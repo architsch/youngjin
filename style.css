@@ -1,0 +1,55 @@
+:root {
+    --darkColor: #404040;
+    --dimColor: #707070;
+    --mediumColor: #909090;
+    --lightColor: #d0d0d0;
+    --lightYellowColor: #e0d0a0;
+    --lightGreenColor: #80d070;
+}
+
+body {
+    background-color: var(--darkColor);
+    font-family: Courier New;
+}
+h1 {
+    display: block;
+    color: var(--lightYellowColor);
+    font-style: italic;
+}
+h2 {
+    display: block;
+    color: var(--mediumColor);
+    font-style: italic;
+}
+h3 {
+    display: block;
+}
+p {
+    display: block;
+    color: var(--lightColor);
+}
+a {
+    display: inline-block;
+    color: var(--lightColor);
+    font-style: italic;
+}
+footer {
+    margin-top: 8vmin;
+    color: var(--dimColor);
+    font-weight: bolder;
+}
+img {
+    display: block;
+}
+
+.banner {
+    background-color: #000000;
+    padding: 8px 8px 8px 8px;
+}
+.snippet {
+    color: var(--lightGreenColor);
+    font-weight: bolder;
+    border: 2px var(--lightGreenColor) solid;
+    background-color: #000000;
+    padding: 6px 6px 6px 6px;
+}
