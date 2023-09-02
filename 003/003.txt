@@ -1,0 +1,821 @@
+:d:A note regarding general-purpose AI.
+:k:AI, Artificial, Intelligence, Automation, Revolution, Copyright
+
+[Feeble Attempt] 2023.01
+
+When a gun was invented, some people claimed that it would never replace bows because it took almost a whole minute to load a single bullet.
+
+When a general-purpose AI system was invented, some people claimed that it would never replace humans because it failed to answer trick questions which could be answered by more than half of the population.
+
+Regardless of what they are capable of at this present moment in time, machines will keep getting smarter and humans will keep getting dumber. It is only a matter of time until even the most sophisticated of intellectuals will eventually succumb to the wit of artificial intelligence.
+
+And what can we do about it? Nothing.
+
+If you are an artist, you may attempt to overthrow the reign of AI-powered arts by claiming that those pieces of work are just concoctions of real arts that are stolen from real artists - an act of crime which must be punished by intellectual property laws.
+
+What if, however, the next generation of AI manages to collect data directly from the nature itself (by making observations with robotic eyes) and create stunning masterpieces based off of it? Will you say that the nature itself is copyrighted by mankind, then?
+
+The real horror of generative AI is not what it is currently capable of; rather, it is the fact that it will continue improving regardless of whether we like it or not.
+
+
+
+
+
+
+:d:A note on a different way of conceptualizing psychological phenomena.
+:k:Psychology, Particle, Mechanical, Spatial, Psychoanalysis, Analytical, Freudian, Jungian
+
+[Thought Particles] 2023.01
+
+Just as physical materials can be thought of as groups of particles that have physical energy in them, our mental processes (such as emotions, memories, and so on) can be thought of as hypothetical particles that have psychological energy in them.
+
+Thoughts are just as tangible as the so-called "rigid bodies" in Newtonian mechanics; they simply belong to a separate domain of existence, which can be described as the realm of collective unconscious as opposed to the realm of physical phenomena.
+
+These "thought particles", as opposed to point masses which make up our physical universe, exist inside a Platonistic space filled with pure ideas. Similar to how atoms establish bonds with one another to form molecules, our thought particles connect with each other for the purpose of formulating more complex ideas.
+
+<003_01>
+
+
+
+
+
+
+:d:An article about software toys.
+:k:Software-Toy, Game, Engine, Edutainment, Educational, Videogame, Tool, UI, UX, Software, Toy, Sandbox
+
+[Making Profit as a Game Developer] 2023.01
+
+The game industry is a pretty saturated niche in the world of business. Competition is tough because way too many people are aspiring to become game developers, and it seems to us that one can hardly create and sell a profitable game without an insane degree of marketing budget these days. The digital marketplace is being flooded with countless numbers of brand new games which continuously pour out of the hands of both indie and AAA game developers on a daily basis, and it appears that even "being creative" is not an economic choice that will save one from this neverending struggle because nearly everyone is "creative" in today's world. How many countless times have we seen all sorts of quirky, out-of-box ideas showcased by random indie developers we hadn't even heard of before? I cannot even count such occasions because there are plenty and they all scream in unison, "Look! Look at me! I am special! I am different from anyone else!"
+
+Because of such high competition, some game developers have chosen to abandon the idea of developing the actual end-product called "game" and shifted their attention to developing a game engine instead. Such people, most of them being hardcore engineers rather than either game development generalists or artists/designers, could be said to have circumvented many of their inherent difficulties by solely focusing on developing a kind of product which they are experts in developing (since a game engine does not necessarily require the talents of artists/designers due to its generic nature).
+
+Making profit out of a game engine, however, has its own set of difficulties that are probably even worse than those which belong to the case of selling an actual game. Whereas marketing a game suffers from the problem of over-supply (because too many people are creating/selling games), marketing a game engine suffers from the problem of under-demand. First of all, only a tiny fraction of the population are game developers, and this factor alone contributes to a drastic reduction of the consumer base. Within this tiny fraction, there are hardcore engineers who prefer to build nearly everything from scratch (aside from the usage of external graphics, sound, and physics libraries) and therefore do not require a game engine. The rest might choose to utilize a game engine, yet we must be aware that the majority of them are doing so for the highest level of efficiency and thus tend to choose the most popular game engines which convey the utmost degree of community support and cross-platform compatibility (such as Unity or Unreal) instead of engines that are being developed/maintained by relatively small groups of people.
+
+When it comes to game development, what we face is a fairly high level of demand but an even higher level of supply. And when it comes to game engine development, what we face is a fairly low level of supply but an even lower level of demand. So what we can easily recognize here is that it is a considerable challenge to make profit out of both a game and a game engine for two opposite reasons.
+
+There is a delicate middle ground that can resolve this dilemma, however.
+
+<003_02>
+
+If we consider games as belonging to the left side of the spectrum of market niches and game engines as belonging to the right side of it, we can enable ourselves to draw two separate curves corresponding to the level supply and the level of demand, respectively.
+
+On the left side, we have the so called "game industry" which is flooded with almost all genres of games, whether they be casual or hardcore, single-player or multi-player, RTS or MOBA, and so on. This cluster of niches, obviously, have extremely high supply due to the fact that so many people with a variety of backgrounds have a tendency to pursue their dreams as game developers. Since a game is more of an interdiscipinary form of art rather than a highly specialized piece of technology that is only comprehensible by a few (such as, say, a control module for a nuclear fusion reactor), it can be developed and published by any nearly anyone. And this is even more so nowadays due to the presence of free game development tutorial videos on YouTube, free and easy-to-use game engines which do not even require text-based coding, and assets (e.g. 3D models, textures, etc) that can be downloaded from the internet for relatively small (or even zero) prices. And even if we assume that the public's demand for videogames is pretty high, it will be rash to dare to suppose that it is high enough to overcome the insanely high level of supply. After all, games do not occupy the top of the pyramid of our spendings, do they? We do not "consume" games in the same sense that we consume food, electricity, and tap water, since games are not absolutely necessary for sustaining our lives; hence, the same exact games can be replayed over and over again indefinitely (since a piece of software does not degrade over time), which technically implies that we do not really need brand new games as long as old ones still manage to entertain us.
+
+On the right side of the spectrum, we have the "game engine industry" which is a much narrower niche than the so-called "game industry". From a supply point of view, it looks like competition in this arena is much more relaxed because far fewer people are undertaking their own colossal journey of creating a game engine. A game engine is an extremely sophisticated system that is way more massive in scale than games (with a few exceptions such as those which belong to a large-scale simulation genre), and therefore only a relatively small portion of the population possesses the willingness to create/sell game engines. The problem with this, as I have mentioned before, is that there is only a small group of consumers who are willing to pay for a game engine unless it is sufficiently popular and is part of the industry standard. Besides, game developers are pretty darn smart compared to the rest of the population to whom the entertainment industry's childish monetization tricks can appeal with relative ease, so they know how to minimize their spendings when they are developing their own games.
+
+Here is a solution.
+
+We have the choice to put ourselves in the middle of the spectrum, in which one is expected to develop neither a game nor a game engine, but instead a "software toy". A software toy is similar to a game in the sense that the user can still play around with it, interacting with its components in real time without having to delve into boring technical details such as scripting, folder structure management, importing/exporting resource files, and so forth. Yet, it is not quite the same thing as a game because it does not spoon-feed the user with any specific narrative, nor does it present the user with any fixed set of rules under which he/she will be either rewarded or punished. It is not a game engine either because its apparent capabilities are not as generic as to allow the user to create virtually anything out of nothing. Minecraft, for instance, could be considered a software toy rather than a game engine (although you could technically create a mini game inside a Minecraft world) because it presents the user with a set of built-in gameplay elements which are quite limited in scope. One cannot create a game inside Minecraft whose underlying mechanics are based upon smooth surfaces or microscopic particles, for example, since Minecraft's possibility space is confined within the domain of discrete block-based interactions.
+
+The boundary between a game and a software toy can sometimes be quite blurry, as there are sandbox games (or "god games") which focus on providing the player with the utmost degree of freedom whilst also providing him/her with a set of goals and plots to follow. Minecraft, Garry's Mod, Kerbal Space Program, Factorio, SimCity, The Sims, and many other simulation games fall into this category. On the other hand, we may as well state that the boundary between a game engine and a software toy is pretty vague as well, since some of the educational game engines such as Scratch, Kodu Game Lab, and Greenfoot are so easy to use (compared to professional engines such as Unreal, of course) that they have entertainment values in their own right.
+
+<003_03>
+
+Despite this perceived ambiguity, however, we can still somehow distinguish software toys as their own independent category due to the agreed upon notion that we are often reluctant to classify them as either games or game engines in a definite sense.
+
+So, what's so amazing about software toys? The fact that they are a sort of "gray" beings, which belongs to neither of the two extremes of the spectrum, suggests that their market niche is a Goldilocks zone in terms of having a chance to make profit out of it. They occupy a fuzzy middle ground upon which the two curves (i.e. supply and demand) can potentially meet and even reveal a crossover. Since a software toy is not a game, passionate game developers who have stuffed their hearts of ambition with all sorts narrative and artistic elements are hesitant to develop such a thing. And since a software toy is not a game engine either, hardcore engineers who are not willing to sacrifice their coding time rendering their software product sufficiently easy to use as to be able to let laymen directly play with it are hesitant to develop such a thing.
+
+Aside from low supply, what we can also observe is that the relative level of demand for software toys is not too low. It is not as high as to let ourselves state that their brand values support the existence of a massive fanbase (such as that of an eSports-type of game), yet we may as well expound that the availability of demand for software toys in a variety of small niches compensates for the apparent lack of boiling passion in any one of them.
+
+A software toy, under a supposition that it is well crafted and user-friendly, can find its use cases in the fields of education, training, research, content creation, and many other areas which are not very often being associated with the game industry. A moderately entertaining yet thought-provoking software toy, since it is an interactive medium that may not be as fun as a typical videogame yet nevertheless far more engaging than a book, easily finds its usage in education where the teacher often struggles to gain his/her students' attention. A software toy with realistic physics may find its use in serious training applications in military, medicine, and other high-risk fields of expertise in which simulations must precede real practices. Academics may find a software toy a sufficiently explorable subject of study, that they would start researching its inner workings in a professional manner. Some hobbyists who are not hardcore gamers and are looking for a piece of entertainment that is somewhat more "intellectual" than mere beat-em-ups and betting rounds, may find a software toy interesting as well.
+
+The following question is, "What kind of software toy should we create in order to make money off of it, then?"
+
+One can think of many choices, including industrial simulators, traffic simulators, a purely exploratory sandbox game which excites the intellectual mind of a science lover, an accounting/tax simulator that is somewhat more casual and entertaining (with the help of a few gameplay elements such as progression (e.g. level-ups)) than, say, TurboTax, and so on.
+
+The trickiest aspect of the development of any of these is that they are too broad in scope. A typical videogame would simply require the developer to focus on a specific genre of gameplay, such as racing, battle, defense, etc, so it is pretty narrow in scope. A typical game engine, despite its colossal scale in terms of the sheer variety of things which can be implemented on top of it, is quite narrow in scope from a contextual standpoint because it merely serves as a "common template" for developing a virtual world, rather than a world which exists for the sake of its own existence.
+
+So to summarize, a software toy could be conceptualized as a virtual universe which exists on its own without requiring any external agent to bring it into existence, yet does not immure itself in a specific set of narratives. Devising such a product is a highly sophisticated task, and requires a great deal of insight.
+
+One clue we do have is that a nicely designed software toy consists of a fairly small number of emergent elements, each of which is easy to conceptualize while also being robust enough to give birth to myriads of interesting scenarios when applied in combination with one another. Examples of such elements include:
+
+(1) A "crafting table" through which the user can combine ingredients to produce new types of items.
+
+(2) Dynamic physical installations (doors, switches, elevators, conveyor belts, etc) which are capable of modifying the spatial characteristics of their surrounding areas under the occurrence of specific events. For instance, opening a door creates a connection between two discrete spaces which used to be separate from each other.
+
+(3) Different types of AI agents which behave differently under the exact same circumstance. Type-1 agents may only move, type-2 agents may only attack, type-3 agents may move AND attack simultaneously, type-4 agents may heal others but only when they have enough energy, and so on.
+
+<003_04>
+
+A virtual world in which these elements exist from the very beginning of user experience, without assuming that the user will take time manually devising them out of nowhere, is a toy that is not necessarily a game (because the presence of such emergent elements do not necessarily present the user with narratives), yet not a game engine either because it is not the user who is inventing all the individual gameplay elements. A software toy, in this respect, could be defined as a "partial game engine" - an engine that lets us create and customize parts of the game while still preserving some of its core mechanics as the backbone of the system which cannot be modified. The coexistence between customizability and immutability is the heart of a software toy, which presents us with a fountain of endless goals by keeping its level of freedom neither too low nor too high. It is because too little freedom (as in a story-driven arcade game) limits the scope of motivation, while too much freedom (as in general-purpose editing programs such as Photoshop and Blender) hardly motivates the user to undertake any adventure at all.
+
+
+
+
+
+
+:d:A note on visualizing logic as individual geometric modules.
+:k:Idea, Platonic, Relations, Logic, Relational, RDBMS, SQL, MySQL, Predicate, Computational
+
+[Idea Space] 2023.01
+
+What is an idea?
+
+We live in a world which consists of two distinct domains; one belongs to the realm of physical beings (i.e. Things we can see, touch, smell, and taste), and the other one which belongs to the realm of pure, abstract ideas. An apple belongs to the domain of physics, yet the idea of an apple belongs to the domain of ideas.
+
+Just as a universe of physical phenomena can be modeled as a physical space which consists of spatial dimensions such as X, Y, and Z, a universe of our mental conceptions can be modeled as an "idea space" in which every single point in its coordinate system can be thought of as the most indivisible, "atomic" idea our minds can ever conceive.
+
+Such atomic ideas serve as building blocks of more complex ideas. They establish connections with one another which represent their mutual relations. For example, the algebraic expression "A=B" is a molecule that is made out of 3 atomic ideas which are indicated by symbols "A", "=", and "B", respectively. "=" has two sockets to which other atoms can bond, since it is a binary operator which requires the availability of two input values in order to produce an output value (i.e. which is either TRUE or FALSE). "A" and "B" have their own sockets as well, both referring to their respective values. The result is that the (meta)physical laws of our idea space allow these 3 atoms to bond together in a form that is reminiscent of a water molecule (H2O).
+
+<003_05>
+
+
+
+
+
+
+
+:d:An article about a potential usage of functional programming in game development.
+:k:Game, Functional, Programming, LISP, Scheme, CommonLISP, CLISP, Racket, Clojure, OOP, Declarative, Data-Driven
+
+[Functional Programming for Game Development] 2023.02
+
+Game development is often being done in a highly object-oriented mindset. This is not only because the vast majority of gameplay engineers program in object-oriented languages (such as C++, C#, Java, etc), but also because the way a videogame operates can easily be modeled as a collection of discrete, independent objects.
+
+A videogame comprises a number of gameplay elements, such as individual game mechanics, narrative elements, dialogues, agents, boids, actors, impacts, cutscenes, scenarios, and so on. And these are all distinct, highly separable entities which are based off of different faculties of mind. A dialogue and an explosive effect, for example, may be related with each other via a segment of conversation such as, "NPC 1: Hey, look! There is an explosion!", yet they both can be implemented independently of each other because the articulation of neither of them requires the full avilability of the other. A writer doesn't require an actual, functioning explosion to be able to mention that there is an explosion, and a VFX artist doesn't require an NPC's description of the explosion's narrative implications in order to be able to implement an explosive impact.
+
+And because of this nature of high modularity during the course of game development, a game's underlying software framework is almost always being modeled under the principles of object-oriented programming. Every "thing" inside a videogame is essentially an object, each of which is a state machine operating on its own (as a standalone system). When combined with one another via loose chains of causality, these objects give rise to all sorts of interesting phenomena based upon their mutual interactions.
+
+However, the object-oriented approach also creates plenty of rooms for countless bugs and glitches, which may arise from the fact that a state machine's inner workings heavily depend on the exact timing of when something happens (which means the order of input values must be precise), as well as that there are multitudes of encapsulated bodies of state existing in a concurrent fashion, whose actions may contradict with each other (e.g. Conservation of energy being violated due to two explosions spawning out of a single bomb because of bad timing, etc). One might be able to prevent such scenarios by introducing some kind of buffer to the overall decision-making process by means of message-passing, queueing, and so forth, yet these methodologies add additional layers of complexity to the architecture.
+
+A neat solution to this is to switch one's programming paradigm to an entirely different one. Take functional programming, for example, in which modifiable states are almost completely excluded from the computing environment's data management scheme.
+
+Inside a purely functional framework, any changes in the state of the application simply undergo the process of being "appended" on top of the state's history (similar to how append-only databases work, such as a blockchain), which nicely solves the problem of race conditions. Since the system never tampers with existing state objects (which are, in a functional programming language, nothing more than function calls sitting inside the application's stack memory), external references which are still pointing to past instances of the state do not have to worry about their procedures making an unexpected turn due to sudden in-between data modifications.
+
+One of the biggest challenges in the adoption of a declarative programming paradigm in game development is the conceptualization of time. The exclusion of the concept of time in a non-imperative language such as LISP, for instance, is both a blessing and a source of confusion. When we are making a game, we are essentially creating a virtual world which has its own timeline. As time passes by, various events happen inside the game's own environment at designated points in time, based upon their own time-dependent schedules. Such a temporal aspect of gameplay is what typically leads engineers to simply fall back to imperative programming when developing the core mechanics of the game, even if they may be great advocates of declarative syntax when implementing modules that are time-independent (e.g. interpretation of data, procedural generation, etc). However, it is my personal conviction that such a multi-paradigm approach is not necessarily the best solution.
+
+In an imperative programming language such as Java, one can easily implement time-related gameplay mechanics by creating an Actor object, letting it have a queue of pending actions (e.g. represented as an array of tuples, each of which is made out of the expected time of occurrence and a function body that must be executed when the time is reached, etc), and then updating this queue whenever the Actor's update-function gets called at each frame of the game loop. This way of implementation, while it is highly intuitive and handy, often leads to a wide spectrum of bugs which may be too subtle to even find out before releasing the final product. The existence of tens or even hundreds of such time-dependent queues, all potentially interacting with one another in real time, is prone to give birth to countless unimaginable scenarios due to race conditions, co-occurrence of mutually contradictory events, and many other ensuing complexities.
+
+Functional programming comes to our rescue when dealing with such difficulties. Since it avoids modifiable states as much as possible, it nicely prevents us from having to worry about our sources of computation (e.g. variables) unexpectedly being corrupted in the middle of computational processes. One might argue that the principle of encapsulation circumvents such a concern, yet it should be noted that having to decide which pieces of data should be public and which of them should be private is in itself a cumbersome and error-prone process.
+
+If only we can represent gameplay in terms of a cascade of function calls instead of a group of independent objects, wouldn't it be great? That way, we will have the advantage of keeping everything in the game application as part of one large hierarchy of procedures, each of which only has access to its local state (e.g. variables that are either passed in as its function parameters or are locally declared) and nothing else. This means that all dependencies will have to be injected by means of arguments, which inevitably turns the overall syntax to be a bit verbose, yet nevertheless gets rid of any chance of interference which may otherwise be exerted to/from outside entities.
+
+Let us start with a simple game loop. Any real-time game engine, as far as common sense goes, contains at least one "update" procedure which runs itself on a periodic basis. A typical object-oriented way of implementing it goes like this:
+
+#$
+class Game
+{
+    private State state;
+
+    Game()
+    {
+        state = new State();
+        Thread.start(updateLoop);
+    }
+
+    void updateLoop()
+    {
+        while (true)
+        {
+            state.update();
+            Thread.waitForNextFrame();
+        }
+    }
+}
+new Game();
+#$
+
+It is conventional of an OOP-centered programming language, such as Java or C#, to start embodying a game application by first making a class that represents the game as a whole. Inside this "home class", where everything related to the game is supposed to begin its life, we create the game's state object and then run a thread which periodically updates it on a per-frame basis. This is a pretty neat way of running the game, except that here we are already introducing quite a degree of complexity to the whole system despite not having done anything substantial yet. The "Game" class in the above example has its own constructor method, an "updateLoop" method which runs within its own thread, as well as an internal state object which requires extra care for encapsulation so as to only let it be modified from within the update loop and nowhere else. The "updateLoop" method's internal "while" loop must make sure to execute its internal procedures in the right order, while also making sure that their execution can be carried out safely along with things that are happening in other threads (e.g. networking thread, rendering thread, etc). Furthermore, the instantiation of the "Game" class must be done in the right order (i.e. after all of the external systems to which it depends have been initialized, yet before systems which depend on it are yet to be initialized). The peril of object-oriented programming is that it has a tendency of giving birth to a complex web of interdependencies, no matter how much we try to simplify our system.
+
+A purely functional equivalent of the game loop system, on the other hand, could be written as below (in LISP).
+
+#$
+(defun update-loop (state)
+    (wait-for-next-frame)
+    (update-loop (update-state state)))
+#$
+
+As you can see, there is no such thing as a class here. The entire game loop is just a single function call (namely, "update-loop"), which calls itself at the beginning of each frame by means of tail recursion. The game's state object is simply a parameter which repeatedly gets passed into the update-loop function as the only dependency, and by this, we can guarantee that the update loop is a purely functional system which does not interact with anything outside of its body. The "(update-state state)" function call returns the updated version of the current game state, and its definition is shown below.
+
+#$
+(defun update-state (state)
+    (make-state (update-actors (get-actors state))))
+#$
+
+The "make-state" function, as you may have already guessed, creates a newer instance of the game's state and uses it as the input state of the next "update-loop" call instead of just modifying the existing state object. The reason behind this is that we want to prevent any potential race condition which may occur if other systems happen to be accessing/modifying the same exact instance. The "update-actors" function, just like the "update-state" function, returns the updated version of the current state of the game, but only the portion which pertains to its collection of actors (aka "characters", "sprites", or "agents") and nothing else.
+
+#$
+(defun update-actors (actors)
+    (cons (update-actor (car actor)) (update-actors (cdr actors))))
+#$
+
+The chain of "cons" nodes, as shown above, is more or less a LISP construct which may not apply to other languages. The overall idea, however, applies quite universally. Every time we update the list of actors, we build a brand new list by cons-ing the newer instances of the actor objects in a recursive manner instead of just modifying the existing list.
+
+<003_06>
+
+This, again, is for the sake of preserving the entire history of state changes instead of tampering with the past remnants which may be still waiting to be visited by extraterrestrial beings (aka "external systems") whose present moment in time could have been delayed by as much as a few milliseconds, due to the nature of time dilation (special relativity) which oftentimes inadvertently gets simulated by the lack of perfect parallelism in modern computing devices.
+
+The "update-actor" function checks to see if the "actor" argument it received is just the end of the list (i.e. nil). If so, it won't do anything. If not, it will proceed to search for the actor's own update function by means of "(get-actor-update-func actor)" and then execute it in order to get the updated version of the actor object. This newer instance of the actor, just like the aforementioned ones, is something that is completely separate from its past copy.
+
+#$
+(defun update-actor (actor)
+    (cond ((= actor nil) nil)
+        (else ((get-actor-update-func actor) actor))))
+#$
+
+And in order to run the game as a whole, we must start the game's loop somewhere. This involves the creation of the initial state, as well as the manual invocation of the update loop based upon that initial state.
+
+#$
+(update-loop (make-state initial-actors))
+#$
+
+But of course, the game itself consists of not just a list of actors but also many other things. This is not too complex a problem to solve, though. All we have to do is implement additional data types and their corresponding "get" and "update" functions, and then insert them into the game loop as additional function parameters.
+
+#$
+(defun update-state (state)
+    (make-state
+        (update-actors (get-actors state))
+        (update-cells (get-cells state))
+        (update-events (get-events state))
+        (update-particleEffects (get-particleEffects state))
+        (update-soundClips (get-soundClips state))))
+#$
+
+One major advantage of using this purely functional, append-only approach to the implementation of a game loop is that, since we are preserving the history of the game's state instead of constantly overwriting it with more recent bits of data, the game's update functions can have full access to the state's past instances and therefore make decisions based upon the differential characteristics that can be derived by comparing the past and present (which means it opens up the gateway to the realization of first-order, second-order, and even higher order systems which often occur in physics/engineering and are represented in terms of differential equations). This is easily done by passing the copy of the state from the previous frame (aka "past instance") into the update loop as an additional argument.
+
+<003_07>
+
+#$
+(defun update-loop (currState prevState)
+    (wait-for-next-frame)
+    (update-loop (update-state currState prevState) currState))
+
+(defun update-state (currState prevState)
+    (make-state
+        (update-actors
+            (get-actors currState)
+            (get-actors prevState))
+        (update-cells
+            (get-cells currState)
+            (get-cells prevState))
+        (update-events
+            (get-events currState)
+            (get-events prevState))
+        (update-particleEffects
+            (get-particleEffects currState)
+            (get-particleEffects prevState))
+        (update-soundClips
+            (get-soundClips currState)
+            (get-soundClips prevState))))
+
+(defun update-actors (currActors prevActors)
+    (cons
+        (update-actor (car currActors) (car prevActors))
+        (update-actors (cdr currActors) (cdr prevActors))))
+
+(defun update-actor (currActor prevActor)
+    (cond
+        ((or (= currActor nil) (= prevActor nil))
+            nil)
+        (else
+            ((get-actor-update-func currActor prevActor) currActor prevActor))))
+...
+#$
+
+One of the specific use-cases of such a temporal stream of data lies on the area of kinematics. For a quick demonstration, let me first suppose that the "get-actor-update-func" function returns the "update-kinematic-actor" function if the type of "currActor" is equal to "kinematic". This means that, if the actor we are updating is of type "kinematic", the "update-kinematic-actor" function will be used update it. This function takes both the current and previous instances of the actor as its input parameters, and computes/updates the actor's current position based on the comparison of its two instances in time (which reveals its current velocity).
+
+#$
+(setf actor-update-func-table () '(
+    ('static update-static-actor)
+    ('kinematic update-kinematic-actor)
+    ('dynamic update-dynamic-actor)
+    ('abstract update-abstract-actor)
+))
+
+(defun get-actor-update-func (currActor prevActor)
+    (get-actor-update-func-iter currActor actor-update-func-table))
+
+(defun get-actor-update-func-iter (actor table)
+    (cond
+        ((= (caar table) (get-actor-type actor))
+            (cdar table))
+        (else
+            (get-actor-update-func-iter actor (cdr table)))))
+
+(defun update-kinematic-actor (currActor prevActor)
+    (let ((currVelocity (- (get-position currActor) (get-position prevActor))))
+        (make-kinematic-actor
+            (+ (get-position currActor) (* currVelocity 0.8)))))
+
+(defun make-kinematic-actor (position)
+    '('kinematic position))
+#$
+
+One might argue, "Well, why bother introducing such a bloated system, just to update the positions of the individual actors? Why not just let each actor have its own 'velocity' property, so that it can simply update its position at any moment in time base off of the explicitly specified velocity value?"
+
+For a simple problem of kinematics, such a solution is sound indeed. It is when we start dealing with more complex, implicit kinds of problems that we seriously begin to face inevitable rise in complexity. Let us consider, for example, that each actor is not a kinematic point mass but a self-conscious animal (i.e. living thing) which has its own set of memories, desires, feelings, metabolic states, and other biological processes whose causal relations are not necessarily instantaneous in time (as opposed to atomic events in Newtonian mechanics such as application of force or displacement of a particle), but rather prone to emit delayed influences upon points in time that are quite far apart from one another. The constructor of such an organic entity will have to look like this:
+
+#$
+(defun make-animal-actor (physicalTraits mentalTraits physicalMemory mentalMemory)
+    '('animal physicalTraits mentalTraits physicalMemory mentalMemory))
+#$
+
+"physicalTraits" and "mentalTraits" are both fixed lists corresponding to the intrinsic physical/mental characteristics of the animal, whose contents are not meant to be changed under usual circumstances. These two lists, therefore, can be said to be time-invariant. "physicalMemory" and "mentalMemory", one the other hand, indicate the most recently added elements of the two streams of data (which represent the history of the animal's physiological state and the history of the animal's psychological state, respectively) which continuously circulate their elements as time passes by in the form of a queueing system. At each update loop of the game, newer memory elements enter these streams via the animal's sensory organs (i.e. external stimuli), while memories that are sufficiently old get discarded becasue these streams cannot keep growing forever (unless the computer is endowed with infinite memory space). The animal makes decisions based on both its most recent memories as well as past memories that are extracted from its past self, and produces a newer copy of itself which corresponds to its future self.
+
+#$
+(defun update-animal-actor (currActor prevActor)
+    (let ((physicalTraits (get-physical-traits currActor))
+            (mentalTraits (get-mental-traits currActor))
+            (currPhysicalMemory (get-physical-memory currActor))
+            (prevPhysicalMemory (get-physical-memory prevActor))
+            (currMentalMemory (get-mental-memory currActor))
+            (prevMentalMemory (get-mental-memory prevActor)))
+        (make-animal-actor
+            physicalTraits
+            mentalTraits
+            (make-physical-memory currPhysicalMemory prevPhysicalMemory)
+            (make-mental-memory currMentalMemory prevMentalMemory))))
+#$
+
+The example shown here, however, only allows the animal's memory to refer to only 1 step (frame) back in time, which suppresses its ability to make long-term decisions based upon long-term memories. If we want to simulate realistic physiological/psychological phenomena, we will need streams of memory elements that are sufficiently long so as to allow each animal to look up not only its most and second most memories, but also memories that were created minutes ago, hours ago, days ago, or even months ago.
+
+The realization of long-term memory streams can easily be done by adding additional references to the game's past, as shown below. "prevState2" refers to the past instance of the game's state that was made 2 steps back in time instead of just 1.
+
+#$
+(defun update-loop (currState prevState prevState2)
+    (wait-for-next-frame)
+    (update-loop (update-state currState prevState prevState2) currState prevState))
+#$
+
+And if we want the game to be able to refer to up to 3 steps in time instead, we will need something like:
+
+#$
+(defun update-loop (currState prevState prevState2 prevState3)
+    (wait-for-next-frame)
+    (update-loop (update-state currState prevState prevState2 prevState3) currState prevState prevState2))
+#$
+
+<003_08>
+
+This, of course, starts to become too verbose as we keep elongating the game's memory stream. Therefore, a much more realistic implementation would be to represent the history of the game's state as a single list variable rather than a sequence of manually specified function arguments.
+
+#$
+(defun update-loop (stateHistory)
+    (wait-for-next-frame)
+    (update-loop (cons (update-state stateHistory) (without-last stateHistory))))
+#$
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Universal, Laws, Game, Design, Conceptual-Space, Idea, Formula, Game-Math, Mathematics, Philosophy
+
+[Universal Laws of Game Design - Volume 1] 2023.02
+
+Designing a game is a weird sort of challenge. It is not necessarily because game design is intrinsically harder than other aspects of game development, but because it is hard to find a fixed theoretical foundation upon which the developer can start designing the game in a systematic fashion. Whenever somebody claims that there is one, it often turns out that it is merely a collection of vague, metaphorical ideas which do not quite fit together in a quantitative manner. Those who have seriously enjoyed learning mathematics during their academic years may share this impression.
+
+Many books on game design, even ones that are written by people who have backgrounds in the field of engineering, primarily focus on surveying the cultural implications of a wide variety of videogames. They often talk about the history of videogames and how the authors' friends succeeded in selling their games when they were high school buddies back in the 1980s, etc, and never forget to present the reader with a list of casual methodologies which are supposed to encourage everyone to design one's own videogames in a highly "creative" way (along with a couple of cute-looking graphical illustrations).
+
+These are all good, except that it is hard to discover any solid principle in such books. They are, to me, hardly anything more than a pile of self-help books with the topic of game design in mind - an amorphous cluster of random thoughts and motivational slogans which are poetically connected with one another in a rather optimistic manner, yet do not fail to continue feeding our shared daydream that this whole "soft-skill" narrative somehow pertains to the conceptual essence of game development.
+
+To be fair, there are academic papers which approach the problem of game design in a much more rational way. Professional game designers who have studied the nature of in-game economics have a lot to say when it comes to outlining and refining mathematical models of gameplay, such as progression curves, mutual balancing of intransitive mechanics, means of exchange and their relative values, and so on.
+
+These areas of research, however, focus rather on the perfection of details and their psychological optimization than on the initial conceptualization of the game as a whole. The aforementioned mathematical models may apply well on projects that have already established their core gameplay dynamics, yet the models themselves help only partially when a designer wants to come up with a brand new game concept. And this is oftentimes a crucial problem to solve because indie developers who are trying to make their own games from scratch are usually "lost" when they attempt to conduct such a grand act of creation. This usually forces them to stay away from rigorous academic aspects of game development and desperately try to squeeze their way out of the abyss of uncertainties by means of random bits of brainstorm and other fragmentary ideas which we all can sense on a subconscious level but cannot tell exactly what they are.
+
+A common method of game design employed by many indie developers is highly experimental and is based off of a trial-and-error feedback loop. First, they devise a quick prototype which could be as simple as a few geometric shapes randomly moving inside the scene. Then they try to observe the "fun" part of it and proceed to add a new feature to that scene (e.g. coins to collect, enemies to avoid, etc) which is expected to render the prototype more playable. And then, they play with the updated prototype, add yet another feature on top of it, then test it, and so on, thereby forming a back-and-forth cycle between playtest and feature addition.
+
+Such a method, which is purely empirical in nature, is not an invalid way of developing a game. One can definitely approach the problem of creating something out of nothing by adding gameplay features one by one, just as a game character would gradually unveil the player's FOW (Fog Of War) by moving outward from its base step by step. This approach, however, seems a bit too tiresome and always makes me wonder, "Shouldn't there be a better way?"
+
+What if there are some kind of "Universal Laws of Game Design", just like there are Newton's laws of motion in classical mechanics? Wouldn't their presence enable us to establish a solid foundation of any game during its early development stage, thereby letting us bypass the necessity of spending considerable time desperately searching for core elements which make the game fun to play?
+
+In order to find out such laws, we must first contemplate upon the essence of what a game is. From a practical perspective, a game is an interactive medium which consists of a set of goals. The player endeavors to achieve these goals by making a series of choices, which are often being referred to as "actions".
+
+<003_09>
+
+Such a generic sort of conceptualization, however, is way too vague to be considered useful for our purposes. There is an infinite variety of goals which can potentially exist within the game, and the designer must elaborately choose a subset of them unless he/she wants the game to be a mere concoction of random narratives which, when combined, will simply confound the player with their collective state of chaos.
+
+And in order to reduce the problem of deciding which goals should be part of the gameplay system into a quantitative (i.e. rationally analyzable) one, we must first classify goals into their respective categories. The most challenging side of this is to figure out the level of abstraction we ought to pursue during this process. For example, it would be too cumbersome to simply keep listing a bunch of random goals and putting them in a large taxonomical tree - that is, goals which have their own thematic elements that sound interesting indeed, yet are too specific in their own context to be considered valuable for general usage. Goals such as, "Destroy the emperor's spaceship from the outer orbit of the moon!", "Stop the train by draining its fuel tank before the detective burns more than half of his cigar!", and many others, are only applicable in specific circumstances and are therefore not adequately designed to function as reusable components.
+
+<003_10>
+
+The best way of avoiding such a rigmarole is to start from the most fundamental goals which we all share in common. These are the goals that are (either consciously or unconsciously) being shared by all lifeforms and are often indicated by terms such as "instincts", "archetypes", and kindred others which suggest their generic applicability. The idea is, once we have a clear notion of what are the most primitive goals of every living organism, we will also have a clear notion of what are the most primitive goals of the player as well because the player is a living organism, too.
+
+Let us suppose that there is a single point in space which represents the simplest form of life we can ever imagine. It has no brain, no organs, no tissues, no nerves, and absolutely no cells. It is just a single mathematical point which only possesses a set of basic properties which would qualify it as a "living thing" and absolutely nothing else. This is the most abstract model of a biological organism we can manage to conceive in the domain of quantitative reasoning (Just like a "point mass" is the highest form of abstraction of a rigid body in classical mechanics).
+
+<003_11>
+
+This abstract lifeform has its own "region of influence", which is the set of all points in space that can be influenced by its existence (i.e. have a nonzero probability of creating a future event whose chain of causality can be traced back to the event which gave birth to the lifeform). Examples include:
+
+(1) The organism's place of residence (e.g. A bird's nest, a person's house, etc).
+(2) A territory that is frequently being visited (patrolled) by the organism (e.g. A cat's alley).
+(3) The organism's lifetime (as long as we suppose that "time" is just another dimension in space).
+(4) Portion of space which the organism's own body occupies (e.g. A plant's area of exposure to sunlight as well as the extent of its roots underneath the surface of earth, an area covered by a swarm of fungi, etc).
+(5) A territory that is "owned" by the organism by means of power (e.g. military force, legal ownership, social consensus, etc).
+(6) The organism's public reputation as a social being (e.g. popularity, brand values, credit, acquaintances, etc).
+(7) The organism's biological heritage (e.g. distribution of its genetic information throughout the ecosystem, which can be defined as the weighted average of the regions of influence of its children, grandchildren, great-grandchildren, etc).
+
+<003_12>
+
+The most ultimate goal of a lifeform is to preserve and expand its region of influence as much as possible. There are multiple ways of achieving this. If it is an animal (i.e. something which can displace its own body to somewhere else), it will be able to temporarily expand its region of influence by visiting places that are outside of the region. Another method which applies to all kingdoms of living things (not just animals) is to reproduce itself for the purpose of generating yet another point which is equally capable of emitting the force of influence around its current location. This latter method also expands the organism's region of influence in the direction that is parallel to the time axis, since creating a younger copy of itself is the most quintessential way of delaying the expiration of its influence.
+
+<003_13>
+
+There are also occasions, however, after which the lifeform's region of influence may shrink in size. The presence of another lifeform's region of influence may overtake the existing region (since increased influence of others means decreased influence of mine), for instance. Also, the fact that the duration of influence has its own limit means that unvisited parts of the region naturally erode over time.
+
+<003_14>
+
+The implication of the aforementioned phenomena is that an organism's region of influence is permanently being exposed to the state of oscillation between expansion and shrinkage.
+
+<003_15>
+
+Environmental factors constantly disintegrate the weakest parts of the region, while the organism itself strives to protect and enlarge it - for it is a common sense that letting one's line of influence propagate through the spacetime continuum as far as possible is the most optimal way of prolonging the causal chain of its own existence.
+
+<003_16>
+
+This general description alone, however, won't lead us anywhere except an endless row of philosophical treatises. For the purpose of game design, what we need is a set of discrete building blocks which can be used for formulating the game's narratives. Such elements must be based upon the core instincts that are universal in every biological being (in order to appeal to the broadest audience as possible), yet we must arrange them in a systematic manner instead of deferring the necessity of their acute interpretation with poetic rambling. As a starting ground, let me come up with the 3 most fundamental goals which I think must be shared by all lifeforms. These are: (1) Absorb, (2) Expand, and (3) Secure.
+
+<003_17>
+
+An organism must "absorb" resources from outside in order to gain enough energy to sustain its life and carry out its own sequence of actions; otherwise it will run out of energy and die. It must also "expand" its region of influence by means of movement and self-replication, while also making sure to "secure" parts of it which have previously been acquired.
+
+One of the reasons why I have presumed the existence of these 3 particular instincts is that this trio are reminiscent of our popular conception of the way in which game mechanics can usually be classified. For instance,
+
+(1) While playing a war game, the player has 3 choices: Whether to collect resources (i.e. "absorb" fuel and constructional ingredients), attack the enemy (i.e. "expand" one's region of influence by means of conquest), or defend the base (i.e. "secure" one's region of influence by means of defense).
+
+(2) While playing Pac-Man, the player has 3 choices: Whether to collect tokens (i.e. "absorb" score points which will allow the player to proceed to the next level), spatially traverse each of the succeeding levels (i.e. "expand" one's region of influence by leveling up and climbing up the leaderboard), or avoid ghosts (i.e. "secure" one's region of influence by saving Pac-Man's life from the enemy characters).
+
+(3) While playing a city-building game, the player has 3 choices: Whether to collect taxes from the citizens (i.e. "absorb" financial potential energy from the taxpayers), grow urban areas by building roads, public facilities, and other parts of the infrastructure (i.e. "expand" one's region of influence by literally expanding the size of the city), or prepare for potential disasters/crimes by installing fire/police stations (i.e. "secure" one's region of influence by means of first responders).
+
+And the list goes on.
+
+These three fundamental goals, however, will remain quite impractical if we are to regard them only as means of identification and nothing else. If we want to use them for game design purposes, we ought to represent them as mathematical procedures each of which has its own set of input parameters. This way we can allow ourselves to begin assembling bits of design logic with their functional implications in mind.
+
+<003_18>
+
+In order to figure out how to apply them exactly, however, one must beware that a game, despite being driven by goals and actions, starts its narratives from an arrangement of physical entities (aka "objects"). We have a world, and inside the world we have a set of objects. One could easily suppose that there must be a point in space which represents the game's central lifeform called the protagonist (aka "myself"). In addition, there could be other points in space which are quite isolated from the protagonist itself and can be grouped into two general categories:
+
+(1) "Resources" - Objects which, when in touch with the protagonist, increase its ability to invoke actions based on its own will. Examples of resources include: Coins, Money, Fuel, Score Points, Victory Points, Action Points, Food, Crafting Ingredients, Collectible Cards, Keys, Territorial Ownership, Psychological Assertion of Dominance (e.g. Fame), and so on.
+
+(2) "Obstacles" - Objects which, when in touch with the protagonist, decrease its ability to invoke actions based on its own will. Examples of obstacles include: Walls, Fences, Landmines, Enemy Characters, Explosives, Traps, Swamp, Locked Doors, Locked Chests, Diseases, Poison, Debt, Lawsuits (which are filed against the protagonist), Stigma, Accusations, and so on.
+
+<003_19>
+
+These two categories nicely reflect the dualism of our universe because they resemble the positive(+) and negative(-) energy particles of our physical reality. Resources are positively charged particles since they add up to the lifeform's store of potential energy. On the other hand, obstacles are negatively charged particles since they subtract from the lifeform's store of potential energy.
+
+In order to grow/preserve its region of influence as efficiently as possible, an organism must maximize its number of chances to increase the region's current size. In order to fulfill this task, it must maximize its chance of colliding with a resource and minimize its chance of colliding with an obstacle. This means that the ultimate goal of every lifeform is to minimize its distance from nearby resources and maximize its distance from nearby obstacles as much as possible (while also making sure to keep expanding its region of influence by means of locomotion and procreation). This pair of motives, from a behaviorist point of view, can be modeled as a physical system made up of hypothetical point-charges and their surrounding hypothetical force vectors.
+
+<003_20>
+
+Such a purely mechanistic model, however, is probably not adequate for representing the design of a game because a game puts more emphasis on the semantics of motivation itself than its causal byproducts. Besides, representing the game's inner world in terms of a single continuous space filled with a fine grid of fields and their respective force vectors distracts us from constructing the game's individual components in a discrete manner, which makes it difficult to build gameplay systems in a highly modular (therefore robust) way. What we probably need is to identify a set of discrete rules of interaction between the organism and its surrounding resources/obstacles, rather than trying to analyze every detail of their ensuing physical phenomena.
+
+(Will be continued in Volume 2)
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Concept, Abstraction, Narrative, Design, Interactive, Medium, Biology, Psychology
+
+[Universal Laws of Game Design - Volume 2] 2023.02
+
+(Continued from Volume 1)
+
+In the previous volume, I supposed a number of hypothetical elements which could be considered the most fundamental building blocks of any game we can possibly imagine. This may be deemed too rash an assumption, and I by no means deny the possibility that the conceptual model I have devised so far is a flawed one. In order to solve the problem of game design with reason rather than a cloud of irrational ideas, however, one should attempt to at least capture a rough snapshot of the abstract nature of games by means of bold generalization. It is my personal conviction that, as long as such generalization does not stray too far from our shared definition of adequacy, it may show us a pathway to a deeper understanding of how a game can be designed.
+
+Let me recapitulate some of the main propositions that were previously made. A game, regardless of its genre, usually takes place in its own isolated world (unless we are designing an AR (Augmented Reality) game, in which case the world may have direct causal relations with that of our own). Inside this virtual world, we have a set of objects which interact with one another based upon certain rules. The question is, how many types of object should there be, and how should such types differ from each other? One might suppose that every one of these objects is merely a point mass which behaves solely according to the laws of classical mechanics, and this is a perfectly reasonable presupposition to make if we are designing a physics simulator. When we are designing a game, however, we must be aware of its narratives and how well they will be able to articulate themselves on top of our model of how objects are distinguished and arranged within the context of gameplay.
+
+In order not to deviate from such a task, I first rooted the origin of my design belief in the existence of a lifeform as a purely mathematical entity and the notion that its ultimate goal is to survive and reproduce for the purpose of prolonging its own existence as much as possible - for it is the question of life and death (i.e. "being" vs "non-being") which sits on the heart of any narrative, since narratives themselves are issued by living beings. And to clearly define the full range of dynamics which signify the presence of life and its spectrum of primeval goals, I have come up with a number of spatial entities.
+
+<003_21>
+
+Inside the game world, there is a point in space which represents the central lifeform called "myself". This is the protagonist which is supposed to be the focal point of the game's narratives. This biological organism, for the purpose of following its instincts (e.g. live, eat, grow, reproduce) as accurately as possible, has developed a tendency to measure its own success with respect to the rest of the universe by means of its own "region of influence". When the region grows in size, the organism knows that the footprint of its own existence will propagate further through spacetime and therefore satisfy its ultimate purpose in life. When the region shrinks in size, on the other hand, the organism knows that the distance of such propagation will be shortened (which is clearly undesirable).
+
+Aside from the presence of a lifeform and its surrounding region of influence, there are two opposing types of particles called "resources" and "obstacles". Colliding with a resource increments the lifeform's number of chances of executing an action, thereby enabling it to grow its region of influence in larger quantities than before. Colliding with an obstacle decrements the lifeform's number of chances of executing an action, thereby forcing it to grow its region of influence in smaller quantities than before.
+
+All these theoretical objects and their relations collectively form a pattern language of the game's narratives, not from a set of vague emotional/cultural references, but from a fixed set of mathematical definitions. For example, the modeling I have done so far allows me to summarize the aforementioned phenomena in terms of 3 independent variables (illustrated below).
+
+<003_22>
+
+In this diagram, "A" denotes the area of the protagonist's region of influence, "d+" denotes the average distance between the protagonist and the resources which it is able to observe (either via sensory organs or memory), and "d-" denotes the average distance between the protagonist and the obstacles which it is able to observe (either via sensory organs or memory).
+
+Previously, I have suggested the existence of the three most fundamental goals of every living entity: (1) Absorb, (2) Expand, and (3) Secure. The reasoning behind the conception of these three becomes clearer when we consider them as the simplest collection of motives in terms of the derivatives of the protagonist's three scalar variables: (1) "d+", (2) "A", and (3) "d-".
+
+<003_23>
+
+To "absorb" is to decrease the distance between myself and a nearby resource, so as to grab it, eat it, and digest it for the purpose of gaining nutrients. This lets me carry out a greater number of actions than before due to increased energy. To "expand" is to enlarge the area of my region of influence, which is done by visiting points in space that are external to myself or by creating offsprings that are capable of visiting such places instead. To "secure" is to increase the distance between myself and a nearby obstacle, so as to decrease the number of chances of having my own energy taken away by it.
+
+These definitions can nicely be summarized into 3 algebraic expressions, which are listed below.
+
+<003_24>
+
+The most optimal way of satisfying the goal "decrease(d+)" with respect to a nearby resource is to not just get closer to it (since the distance "d+" will still be nonzero as long as the protagonist's center of mass does not perfectly coincide with that of the resource), but also to pick it up and put it inside one's own body. Since both the protagonist and the resource are theoretically a pair of mathematical points, putting one of them "inside" the other naturally makes their centers of mass overlap and hence reduces "d+" down to exactly 0. The process of approaching a resource, picking it up, and putting it inside one's body can be denoted as "collect(resource)". This interpretation of "decrease(d+)" also matches the functional implication of a resource because one must ingest it first in order to digest and extract nutrients out of it.
+
+The most optimal way of satisfying the goal "increase(A)" is to conduct one of the two aforementioned methods of expanding one's region of influence - that is, either visit a place which has not been visited for a while (in order to recharge its potential to transmit the organism's chain of causality), or create an offspring who will help expand the region instead. These two procedures can be denoted by "explore(outside(myself))" and "create(offspring)". The function "outside(myself)" indicates the set of all points in space which belongs to the outside of the organism's own body (which, in our case, can be defined as the set of all points in space minus the current position of the organism).
+
+The most optimal way of satisfying the goal "increase(d-)" with respect to a nearby obstacle is to either avoid it (because getting farther away from the obstacle increments "d-") or destroy it (because destroying the obstacle, while it may be significantly harder then simply avoiding it, will instantly change the distance between myself and the obstacle to be greater than or equal to the minimum distance between the earth and the heaven). These two procedures can be written as "avoid(obstacle)" and "destroy(obstacle)", respectively.
+
+<003_25>
+
+So far, one may have acquired an impression that I am now delving into an endless rabbit hole of arbitrary details which are hardly anything more than a mathematically elaborated pile of wishful thoughts. But please bear in mind that there is a definite end to the process which I have been undergoing, and by the time the end exposes itself, it will complete the full picture of how all these functional specifications are supposed to come together and fit nicely into a unified design methodology.
+
+Let's break down the procedures further. We have a bunch of new semantic elements called "collect", "explore", "avoid", "create", and "destroy", which are secondary goals aimed to solve their respective primary goals (i.e. "absorb", "expand", and "secure"). A person who is well-versed in computer science will easily recognize a recursive pattern here and proceed to attempt to break down these elements even further, thereby yielding tertiary goals from secondary goals, quaternary goals from tertiary goals, and so forth. Eventually, what we expect to witness is one gigantic tree of goals (which is often being modeled as a "behavior tree" in a videogame), in which the top of the tree indicates the most abstract goals, whereas the bottom of the tree indicates their most specific constituents (e.g. "Move object X from point P1 to point P2", etc). The question is, what are the most specific (i.e. "atomic") goals we can ever imagine? Once we know this, we will have a clear notion of what are the exact kinds of primitive actions we ought to implement while designing the computational structure of gameplay systems. And my personal belief is that the most basic form of action, which has the capability of achieving any type of goal when combined together in multitude, is "movement" (expressed in terms of the "move(...)" function).
+
+The reasoning behind this lies upon the process of breaking down the goals. What will the protagonist have to do to "collect" an object called X, for example? One answer which makes topological sense is that hardly anything more than a series of simple movements will suffice. The protagonist can first approach X (i.e. Move the protagonist to X), put X into its own body (i.e. Move X to the inside of the protagonist), and that's it. These two actions, which are nothing more than a pair of discrete movements, allow the subject to "collect" X by first approaching it and then integrating it as part of one's internal inventory space.
+
+The case of the "explore" goal is even simpler. Here, the protagonist only needs to move itself to a random position in space which belongs to the outside of its own body. This can be expressed as a single movement.
+
+The "avoid" goal is also a single-movement goal, the only difference being that the destination of the motion is the opposite position of that of the given object X with respect to the protagonist's position.
+
+<003_26>
+
+What about "create" and "destroy"? At first, it seems that these two are primitive actions which fundamentally distinguish themselves from the act of movement. If we pretend to believe in afterlife and reincarnation, however, the process of creating and destroying an object can simply be interpreted as the process of transferring its immortal soul from ether to earth or from earth to ether. In more neutral terms, we can say that "creating" an object X is the equivalent of moving X from imaginary space to real space, whereas "destroying" an object X is the equivalent of moving X from real space to imaginary space.
+
+<003_27>
+
+Real space represents the set of all points in space that are currently defined as "existing", whereas imaginary space represents the set of all points in space that are currently defined as "not existing".
+
+<003_28>
+
+The five operations I have described so far (i.e. "Collect", "Explore", "Create", "Avoid", "Destroy") can be written algebraically as well. Notice that the right-side expressions are all made out of "Move" procedures only.
+
+<003_29>
+
+If we substitute the inner procedure calls of the 3 most fundamental goals with their respective right-side expressions, we get the fully expanded sequences of actions as shown below.
+
+<003_30>
+
+The implication of this is pretty neat and minimalistic, despite the seemingly complex list of steps we had to go through algebraically. The fact that life's three most fundamental goals (Absorb, Expand, Secure) can be broken down into mere sequences of movements and nothing else suggests that the entire narrative space of the game can be defined as a purely mechanical system represented by the collective sum of energy particles and their atomic movements.
+
+This allows us to design a game with a methodology that is reminiscent of a scientific experiment in a laboratory. Once we know how the individual atoms behave, we will know how they combine with each other to form molecules. Once we know how these molecules behave, we will know how they will interact with one another to form large-scale molecular structures such as crystals. Eventually, once we know how these structures behave with respect to their circumstances, we will know how to leverage their characteristics for the purpose of manufacturing certain types of materials that are useful for industrial applications, and so on.
+
+The same scientific reasoning can be applied to the study of game design as long as we start by breaking it down to its most atomic constituents and then figuring out how to assemble them one by one for the purpose of creating more and more complex structures. In our case, the "atomic constituents" are simple discrete movements of indivisible objects.
+
+<003_31>
+
+Now, of course, one may as well suspect that the model illustrated so far, which is composed of mathematical points in space and hardly anything else, is way too simplistic to provide the designer with enough room for devising rich gameplay experience. Indeed, the set of alternative player choices listed so far have been quite limited in scope, and they alone will not let anyone create a vast landscape of narratives which is typically expected in today's videogames.
+
+The gameplay dynamics that have been explicitly illustrated so far do not confine themselves in their present state of demonstration, though. They are but an infinitessimally minuscule subset of game design's possibility space which is awaiting us behind the fort of unconscious, and the journey to explore its mysterious ponds and ravines has just begun.
+
+Before seriously plunging into the essential strategies of exploding the spectrum of gameplay choices from a minimal set of emergent building blocks, let me talk about the definition of the word "offspring" which I have mentioned a few times so far. A typical usage of this word is to indicate somebody's biological child. In our context, however, its meaning is a bit more abstract.
+
+The topmost goal of an organism is to secure and expand its region of influence, and the major difficulty which arises when it tries to keep growing its region's size is that the region itself is not a permanent entity; it has a tendency of eroding over time, as well as being overtaken by other organisms' regions. So it is not wise for the organism to merely keep recovering the weakest portions of its region by moving back and forth as frequently as possible, for it is a common sense that it must have its own speed limit as well as the necessity to constantly refuel itself with external sources of energy (e.g. resources), which are not always available instantaneously. Such a monotonic strategy is bound to introduce a hard limit to the maximum size to which the region can grow. A better method to guarantee the unbounded growth of the region would be to produce "offsprings" which will be emitting their own forces of influence around their positions in addition to those of the parent, thereby splitting the amount of responsibility it takes to maintain the current area of the region.
+
+<003_32>
+
+The offspring mentioned here do not have to be one's biological descendants; they may as well be one's properties such as livestock, pets, real estate, goods, and other objects which can be owned by the organism, or may even be abstract ones such as the organism's intellectual properties (e.g. patents), financial assets, reputation, credit, personal relationships, information, and others which can be deemed to help expand the region of influence.
+
+These offsprings, abstract or non-abstract, collectively form the holistic definition of "myself" from the organism's point of view. When I own a car, it becomes part of my extended self despite being a vastly separate object from a purely mechanistic view. The reason why I can say this is that, since I own it, anyone who damages the car will have to pay me for it (at least from a legal perspective). This establishes a direct causal connection between the influence of my own existence and the influence of the car's own existence. If the car's area of occupation gets intruded, the intruder will be affected by the influence of mine (as a citizen protected by property laws) by having to pay for the act of offense. Therefore, it could be concluded that the car's area of occupation is a subset of my region of influence, and hence the car itself can be expressed as a point mass which constantly replicates my forces of influence around its current position. This is what an "offspring" is in our abstract context - an alternative point in space which extends the owner's influence beyond the physical reach of one's own body.
+
+And there is a great deal of diversity in gameplay we can extract from the presence of offsprings. Suppose, for example, that there is an offspring called X.
+
+<003_33>
+
+Previously, we only had 3 variables which were labeled as (d+, A, d-). Now with the presence of an offspring, we have 6 variables instead: (d1+, A1, d1-, d2+, A2, d2-). "d1+", "A1", and "d1-" are the same ones as introduced before; they are the protagonist's distance from a resource, the area of the protagonist's region of influence, and the protagonist's distance from an obstacle, respectively. "d2+", "A2", and "d2-", on the other hand, are quantities of the same exact meaning except that they are measured with respect to the offspring X instead of the protagonist.
+
+(d1+, A1, d1-) represent the metrics for tracking the performance of the protagonist's own body, while (d2+, A2, d2-) represent the metrics for tracking the performance of the offspring's body. And since these variables come in pairs such as "d1+,d2+", "A1,A2", and "d1-,d2-" (which can be expressed as 2D vectors) instead of isolated scalar quantities, each of the lifeform's three most fundamental goals can now be represented as a pair of alternative goals instead of just one (one for changing the left side of the pair, the other one for changing the right side of the pair).
+
+The sub-goals "decrease(d2+)", "increase(A2)", and "increase(d2-)" can be expanded as shown in the picture below. The actions required to fulfill these goals are quite different from ones which associate themselves only with the parent and not its offspring. In this new circumstance we are facing here, the subject of these new goals is the offspring. However, it is still the parent who is carrying out these goals, which means that the way to accomplish them (from the parent's perspective) is to "help" its offspring to absorb, expand, and secure instead of directly pursuing them on its own because the parent is not a ghost that can just possess the offspring's body and have direct control over it.
+
+<003_34>
+
+And again, all of the subsidiary tasks involved in following the goals above can be fully expanded into sequences of discrete movements, which can be translated directly into machine instructions in almost any computing device.
+
+<003_35>
+
+Aside from alternative choices which arise from the presence of an offspring, there may also be alternative choices which arise from the organism's ability to bring a new offspring into existence. For example, one may destroy an obstacle by creating an offspring called "bullet", moving it to the inside of the obstacle's body (by means of "shooting"), and then letting the bullet carry out its own "secure(...)" goal by destroying the obstacle. The converse is also feasible. One may as well destroy (explode) one of its offsprings called "bomb" for the purpose of destroying its nearby obstacles as a side effect. The act of destroying one's offspring disobeys the organism's "expand" goal (since the annihilation of an offspring shrinks one's region of influence), yet it also allows the organism to obey its "secure" goal by getting rid of obstacles, which can be considered a decent choice to make if the latter brings more benefit to the organism than the former. Such an exchange between two competing goals (i.e. sacrifice of one goal for the sake of another) is an intelligent decision which the organism can be expected to display if it is a well-designed AI agent, or if it is a player-controlled character.
+
+Such methods of endlessly spreading one's assortment of imagination, however, may not be adequate for our purpose of penetrating into the essence of emergence in gameplay. In the next volume, I will explain how the dynamic elements which have been mentioned so far will be able to fit together in the overall methodology of game design.
+
+(Will be continued in Volume 3)
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Narratives, Mechanics, Game, Design, Qualitative, Quantitative, RTS, MOBA, Videogame
+
+[Universal Laws of Game Design - Volume 3] 2023.02
+
+(Continued from Volume 2)
+
+So far, I have been suggesting a new way to search for an optimal method of designing a game by constructing a purely mathematical universe - a universe made out of abstract entities such as a single point in space representing a biological organism, its "region of influence", as well as energy particles of two opposing forces (positive and negative). The conception of such a hypothetical model, although its metaphysical nature prevents it from showcasing any specific example of game design right off the bat, has been intended to function as a gateway to the discovery of a set of "Universal Laws of Game Design" based upon its focus on our shared biological instincts as well as their generic applications.
+
+The abstract world which I have been devising largely consists of elements which reflect the two mutually reinforcing aspects of game design - narratives and mechanics.
+
+<003_36>
+
+Since a game must begin with a narrative (otherwise it would be categorized as either "toy", "puzzle", or "simulation") and the root of it is the player's desire to become successful as a lifeform, it seems obvious that the most fundamental instincts of any biological being must also be the most fundamental building blocks of any narrative. And while it may appear as rather arbitrary, I have supposed the classification of our most archetypal desires into 3 types: Absorb, Expand, and Secure. These three indicate the topmost nodes of the player's goal tree, from which all other (i.e. subsidiary) goals originate in the form of subtrees. These are, within the context of the abstract gameplay model which I am proposing, the most atomic constituents of the game's narrative space.
+
+In order to let the player traverse this vast tree of goals, however, a game must also involve a web of mechanics. Goals are nothing but a wishlist unless we have ways of achieving them, and such ways can be described as "interactive" only as long as the player is compelled to take actions to fulfill them. The presence of gameplay mechanics ensures the realization of such actions, due to their chains of causality which can either be invoked or not invoked depending on the player's choices. The easiest way to introduce such mechanics, at least from my perspective, is to come up with a few spatial entities which represent our real-life objects in the most generic fashion as possible (i.e. The protagonist, a region of influence, resources, and obstacles). Interactions among these indivisible objects are basically the game's mechanics which lead the player from one goal to another.
+
+And the converse is also true. By observing a set of mechanics and their emergent behaviors, we can derive an assortment of brand new narratives. Placement of a treasure box behind a locked door, for instance, generates narratives which eventually lead the player to conceive the goal: "Find the key which unlocks the door".
+
+<003_37>
+
+The overall conceptualization of how narratives and mechanics form a cycle of mutual reinforcement, however, is not detailed enough to let the designer create anything substantial; it is more or less just a fuzzy overview of what is going on in a broad sense, which by no means delves into specifics that are crucial for the design process.
+
+And because of this concern, I went through a quantitatively precise methodology of how the construction of a goal tree and its machine-level protocols of execution can be made possible by means of algebraic expansion. Each goal is essentially a formula whose terms can be substituted with their respective subgoal formulas, which means that the entire goal tree can be expanded into one large expression that is solely composed of the most atomic terms we can possibly think of. Such "atomic terms" are the computer's most primitive operations, which in our context are the movements of individual objects.
+
+<003_38>
+
+It is thus quite clear that we know how to design a detailed gameplay system based off of a set of narratives as well as a set of mechanics. We come up with goals, algebraically break them down all the way down to the most primitive level (e.g. discrete topological movements), and from the dynamics of their ensuing set of interactions, we allow ourselves to conceive yet another potential set of goals to solve, and so on.
+
+The question is, will this cyclic methodology really lead us to the process of game design? After all, a game is more than just a stack of goals and actions. There are somewhat more qualitative aspects of designing a game such as thematic elements, storylines, hints, dialogues, contents, progression, levels, items, and myriads of other subtleties which are essential for rich gameplay experience. The purely abstract model which I have described so far does not directly suggest any method of implementing such features, so how an earth will anyone be foolish enough to expect a decent gameplay prototype out of it?
+
+This kind of doubt is definitely valid on a perceptual level, yet it could also serve as a mental barrier which prevents the designer from seeing the essence of what is really going on behind the facade of worldly sensations. Anyone who is willing to design a game with efficiency in mind must build things from a carefully chosen backbone of abstraction, which does not necessarily embody any of the "features" that are directly visible to the player's eyes, yet has the capacity of giving birth to a number of functional elements that are highly modular and reusable. Once we have such elements, we will be able to come up with new gameplay features simply by assembling them together like Lego bricks.
+
+Yet, it is also true that the theoretical model which has been outlined so far lacks a number of core elements which are vital for its practical applications. In order to create a commercially viable game out of it, for instance, one definitely needs to be able to answer the following 2 questions:
+
+(Question 1) Most games should be able to involve not only the player character, but also other characters which exhibit their own behaviors in intelligent ways (i.e. behaviors that are somewhat more sophisticated than mere mechanical actions driven by mechanical laws). They may either be controlled by other humans such as those in a multiplayer RTS or MOBA game, or AI agents which imitate the way humans control their characters. How will the current abstract framework, which seems to only involve a single protagonist and a group of things which solely exist in relation to it, make it possible for us to come up with multi-agent gameplay?
+
+<003_39>
+
+(Question 2) The types of objects which have been specified so far are extremely generic. For example, anything which provides the player with energy is called a "resource", while anything which steals energy from the player is called an "obstacle". Most real games, however, contain multiple variants of resources and obstacles from which a wide spectrum of gameplay dynamics may arise. Such variants can hardly be designed within the context of mathematics, for they require thematic elements which cannot be fully analyzed in a purely logical manner. Hence, how on earth will a generic skeleton of a game be able to yield any chance of diversifying its gameplay ingredients, if the skeleton claims itself to be already functionally perfect in its own right?
+
+<003_40>
+
+Let me tackle the first question. It is, for sure, crucial to have multiple player-like agents within the gameplay system unless we only want to design static puzzles and nothing else. And this bit of necessity can immediately perplex the designer if we are to assign fixed labels to all things that are represented as objects in our hypothetical game world. The reason behind this is pretty easy to discern, as illustrated below.
+
+<003_41>
+
+Suppose that there is a human, a shark, and an ocean. Which ones should be considered "myself", "resource", and "obstacle" then, if we are to fit them into the context of the aforementioned mathematical model of the gameplay space?
+
+Our intuition leads to the notion that the answer must be relative in nature. From the perspective of the human, the shark is an obstacle because it has the potential to attack him/her. The ocean, too, is an obstacle because it works as a spatial barrier which makes it harder for people to move from place to place. What about from the perspective of the shark? To the shark, a person is an obstacle because he/she is able to inflict damage upon its body by means of a spear or other equipment. The ocean, on the other hand, must be considered a resource because it allows the creature to move as well as maintain its biological function.
+
+The presence of such relativity, which arises from the coexistence of multiple animate (i.e. motive-driven) agents, forces us to start representing the current model of the gameplay universe a bit differently from before. An object is described in terms of properties such as "myself", "resource", or "obstacle", not because they are intrinsic to the object itself, but because they are endowed upon the object by the observer's interpretation. Each property is more of a relation between a pair of objects than a constituent of a single object.
+
+<003_42>
+
+In general, we can define each of the objects as an "observer" because every one of them is the protagonist ("myself") from its own viewpoint. And the overall worldview can be summarized as follows:
+
+<003_43>
+
+A universe which comprises N observers can be considered an ensemble of N parallel universes, each of which is each observer's own set of interpretations regarding all of the N observers. For the sake of abstract reasoning, one could say that even a piece of rock is an "observer" in a sense that it does observe things that exist in its own parallel universe, yet possesses a tendency to not assign any motivational meaning to them.
+
+Going back to the human/shark example above, we can fairly easily draw a conclusion that the human-observer belongs to a parallel universe in which both the ocean and the shark are interpreted as obstacles, whereas the shark-observer belongs to a parallel universe in which the human is interpreted as an obstacle but the ocean is interpreted as a resource. And the motive-driven behaviors of these two observers (human and shark) can be determined by algebraic patterns which originate from their respective parallel universes, just as shown below.
+
+<003_44>
+
+Representing the gameplay space as a collective sum of distinct observer-spaces can give us a strong temptation to indulge in the notion of synthesizing complex narratives that are more sophisticated than the three initial goals (i.e. Absorb, Expand, and Secure). The coexistence of different relations among different objects gives rise to a wide variety of implicit goals which may yield profound decision points (e.g. dilemma, prioritization, moral ambivalence, etc) and shift the gamer's stream of consciousness above and beyond that of a puzzle-solver, thereby opening up a gateway through which the game itself can narrate its own emotional stories as a collective lore. Examples of how complex relations might be able to emerge out of simpler ones are listed below.
+
+<003_45>
+
+If both objects are resources to each other, they are allies. If both of them are obstacles to each other, they are enemies. When only of them interprets the other as a resource and the other one doesn't care, that "resource" is just an ingredient (i.e. raw material) to be consumed, and so forth. Such descriptions are "derived relations" - ones that are derived from mutual arrangements of primary relations (e.g. "resource", "obstacle", etc). Given these additional factors, we can technically diversify the observing agent's behavioral pattern by endowing it with a bunch of conditional statements, each of which specifies how to react to the presence of each derived relation (illustrated below).
+
+<003_46>
+
+This sort of reasoning, however, raises two major concerns. One is that it complicates the algebra way too much, and the other one is that there is a great deal of ambiguity involved in the construction of derived relations and their ensuing goals/actions.
+
+First of all, let us recall the elegance of the original formulas which were introduced in the previous volume: "absorb = decrease(d+)" and "secure = increase(d-)". They explained the agent's entire behavioral pattern by means of changes in its distance with respect to other objects. The purely geometric nature of this design, as well as its simplicity of computation, allowed us to easily come up with goals which could gracefully be broken down into sequences of primitive actions (i.e. spatial movements). Now with a bunch of derived relations which are not logically as straightforward as the original, we are heading toward a mudpool of vague design ideas made up of myriads of custom scenarios and potentially contradictory edge cases.
+
+An even worse consequence of using derived relations is that they can be quite arbitrary in meaning. If Y is a resource of X and X is an obstacle of Y, for example, should it really mean that Y is X's prey and X is Y's predator? What if X is physically weaker than Y? If that is the case, shouldn't Y be called a "host" of X, and X a "parasite" of Y, since X won't be able to just catch and devour Y because does not possess enough strength to do so?
+
+Also, what if there is a case in which an object can both be considered a resource AND an obstacle simultaneously, such as a radioactive material which can harm our bodies but can also be used as a source of power? What kind of derived relation should there be between this object and its observer? And if there is one, exactly how should the observer behave in order to satisfy both the "absorb" and "secure" goals at once, in regard to this "dangerous yet useful" object?
+
+What if my own body is also my resource (supposing that I am a plant, capable of producing nutrients on my own)? Should I then "collect" myself and then use myself as a fuel? And if that's the route of my reasoning, hasn't such a goal already been fully achieved, since the distance between myself and the resource is already zero?
+
+What if there is a resource which is also an obstacle of another resource? Shouldn't I take this complexity of relations into account and make sure that these two types of resources are segregated from each other as much as possible, while also making sure that I myself is as close to both of them as possible (which may introduce oscillatory behaviors due to perpetual recurrence of self-contradiction)? And what if there is a resource which is also a resource of my obstacle? Shouldn't I, then, be making sure to separate out my resource from my obstacle as much as possible, while also avoiding the obstacle and collecting the resource simultaneously? Should I avoid and then collect? Or collect and then avoid? Which heuristic should be used to determine the precedence between these two goals?
+
+<003_47>
+
+Etc...
+
+And the list goes on and on, forcing us to consider every possible permutation of relations and manually design a separate behavioral algorithm for every one of them.
+
+Such an exhaustive approach, for sure, is a terribly inefficient and error-prone method of developing the game's theoretical model. The main reason behind its exploding complexity is that thinking in terms of supersets of mutual relations creates a huge gap between the game's narratives and mechanics.
+
+When I introduced a bunch of new relations such as "prey", "predator", "ally", and "enemy", what I did was come up with a number of semantic seeds for the game's advanced narratives. However, such derived relations were something conceived outside of the game's system of mechanics and thus turned out to be not quite translatable to a collection of executable actions. This made them stay as a vague cloud of mere wishes, hardly achievable in any specific way.
+
+We may as well try the exact opposite method - that is, just come up with pure mechanics first and then build narratives on top of them. This too, however, leads to more or less the same level of unbearable complexity as more and more mechanics get introduced.
+
+Let me take an example by supposing that a person starts to design the game's mechanics by devising generic components such as "signal emitter", "signal receiver", "signal filter", and so on. Since they are too abstract, one should be compelled to derive more specific types of components from them such as "ray signal emitter", "area signal emitter", "signal distance filter", "signal line-of-sight filter", and so on. A gun, for instance, can be considered an object which uses a "ray signal emitter" because it sends a signal called "bullet" by casting a ray through its calculated line of trajectory, and the target that is being hit by the bullet can be considered an object which uses a "signal receiver" because it receives the "bullet" signal from the gun and invokes an appropriate callback procedure (i.e. A function which plays a death animation and despawns the target, etc).
+
+<003_48>
+
+And we can definitely keep doing this for a while, inventing as many gameplay mechanics as possible by virtue of both inheritance and composition. If we have a timer and a bomb, for instance, we can combine them together to create a timebomb. If we have a lock and a door, we can combine them together to create a lockable door. And if we put a timebomb on the other side of a lockable door and then lock it up while there are enemies behind it, we can eliminate the enemies with an explosion without being hurt because the door will protect us. And so on.
+
+However, it soon becomes quite clear that designing a game by simply coming up with a truckload of mechanical elements will hardly lead us anywhere beyond a mere assortment of emergent phenomena, since it is hard to decide exactly what sort of narrative sense we ought to make out of them. Suppose we have a game design template which is capable of generating an imaginary maze-like hallway (like the one in Wolfenstein 3D), filled with myriads of combinable/interactive elements such as locked doors, keys that can unlock those doors, buttons and switches which can trigger special events when activated, monsters with swords, monsters with guns, monsters with grenades, healing potions, invisibility potions, traps, explosive gas tanks, and so on. There are indeed many ways of arranging such elements, and one may be able to argue that even a random arrangement will be decent as long as the game is not primarily story-driven because the dynamics of their in-game interactions will naturally induce the player to make up his/her own set of narratives during the play. Delegating the production of narratives to the inner workings of the game's mechanics, however, makes it hard for us to come up with a game that is semantically rich in its own fictional context. A mere arrangement of mechanics may introduce an enormous set of clever goals such as killing an enemy by means of an unexpected chain reaction among a group of seemingly related objects and so forth, but it is hardly capable of giving birth to subtle narratives such as moral struggles, social bondage/conflicts, profound emotional revelation, jealousy, vengeance, betrayal, compassion, humor, etc.
+
+And if we are to complete the full picture by trying to devise a whole separate list of narratives which is supposed to fit the complex web of mechanics explained above, we will be just as equally lost (if not more) as in the previous case in which we saw the difficulty of coming up with mechanics which fit the complex web of subtle narrative elements. Here is my conclusion regarding the requirements of a clean game design methodology, based off of the observations I have made so far.
+
+A well-made game must consist of both narratives and mechanics; a "game" which lacks mechanics is a mere lore, and a "game" which lacks narratives is a mere sandbox.
+
+And both the game's narratives and mechanics must be designed concurrently as parts of one shared system of logic, since either developing a system of narratives first and then trying to develop a system of mechanics on top of it, or developing a system of mechanics first and then trying to develop a system of narratives on top of it, will introduce too much complexity/ambiguity due to their lack of mutual compatibility. The question is, "How on earth will we be able to come up with a multidisciplinary prototype which is rich in both narratives and mechanics, despite the fact that these two areas of knowledge are drastically different from each other?"
+
+In the next volume, I will answer this question by explaining how a minimally designed mathematical model can provide a "common ground of reasoning" for these two areas of knowledge.
+
+(Will be continued in Volume 4)
+
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Game, Story, Boardgame, Narrative, Mechanic, Knowledge, UI, UX, Postmodern
+
+[Universal Laws of Game Design - Volume 4] 2023.02
+
+(Continued from Volume 3)
+
+Can there be "Universal Laws of Game Design"?
+
+Game developers whose academic upbringings can be traced back to the study of math and science may have already asked this question at least once during their lifetime, for it often brings up a bit of annoyance to be expected to simply concede the widely accepted opinion that a game, as a whole, cannot be analyzed in a purely quantitative manner because it is supposed to be an "interdisciplinary artform". After all, how could somebody even dare to question the stylish undefinability of postmodern rhetorics, which feign their own possession of intellect by hiding behind the wall of vague metaphorical connotations?
+
+While it may sound snobbish, however, it is my personal belief that refusing to analyze a subject as a rational entity simply because of its apparent complexity is a form of intellectual laziness. No area of knowledge should be exempt from thorough examination as well as genuine endeavors to break it down into logical pieces, and the study of game design is not an exception.
+
+In the previous volume, I undertook a series of thought experiments and came up with the conclusion that a well-designed game must be rich both in its narratives and mechanics, and that these two elements must be developed in a concurrent (mutually reinforcing) fashion so as to ensure that it is always possible to mathematically derive either one of them from the other.
+
+<003_49>
+
+The question is, how to construct a model which enables such a set of criteria?
+
+This is indeed a tricky problem because simultaneously developing both the narratives and mechanics of the game, while also making sure that they fit each other, is prone to lure us into an endless abyss of extra definitions and arbitrary rules for the sake of resolving their mutual incompatibilities. And in order to bypass this, I have been trying to keep the abstract model of gameplay as simple as possible since the very beginning of this series.
+
+The reason for doing this lies on the notion of "shared knowledge" and the importance of leveraging it for the purpose of reducing the boundary between narratives and mechanics.
+
+While narratives and mechanics belong to two vastly different branches of knowledge, they both are part of one vast pool of human intellect within which their shared origin can be found. Humanity's tree of knowledge, while stretched like fungi all over the place, can ultimately be traced back to its most fundamental root called "philosophy". The ancients began to question the nature of mankind as well as the universe as soon as they were freed up from their utmost needs such as hunger, thirst, and security. They searched for the meaning of life, death, and other worldly phenomena, communicated with one another, wrote down their thoughts, and even proceeded to invent brand new languages (e.g. algebra) for the purpose of expressing their novel ideas.
+
+<003_50>
+
+As time passed by, the study of philosophy diverged itself into more specialized branches of knowledge such as ethics, aesthetics, metaphysics, natural philosophy, and so on. Then these branches recursively diverged themselves into even more specialized branches such as "physics", "chemistry", "sociology", and so forth, due to the emergence of experts who focused more on specific areas of knowledge than the entirety of what humans can think and reason with.
+
+This process of specialization led to a great deal of misunderstanding between experts who came from different backgrounds. This has been fine for most part, especially in most of our industrial pipelines in which almost every process can be nicely encapsulated into an approximately independent area of expertise. The real problem of specialization rises when our intention is to create a multidisciplinary system such as a videogame. Since it involves fine arts, music, literature, storytelling, AI, physics, system dynamics, data science, and other fields of knowledge which differ significantly from one another yet are mutually intertwined in subtle ways, a game quickly becomes a piece of pure pain to make as soon as a group of highly specialized individuals who do not understand each other simply gather together and decide to undertake the process of developing it by means of collaboration.
+
+<003_51>
+
+Specialization of knowledge only works well for specialized areas of the industry. For designing and implementing a videogame, what we need is a group of "philosophers" who desire to understand the fundamental nature of games instead of solely focusing on their own domains of expertise. It is only when we establish a common ground of knowledge that we can start merging different fields of expertise into a single boiling pot and brew out the game as one, elegantly coordinated system.
+
+<003_52>
+
+And the common ground which I am referring to here is the study of philosophy, for it is a generally accepted notion that it is the root of all other studies. One question which may arise immediately is, "Okay, so you want us to design a game by using... philosophy? What do you expect us to do? Sit on a round table and take turns quoting some of the famous words of ancient Greek philosophers for the hope of discovering cool game design ideas?"
+
+For this, I would suggest that the word "philosophy" is often being misinterpreted as an act of deciphering a pile of obscure ramblings from old academics. The study of philosophy does not have to be approached this way. Let us just ignore the preconceived notion of what the study of philosophy is supposed to be, as well as what sort of recondite terminologies we ought to employ in order to even let ourselves talk about it, and just restart our stream of consciousness from the very beginning like a new-born infant. Once we start from nothing and try to build some knowledge out of this pure state of nothingness, we will sense a hint of liberation which unhinges us from the burden of complicated theories as well as their annoying technical details. This pure development of knowledge is what I am referring to as "philosophy" within the context of this writing, and it is precisely this mode of development through which one can elaborate a common ground of reasoning that can be shared by all types of experts.
+
+<003_53>
+
+This was the line of logic I had implicitly drawn in volume 1, by means of a conceptual model made out of a few abstract yet universal entities. The initial ground of reasoning did not begin with a survey of popular games or popular game design books. Instead, what I did was simply start from nothing as though I were a child without any knowledge in the game industry, and gradually construct a rational model based off of our most intrinsic values that can be deemed universal to a certain degree, such as biological instincts ("Eat", "Reproduce", "Survive", etc) as well as basic elements of geometry (points, lines, shapes, etc). The purpose of doing this was to separate out the methodology of game design from any of its areas of specialization (such as "progression curves", "intransitive mechanics", "combat design", "user experience", and so on), so as to be able to preserve its essence and keep it universally comprehensible.
+
+<003_54>
+
+The trickiest aspect of designing a game based upon such a pure faculty of reasoning, though, is that it is way too generic and therefore not directly applicable to an actual game. This means that we do require some way of ensuring that the game's abstract model, while being general enough for nearly everyone to understand, can also extend itself to a rich panorama of specific use cases. According to my observations, these two seemingly contradictory requirements can be resolved by means of the two following strategies: Mathematical Minimalism and Quantitative Expansion.
+
+(1) Mathematical Minimalism
+
+The key to establishing a shared model of the game, which is supposed to be comprehended by anyone regardless of their professional backgrounds, lies on the usage of concepts that are universal. In order to establish a body of knowledge which we can all share in common with ease, we must step back from specialized areas of expertise (e.g. arts, engineering, level design, economy design, etc) and start everything afresh on a blank paper.
+
+The answer to the question of how to undertake such a task lies on mathematical minimalism. As some of us are already aware, mathematics is one of the most pristine languages of mankind which is marked by its ability to represent every definable idea in its utmost degree of abstraction. Using mathematics, we can get rid of all specialties from a body of knowledge and cut it down to its most generic form. And the benefit of this is that such a purified model is independent of any specific context which might require the observer to become an expert at a particular subject.
+
+<003_55>
+
+Throughout the previous volumes, I have introduced a mathematical model of gameplay which only comprises 3 most fundamental goals (i.e. Absorb, Expand, and Secure) and their corresponding behavioral patterns (i.e. Decrease(d+), Increase(A), and Increase(d-)). One underlying assumption I made during the construction of these primitives was that they must all be "minimal" in terms of computation, so that even people who are not well-versed in the study of math will be able to understand the model fairly easily. If I introduced rather more advanced concepts such as rigid bodies, colliders, pathfinding, force/acceleration, local avoidance, and myriads of other topics in hard science, their ensuing complexities would have quickly overwhelmed the viewer and created an impression that the whole model is supposed to only belong to one specialized branch of knowledge called "engineering" and thus should be ignored by others.
+
+In order to stay at the root of the tree of knowledge (aka "philosophy") instead of straying off to piles of petty technical details, what I did was to make sure to exclude any of the advanced mathematical techniques from the scene while still leveraging the power of math to represent our core concepts in the most shareable format as possible. Such a mode of development is what I would call "mathematical minimalism"; it is "mathematical" because every one of its constituents is rationally defined, and "minimal" because it describes every relation among its constituents as a simple measure of distance in space (which is the most minimal metric one can typically think of, regarding the relationship between two spatial entities).
+
+We could have undertaken the journey of analyzing the relationships between objects by means of complex metrics such as: "The smallest weighted cost of traversing a path which starts from point A and ends up at point B", "The amount of energy it takes to move a unit mass from point A to point B", "The expected amount of damage the player will receive while travelling from point A to point B at its maximum possible speed", and so forth, but such details are non-fundamental and can be elaborated later on based off of the original question: "How to decrease the distance between A and B?".
+
+<003_56>
+
+The problem of implementing a pathfinding algorithm, for example, is important for engineers but not necessarily important for designers. The problem of defining whether the player's goal pertains to the matter of reducing the distance between two particular objects, however, is such a fundamental description of what is happening within the game, that it must be understood by both engineers and designers.
+
+(2) Quantitative Expansion
+
+It seems obvious that a purely mathematical model of a game, while being easy to understand without any specific background knowledge, is not sufficiently capable of letting the designer come up with a gameplay prototype that is rich in context. And the cause of this lies primarily on the apparent over-simplicity of the initial model which prevents us from expanding the game's possibility space into richer and richer contextual domains.
+
+A feeble attempt I had previously made was to introduce a bunch of new qualitative elements to the scene, with the expectation that they will somehow allow us to enrich the game's design framework in a fairly consistent manner. This approach, however, quickly turned out to be not quite tenable due to the inherent dissonance between their qualitative nature and the attempt to analyze them quantitatively.
+
+<003_57>
+
+The main problem is that, when we add something qualitative to the system (as opposed to quantitative), we cannot seamlessly integrate it into the system's computational structure due to its inherent incompatibility. Relations such as "prey", "predator", "ally", and "enemy", for instance, are measures that cannot be reduced to rational definitions without making a truckload of arbitrary assumptions, and thus are prone to confound us with an infinitely wide spectrum of complexity. As a result, we naturally come to the conclusion that the system must always exclude any irrational concept from its domain of reasoning for the sake of preserving its sanity.
+
+Such a line of logic is what I would refer to as "quantitative expansion". We do need to expand the system of gameplay beyond its initial stage of conception in order to let it present the audience with scenarios that are more sophisticated than mere geometric figures pulling/pushing each other, yet we must always be careful not to do so by adding brand new concepts that cannot be represented in terms of mathematical definitions. Instead, we must augment the system solely by recombining its existing elements in a strictly quantitative fashion, for it is the most sensible way to assure that everything within the scope of the system will still be reducible to computational rules.
+
+<003_58>
+
+So, how shall quantitative expansion be done? What has been proven so far is that mere introduction of subjective terms such as "ally", "enemy", "prey", and "predator", without definitions which pertain to the domain of computability, has a tendency of halting the advancement of one's design process due to their semantic ambiguity. According to my viewpoint, the way to overcome this difficulty consists of the following two criteria: (1) Exclusion of External Observers, and (2) Additive Composition.
+
+(1) Exclusion of External Observers
+
+In the previous volume, I have mentioned that the universe as a whole can be broken down to multiple parallel universes, each of which corresponds to the set of interpretations made by each of its constituent observers in regard to its surroundings. The main source of complexity which we have clearly perceived was the attempt to treat multiple relations among multiple observers as parts of a whole and label it with a unique name. The downside of this approach was that, since each observer belonged to its own separate parallel universe, trying to combine the semantic implications of two or more observers led us to the problem of merging two or more parallel universes together into one unified continuum (which created countless rooms of obscurity).
+
+The solution to this is to avoid simultaneously considering the implications of multiple parallel universes and just focus on one of them - that is, only look at one particular observer and its outward relations at a time when determining its behavior, and simply ignore the perspectives of everyone else ("outward relations" mean the ways in which others are being interpreted by the observer of our interest, as opposed to the ways in which the observer is being interpreted by others).
+
+<003_59>
+
+This simplifies the problem by orders of magnitude, as it forces us to deliberately ignore the subtleness of meaning which may arise from a complex network of relations by excluding both circular and indirect connections from our domain of reasoning. All we need to care about when computing the goals/actions of an object, in this model, is its relations to others and nothing else.
+
+(2) Additive Composition
+
+So far, we have been assuming that each observer is a single mathematical point in space. This of course is a rather bold generalization which I have hitherto been carrying on for the sake of utmost simplicity, and is now turning out to be quite inadequate for expanding our gameplay system. If we consider every distinct object as a single point, the only shades of contextual diversity we will be allowed to add are only those that are qualitative in nature. In order words, if everything in our universe is an atom (i.e. indivisible entity), the only modification which can enlarge this universe's possibility space is to introduce brand new types of atoms, whose ensuing potential relations to the existing types are a bunch of arbitrary rules we have to specify thoroughly in a painstaking manner (which is extremely tedious and prone to contradictions).
+
+Because of this limitation, we must consider the possibility of representing each individual object of our game world as a composition of multiple atoms instead of just one. This obviously gives birth to a certain level of complexity, but it is a kind of complexity which can be analyzed in a purely additive manner under a set of carefully crafted disciplines. By "additive", what I mean is that the behavior of a whole is equal to the sum of the behaviors of its parts.
+
+<003_60>
+
+As long as every object in the gameplay universe is an additive composition of atoms, we can always derive the exact behavior of any object from the individual behaviors of its component atoms; algebraically, it is only a matter of summation as long as those individual behaviors are quantitative entities (e.g. numbers, vectors, matrices, etc). If we want to identify the behavior of a complex object, all we need to do is just identify the primitive behaviors of its atoms and then add them up; the resulting sum must be equal to the overall behavior of the object.
+
+How the aforementioned principles will help in case of practical applications, though, is another question we must answer. In the next volume, I will go over a couple of specific examples to demonstrate a way in which the principles shown so far can contribute to the process of game design.
+
+(Will be continued in Volume 5)

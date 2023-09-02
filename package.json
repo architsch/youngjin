@@ -1,0 +1,7 @@
+{
+	"name": "youngjin",
+	"type": "commonjs",
+	"exports": {
+		".": "./generator.js"
+	}
+}

@@ -1,0 +1,584 @@
+:d:An article about universal laws of game design.
+:k:Biology, Instincts, Game, Videogame, Survival, Mathematics, Motivation
+
+[Universal Laws of Game Design - Volume 5] 2023.03
+
+(Continued from Volume 4)
+
+How to design a game? And how to do it in a nicely orchestrated manner, rather than through an indefinite series of case-by-case analyses which can be deemed highly inefficient? It is my hope that a genuine search for "Universal Laws of Game Design" will be able to answer this question.
+
+It is not hard to observe that among numerous game development professionals, especially those who call themselves "indie", there is a tendency of over-emphasizing the importance of practice and undermining the importance of theory when it comes to game design. A common advice that is being given to a newcomer often starts with: "Hey, you want to become a game developer? Then JUST MAKE A GAME first! Playtest it and see how fun it is. Identify its problems, fix them, and playtest again. Let other people play your game and give some feedback. Spend your time playing other games, too, and see why they are fun to play! etc etc..."
+
+This approach is mostly valid and mostly works well, but there is one major hole here. In order to start the initial stage of development, one must be able to design and implement at least a decent prototype of the game in the first place. And during this early phase, a vague advice such as "Just make a game!" is almost always in vain because a game is a system of interlocking logical elements rather than a mere product of self-esteem.
+
+<004_01>
+
+Once we have a solid prototype, the rest of the development process may simply be empirical in nature. We may playtest it, fix its problems, add more features, playtest it more, fix its problems, add more features, and continue on and on like this, never requiring any profound theory for perfecting the design of the game. The problem of formulating such a solid prototype in the first place, however, will remain as an excruciating process as long as we only stick to the virtue of practice and not to the virtue of theory. In order to create something out of nothing, we must establish a theoretical groundwork of the game first in order to have something to experiment with, instead of just throwing in a bunch of random features first and then trying out each one of their random combinations until we find one peculiar recipe that "feels fun enough".
+
+And in order to mitigate this difficulty of initial conception, I have been endeavoring to come up with a solid design foundation upon which any game prototype can be devised without requiring endless rounds of brute-force experimentation.
+
+Here is the recap of the original model which had been proposed in volume 1 and 2 (shown below). A game begins with 3 most fundamental goals that the player is expected to follow, which are referred to as "Absorb", "Expand", "Secure", respectively. In order to achieve these goals, we need at least one protagonist character (aka "myself"). In our model, this character is represented as a hypothetical lifeform whose body is a single mathematical point in space.
+
+<004_02>
+
+This being, as the player's avatar, measures its current degree of success as a biological organism by means of the three metrics: (1) Its distance from resources, (2) Area of its region of influence, and (3) Its distance from obstacles. In order to achieve the "Absorb" goal, it strives to be closer to resources. In order to achieve the "Expand" goal, it strives to broaden its region of influence by visiting unfamiliar places and procreating. And in order to achieve the "Secure" goal, it strives to be farther away from obstacles either by running away from them or by destroying them (because the distance between a living being and a dead being is greater than any potential distance between two living beings).
+
+<004_03>
+
+The intrinsic limitation of this model, however, plays as a major bottleneck when trying to increase the richness of our gameplay. For example, this model contains only one player character, represents every "object" as a single point in space which discourages the designer from coming up with various interesting spatial features, apparently suggests no room for advanced narratives, and so on.
+
+And in order to overcome such limitations without straying off to a mud pool of groundless complexity, I have suggested in the previous volume that there is a set of criteria one must follow in order to extend the system's scope of narratives/mechanics while also preserving its conceptual simplicity. First, the way we describe the core of our gameplay architecture must be "mathematically minimal" - that is, we must avoid complicated math as much as possible (in order to make sure that almost anyone can understand it) while still keeping a sense of mathematical precision for the purpose of acutely expressing the universality of its abstract nature. Second, we must extend the architecture in a strictly quantitative manner because introducing qualitative factors quickly degrades the whole design scheme into a gigantic table of arbitrary definitions. The purpose of obeying the characteristics of quantitative expansion is to compute everything from the perspective of only one observer at a time, as well as to always ensure to design complex objects in terms of "additive composition" - that is, design by establishing connections among already existing types of atoms instead of trying to introduce brand new types of atoms out of nowhere.
+
+<004_04>
+
+The benefit of mathematical minimalism is already pretty self-evident, I presume, since not everybody in the game industry is fond of advanced topics in mathematics yet they still concede that at least a small degree of mathematical precision is necessary for clarifying the game's design. This usually results in a state of implicit agreement which says, "Yes! We do need some math, but it must be as simple as possible for every one of us to understand".
+
+The benefit of additive composition, on the other hand, is not so self-explanatory. One thing that is for sure is that it encourages us to create compound objects by assembling individual atoms together, but whether it will improve the versatility of our game design methodology or not remains a mystery as long as we do not see an example in action. So in the following few paragraphs, I will go over a couple of examples to demonstrate how additive composition will play out in practice.
+
+Imagine that there is a human being who indicates him/herself as "myself", and that there is an angry cow nearby. This cow has a great deal of milk stored in its breast, and the person wants to steal milk from it. However, the cow is in a bad mood and is looking forward to hurt anyone nearby.
+
+<004_05>
+
+What does this mean to the human protagonist? From the viewpoint of "myself", this angry cow is both a resource and an obstacle. It is a resource because it possesses milk which provides human beings with useful nutrients (energy), yet it is also an obstacle because it is likely to damage human beings and divert their energy from being spent on tasks that are more productive than repairing their broken bones/tissues.
+
+If we decide to satisfy these criteria by means of qualitative expansion, we will have to introduce a brand new class of objects and assign it a unique name such as "resource-obstacle" (in order to indicate that it is a halfway mixture between a resource and an obstacle). This will force us to start computing the dynamics of the entire in-game universe in terms of not only the existing primitive elements (i.e. myself, resources, and obstacles), but also another type of elements which popped out of nowhere (i.e. resource-obstacles). The main problem with this approach is that we now have to take account of how the protagonist must react to the presence of "resource-obstacles" and manually devise an entirely separate network of subgoals and tasks to make sense of their newly introduced web of causality.
+
+<004_06>
+
+This guides us to the realization that we should resolve the problem of the angry cow by means of quantitative expansion instead. For instance, rather than coming up with a whole new category of atoms, we can simply let each object be made out of two or more atoms (instead of just one) for the purpose of diversifying the context of gameplay without having to invent additional rules.
+
+Suppose that the angry cow is not a single particle, but a connected pair of particles which represent the cow's body and milk, respectively. The cow's body is a threat to nearby human beings due to its sharp horns and bad temper; this makes it an obstacle to the protagonist. The cow's milk, on the other hand, is a collectible item that the person is able to steal from the cow; this makes it a resource to the protagonist.
+
+<004_07>
+
+The coexistence of these two relations, however, introduces a motivational dilemma between the sequence of actions that one must take in order to get farther away from an obstacle, and the sequence of actions that one must take in order to get closer to a resource. Two separate goals (i.e. "Secure" and "Absorb") are partially interfering with each other here due to the presence of two potential targets (i.e. The cow's body and milk), and the complexity of such a scenario has a tendency of forcing us to design additional heuristics to let the agent determine which degrees of prioritization ought to be assigned to each one of its goals; for it seems quite obvious that following both of these goals in parallel without any tie-breaking rule may trap the agent in a weird deadlock state, during which mutually conflicting goals and their ensuing actions cancel each other out and hardly motivate the character to do anything in particular.
+
+<004_08>
+
+Here is a solution. Just like we split up the angry cow into two components (i.e. cow's body and milk), we can split up the protagonist (aka "myself") into two separate components as well, which may be labeled as "my body" and "my hand". "My body" denotes the person's entire body except his/her hand, and "my hand" denotes the person's hand.
+
+<004_09>
+
+When a person wants to acquire milk from a cow, how does he/she do it? There could certainly be a variety of mechanical tools by means of which one may achieve such a goal, but the most rudimentary way of milking a cow is to grab its breast (i.e. where the milk is located) with one's hand and squeeze it. This means that it is only "my hand" which regards the cow's milk as a resource, and that "my body" has nothing to do with the cow's milk because we do not expect the entire body of a person to wrap the cow's breast and perform the squeezing action (Unless you.. never mind). Likewise, the cow's body doesn't have to care about "my hand" because such a marginal body part is not the main focus of the cow's point of attack. The cow's milk, on the other hand, regards "my hand" as its obstacle because a person's hand is a direct threat to the persistence of its connection to the cow's body.
+
+The resulting schema is a neatly isolated pair of one-to-one bidirectional relations - one between "my body" and the cow's body, and the other one between "my hand" and the cow's milk. This simplifies the expected behavior of every one of the four atoms that are involved in our scenario, as each of them only regards either one obstacle or one resource (but not both) as its volitional pivot point. As long as this arrangement persists, "my body" will be running away from the cow's body, cow's body will be chasing "my body", "my hand" will be chasing the cow's milk, and the cow's milk will be running away from "my hand".
+
+There is no multifaceted decision-making process involved in here whatsoever, since each atom always follows exactly one goal; the consequence of this simplicity is a nicely orchestrated system in which everything happens in a purely mechanical manner, fully explicable in terms of energy particles and their respective force vectors.
+
+<004_10>
+
+The practical implication of such a strictly minimalistic mechanical system is that, despite the apparent lack of any intelligence in the individual parts of the system, their combination introduces myriads of interesting emergent phenomena due to their additive nature. In the case of the angry cow depicted above, for instance, one can easily expect the person and the cow to display some kind of rotational behavior due to the combination of their pairwise opposing forces. The cow chases the person from behind the person's back, and the person chases the cow from behind the cow's back; the net result is a goofy-looking mutual tail chase.
+
+Unless this spinning routine is perfectly stable, it is bound to end up in either of the following two cases.
+
+(1) The person may successfully grab the cow's breast and squeeze milk out of it, after which the person will be free to simply run away from the cow because his/her hand will no longer be motivated to get closer to the cow's milk,
+
+<004_11>
+
+(2) Or the cow may successfully destroy the person with its horns before the person squeezes milk out of its breast, in which case the person's body will be sent to the imaginary space (due to death) and his/her hand will immediately follow it because both of them are part of the same object (aka "person").
+
+<004_12>
+
+Such nice decoupling of individual behaviors, however, is bound to face a major hint of contradiction when two mutually exclusive behaviors are allowed to coexist.
+
+Let me take an example. The angry cow is not a perpetual motion machine and therefore must eat something (e.g. grass) in order to survive. In other words, it is expected to follow its "Absorb" goal as much as it is expected to follow its "Secure" goal. The problem is, a serious dilemma arises when we think about it within the context of physical realism.
+
+<004_13>
+
+Based upon the principle of additive composition, we can first represent the current scenario as shown above. Everything stays the same, except that now the angry cow has an additional component which represents its mouth. This mouth does not care about the presence of the person whatsoever, and solely focuses on the nearby grass which it can chew and swallow. The grass, which is an external object, is a resource from the perspective of the cow's mouth.
+
+And just like before, it is theoretically possible to just assign separate goals to the cow's body and mouth. The cow's body can simply pursue its "Secure" goal by chasing/attacking its obstacle (i.e. person's body), and the cow's mouth can simply pursue its "Absorb" goal by eating the nearby grass. The nature of additivity does not prevent the system from simultaneously executing these two goals.
+
+Yet, we all know that eating grass while also chasing/attacking a person is a nearly impossible task. The reason why it is so is that both the cow's weapon (pair of horns) and its mouth are part of one small and rigid object (head), which prevents these two from pursuing two different targets at once. In the previous case in which the cow was both chasing the person and dodging his/her hand, there was at least a fair amount of distance between the cow's horns and its breast which rendered the concurrent execution of their goals quite feasible (by means of the cow's rotation). In case where the spatial constraint (i.e. distance limit) is way too tight, as in the case of the cow's mouth being too close to its horns, we cannot simply superimpose two separate behavioral elements together and let their actions add up linearly.
+
+<004_14>
+
+So, what should be a solution to such mutually conflicting goals? Strictly speaking, there are obvious ways to circumvent this problem such as introducing a set of criteria for deciding when to spend time chasing the person and when to spend time eating grass, based off of parameters such as the distance between the cow and the person, the distance between the cow and the grass, the cow's hunger level, the person's aggro level, and so on. Just as mentioned before, however, such additional rules complicate the gameplay logic too much and clearly violate the principle of additive composition.
+
+From an engineering point of view, this is a problem of how we should combine multiple subsystems in a modular way. When subsystems are completely isolated from one another, what we see is a mere conglomeration of small independent entities which do not possess any ability to collaborate. When subsystems directly depend on one another, on the other hand, what we see is a convoluted jungle of dependencies which is extremely hard to construct and maintain.
+
+<004_15>
+
+A typical solution to such a problem is to let subsystems neither isolate themselves nor establish direct interdependencies, but simply "communicate" with each other in an explicit way. A large-scale computer program, for example, does not let its internal modules directly access/modify one another; instead, it lets them use an intermediary medium such as a messaging system for cooperative purposes. The reason why such a buffered method of communication is deemed a great way of designing a computational framework is that it allows us to control the way in which the modules interact with each other by simply controlling the way in which information flows from one place to another.
+
+This design philosophy can be applied to our case as well. From what we have observed so far, it appears to be a bit too rash to assume that every one of the individual atoms of an object can operate in a completely independent manner while also preserving the realism of our everyday physical phenomena. Yet, it is also true that establishing additional rules which involve multiple atoms and their implicit properties complicates the matter way too much. Therefore, it seems pretty evident that we should allow atoms to communicate with one another through a separate medium in order to establish a nice compromise between the two extreme methodologies (i.e. No Dependency VS Direct Dependency).
+
+In the next volume, I will go over in detail the methods of leveraging this conclusion as means of ensuring the robustness of our gameplay system without damaging its modularity.
+
+(Will be continued in Volume 6)
+
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Game, Design, Composition, Multidisciplinary, Interdisciplinary, Signals, Systems, Architecture
+
+[Universal Laws of Game Design - Volume 6] 2023.03
+
+(Continued from Volume 5)
+
+Designing a game is a monumental task, since it is a multidisciplinary system which involves vastly different faculties of mind. This requires us to begin the process of developing a game from bottom up, starting from a common ground of knowledge which can easily be understood by experts of any kind as well as laymen. And in order to devise a groundwork for such a shared medium of understanding, I have been drafting a purely mathematical (i.e. devoid of particulars) and minimal model which may be considered a generic archetype of any type of game we can think of.
+
+And the principles which were established to let us enrich this model without introducing too much complexity have been suggesting that the gameplay system, as a whole, must always be extended in both a quantitative and additive manner - "quantitative" because irrational ideas are prone to stray our attention off to mere wishful thoughts, and "additive" because the notion of expressing a large-scale system as the sum of its parts is the most straightforward way of ensuring that we won't have to frequently add new rules in order to increase its robustness.
+
+In the previous volume, however, we saw the difficulty of applying the principle of additive composition without limiting some of the core design factors such as mutually exclusive actions, condition-driven actions, and so on. An angry cow, for example, cannot be eating grass and attacking a person at the same time, despite the fact that it is logically sound from the point of view of additive composition to simply let these two actions independently trigger themselves at any time.
+
+Preserving a sense of additivity while also preserving our ability to design conditional phenomena, fortunately, is not an impossible task. Individual atoms can be allowed to communicate with one another without crossing the borderline of their modularity, as long as they do so by only interacting through an external medium such as a message router.
+
+<004_16>
+
+Here is an example of how it could be done in our angry cow example. As explained before, the angry cow must both be able to chase/attack a nearby person and be able to eat nearby grass, yet it must not be allowed to carry out these two actions simultaneously. The trouble is, such a constraint is not realizable as long as we force the cow's weapon (horns) and its mouth to make decisions on their own without checking each other's current status.
+
+A method we can use to solve this problem is to imagine each atom as a signal transmitter.
+
+<004_17>
+
+It is possible for an atom to communicate with the external world as long as it is capable of emitting and receiving signals (A "signal" can be thought of as a theoretical particle which carries information, like a message). And the idea is that even if there are atoms which are not directly interrelated at all, they can still indirectly communicate with each other by emitting and receiving signals.
+
+Ever since the introduction of the concept of "inside" and "outside" in volume 2, it has been implicitly assumed that each atom is able to contain another atom inside of its own body, as opposed to its outside. One of the practical necessities of this logic, illustrated in volume 2, was to allow each atom (such as one which represents a biological organism as a single mathematical point) to either absorb resources for the purpose of replenishing its own energy, or to carry another atom from place to place by first picking it up, visiting the destination, and then dropping it.
+
+<004_18>
+
+Such a set of mechanics can be used for communication purposes as well, if we suppose that a signal is also an atom. For instance, we can build an inter-atomic communication protocol by saying that the process of sending information from atom A to atom B is the same thing as letting atom A emit a signal and then letting atom B receive it. And the benefit of this is that neither of these two atoms is required to assume the presence of the other because they only communicate by means of third-party entities called "signals".
+
+<004_19>
+
+This method of reasoning is highly valuable when it comes to the problem of explaining causal relations between atoms. A cow's mouth perceives a nearby grass as a resource which it should approach and eat. The question is, how does it recognize the existence of the grass in the first place? If we simply let the cow's mouth and the grass directly reference each other by means of explicit relations such as "resource" and "obstacle", we will be creating interdependencies that are destined to confound the whole system beyond the grasp of our control. So while the concept of direct atom-to-atom relations is an easy way to express the semantic implications of a set of atoms, it should rather stay as a convenient fiction which does not pertain to the inner workings of the system.
+
+Let's contemplate the nature of communication from a practical point of view. When there is a chair in front of us, we observe it and recognize it as a chair; then we make a decision such as "I am going to sit on this chair" based upon the fact that we are interpreting the objective of our observation as a chair. This means that any chair-related decision ought to originate from the act of observing and identifying a chair. How does it happen? Well, the chair emits light particles (i.e. "signals") and our eyes receive them, which effectively engrave a photographic image of the object upon the surface of our consciousness. We then recognize visual patterns in the perceived image which, after a brief interval of classification and other subsidiary processes, lead us to conclude that the signals which our eyes received are the proof of existence of an entity called "chair" within our field of view.
+
+<004_20>
+
+The same exact reasoning, which bases the framework of causality upon the idea of signal transmission which takes place under the presence of an intermediate medium, can be applied to the case of the cow's mouth recognizing a nearby grass as its resource. The grass emits its own "grass signals" which are particles moving radially in empty space. These particles are not immortal, though, so they gradually decay and finally disappear after a designated length of time. As a result, this creates a cluster of grass signals around the grass atom's center of emission, whose density decreases as the radial distance from the center increases.
+
+The cow's mouth, on the other hand, possesses a tendency of receiving any adjacent grass signals and temporarily storing them in its internal receptors (I am saying "temporarily" because each signal has a limited lifespan). The number of receptors indicates the maximum number of signals that the cow's mouth is allowed to hold within itself at any moment in time.
+
+<004_21>
+
+Due to radial spread of signals as well as their temporal decay, the probability that the cow's mouth will be receiving a grass signal at a random point in time is bound to increase as the cow's mouth gets closer to the grass and decrease as the cow's mouth gets farther away from the grass. This means that the rate at which the receptors of the cow's mouth gets filled up with grass signals, by nature of statistics, will tend to be inversely proportional to the distance between the cow's mouth and the grass.
+
+So, how will such an interpretation of the world influence the way in which we determine how an atom recognizes another atom and reacts to its presence? The illustration above certainly seems to complicate the whole matter a bit too much, and indeed the idea of simulating the movement of every individual "signal particle" in real time is not going to apply well to a videogame when it comes to computational efficiency. The physics-like model shown above, therefore, should be considered a proof of a concept rather than an actual implementation.
+
+The point of demonstrating the process of atom-to-atom communication in terms of continuous signal emission and reception is to show how a robust decision-making logic is able to emerge out of a collection of purely mechanical phenomena rather than a pile of arbitrary rules that are hard to manage.
+
+In the previous volume, I have mentioned the technical difficulty of allowing both the angry cow's body and mouth to exhibit their own behaviors in a disjoint (mutually exclusive) manner. If it were okay for the cow to chase the person and eat the grass at the same time, we wouldn't have to do anything other than simply letting the cow's body and mouth execute their own actions whenever they wanted to because they would never have to communicate with each other at all. The problem arises because the cow's body and mouth should not be allowed to execute their own actions in parallel, and this is why we need to make sure that these two atoms are communicating with each other and making decisions on whether to carry out an action or not based upon their current state of mutual conversation.
+
+Here is how an appropriate signaling scheme can be designed for the purpose of control in this example. The angry cow's body and mouth are both atoms, and the person and the grass are atoms as well. This means that every one of them is a signal transmitter, capable of emitting, receiving, and storing signals by means of moving them inside/outside of its own cellular membrane as well as temporarily keeping them in its receptors.
+
+<004_22>
+
+We all know that, according to the construct of this schema, the person will be emitting "person signals" from its current position and the grass will be emitting "grass signals" from its current position. The cow's body is sensitive to the person's presence, so it will be receiving and storing "person signals" as long as it is sufficiently close to the person. The cow's mouth, on the other hand, is sensitive to the grass's presence, so it will be receiving and storing "grass signals" as long as it is sufficiently close to the grass.
+
+And the ensuing behavioral expectation can proceed like this: "If the majority of your receptors are filled with 'person signals', chase and attack the person. If the majority of your receptors are filled with 'grass signals', approach and eat the grass."
+
+This interpretation alone, of course, is not sufficient to prevent concurrent execution of the cow's two mutually exclusive goals. As soon as the majority of the body's receptors are filled with "person signals" and the majority of the mouth's receptors are filled with "grass signals", what we will immediately witness is that the body's action and the mouth's action will both be triggered without any means of suppressing either one of them.
+
+<004_23>
+
+However, we ought to also realize that transmission of signals can be performed between any pair of atoms, not just between the person and the cow's body or between the grass and the cow's mouth. It can happen between the cow's body and mouth as well, by means of the cow's internal signal routes such as its nervous system. The body and mouth are directly connected with each other to indicate that they are components of one shared object called "cow", and it is fairly reasonable for us to assume that such a topological connection is a communication channel which allows direct transfer of signals from one end to the other.
+
+Let us suppose that the cow's body not only receives "person signals" from the person but also sends copies of them to the cow's mouth through the channel, and that the cow's mouth not only receives "grass signals" from the grass but also sends copies of them to the cow's body through the channel. The overall logic can be summarized as:
+
+"Whenever you receive a signal called X, make a copy of it called X1. If there is an available (empty) receptor, store X in it or destroy X otherwise. At the same time, send X1 to your connection."
+
+If the atom had 2 connections, it'd be generating 2 copies and sending them to both of its respective connections, and so on. The general idea is that every atom inside a connected set of atoms (aka "object") stores signals from the external environment (as long as there are receptors available) and sends their replicas to its adjacent connections. This is the way in which each atom can "broadcast" its signals to the whole network.
+
+<004_24>
+
+One may claim that this network-oriented model violates the principle of "indirect communication" by letting atoms directly talk to one another without using any intermediate medium. Such a concern, however, will quickly dissolve as soon as we remind ourselves that a connection between two atoms can be interpreted as an intermediate medium itself. Whereas the person and the grass simply emit their own intrinsic signals (i.e. "person signals" and "grass signals") to the global space, the cow's body and mouth can be thought of as emitting copies of their received signals to a local space which represents the spatial volume occupied by the connection between these two atoms.
+
+<004_25>
+
+The end result of both radial and network-oriented means of signal propagation is that, at each moment in time, each atom will be possessing a fairly unique composition of signals within its inventory of receptors (given that there are enough number of receptors as well as signals that are being emitted/received, besides that the lifespan of each signal is not too long). Take the cow's body and mouth as an example. The cow's body receives "person signals" from the person in real time and broadcasts them to the cow's mouth in real time. Meanwhile, the cow's mouth receives "grass signals" from the grass in real time and broadcasts them to the cow's body in real time. This implies that both the influx of "person signals" and the influx of "grass signals" are actively completing with each other to occupy the majority the receptors in both the cow's body and the cow's mouth.
+
+If the majority of receptors in both the cow's body and mouth get filled with "person signals", the cow's body will begin to execute its own act of chasing/attacking the person and the cow's mouth will be silent. If the majority of receptors in both the cow's body and mouth get filled with "grass signals", on the other hand, the cow's mouth will begin to execute its own act of eating the grass and the cow's body will be silent.
+
+It is reasonable to suppose that there could be cases in which the cow's body has its receptors dominated by "person signals" while the cow's mouth has its receptors dominated by "grass signals", during which both of them will trigger their own actions and plunge the cow into an awkward inner conflict. Such a scenario, however, can be assumed to be highly improbable or at most only momentary because the cow's body and mouth are always actively sharing signals with each other. This creates an effect that is reminiscent of two adjacent heat-conducting materials reaching a thermal equilibrium due to the fact that thermal energy can easily flow between them. Just as two adjacent heat conductors will both be cold when the environment's temperature is low and both be hot when the environment's temperature is high (once the equilibrium is reached), we can reasonably expect the cow's body and mouth to be both dominated by "person signals" when the environment is predominantly occupied by the person's field of signal radiation or be both dominated by "grass signals" when the environment is predominantly occupied by the grass's field of signal radiation.
+
+<004_26>
+
+This concept of equilibrium can be useful when it comes to letting each object (i.e. network of atoms) exhibit only one of multiple possible behaviors instead of all of them at once. Since every component atom contains a finite number of receptors and every incoming signal can be shared across the whole network, it is only a matter of time until the object's whole "nervous system" gets saturated with exactly one type of signals and not others. And once this state of saturation becomes clearly recognizable, every atom within the same network can assure that it can act accordingly to the presence of the dominant signal without having to worry about contradicting the actions of other atoms.
+
+If the entire connected set of atoms always share all types of signals with one another, however, what we will witness is that the object as a whole will always be bound to display one behavior at a time (which is not necessarily desirable). Let us recall from the example of the angry cow that there are goals which can definitely be carried out in parallel, aside from goals which are required to be disjoint in nature. The cow's body and mouth must have their behaviors synchronized, for instance, but the cow's body and milk do not have to because the cow can rotate itself for the purpose of chasing the person and dodging his/her breast-grabbing hand simultaneously.
+
+Such a distinction can be realized by letting each atom either emit or receive certain types of signals in a highly discriminatory fashion.
+
+<004_27>
+
+The cow's body only receives external "person signals" and ignores external "grass signals" because it is only interested in the person and not the grass. The cow's mouth, on the other hand, only receives external "grass signals" and ignores external "person signals" because it is only interested in the grass and not the person. Such a filtering mechanism can also be applied to the process of internal networking. For example, we can choose not to allow the cow's body to send copies of its "person signals" to the cow's milk, thereby letting the milk keep acting based off of its own storage of "hand signals". Likewise, the cow's milk can be chosen not to send copies of its "hand signals" (which it receives from the person's hand) to the cow's body, thereby letting the body keep acting based upon its own storage of "person signals".
+
+Such controlled emission/reception of signals is so robust, that this concept alone is capable of giving birth to myriads of sophisticated in-game mechanics. It is highly scalable because the design of individual atoms is still additively composable (That is, one does not have to explicitly specify relationships between atoms), as well as being mathematically minimal because the idea of emitting/receiving signals can easily be illustrated graphically rather than by means of recondite formulas.
+
+I digressed a bit into the realm of technical details, but the overall purpose of the thought experiments conducted so far was to prove, at least on a theoretical level, the feasibility of constructing an intelligent large-scale system out of relatively simple yet emergent building blocks.
+
+In the next volume, I will explain how this system of concurrent signal transmission will eventually merge itself with the overall architecture of gameplay.
+
+(Will be continued in Volume 7)
+
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Game, Design, Universal, Laws, Atomic, Gameplay, Videogame, Narrative, Storytelling
+
+[Universal Laws of Game Design - Volume 7] 2023.03
+
+(Continued from Volume 6)
+
+Throughout the two previous volumes, I have been pointing out the difficulty of concurrently triggering various actions inside their shared gameplay space without letting themselves contradict one another, for which I have introduced a brand new system (i.e. network of signal transmitters) as a safe solution.
+
+The remaining issue is to integrate this new system into the existing gameplay model which is quite distinct in the sense that it is based upon a mutually reinforcing cycle of narratives (hinted by "Absorb", "Expand", and "Secure") and their respective mechanics (hinted by "Region of Influence", "Resource", and "Obstacle"). We have already seen how the atom-to-atom signaling scheme may fit into the framework of compound objects and their emergent behaviors by looking at a specific example (i.e. angry cow), yet I have not yet established a unified conceptual foundation of everything which have been illustrated so far. In order to let such an establishment be undertaken thoroughly without any bit of vagueness, I will first revisit the basics of the gameplay model which was initially proposed and clarify some of its structural details for the purpose of the theory's integrity and further development.
+
+In the beginning, I supposed that the most basic form of life is a single mathematical point in space (i.e. single atom) which exhibits 3 most fundamental goals throughout its lifespan: "Absorb", "Expand", and "Secure". And in order to describe the physical configuration of the gameplay universe which is responsible for triggering the realization of these 3 goals, I have also supposed the existence of 3 most fundamental entities in space - namely, "Region of Influence", "Resource", and "Obstacle".
+
+<004_28>
+
+The 3 goals are originated from the game's narratives, whereas the 3 entities are originated from the game's mechanics. The 3 goals encourage the lifeform (which refers to itself as "myself") to modify its spatial configuration with respect to the 3 entities, and the 3 entities encourage the lifeform to conceive these 3 goals. This, in the long run, creates an endless cycle of mutual reinforcement between the game's narratives and mechanics, which enables the growth of both of these two pillars of interactivity in the form of a rapid back-and-forth iteration.
+
+Then I went on to suggest that these archetypal elements, just like atoms in chemistry, are able to bond with each other to form compound objects which possess their own intelligent behaviors based off of a fairly minimal set of additive building blocks such as atoms and their discrete movements.
+
+<004_29>
+
+And in order to solve the problem of resolving inner conflicts which may arise among atoms, I introduced the notion of signal-based communication which can potentially happen between any pair of atoms in a selective manner. This system of indirect atom-to-atom interaction provided us with the ability to construct complex objects simply by assembling a group of independent atoms, rather than by manually devising a bunch of additional rules to tell the system how they should be interrelated.
+
+<004_30>
+
+This model, however, raises a major concern due to its implication of complexity. As you may have noticed already, I have introduced quite a large number of concepts so far which can hardly be referred to as "minimal" in the sense that it is supposed to let us design a wide variety of games based upon a set of very few basic components. The sum of all the descriptions which have been made to represent the current model renders itself as quite contrary to such an objective. Apparently, the theory itself involves not just atoms as the ultimate constituents of the gameplay universe, but also their mutual connections, signals, regions in space, internal receptors, transmission filters, goals, actions, and so on.
+
+This looks pretty complicated, isn't it? If we observe the entire model from a purely computational point of view, however, we can easily realize that it is possible to simplify the whole scene down to a much slimmer subset of terminologies. In order to illustrate the reasoning behind this blunt assertion of optimism, let me revisit the initially introduced model which represented the game's protagonist as a single atom that persistently strives to preserve and expand its own region of influence, by means of decreasing its distance from "resource" atoms, increasing its distance from "obstacle" atoms, and spatially expanding the region via movement and procreation.
+
+<004_31>
+
+This mathematical representation is not so minimal in the sense that it requires us to keep both of the two drastically different conceptual entities in mind, which are typically called "atom" and "space", respectively. The points in space among which we measure distances are termed "atoms", whereas a domain of existence within which individual atoms can claim themselves to be associated with specific locations (coordinates) is termed "space". This worldview is pretty reasonable in most circumstances because our common sense dictates that the universe must possess a pool of dimensional permutations called "space" in order to be able to have spatial entities in it.
+
+The dualism between atom and space, however, can easily complicate the way in which the system is being formulated. And it is my abstract sort of conviction which insists that the entire universe can be depicted as a set of atoms only, without any necessity of involving the notion of space whatsoever.
+
+Here is the reason. When we represent the global gameplay space as a hierarchical composition of local spaces and proceed to suppose that an atom belongs to one of these local spaces, what we are saying is that the atom's current topological position in space is essentially just a binding of an atom to the space to which it belongs. And since there is apparently no reason to assume that a space must be functionally distinct from an atom (aside from perceptual differences), it is highly sensible to claim that a space is an atom, too.
+
+<004_32>
+
+In other words, it is not so rash to imagine that any volume of space is just a graph made out of atoms, each of which corresponds to a continuous spatial region. Each binding between two atoms tells us which spatial region is contained in another region.
+
+This alternative worldview works as a key to a much more elegant description of the gameplay universe, especially when it comes to events which occur among objects and their component atoms. For example, a movement of an atom from one point in space to another can be equated with the process of unbinding the atom from its original region of residence and rebinding it to a different region of residence.
+
+<004_33>
+
+If we fancy that the notion of "binding" in this case represents some kind of land ownership, we may as well suppose that the act of movement is a micro-scale real estate transaction which happens inside a hypothetical system of finance. An atom which moves from place to place does so by "selling" its initial location and then subsequently "buying" its final location as a form of exchange. In general, every observable entity which constitutes our physical phenomena (e.g. a piece of matter) can be described as a financial asset, and every physical process such as a displacement can be described as a transaction which triggers a set of exchanges among such assets. This idea may be a bit too abstract, yet it bears a hint of pragmatism when we consider the possibility of developing a game which operates on top of a financial protocol (e.g. blockchain) and directly associates its in-game activities with means of monetization.
+
+<004_34>
+
+A potential source of confusion which may arise at this point is the concept of "connection" between atoms which allows us to create compound objects by means of composition. When we "connect" multiple atoms together, we are basically grouping them and treating them as a singular object. How does this differ from the concept of "binding" which I have introduced above?
+
+The answer is that a "connect" is nothing more than a form of indirect binding between a pair of atoms. When two atoms are connected with each other, it is implicitly assumed that they are both contained within the same local space. Although this definition may seem a bit too arbitrary, it proves itself to be quite handy when it comes to explaining the nature of connection-based signal transmission between atoms (as explained in volume 6). So for the sake of internal consistency and convenience, I will stick to such a definition for now.
+
+Since a local space is itself an atom, the state of two atoms residing in the same local space is an equivalent of two atoms being bound to the same target atom. This is what is meant by the word "connection".
+
+<004_35>
+
+As a result, a compound object (which is a connected set of atoms) can be thoroughly represented as a set of atoms which locally share their intermediary binding targets in a pairwise manner.
+
+<004_36>
+
+Signal transmission, too, is fully explicable in terms of bindings among atoms. A signal is just an atom (although it is not as tangible as others), and the space through which it is able to propagate, such as a copper wire, is also yet another atom to which both the emitter and receiver of the signal are bound. And from this unified mode of conceptualization, we can easily deduce that the act of sending a signal from one atom to another is made up of 2 discrete movements: (1) A movement which rebinds the signal from the emitter to the medium of communication (aka "connector"), and (2) Another movement which rebinds the signal from the medium of communication to the receiver.
+
+<004_37>
+
+Receptors and broadcasting mechanics can be explained in terms of atomic interactions as well. Previously I have mentioned that two atoms can achieve a state of cognitive synchronicity by reaching a "thermal equilibrium" of signals between them, as long as they always actively and rapidly share copies of external signals with each other. The purpose of introducing this mechanic was to prevent any pair of atoms from executing two mutually contradictory actions in parallel. This whole sharing process can be represented as a sequence of binding/unbinding actions performed by each received signal's copy shortly after its initial creation. The details are illustrated below.
+
+<004_38>
+
+However, this is not everything there is to the idea of unification between "space" and "atom". In volume 1 and 2, I explained the quantitative nature of the protagonist's "Absorb" and "Secure" goals in terms of its distance from a resource and its distance from an obstacle, respectively. But how do we define the word "distance" within the context of the current design model, if the word "space" is not even independently defined here? If every quantitatively definable entity which constitutes the game's inner universe is an atom and there is absolutely nothing which pertains to our conventional notion of "space", how can we even measure a distance between a pair of atoms in the first place without making vague assumptions?
+
+In order to resolve this inner conflict of meanings, one must take a step back and contemplate upon the idea of space itself.
+
+Why do we say that we are surrounded by something called "space"? First of all, we cannot see, smell, hear, or touch a volume of space, so we cannot define space in terms of direct sensory data. However, we know that assuming the existence of "space" comes in handy whenever we feel the necessity of distinguishing occasions in which two objects are close to each other from occasions in which two objects are far away from each other (for practical purposes such as avoiding the nearest source of danger first and then avoiding others later, and so forth). In other words, our definition of "space" begins with the idea of a distance between two atoms (since atoms are the simplest objects we can imagine). Space exists because atoms exist and they are separated by a certain amount of "room for occupancy" between them.
+
+One might argue that distance is only one of many possible dimensional measures in space, such as direction, area, volume, and others. However, it is my (potentially erroneous) conviction that all these additional concepts are only secondary to the concept of distance. For example, we can measure the direction of a line segment solely in terms of distances because, if we imagine the coordinate system's point (0,0) and point (1,0) as a pair of objects and the line segment's two endpoints as yet another pair of objects, the ratios among the pairwise distances of all of these four objects will tell us the angle of the line with respect to the coordinate system. The concept of area and volume can be derived in similar ways as well, since they can be derived from the total number of atoms in addition to the statistical distribution of their pairwise distances.
+
+<004_39>
+
+The next question is, how to define "distance"? Since space is defined in terms of distances, the idea of distance itself must be defined as well in order to fully explain the nature of space. And in order to figure this out, we ought to first find out an objective way of measuring a distance between two atoms - for it appears to be quite axiomatic that, if we want to define something quantitative, we must be able to measure it in a quantitative manner. One quick method of measuring a distance is to use a ruler (or any other fixed-length object), but the problem is that such a way of measurement assumes the legitimacy of the observer's sensory (visual) data as well as a predefined distance between the two tips of the ruler (which creates a circular logic by forcing us to define a distance in terms of another distance).
+
+Defining distance as something that is proportional to the amount of time it takes for an object of a constant velocity to move from a fixed reference point to another fixed reference point seems to be a more scientific method, yet it is still bound to circular reasoning because the temporal dimension itself can be considered just yet another axis in space (which, along with the X, Y, and Z spatial axes, constitutes one unified continuum called "spacetime") as far as the theory of relativity goes, and hence requires the observer to measure the "temporal distance" between the object's two different positions at two different moments in time.
+
+If one desires to measure a distance without either sensory bias or semantic circularity, he/she should seek a fully distance-independent causal relation between successive observations as a primary proof of the existence of distance instead. One relatively objective criterion for finding such a relation is to suppose that distance is proportional to the amount of energy it takes for a unit mass to travel from a fixed reference point to another fixed reference point. This is probably still not a fundamentally valid definition because the notion of "fixed reference point" itself indicates a spatial entity which presumes the distance between itself, the observer, and other points in space (which, again, induces circular logic), but I will stop delving into the ontological ultimacy of meanings at this point because this article is about game design and is not a treatise on metaphysics.
+
+If we define the distance between atom B and C as the amount of energy it takes to move atom A from B to C, and further define that:
+
+(1) Two atoms are "neighbors" to each other if at least one of them is bound to the other,
+(2) An atom can only rebind itself to a neighbor of the atom to which it is currently bound, and
+(3) An atom consumes the exact same quantity of energy (aka "cost") every time it rebinds itself,
+
+<004_40>
+
+we can then declare that the distance between atom B and C is the number of times A is required to rebind itself until it changes its binding target from B to C. This means that the so-called "distance" in space, in any discrete gameplay environment operated by a digital computer, can be defined as the minimum cost (in terms of energy) of traversing a path from one atom to the other inside a graph of atoms.
+
+Now, what's the purpose of all this? Why not just place atoms inside a plain Euclidean space and move them freely, without esoteric notions such as "binding"? Here is the most significant reason why I chose to undertake the process of explaining all spatial concepts in terms of atoms and their bindings, despite its apparent obscurity.
+
+At the very beginning of this series of articles (volume 1), I presumed that the instincts of any biological organism can ultimately be classified into 3 most fundamental goals called "Absorb", "Expand", and "Secure", and proceeded to claim that the "Absorb" goal motivates the organism to decrease its distance from a nearby resource, the "Expand" goal motivates the organism to increase the area of its region of influence, and the "Secure" goal motivates the organism to increase its distance from a nearby obstacle.
+
+The "Absorb" and "Secure" goals were explained pretty easily in terms of distances between atoms. The "Expand" goal, on the other hand, was explained in terms of yet another type of spatial quantity called "area". Since an area is a secondary property which must be derived from multiple distance relations among multiple pairs of atoms instead of just a single pair, it has been quite complicated to describe the exact way in which the organism could carry out its "Expand" goal. As a result, I explained the sequence of actions required to pursue the "Expand" goal with vague specifications such as: "Go to a random position in space that is outside of your own body".
+
+If we exclude the notion of space altogether (the method of which is what I have been expounding so far), the structure of the "Expand" goal can be synchronized with those of the other two fundamental goals ("Absorb" and "Secure") because we will then be letting any region of influence be represented by atoms, just like resources and obstacles are being represented by atoms. A lifeform's region of influence is a set of local regions in space, and such a set is equivalent to a set of atoms. Let us start referring to each constituent atom of any region of influence as an "influence" from now on.
+
+<004_41>
+
+The trickiest part is, how to measure the area of a region of influence? As mentioned before, since the ultimate root of the definition of the word "space" within the context of the current atom-based model is an attribute called "distance", a scalar quantity that is being referred to as "area" should be able to be computed based upon the distances among the corresponding region's component atoms. In order to identify the region's area, however, one must first be able to tell the shape of the region. And this is indeed a quite perplexing task because each atomic unit of space, in our context, is a topological being that is defined in terms of its nature of connectivity with other units instead of a uniformly sized/arranged segment which sits within a continuous field of dimensional permutations.
+
+But, let's pause here for a bit and think about the intended usage of the concept called "area" in our purpose. Why do we want to find out the area of a region? The answer is, we need a metric which tells the game's protagonist how successful it is in terms of expanding its own region of influence. Whenever a typical Euclidean space is concerned, the area of the region of influence tends to be an obvious measure of such a type of success. The thing is, we are not dealing with a Euclidean space here, and thus do not have to force our stream of consciousness to linger upon geometric constructs such as the area of a region; all we need is a metric which reveals the organism's outgoing flux of influence that is being imposed upon the rest of the world.
+
+This problem will be investigated in the next volume. After that, we will be able to assemble the concepts introduced so far and summarize them in the form of a single unified model.
+
+(Will be continued in Volume 8)
+
+
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Game, Design, Procedural, Engine, Theory, Commercial, Tech, Organism
+
+[Universal Laws of Game Design - Volume 8] 2023.03
+
+(Continued from Volume 7)
+
+Designing a game often seems to appear as a complex process. It is due to our shared impression that, while a game's individual components are not necessarily complicated, the process of assembling them together to form a holistic picture of gameplay can indeed confound anyone who is involved in it. And because of this apparent complexity, it is widely believed that the full course of game development, as a whole, can only be approached via case-by-case perceptual experiments instead of a theoretical model.
+
+Such a shared tendency of the game development community often results in endless rounds of vague subjective statements that are hardly less superficial than: "This game's water shader looks fantastic", "This game's lore sounds intriguing", "This game's procedural dungeon generator looks cool", and so forth.
+
+One might ask, "What's wrong with that? Isn't a game, after all, an almost entirely player-centered medium of experience? As long as we conduct a set of experiments regarding the way in which the average player interacts with the game on a perceptual level, however "superficial" it might be, wouldn't they be accurately capturing the essence of what constitutes a game?"
+
+This line of reasoning, without a doubt, is definitely valid to a certain extent. A game is indeed a set of experiences, and therefore a designer's habit of focusing on the outer facets of gameplay bears an acute sense of priority within the methodology of how a game should be designed. After all, players do not care what is really going on inside the game; they only care what they feel about the game.
+
+However, we should also note that the game industry has changed quite drastically during the past few decades, and that we no longer live in the 80s and 90s back when even a rudimentary arcade game (i.e. something which would hardly require a sophisticated theory as a backbone of its construction) would've had some chance of commercial success. If we were living in those good old days, simply focusing on the player's experience itself and experimenting with it in a purely iterative manner would've been a decent approach for attracting a considerable number of customers. Sadly, we are living in an era where high competition and technological advancements have rendered such a methodology quite ineffective.
+
+Most of us are aware of how stunningly capable some of the latest AI tools are. The field of artificial intelligence has been improved so dramatically these days, that creating many of the gameplay features is becoming easier than ever. This means that a game developer can no longer stand out from the rest of the competitors simply by perfecting the qualities of the game's experiential aspects (e.g. graphics, sound, writings, immersive actions, UI/UX, etc), and that the game's internal semantic structure itself must possess its own hint of ingenuity for the sake of being able to compete with millions of other games that are up there in the market, many of which are just as competent (if not more) in terms of providing the player with a series of cheap attention-hooking experiences.
+
+Therefore, independent developers of today's game industry are facing a new kind of challenge which could mostly be ignored by older generations of game developers (i.e. Baby Boomers and Generation X) who were privileged enough to spend their early adulthood during the infancy of videogames, which also happily coincided with the era of economic prosperity led by Pax Americana, during which they were endowed with far more opportunities in terms of finding profitable niches. The struggle of our current generation is that, if there are far too many people who are capable of developing the most immersive videogames and finding out the most optimal strategy of selling them (with the help of easy-to-use game creation tools, digital distribution platforms, and social media), the only way in which you can ever have a considerable chance of success in the field of games (unless you are blessed with enormous budget) is to transcend beyond the commonly held definition of what a game is and introduce something new to the very nature of the idea of "game" itself - that is, create a brand new niche in which you can sell your games without too much competition, since most of the existing ones are pretty much saturated.
+
+And this train of logic originates not from a stylish notion of "Art for art's sake", but from a practical consideration which anyone who is aware of the reality of today's gaming market cannot simply refuse to acknowledge. If we desire to sell our games in today's market, we must differentiate our games from the majority of others by shifting the entire dimension of how our games are being designed.
+
+<004_42>
+
+And because such a monumental task requires an almost complete reconfiguration of the game's inner system, it should not be taken as a form of intellectual snobbery to say that one must undertake the process of game design in a highly scientific fashion - that is, break down the nature of gameplay into its most fundamental building blocks (e.g. atoms), and then figure out the most robust yet minimal set of ways of assembling them together to be able to design any complex system without too much hassle.
+
+This is one of the reasons why I have been emphasizing the importance of theory in contemporary game development practices.
+
+I could technically keep ranting about this topic indefinitely, but since the main focus of this series of articles is about formulating the theory itself rather than complaining why it is being neglected by many developers, I will resume back to where we were at in the previous volume.
+
+So far, we have been seeing a set of conceptual evidences which led us to the notion that the entire in-game universe can be expressed as a set of atoms and their topological bindings, without any necessity of representing continuous regions in space at least within the context of mathematical reasoning. This grand unification of spatial concepts helped us simplify down the gameplay dynamics into a system that is entirely made up of discrete (i.e. computable) entities.
+
+A biological organism, which can be considered the game's protagonist, can be thought of as an atom that is being surrounded by 3 other types of atoms - "resources", "obstacles", and "influences".
+
+From the very beginning, it has been clearly assumed that an organism's instinct motivates it to collect resources, avoid or destroy obstacles, and expand its own region of influence. And since our gameplay model now represents the continuum of space as a set of atoms (each of which refers to a region in space), it has also been discovered that the region of influence can be expressed as a set of atoms called "influences".
+
+<004_43>
+
+The problem which was left unsolved at the end of the previous volume was the problem of describing how the organism should behave in regards to its influences for the purpose of expanding its region of influence. And in order to solve this, we should remind ourselves that the idea of such a type of expansion pertains to the idea of increasing the overall exposure of influence atoms against the rest of the environment.
+
+What this means is that, in order to have a region of influence that is as wide as possible, a lifeform must allocate its influence atoms to as many positions in space as possible. And the reason behind this is that, as we start identifying influences as signal emitters whose emitted signals impact the way in which their receivers behave, we can make a rough generalization that the number of locations which are occupied by influences is a fairly reasonable measure of the overall rate of impact that the organism is imposing upon the world.
+
+Just like resources emit their own "resource signals" and obstacles emit their own "obstacle signals", influences emit their own "influence signals".
+
+<004_44>
+
+And let us remind ourselves of the basic presuppositions that were made back in volume 1. According to them, any point in space which is sufficiently close to any other point in space that has recently been traversed by the organism is assumed to be part of its region of influence. A casual analogy of this would be that, if we suppose that the whole gameplay environment is just one large iron plate and the organism is a tiny ball of fire which never dwindles in strength, we can fancy that anywhere on the iron plate that is sufficiently hot is part of the organism's region of influence.
+
+<004_45>
+
+This theoretical model can be formulated in an intuitively satisfying manner if we suppose that:
+
+(1) The organism emits an influence at every time step,
+(2) Each influence is static (i.e. never moves),
+(3) Each influence emits an "influence signal" at every time step, which propagates through space radially,
+(4) Each influence destroys itself once its lifespan is over,
+(5) Each "influence signal" destroys itself once its lifespan is over, and
+(6) Each position in space can only hold up to exactly 1 influence, in which case it gets saturated. If the organism's current location is saturated, it won't be able to emit an influence until it goes to somewhere else that is not saturated.
+
+The organism is an influence-emitter; it creates footsteps wherever it goes, and such footsteps are hypothetical lightbulbs which radiate the organism's forces of influence from their own points of emission until they run out of energy and die out. Altogether, their combined field of radiation can be referred to as the organism's "region of influence".
+
+<004_46>
+
+In this context, the question of how to increase the area of one's region of influence becomes much clearer. Although our current discrete-space model does not allow us to accurately define the word "area" in a geometric sense, we can still share an implicit consensus that the whole purpose of trying to increase the area is to increment the overall rate at which other atoms of the universe receive the organism's "influence signals". And since each position in space can only contain 1 influence at a time, the organism must always keep moving away from its current set of influences in order to maximize the rate at which it can give birth to new influences.
+
+From this, we can easily conclude that the desire to "Expand" one's region of influence is the same thing as the desire to increase the average distance between the organism and its nearby influences. The benefit of this new definition of the "Expand" goal is that its mathematical formulation perfectly aligns with the other two fundamental goals (i.e. "Absorb" and "Secure"), in the sense that they all measure their degrees of success based upon one unified metric called "distance". This is an example of mathematical minimalism.
+
+<004_47>
+
+And the principle of additive composition, which was mentioned along with the principle of mathematical minimalism, can be satisfied as well by separating out the responsibilities of individual atoms (by forcing each of them to follow only one of the three fundamental goals) and then assembling them together to form compound objects. Potential conflicts among the respective goals of these atoms can easily be resolved via signal-based decision protocols, as demonstrated in volume 6.
+
+<004_48>
+
+There are more details we have to consider in order to make this model work, however.
+
+When there are two atoms called A and B, one may imagine that B is an obstacle of A. Let us, for the sake of convenience, simply assume that it really is the case. The main problem with this imagination-driven approach to game design, though, is that it requires us to manually devise all sorts of complex relations among all types of atoms that can ever exist inside the game, which is such a pain that we want to avoid.
+
+It is indeed possible to come up with a clever shortcut to mitigate the workload of such a manual way of design, such as assigning keywords to atoms and then constructing logical relations among such keywords. For example, one may say that a fire-atom and a lava-atom both have the keyword "hot", and that any atom which has the keyword "cold" must be an obstacle of any atom which has the keyword "hot". This way, one can automatically ensure that both a fire-atom and a lava-atom will be able to recognize any "cold" atom an obstacle, without having to manually specify a relation between every pair of unique atoms.
+
+<004_49>
+
+Even a shortcut like this, however, is bound by the limitations of qualitative evaluation. We may say that cold atoms are obstacles of hot atoms because coldness (lack of heat) has a tendency of taking thermal energy away from hot atoms and thus impairing their ability to preserve their own identity of hotness, but this sort of direct rational reasoning only applies to strictly mechanical circumstances. When we are defining relations between atoms that are not only mechanical but also narrative in nature, we cannot simply assume that the causal origins of such relations will always present themselves as self-evident in an intuitively satisfying manner.
+
+Relations that are tricky to derive are often found in cases in which atoms are endowed with characteristics that are not strictly quantifiable. Suppose that there is a wizard who firmly believes that the entire world must be filled with donuts and nothing else, and that the ultimate purpose of his life is to convert every object he saw into a donut by casting a magic spell. He never eats a donut because such an act would reduce the overall ratio of donuts over the total number of objects in the universe, so the process of making donuts does not provide this man with any physiological benefit. The only thing which motivates him to keep transforming everything into a donut is his mysterious belief alone, which does not seem to be stemming from any further ground of logic.
+
+In such a case, any atom that is not a donut must be identified as an obstacle to the wizard because he is apparently resolved to increase the average distance between himself and all things that are not donuts by sending them to the heaven (i.e. erasing them from the domain of existence by converting them to donuts). And when someone questions the reasoning behind such an establishment of relations, all we can say is, "It is just the way this guy thinks".
+
+Abstract beliefs which do not directly pertain to changes in the distribution of physical assets (e.g. food, money, natural resources, etc) are quite tricky to deal with when it comes to organizing them in a quantitative (therefore systematically expandable) way. We can of course specify them somehow and create a rigid framework of logic on top of such specifications (e.g. Statements such as: "Any atom which does not have the keyword 'Donut' in it is an obstacle of any atom which has the keyword 'Wizard' in it", and so forth), yet this brute-force approach is exactly the kind of complexity we ought to avoid in order to prevent the whole design scheme from turning itself into an encyclopedia of case-by-case scenarios.
+
+Fortunately, nothing apparently blocks us from saying that abstract beliefs hardly differ from those that are based on biological needs when it comes to identifying their causal origins on an atomic level. Just because something is abstract does not mean that it is required to follow a fundamentally different structure of logic from things that are concrete (e.g. need for food).
+
+But for the purpose of precisely analyzing what is really going on underneath the surface of this mysterious concept called "belief", one must first revisit the suggested definitions of "resource" and "obstacle" which were stated back in volume 1. Supposing that there is an atom which represents a biological organism, we may say that a "resource" is any atom which adds energy to it, and that an "obstacle" is any atom which subtracts energy from it. A purely atomic ground of reasoning from which these definitions arise would be that there are atoms which represent units of energy, whose owner is the atom to which they are bound (That is, if there are N energy atoms bound to the organism, we can say that the amount of energy that can be used by the organism is N). And it is also pretty reasonable to assume that at least one of these energy atoms must be unbound from its owner whenever the owner executes an action (e.g. movement), since an action obviously requires energy to be consumed.
+
+<004_50>
+
+Based on this model, one can derive purely discrete and computable definitions of resources and obstacles.
+
+Let us start with resources. A resource is an atom which, when sufficiently close to the observer, adds energy atoms to the observer's body. One potentially misleading assumption is that a resource must be carrying at least one energy atom it can donate. However, we should note that there could be entities which are identified as "resources" by the observer without actually having any morsel of energy it is currently able to give off, such as empty treasure boxes or empty fuel cans whose emptiness is not known beforehand.
+
+It is more of the perceived possibility of giving energy to the observer which makes an atom a resource. A lottery can be considered a resource not necessarily because it has any money (i.e. financial energy) that is guaranteed to be delivered to the consumer right off the bat, but because it is deemed to reserve a certain amount of money which may be given to the consumer under the condition of "winning a lottery".
+
+What does this mean in our atom-based gameplay model? A resource may or may not possess an energy atom which is capable of transferring its ownership to the observer, yet it is required that the observer believes that it does (because an empty treasure box whose emptiness is known is clearly not a resource, as well as a full treasure box that is somehow considered empty). Defining the presence of such a belief, though, is a tricky business due to its nature of subjectivity.
+
+However, there are also clues which may let us grasp a better picture of what is going on. From a realist point of view, one may claim that there is something called "objective truth" in our world which is separate from our personal beliefs. As long as we are arguing based upon this context of reasoning, we can definitely say that each belief is either "true" or "false" depending on whether it aligns with our universe's absolute body of truth or not. This worldview is of course questionable because we define most of our knowledge of what is true or false (if not all) based off of what we can observe through our own perspectives, which is subjective in itself and is therefore not an accurate method of evaluating the objectives themselves. But the idea of a domain of pure truth that is invariant of what we believe is, however fictional it might be, a convenient way of organizing and classifying a wide assortment of beliefs in a consistent manner since it presents us with a fixed reference point to which we can anchor our definitions.
+
+The "objective truth" of whether an atom is a resource or not depends on whether the atom really contains at least one energy particle that is capable of being handed off to the observer. On the other hand, it is also sensible to say that whether it is considered a resource from the observer's viewpoint depends on whether the observer believes in the presence of such energy particle. The main issue is that discovering an accurate causal connection between the objective truth and the observer's interpretation of it is an enormous challenge, for it is being determined by numerous parameters such as the observer's background knowledge, scope of observation (e.g. field of view, line of sight, etc), state of consciousness (e.g. hallucination, fatigue, etc), and so on. This depth of reasoning may convolute the game design process a bit too much at least during the early prototyping phase.
+
+I would say that it must be reasonable, therefore, to find a nice middle ground between the subjectivity of the observer and the objectivity of things that are really happening inside our gameplay universe.
+
+And here is the catch. Since the objectiveness of truth within the context of gameplay is nothing more than part of one grand fiction whose scope of logical associations is limited to the boundaries of whichever game we are designing, the degree of solidity of the objective truth itself can be whatever we want it to be. That is, the state of being uncertain can itself be an atomic constituent of truth in our fictional world.
+
+A treasure box whose inner content is simply "undefined" prior to the moment of being opened is just as valid a constituent of a fictional universe as one whose inner content has been fully specified beforehand. The outcome of opening the box can simply be defined by the result of rolling a dice which happens right at the moment of opening it, and such a "deferred state of truth" will not contradict any logical construct as long as the outcome never fails to solidify itself when directly observed and does so in a consistent manner so that multiple observers under the same circumstance are always bound to observe it the same way.
+
+<004_51>
+
+Within the aforementioned context, a closed treasure box whose content is unknown to the observer can be assumed to contain something that is fundamentally undefined from the objective standpoint as long as the concept of being "undefined" is allowed to be part of the game's domain of objective truth; this "something" can be described as the potential for the treasure box to donate at least one energy atom to the observer. The presence of an energy atom and its transferability is undefined as long as the box is closed (not just "unknown", but "undefined" in the objective sense), yet the probability that such an energy atom may exist is a defined piece of information which clearly "exists" within the context of our reasoning and thus entitles us to call this box a "resource".
+
+To summarize, I would say that an atom can be defined as a "resource" as long as it carries a potential for giving off energy to the observer, regardless of whether the existence of such capability is defined before the moment of observation. Likewise, an atom can be defined as an "obstacle" as long as it carries a potential for stealing energy from the observer, regardless of whether the existence of such capability is defined before the moment of observation.
+
+In the next volume, I will delve into this new idea called "potential", and explain how it simplifies the nature of atom-to-atom relations down to a purely mechanical set of patterns. This will eventually even allow highly narrative scenarios to be broken down to a group of mechanics, thereby proving the feasibility of coming up with a "universal language" which unifies the language of narratives and the language of mechanics into one shared faculty of reasoning.
+
+(Will be continued in Volume 9)
+
+
+
+
+
+
+
+:d:An article about universal laws of game design.
+:k:Game, Videogame, Design, Cognitive, Science, AAA, Indie, System, Engineering
+
+[Universal Laws of Game Design - Volume 9] 2023.03
+
+(Continued from Volume 8)
+
+So far, we have been encountering the difficulty of representing not only the mechanics but also the narratives of the game in a computationally interpretable form. Since a game is a fairly sophisticated architecture made up of both mechanics and narratives which constantly reinforce each other in an interactive way, it is crucial to ensure that we are able to formulate a unified language upon which both of these two opposing faculties of knowledge can collaborate together as a whole.
+
+The main struggle with the attempts to represent the game's narratives in a purely mathematical (thus translatable to mechanics) format belongs to their apparent image of vagueness. They often involve emotional components such as joy, sorrow, jealousy, remorse, enlightenment, and many others, as well as personalities, beliefs, worldviews, senses that are either observed or not observed, thoughts that are either conceived or not conceived, and so on.
+
+Such a vast field of complexity, in general, tends to compel the designer to develop the narrative elements of the game in a rather experimental manner for the purpose of avoiding ungrounded speculations, which derives the basis of its reasoning from the engagement of the player on a cognitive level and measures the relative degree of success of each design approach in terms of its most directly measurable outcomes such as the intensity and time of engagement.
+
+It may also be argued, however, that such a cognition-centered methodology has widely been practiced by AAA game companies and other large institutions which are armed with countless experts in the area of manipulative psychology (whom a small group of independent developers can hardly compete with). If one is to undertake a journey of becoming an indie developer, therefore, being able to design a game whose degree of competence in the marketplace lies on a distinct dimension of measurement that is somehow differentiable from the brute-force power of dopamine addiction is more or less a pragmatic necessity.
+
+For this reason, a design process that is of any considerable value in this oversaturated industry ought to possess some form of metaphysical insight which goes deeper into the fundamental nature of narratives and mechanics themselves, rather than focusing on the outer surface of their cognitive effects.
+
+Such an insight should not be confused with the so-called "artistic endeavors", however, which are carelessly coined by amateurs who feign the integrity of their imagination based upon the mere ambiguity of the way in which they associate their ideas. Such an undisciplined sort of self-expression, which bases its value on the aesthetics of one's own fashionable ego, usually does not lead to the proof of its uniqueness because there are way too many of them who desperately clamor in unison to let the rest of the world know how "creative" they are.
+
+If we are rationally minded individuals who make decisions out of some form of logic rather than an amorphous cloud of emotional impulses, it should not be an overstatement to say that an attempt to design a game that is commercially viable yet still distinguishes itself from the most common niche of today's game industry (which is highly empirical in nature) should begin with the imaginative power of pure mathematics as well as its philosophical origin - for it is an intuitively fitting notion that a body of a priori knowledge which excludes mathematics from its domain of reasoning easily veers towards an abyss of vagueness and thus disrupts the game's structural integrity.
+
+And in order for such a line of reasoning to invariably apply to the full process of game development, we ought to make sure that both the narratives and mechanics of the gameplay, as well as their back-and-forth interactions, are representable in terms of mathematical entities.
+
+In the last volume, we witnessed the difficulty of defining and measuring volitional (psychological) forces of gameplay agents as opposed to forces which solely belong to the domain of pure mechanics (e.g. motion, heat, gravity, chemical reactions, etc). Such a challenge seemed to suggest at first that drawing the complete anatomy of narrative elements in a system-oriented manner is an impossible task, but later on we also saw that they do not necessarily have to differ from mechanics on a fundamental level. The reason behind this bold statement of wholeness lies on the notion that, in the vast majority of cases, narratives stem from motivations and motivations stem from the idea of energy exchange.
+
+<004_52>
+
+One might argue that some of the sources of narratives such as purely abstract emotions have nothing to do with the concept of "energy", yet such a statement can be considered valid only if we suppose that the word "energy" always refers to its conventional use cases such as generation/consumption of electricity, petroleum, foods, and other physical entities.
+
+Since energy is something that is defined in terms of a causal relation among observations (i.e. An underlying pattern of nature which causes a group of observations at one point in time to be associated with another group of observations at a different point in time) instead of the sense-data of individual observations themselves, we may claim that any observable phenomenon which bears a hint of such a relation can be assumed to involve some form of energy transfer. And as far as I can tell, there has not been a decisive reason to assume that such causal phenomena must be confined to those which are considered physical, as opposed to those which are considered mental.
+
+The energy-oriented reasoning leads us to the idea that not only mechanical but also narrative elements of gameplay are capable of being defined in the form of energy exchange, as long as we do not limit the scope of our definition of the term "energy" to those which pertain to the study of physics.
+
+As we all know, there are different kinds of energy such as those that are gravitational, electrical, thermal, nuclear, and so forth. This makes it quite logically sound to say that it is okay for us to expand this collection of energy types by adding new ones to it in order to fit our design purposes, especially because what we are designing is a fictional universe in which the very definition of "real" as opposed to "unreal" is more or less arbitrary. For example, it is perfectly sensical to imagine abstract forms of energy such as "emotional energy", "financial energy" (i.e. monetary value), and many others which have the ability to modify the state of causality of the system.
+
+<004_53>
+
+Time, too, can be interpreted as a form of energy, and one may fancy that any object which is willing to change its current location does so by spending its time-energy (because it takes time for an object to move, unless it is capable of instantaneous teleportation). This backs up my previous claim that a distance in space can be measured in terms of the amount of energy spent by an object while it travels from one point to another; even in case where there is absolutely no force field (e.g. gravity) or medium of friction (e.g. air) surrounding the object, which would let it simply move through the continuum of space based upon its own inertia without requiring any change in its potential/kinetic forms of energy, it is still bound to consume a certain number of time-energy particles for every unit distance it travels.
+
+<004_54>
+
+How to determine the rules of exchange among energy particles, then? For this question, I would say that it is generally fine to presume that abstract types of energy which belong to the domain of psychological interactions follow the same exact rules as the ones that are obeyed by physical types (because I have not yet perceived a case in which such a supposition should be considered logically contradictory).
+
+In the last volume, I suggested the feasibility of the existence of what is called a "potential". A potential is essentially an indivisible container which may or may not have an energy atom bound to itself; it possesses the ability to receive, store, and emit an energy atom of a specific type which might pertain to the interests of the observer, without necessarily letting the observer know whether or not it is currently available.
+
+<004_55>
+
+When there are two potentials that are sufficiently close to each other (i.e. separated by at most 1 binding), one may expect energy atoms to travel from one potential to the other. In order to specify the direction of energy transfer without devising truckloads of arbitrary rules, however, we need to understand the concept of energy levels.
+
+<004_56>
+
+There are different levels in each type of energy. Gravitational energy, for example, has its energy levels allocated to different altitudes of space with respect to the center of the Earth. When a ball gets lifted up into the sky, its gravitational energy level increases (because the altitude is higher). And when it falls down to the ground, its gravitational energy level decreases (because the altitude is lower). Therefore, it makes sense for us to say that the ball is an energy atom which belongs to either a potential which is located at the ground or a potential which is located at the sky depending on how far away it is from the center of the Earth. Hence it is also sensible to state, due to the apparent nature of gravity which we all agree upon, that such an energy atom has a tendency of always moving towards a lower energy level than the current one to which it belongs, as long as there is no counteracting force which prevents it.
+
+<004_57>
+
+This tendency is universally present in all energy types. Electrical charges move from higher to lower electrical energy levels (which allows us to run electric circuits), and heat moves from higher to lower thermal energy levels which results in eventual thermal equilibrium. Abstract units of energy (e.g. time), too, have their own levels allocated to various points in spacetime, across which they travel in the descending order.
+
+<004_58>
+
+If we let each potential have its own energy level, therefore, it will be reasonable to claim that an energy atom which is bound to a potential of level N will automatically rebind itself to any other potential of level X (where X < N) which is at most 1 binding apart from the level-N potential.
+
+Also, our observations in gravitational phenomena tell us that an agent of an energy field always follows the shortest route in terms of reducing its own energy level. That is, an uninterrupted ball always falls directly towards the center of the Earth because it is the line of displacement which guarantees the highest rate of reduction in its gravitational energy level. Thus, we can conclude that an energy atom which is bound to a level-N potential always automatically rebinds itself to any other adjacent potential of level X which satisfies both of the following conditions:
+
+(1) X < N
+(2) X is the smallest of the levels of all potentials that are adjacent to the aforementioned level-N potential.
+
+(Note: "Adjacent" means that two potentials are separated by at most 1 atomic binding.)
+
+<004_59>
+
+One question which may arise is, "What happens after all energy atoms reach their lowest possible energy levels? Won't this stall the entire system because there will no longer be any transfer of energy?" And this doubt is perfectly reasonable because it should indeed be the case if only the pattern stated above constitutes the dynamics of the gameplay system. Eventually, all energy atoms will settle down in their ultimate state of equilibrium and no more event will happen thereafter; this is a theoretical analogue of the so-called "heat death" of our universe.
+
+Let us note, however, that our game world does not have to be a completely closed system. We may assume the existence of external forces which revive dead energy particles (i.e. those which have fallen to their lowest possible levels) by sending them back to their highest levels by means of two special kinds of potentials - sinks and sources.
+
+<004_60>
+
+A sink is a potential which has the lowest possible energy level, whereas a source is a potential which has the highest possible energy level. A sink follows a special way of energy transfer which differs from that of all other potentials - that is, an energy atom which enters a sink always instantly gets transported to one of the sources which exist within the gameplay world, despite the fact that a source's energy level is higher than that of a sink. This scheme may sound contradictory to our reasoning of the direction in which energy is always bound to propagate (i.e. from high potential to low potential), yet the logic makes perfect sense if we assume that there is an external power supply which constantly provides a stream of force which "recharges" the most exhausted energy particles back to their most excited state. We can think of a sink and a source as the two ends of a battery in an electric circuit.
+
+<004_61>
+
+So, with the presence of potentials and their recycling mechanism, we now have a system which is able to maintain its own perpetual cycle of dynamic events. Energy atoms flow from upstream to downstream inside the vast network of potentials, more or less periodically circulating back to the top of the upstream with the aid of sinks/sources.
+
+However, a game is something more than just a physics simulation and is therefore required to support the emergence of active agents and their motive-driven energy exchanges. The reason behind this is that gameplay begins with the conceptual division between the self and the rest of the world. Both the player and NPCs are decision-making entities (e.g. biological organisms) as opposed to rudimentary mechanical bodies which only react to impulses on a short-term case by case basis, and such a hint of inner complexity can be realized by separating out each character's inventory of energy particles from those which belong to the outside of its own body. Under this hypothetical division, we can easily imagine that an active gameplay agent's own set of goals and actions directly correlate to instances of direct energy transfer which occur between the inside and outside of the agent's existential boundary, each of which can be defined as a constituent of an exchange of energy particles (aka "transaction").
+
+<004_62>
+
+The concept of exchange is trickier to define than mere flux of energy from high to low potentials, due to its nature of bidirectionality and simultaneity. And for this reason, we must take extra precautions not to convolute our definitions too much while constructing the mathematical foundation of what an exchange is.
+
+Let us first consider the mechanic of autonomous movement as an example. An organism (such as an animal) moves itself by giving off one of its kinetic energy atoms and receiving a chance to modify its current position in return. This is probably the most basic yet also the most significant type of exchange due to the fact that a movement is the most fundamental unit of action one can ever imagine (as explained in volume 2).
+
+<004_63>
+
+First of all, it is not hard to guess that the consumption of kinetic energy can be explained as an event in which a kinetic energy atom transfers itself from a relatively high kinetic potential to a relatively low kinetic potential, given that a condition which allows the occurrence of such an event is present. If we apply this same exact mode of interpretation to the phenomenon of locomotion, we should be able to hypothesize that the organism (i.e. subject of motion) itself can be imagined as an energy atom, and that its present and future spatial locations can be imagined as having potentials in them that are capable of transmitting energy.
+
+Supposing that there is a special type of energy called "locomotive energy", one may fancy that a voluntary mover's initial location of movement temporarily becomes an owner of a high-level locomotive potential, while its final location of movement temporarily becomes an owner of a low-level locomotive potential, and that the moving agent itself is a locomotive energy particle which follows the stream of locomotive potentials in the most rapidly descending order. Meanwhile, it should also be assumed that the mover temporarily becomes an owner of a kinetic sink in order to dissipate one of its kinetic energy particles while moving.
+
+<004_64>
+
+Since a voluntary movement is not something which occurs naturally without any psychological determination, it must be triggered by a process of motivation. In our hypothetical model, this phenomenon can be interpreted as a temporary addition of a set of atoms to the system, which immediately get taken back as soon as they invoke the desired action.
+
+This is how a simultaneous exchange of energy particles is able to take place within the context of an autonomous agent and its surrounding environment. The agent motivates itself (i.e. adds a specific set of potentials to the scene), follows its own motivation (i.e. waits for a moment to let the energy atoms transfer themselves to lower potentials), and then terminates its own motivation (i.e. removes the potentials it just added). The end result of this 3-step process is an exchange between 1 outgoing kinetic energy atom and 1 incoming locomotive energy atom, which is reminiscent of exchanging one currency with another inside a bank.
+
+In the next volume, we will delve into the nature of exchange in more detail.
+
+(Will be continued in Volume 10)

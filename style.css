@@ -1,55 +1,389 @@
-:root {
-    --darkColor: #404040;
-    --dimColor: #707070;
-    --mediumColor: #909090;
-    --lightColor: #d0d0d0;
-    --lightYellowColor: #e0d0a0;
-    --lightGreenColor: #80d070;
-}
-
 body {
-    background-color: var(--darkColor);
-    font-family: Courier New;
-}
-h1 {
-    display: block;
-    color: var(--lightYellowColor);
-    font-style: italic;
-}
-h2 {
-    display: block;
-    color: var(--mediumColor);
-    font-style: italic;
-}
-h3 {
-    display: block;
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 0.5vmin 0.5vmin 0.5vmin 0.5vmin;	margin: 0.5vmin auto 0.5vmin auto;
+	font-size: min(2.8vmax, 18px);
+	font-family: Courier New;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #404040;
+	color: #d0d0d0;
 }
 p {
-    display: block;
-    color: var(--lightColor);
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
+	font-size: min(2.8vmax, 18px);
+	font-family: Courier New;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #404040;
+	color: #d0d0d0;
 }
-a {
-    display: inline-block;
-    color: var(--lightColor);
-    font-style: italic;
+h3 {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(3.36vmax, 22px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #d0d0d0;
+}
+h2 {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
+	font-size: min(4.0vmax, 26px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+h1 {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #e0d0a0;
+}
+a:link {
+  color: #909090;
+}
+a:visited {
+  color: #909090;
+}
+a:hover {
+  color: #e0d0a0;
+}
+a:active {
+  color: #909090;
 }
 footer {
-    margin-top: 8vmin;
-    color: var(--dimColor);
-    font-weight: bolder;
-}
-img {
-    display: block;
+	position: relative;
+	display: block;
+	margin-top: 7vh;
+	margin-bottom: 5vh;
+	margin-left: 5vw;
+	margin-right: 5vw;
+	padding: 3vmax 3vmax 3vmax 3vmax;
+	font-size: min(3.36vmax, 22px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #707070;
 }
 
-.banner {
-    background-color: #000000;
-    padding: 8px 8px 8px 8px;
-}
 .snippet {
-    color: var(--lightGreenColor);
-    font-weight: bolder;
-    border: 2px var(--lightGreenColor) solid;
-    background-color: #000000;
-    padding: 6px 6px 6px 6px;
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
+	font-size: min(2.8vmax, 18px);
+	font-family: Courier New;
+	font-style: normal;
+	font-weight: 700;
+	background-color: #202020;
+	color: #80d070;
+	border-radius: 4.5vmin;
+	text-align: left;
+}
+.banner {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 2.0vmin 2.0vmin 2.0vmin 2.0vmin;	margin: 2.0vmin auto 2.0vmin auto;
+	font-size: min(4.0vmax, 26px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #202020;
+	color: #909090;
+	border-radius: 4.5vmin;
+}
+.l_spacer {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
+	background-color: #404040;
+	color: #909090;
+}
+.xl_spacer {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 2.0vmin 2.0vmin 2.0vmin 2.0vmin;	margin: 2.0vmin auto 2.0vmin auto;
+	background-color: #404040;
+	color: #909090;
+}
+
+@media (orientation: landscape) {
+	
+iframe {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(4.0vmax, 26px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.logoImage {
+	position: relative;
+	display: block;
+	max-width: 40vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.logoImageSmall {
+	position: relative;
+	display: block;
+	max-width: 23vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.profileImage {
+	position: relative;
+	display: block;
+	max-width: 28vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+}
+.figureImage {
+	position: relative;
+	display: block;
+	max-width: 40vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	min-width: 500px;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+}
+.gameImage {
+	position: relative;
+	display: block;
+	max-width: 40vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	min-width: 200px;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+}
+.button {
+	position: relative;
+	display: block;
+	max-width: 40vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #909090;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+	border: 1.5vmin #e0d0a0 solid;
+}
+.gameLink {
+	position: relative;
+	display: inline-block;
+	width: 30vw;
+	height: 9.1714vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+	border-radius: 4.5vmin;
+	border: 1.5vmin #909090 solid;
+}
+.gameLink:hover {
+	border-color: #e0d0a0
+}
+.playButton {
+	position: relative;
+	display: inline-block;
+	width: 30vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.noTextDeco {
+	text-decoration: none;
+}
+
+}
+
+@media (orientation: portrait) {
+	
+iframe {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(4.0vmax, 26px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.logoImage {
+	position: relative;
+	display: block;
+	max-width: 80vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.logoImageSmall {
+	position: relative;
+	display: block;
+	max-width: 40vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.profileImage {
+	position: relative;
+	display: block;
+	max-width: 40vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+}
+.figureImage {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	min-width: 500px;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+}
+.gameImage {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	min-width: 200px;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+}
+.button {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #909090;
+	color: #d0d0d0;
+	border-radius: 4.5vmin;
+	border: 1.5vmin #e0d0a0 solid;
+}
+.gameLink {
+	position: relative;
+	display: block;
+	width: 80vw;
+	height: 24.4571vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+	border-radius: 4.5vmin;
+	border: 1.5vmin #909090 solid;
+}
+.gameLink:hover {
+	border-color: #e0d0a0
+}
+.playButton {
+	position: relative;
+	display: block;
+	width: 60vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	font-size: min(5.6vmax, 36px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #404040;
+	color: #909090;
+}
+.noTextDeco {
+	text-decoration: none;
+}
+
 }

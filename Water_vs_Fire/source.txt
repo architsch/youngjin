@@ -1,0 +1,19 @@
+:d:Water vs Fire is a minimalistic RTS which features a battle between two opposing elements - Water and Fire.
+:k:Free, Game, Elemental, Indie, Browser, Go, Board-Game, Table-Game, Chess
+<1>
+
+[An Elemental RTS]
+
+Water vs Fire is a real-time elemental strategy game with minimalistic design.
+
+<2>
+
+[A Never-Ending Battle between Fire and Water]
+
+You are fighting against hordes of deadly fire. Build wells to extend your water supply, and pour buckets of water to extinguish the menacing flames.
+
+<3>
+
+[This is a Race against Time!]
+
+Extinguish every crumb of fire before the timer runs out.

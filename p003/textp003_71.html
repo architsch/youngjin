@@ -2,7 +2,18 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="description" content="게임 속 개발자의 꼼수들에 관해.">
+<meta name="keywords" content="좀비인공지능, 절두체, 컬링, 시네마틱, 컷신, 심즈, GPU연산, 쉐이더, 90년대게임">
+<meta name="author" content="ThingsPool">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Free Games"/>
+<meta property="og:url" content="https://thingspool.net"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="Play free games on your browser!"/>
+<meta property="og:image" content="https://thingspool.net/share.jpg"/>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <title>게임 개발자들이 자주 쓰는 꼼수들</title>
 <link rel="shortcut icon" href="../favicon.ico">
 <link rel="stylesheet" href="../style.css">
@@ -11,26 +22,41 @@
 <h3><a href="textp003_index.html">&#171; Back</a></h3>
 <h1>게임 개발자들이 자주 쓰는 꼼수들</h1>
 <h2>2019.12</h2>
+<div class="xl_spacer"></div>
+<a class="noTextDeco" href="../Water_vs_Fire/page.html">
+<img class="gameLink" src="../Water_vs_Fire/entry.jpg" alt="Water vs Fire">
+</a>
+<a class="noTextDeco" href="../HuntLand/page.html">
+<img class="gameLink" src="../HuntLand/entry.jpg" alt="HuntLand">
+</a>
+<a class="noTextDeco" href="../PoliceChase/page.html">
+<img class="gameLink" src="../PoliceChase/entry.jpg" alt="Police Chase">
+</a>
+<a class="noTextDeco" href="../SpaceTown/page.html">
+<img class="gameLink" src="../SpaceTown/entry.jpg" alt="SpaceTown">
+</a>
+<div class="xl_spacer"></div>
 <p>게임 개발자들은 종종 최소한의 노력으로 최대한 다채로운 게임 플레이를 구현하기 위해 꼼수를 부리곤 한다. 이들 중 몇몇은 꽤나 창의적이라서, 단순한 효율성의 도구라는 개념을 초월하여 해당 게임만이 가진 독특한 개성으로 존중받기도 한다. 다음은 게임 개발자들의 잔머리에서 나온 수많은 꼼수들 중 몇가지의 대표적인 예시들이다.</p>
 <p>(1) 숫자로 퉁치기</p>
 <p>복잡한 현상을 그냥 몇 개의 숫자로 단순화시켜 표현하는 것이야말로 게임에서 가장 흔히 사용되는 수법이라 할 수 있다. 예를 들어서 게임 심즈(Sims)에 등장하는 가상의 인물들은 한 명당 상태변수를 8개씩 가지고 있는데, 이 변수들은 각각 허기, 위생, 편안함, 용변, 에너지, 재미, 사교, 공간이라는 이름을 가진 욕구의 충족상태를 의미한다. 인체에서 일어나는 복잡미묘한 생리현상을 단 8개의 숫자들 속에 함축시켜 버린 것이다.</p>
-<img src="img_71_1.jpg" alt="게임 개발자들이 자주 쓰는 꼼수들 (Figure 1)">
+<img class="figureImage" src="img_71_1.jpg" alt="게임 개발자들이 자주 쓰는 꼼수들 (Figure 1)">
 <p>(이미지 출처: Strategy Wiki: https://strategywiki.org/wiki/The_Sims_2/Tutorial_1)</p>
 <p>(2) 멍청한 캐릭터만 등장시키기</p>
 <p>좀비 아포칼립스 장르의 게임이 많은 이유는, 좀비들이 멍청하기 때문이다. 좀비들은 일반 사람처럼 ("정상인"이라는 표현은 좀비들에게 실례가 될 수 있으니 피하도록 하겠다) 치밀하게 계산하며 길을 찾을 줄 모른다. 그저 눈 앞에 보이는 먹잇감을 향해 일직선으로 나아갈 뿐이다. 좀비의 이런 단순명료한 행동양식은 인공지능을 디자인하는 엔지니어에게 있어 더할 나위 없이 만들기 쉬운 대상이라고 할 수 있다.</p>
-<img src="img_71_2.jpg" alt="게임 개발자들이 자주 쓰는 꼼수들 (Figure 2)">
+<img class="figureImage" src="img_71_2.jpg" alt="게임 개발자들이 자주 쓰는 꼼수들 (Figure 2)">
 <p>(이미지 출처: YouTube: https://www.youtube.com/watch?v=TmFbBV5p248)</p>
 <p>(3) 사방을 안개로 둘러싸기</p>
 <p>탁 트인 드넓은 숲을 마음껏 누비는 오픈월드 게임은 얼마나 매혹적인가? 그러나 불행히도 그래픽 카드의 성능이 그닥 좋지 못한 컴퓨터에게는 이토록 GPU를 혹사시키는 형태의 게임 그래픽을 구현하는 것이 무리이다. 때문에 저사양 게임들은 비교적 가까운 곳에 위치한 사물만을 화면 상에 그려내는 방식으로 GPU의 연산량을 최소화 한다. 다만 이러한 방법은 관찰자로부터 점차 멀어지는 사물이 갑자기 눈 앞에서 뿅 하고 사라지는 것처럼 보인다든지, 아니면 조금씩 가까이 다가오는 사물이 갑자기 눈 앞에 뿅 하고 나타나는 것처럼 보인다든지 하는 등의 희한한 광경을 유발할 수 있다. 따라서 게임 개발자들은 사방에 자욱한 안개를 드리움으로써, 멀리 있는 사물을 화면 상에 굳이 그리지 않아도 되는 절대적인 이유를 만들어 내곤 한다.</p>
-<img src="img_71_3.jpg" alt="게임 개발자들이 자주 쓰는 꼼수들 (Figure 3)">
+<img class="figureImage" src="img_71_3.jpg" alt="게임 개발자들이 자주 쓰는 꼼수들 (Figure 3)">
 <p>(이미지 출처: Demonixis: https://demonixis.tumblr.com/post/169389390726/c3de-global-fog-ported-from-unity)</p>
 <p>(4) 컷신으로 상황설명</p>
 <p>미리 준비해 둔 동영상을 트는 것은 모든 상황을 게임 속 메카닉으로 구현하는 것 보다 훨씬 쉽다. 중간에 예상치 못한 변수가 유입될 일이 없기 때문이다. 보통은 게임 캐릭터들을 인위적으로 움직여 컷신을 만드는데, 옛날 90년대 게임 중에는 아예 실사로 촬영한 동영상을 컷신으로 사용한 것들도 꽤 있었다.</p>
 <p>(5) 유저들에게 진행을 떠맡기기</p>
 <p>"이 게임에는 정해진 룰이 없습니다. 당신이 신이 되어 마음껏 창의성을 뽐내 보세요!" 라고 말하는 샌드박스 게임들이 있다. 그런데 이는 어찌 보면 개발자들이 게임을 세세하게 디자인 하기 귀찮으니까 플레이어에게 진행을 떠맡기는 것이라고 볼 수도 있다.</p>
 <footer>
-<h3>&copy Youngjin Kang. All rights reserved.</h3>
-<h3>Contact: architsch@gmail.com</h3>
+<img class="logoImageSmall" src="../logo.png" alt="ThingsPool Logo">
+&copy 2019-2023 ThingsPool. All rights reserved.<br>
+Contact: thingspool@gmail.com
 </footer>
 </body>
 </html>

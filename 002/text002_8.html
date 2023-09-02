@@ -2,7 +2,18 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="description" content="An article about a spatial interpretation of videogame narratives.">
+<meta name="keywords" content="Game, Videogame, Narrative, Spatial, State-Machine, FSM, Graph-Grammar, Logic-Programming, Prolog">
+<meta name="author" content="ThingsPool">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Free Games"/>
+<meta property="og:url" content="https://thingspool.net"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="Play free games on your browser!"/>
+<meta property="og:image" content="https://thingspool.net/share.jpg"/>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <title>Intergraph</title>
 <link rel="shortcut icon" href="../favicon.ico">
 <link rel="stylesheet" href="../style.css">
@@ -11,6 +22,20 @@
 <h3><a href="text002_index.html">&#171; Back</a></h3>
 <h1>Intergraph</h1>
 <h2>2022.10</h2>
+<div class="xl_spacer"></div>
+<a class="noTextDeco" href="../Water_vs_Fire/page.html">
+<img class="gameLink" src="../Water_vs_Fire/entry.jpg" alt="Water vs Fire">
+</a>
+<a class="noTextDeco" href="../HuntLand/page.html">
+<img class="gameLink" src="../HuntLand/entry.jpg" alt="HuntLand">
+</a>
+<a class="noTextDeco" href="../PoliceChase/page.html">
+<img class="gameLink" src="../PoliceChase/entry.jpg" alt="Police Chase">
+</a>
+<a class="noTextDeco" href="../SpaceTown/page.html">
+<img class="gameLink" src="../SpaceTown/entry.jpg" alt="SpaceTown">
+</a>
+<div class="xl_spacer"></div>
 <p>From a purely structural point of view, a game can be designed using multiple graphs (where a "graph" refers to a set of vertices and a set of edges among those vertices, as in discrete mathematics).</p>
 <p>The spatial map of a videogame, typically referred to as the "game world", can easily be depicted as a graph in which each vertex indicates a "place" (e.g. room, dungeon, platform (floor), etc) and each edge indicates a "passage" (e.g. corridor, hallway, staircase, etc) that lets the player move from place to place.</p>
 <p>The overall narrative structure of the game (aka "scenario") can be represented as a graph, too. An interactive story which drives the player's experience is essentially an ensemble of various alternative chains of events, where each chain can be considered a parallel universe which is bound to collapse into the user's scope of observation under a particular sequence of external inputs. A chain in this context is basically a sequence of events, where each event is equivalent to a vertex and each event-to-event transition is equivalent to an edge in graph terminology. When such chains are all overlayed together, they form a graph which can be described as the FSM (Finite State Machine) representation of the game's storyline.</p>
@@ -22,8 +47,9 @@
 <p>enable(sleep) :- location(bedroom)</p>
 <p>What this implies is that an intergraph should be interpreted as a set of logical conditions imposed upon the way in which the game governs itself. Without such a group of interconnections, the game's narrative elements can potentially all reveal themselves to the player regardless of his/her current local condition; that is, it would be totally valid to assume that the player could just defeat the enemy, undertake all sorts of crazy adventures, and collect all secret treasures of a sunken pirate ship while still chilling in his/her own bedroom with a nice cup of tea.</p>
 <footer>
-<h3>&copy Youngjin Kang. All rights reserved.</h3>
-<h3>Contact: architsch@gmail.com</h3>
+<img class="logoImageSmall" src="../logo.png" alt="ThingsPool Logo">
+&copy 2019-2023 ThingsPool. All rights reserved.<br>
+Contact: thingspool@gmail.com
 </footer>
 </body>
 </html>

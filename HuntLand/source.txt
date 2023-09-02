@@ -1,0 +1,21 @@
+:d:HuntLand is a free web game (Free browser game) which features sandbox action, first-person control, and open-world gameplay.
+:k:Free, Game, FPS, Sandbox, Robots, Roguelike, Open-World, Casual
+[(This game is for PC only)]
+
+<1>
+
+[An HTML5 First-Person Shooter]
+
+HuntLand is a casual FPS action game in which you employ various tools to fight against your robotic enemies.
+
+<2>
+
+[Emergent Mechanics]
+
+Make your way through bouncy projectiles, explosives, force fields, and other interactive wonders.
+
+<3>
+
+[Roguelike Gameplay]
+
+Collect loot from the footsteps of your enemies, in order to level up and unlock your door to the next stage.

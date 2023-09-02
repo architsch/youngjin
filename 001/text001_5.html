@@ -2,7 +2,18 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="description" content="An article about developing procedural narratives in games.">
+<meta name="keywords" content="Narrative, Procedural, Game, GameDev, IndieGame, AI, Roguelike, PCG">
+<meta name="author" content="ThingsPool">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Free Games"/>
+<meta property="og:url" content="https://thingspool.net"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="Play free games on your browser!"/>
+<meta property="og:image" content="https://thingspool.net/share.jpg"/>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <title>Procedural Narratives</title>
 <link rel="shortcut icon" href="../favicon.ico">
 <link rel="stylesheet" href="../style.css">
@@ -11,6 +22,20 @@
 <h3><a href="text001_index.html">&#171; Back</a></h3>
 <h1>Procedural Narratives</h1>
 <h2>2022</h2>
+<div class="xl_spacer"></div>
+<a class="noTextDeco" href="../Water_vs_Fire/page.html">
+<img class="gameLink" src="../Water_vs_Fire/entry.jpg" alt="Water vs Fire">
+</a>
+<a class="noTextDeco" href="../HuntLand/page.html">
+<img class="gameLink" src="../HuntLand/entry.jpg" alt="HuntLand">
+</a>
+<a class="noTextDeco" href="../PoliceChase/page.html">
+<img class="gameLink" src="../PoliceChase/entry.jpg" alt="Police Chase">
+</a>
+<a class="noTextDeco" href="../SpaceTown/page.html">
+<img class="gameLink" src="../SpaceTown/entry.jpg" alt="SpaceTown">
+</a>
+<div class="xl_spacer"></div>
 <p>Let's say that we are creating a videogame using a procedural content generation algorithm. What shall we do to let the game's underlying software auto-generate a virtual world that is populated by meaningful contents?</p>
 <p>It is a pretty well known observation that, using a variety of stochastic and hash-based mechanisms, one can randomly generate all sorts of patterns in space fairly easily. For instance, anyone who is well-versed in computer science would have no trouble writing an algorithm which configures a random maze based on a simple graph-oriented technique (i.e. Just make a grid of vertices and keep connecting random pairs of them until all of them are connected).</p>
 <p>It is also fairly easy to introduce more advanced, abstract patterns to the cookbook of procedural generation. Lock-and-key mechanism, by which the maze is filled with not only corridors of obscure shapes but also with locked doors which can only be unlocked by certain types of keys, is also an option that is straightforward to implement because we can utilize graph-based logic for it (e.g. A "key node" inside the maze graph must precede its corresponding "door node" within at least 1 out of N paths that can be traversed by the player, and so on).</p>
@@ -55,8 +80,9 @@
 <p>A subsequent conclusion, therefore, would be that the procedural algorithm somehow needs to be able to automatically construct the goal-tree itself in large scale (possibly infinite), in order to let us scale up the game's narrative space without putting massive amounts of design work. Achieving such level of automation will require the algorithm to be intelligent enough to be able to come up with brand new types of goals under minimal human intervention.</p>
 <p>This is an interdisciplinary area of research which needs collaboration of individuals who have ideas on how to quantitatively measure and reproduce narrative elements. And this, I think, can only be realized through deep understanding of human nature.</p>
 <footer>
-<h3>&copy Youngjin Kang. All rights reserved.</h3>
-<h3>Contact: architsch@gmail.com</h3>
+<img class="logoImageSmall" src="../logo.png" alt="ThingsPool Logo">
+&copy 2019-2023 ThingsPool. All rights reserved.<br>
+Contact: thingspool@gmail.com
 </footer>
 </body>
 </html>

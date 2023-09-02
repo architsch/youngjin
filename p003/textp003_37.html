@@ -2,7 +2,18 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="description" content="미래의 게임산업에 관해.">
+<meta name="keywords" content="게임서버, 스테이디어, 게임스트리밍, 토이솔져스, 토이디펜스, 락스텝, e스포츠">
+<meta name="author" content="ThingsPool">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Free Games"/>
+<meta property="og:url" content="https://thingspool.net"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="Play free games on your browser!"/>
+<meta property="og:image" content="https://thingspool.net/share.jpg"/>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <title>서버 중심의 게임플레이</title>
 <link rel="shortcut icon" href="../favicon.ico">
 <link rel="stylesheet" href="../style.css">
@@ -11,24 +22,39 @@
 <h3><a href="textp003_index.html">&#171; Back</a></h3>
 <h1>서버 중심의 게임플레이</h1>
 <h2>2019.09</h2>
+<div class="xl_spacer"></div>
+<a class="noTextDeco" href="../Water_vs_Fire/page.html">
+<img class="gameLink" src="../Water_vs_Fire/entry.jpg" alt="Water vs Fire">
+</a>
+<a class="noTextDeco" href="../HuntLand/page.html">
+<img class="gameLink" src="../HuntLand/entry.jpg" alt="HuntLand">
+</a>
+<a class="noTextDeco" href="../PoliceChase/page.html">
+<img class="gameLink" src="../PoliceChase/entry.jpg" alt="Police Chase">
+</a>
+<a class="noTextDeco" href="../SpaceTown/page.html">
+<img class="gameLink" src="../SpaceTown/entry.jpg" alt="SpaceTown">
+</a>
+<div class="xl_spacer"></div>
 <p>머지 않아 구글의 실시간 게임 스트리밍 서비스인 스테이디어(Stadia, 스테이디아)가 게임시장에 모습을 드러내게 된다.</p>
-<img src="img_37_1.jpg" alt="서버 중심의 게임플레이 (Figure 1)">
+<img class="figureImage" src="img_37_1.jpg" alt="서버 중심의 게임플레이 (Figure 1)">
 <p>(이미지 출처: Wikipedia: https://en.wikipedia.org/wiki/Google_Stadia)</p>
 <p>'클라우드 게임 서비스'라고도 불리우는 스테이디어는 한마디로 게임 자체를 클라이언트가 아닌 서버 컴퓨터 안에서 작동시키고, 클라이언트(유저)는 그냥 스트리밍 형식으로 게임 속 영상을 전달받는 방식으로 게임을 하게끔 해준다 (물론 스트리밍 비디오를 보듯이 그냥 관찰하는 것도 가능하다).</p>
 <p>한마디로 게임 속에서 벌어지는 대부분의 연산을 서버가 처리함으로써, 클라이언트의 CPU가 받을 수 있는 연산의 부담을 최대한 줄여주는 것이다.</p>
 <p>이렇게 게임의 주요 매커니즘을 서버가 구동하는 사례는 과거에도 많았다. 예컨대 모바일 게임인 '클래시로얄'(Clash Royal)은 모바일 디바이스의 연산량을 최대한 줄여주기 위해, 게임 속에서 일어나는 대부분의 이벤트들을 서버 상에서 처리하고 클라이언트는 단순히 계산결과를 받아 거기에 그래픽/사운드만 입히게끔 하는 식으로 작동한다.</p>
-<img src="img_37_2.jpg" alt="서버 중심의 게임플레이 (Figure 2)">
+<img class="figureImage" src="img_37_2.jpg" alt="서버 중심의 게임플레이 (Figure 2)">
 <p>(이미지 출처: Wikipedia: https://en.wikipedia.org/wiki/Clash_Royale)</p>
 <p>다만 스테이디어는 이러한 서버 중심의 게임 진행을 훨씬 더 극단적인 수준으로 끌어 올린 것이라고 볼 수 있다.</p>
 <p>예로부터 실시간 온라인게임을 만들 때 개발자들이 가장 힘들어 하는 난제는 바로 플레이어들 사이의 게임의 싱크로율을 유지하는 것이라 할 수 있다. 가령 두 플레이어들이 온라인 상에서 서로 대결을 할 때, 이 둘이 관찰하는 게임 속 상황은 거의 정확히 일치하여야 한다. 그렇지 않다면 두 플레이어들은 서로 다른 2가지의 대결에 임하고 있는 꼴이 될 뿐만 아니라, 서로가 서로의 상황에 맞지 않는 행동을 하며 혼란을 조성하기 때문이다.</p>
 <p>이 때문에 온라인 FPS 게임들은 보통 각 플레이어의 위치/방향값을 최대한 신속하게 서로에게 스트리밍 형식으로 전송하고, 스타크래프트를 비롯한 온라인 전략게임들은 아예 게임 속 시스템 자체를 체스처럼 결정론적으로 진행함으로써, 플레이어들로 하여금 서로의 입력값들만 알면 나머지의 모든 게임 속 상황들을 완벽하게 계산해 낼 수 있게끔 디자인되어 있다.</p>
-<img src="img_37_3.jpg" alt="서버 중심의 게임플레이 (Figure 3)">
+<img class="figureImage" src="img_37_3.jpg" alt="서버 중심의 게임플레이 (Figure 3)">
 <p>(이미지 출처: Wikipedia: https://en.wikipedia.org/wiki/StarCraft_(video_game))</p>
 <p>물론 모든 실시간 온라인 게임이 이렇게 철두철미하게 설계된 건 아니다. 예를 들어서 '토이 솔져스'(Toy Soldiers)는 두 플레이어 사이의 싱크로율이 엉망임에도 불구하고 실시간 멀티플레이어 기능을 지원한다 (어차피 타워디펜스 형식의 게임이라서, 싱크가 좀 안 맞아도 당사자들 한테는 티가 안 날 것이라 판단했기 때문이다).</p>
 <p>다만 실시간으로 양 측의 게임플레이 영상을 대조해 가며 중계를 하는 e스포츠 방송에 특화된 온라인 게임, 또는 유저들 간에 실시간으로 대화가 오고 가는 커뮤니케이션 중심의 온라인 게임의 경우에는 클라이언트들 사이의 싱크를 맞추는 게 필수 조건이다. 이러한 경우에는 구글의 스테이디어가 사용하는 방식이 굉장히 게임개발 과정의 수고를 단축시킬 것이라 믿는다.</p>
 <footer>
-<h3>&copy Youngjin Kang. All rights reserved.</h3>
-<h3>Contact: architsch@gmail.com</h3>
+<img class="logoImageSmall" src="../logo.png" alt="ThingsPool Logo">
+&copy 2019-2023 ThingsPool. All rights reserved.<br>
+Contact: thingspool@gmail.com
 </footer>
 </body>
 </html>

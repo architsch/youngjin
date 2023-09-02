@@ -1,0 +1,19 @@
+:d:SpaceTown is a space construction simulator with emergent gameplay mechanics and a variety of collectibles.
+:k:Free, Game, RTS, Browser-Game, Isometric, Management, Strategy, Construction, Sci-Fi, Cosmic
+<1>
+
+[A Clicker RTS]
+
+SpaceTown is an incremental tower defense game in which you must fight against continuous waves of alien creatures.
+
+<2>
+
+[A Galactic Battle Simulator]
+
+Gather resources, upgrade your weapons, and conduct researches to enhance your space force.
+
+<3>
+
+[Construct your own Space Colony]
+
+Various level-ups and hidden rewards are awaiting you.
