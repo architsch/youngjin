@@ -29,8 +29,8 @@ const fullCoverChildArea = (display) =>
 \twidth: 100%;
 \theight: 100%;`;
 
-const spacing = (length, includePadding, includeMargin) =>
-`text-align: center;` +
+const spacing = (length, includePadding, includeMargin, textAlign) =>
+`text-align: ${textAlign};` +
 (includePadding ? `\tpadding: ${length} ${length} ${length} ${length};` : "") +
 (includeMargin ? `\tmargin: ${length} auto ${length} auto;` : "");
 
@@ -65,21 +65,27 @@ const quarter_row_area = relativeArea(true, "23vw");
 const visible_full_cover_child_area = fullCoverChildArea(true);
 const invisible_full_cover_child_area = fullCoverChildArea(false);
 
-const zero_spacing = spacing("0", true, true);
-const s_spacing = spacing("0.5vmin", true, true);
-const m_spacing = spacing("1.0vmin", true, true);
-const l_spacing = spacing("1.5vmin", true, true);
-const xl_spacing = spacing("2.0vmin", true, true);
+const zero_spacing = spacing("0", true, true, "center");
+const s_spacing = spacing("0.5vmin", true, true, "center");
+const m_spacing = spacing("1.0vmin", true, true, "center");
+const l_spacing = spacing("1.5vmin", true, true, "center");
+const xl_spacing = spacing("2.0vmin", true, true, "center");
 
-const s_spacing_paddingOnly = spacing("0.5vmin", true, false);
-const m_spacing_paddingOnly = spacing("1.0vmin", true, false);
-const l_spacing_paddingOnly = spacing("1.5vmin", true, false);
-const xl_spacing_paddingOnly = spacing("2.0vmin", true, false);
+const s_spacing_paddingOnly = spacing("0.5vmin", true, false, "center");
+const m_spacing_paddingOnly = spacing("1.0vmin", true, false, "center");
+const l_spacing_paddingOnly = spacing("1.5vmin", true, false, "center");
+const xl_spacing_paddingOnly = spacing("2.0vmin", true, false, "center");
 
-const s_spacing_marginOnly = spacing("0.5vmin", false, true);
-const m_spacing_marginOnly = spacing("1.0vmin", false, true);
-const l_spacing_marginOnly = spacing("1.5vmin", false, true);
-const xl_spacing_marginOnly = spacing("2.0vmin", false, true);
+const s_spacing_marginOnly = spacing("0.5vmin", false, true, "center");
+const m_spacing_marginOnly = spacing("1.0vmin", false, true, "center");
+const l_spacing_marginOnly = spacing("1.5vmin", false, true, "center");
+const xl_spacing_marginOnly = spacing("2.0vmin", false, true, "center");
+
+const zero_spacing_leftText = spacing("0", true, true, "left");
+const s_spacing_leftText = spacing("0.5vmin", true, true, "left");
+const m_spacing_leftText = spacing("1.0vmin", true, true, "left");
+const l_spacing_leftText = spacing("1.5vmin", true, true, "left");
+const xl_spacing_leftText = spacing("2.0vmin", true, true, "left");
 
 const s_font = font("min(2.8vmax, 18px)", false, 400);
 const s_bold_font = font("min(2.8vmax, 18px)", false, 700); // x1.2
@@ -131,14 +137,12 @@ iframe {
 .figureImage {
 	${landscape ? half_row_area : full_row_area}
 	${m_spacing}
-	min-width: 500px;
 	${xl_font}
 	${img_frame}
 }
 .gameImage {
 	${landscape ? half_row_area : full_row_area}
 	${m_spacing}
-	min-width: 200px;
 	${xl_font}
 	${img_frame}
 }
@@ -233,11 +237,13 @@ footer {
 }
 
 .snippet {
-	${full_row_area}
-	${l_spacing}
+	position: relative;
+	display: inline-block;
+	width: auto;
+	${xl_spacing_leftText}
 	${s_bold_font}
 	${snippet_frame}
-	text-align: left;
+	white-space: nowrap;
 }
 .banner {
 	${full_row_area}

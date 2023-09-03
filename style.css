@@ -88,9 +88,9 @@ footer {
 
 .snippet {
 	position: relative;
-	display: block;
-	max-width: 90vw;
-	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
+	display: inline-block;
+	width: auto;
+	text-align: left;	padding: 2.0vmin 2.0vmin 2.0vmin 2.0vmin;	margin: 2.0vmin auto 2.0vmin auto;
 	font-size: min(2.8vmax, 18px);
 	font-family: Courier New;
 	font-style: normal;
@@ -98,7 +98,7 @@ footer {
 	background-color: #202020;
 	color: #80d070;
 	border-radius: 4.5vmin;
-	text-align: left;
+	white-space: nowrap;
 }
 .banner {
 	position: relative;
@@ -186,7 +186,6 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	min-width: 500px;
 	font-size: min(5.6vmax, 36px);
 	font-family: Courier New;
 	font-style: italic;
@@ -200,7 +199,6 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	min-width: 200px;
 	font-size: min(5.6vmax, 36px);
 	font-family: Courier New;
 	font-style: italic;
@@ -315,7 +313,6 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	min-width: 500px;
 	font-size: min(5.6vmax, 36px);
 	font-family: Courier New;
 	font-style: italic;
@@ -329,7 +326,6 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	min-width: 200px;
 	font-size: min(5.6vmax, 36px);
 	font-family: Courier New;
 	font-style: italic;

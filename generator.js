@@ -4,20 +4,18 @@ const fs = require('fs/promises');
 const fss = require('fs');
 
 const gameEntries = [
-    ["Water_vs_Fire", "Water vs Fire", "https://www.gamearter.com/game/water-vs-fire", `<iframe width="560" height="315" src="https://www.youtube.com/embed/6DeA_m8Iq4M?si=hC1uzkEtBWpYcM8z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
+    ["Water-vs-Fire", "Water vs Fire", "https://www.gamearter.com/game/water-vs-fire", `<iframe width="560" height="315" src="https://www.youtube.com/embed/6DeA_m8Iq4M?si=hC1uzkEtBWpYcM8z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
     ["HuntLand", "HuntLand", "https://www.gamearter.com/game/huntland", `<iframe width="560" height="315" src="https://www.youtube.com/embed/3dRg6vvoPqc?si=FlnKVyzQq0_55sL2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
     ["PoliceChase", "Police Chase", "https://www.gamearter.com/game/policechase", null],
     ["SpaceTown", "SpaceTown", "https://www.gamearter.com/game/spacetown", `<iframe width="560" height="315" src="https://www.youtube.com/embed/ll-TAmGqilA?si=e3DLl06bEjohhc2X" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
 ];
 const writingEntries = [
-    ["p001", "Short Novels (2012 - 2013)"],
-    ["p002", "Notes on Metaphysics (2013 - 2014)"],
+    ["p001", "Novels (2012 - 2013)"],
+    ["p002", "Metaphysics (2013 - 2014)"],
     ["p003", "Game Analysis (2019)"],
-    ["001", "Essays and Novels (Summer 2022)"],
-    ["002", "On Legitimacy of Blockchains - and other essays (Autumn-Winter 2022)"],
-    ["003", "Universal Laws of Game Design - and other essays (January-February 2023)"],
-    ["004", "Universal Laws of Game Design (March 2023)"],
-    ["005", "Universal Laws of Game Design - and other essays (April-May 2023)"],
+    ["001", "Essays and Novels (2022 - 2023)"],
+    ["002", "Blockchains (2022)"],
+    ["003", "Game Design (2023)"],
 ];
 
 async function run()
@@ -60,13 +58,13 @@ async function run()
             const fileIndex = fileIndices[j];
             const fileTitle = fileTitles[j];
             const fileText = fileTexts[j];
-            const fileHTMLFileName = `text${code}_${fileIndex}.html`;
+            const fileHTMLFileName = `text${code}-${fileIndex}.html`;
             htmlLines.push(`<h3><a href="${fileHTMLFileName}">${fileTitle}</a></h3>`);
             await write(`${code}/${fileHTMLFileName}`, fileText);
         }
 
         addFooterHTML(htmlLines, 0);
-        await write(`${code}/text${code}_index.html`, htmlLines.join("\n"));
+        await write(`${code}/text${code}-index.html`, htmlLines.join("\n"));
     }
 
     //------------------------------------------------------------------------------------
@@ -88,7 +86,7 @@ async function run()
     {
         const code = writingEntries[i][0];
         const entryName = writingEntries[i][1];
-        htmlLines.push(`<h3><a href="${code}/text${code}_index.html">${entryName}</a></h3>`);
+        htmlLines.push(`<h3><a href="${code}/text${code}-index.html">${entryName}</a></h3>`);
     }
     htmlLines.push(`<div class="l_spacer"></div>`);
     htmlLines.push(`<h2 class="banner">About Myself</h2>`);
@@ -232,9 +230,8 @@ function addFooterHTML(htmlLines, pageDepth)
         pageDepthRelativePath += "../";
 
     htmlLines.push(`<footer>`);
-    htmlLines.push(`<img class="logoImageSmall" src="${pageDepthRelativePath}logo.png" alt="ThingsPool Logo">`);
-    htmlLines.push(`&copy 2019-2023 ThingsPool. All rights reserved.<br>`);
-    htmlLines.push(`Contact: thingspool@gmail.com`);
+    htmlLines.push(`<a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="${pageDepthRelativePath}logo.png" alt="ThingsPool Logo"></a>`);
+    htmlLines.push(`&copy 2019-2023 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com`);
     htmlLines.push(`</footer>`);
     htmlLines.push(`</body>`);
     htmlLines.push(`</html>`);
@@ -378,7 +375,7 @@ function createHTMLsForWritings(rawText, code)
             addHeaderHTML(htmlLines, title, 0, description, keywords);
             description = "A writing by ThingsPool.";
             keywords = "ThingsPool, Game, Free";
-            htmlLines.push(`<h3><a href="text${code}_index.html">&#171; Back</a></h3>`);
+            htmlLines.push(`<h3><a href="text${code}-index.html">&#171; Back</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
             htmlLines.push(`<h2>${date}</h2>`);
             addPromo(htmlLines, 0);
