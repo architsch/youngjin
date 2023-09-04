@@ -10,12 +10,12 @@ const gameEntries = [
     ["SpaceTown", "SpaceTown", "https://www.gamearter.com/game/spacetown", `<iframe width="560" height="315" src="https://www.youtube.com/embed/ll-TAmGqilA?si=e3DLl06bEjohhc2X" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
 ];
 const writingEntries = [
-    ["p001", "Novels (2012 - 2013)"],
-    ["p002", "Metaphysics (2013 - 2014)"],
-    ["p003", "Game Analysis (2019)"],
-    ["001", "Essays and Novels (2022 - 2023)"],
-    ["002", "Blockchains (2022)"],
-    ["003", "Game Design (2023)"],
+    ["Novels", "Novels (2012 - 2013)"],
+    ["Metaphysics", "Metaphysics (2013 - 2014)"],
+    ["Game-Analysis", "Game Analysis (2019)"],
+    ["Essays-and-Novels", "Essays and Novels (2022 - 2023)"],
+    ["Blockchains", "Blockchains (2022)"],
+    ["Game-Design", "Game Design (2023)"],
 ];
 
 async function run()
@@ -44,7 +44,7 @@ async function run()
         const code = writingEntries[i][0];
 
         const entryTitle = writingEntries[i][1];
-        const rawText = await read(`${code}/${code}.txt`);
+        const rawText = await read(`${code}/source.txt`);
         const {fileIndices, fileTitles, fileTexts} = createHTMLsForWritings(rawText, code);
 
         htmlLines.length = 0;
@@ -58,13 +58,13 @@ async function run()
             const fileIndex = fileIndices[j];
             const fileTitle = fileTitles[j];
             const fileText = fileTexts[j];
-            const fileHTMLFileName = `text${code}-${fileIndex}.html`;
+            const fileHTMLFileName = `page-${fileIndex}.html`;
             htmlLines.push(`<h3><a href="${fileHTMLFileName}">${fileTitle}</a></h3>`);
             await write(`${code}/${fileHTMLFileName}`, fileText);
         }
 
         addFooterHTML(htmlLines, 0);
-        await write(`${code}/text${code}-index.html`, htmlLines.join("\n"));
+        await write(`${code}/list.html`, htmlLines.join("\n"));
     }
 
     //------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ async function run()
     {
         const code = writingEntries[i][0];
         const entryName = writingEntries[i][1];
-        htmlLines.push(`<h3><a href="${code}/text${code}-index.html">${entryName}</a></h3>`);
+        htmlLines.push(`<h3><a href="${code}/list.html">${entryName}</a></h3>`);
     }
     htmlLines.push(`<div class="l_spacer"></div>`);
     htmlLines.push(`<h2 class="banner">About Myself</h2>`);
@@ -375,7 +375,7 @@ function createHTMLsForWritings(rawText, code)
             addHeaderHTML(htmlLines, title, 0, description, keywords);
             description = "A writing by ThingsPool.";
             keywords = "ThingsPool, Game, Free";
-            htmlLines.push(`<h3><a href="text${code}-index.html">&#171; Back</a></h3>`);
+            htmlLines.push(`<h3><a href="list.html">&#171; Back</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
             htmlLines.push(`<h2>${date}</h2>`);
             addPromo(htmlLines, 0);
