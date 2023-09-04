@@ -182,6 +182,16 @@ function addHeaderHTML(htmlLines, title, pageDepth, description, keywords)
     htmlLines.push(`<meta property="og:image" content="https://thingspool.net/share.jpg"/>`);
     htmlLines.push(`<meta property="og:image:width" content="1200">`);
     htmlLines.push(`<meta property="og:image:height" content="630">`);
+
+    htmlLines.push(`<!-- Google tag (gtag.js) -->`);
+    htmlLines.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>`);
+    htmlLines.push(`<script>`);
+    htmlLines.push(`window.dataLayer = window.dataLayer || [];`);
+    htmlLines.push(`function gtag(){dataLayer.push(arguments);}`);
+    htmlLines.push(`gtag('js', new Date());`);
+    htmlLines.push(`gtag('config', 'G-JL7KHR7HK8');`);
+    htmlLines.push(`</script>`);
+    
     htmlLines.push(`<title>${title}</title>`);
     htmlLines.push(`<link rel="shortcut icon" href="${pageDepthRelativePath}favicon.ico">`);
     htmlLines.push(`<link rel="stylesheet" href="${pageDepthRelativePath}style.css">`);
