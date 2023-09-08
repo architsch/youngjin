@@ -6,7 +6,7 @@ const fss = require('fs');
 const gameEntries = [
     ["Water-vs-Fire", "Water vs Fire", "https://www.gamearter.com/game/water-vs-fire", `<iframe width="560" height="315" src="https://www.youtube.com/embed/6DeA_m8Iq4M?si=hC1uzkEtBWpYcM8z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
     ["HuntLand", "HuntLand", "https://www.gamearter.com/game/huntland", `<iframe width="560" height="315" src="https://www.youtube.com/embed/3dRg6vvoPqc?si=FlnKVyzQq0_55sL2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
-    ["PoliceChase", "Police Chase", "https://www.gamearter.com/game/policechase", null],
+    ["PoliceChase", "Police Chase", "https://www.gamearter.com/game/policechase", `<iframe width="560" height="315" src="https://www.youtube.com/embed/kABg0j2mZqQ?si=3-JUZQnh3omVXSJd" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
     ["SpaceTown", "SpaceTown", "https://www.gamearter.com/game/spacetown", `<iframe width="560" height="315" src="https://www.youtube.com/embed/ll-TAmGqilA?si=e3DLl06bEjohhc2X" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
 ];
 const writingEntries = [
@@ -17,10 +17,14 @@ const writingEntries = [
     ["Blockchains", "Blockchains (2022)"],
     ["Game-Design", "Game Design (2023)"],
 ];
+const sitemapLines = [
+    `</urlset>`,
+];
 
 async function run()
 {
     const htmlLines = [];
+    let relativeURL = "";
 
     //------------------------------------------------------------------------------------
     // Generate CSS
@@ -33,7 +37,11 @@ async function run()
     //------------------------------------------------------------------------------------
 
     for (const gameEntry of gameEntries)
-        await write(`${gameEntry[0]}/page.html`, createHTMLForGame(gameEntry[1], gameEntry[2], gameEntry[3], await read(`${gameEntry[0]}/source.txt`)));
+    {
+        relativeURL = `${gameEntry[0]}/page.html`;
+        await write(relativeURL, createHTMLForGame(gameEntry[1], gameEntry[2], gameEntry[3], await read(`${gameEntry[0]}/source.txt`)));
+        addSitemapEntry(relativeURL);
+    }
 
     //------------------------------------------------------------------------------------
     // Generate HTMLs for writings
@@ -60,11 +68,17 @@ async function run()
             const fileText = fileTexts[j];
             const fileHTMLFileName = `page-${fileIndex}.html`;
             htmlLines.push(`<h3><a href="${fileHTMLFileName}">${fileTitle}</a></h3>`);
-            await write(`${code}/${fileHTMLFileName}`, fileText);
+
+            relativeURL = `${code}/${fileHTMLFileName}`;
+            await write(relativeURL, fileText);
+            addSitemapEntry(relativeURL);
         }
 
         addFooterHTML(htmlLines, 0);
-        await write(`${code}/list.html`, htmlLines.join("\n"));
+
+        relativeURL = `${code}/list.html`;
+        await write(relativeURL, htmlLines.join("\n"));
+        addSitemapEntry(relativeURL);
     }
 
     //------------------------------------------------------------------------------------
@@ -101,7 +115,18 @@ async function run()
     htmlLines.push(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Page</a></h3>`);
 
     addFooterHTML(htmlLines, -1);
-    await write(`index.html`, htmlLines.join("\n"));
+    relativeURL = `index.html`;
+    await write(relativeURL, htmlLines.join("\n"));
+    addSitemapEntry(relativeURL);
+
+    //------------------------------------------------------------------------------------
+    // Generate sitemap.xml
+    //------------------------------------------------------------------------------------
+
+    sitemapLines.push(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`);
+    sitemapLines.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+    sitemapLines.reverse();
+    await write(`sitemap.xml`, sitemapLines.join("\n"));
 }
 
 async function read(filepath)
@@ -155,6 +180,13 @@ async function mkdir(fileOrDirPath)
     }
 }
 
+function addSitemapEntry(relativeURL)
+{
+    sitemapLines.push(`</url>`);
+    sitemapLines.push(`<loc>https://thingspool.net/${relativeURL}</loc>`);
+    sitemapLines.push(`<url>`);
+}
+
 function addHeaderHTML(htmlLines, title, pageDepth, description, keywords)
 {
     if (description.indexOf("\"") >= 0)
@@ -195,6 +227,7 @@ function addHeaderHTML(htmlLines, title, pageDepth, description, keywords)
     htmlLines.push(`<title>${title}</title>`);
     htmlLines.push(`<link rel="shortcut icon" href="${pageDepthRelativePath}favicon.ico">`);
     htmlLines.push(`<link rel="stylesheet" href="${pageDepthRelativePath}style.css">`);
+    htmlLines.push(`<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">`);
     htmlLines.push(`</head>`);
     htmlLines.push(`<body>`);
 }
@@ -262,7 +295,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText)
         console.error(":d: is missing in -> " + gameTitle);
 
     if (lines[1].startsWith(":k:"))
-        keywords = lines[1].substring(3);
+        keywords = lines[1].substring(3).toLowerCase().replaceAll("-", " ");
     else
         console.error(":k: is missing in -> " + gameTitle);
 
@@ -411,7 +444,7 @@ function createHTMLsForWritings(rawText, code)
         }
         else if (line.startsWith(":k:"))
         {
-            keywords = line.substring(3);
+            keywords = line.substring(3).toLowerCase().replaceAll("-", " ");
         }
         else if (line.startsWith("_CUT_"))
         {

@@ -266,7 +266,7 @@ The problem with such a manual process is that a user cannot just open up a new 
 
 
 :d:An article about blockchains, cryptocurrency, and other distributed financial protocols.
-:k:PoP, PoW, Transaction, Blockchain, Cryptocurrency, Wallet, Cryptography, CBDC, IDEAN, iDNA, Decentralized, Digital-Cash, Token
+:k:PoP, PoW, Transaction, Blockchain, Cryptocurrency, Wallet, Cryptography, CBDC, IDENA, iDNA, Decentralized, Digital-Cash, Token
 
 [On Legitimacy of Blockchains - 13] 2022.12
 
