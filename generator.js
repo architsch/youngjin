@@ -109,7 +109,7 @@ async function run()
     htmlLines.push(`<div class="l_spacer"></div>`);
     htmlLines.push(`<img class="profileImage" src="${rootURL}/profile.jpg" alt="Youngjin Kang">`);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h3>About ThingsPool</h3>`);
+    htmlLines.push(`<h3>Hello!</h3>`);
     htmlLines.push(`<p>My name is Youngjin, and I am a software engineer who develops computer games, simulations, and other types of interactive media. I studied electrical and electronics engineering at the University of Washington, and worked as a software developer in game development companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>`);
     htmlLines.push(`<p>ThingsPool is an independent game development studio which I have founded for the purpose of making and publishing videogames that are easily accessible and furnished with unique personalities.</p>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
