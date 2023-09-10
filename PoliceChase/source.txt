@@ -1,5 +1,5 @@
 :d:Police Chase is a puzzle game which features turn-based tabletop mechanics and item-based tactics.
-:k:Free, Game, Turn-Based, Tabletop, Boardgame, Puzzle, Police, Casual, Web-Game, Top-Down
+:k:Free Game, Turn-Based, Tabletop, Boardgame, Puzzle, Police, Casual, Web-Game, Top-Down, Browser Game, HTML5 Game
 <1>
 
 [Turn-Based Puzzle]

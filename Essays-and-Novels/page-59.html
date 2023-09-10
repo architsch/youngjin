@@ -23,26 +23,26 @@ gtag('js', new Date());
 gtag('config', 'G-JL7KHR7HK8');
 </script>
 <title>Functional Programming for Game Development</title>
-<link rel="shortcut icon" href="../favicon.ico">
-<link rel="stylesheet" href="../style.css">
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
 </head>
 <body>
-<h3><a href="list.html">&#171; Back</a></h3>
+<h3><a href="https://thingspool.net/essays-and-novels/list.html">&#171; Back</a></h3>
 <h1>Functional Programming for Game Development</h1>
 <h2>2023.02</h2>
 <div class="xl_spacer"></div>
-<a class="noTextDeco" href="../Water-vs-Fire/page.html">
-<img class="gameLink" src="../Water-vs-Fire/entry.jpg" alt="Water vs Fire">
+<a class="noTextDeco" href="https://thingspool.net/Water-vs-Fire/page.html">
+<img class="gameLink" src="https://thingspool.net/Water-vs-Fire/entry.jpg" alt="Water vs Fire">
 </a>
-<a class="noTextDeco" href="../HuntLand/page.html">
-<img class="gameLink" src="../HuntLand/entry.jpg" alt="HuntLand">
+<a class="noTextDeco" href="https://thingspool.net/HuntLand/page.html">
+<img class="gameLink" src="https://thingspool.net/HuntLand/entry.jpg" alt="HuntLand">
 </a>
-<a class="noTextDeco" href="../PoliceChase/page.html">
-<img class="gameLink" src="../PoliceChase/entry.jpg" alt="Police Chase">
+<a class="noTextDeco" href="https://thingspool.net/PoliceChase/page.html">
+<img class="gameLink" src="https://thingspool.net/PoliceChase/entry.jpg" alt="Police Chase">
 </a>
-<a class="noTextDeco" href="../SpaceTown/page.html">
-<img class="gameLink" src="../SpaceTown/entry.jpg" alt="SpaceTown">
+<a class="noTextDeco" href="https://thingspool.net/SpaceTown/page.html">
+<img class="gameLink" src="https://thingspool.net/SpaceTown/entry.jpg" alt="SpaceTown">
 </a>
 <div class="xl_spacer"></div>
 <p>Game development is often being done in a highly object-oriented mindset. This is not only because the vast majority of gameplay engineers program in object-oriented languages (such as C++, C#, Java, etc), but also because the way a videogame operates can easily be modeled as a collection of discrete, independent objects.</p>
@@ -65,7 +65,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>The "make-state" function, as you may have already guessed, creates a newer instance of the game's state and uses it as the input state of the next "update-loop" call instead of just modifying the existing state object. The reason behind this is that we want to prevent any potential race condition which may occur if other systems happen to be accessing/modifying the same exact instance. The "update-actors" function, just like the "update-state" function, returns the updated version of the current state of the game, but only the portion which pertains to its collection of actors (aka "characters", "sprites", or "agents") and nothing else.</p>
 <p class="snippet">(defun&nbsp;update-actors&nbsp;(actors)<br>&nbsp;&nbsp;&nbsp;&nbsp;(cons&nbsp;(update-actor&nbsp;(car&nbsp;actor))&nbsp;(update-actors&nbsp;(cdr&nbsp;actors))))</p>
 <p>The chain of "cons" nodes, as shown above, is more or less a LISP construct which may not apply to other languages. The overall idea, however, applies quite universally. Every time we update the list of actors, we build a brand new list by cons-ing the newer instances of the actor objects in a recursive manner instead of just modifying the existing list.</p>
-<img class="figureImage" src="003_06.jpg" alt="Functional Programming for Game Development (Figure 1)">
+<img class="figureImage" src="https://thingspool.net/essays-and-novels/003_06.jpg" alt="Functional Programming for Game Development (Figure 1)">
 <p>This, again, is for the sake of preserving the entire history of state changes instead of tampering with the past remnants which may be still waiting to be visited by extraterrestrial beings (aka "external systems") whose present moment in time could have been delayed by as much as a few milliseconds, due to the nature of time dilation (special relativity) which oftentimes inadvertently gets simulated by the lack of perfect parallelism in modern computing devices.</p>
 <p>The "update-actor" function checks to see if the "actor" argument it received is just the end of the list (i.e. nil). If so, it won't do anything. If not, it will proceed to search for the actor's own update function by means of "(get-actor-update-func actor)" and then execute it in order to get the updated version of the actor object. This newer instance of the actor, just like the aforementioned ones, is something that is completely separate from its past copy.</p>
 <p class="snippet">(defun&nbsp;update-actor&nbsp;(actor)<br>&nbsp;&nbsp;&nbsp;&nbsp;(cond&nbsp;((=&nbsp;actor&nbsp;nil)&nbsp;nil)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(else&nbsp;((get-actor-update-func&nbsp;actor)&nbsp;actor))))</p>
@@ -74,7 +74,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>But of course, the game itself consists of not just a list of actors but also many other things. This is not too complex a problem to solve, though. All we have to do is implement additional data types and their corresponding "get" and "update" functions, and then insert them into the game loop as additional function parameters.</p>
 <p class="snippet">(defun&nbsp;update-state&nbsp;(state)<br>&nbsp;&nbsp;&nbsp;&nbsp;(make-state<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-actors&nbsp;(get-actors&nbsp;state))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-cells&nbsp;(get-cells&nbsp;state))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-events&nbsp;(get-events&nbsp;state))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-particleEffects&nbsp;(get-particleEffects&nbsp;state))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-soundClips&nbsp;(get-soundClips&nbsp;state))))</p>
 <p>One major advantage of using this purely functional, append-only approach to the implementation of a game loop is that, since we are preserving the history of the game's state instead of constantly overwriting it with more recent bits of data, the game's update functions can have full access to the state's past instances and therefore make decisions based upon the differential characteristics that can be derived by comparing the past and present (which means it opens up the gateway to the realization of first-order, second-order, and even higher order systems which often occur in physics/engineering and are represented in terms of differential equations). This is easily done by passing the copy of the state from the previous frame (aka "past instance") into the update loop as an additional argument.</p>
-<img class="figureImage" src="003_07.jpg" alt="Functional Programming for Game Development (Figure 2)">
+<img class="figureImage" src="https://thingspool.net/essays-and-novels/003_07.jpg" alt="Functional Programming for Game Development (Figure 2)">
 <p class="snippet">(defun&nbsp;update-loop&nbsp;(currState&nbsp;prevState)<br>&nbsp;&nbsp;&nbsp;&nbsp;(wait-for-next-frame)<br>&nbsp;&nbsp;&nbsp;&nbsp;(update-loop&nbsp;(update-state&nbsp;currState&nbsp;prevState)&nbsp;currState))<br><br><br>(defun&nbsp;update-state&nbsp;(currState&nbsp;prevState)<br>&nbsp;&nbsp;&nbsp;&nbsp;(make-state<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-actors<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-actors&nbsp;currState)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-actors&nbsp;prevState))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-cells<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-cells&nbsp;currState)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-cells&nbsp;prevState))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-events<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-events&nbsp;currState)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-events&nbsp;prevState))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-particleEffects<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-particleEffects&nbsp;currState)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-particleEffects&nbsp;prevState))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-soundClips<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-soundClips&nbsp;currState)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-soundClips&nbsp;prevState))))<br><br><br>(defun&nbsp;update-actors&nbsp;(currActors&nbsp;prevActors)<br>&nbsp;&nbsp;&nbsp;&nbsp;(cons<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-actor&nbsp;(car&nbsp;currActors)&nbsp;(car&nbsp;prevActors))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(update-actors&nbsp;(cdr&nbsp;currActors)&nbsp;(cdr&nbsp;prevActors))))<br><br><br>(defun&nbsp;update-actor&nbsp;(currActor&nbsp;prevActor)<br>&nbsp;&nbsp;&nbsp;&nbsp;(cond<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;((or&nbsp;(=&nbsp;currActor&nbsp;nil)&nbsp;(=&nbsp;prevActor&nbsp;nil))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nil)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(else<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;((get-actor-update-func&nbsp;currActor&nbsp;prevActor)&nbsp;currActor&nbsp;prevActor))))<br>...</p>
 <p>One of the specific use-cases of such a temporal stream of data lies on the area of kinematics. For a quick demonstration, let me first suppose that the "get-actor-update-func" function returns the "update-kinematic-actor" function if the type of "currActor" is equal to "kinematic". This means that, if the actor we are updating is of type "kinematic", the "update-kinematic-actor" function will be used update it. This function takes both the current and previous instances of the actor as its input parameters, and computes/updates the actor's current position based on the comparison of its two instances in time (which reveals its current velocity).</p>
 <p class="snippet">(setf&nbsp;actor-update-func-table&nbsp;()&nbsp;'(<br>&nbsp;&nbsp;&nbsp;&nbsp;('static&nbsp;update-static-actor)<br>&nbsp;&nbsp;&nbsp;&nbsp;('kinematic&nbsp;update-kinematic-actor)<br>&nbsp;&nbsp;&nbsp;&nbsp;('dynamic&nbsp;update-dynamic-actor)<br>&nbsp;&nbsp;&nbsp;&nbsp;('abstract&nbsp;update-abstract-actor)<br>))<br><br><br>(defun&nbsp;get-actor-update-func&nbsp;(currActor&nbsp;prevActor)<br>&nbsp;&nbsp;&nbsp;&nbsp;(get-actor-update-func-iter&nbsp;currActor&nbsp;actor-update-func-table))<br><br><br>(defun&nbsp;get-actor-update-func-iter&nbsp;(actor&nbsp;table)<br>&nbsp;&nbsp;&nbsp;&nbsp;(cond<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;((=&nbsp;(caar&nbsp;table)&nbsp;(get-actor-type&nbsp;actor))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(cdar&nbsp;table))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(else<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(get-actor-update-func-iter&nbsp;actor&nbsp;(cdr&nbsp;table)))))<br><br><br>(defun&nbsp;update-kinematic-actor&nbsp;(currActor&nbsp;prevActor)<br>&nbsp;&nbsp;&nbsp;&nbsp;(let&nbsp;((currVelocity&nbsp;(-&nbsp;(get-position&nbsp;currActor)&nbsp;(get-position&nbsp;prevActor))))<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(make-kinematic-actor<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(+&nbsp;(get-position&nbsp;currActor)&nbsp;(*&nbsp;currVelocity&nbsp;0.8)))))<br><br><br>(defun&nbsp;make-kinematic-actor&nbsp;(position)<br>&nbsp;&nbsp;&nbsp;&nbsp;'('kinematic&nbsp;position))</p>
@@ -88,11 +88,11 @@ gtag('config', 'G-JL7KHR7HK8');
 <p class="snippet">(defun&nbsp;update-loop&nbsp;(currState&nbsp;prevState&nbsp;prevState2)<br>&nbsp;&nbsp;&nbsp;&nbsp;(wait-for-next-frame)<br>&nbsp;&nbsp;&nbsp;&nbsp;(update-loop&nbsp;(update-state&nbsp;currState&nbsp;prevState&nbsp;prevState2)&nbsp;currState&nbsp;prevState))</p>
 <p>And if we want the game to be able to refer to up to 3 steps in time instead, we will need something like:</p>
 <p class="snippet">(defun&nbsp;update-loop&nbsp;(currState&nbsp;prevState&nbsp;prevState2&nbsp;prevState3)<br>&nbsp;&nbsp;&nbsp;&nbsp;(wait-for-next-frame)<br>&nbsp;&nbsp;&nbsp;&nbsp;(update-loop&nbsp;(update-state&nbsp;currState&nbsp;prevState&nbsp;prevState2&nbsp;prevState3)&nbsp;currState&nbsp;prevState&nbsp;prevState2))</p>
-<img class="figureImage" src="003_08.jpg" alt="Functional Programming for Game Development (Figure 3)">
+<img class="figureImage" src="https://thingspool.net/essays-and-novels/003_08.jpg" alt="Functional Programming for Game Development (Figure 3)">
 <p>This, of course, starts to become too verbose as we keep elongating the game's memory stream. Therefore, a much more realistic implementation would be to represent the history of the game's state as a single list variable rather than a sequence of manually specified function arguments.</p>
 <p class="snippet">(defun&nbsp;update-loop&nbsp;(stateHistory)<br>&nbsp;&nbsp;&nbsp;&nbsp;(wait-for-next-frame)<br>&nbsp;&nbsp;&nbsp;&nbsp;(update-loop&nbsp;(cons&nbsp;(update-state&nbsp;stateHistory)&nbsp;(without-last&nbsp;stateHistory))))</p>
 <footer>
-<a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="../logo.png" alt="ThingsPool Logo"></a>
+<a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2023 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com
 </footer>
 </body>

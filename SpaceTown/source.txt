@@ -1,5 +1,5 @@
 :d:SpaceTown is a space construction simulator with emergent gameplay mechanics and a variety of collectibles.
-:k:Free, Game, RTS, Browser-Game, Isometric, Management, Strategy, Construction, Sci-Fi, Cosmic
+:k:Free Game, WebGL Game, RTS, Browser-Game, Isometric, Management Game, Strategy Game, Construction Game, Sci-Fi, Cosmic
 <1>
 
 [A Clicker RTS]

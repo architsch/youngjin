@@ -3,6 +3,8 @@ const css = require('./styleDictionary.js');
 const fs = require('fs/promises');
 const fss = require('fs');
 
+const rootURL = "https://thingspool.net"
+
 const gameEntries = [
     ["Water-vs-Fire", "Water vs Fire", "https://www.gamearter.com/game/water-vs-fire", `<iframe width="560" height="315" src="https://www.youtube.com/embed/6DeA_m8Iq4M?si=hC1uzkEtBWpYcM8z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
     ["HuntLand", "HuntLand", "https://www.gamearter.com/game/huntland", `<iframe width="560" height="315" src="https://www.youtube.com/embed/3dRg6vvoPqc?si=FlnKVyzQq0_55sL2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
@@ -10,12 +12,12 @@ const gameEntries = [
     ["SpaceTown", "SpaceTown", "https://www.gamearter.com/game/spacetown", `<iframe width="560" height="315" src="https://www.youtube.com/embed/ll-TAmGqilA?si=e3DLl06bEjohhc2X" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
 ];
 const writingEntries = [
-    ["Novels", "Novels (2012 - 2013)"],
-    ["Metaphysics", "Metaphysics (2013 - 2014)"],
-    ["Game-Analysis", "Game Analysis (2019)"],
-    ["Essays-and-Novels", "Essays and Novels (2022 - 2023)"],
-    ["Blockchains", "Blockchains (2022)"],
-    ["Game-Design", "Game Design (2023)"],
+    ["novels", "Novels (2012 - 2013)"],
+    ["metaphysics", "Metaphysics (2013 - 2014)"],
+    ["game-analysis", "Game Analysis (2019)"],
+    ["essays-and-novels", "Essays and Novels (2022 - 2023)"],
+    ["blockchains", "Blockchains (2022)"],
+    ["game-design", "Game Design (2023)"],
 ];
 const sitemapLines = [
     `</urlset>`,
@@ -39,8 +41,8 @@ async function run()
     for (const gameEntry of gameEntries)
     {
         relativeURL = `${gameEntry[0]}/page.html`;
-        await write(relativeURL, createHTMLForGame(gameEntry[1], gameEntry[2], gameEntry[3], await read(`${gameEntry[0]}/source.txt`)));
-        addSitemapEntry(relativeURL);
+        await write(relativeURL, createHTMLForGame(gameEntry[1], gameEntry[2], gameEntry[3], await read(`${gameEntry[0]}/source.txt`), gameEntry[0]));
+        addSitemapEntry(`${rootURL}/${relativeURL}`);
     }
 
     //------------------------------------------------------------------------------------
@@ -56,10 +58,10 @@ async function run()
         const {fileIndices, fileTitles, fileTexts} = createHTMLsForWritings(rawText, code);
 
         htmlLines.length = 0;
-        addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, 0, entryTitle, "ThingsPool, Game, Free, Blog, Writings, Articles");
-        htmlLines.push(`<h3><a href="../index.html">&#171; Back</a></h3>`);
+        addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles");
+        htmlLines.push(`<h3><a href="${rootURL}">&#171; Back</a></h3>`);
         htmlLines.push(`<h1>${entryTitle}</h1>`);
-        addPromo(htmlLines, 0);
+        addPromo(htmlLines);
 
         for (let j = fileIndices.length-1; j >= 0; --j)
         {
@@ -67,18 +69,18 @@ async function run()
             const fileTitle = fileTitles[j];
             const fileText = fileTexts[j];
             const fileHTMLFileName = `page-${fileIndex}.html`;
-            htmlLines.push(`<h3><a href="${fileHTMLFileName}">${fileTitle}</a></h3>`);
+            htmlLines.push(`<h3><a href="${rootURL}/${code}/${fileHTMLFileName}">${fileTitle}</a></h3>`);
 
             relativeURL = `${code}/${fileHTMLFileName}`;
             await write(relativeURL, fileText);
-            addSitemapEntry(relativeURL);
+            addSitemapEntry(`${rootURL}/${relativeURL}`);
         }
 
-        addFooterHTML(htmlLines, 0);
+        addFooterHTML(htmlLines);
 
         relativeURL = `${code}/list.html`;
         await write(relativeURL, htmlLines.join("\n"));
-        addSitemapEntry(relativeURL);
+        addSitemapEntry(`${rootURL}/${relativeURL}`);
     }
 
     //------------------------------------------------------------------------------------
@@ -86,13 +88,13 @@ async function run()
     //------------------------------------------------------------------------------------
 
     htmlLines.length = 0;
-    addHeaderHTML(htmlLines, "ThingsPool", -1, "ThingsPool is an indie game developer.", "ThingsPool, Game, Entertainment, Free, HTML5, RTS, FPS, Boardgame, Tabletop, Puzzle");
+    addHeaderHTML(htmlLines, "ThingsPool", "ThingsPool is an indie game developer.", "thingspool, entertainment, web game, browser game, html5 game rts, fps, boardgame, tabletop game, puzzle game, tactics game, sandbox game");
 
-    htmlLines.push(`<img class="logoImage" src="logo.png" alt="ThingsPool Logo">`);
+    htmlLines.push(`<img class="logoImage" src="${rootURL}/logo.png" alt="ThingsPool Logo">`);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
     htmlLines.push(`<h2 class="banner">Games</h2>`);
-    addPromo(htmlLines, -1);
+    addPromo(htmlLines);
 
     htmlLines.push(`<h2 class="banner">Writings</h2>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
@@ -100,24 +102,24 @@ async function run()
     {
         const code = writingEntries[i][0];
         const entryName = writingEntries[i][1];
-        htmlLines.push(`<h3><a href="${code}/list.html">${entryName}</a></h3>`);
+        htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">${entryName}</a></h3>`);
     }
     htmlLines.push(`<div class="l_spacer"></div>`);
     htmlLines.push(`<h2 class="banner">About Myself</h2>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<img class="profileImage" src="profile.jpg" alt="Youngjin Kang">`);
+    htmlLines.push(`<img class="profileImage" src="${rootURL}/profile.jpg" alt="Youngjin Kang">`);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h3>Hello!</h3>`);
+    htmlLines.push(`<h3>About ThingsPool</h3>`);
     htmlLines.push(`<p>My name is Youngjin, and I am a software engineer who develops computer games, simulations, and other types of interactive media. I studied electrical and electronics engineering at the University of Washington, and worked as a software developer in game development companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>`);
     htmlLines.push(`<p>ThingsPool is an independent game development studio which I have founded for the purpose of making and publishing videogames that are easily accessible and furnished with unique personalities.</p>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h3><a href="https://www.linkedin.com/in/youngjin-kang-55321882/">LinkedIn Page</a></h3>`);
+    htmlLines.push(`<h3><a href="https://www.linkedin.com/company/thingspool">LinkedIn Page</a></h3>`);
     htmlLines.push(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Page</a></h3>`);
 
-    addFooterHTML(htmlLines, -1);
+    addFooterHTML(htmlLines);
     relativeURL = `index.html`;
     await write(relativeURL, htmlLines.join("\n"));
-    addSitemapEntry(relativeURL);
+    addSitemapEntry(rootURL);
 
     //------------------------------------------------------------------------------------
     // Generate sitemap.xml
@@ -180,23 +182,19 @@ async function mkdir(fileOrDirPath)
     }
 }
 
-function addSitemapEntry(relativeURL)
+function addSitemapEntry(url)
 {
     sitemapLines.push(`</url>`);
-    sitemapLines.push(`<loc>https://thingspool.net/${relativeURL}</loc>`);
+    sitemapLines.push(`<loc>${url}</loc>`);
     sitemapLines.push(`<url>`);
 }
 
-function addHeaderHTML(htmlLines, title, pageDepth, description, keywords)
+function addHeaderHTML(htmlLines, title, description, keywords)
 {
     if (description.indexOf("\"") >= 0)
         console.error("Description contains a double quote ---> " + description);
     if (keywords.indexOf("\"") >= 0)
         console.error("Keywords contains a double quote ---> " + keywords);
-    
-    let pageDepthRelativePath = "";
-    for (let i = 0; i <= pageDepth; ++i)
-        pageDepthRelativePath += "../";
 
     htmlLines.push(`<!DOCTYPE html>`);
     htmlLines.push(`<html>`);
@@ -225,62 +223,46 @@ function addHeaderHTML(htmlLines, title, pageDepth, description, keywords)
     htmlLines.push(`</script>`);
     
     htmlLines.push(`<title>${title}</title>`);
-    htmlLines.push(`<link rel="shortcut icon" href="${pageDepthRelativePath}favicon.ico">`);
-    htmlLines.push(`<link rel="stylesheet" href="${pageDepthRelativePath}style.css">`);
+    htmlLines.push(`<link rel="shortcut icon" href="${rootURL}/favicon.ico">`);
+    htmlLines.push(`<link rel="stylesheet" href="${rootURL}/style.css">`);
     htmlLines.push(`<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">`);
     htmlLines.push(`</head>`);
     htmlLines.push(`<body>`);
 }
 
-function addPromo(htmlLines, pageDepth)
+function addPromo(htmlLines)
 {
-    let pageDepthRelativePath = "";
-    for (let i = 0; i <= pageDepth; ++i)
-        pageDepthRelativePath += "../";
-
     htmlLines.push(`<div class="xl_spacer"></div>`);
     for (const gameEntry of gameEntries)
-        addGameLink(htmlLines, gameEntry[1], `${pageDepthRelativePath}${gameEntry[0]}/page.html`, `${gameEntry[0]}/entry.jpg`, pageDepth);
+        addGameLink(htmlLines, gameEntry[1], `${rootURL}/${gameEntry[0]}/page.html`, `${rootURL}/${gameEntry[0]}/entry.jpg`);
     htmlLines.push(`<div class="xl_spacer"></div>`);
 }
 
-function addGameLink(htmlLines, gameTitle, gameURL, imageURL, pageDepth)
+function addGameLink(htmlLines, gameTitle, gameURL, imageURL)
 {
-    let pageDepthRelativePath = "";
-    for (let i = 0; i <= pageDepth; ++i)
-        pageDepthRelativePath += "../";
-
     htmlLines.push(`<a class="noTextDeco" href="${gameURL}">`);
-    htmlLines.push(`<img class="gameLink" src="${pageDepthRelativePath}${imageURL}" alt="${gameTitle}">`);
+    htmlLines.push(`<img class="gameLink" src="${imageURL}" alt="${gameTitle}">`);
     htmlLines.push(`</a>`);
 }
 
-function addGamePlayButton(htmlLines, gamePlayURL, pageDepth)
+function addGamePlayButton(htmlLines, gamePlayURL)
 {
-    let pageDepthRelativePath = "";
-    for (let i = 0; i <= pageDepth; ++i)
-        pageDepthRelativePath += "../";
-
     htmlLines.push(`<a class="noTextDeco" href="${gamePlayURL}">`);
-    htmlLines.push(`<img class="playButton" src="${pageDepthRelativePath}play.png" alt="Play">`);
+    htmlLines.push(`<img class="playButton" src="${rootURL}/play.png" alt="Play">`);
     htmlLines.push(`</a>`);
 }
 
-function addFooterHTML(htmlLines, pageDepth)
+function addFooterHTML(htmlLines)
 {
-    let pageDepthRelativePath = "";
-    for (let i = 0; i <= pageDepth; ++i)
-        pageDepthRelativePath += "../";
-
     htmlLines.push(`<footer>`);
-    htmlLines.push(`<a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="${pageDepthRelativePath}logo.png" alt="ThingsPool Logo"></a>`);
+    htmlLines.push(`<a class="noTextDeco" href="${rootURL}"><img class="logoImageSmall" src="${rootURL}/logo.png" alt="ThingsPool Logo"></a>`);
     htmlLines.push(`&copy 2019-2023 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com`);
     htmlLines.push(`</footer>`);
     htmlLines.push(`</body>`);
     htmlLines.push(`</html>`);
 }
 
-function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText)
+function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText, code)
 {
     const htmlLines = [];
 
@@ -299,11 +281,11 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText)
     else
         console.error(":k: is missing in -> " + gameTitle);
 
-    addHeaderHTML(htmlLines, "ThingsPool - " + gameTitle, 0, description, keywords);
-    htmlLines.push(`<h3><a href="javascript:history.back()">&#171; Back</a></h3>`);
+    addHeaderHTML(htmlLines, "ThingsPool - " + gameTitle, description, keywords);
+    htmlLines.push(`<h3><a href="${rootURL}">Home</a></h3>`);
     htmlLines.push(`<h1>${gameTitle}</h1>`);
 
-    addGamePlayButton(htmlLines, gamePlayURL, 0);
+    addGamePlayButton(htmlLines, gamePlayURL);
 
     let imageIndex = 1;
     const paragraphLinesPending = [];
@@ -340,7 +322,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText)
             const imgName = line.match(/<(.*?)>/)[1];
             if (imgName.length > 0)
             {
-                const imgPath = `${imgName}.jpg`;
+                const imgPath = `${rootURL}/${code}/${imgName}.jpg`;
                 htmlLines.push(`<img class="gameImage" src="${imgPath}" alt="ThingsPool - ${gameTitle} (Screenshot ${imageIndex++})">`);
             }
         }
@@ -355,7 +337,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText)
         htmlLines.push(`<div class="l_spacer"></div>`);
         htmlLines.push(gameYouTubeTag);
     }
-    addFooterHTML(htmlLines, 0);
+    addFooterHTML(htmlLines);
     return htmlLines.join("\n");
 }
 
@@ -373,7 +355,7 @@ function createHTMLsForWritings(rawText, code)
     const htmlLines = [];
 
     let description = "A writing by ThingsPool.";
-    let keywords = "ThingsPool, Free, Game, Writing";
+    let keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
 
     const endParagraph = () => {
         if (paragraphLinesPending.length > 0)
@@ -408,20 +390,20 @@ function createHTMLsForWritings(rawText, code)
             const date = line.match(/\](.*?)$/)[1].trim();
             if (!isFirstArticle)
             {
-                addFooterHTML(htmlLines, 0);
+                addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
                 fileTexts.push(htmlLines.join("\n"));
                 htmlLines.length = 0;
                 imageIndex = 1;
             }
             isFirstArticle = false;
-            addHeaderHTML(htmlLines, title, 0, description, keywords);
+            addHeaderHTML(htmlLines, title, description, keywords);
             description = "A writing by ThingsPool.";
-            keywords = "ThingsPool, Game, Free";
-            htmlLines.push(`<h3><a href="list.html">&#171; Back</a></h3>`);
+            keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
+            htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
             htmlLines.push(`<h2>${date}</h2>`);
-            addPromo(htmlLines, 0);
+            addPromo(htmlLines);
         }
         else if (line.startsWith("<")) // image reference
         {
@@ -429,7 +411,7 @@ function createHTMLsForWritings(rawText, code)
             const imgName = line.match(/<(.*?)>/)[1];
             if (imgName.length > 0)
             {
-                const imgPath = `${imgName}.jpg`;
+                const imgPath = `${rootURL}/${code}/${imgName}.jpg`;
                 htmlLines.push(`<img class="figureImage" src="${imgPath}" alt="${title} (Figure ${imageIndex++})">`);
             }
         }
@@ -456,7 +438,7 @@ function createHTMLsForWritings(rawText, code)
         }
     }
     endParagraph();
-    addFooterHTML(htmlLines, 0);
+    addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
     fileTexts.push(htmlLines.join("\n"));
     htmlLines.length = 0;
