@@ -3,13 +3,39 @@ const css = require('./styleDictionary.js');
 const fs = require('fs/promises');
 const fss = require('fs');
 
-const rootURL = "https://thingspool.net"
+const rootURL = "https://thingspool.net";
+const globalLastmod = "2023-09-10";
 
+// [code (directory name), title, play link URL, YouTube URL, lastmod]
 const gameEntries = [
-    ["Water-vs-Fire", "Water vs Fire", "https://www.gamearter.com/game/water-vs-fire", `<iframe width="560" height="315" src="https://www.youtube.com/embed/6DeA_m8Iq4M?si=hC1uzkEtBWpYcM8z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
-    ["HuntLand", "HuntLand", "https://www.gamearter.com/game/huntland", `<iframe width="560" height="315" src="https://www.youtube.com/embed/3dRg6vvoPqc?si=FlnKVyzQq0_55sL2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
-    ["PoliceChase", "Police Chase", "https://www.gamearter.com/game/policechase", `<iframe width="560" height="315" src="https://www.youtube.com/embed/kABg0j2mZqQ?si=3-JUZQnh3omVXSJd" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
-    ["SpaceTown", "SpaceTown", "https://www.gamearter.com/game/spacetown", `<iframe width="560" height="315" src="https://www.youtube.com/embed/ll-TAmGqilA?si=e3DLl06bEjohhc2X" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`],
+    [
+        "Water-vs-Fire",
+        "Water vs Fire",
+        "https://www.gamearter.com/game/water-vs-fire",
+        `<iframe width="560" height="315" src="https://www.youtube.com/embed/6DeA_m8Iq4M?si=hC1uzkEtBWpYcM8z" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`,
+        "2023-09-10",
+    ],
+    [
+        "HuntLand",
+        "HuntLand",
+        "https://www.gamearter.com/game/huntland",
+        `<iframe width="560" height="315" src="https://www.youtube.com/embed/3dRg6vvoPqc?si=FlnKVyzQq0_55sL2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`,
+        "2023-09-10",
+    ],
+    [
+        "PoliceChase",
+        "Police Chase",
+        "https://www.gamearter.com/game/policechase",
+        `<iframe width="560" height="315" src="https://www.youtube.com/embed/kABg0j2mZqQ?si=3-JUZQnh3omVXSJd" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`,
+        "2023-09-10",
+    ],
+    [
+        "SpaceTown",
+        "SpaceTown",
+        "https://www.gamearter.com/game/spacetown",
+        `<iframe width="560" height="315" src="https://www.youtube.com/embed/ll-TAmGqilA?si=e3DLl06bEjohhc2X" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`,
+        "2023-09-10",
+    ],
 ];
 const writingEntries = [
     ["novels", "Novels (2012 - 2013)"],
@@ -42,7 +68,7 @@ async function run()
     {
         relativeURL = `${gameEntry[0]}/page.html`;
         await write(relativeURL, createHTMLForGame(gameEntry[1], gameEntry[2], gameEntry[3], await read(`${gameEntry[0]}/source.txt`), gameEntry[0]));
-        addSitemapEntry(`${rootURL}/${relativeURL}`);
+        addSitemapEntry(`${rootURL}/${relativeURL}`, gameEntry[4]);
     }
 
     //------------------------------------------------------------------------------------
@@ -55,7 +81,7 @@ async function run()
 
         const entryTitle = writingEntries[i][1];
         const rawText = await read(`${code}/source.txt`);
-        const {fileIndices, fileTitles, fileTexts} = createHTMLsForWritings(rawText, code);
+        const {fileIndices, fileTitles, fileTexts, fileLastmods} = createHTMLsForWritings(rawText, code);
 
         htmlLines.length = 0;
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles");
@@ -68,19 +94,20 @@ async function run()
             const fileIndex = fileIndices[j];
             const fileTitle = fileTitles[j];
             const fileText = fileTexts[j];
+            const fileLastmod = fileLastmods[j];
             const fileHTMLFileName = `page-${fileIndex}.html`;
             htmlLines.push(`<h3><a href="${rootURL}/${code}/${fileHTMLFileName}">${fileTitle}</a></h3>`);
 
             relativeURL = `${code}/${fileHTMLFileName}`;
             await write(relativeURL, fileText);
-            addSitemapEntry(`${rootURL}/${relativeURL}`);
+            addSitemapEntry(`${rootURL}/${relativeURL}`, fileLastmod);
         }
 
         addFooterHTML(htmlLines);
 
         relativeURL = `${code}/list.html`;
         await write(relativeURL, htmlLines.join("\n"));
-        addSitemapEntry(`${rootURL}/${relativeURL}`);
+        addSitemapEntry(`${rootURL}/${relativeURL}`, fileLastmods.sort().pop());
     }
 
     //------------------------------------------------------------------------------------
@@ -119,7 +146,7 @@ async function run()
     addFooterHTML(htmlLines);
     relativeURL = `index.html`;
     await write(relativeURL, htmlLines.join("\n"));
-    addSitemapEntry(rootURL);
+    addSitemapEntry(rootURL, globalLastmod);
 
     //------------------------------------------------------------------------------------
     // Generate sitemap.xml
@@ -182,9 +209,10 @@ async function mkdir(fileOrDirPath)
     }
 }
 
-function addSitemapEntry(url)
+function addSitemapEntry(url, lastmod)
 {
     sitemapLines.push(`</url>`);
+    sitemapLines.push(`<lastmod>${lastmod}</lastmod>`);
     sitemapLines.push(`<loc>${url}</loc>`);
     sitemapLines.push(`<url>`);
 }
@@ -352,10 +380,12 @@ function createHTMLsForWritings(rawText, code)
     const fileIndices = [];
     const fileTitles = [];
     const fileTexts = [];
+    const fileLastmods = [];
     const htmlLines = [];
 
     let description = "A writing by ThingsPool.";
     let keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
+    let lastmod = "2023-09-10";
 
     const endParagraph = () => {
         if (paragraphLinesPending.length > 0)
@@ -393,6 +423,7 @@ function createHTMLsForWritings(rawText, code)
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
                 fileTexts.push(htmlLines.join("\n"));
+                fileLastmods.push(lastmod);
                 htmlLines.length = 0;
                 imageIndex = 1;
             }
@@ -400,6 +431,7 @@ function createHTMLsForWritings(rawText, code)
             addHeaderHTML(htmlLines, title, description, keywords);
             description = "A writing by ThingsPool.";
             keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
+            lastmod = "2023-09-10";
             htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
             htmlLines.push(`<h2>${date}</h2>`);
@@ -428,6 +460,10 @@ function createHTMLsForWritings(rawText, code)
         {
             keywords = line.substring(3).toLowerCase().replaceAll("-", " ");
         }
+        else if (line.startsWith(":l:"))
+        {
+            lastmod = line.substring(3);
+        }
         else if (line.startsWith("_CUT_"))
         {
             break;
@@ -441,10 +477,11 @@ function createHTMLsForWritings(rawText, code)
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
     fileTexts.push(htmlLines.join("\n"));
+    fileLastmods.push(lastmod);
     htmlLines.length = 0;
     imageIndex = 1;
 
-    return {fileIndices, fileTitles, fileTexts};
+    return {fileIndices, fileTitles, fileTexts, fileLastmods};
 }
 
 run();
