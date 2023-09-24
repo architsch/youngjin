@@ -107,7 +107,7 @@ async function run()
     htmlLines.push(`<p>My name is Youngjin, and I am a software engineer who develops computer games, simulations, and other types of interactive media. I studied electrical and electronics engineering at the University of Washington, and worked as a software developer in game development companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>`);
     htmlLines.push(`<p>ThingsPool is an independent game development studio which I have founded for the purpose of making and publishing videogames that are easily accessible and furnished with unique personalities.</p>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h3><a href="https://www.linkedin.com/company/thingspool">LinkedIn Page</a></h3>`);
+    htmlLines.push(`<h3><a href="https://www.linkedin.com/in/youngjin-kang-55321882">LinkedIn Page</a></h3>`);
     htmlLines.push(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Page</a></h3>`);
 
     addFooterHTML(htmlLines);
@@ -441,11 +441,13 @@ function createHTMLsForWritings(rawText, code)
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
                 fileTexts.push(htmlLines.join("\n"));
-                fileLastmods.push(lastmod);
                 htmlLines.length = 0;
                 imageIndex = 1;
             }
             isFirstArticle = false;
+
+            fileLastmods.push(lastmod);
+
             addHeaderHTML(htmlLines, title, description, keywords);
             description = "A writing by ThingsPool.";
             keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
@@ -500,7 +502,6 @@ function createHTMLsForWritings(rawText, code)
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
     fileTexts.push(htmlLines.join("\n"));
-    fileLastmods.push(lastmod);
     htmlLines.length = 0;
     imageIndex = 1;
 
