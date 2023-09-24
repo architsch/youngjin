@@ -37,6 +37,9 @@ const gameEntries = [
         "2023-09-20",
     ],
 ];
+const devlogEntries = [
+    ["devlog-webgl-engine", "WebGL Game Engine"],
+];
 const writingEntries = [
     ["novels", "Novels (2012 - 2013)"],
     ["metaphysics", "Metaphysics (2013 - 2014)"],
@@ -75,6 +78,68 @@ async function run()
     // Generate HTMLs for writings
     //------------------------------------------------------------------------------------
 
+    await makeWritingPages(devlogEntries);
+    await makeWritingPages(writingEntries);
+
+    //------------------------------------------------------------------------------------
+    // Generate index.html
+    //------------------------------------------------------------------------------------
+
+    htmlLines.length = 0;
+    addHeaderHTML(htmlLines, "ThingsPool", "ThingsPool is an indie game developer.", "thingspool, entertainment, web game, browser game, html5 game rts, fps, boardgame, tabletop game, puzzle game, tactics game, sandbox game");
+
+    htmlLines.push(`<img class="logoImage" src="${rootURL}/logo.png" alt="ThingsPool Logo">`);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+
+    htmlLines.push(`<h2 class="banner">Games</h2>`);
+    addPromo(htmlLines);
+
+    makeWritingPagesList("Devlog", devlogEntries, htmlLines);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+    makeWritingPagesList("Writings", writingEntries, htmlLines);
+
+    htmlLines.push(`<div class="l_spacer"></div>`);
+    htmlLines.push(`<h2 class="banner">About Myself</h2>`);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+    htmlLines.push(`<img class="profileImage" src="${rootURL}/profile.jpg" alt="Youngjin Kang">`);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+    htmlLines.push(`<h3>Hello!</h3>`);
+    htmlLines.push(`<p>My name is Youngjin, and I am a software engineer who develops computer games, simulations, and other types of interactive media. I studied electrical and electronics engineering at the University of Washington, and worked as a software developer in game development companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>`);
+    htmlLines.push(`<p>ThingsPool is an independent game development studio which I have founded for the purpose of making and publishing videogames that are easily accessible and furnished with unique personalities.</p>`);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+    htmlLines.push(`<h3><a href="https://www.linkedin.com/company/thingspool">LinkedIn Page</a></h3>`);
+    htmlLines.push(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Page</a></h3>`);
+
+    addFooterHTML(htmlLines);
+    relativeURL = `index.html`;
+    await write(relativeURL, htmlLines.join("\n"));
+    addSitemapEntry(rootURL, globalLastmod);
+
+    //------------------------------------------------------------------------------------
+    // Generate sitemap.xml
+    //------------------------------------------------------------------------------------
+
+    sitemapLines.push(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`);
+    sitemapLines.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+    sitemapLines.reverse();
+    await write(`sitemap.xml`, sitemapLines.join("\n"));
+}
+
+function makeWritingPagesList(title, writingEntries, htmlLines)
+{
+    htmlLines.push(`<h2 class="banner">${title}</h2>`);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+    for (let i = writingEntries.length-1; i >= 0; --i)
+    {
+        const code = writingEntries[i][0];
+        const entryName = writingEntries[i][1];
+        htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">${entryName}</a></h3>`);
+    }
+}
+
+async function makeWritingPages(writingEntries)
+{
+    const htmlLines = [];
     for (let i = 0; i < writingEntries.length; ++i)
     {
         const code = writingEntries[i][0];
@@ -109,53 +174,6 @@ async function run()
         await write(relativeURL, htmlLines.join("\n"));
         addSitemapEntry(`${rootURL}/${relativeURL}`, fileLastmods.sort().pop());
     }
-
-    //------------------------------------------------------------------------------------
-    // Generate index.html
-    //------------------------------------------------------------------------------------
-
-    htmlLines.length = 0;
-    addHeaderHTML(htmlLines, "ThingsPool", "ThingsPool is an indie game developer.", "thingspool, entertainment, web game, browser game, html5 game rts, fps, boardgame, tabletop game, puzzle game, tactics game, sandbox game");
-
-    htmlLines.push(`<img class="logoImage" src="${rootURL}/logo.png" alt="ThingsPool Logo">`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
-
-    htmlLines.push(`<h2 class="banner">Games</h2>`);
-    addPromo(htmlLines);
-
-    htmlLines.push(`<h2 class="banner">Writings</h2>`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
-    for (let i = writingEntries.length-1; i >= 0; --i)
-    {
-        const code = writingEntries[i][0];
-        const entryName = writingEntries[i][1];
-        htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">${entryName}</a></h3>`);
-    }
-    htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h2 class="banner">About Myself</h2>`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<img class="profileImage" src="${rootURL}/profile.jpg" alt="Youngjin Kang">`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h3>Hello!</h3>`);
-    htmlLines.push(`<p>My name is Youngjin, and I am a software engineer who develops computer games, simulations, and other types of interactive media. I studied electrical and electronics engineering at the University of Washington, and worked as a software developer in game development companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>`);
-    htmlLines.push(`<p>ThingsPool is an independent game development studio which I have founded for the purpose of making and publishing videogames that are easily accessible and furnished with unique personalities.</p>`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h3><a href="https://www.linkedin.com/company/thingspool">LinkedIn Page</a></h3>`);
-    htmlLines.push(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Page</a></h3>`);
-
-    addFooterHTML(htmlLines);
-    relativeURL = `index.html`;
-    await write(relativeURL, htmlLines.join("\n"));
-    addSitemapEntry(rootURL, globalLastmod);
-
-    //------------------------------------------------------------------------------------
-    // Generate sitemap.xml
-    //------------------------------------------------------------------------------------
-
-    sitemapLines.push(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`);
-    sitemapLines.push(`<?xml version="1.0" encoding="UTF-8"?>`);
-    sitemapLines.reverse();
-    await write(`sitemap.xml`, sitemapLines.join("\n"));
 }
 
 async function read(filepath)
@@ -385,7 +403,7 @@ function createHTMLsForWritings(rawText, code)
 
     let description = "A writing by ThingsPool.";
     let keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
-    let lastmod = "2023-09-10";
+    let lastmod = globalLastmod;
 
     const endParagraph = () => {
         if (paragraphLinesPending.length > 0)
@@ -431,7 +449,7 @@ function createHTMLsForWritings(rawText, code)
             addHeaderHTML(htmlLines, title, description, keywords);
             description = "A writing by ThingsPool.";
             keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
-            lastmod = "2023-09-10";
+            lastmod = globalLastmod;
             htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
             htmlLines.push(`<h2>${date}</h2>`);
@@ -446,6 +464,11 @@ function createHTMLsForWritings(rawText, code)
                 const imgPath = `${rootURL}/${code}/${imgName}.jpg`;
                 htmlLines.push(`<img class="figureImage" src="${imgPath}" alt="${title} (Figure ${imageIndex++})">`);
             }
+        }
+        else if (line.startsWith("@@")) // Video Tag
+        {
+            htmlLines.push(`<div class="l_spacer"></div>`);
+            htmlLines.push(line.substring(2));
         }
         else if (line.startsWith("#$")) // snippet
         {

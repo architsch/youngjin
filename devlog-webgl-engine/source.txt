@@ -1,0 +1,26 @@
+:d:A devlog of the custom WebGL game engine.
+:k:Game Engine, Javascript, Typescript, WebGL, HTML5, Webgame Engine, Web Engine, Indie Game
+:l:2023-09-24
+
+[First Screenshot of the Engine] September 14, 2023
+
+This is a game engine I am developing these days for upcoming games. It runs on any web browser, and is based on pure WebGL (No graphics engine such as Pixi.js or Three.js). The code architecture is based on ECS (Entity Component System), so the whole engine is highly scalable and modular.
+
+<sc01>
+
+
+
+
+
+:d:A devlog of the custom WebGL game engine.
+:k:Game Engine, Game Dev, Indie Game Developer, 3D Engine, 3D Programming, Custom Game Engine, Indie Game Engine
+:l:2023-09-24
+
+[A Video Footage] September 24, 2023
+
+This is a video footage of the game engine I'm developing these days, which is based on pure WebGL and pure ECS.
+Rudimentary graphics and physics systems are now up and running, and a framework for contriving sophisticated gameplay mechanics is currently under construction.
+
+(Special guests: Apple-shooting mushrooms and bouncy Volvos)
+
+@@<iframe width="560" height="315" src="https://www.youtube.com/embed/lS_Y1-lAkW0?si=XvZZc8n6Dl-Y854W" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
