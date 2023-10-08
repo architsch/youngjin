@@ -227,7 +227,7 @@ a:active {
 footer {
 	position: relative;
 	display: block;
-	margin-top: 7vh;
+	margin-top: 5vh;
 	margin-bottom: 5vh;
 	margin-left: 5vw;
 	margin-right: 5vw;
@@ -250,6 +250,16 @@ footer {
 	${xl_spacing}
 	${l_font}
 	${banner_frame}
+}
+.s_spacer {
+	${full_row_area}
+	${s_spacing}
+	${medium_color_frame}
+}
+.m_spacer {
+	${full_row_area}
+	${m_spacing}
+	${medium_color_frame}
 }
 .l_spacer {
 	${full_row_area}

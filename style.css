@@ -73,7 +73,7 @@ a:active {
 footer {
 	position: relative;
 	display: block;
-	margin-top: 7vh;
+	margin-top: 5vh;
 	margin-bottom: 5vh;
 	margin-left: 5vw;
 	margin-right: 5vw;
@@ -112,6 +112,22 @@ footer {
 	background-color: #202020;
 	color: #909090;
 	border-radius: 4.5vmin;
+}
+.s_spacer {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 0.5vmin 0.5vmin 0.5vmin 0.5vmin;	margin: 0.5vmin auto 0.5vmin auto;
+	background-color: #404040;
+	color: #909090;
+}
+.m_spacer {
+	position: relative;
+	display: block;
+	max-width: 90vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
+	background-color: #404040;
+	color: #909090;
 }
 .l_spacer {
 	position: relative;

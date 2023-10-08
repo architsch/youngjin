@@ -40,14 +40,20 @@ const gameEntries = [
 const devlogEntries = [
     ["devlog-webgl-engine", "WebGL Game Engine"],
 ];
-const writingEntries = [
-    ["novels", "Novels (2012 - 2013)"],
-    ["metaphysics", "Metaphysics (2013 - 2014)"],
-    ["game-analysis", "Game Analysis (2019)"],
-    ["essays-and-novels", "Essays and Novels (2022 - 2023)"],
-    ["blockchains", "Blockchains (2022)"],
-    ["game-design", "Game Design (2023)"],
+const nonfictionEntries = [
+    ["metaphysics", "형이상학 (2013 - 2014)"],
+    ["game-analysis", "게임분석 (2019)"],
+    ["essays", "Miscellaneous Writings (2022 - 2023)"],
+    ["blockchains", "On Legitimacy of Blockchains (2022)"],
+    ["software-development", "Software Development (2022 - 2023)"],
+    ["game-design", "Universal Laws of Game Design (2023)"],
 ];
+const fictionEntries = [
+    ["novels", "단편소설 (2012 - 2013)"],
+    ["alien-job-interview", "Alien Job Interview (2022)"],
+    ["infinite-treasures", "The Island of Infinite Treasures (2022)"],
+];
+
 const sitemapLines = [
     `</urlset>`,
 ];
@@ -79,7 +85,8 @@ async function run()
     //------------------------------------------------------------------------------------
 
     await makeWritingPages(devlogEntries);
-    await makeWritingPages(writingEntries);
+    await makeWritingPages(nonfictionEntries);
+    await makeWritingPages(fictionEntries);
 
     //------------------------------------------------------------------------------------
     // Generate index.html
@@ -93,12 +100,17 @@ async function run()
 
     htmlLines.push(`<h2 class="banner">Games</h2>`);
     addPromo(htmlLines);
+    htmlLines.push(`<div class="l_spacer"></div>`);
 
     makeWritingPagesList("Devlog", devlogEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    makeWritingPagesList("Writings", writingEntries, htmlLines);
 
+    makeWritingPagesList("Writings (Nonfiction)", nonfictionEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
+
+    makeWritingPagesList("Writings (Fiction)", fictionEntries, htmlLines);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+
     htmlLines.push(`<h2 class="banner">About Myself</h2>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
     htmlLines.push(`<img class="profileImage" src="${rootURL}/profile.jpg" alt="Youngjin Kang">`);
@@ -129,7 +141,7 @@ function makeWritingPagesList(title, writingEntries, htmlLines)
 {
     htmlLines.push(`<h2 class="banner">${title}</h2>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    for (let i = writingEntries.length-1; i >= 0; --i)
+    for (let i = 0; i < writingEntries.length; ++i)
     {
         const code = writingEntries[i][0];
         const entryName = writingEntries[i][1];
@@ -152,9 +164,9 @@ async function makeWritingPages(writingEntries)
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles");
         htmlLines.push(`<h3><a href="${rootURL}">&#171; Back</a></h3>`);
         htmlLines.push(`<h1>${entryTitle}</h1>`);
-        addPromo(htmlLines);
+        htmlLines.push(`<div class="l_spacer"></div>`);
 
-        for (let j = fileIndices.length-1; j >= 0; --j)
+        for (let j = 0; j < fileIndices.length; ++j)
         {
             const fileIndex = fileIndices[j];
             const fileTitle = fileTitles[j];
@@ -168,6 +180,7 @@ async function makeWritingPages(writingEntries)
             addSitemapEntry(`${rootURL}/${relativeURL}`, fileLastmod);
         }
 
+        addPromo(htmlLines);
         addFooterHTML(htmlLines);
 
         relativeURL = `${code}/list.html`;
@@ -281,7 +294,6 @@ function addPromo(htmlLines)
     htmlLines.push(`<div class="xl_spacer"></div>`);
     for (const gameEntry of gameEntries)
         addGameLink(htmlLines, gameEntry[1], `${rootURL}/${gameEntry[0]}/page.html`, `${rootURL}/${gameEntry[0]}/entry.jpg`);
-    htmlLines.push(`<div class="xl_spacer"></div>`);
 }
 
 function addGameLink(htmlLines, gameTitle, gameURL, imageURL)
@@ -438,6 +450,7 @@ function createHTMLsForWritings(rawText, code)
             const date = line.match(/\](.*?)$/)[1].trim();
             if (!isFirstArticle)
             {
+                addPromo(htmlLines);
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
                 fileTexts.push(htmlLines.join("\n"));
@@ -454,8 +467,9 @@ function createHTMLsForWritings(rawText, code)
             lastmod = globalLastmod;
             htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
-            htmlLines.push(`<h2>${date}</h2>`);
-            addPromo(htmlLines);
+            htmlLines.push(`<h3>Author: Youngjin Kang</h3>`);
+            htmlLines.push(`<h3>Date: ${date}</h3>`);
+            htmlLines.push(`<div class="l_spacer"></div>`);
         }
         else if (line.startsWith("<")) // image reference
         {
@@ -499,6 +513,7 @@ function createHTMLsForWritings(rawText, code)
         }
     }
     endParagraph();
+    addPromo(htmlLines);
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
     fileTexts.push(htmlLines.join("\n"));

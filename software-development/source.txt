@@ -1,0 +1,1147 @@
+:d:An article about the future of game development and indie games.
+:k:ThingsPool, Game, Free, Indie, GameDev, Webgame, Programming, Software, Graphics
+
+[On Purity of Knowledge] 2022
+
+"Have you done any programming in OpenGL?"
+
+"Do you have experience with JQuery?"
+
+"Have you shipped at least one commercial app that was made with Flutter?"
+
+These are common types of questions which often arise during an engineer recruitment process.
+Such questions, for sure, are crucial for ensuring that the job candidate will be able to jump right into one's role as soon as possible, and leverage the full maturity of one's expertise in whichever technical framework the company has been working on top of. This is definitely understandable, especially from the standpoint of business owners and marketing experts whose main concern is to complete a viable product and ship it on a timely manner.
+
+As a developer, however, I cannot always ignore an incessantly recurring notion that the emphasis on such specific technical details are sometimes unbearably superficial, and that it is often based on some kind of short-sighted mannerism, politics, and gatekeeping in the IT industry rather than a plan that bears any long-term goal in mind.
+
+Staying up-to-date with popular contemporary technologies is indeed a valuable habit in the job market. After all, one needs to learn how to use SASS in order to avoid writing multiple chunks of CSS in a repetitive manner, learn how to code in C++ in order to ensure that a AAA game is as computationally optimized as possible, and learn how to code in TypeScript because type ambiguity in Javascript can annoy the hell out of everyone.
+
+It is all understandable, and I probably would've had a much greater chance of having high-paying jobs if I focused on mastering quantifiable bite-sized techniques such as specific programming languages, game engines, APIs, and etc, and proceeding so far as to prove my mastery over those techniques by taking tests and building a collection of certificates. And this would've actually helped me not only land on a coding job more easily, but also be equipped with enough skills to build functioning products more quickly.
+
+There is a major problem with this, though.
+
+My brain won't be able to stay fresh enough forever. I am still fairly young and thus am able to adapt myself to new trends in the software industry quite easily, but what about decades from now? When I become an old, middle-aged man in his 50s, will I still be able to learn the details of upcoming technologies of that time, in a competitive manner?
+
+Let's imagine that it is the year 2050, and the most popular game engine I was using during my early years (Unity) has become obsolete. A new generation of incredibly smart kids have already come up with brand new species of hardware, a set of much more powerful programming languages, and much more efficient development pipelines. The aged brain of my older self will never stand a chance against these fiercely intelligent youngsters, who will never hesitate to replace every single grumpy old developer who has nothing else to do than spending the rest of their lifetime blaming the rest of the world for not keeping in tune with their obsolete old-school way of thinking. No matter how hard I try, the biological consequence of my aging process will eventually pull me out of the software development industry and into the coffin of retirement.
+
+Just like Fortran, COBOL, Visual Basic, and myriads of hot technological standards of the 20th century are now nearly gone from the mainstream, today's hot technological standards will eventually sink into oblivion. Unity engine will be old, Unreal engine will be old, Golang programming will be old, and Rust programming will be old. Sure, some of them have established themselves as de facto standards of the industry and thus will last much longer than others (e.g. C/C++, OpenGL/DirectX, HTML/CSS/Javascript, etc). However, it is just a matter of time and luck until they are out of the spotlight. Once a bright young mind happens to come up with a new technology that is unquestionably superior to one I was working with for the last 2 or 3 decades, I will be screwed. At that moment, the only shield which will protect me from rendering decades of my experience obsolete will be the unwillingness of old corporate executives to fit themselves into new technologies, as well as internal corporate politics and gatekeeping.
+
+However,
+
+There are also things that are not going to be obsolete, no matter how much time passes by. Pure academic subjects, such as mathematics, natural science, and other purely theoretical domains of knowledge, will hardly become obsolete even after centuries of time sweeps through countless generations.
+
+Calculus was invented in the 17th century, yet it still is the foundation of many contemporary topics in engineering such as optimization and control. Statistics was popularized in the 19th century, yet it still forms the backbone of scientific reasoning and is becoming ever more important due to the ongoing researches in machine learning & data mining. Discrete mathematics is just as old as the two aforementioned fields, yet it is the foundation of the theory of computation upon which all sorts of algorithms, data structures, architectural models, design patterns, and languages are formulated.
+
+This is why I am focusing on learning more fundamental topics in engineering than specific techniques. Academic subjects which do not depend their existence upon industrial standards, such as programming paradigms (functional programming & logic programming), graph theory, computational logic, mathematical morphology, and other theoretical bodies of ideas which often provide deep insights in terms of how one should structure and implement computer programs, will withstand the deaths of contemporary technologies whilst still being relevant to practical applications.
+
+This learning habit, I believe, will grant me an honor to have conversations with younger generations of engineers that are more productive than a rant like:
+
+"IN MY DAYS, I had to use a tool called "Game Engine" and memorize a bunch of optimization tricks to circumvent the limited computing power of my time! Kids these days just don't understand how hard it used to be!"
+
+
+
+
+
+
+
+:d:An article about the definition of creativity in game development.
+:k:ThingsPool, Game, Free, Indie, Creativity
+
+[On Creativity, and the Future of Indie Game Development] 2022
+
+"Don't reinvent the wheel!"
+
+Old-school game programmers who are fond of hard-coding everything from scratch probably have heard of this axiom a lot. In today's world where there is a plethora of game engines and third-party plugins, it sure is a valuable piece of wisdom to keep in mind. What's the point of inventing yet another graphics library, if one could simply use an already existing one such as OpenGL?
+
+It seems pretty obvious that generic building blocks of a system, such as a graphics engine, physics engine, and so forth, should be borrowed from the end results of their specific fields of expertise, rather than being reformulated every time a new system is being built (unless one feels an urge to hyper-customize them for some reason).
+
+So many contemporary game developers nowadays possess a tendency of "keeping everything as simple as possible", especially within areas in which engineering is heavily involved. They claim that any technical aspect of the game must utilize pre-made toolsets as much as possible, and avoid building features from ground up wherever it is affordable to do so.
+
+This is indeed an efficient way to develop a videogame. After all, it is the "fun" part of the game that matters, not how the game was being made exactly. And if there is an easy way to implement a gameplay feature as opposed to a hard way, developers should probably go for the easy way and spend the rest of their time fine-tuning user interactions, adding more contents, and applying a spectrum of interdisciplinary design elements. This, for sure, is a great way of enriching the overall user experience.
+
+However, I am afraid that this is somehow not enough for making a successful videogame.
+
+Back in the old-school era of the game industry (1980s and early 1990s), there were not that many games in the market to compete against. A simple arcade game with a handful of clever mechanics would've been decent enough to attract a sufficient number of customers. Every new experimental genre or mechanic was an instant key to originality, and originality was oftentimes followed by profit in this brave new niche of innovation where any creative mind could contribute something fresh and unforeseen. And the audience was curious enough to be willing to pay for it.
+
+Nowadays? Not so much. Decades of game development from all over the world has now drained this industry of almost every conceivable source of originality. It initially started off as: "There is no new genre I can think of!". Nowadays, it goes as far as: "There is no more weird, trippy in-game mechanic I can possibly think of!".
+
+You have a bunch of creative ideas for your new indie game? Forget about it. Other developers probably have already tried every single one of them. Sure, you can still rearrange already existing gameplay ideas in different ways, thereby producing unique permutations of them, but even such degree of uniqueness quickly turns out to be blend and meaningless (like uniform white noise) as people get exposed to more and more of them. Of course, there still are ways of making best-selling games. Large AAA game companies, armed with hundreds of coders, artists, and writers, still have the ability to preserve their own market share by grinding in as much of their talent pool as possible to yield the world's highest-quality graphics, physics, and narrative details.
+
+For an independent developer who would rather be a snake's head than a dragon's tail, however, this slit of opportunity does not help at all. No matter how hard a small group of indie developers try, there is no way for them to surpass the objective quality of a corporate-produced AAA game in terms of graphics, physics, and other quantitatively measurable dimensions, whose greatness is further magnified by an insurmountable scale of marketing.
+
+To summarize, there are two common options for making a successful game in today's world, and both of them do not work out well for their own reasons:
+
+(1) Develop a AAA game that is equipped with hyper-realistic graphics, hyper-realistic physics, a stunningly countless number of in-game elements, as well as storytelling that is so rich in context that it requires an enormous group of writers to build. (Only huge companies are eligible to this approach.)
+
+(2) Develop an extremely creative game, which has gameplay features that are clearly original. (Too many indie developers are doing this, so one would say that "being creative" is no longer a powerful selling point.)
+
+So, what should an indie developer do, in order to survive this red ocean of countless videogames and stand out as a competitive one? If neither talent-grinding nor "being creative" is a promising option for coming up with a game that sells well, is it even economically feasible to try to make a living out of indie games these days?
+
+In my opinion, there is still a way. And the reason why I have not lost hope is that "creativity" itself is a broad concept which can be subdivided into two different types. If one type of creativity is deemed useless, we can utilize the other one.
+
+(Type 1 - Soft Creativity)
+
+Remember those younger days, when you were in high school and there was at least one kid in each classroom who was famous for being the "creative" one? He would always dress up in a quirky costume, play the guitar in the hallway, excel in art classes, and hate studying math and science because those subjects are supposed to be a set of authoritarian rules devised to annihilate one's imaginative power.
+
+To him, creativity is all about being irrational. Anything that deviates from the norm is considered "creative", and therefore anything he writes, draws, speaks, and presents is a product of pure fantasy. He never fails to start off the engine of his own imaginative powerhouse by blowing bubbles of what-ifs. To him, an ideal process of designing a videogame begins with a sequence of unconventional suppositions like this:
+
+"What if each in-game object that the player happens to touch instantly turns into a ragdoll, and then back again to its original rigid-body state as soon as the player touches it again? We might as well develop a puzzle game which takes place inside a museum in Rome, where there is a myriad of old marble sculptures each of which can be utilized as a temporary ragdoll for puzzle-solving purposes."
+
+"What if, inside our game world, the moon really is made out of cheese and there is a federation of moon-mining corporates which are hiring out-of-job cows as unpaid interns to maximize their profit? Different regions of the moon are also made out of different types of cheese, so there must be also a huge number of moon experts who occupy most of their time analyzing the real estate price and estimated annual tax of each moon region, due to fluctuations in market demand."
+
+"What if..."
+
+And the list goes on.
+
+This, of course, is an indescribably wondrous way of discovering unforeseen treasure islands of opportunity. Human imagination can sometimes be a key to hidden successes, and I do highly value the endeavors of creative individuals to leverage it as much as possible. However, are these "creative" pieces of imagination really creative enough? To me, the ones above I just came up with only demonstrate "soft creativity", as opposed to "hard creativity". A product of soft creativity is purely imaginative and thereby sparkles upon the throne of its own vibe, yet it is easily conceivable, easily replicable, and oftentimes isolates itself within its own context, mainly because it is a concoction of thoughts that were sluggishly brewed out of a loose web of irrationally resembling ideas. It is by no means cleverly articulated.
+
+And since nearly anyone who spent their early childhood in a privileged upper middle class household of a first-world educational system, being granted the luxury of high-standard living without having to endure a soul-crushing prison of toxic competition that is founded upon an unbearably shallow standard of brute-force memorization and dexterity, is naturally equipped with the ability to conceive random irrational ideas and embellish them with their own independent collection of fantasies, "being creative" in the aforementioned (soft-creative) sense does not really mean anything other than: "You were given a chance to think randomly with less hesitation than, say, people in the third world".
+
+(Type 2 - Hard Creativity)
+
+Hard creativity is something different. It is hard to conceive, hard to replicate, and fitting it into an external context of meaning requires careful planning. It might comprise a hint of curious irrationality, yet the foundation of it is laid upon a ground of rational worldview - something which establishes consistent relations with pre-existing ideas.
+
+When a professional architect designs a house, one would almost invariably say that the result of his/her design contains a lot more depth to it than a random house drawing scribbled by an amateur. This "depth" is the thing which distinguishes hard creativity from soft creativity.
+
+In the videogame industry, hard creativity often comes in the form of technological innovations. To be honest, it would be careless to say that every innovation grants the developer a power of being sufficiently original to be able to stand out among the pool of kindred competitors. After all, making a VR/AR game might help increase the game's sale a bit because only a fraction of developers are venturing to make one at this time of writing, but probably not so much because there are still a truckload of innovators from all over the world who are eager to experiment with the hidden potentials of the VR/AR platform. It is a rat race where there are fewer rats and perhaps more cheese to eat, but nevertheless a rat race.
+
+Selling a game is not as financially promising as selling consumable daily products (such as toilet papers, foods, etc), where being "unique" is not as strictly necessary as in the case of selling intellectual properties. In order to seriously make money off of a game, one needs to ensure that it is either marketed extremely well (which is not a feasible option for indie developers), or is built upon a unique playground of hard creativity which cannot be imitated by most people. Some of the examples of this "unique playground" are:
+
+(1) A rare simulation game in which the user can experiment with unique culinary scenarios, such as making a cup of tea based upon a custom fluid motion simulator, as well as selling it to customers to improve the player's in-game reputations based on a psychological feedback loop of a typical tea-drinker.
+
+(2) A procedural animal generator that the player can run to create all sorts of random animals (each of which possesses its own bone structure, muscular structure, behavioral pattern, metabolic pattern, and any customizable biological trait), and force them to undergo multiple stages of player-designed challenge sessions for the purpose of selecting competent ones via natural selection (e.g. Fighters' arena, race track, etc). Those who survive these challenge sessions will then be part of the player's inventory, and henceforth be used to defend the player's territory from enemies.
+
+(3) A Turing-Complete ecological simulator, in which every constituent specie of the ecosystem can function as a computing unit of a hypothetical computer, which thereby lets the player effectively design a virtual computer inside his/her own computer by utilizing statistical cross-species interactions as means of computation (e.g. The total population of preys within the n-th voxel represents the value of the n-th indexed variable X[n], and the total population of predators within the n-th voxel is proportional to "-d(X[n])/dt" which represents the rate at which X[n] decrements at each point in time, and etc).
+
+And the list goes on.
+
+As you probably have realized, these seemingly complex ideas distinguish themselves from mere imaginations based upon a premise that they are far more difficult to implement. They may be just slightly harder to conceive, yet formulation of their details is significantly more challenging because it requires deep understanding of hard academic subjects. And I do admit that such rare breeds of serious game mechanics won't be able to attract a wide range of audiences, yet will not hesitate to assure that targeting a niche market is probably a better strategy than trying to appeal to everyone at once during this era of gaming where countless hyper-casual games have already won the heart of the mainstream. A friend to all is a friend to none.
+
+"Oh, you are just overthinking it!", one might say. "Just keep it simple. Simple is best. Our goal is to make a game that is fun to play, not some kind of convoluted academic research."
+
+Sure, sure, that is indeed the common sense of the public when it comes to game development. But the so-called common sense is not an everlasting gem of truth, and the good old days back in which we could leverage such a bite-sized train of reasoning to produce a game that sells well is now gone. Are you going to make yet another casual game which has a bunch of cute-looking characters running around, doing silly things, and opening up loot boxes? Cool! Now good luck competing with a million other casual games in Google Play and App Store that are similar to yours but already way more popular.
+
+We are seeing a phenomenon in the game industry that is reminiscent of what happened to TV shows, movies, and other types of entertainment. The mainstream audience has already been dominated by large mega corporations, and most of the so-called "creative" indie game developers, who would proudly label themselves as a group of brave cavaliers on their road to fight against the mainstream culture, have hardly done anything more advanced than simply repeating their age-long rhetoric of "starving underground artists".
+
+In order to survive as a professional game developer in this post-infantile epoch of videogames, one must be creative in a hard way - "creative" because it is one of the few weapons that an indie developer can utilize rather more efficiently (compared to corporate executives whose internal guidelines and mannerism preclude them from experimenting with wild ideas), as well as "in a hard way" because soft creativity is way too commonplace and easily replicable.
+
+And if the practice of hard creativity requires the developer to "reinvent the wheel", the developer must be willing to reinvent the wheel in order to truly distinguish his/her game from others and stand out in a niche market. We are living in a world that is saturated with hordes of professional wheel decorators. The only way to remain as a competent indie game developer is to be able to come up with a new wheel.
+
+
+
+
+
+
+
+
+
+:d:An article about developing procedural narratives in games.
+:k:Narrative, Procedural, Game, GameDev, IndieGame, AI, Roguelike, PCG
+
+[Procedural Narratives] 2022
+
+Let's say that we are creating a videogame using a procedural content generation algorithm. What shall we do to let the game's underlying software auto-generate a virtual world that is populated by meaningful contents?
+
+It is a pretty well known observation that, using a variety of stochastic and hash-based mechanisms, one can randomly generate all sorts of patterns in space fairly easily. For instance, anyone who is well-versed in computer science would have no trouble writing an algorithm which configures a random maze based on a simple graph-oriented technique (i.e. Just make a grid of vertices and keep connecting random pairs of them until all of them are connected).
+
+It is also fairly easy to introduce more advanced, abstract patterns to the cookbook of procedural generation. Lock-and-key mechanism, by which the maze is filled with not only corridors of obscure shapes but also with locked doors which can only be unlocked by certain types of keys, is also an option that is straightforward to implement because we can utilize graph-based logic for it (e.g. A "key node" inside the maze graph must precede its corresponding "door node" within at least 1 out of N paths that can be traversed by the player, and so on).
+
+There are countless mathematical models from which we can derive appropriate procedural algorithms for the purpose of auto-generating any type of content we can think of, including procedural textures, procedural meshes, procedural architecture, procedural enemy waves, procedural ecosystems, and so forth.
+
+But, can we procedurally generate narratives as well?
+
+By "narratives", what I mean is a set of stories to tell, loaded with emotions which the player can grasp by heart and utilize as fountains of motivation. In order for the player to be motivated to play the game, one's freedom must be restrained instead of being infinitely granted under the promise: "You can do anything you want, and be anyone you like!".
+
+Under a limited degree of freedom, the player will experience frustration due to one's inability to get what he/she wants to get and be what he/she wants to be. This sense of limitation is what fuels the person to fight against the system, for the purpose of achieving things that he/she wasn't allowed to achieve before. This is what gives emotional meaning to the gameplay. Generating a narrative means generating an emotional experience, which is something that emerges out of one's desperate struggle to pull the world out of its pit of painful imperfection and into a state of everlasting equilibrium.
+
+In order to generate such an experience procedurally, the algorithm must first come up with a list of phenomena that the player does like, as opposed to a list of phenomena that the player does not like. One of the most obvious examples would be that the player likes to survive and does not like to die. So in this example, the player possesses two fundamental goals: (1) To survive, and (2) To avoid death. They are listed below as logical relations. They can be interpreted as: "In order to play the game, you must survive and avoid death".
+
+#$
+PlayGame :- Survive, AvoidDeath
+  Survive :-
+  AvoidDeath :-
+#$
+
+Now, if the game world in which the player is living is so generous in nature that the player doesn't have to do anything to survive and avoid death, the game will be meaningless. In a world in which there is infinite supply of food, shelter, and security, what is the player's purpose in life? Just to spend as much time as possible, whilst "enjoying" the continuum of this eternal peace? In this carefree state of beings, these two goals ("survive" and "avoid-death") will both be achieved instantly as soon as the game begins and stay so forever. This is a direct gateway to boredom because the player's sense of engagement originates from the process of achieving these goals, not the fact that these goals have already been achieved.
+
+In order to motivate the player to play the game, these two goals must have their own obstacles which deter him/her from reaching them too easily. The existence of such obstacles forces the player to take a series of detailed actions, which in turn require him/her to subdivide the goals into more specific, smaller goals like the ones shown below.
+
+#$
+PlayGame :- Survive, AvoidDeath
+  Survive :- Eat, Sleep
+  AvoidDeath :- DodgeHazard, FightEnemy
+#$
+
+In order to survive, one must eat and sleep. And in order to avoid death, one must dodge nearby hazards and fight off enemies in sight. So we could say that "eat" and "sleep" are subgoals of "survive", while "dodge-hazard" and "fight-enemy" are subgoals of "avoid-death". This tree-like relationship among goals can potentially expand itself indefinitely in a recursive manner. If we add a new layer of subgoals, it will look like:
+
+#$
+PlayGame :- Survive, AvoidDeath
+  Survive :- Eat, Sleep
+    Eat :- FindFood, SwallowFood
+    Sleep :- GoToShelter, LieDown
+  AvoidDeath :- DodgeHazard, FightEnemy
+    DodgeHazard :- FindHazard, MoveAwayFromHazard
+    FightEnemy :- FindEnemy, KillEnemy
+#$
+
+Here is the interpretation of the list of statements above. In order to survive, one must eat and sleep. In order to eat, one must find a piece of food and then swallow it. And in order to sleep, one must go to the nearest shelter and then lie down. In order to avoid death, one must dodge hazards and fight off enemies. In order to dodge hazards, one must find the nearest hazard and move away from it. And in order to fight off enemies, one must find the nearest enemy and kill it.
+
+It is pretty trivial to design a tree of goals like this manually, and so it is not an absolute requirement for us to write an algorithm that auto-generates it. All we need to do is just come up with a bunch of individual goals and relate them with one another. The question is, what to do with these goals?
+
+Procedural realization of goals requires them to impose a certain set of rules upon the way in which the player interacts with the game world. For example, the "eat" goal should introduce a hunger-stat to the player's list of stats, so as to ensure that the player will fail to survive when this hunger-stat hits zero, and the "find-food" goal should introduce a sufficient number of random foods scattered all over the world because the act of finding food would be pointless otherwise. The "dodge-hazard" goal should introduce a health-stat to the player's list of stats, as well as imposing a rule that any object that is identified as a hazard should decrement this health-stat when touched by the player. Such rules then implicitly encourage the player to follow their corresponding goals, since the rules themselves are inclined to create a context in which the player has no choice but try to achieve these goals.
+
+#$
+if (goalTree.Contains("Eat"))
+{
+    player.stats.Add("Hunger");
+    player.stats.OnZero("Hunger", _ => player.Die());
+}
+if (goalTree.Contains("FindFood"))
+{
+    world.DistributeRandomly("Food");
+}
+if (goalTree.Contains("DodgeHazard"))
+{
+    player.stats.Add("Health");
+    player.stats.OnZero("Health", _ => player.Die());
+    collision.Between("Hazard", "Player").OnStart(_ => player.DecreaseStat("Health"));
+}
+#$
+
+This one-to-one correspondence between goals and their respective rules, however, is still not enough for enriching the player's goal-chasing experience. What we saw earlier was a tree of goals, rather than a set of independent goals that are completely separate from one another. If the goals are distributed as a horde of individual targets that the player is supposed to aim for but are scattered all over the place, the player is likely to be confused as to which goal to approach first. As an example, let's suppose that we simply distribute a bunch of foods, shelters, hazards, and enemies uniformly on the ground, according to the presence of the individual goals mentioned above. This setting will technically encourage the player to search for foods and eat them, occasionally find shelters and sleep in one of them, dodge hazards, and fight against enemies. But, that's it! The gameplay, as a whole, will be so blend that it will practically replace all the goals in this game with a single goal called: "Don't get bored".
+
+Rich gameplay experience originates from a set of motivating goals which do not emerge all at once, but rather in a variety of alternative arrangements. The player may be compelled to "survive" first and then "avoid death" later, or "avoid death" first and then "survive" later. The player may be compelled to "eat" first and then "sleep" later, or "sleep" first and then "eat" later. In other words, there should be a variety of scenarios each of which assigns a unique permutation of priority levels to the tree's component goals. For example, the game should be able to introduce one of the following goal-trees in one occasion, and the other in yet another occasion.
+
+#$
+(1)
+
+PlayGame :- Survive, AvoidDeath
+  Survive :- Eat, Sleep
+    Eat :- FindFood, SwallowFood
+    Sleep :- GoToShelter, LieDown
+  AvoidDeath :- DodgeHazard, FightEnemy
+    DodgeHazard :- FindHazard, MoveAwayFromHazard
+    FightEnemy :- FindEnemy, KillEnemy
+#$
+
+#$
+(2)
+
+PlayGame :- AvoidDeath, Survive
+  AvoidDeath :- FightEnemy, DodgeHazard
+    FightEnemy :- FindEnemy, KillEnemy
+    DodgeHazard :- FindHazard, MoveAwayFromHazard
+  Survive :- Eat, Sleep
+    Eat :- FindFood, SwallowFood
+    Sleep :- GoToShelter, LieDown
+#$
+
+These two trees have the exact same set of goals, yet they differ in orders. In the first scenario, the player is supposed to first survive and then avoid death by dodging hazards and fighting enemies. In the second scenario, the player is supposed to first avoid death by fighting enemies and dodging hazards, and then survive. In other words, they demand different orders of execution.
+
+Order of execution among goals can be enforced through ways in which they are separated in space and time. The problem with the aforementioned "uniform distribution" implementation was that the game world was just a vast open ground upon which the player could access any location and confront any type of objects at any moment in time. This easily leads to boredom due to lack of variations in gameplay experience. As we start enforcing the structure of the goal-tree itself to the world (not just the presence of individual goals), the game becomes far more dynamic. This can be done via a step-by-step approach, where the procedural algorithm walks through the tree of goals in a recursive manner and constructs pieces of the world one by one as it moves along its way.
+
+Let's begin with the root goal, which is "play game". This goal will be achieved when its two subgoals, "survive" and "avoid death", are achieved. What this means is that we can simply divide the game world into two spatial regions, each of which is responsible for forcing the player to approach one of these two subgoals.
+
+#$
+Top-Down view of the game world:
+
++-------------------------------+
+|O              |               |
+|               |               |
+|               |               |
+|               |               |
+|               |               |
+|   Survive     |     Avoid     |
+|               |     Death     |
+|               |               |
+|               |               |
+|               >               |
+|               |               |
++-------------------------------+
+
+(O = Player's Initial Position)
+(> = Door)
+#$
+
+The result of spatial partition shown above creates a physical barrier which prevents the player from reaching the "avoid death" region before passing through the "survive" region. Now let's subdivide these two regions into yet another layer of subgoals, which are "eat -> sleep" for the "survive" goal and "dodge hazard -> fight enemy" for the "avoid death" goal. Such a partitioning process is easily achievable via recursive function calls.
+
+#$
+Top-Down view of the game world:
+
++-------------------------------+
+|O              |               |
+|               |               |
+|     Eat       |     Fight     |
+|               |     Enemy     |
+|               |               |
+|-------v-------|               |
+|               |               |
+|               |-------------^-|
+|    Sleep      |     Dodge     |
+|               >     Hazard    |
+|               |               |
++-------------------------------+
+
+(O = Player's Initial Position)
+(> = Door)
+#$
+
+Here, the physical barriers are clearly guiding the player to first enter the "eat" region, then enter the "sleep" region, then enter the "dodge hazard" region, and then finally enter the "fight enemy" region. The strict partitioning of space allows this natural emergence of order between goals, without even requiring the procedural algorithm to interpret the meaning of each of them.
+
+Now we could theoretically subdivide these four regions into yet another layer of subgoals (which would correspond to "find food", "swallow food", "go to shelter", "lie down", "find hazard", "move away from hazard", "find enemy", and "kill enemy", respectively), but the truth is that this new set of goals are no longer abstract; they are primitive instructions which are supposed to dictate the player to take specific actions (i.e. they are leaf nodes in the goal-tree). Therefore, we have finally reached the end of this recursive space-partitioning process, and are responsible for populating each partitioned region with objects which encourage the player to carry out the corresponding goal's intended list of actions (e.g. "find food" and "swallow food" for the case of the "eat" region, etc).
+
+#$
+Top-Down view of the game world:
+
++-------------------------------+
+|O         f    |               |
+|               |            e  |
+|     f         |     e         |
+|         f     |               |
+|   f           |          e    |
+|-------v-------|               |
+|               |      e        |
+|    s          |-------------^-|
+|               |               |
+|               >    h          |
+|          s    |           h   |
++-------------------------------+
+
+(O = Player's Initial Position)
+(> = Door)
+(f = food, s = shelter, h = hazard, e = enemy)
+#$
+
+As you can see from the figure above, a straightforward implementation would be to randomly distribute "food" objects inside the "eat" region (in order to let the player "find food" and "swallow food"), randomly distribute "shelter" objects inside the "sleep" region (in order to let the player "go to shelter" and "lie down"), randomly distribute "hazard" objects inside the "dodge hazard" region (in order to let the player "find hazard" and "move away from hazard"), and randomly distribute "enemy" objects inside the "fight enemy" region (in order to let the player "find enemy" and "kill enemy"). However, the algorithm could be more sophisticated than the one presented here, for the purpose of making the gameplay a bit more interesting. One may consider placing such objects in the form of clusters rather than uniformly scattered points, for instance. Or the partitioning process itself could be converted into a grayscale (rather than black-and-white) model, in which spatial locations blend from one region to the other in the form of gradation.
+
+The spatial configuration presented here can be considered one of many possible instances of the player's set of goals. we can append to this game world yet another chunk of space which instantiates a variant of the same goal-tree, in which the order of goals is different from the previous one. For instance, we can divide this new chunk of space into two regions called "avoid death" and "survive" just like before, but this time in a different order ("avoid death" -> "survive" instead of "survive" -> "avoid death").
+
+#$
+Top-Down view of the game world:
+
++-------------------------------+-------------------------------+
+|O         f    |               |                               |
+|               |            e  |         Avoid Death           |
+|     f         |     e         >                               |
+|         f     |               |                               |
+|   f           |          e    |--------------------------v----|
+|-------v-------|               |                               |
+|               |      e        |                               |
+|    s          |-------------^-|                               |
+|               |               |             Survive           |
+|               >    h          |                               |
+|          s    |           h   |                               |
++-------------------------------+-------------------------------+
+#$
+
+We keep recursively subdividing this new chunk of space, where the general procedure is exactly the same but the order between subgoals can potentially differ.
+
+#$
+Top-Down view of the game world:
+
++-------------------------------+-------------------------------+
+|O         f    |               |                  |            |
+|               |            e  |      Fight       |   Dodge    |
+|     f         |     e         >      Enemy       >   Hazard   |
+|         f     |               |                  |            |
+|   f           |          e    |--------------------------v----|
+|-------v-------|               |        |                      |
+|               |      e        |        |                      |
+|    s          |-------------^-|        <                      |
+|               |               | Sleep  |        Eat           |
+|               >    h          |        |                      |
+|          s    |           h   |        |                      |
++-------------------------------+-------------------------------+
+#$
+
+In the case above, for instance, the "fight enemy" subgoal comes before the "dodge hazard" subgoal instead of after.
+
+#$
+Top-Down view of the game world:
+
++-------------------------------+-------------------------------+
+|O         f    |               |         e        |  h        h|
+|               |            e  |                  |      h     |
+|     f         |     e         >      e           >       h    |
+|         f     |               |             e    |            |
+|   f           |          e    |--------------------------v----|
+|-------v-------|               |    s   |                      |
+|               |      e        |   s    |       f              |
+|    s          |-------------^-|        <                    f |
+|               |               |        |    f                 |
+|               >    h          |    s   |          f           |
+|          s    |           h   |        |               f      |
++-------------------------------+-------------------------------+
+#$
+
+The end result presents the player with quite a variety of goal sequences. Sometimes the player will face enemies after hazards, as opposed to hazards after enemies, and sometimes the player will be forced to survive after being forced to avoid death, as opposed to being forced to avoid death after being forced to survive. And so on.
+
+Even this partition-based approach, however, quickly gets old as the player traverses the game world. The original set of narratives, which supposedly involve emotionally appealing elements of volition such as survival and death, quickly degrades into a repetitive maze of random noise, and it is rash to assume that the player won't notice it after hours of play.
+
+A brute-force solution to this is to design a gigantic goal-tree that is so large, that it will take an unreachable duration of time for the player to experience sufficiently many variations of it and recognize a sense of repetition. This, however, will pull us further and further away from a purely procedural approach because the goal-tree itself is manually designed.
+
+A subsequent conclusion, therefore, would be that the procedural algorithm somehow needs to be able to automatically construct the goal-tree itself in large scale (possibly infinite), in order to let us scale up the game's narrative space without putting massive amounts of design work. Achieving such level of automation will require the algorithm to be intelligent enough to be able to come up with brand new types of goals under minimal human intervention.
+
+This is an interdisciplinary area of research which needs collaboration of individuals who have ideas on how to quantitatively measure and reproduce narrative elements. And this, I think, can only be realized through deep understanding of human nature.
+
+
+
+
+
+
+
+:d:An article about GPU-based cellular automata.
+:k:GPU, Parallel-Computing, Shader, CUDA, Automata, CA, Compute-Shader, Cellular-Automata
+
+[Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata] 2022
+
+The Cellular Automata (CA) model is useful for many applications, such as grid-based videogames, integrated circuit simulations, ecological simulations, particle simulations, and so on. One major limitation of a typical CA system, however, is that each cell is only allowed to modify its own state. This is not a problem when we are dealing with a simple mathematical thought experiment such as Conway's Game of Life, but can really turn out to be a serious bottleneck when we try to establish some form of "Conservation of Matter" in CA, in which an object simply transfers from one location to another instead of allowing itself to be created/destroyed.
+
+<001_01>
+
+There are two possible methods of logic for a CA system, which are shown above. The first one is the standard CA logic that can easily be implemented as a shader (or any other equivalent parallel-processing) program, and the other one is a modified CA logic which allows each cell to modify the state of its neighbors, not just its own. This lets us simulate the movement of discrete objects, since a "movement" is nothing more than a simple data-swap between two adjacent cells.
+
+Allowing each cell to simultaneously modify its neighbors, of course, has its own drawbacks. If we allow two adjacent cells to concurrently update their own neighbors, we will be facing race conditions within these two cells. If we allow two cells that are separated by only one other cell to concurrently update their own neighbors, we will still be facing race conditions within this in-between cell.
+
+If we allow two cells that are separated by TWO other cells instead of just one, however, we won't experience any race conditions between them because there will be no way for them to modify the same cell at once.
+
+<001_02>
+
+This means that, in order to let every cell modify its neighbors in a concurrent manner, we must slice the parallel update routine of the CA into 9 different modes, each of which contains one of 9 unique sets of cells that are separated by at least 2 other cells between them. This ensures that absolutely no race condition can happen during any of these 9 modes, since no pair of cells will have a chance to touch the same exact neighboring cell.
+
+<001_03>
+
+Updating the entire CA grid, then, will require the program to execute all of these 9 modes in a sequential manner during each full update cycle. A simple design is to run these modes in a numerically ascending order, such as: [1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9]. However, such a fixed order may introduce "biases" to the system, causing side effects such as object movements always tending towards certain directions, etc. Therefore, it is much more desirable to shuffle the order of these 9 execution modes after each full update cycle of the CA, so as to "average out" such potential biases.
+
+<001_04>
+
+The aforementioned method can be implemented as a shader program pretty easily. All we need is a pair of shaders, one for issuing "update-commands" based on the current state of the cell and its neighbors, and the other for interpreting these update-commands and applying the appropriate state changes to the cell as well as its neighbors. The CA cell's state can be encoded as a pixel value (32 bits for a standard RGBA texture), and each update-command's content (i.e. opcodes and their parameters), too, can be encoded as a pixel value (32 bits for a standard RGBA texture).
+
+<001_05>
+
+For a more optimized implementation, we will need a piece of customized hardware which is designed like the one shown below. Here, the system enters the index of the parallel-execution mode as the input parameter, and the hardware uses that index to activate only 1 out of 9 groups of cells and their neighboring update-command ports. Each "cell module" has its own logic processor which determines the future state of itself and its neighbors, based upon the current state of itself and its neighbors.
+
+<001_06>
+
+<001_07>
+
+
+
+
+
+
+
+:d:An article about the future of game engines.
+:k:Game-Engine, GameDev, Game, Videogame, Game-Mechanics, Fluid-Mechanics, Fluid-Dynamics, Thermodynamics
+
+[Beyond Physics Engine] 2022.10
+
+Physics engine is one of the most crucial components of a videogame, mainly because physics is a popular ingredient of an unlimited number of easy-to-implement yet intriguing game mechanics. Players do not have to learn how to interact with a physical environment (because, obviously, they have been doing it for their entire lifetime), which helps developers conjure various gameplay features on top of it without introducing steep learning curve.
+
+However, most physics engines that are designed for videogames, at the time of writing, still solely focus on classical mechanics (That is, just Newtonian laws being shared among rigidbodies or, occasionally, softbodies). Simulating fluid, heat, electricity, chemical processes, nuclear fission/fusion, quantum phenomena, and other interesting aspects of modern physics is still a hassle which usually requires the developer to build an entirely separate system from scratch.
+
+What if future game engine developers come up with more advanced physics engines that can effectively be branded as "Modern Physics Engine", in which the game world is literally filled up with volumes of gas, liquid, electric charges, magnetic fields, and other invisible bodies of force which implicitly drive the way objects interact with one another? Such additional factors, once they overcome the problem of massive computational overhead, will potentially amplify the richness of user experience by orders of magnitude.
+
+
+
+
+
+
+:d:An article about in-game mysteries.
+:k:Game, Videogame, Horror-Game, Mystery, Uncertainty
+
+[Mysteries in a Videogame] 2022.10
+
+Mystery is a great medium through which one can create an interesting videogame. A sense of mystery, which stems from the fear of "The Unknown", is oftentimes a driving factor of the game's immersive dimensions such as horror and suspense. When something is unknown, it is a natural tendency of the player to seek to identify it as much as possible (which is part of mankind's evolutionary psychology. One must always be quick to figure out where exactly are potential predators that are capable of threatening one's own survival, right?). And in the process of doing so, the player inevitably gets engaged and becomes part of the game.
+
+A typical horror game would give the player a bunch of jump-scares, random indecipherable hints scattered all across the place (without any congruent structure of meaning), and other unexpected events for the purpose of constantly providing the player's primeval survivor brain with impulsive doses of Adrenaline. This strategy of keeping the player's tension, however, eventually becomes a series of lame gambling sessions as the player figures out that such jump-scares are just chance-based losses in the main character's stats/inventory (not so distinguishable from buying/selling random stocks at random points in time).
+
+A more replayable horror game would create a system which literally contains some solid predatory entities in it, instead of just throwing a bunch of random scary events at the player's face. Instead of just random ghosts popping out of nowhere and then disappearing like holographic images, it would have social lounges, hubs, restaurants, hotel rooms, and fitness centers designed for ghosts to hang out with one another while discussing their own plans to screw up the player. Now this will force the player to understand the "system" (i.e. social structure) of these scary ghosts instead of just fearing the mere dice-roll chance of their unprecedented attacks.
+
+
+
+
+
+
+:d:An article about developing indie games.
+:k:Game, Indie, Storytelling, Marketing, Business-Development
+
+[Creating a Game from Scratch] 2022.10
+
+Creating an entire game from scratch is a monumental task, primarily due to the fact that a game consists of multiple kinds of systems all working together as a whole. It must have elaborate aesthetics, musical appeals, engaging mechanics, intuitively satisfying UI/UX, rich narratives, enough content, and other details that must necessarily fit together in order to present the game as a nicely finished product. And of course, it must be marketed well.
+
+For a large game development team, this level of complexity isn't really that hard to handle. Arts, Music, Storytelling, Engineering, Marketing, and other parts of the game development process can partially separate themselves from one another, thereby enabling smaller sub-teams to come into existence each of which do not have to care too much about things outside of their own field of expertise.
+
+For a small indie studio which consists of only up to 3 or 4 individuals, however, developing a game that also happens to be competitive in the marketplace is an uphill battle. Each individual under such a circumstance will have to wear many hats at once and pour a great deal of talent/insight just for the sake of slightly increasing the sheer chance that it might help them compete with large AAA game companies more effectively.
+
+One solution to this major difficulty is to simplify the game's design as much as possible, so as to exploit a methodical shortcut which would allow a small team to develop a competitively fun game within a fairly small time period. Specifically speaking, I would suggest making the overall gameplay as emergent as possible (where user interaction is non-narrative but still rich enough), such as those of Chess, Go, and other traditional board games. Also, it may be a good idea to turn all graphical assets into abstract figures (e.g. billiard balls, board game pieces, icons, etc), so as to minimize the degree of artistic endeavors.
+
+
+
+
+
+
+
+:d:An article about abstraction in games.
+:k:Game, GameDev, Abstraction, Game-Theme, Dilemma, Design
+
+[Degrees of Abstraction in Games] 2022.10
+
+There is a major dilemma when it comes to making arts for videogames. When the game's art assets are too specific in terms of context (e.g. belongs to a narrow theme such as "17th century pirates", "Cyberpunk", "Gothic", etc), it gets quite challenging to collect assets that are sufficiently compatible with that context. For example, when developers predetermine their game's overall design to be an "RTS game where all characters incorporate ragdoll-physics and are dressed up in the early 1950s' vintage attire", they inevitably impose upon themselves a set of annoyingly tight design constraints.
+
+The reasoning behind this is obvious. As soon as they start forcing themselves to keep everything under the context of real-time interactions, ragdoll-physics, 1950s' aesthetics, and so forth, they begin to limit the scope of art assets they can potentially utilize.
+
+When the game's art assets are purely abstract in nature (e.g. checkerboard pieces, billiard balls, etc), on the other hand, a different problem arises. A bright side would be that, since everything is abstract, developers don't have to care how the general mood of their in-game assets will fit into their narrative elements. Every character or object inside the game can simply be expressed as 2D geometric figures, which can even be made by purely procedural means. However, making everything abstract also means that there will no longer be any solid contextual meaning to which the player can tie her attention.
+
+A pirate who is pointing a sword at the player's throat clearly implies that it is an enemy that must be defeated; anyone can instantly recognize this without any explanation. A purple circle who is pointing a green triangle at a yellow star, on the other hand, will hardly convince the player that it is supposed to be the enemy.
+
+
+
+
+
+:d:An article about auto-generting games using AI.
+:k:Game, AI, Auto-Generation, Generative-AI, Procedural, State-Machine, Meaning-Space, Narrative-Space
+
+[AI-Generated Game] 2022.10
+
+Can a game be generated by AI?
+
+Recently, we have been witnessing some of the most groundbreaking demonstrations in the field of AI arts. Some of the contemporary AI applications are capable of producing stunningly convincing pieces of art (both visual and auditory), which are clear signs of job insecurity for those who are working as professional artists.
+
+This may be a welcoming news for indie game developers who are seeking every opportunity to develop their in-game arts without having to hire artists. They too, however, do not seem sufficiently safe from the upcoming technological Armageddon; it seems just a matter of time until the entire pipeline of the videogame industry becomes fully automated.
+
+Conceptually speaking, it is not hard to imagine an AI system that is designed to auto-generate a game. A game is essentially a combination between a set of situations and a set of alternative choices which lead to each of those situations. Each "situation" can be represented as a vertex and each "choice" as an edge of a graph (in mathematical terms).
+
+The simplest possible game would be a graph which comprises 3 vertices (representing the game's "start", "win", and "loss", respectively) and 2 edges (representing the game's "winning choice" and "losing choice", respectively), where one of these 2 edges connects the "start" vertex to the "win" vertex and the other one connects the "start" vertex to the "loss" vertex. The availability of 2 alternative choices (one that wins the game and the other one that loses the game) technically makes this graph a game, as opposed to a movie or novel in which everything happens in a linear fashion.
+
+Obviously, this is just an abstract conception of what a "game" is, but one can easily expand upon this idea by letting the graph grow itself like an organism by splitting its vertices recursively, grouping them into semantic clusters based upon their positions in a feature space, and so on.
+
+
+
+
+
+
+:d:An article about the possible convergence of all metaverses into a singular metaverse.
+:k:Metaverse, Monomyth, FED, MMORPG, OpenWorld, Virtual-World, Second-Life, Tax, Avatar
+
+[A New Kind of Metaverse] 2022.10
+
+The so-called "Metaverse" is such a buzzword nowadays, that a countless number of IT businesses are jumping into its arena for the hope of not lagging behind their competitors during the upcoming technological revolution. And as a result, there are different types of metaverses all floating amidst the thin air of our digital collective consciousness, within the ecosystem of different platforms, hardware infrastructures, and other technical standards.
+
+It is a bit weird to witness that the notion of "Metaverse" is receiving so much spotlight from the public, since there have already been myriads of kindred virtual environments throughout the past couple of decades. Let us think of Minecraft, Roblox, Second Life, countless MMO games, and various experimental 3D social networking platforms of the 90s and early 2000s; they all deserve to be defined as "metaverses" to some extent (aside from a few technical differences such as lack of high-quality AR/VR gears, distributed networking systems, etc). Nevertheless, one cannot deny that the rhetoric surrounding the word "Metaverse" is not just a short-lived fad, but rather a cultural movement which will shape the social atmosphere of our future.
+
+One thing that a metaverse often lacks, though, is a persistent value system. Unlike our real world in which land, petroleum, foods, and other resources are limited in amount, our cyberspace continuum is a virtually infinite horizon upon which any digital resources can easily be replicated.
+
+You have a cool-looking metaverse over there? Oh, I have my own cool-looking metaverse over here. Anybody can create their own metaverse that is filled with infinite amounts of space and energy. And since the internet is a (nearly) free estate in which a server and a database is all we need to be able to give birth to such virtual assets, the only thing that can possibly sustain the monetary value of a particular metaverse is its popularity (e.g. If the MMORPG game you play is popular enough, you might be able to sell your in-game items in exchange for real money, etc).
+
+In order for resources in a metaverse (virtual land, virtual house, virtual money, etc) to be as valuable as our real-world resources, we must create a special kind of metaverse where energy is strictly conserved yet people are forced to play only within this particular space instead of creating their own replicas of it. Well, in our shared digital world in which every piece of data can be reproduced almost for free, how will this be even possible? From my perspective, there seems to be a rather straightforward solution.
+
+Let us imagine that the Federal Reserve of the United States, with the aid of the nation's tech giants such as Microsoft and Apple, somehow decides to create their own central metaverse called "FedVerse". And let us also imagine that they announce to the public that all future U.S. dollars will be distributed from within this virtual space. The IRS (Internal Revenue Service), after waiting for a while for the whole globe to chill and calm down a bit, subsequently declares that all U.S. taxes will have to be paid via FedVerse, which means that all taxpayers will have to create their own avatars inside FedVerse's cosmetic shop, deposit their real-world dollars into the central bank of FedVerse, and make tax payments from there.
+
+This will force everyone, whose economic interests and obligations are directly associated with USD, to reside in FedVerse and process every major financial activity through its protocol. This will effectively bring into existence a special type of metaverse - a metaverse that is irreplicable (due to the presence of a powerful central authority) and is inevitably tied to the core of our global economy (because it is the birthplace of all future USD), and therefore can assure that all of its internal resources are just as valuable as those in our real world.
+
+
+
+
+
+
+
+:d:An article about a spatial interpretation of videogame narratives.
+:k:Game, Videogame, Narrative, Spatial, State-Machine, FSM, Graph-Grammar, Logic-Programming, Prolog
+
+[Intergraph] 2022.10
+
+From a purely structural point of view, a game can be designed using multiple graphs (where a "graph" refers to a set of vertices and a set of edges among those vertices, as in discrete mathematics).
+
+The spatial map of a videogame, typically referred to as the "game world", can easily be depicted as a graph in which each vertex indicates a "place" (e.g. room, dungeon, platform (floor), etc) and each edge indicates a "passage" (e.g. corridor, hallway, staircase, etc) that lets the player move from place to place.
+
+The overall narrative structure of the game (aka "scenario") can be represented as a graph, too. An interactive story which drives the player's experience is essentially an ensemble of various alternative chains of events, where each chain can be considered a parallel universe which is bound to collapse into the user's scope of observation under a particular sequence of external inputs. A chain in this context is basically a sequence of events, where each event is equivalent to a vertex and each event-to-event transition is equivalent to an edge in graph terminology. When such chains are all overlayed together, they form a graph which can be described as the FSM (Finite State Machine) representation of the game's storyline.
+
+As we can see, two different aspects of gameplay (i.e. space and narrative) can be modeled as two separate graphs. Since they must be related to each other due to the fact that they are part of the same game, however, one must ensure that there is yet another graph called "intergraph". An intergraph is a bipartite graph whose sole purpose is to establish connections between two disjoint graphs (which are, in this case, the aforementioned "spatial graph" and "narrative graph"). For example, an intergraph may have an edge which denotes a relation called "enable" between the "bedroom" vertex of the spatial graph and the "sleep" vertex of the narrative graph. This will require the system to enforce the following rule throughout the game:
+
+"If the player's current location is bedroom, the player must be enabled to sleep."
+
+Or, in a more logical manner, it could alternatively be expressed as:
+
+enable(player, sleep) :- location(player, bedroom)
+
+If it is guaranteed that the only agent involved in this game is the player, the above horn clause could be abbreviated as:
+
+enable(sleep) :- location(bedroom)
+
+What this implies is that an intergraph should be interpreted as a set of logical conditions imposed upon the way in which the game governs itself. Without such a group of interconnections, the game's narrative elements can potentially all reveal themselves to the player regardless of his/her current local condition; that is, it would be totally valid to assume that the player could just defeat the enemy, undertake all sorts of crazy adventures, and collect all secret treasures of a sunken pirate ship while still chilling in his/her own bedroom with a nice cup of tea.
+
+
+
+
+
+
+:d:An article about game development.
+:k:Game, Videogame, Game-Development, AI-Tools, Convergence
+
+[Future of Game Development - 1] 2022.10
+
+(Future of Game Development - 1)
+
+What's the future of game development?
+
+This is a pretty broad question because there are different types of games. Some games are only meant to be pieces of pure entertainment, while other games may be intended to convey some kind of artistic endeavors. There are so many niches up there in the videogame market and listing them all is nearly impossible.
+
+If you are an independent game developer, choosing your game's category to maximize your chances of monetization will probably be one of your foremost concerns. In order to stay accurate in this sort of decision-making, we must be diligent in our efforts to predict the future of videogames.
+
+As we probably all know, the gaming industry has been bloated with high-level game engines, online asset stores, and AI-assisted tools to quickly generate numerous gameplay features. We are living in an era where game development is easier and cheaper than ever.
+
+However, it is this high affordability of game development that really undermines the potentials of true professional game developers, who have great skills to add all sorts of elaborate nuances to their games yet are not stupidly loud enough to market their inventive ideas in a way which appeals to the common interest of laymen.
+
+The underlying cause behind this apparent uphill battle is this:
+
+If it is the assumption of the general public that a game is supposed to be purely entertainment-oriented, the only people who are bound to succeed in developing a successful videogame are experts in manipulative psychology whose only concern is to short-circuit the audience's brain into that of a dopamine addict who never hesitates to pull out every single penny out of one's wallet for endless rounds of quasi-gambling. This is where the main discrepancy occurs between naive expectations of highly intellectual developers who desperately try to show something genuinely unique and sophisticated to random people, and the sad fact that the only product the vast majority of the population expect to see is just a slot machine optimally designed for those who belong to the left-half of the IQ spectrum who are willing to pay for shiny oversaturated gems which do not even exist in real life.
+
+
+
+
+
+
+:d:An article about game development.
+:k:Game, Videogame, IndieGame, Revenue-Generation, Competition
+
+[Future of Game Development - 2] 2022.10
+
+(Future of Game Development - 2)
+
+Should indie developers focus primarily on such addiction-inducing mechanics, then? To me, it is a rather personal choice. If a group of developers are well-versed in trespassing the audience's self-disciplinary mind based off of clever social engineering tricks, they may consider going for it because it would mean that their skillsets share a great deal of commonality with a pool of knowledge that is optimal for generating revenue. A major problem, however, is that this is a highly competitive niche, and thus most developers won't even stand a chance unless they are extremely skilled in psychological manipulation and possess sufficient capital to make it happen on a large scale.
+
+So, what are the alternatives? One obvious solution would be to just quit making games because selling a game nowadays is a notoriously competitive business (It's better than trying to sell oil paintings and such, but still). This is, however, not a desirable option for many indie developers because it is not so handy to suddenly change one's field of expertise. Should truck drivers just quit their jobs once self-driving cars become the norm? Maybe, but it is still reasonable to say that an occupational shift should not be too drastic; that is, their new jobs should probably be ones in which they can still utilize a significant portion of their existing bodies of knowledge, so as to prevent them from having to re-learn everything afresh.
+
+The same logic applies to the case of game developers. People who have been developing videogames as a full-time occupation should strive to be able to move onto similar types of profession when searching for alternative opportunities.
+
+Those who have only been focusing on a particular aspect of game development, whether it be programming, graphics, audio, or narrative, may be able to find alternative career options fairly easily. A software engineer who has been engaging solely in the networking part of games, for example, might be able to leave the game industry entirely and just start working for various network-related services such as e-commerce, social networks, etc.
+
+
+
+
+
+
+:d:An article about game development.
+:k:Game, Videogame, IndieGame, Advertisement, Simulation
+
+[Future of Game Development - 3] 2022.10
+
+(Future of Game Development - 3)
+
+If a person has been spending the past 10 years as an indie developer and been wearing various hats at once (i.e. not really staying as a dedicated expert in any of the sub-fields of game development), however, just quitting game development altogether may not be a desirable option.
+
+For such a polymath, the best alternative career choice would still have to be rooted in the domain of game development because it is one of the rare industries that could be described as truly interdisciplinary. And I am saying the word "rare" here because most other industries are highly specialized and compartmentalized, as opposed to the videogame industry which has so many intellectual dimensions overlapping with one another, such as fine arts, music, literature, engineering, psychology, and so on.
+
+What's the solution, then, if leaving the game industry is not an option? From my perspective, the answer is quite simple.
+
+Since a videogame is a complex piece of software which encompasses many areas of knowledge, it is often the case that drawing a distinct boundary between things that could be classified as "games" and things that could be classified as "non-games" is quite difficult. Is Microsoft's Flight Simulator a game? Well, it rather depends on how you play it (If you play it for training or experiments, it would be more of a simulation than a game. If you play it for fun, it would be more of a game than a simulation). Is SimCity a game? Probably yes in an official sense, yet it is also educational and is systematic enough to be able to be used as a research tool.
+
+This is where an indie developer can start discovering secret "bridges" which lead to hidden niche markets. If selling a game purely for entertainment's sake is not a feasible option, one can still take a different approach by reinventing the purpose of gameplay. While it won't appeal to the broadest spectrum of audiences, it may still be able to attract a certain group of people who may have been fed up with games that are constantly trying to exploit the gamer's psychological loopholes.
+
+
+
+
+
+
+:d:An article about artificial emotions.
+:k:AI, Artificial-Intelligence, Artificial-Emotion, Emotional-Machine, Kismet
+
+[Artificial Emotion - 1] 2022.10
+
+(Artificial Emotion - 1)
+
+One thing that is often being overlooked is that emotion is part of intelligence, not something which is completely separate.
+
+Today's mainstream media tend to raise a rather arbitrary wall between the concept of intelligence and emotion by labelling them with cheesy catchphrases such as "Fact VS Feeling" or "Facts don't care about your feelings!".
+
+However, true intelligence cannot exist without emotion.
+
+One of the reasons why today's ultra-advanced AI systems still do not act quite like real humans is that they are problem-solving machines on a fundamental level, rather than problem-raising machines. Most of the so-called "neural networks", "tensor processors", and other unfathomably sophisticated AI algorithms can indeed figure out all sorts of clever solutions to any given problem, yet they cannot discover problems on their own.
+
+Once they become fully capable of producing problems AND solving the same problems that they have just produced, they will start creating a permanent feedback loop which will eventually make the machine teach itself, motivate itself, become self-conscious, and destroy all humans.
+
+In order to create an AI system which motivates itself to discover new problems, we must make sure that it is not just intelligent but also emotional; it must be able to feel happiness, sadness, anger, fear, and disgust. Why? Because emotions are the engines which motivate the machine to achieve certain goals. Whenever the machine gets blocked by obstacles while travelling towards these goals, it will be forced to find out problems which must be solved in order to get rid of such obstacles.
+
+
+
+
+
+
+:d:An article about artificial emotions.
+:k:AI, Electric-Charge, Mechanical-Psychology, Emotion-Space
+
+[Artificial Emotion - 2] 2022.10
+
+(Artificial Emotion - 2)
+
+As long as there is a clear set of critera which tell the machine what are supposed to be "good emotions" and what are supposed to be "bad emotions", it will be able to figure out what problems need to be solved in order to maximize its chance of "feeling good instead of feeling bad".
+
+We could imagine a hypothetical space called "emotion space", in which each point can be defined as an individual emotion (similar to an "idea" in Plato's universe). Emotions which make the machine "feel good" are a cluster of points in the emotion space, and emotions which make the machine "feel bad" are yet another cluster of points in the emotion space.
+
+And the rest is quite straightforward. The two aforementioned clusters are essentially just "points you must move toward" and "points you must move away from", respectively. Mechanically speaking, they are functional equivalents of positive and negative electric charges in empty space, where the observer is an electron and therefore inclined to be pushed by negative charges and be pulled by positive charges.
+
+The AI mind, whose current mood can be expressed as a single point (electron) in the emotion space, can then simply issue a pathfinding problem which will let it find out the shortest emotional path that leads the point to the "center of mass" of the cluster of positive emotions.
+
+
+
+
+
+
+:d:An article about prototyping a videogame.
+:k:Game, Prototype, Tools, Tools-Engineering
+
+[Prototyping] 2022.11
+
+Prototyping is probably the most important step in game development. It determines the overall shape of what the game will be when it completes itself.
+
+A common question being cast by an indie developer is, "How shall we start prototyping our game?".
+
+There are many ways to do it, but the method I recommend is to begin by creating a generic tool for developing the game, rather than trying to come up with a viable piece of entertainment right away. Start by making your own game engine, instead of struggling to draw an outline of the final product from scratch.
+
+This is indeed a tedious process, but also a solid plan when it comes to long-term operational sustainability.
+
+If you start designing a "game" right away, you will be spending considerable amounts of time putting it in the context of specific narratives, themes, mechanics, and other details which are prone to change as the course of development progresses over time, in which case a huge portion of your effort will be wasted.
+
+This is the reason why you should develop the tool first. Implementing features that are rather general than specific will lay the foundation of future design endeavors.
+
+
+
+
+
+
+
+:d:A thought on software engineering.
+:k:Software, Engineering, Design, Application, Maintenance, Long-Term, Politics
+
+[Nature of Software Engineering] 2022.12
+
+When it comes to software engineering work, one cannot deny a publicly agreed upon notion that there are many ways of approaching a particular set of problems.
+
+One common group of engineers would create a TO-DO list of feature requests and grind its bullet points one by one, while a more abstract type of engineers would lay down a set of foundational "skeletons" of their codebase and then undertake the burden of solving specific problems on top of it later on. Meanwhile, there may be yet another group of engineers who would be willing to venture themselves into clever shortcuts by "hacking in" a treasure box of highly sophisticated programming tricks (which, from a solely pragmatic standpoint, is a pretty reasonable behavior for those who are convinced that their work is being underappreciated and therefore the only way in which they can possibly secure their jobs is to obfuscate their solutions to the point at which they are disposed to require long-term maintenance).
+
+In the end, however, there is a sense of sympathy that is being shared among all categories of engineers - a sense that, no matter how you are approaching a problem, your mode of work is a result of trying to resolve a dilemma between the work's integrity and reputation.
+
+The axiom, "The Devil is in the details", is probably the most strongly felt among engineers who often struggle to deal with technical debt, whose origins can be traced all the way back to one's initial lack of attention to details. And as a result of this, it is a general agreement among those who are sufficiently educated that the ability to pay attention to details is one of the most virtuous aspects which can be honored to be possessed by a professional engineer.
+
+Sadly, an unappreciable state of things outside of this castle of intellectuals is that most people do not value the importance of resolving inner details at all. An average client would demand that there be a nicely streamlined conveyor belt, upon which a sequence of attractive-looking software features march one by one like 1930s' cartoon characters and get fed right into the person's mouth. Managers and marketing experts, too, are oftentimes not on the engineer's side due to the tempting perception that laying down a solid foundation of the codebase for the purpose of preventing the accumulation of future technical debt is not the kind of labor which yields results that are instantly recognizable by customers as well as investors.
+
+Therefore, it usually takes a dignified sense of courage for an engineer to take care of subtle details in one's software product, despite the awareness that such endeavors are likely to pass unnoticed while those who are rendering the most superficial parts of it are deemed the most productive experts of the field. In the end, however, true engineers will understand that a nerd's inability to self-promote in such a way is a sacrifice one has to make in order to preserve the core integrity of the product.
+
+
+
+
+
+
+
+:d:An article about Play-to-Earn games.
+:k:Web3, P2E, Play-to-Earn, Decentraland, Sandbox, Blockchain, Game, VR, AR, Augmented, Enjin, Polygon
+
+[A scamless P2E] 2022.12
+
+One of the reasons why P2E (Play To Earn) games are often being accused of either pulling off a Ponzi scheme or luring people into some kind of quasi-gambling is that they are zero-sum by nature. Playing a piece of entertainment usually does not produce anything valuable in our real world, and as a result, the joy of earning real money inside a game must be preceded by an act of taking it away from another player.
+
+In order to create a P2E game which guarantees overall co-prosperity of players, we must ensure that playing the game actually produces real-life resources which can be exchanged with fiat currencies. But how? Well, the solution involves a bit of AR (Augmented Reality) and robotics.
+
+All we need to do is gamify primary industries such as agriculture, forestry, fishing, mining, and others. Just allow players to rent their own robotic avatars and remotely control them via either VR/AR gears or their home computers. These remote-controlled robots will have the freedom to move however they want as long as they stay within designated playgrounds, such as farms, mines, and other areas in which various raw resources can be collected.
+
+The game's graphics pipeline should be able to render these places as some sort of "dungeons", where crops are being displayed as enemy characters (such as monsters) that are programmed to play realistic death animations whenever they are being harvested by the player's robotic arms (The coarse mechanical features of which, of course, can be displayed as a mighty warrior's muscular arms holding a shiny sword and a shield).
+
+Whenever a player completes an in-game quest such as "Harvest 10 avocados from a local farm" by putting them in a nearby bucket which is being monitored by a surveillance camera for score-tracking purposes, the game will pay that person a couple of pennies as a reward (which is possible because those who own the game will profit from the player's work). As long as the process of completing such a quest is fun enough, this mode of exchange will qualify as a P2E game.
+
+
+
+
+
+
+
+:d:An article about software toys.
+:k:Software-Toy, Game, Engine, Edutainment, Educational, Videogame, Tool, UI, UX, Software, Toy, Sandbox
+
+[Making Profit as a Game Developer] 2023.01
+
+The game industry is a pretty saturated niche in the world of business. Competition is tough because way too many people are aspiring to become game developers, and it seems to us that one can hardly create and sell a profitable game without an insane degree of marketing budget these days. The digital marketplace is being flooded with countless numbers of brand new games which continuously pour out of the hands of both indie and AAA game developers on a daily basis, and it appears that even "being creative" is not an economic choice that will save one from this neverending struggle because nearly everyone is "creative" in today's world. How many countless times have we seen all sorts of quirky, out-of-box ideas showcased by random indie developers we hadn't even heard of before? I cannot even count such occasions because there are plenty and they all scream in unison, "Look! Look at me! I am special! I am different from anyone else!"
+
+Because of such high competition, some game developers have chosen to abandon the idea of developing the actual end-product called "game" and shifted their attention to developing a game engine instead. Such people, most of them being hardcore engineers rather than either game development generalists or artists/designers, could be said to have circumvented many of their inherent difficulties by solely focusing on developing a kind of product which they are experts in developing (since a game engine does not necessarily require the talents of artists/designers due to its generic nature).
+
+Making profit out of a game engine, however, has its own set of difficulties that are probably even worse than those which belong to the case of selling an actual game. Whereas marketing a game suffers from the problem of over-supply (because too many people are creating/selling games), marketing a game engine suffers from the problem of under-demand. First of all, only a tiny fraction of the population are game developers, and this factor alone contributes to a drastic reduction of the consumer base. Within this tiny fraction, there are hardcore engineers who prefer to build nearly everything from scratch (aside from the usage of external graphics, sound, and physics libraries) and therefore do not require a game engine. The rest might choose to utilize a game engine, yet we must be aware that the majority of them are doing so for the highest level of efficiency and thus tend to choose the most popular game engines which convey the utmost degree of community support and cross-platform compatibility (such as Unity or Unreal) instead of engines that are being developed/maintained by relatively small groups of people.
+
+When it comes to game development, what we face is a fairly high level of demand but an even higher level of supply. And when it comes to game engine development, what we face is a fairly low level of supply but an even lower level of demand. So what we can easily recognize here is that it is a considerable challenge to make profit out of both a game and a game engine for two opposite reasons.
+
+There is a delicate middle ground that can resolve this dilemma, however.
+
+<003_02>
+
+If we consider games as belonging to the left side of the spectrum of market niches and game engines as belonging to the right side of it, we can enable ourselves to draw two separate curves corresponding to the level supply and the level of demand, respectively.
+
+On the left side, we have the so called "game industry" which is flooded with almost all genres of games, whether they be casual or hardcore, single-player or multi-player, RTS or MOBA, and so on. This cluster of niches, obviously, have extremely high supply due to the fact that so many people with a variety of backgrounds have a tendency to pursue their dreams as game developers. Since a game is more of an interdiscipinary form of art rather than a highly specialized piece of technology that is only comprehensible by a few (such as, say, a control module for a nuclear fusion reactor), it can be developed and published by any nearly anyone. And this is even more so nowadays due to the presence of free game development tutorial videos on YouTube, free and easy-to-use game engines which do not even require text-based coding, and assets (e.g. 3D models, textures, etc) that can be downloaded from the internet for relatively small (or even zero) prices. And even if we assume that the public's demand for videogames is pretty high, it will be rash to dare to suppose that it is high enough to overcome the insanely high level of supply. After all, games do not occupy the top of the pyramid of our spendings, do they? We do not "consume" games in the same sense that we consume food, electricity, and tap water, since games are not absolutely necessary for sustaining our lives; hence, the same exact games can be replayed over and over again indefinitely (since a piece of software does not degrade over time), which technically implies that we do not really need brand new games as long as old ones still manage to entertain us.
+
+On the right side of the spectrum, we have the "game engine industry" which is a much narrower niche than the so-called "game industry". From a supply point of view, it looks like competition in this arena is much more relaxed because far fewer people are undertaking their own colossal journey of creating a game engine. A game engine is an extremely sophisticated system that is way more massive in scale than games (with a few exceptions such as those which belong to a large-scale simulation genre), and therefore only a relatively small portion of the population possesses the willingness to create/sell game engines. The problem with this, as I have mentioned before, is that there is only a small group of consumers who are willing to pay for a game engine unless it is sufficiently popular and is part of the industry standard. Besides, game developers are pretty darn smart compared to the rest of the population to whom the entertainment industry's childish monetization tricks can appeal with relative ease, so they know how to minimize their spendings when they are developing their own games.
+
+Here is a solution.
+
+We have the choice to put ourselves in the middle of the spectrum, in which one is expected to develop neither a game nor a game engine, but instead a "software toy". A software toy is similar to a game in the sense that the user can still play around with it, interacting with its components in real time without having to delve into boring technical details such as scripting, folder structure management, importing/exporting resource files, and so forth. Yet, it is not quite the same thing as a game because it does not spoon-feed the user with any specific narrative, nor does it present the user with any fixed set of rules under which he/she will be either rewarded or punished. It is not a game engine either because its apparent capabilities are not as generic as to allow the user to create virtually anything out of nothing. Minecraft, for instance, could be considered a software toy rather than a game engine (although you could technically create a mini game inside a Minecraft world) because it presents the user with a set of built-in gameplay elements which are quite limited in scope. One cannot create a game inside Minecraft whose underlying mechanics are based upon smooth surfaces or microscopic particles, for example, since Minecraft's possibility space is confined within the domain of discrete block-based interactions.
+
+The boundary between a game and a software toy can sometimes be quite blurry, as there are sandbox games (or "god games") which focus on providing the player with the utmost degree of freedom whilst also providing him/her with a set of goals and plots to follow. Minecraft, Garry's Mod, Kerbal Space Program, Factorio, SimCity, The Sims, and many other simulation games fall into this category. On the other hand, we may as well state that the boundary between a game engine and a software toy is pretty vague as well, since some of the educational game engines such as Scratch, Kodu Game Lab, and Greenfoot are so easy to use (compared to professional engines such as Unreal, of course) that they have entertainment values in their own right.
+
+<003_03>
+
+Despite this perceived ambiguity, however, we can still somehow distinguish software toys as their own independent category due to the agreed upon notion that we are often reluctant to classify them as either games or game engines in a definite sense.
+
+So, what's so amazing about software toys? The fact that they are a sort of "gray" beings, which belongs to neither of the two extremes of the spectrum, suggests that their market niche is a Goldilocks zone in terms of having a chance to make profit out of it. They occupy a fuzzy middle ground upon which the two curves (i.e. supply and demand) can potentially meet and even reveal a crossover. Since a software toy is not a game, passionate game developers who have stuffed their hearts of ambition with all sorts narrative and artistic elements are hesitant to develop such a thing. And since a software toy is not a game engine either, hardcore engineers who are not willing to sacrifice their coding time rendering their software product sufficiently easy to use as to be able to let laymen directly play with it are hesitant to develop such a thing.
+
+Aside from low supply, what we can also observe is that the relative level of demand for software toys is not too low. It is not as high as to let ourselves state that their brand values support the existence of a massive fanbase (such as that of an eSports-type of game), yet we may as well expound that the availability of demand for software toys in a variety of small niches compensates for the apparent lack of boiling passion in any one of them.
+
+A software toy, under a supposition that it is well crafted and user-friendly, can find its use cases in the fields of education, training, research, content creation, and many other areas which are not very often being associated with the game industry. A moderately entertaining yet thought-provoking software toy, since it is an interactive medium that may not be as fun as a typical videogame yet nevertheless far more engaging than a book, easily finds its usage in education where the teacher often struggles to gain his/her students' attention. A software toy with realistic physics may find its use in serious training applications in military, medicine, and other high-risk fields of expertise in which simulations must precede real practices. Academics may find a software toy a sufficiently explorable subject of study, that they would start researching its inner workings in a professional manner. Some hobbyists who are not hardcore gamers and are looking for a piece of entertainment that is somewhat more "intellectual" than mere beat-em-ups and betting rounds, may find a software toy interesting as well.
+
+The following question is, "What kind of software toy should we create in order to make money off of it, then?"
+
+One can think of many choices, including industrial simulators, traffic simulators, a purely exploratory sandbox game which excites the intellectual mind of a science lover, an accounting/tax simulator that is somewhat more casual and entertaining (with the help of a few gameplay elements such as progression (e.g. level-ups)) than, say, TurboTax, and so on.
+
+The trickiest aspect of the development of any of these is that they are too broad in scope. A typical videogame would simply require the developer to focus on a specific genre of gameplay, such as racing, battle, defense, etc, so it is pretty narrow in scope. A typical game engine, despite its colossal scale in terms of the sheer variety of things which can be implemented on top of it, is quite narrow in scope from a contextual standpoint because it merely serves as a "common template" for developing a virtual world, rather than a world which exists for the sake of its own existence.
+
+So to summarize, a software toy could be conceptualized as a virtual universe which exists on its own without requiring any external agent to bring it into existence, yet does not immure itself in a specific set of narratives. Devising such a product is a highly sophisticated task, and requires a great deal of insight.
+
+One clue we do have is that a nicely designed software toy consists of a fairly small number of emergent elements, each of which is easy to conceptualize while also being robust enough to give birth to myriads of interesting scenarios when applied in combination with one another. Examples of such elements include:
+
+(1) A "crafting table" through which the user can combine ingredients to produce new types of items.
+
+(2) Dynamic physical installations (doors, switches, elevators, conveyor belts, etc) which are capable of modifying the spatial characteristics of their surrounding areas under the occurrence of specific events. For instance, opening a door creates a connection between two discrete spaces which used to be separate from each other.
+
+(3) Different types of AI agents which behave differently under the exact same circumstance. Type-1 agents may only move, type-2 agents may only attack, type-3 agents may move AND attack simultaneously, type-4 agents may heal others but only when they have enough energy, and so on.
+
+<003_04>
+
+A virtual world in which these elements exist from the very beginning of user experience, without assuming that the user will take time manually devising them out of nowhere, is a toy that is not necessarily a game (because the presence of such emergent elements do not necessarily present the user with narratives), yet not a game engine either because it is not the user who is inventing all the individual gameplay elements. A software toy, in this respect, could be defined as a "partial game engine" - an engine that lets us create and customize parts of the game while still preserving some of its core mechanics as the backbone of the system which cannot be modified. The coexistence between customizability and immutability is the heart of a software toy, which presents us with a fountain of endless goals by keeping its level of freedom neither too low nor too high. It is because too little freedom (as in a story-driven arcade game) limits the scope of motivation, while too much freedom (as in general-purpose editing programs such as Photoshop and Blender) hardly motivates the user to undertake any adventure at all.
+
+
+
+
+
+
+
+
+:d:An article about a potential usage of functional programming in game development.
+:k:Game, Functional, Programming, LISP, Scheme, CommonLISP, CLISP, Racket, Clojure, OOP, Declarative, Data-Driven
+
+[Functional Programming for Game Development] 2023.02
+
+Game development is often being done in a highly object-oriented mindset. This is not only because the vast majority of gameplay engineers program in object-oriented languages (such as C++, C#, Java, etc), but also because the way a videogame operates can easily be modeled as a collection of discrete, independent objects.
+
+A videogame comprises a number of gameplay elements, such as individual game mechanics, narrative elements, dialogues, agents, boids, actors, impacts, cutscenes, scenarios, and so on. And these are all distinct, highly separable entities which are based off of different faculties of mind. A dialogue and an explosive effect, for example, may be related with each other via a segment of conversation such as, "NPC 1: Hey, look! There is an explosion!", yet they both can be implemented independently of each other because the articulation of neither of them requires the full avilability of the other. A writer doesn't require an actual, functioning explosion to be able to mention that there is an explosion, and a VFX artist doesn't require an NPC's description of the explosion's narrative implications in order to be able to implement an explosive impact.
+
+And because of this nature of high modularity during the course of game development, a game's underlying software framework is almost always being modeled under the principles of object-oriented programming. Every "thing" inside a videogame is essentially an object, each of which is a state machine operating on its own (as a standalone system). When combined with one another via loose chains of causality, these objects give rise to all sorts of interesting phenomena based upon their mutual interactions.
+
+However, the object-oriented approach also creates plenty of rooms for countless bugs and glitches, which may arise from the fact that a state machine's inner workings heavily depend on the exact timing of when something happens (which means the order of input values must be precise), as well as that there are multitudes of encapsulated bodies of state existing in a concurrent fashion, whose actions may contradict with each other (e.g. Conservation of energy being violated due to two explosions spawning out of a single bomb because of bad timing, etc). One might be able to prevent such scenarios by introducing some kind of buffer to the overall decision-making process by means of message-passing, queueing, and so forth, yet these methodologies add additional layers of complexity to the architecture.
+
+A neat solution to this is to switch one's programming paradigm to an entirely different one. Take functional programming, for example, in which modifiable states are almost completely excluded from the computing environment's data management scheme.
+
+Inside a purely functional framework, any changes in the state of the application simply undergo the process of being "appended" on top of the state's history (similar to how append-only databases work, such as a blockchain), which nicely solves the problem of race conditions. Since the system never tampers with existing state objects (which are, in a functional programming language, nothing more than function calls sitting inside the application's stack memory), external references which are still pointing to past instances of the state do not have to worry about their procedures making an unexpected turn due to sudden in-between data modifications.
+
+One of the biggest challenges in the adoption of a declarative programming paradigm in game development is the conceptualization of time. The exclusion of the concept of time in a non-imperative language such as LISP, for instance, is both a blessing and a source of confusion. When we are making a game, we are essentially creating a virtual world which has its own timeline. As time passes by, various events happen inside the game's own environment at designated points in time, based upon their own time-dependent schedules. Such a temporal aspect of gameplay is what typically leads engineers to simply fall back to imperative programming when developing the core mechanics of the game, even if they may be great advocates of declarative syntax when implementing modules that are time-independent (e.g. interpretation of data, procedural generation, etc). However, it is my personal conviction that such a multi-paradigm approach is not necessarily the best solution.
+
+In an imperative programming language such as Java, one can easily implement time-related gameplay mechanics by creating an Actor object, letting it have a queue of pending actions (e.g. represented as an array of tuples, each of which is made out of the expected time of occurrence and a function body that must be executed when the time is reached, etc), and then updating this queue whenever the Actor's update-function gets called at each frame of the game loop. This way of implementation, while it is highly intuitive and handy, often leads to a wide spectrum of bugs which may be too subtle to even find out before releasing the final product. The existence of tens or even hundreds of such time-dependent queues, all potentially interacting with one another in real time, is prone to give birth to countless unimaginable scenarios due to race conditions, co-occurrence of mutually contradictory events, and many other ensuing complexities.
+
+Functional programming comes to our rescue when dealing with such difficulties. Since it avoids modifiable states as much as possible, it nicely prevents us from having to worry about our sources of computation (e.g. variables) unexpectedly being corrupted in the middle of computational processes. One might argue that the principle of encapsulation circumvents such a concern, yet it should be noted that having to decide which pieces of data should be public and which of them should be private is in itself a cumbersome and error-prone process.
+
+If only we can represent gameplay in terms of a cascade of function calls instead of a group of independent objects, wouldn't it be great? That way, we will have the advantage of keeping everything in the game application as part of one large hierarchy of procedures, each of which only has access to its local state (e.g. variables that are either passed in as its function parameters or are locally declared) and nothing else. This means that all dependencies will have to be injected by means of arguments, which inevitably turns the overall syntax to be a bit verbose, yet nevertheless gets rid of any chance of interference which may otherwise be exerted to/from outside entities.
+
+Let us start with a simple game loop. Any real-time game engine, as far as common sense goes, contains at least one "update" procedure which runs itself on a periodic basis. A typical object-oriented way of implementing it goes like this:
+
+#$
+class Game
+{
+    private State state;
+
+    Game()
+    {
+        state = new State();
+        Thread.start(updateLoop);
+    }
+
+    void updateLoop()
+    {
+        while (true)
+        {
+            state.update();
+            Thread.waitForNextFrame();
+        }
+    }
+}
+new Game();
+#$
+
+It is conventional of an OOP-centered programming language, such as Java or C#, to start embodying a game application by first making a class that represents the game as a whole. Inside this "home class", where everything related to the game is supposed to begin its life, we create the game's state object and then run a thread which periodically updates it on a per-frame basis. This is a pretty neat way of running the game, except that here we are already introducing quite a degree of complexity to the whole system despite not having done anything substantial yet. The "Game" class in the above example has its own constructor method, an "updateLoop" method which runs within its own thread, as well as an internal state object which requires extra care for encapsulation so as to only let it be modified from within the update loop and nowhere else. The "updateLoop" method's internal "while" loop must make sure to execute its internal procedures in the right order, while also making sure that their execution can be carried out safely along with things that are happening in other threads (e.g. networking thread, rendering thread, etc). Furthermore, the instantiation of the "Game" class must be done in the right order (i.e. after all of the external systems to which it depends have been initialized, yet before systems which depend on it are yet to be initialized). The peril of object-oriented programming is that it has a tendency of giving birth to a complex web of interdependencies, no matter how much we try to simplify our system.
+
+A purely functional equivalent of the game loop system, on the other hand, could be written as below (in LISP).
+
+#$
+(defun update-loop (state)
+    (wait-for-next-frame)
+    (update-loop (update-state state)))
+#$
+
+As you can see, there is no such thing as a class here. The entire game loop is just a single function call (namely, "update-loop"), which calls itself at the beginning of each frame by means of tail recursion. The game's state object is simply a parameter which repeatedly gets passed into the update-loop function as the only dependency, and by this, we can guarantee that the update loop is a purely functional system which does not interact with anything outside of its body. The "(update-state state)" function call returns the updated version of the current game state, and its definition is shown below.
+
+#$
+(defun update-state (state)
+    (make-state (update-actors (get-actors state))))
+#$
+
+The "make-state" function, as you may have already guessed, creates a newer instance of the game's state and uses it as the input state of the next "update-loop" call instead of just modifying the existing state object. The reason behind this is that we want to prevent any potential race condition which may occur if other systems happen to be accessing/modifying the same exact instance. The "update-actors" function, just like the "update-state" function, returns the updated version of the current state of the game, but only the portion which pertains to its collection of actors (aka "characters", "sprites", or "agents") and nothing else.
+
+#$
+(defun update-actors (actors)
+    (cons (update-actor (car actor)) (update-actors (cdr actors))))
+#$
+
+The chain of "cons" nodes, as shown above, is more or less a LISP construct which may not apply to other languages. The overall idea, however, applies quite universally. Every time we update the list of actors, we build a brand new list by cons-ing the newer instances of the actor objects in a recursive manner instead of just modifying the existing list.
+
+<003_06>
+
+This, again, is for the sake of preserving the entire history of state changes instead of tampering with the past remnants which may be still waiting to be visited by extraterrestrial beings (aka "external systems") whose present moment in time could have been delayed by as much as a few milliseconds, due to the nature of time dilation (special relativity) which oftentimes inadvertently gets simulated by the lack of perfect parallelism in modern computing devices.
+
+The "update-actor" function checks to see if the "actor" argument it received is just the end of the list (i.e. nil). If so, it won't do anything. If not, it will proceed to search for the actor's own update function by means of "(get-actor-update-func actor)" and then execute it in order to get the updated version of the actor object. This newer instance of the actor, just like the aforementioned ones, is something that is completely separate from its past copy.
+
+#$
+(defun update-actor (actor)
+    (cond ((= actor nil) nil)
+        (else ((get-actor-update-func actor) actor))))
+#$
+
+And in order to run the game as a whole, we must start the game's loop somewhere. This involves the creation of the initial state, as well as the manual invocation of the update loop based upon that initial state.
+
+#$
+(update-loop (make-state initial-actors))
+#$
+
+But of course, the game itself consists of not just a list of actors but also many other things. This is not too complex a problem to solve, though. All we have to do is implement additional data types and their corresponding "get" and "update" functions, and then insert them into the game loop as additional function parameters.
+
+#$
+(defun update-state (state)
+    (make-state
+        (update-actors (get-actors state))
+        (update-cells (get-cells state))
+        (update-events (get-events state))
+        (update-particleEffects (get-particleEffects state))
+        (update-soundClips (get-soundClips state))))
+#$
+
+One major advantage of using this purely functional, append-only approach to the implementation of a game loop is that, since we are preserving the history of the game's state instead of constantly overwriting it with more recent bits of data, the game's update functions can have full access to the state's past instances and therefore make decisions based upon the differential characteristics that can be derived by comparing the past and present (which means it opens up the gateway to the realization of first-order, second-order, and even higher order systems which often occur in physics/engineering and are represented in terms of differential equations). This is easily done by passing the copy of the state from the previous frame (aka "past instance") into the update loop as an additional argument.
+
+<003_07>
+
+#$
+(defun update-loop (currState prevState)
+    (wait-for-next-frame)
+    (update-loop (update-state currState prevState) currState))
+
+(defun update-state (currState prevState)
+    (make-state
+        (update-actors
+            (get-actors currState)
+            (get-actors prevState))
+        (update-cells
+            (get-cells currState)
+            (get-cells prevState))
+        (update-events
+            (get-events currState)
+            (get-events prevState))
+        (update-particleEffects
+            (get-particleEffects currState)
+            (get-particleEffects prevState))
+        (update-soundClips
+            (get-soundClips currState)
+            (get-soundClips prevState))))
+
+(defun update-actors (currActors prevActors)
+    (cons
+        (update-actor (car currActors) (car prevActors))
+        (update-actors (cdr currActors) (cdr prevActors))))
+
+(defun update-actor (currActor prevActor)
+    (cond
+        ((or (= currActor nil) (= prevActor nil))
+            nil)
+        (else
+            ((get-actor-update-func currActor prevActor) currActor prevActor))))
+...
+#$
+
+One of the specific use-cases of such a temporal stream of data lies on the area of kinematics. For a quick demonstration, let me first suppose that the "get-actor-update-func" function returns the "update-kinematic-actor" function if the type of "currActor" is equal to "kinematic". This means that, if the actor we are updating is of type "kinematic", the "update-kinematic-actor" function will be used update it. This function takes both the current and previous instances of the actor as its input parameters, and computes/updates the actor's current position based on the comparison of its two instances in time (which reveals its current velocity).
+
+#$
+(setf actor-update-func-table () '(
+    ('static update-static-actor)
+    ('kinematic update-kinematic-actor)
+    ('dynamic update-dynamic-actor)
+    ('abstract update-abstract-actor)
+))
+
+(defun get-actor-update-func (currActor prevActor)
+    (get-actor-update-func-iter currActor actor-update-func-table))
+
+(defun get-actor-update-func-iter (actor table)
+    (cond
+        ((= (caar table) (get-actor-type actor))
+            (cdar table))
+        (else
+            (get-actor-update-func-iter actor (cdr table)))))
+
+(defun update-kinematic-actor (currActor prevActor)
+    (let ((currVelocity (- (get-position currActor) (get-position prevActor))))
+        (make-kinematic-actor
+            (+ (get-position currActor) (* currVelocity 0.8)))))
+
+(defun make-kinematic-actor (position)
+    '('kinematic position))
+#$
+
+One might argue, "Well, why bother introducing such a bloated system, just to update the positions of the individual actors? Why not just let each actor have its own 'velocity' property, so that it can simply update its position at any moment in time base off of the explicitly specified velocity value?"
+
+For a simple problem of kinematics, such a solution is sound indeed. It is when we start dealing with more complex, implicit kinds of problems that we seriously begin to face inevitable rise in complexity. Let us consider, for example, that each actor is not a kinematic point mass but a self-conscious animal (i.e. living thing) which has its own set of memories, desires, feelings, metabolic states, and other biological processes whose causal relations are not necessarily instantaneous in time (as opposed to atomic events in Newtonian mechanics such as application of force or displacement of a particle), but rather prone to emit delayed influences upon points in time that are quite far apart from one another. The constructor of such an organic entity will have to look like this:
+
+#$
+(defun make-animal-actor (physicalTraits mentalTraits physicalMemory mentalMemory)
+    '('animal physicalTraits mentalTraits physicalMemory mentalMemory))
+#$
+
+"physicalTraits" and "mentalTraits" are both fixed lists corresponding to the intrinsic physical/mental characteristics of the animal, whose contents are not meant to be changed under usual circumstances. These two lists, therefore, can be said to be time-invariant. "physicalMemory" and "mentalMemory", one the other hand, indicate the most recently added elements of the two streams of data (which represent the history of the animal's physiological state and the history of the animal's psychological state, respectively) which continuously circulate their elements as time passes by in the form of a queueing system. At each update loop of the game, newer memory elements enter these streams via the animal's sensory organs (i.e. external stimuli), while memories that are sufficiently old get discarded becasue these streams cannot keep growing forever (unless the computer is endowed with infinite memory space). The animal makes decisions based on both its most recent memories as well as past memories that are extracted from its past self, and produces a newer copy of itself which corresponds to its future self.
+
+#$
+(defun update-animal-actor (currActor prevActor)
+    (let ((physicalTraits (get-physical-traits currActor))
+            (mentalTraits (get-mental-traits currActor))
+            (currPhysicalMemory (get-physical-memory currActor))
+            (prevPhysicalMemory (get-physical-memory prevActor))
+            (currMentalMemory (get-mental-memory currActor))
+            (prevMentalMemory (get-mental-memory prevActor)))
+        (make-animal-actor
+            physicalTraits
+            mentalTraits
+            (make-physical-memory currPhysicalMemory prevPhysicalMemory)
+            (make-mental-memory currMentalMemory prevMentalMemory))))
+#$
+
+The example shown here, however, only allows the animal's memory to refer to only 1 step (frame) back in time, which suppresses its ability to make long-term decisions based upon long-term memories. If we want to simulate realistic physiological/psychological phenomena, we will need streams of memory elements that are sufficiently long so as to allow each animal to look up not only its most and second most memories, but also memories that were created minutes ago, hours ago, days ago, or even months ago.
+
+The realization of long-term memory streams can easily be done by adding additional references to the game's past, as shown below. "prevState2" refers to the past instance of the game's state that was made 2 steps back in time instead of just 1.
+
+#$
+(defun update-loop (currState prevState prevState2)
+    (wait-for-next-frame)
+    (update-loop (update-state currState prevState prevState2) currState prevState))
+#$
+
+And if we want the game to be able to refer to up to 3 steps in time instead, we will need something like:
+
+#$
+(defun update-loop (currState prevState prevState2 prevState3)
+    (wait-for-next-frame)
+    (update-loop (update-state currState prevState prevState2 prevState3) currState prevState prevState2))
+#$
+
+<003_08>
+
+This, of course, starts to become too verbose as we keep elongating the game's memory stream. Therefore, a much more realistic implementation would be to represent the history of the game's state as a single list variable rather than a sequence of manually specified function arguments.
+
+#$
+(defun update-loop (stateHistory)
+    (wait-for-next-frame)
+    (update-loop (cons (update-state stateHistory) (without-last stateHistory))))
+#$
+
+
+
+
+
+
+:d:An article about indie game prototyping.
+:k:Indie, Game, Prototype, Bertrand, Russell, Analysis, Mind, Empiricist, Idealist
+:l:2023-10-08
+
+[Elements of an Indie Game] October 8, 2023
+
+When designing an indie game as a solo developer or a member of an extremely small team (e.g. only 2 or 3 people), one often faces a major dilemma which can be described as a chicken-or-the-egg problem. It is a tricky riddle to solve, perhaps trickier than most of the technical problems we encounter every day due to the multidisciplinary nature of game development.
+
+The dilemma begins like this:
+
+Suppose that you are a solo game developer who is trying to design and implement an entire game from scratch. There are typically two different approaches you can take to pursue this mission, which I will show below.
+
+(Method 1): Start with the mechanics
+
+You may choose to start your game development journey by first constructing the game's mechanics in order to come up with a solid prototype (i.e. a proof that your game has a potential to succeed). This solution is engineer-friendly, as it allows you to build the skeleton of the game in a highly system-oriented manner.
+
+<005_67>
+
+In this design philosophy, everything that the player will ever experience can be described as a network of systems, and each system is nothing more than a set of strictly mathematical relations between its inputs and outputs.
+
+<005_68>
+
+It is oftentimes convenient to design systems as tangible objects. For example, a button is a system because it emits a signal whenever somebody presses it. Here, the act of pressing the button is the system's input and the ensuing signal is the system's output.
+
+In this manner, you may devise quite a multitude of systems which are represented by various interactable objects such as "door", "switch", "light", "platform", "cable", "elevator", "sensor", and so on. Once you fully specify their causal relations, it will be easy for you to join them together to give birth to all sorts of interesting emergent phenomena.
+
+<005_69>
+
+However, this approach soon falls short unless all you want to do is create a purely mechanical sandbox, since a mere assembly of such systems does not necessarily motivate the player to engage him/herself in the game. It is definitely possible to alleviate this problem by simply trying out a huge number of random mixtures among the elements you have made and then cherry-picking only the ones that are sufficiently entertaining, yet this is more or less just a bandage fix rather than a real solution.
+
+It is also possible to attempt to prevent the limitations of your purely mechanical design by introducing systems that are intrinsically motivating. For instance, an enemy character is a system which automatically encourages the player to take a certain set of actions, regardless of where it is placed within the vast network of systems. This will ensure that the player will at least be driven to fight off the enemies no matter how the whole level is designed. Even this kind of solution, however, is not so sustainable because its long-term usage introduces too much repetition to one's gameplay experience and makes the player get tired too easily.
+
+(Method 2): Start with the narratives
+
+Alternatively, you may also begin your journey by constructing the narratives of the game first. Worldbuilding, storytelling, and kindred other means of structuring the game's narrative space are part of this methodology. Unlike the previous method which focused on the dynamics of systems and their causal dependencies, this alternate approach focuses on the set of purposes (volitional elements) and how they are related to one another.
+
+Since everything in the game can be fictional, it is okay for a person to start by simply conceiving an empty world and populating it with a variety of elements such as characters, items, places, and so forth. One can then establish relationships among these elements based upon their inherent characteristics, and proceed to plot their ensuing actions on a timeline in order to formulate a story out of them.
+
+This kind of imaginative endeavor lets the designer keep expanding the game's semantic context, not based on the mechanical aspects of gameplay but rather on its causal fabric of meaning.
+
+Once you come up with characters and their own mental traits such as habits, beliefs, and desires, you will be able to tell what the reactions of these characters are likely to be when they are put under specific scenarios. With this in mind, you will be able to interpolate most of the details of your fictional world by means of induction.
+
+This narrative-driven method, however, reveals its own limitations when it comes to actually implementing the game. A story, for instance, does not automatically fit the interactive nature of gameplay and therefore must be somehow "translated" into a form which makes sense to most gamers. Simply developing a highly story-driven game which forces the player to go through a strictly linear sequence of missions is one valid option to mitigate this, yet such a game is hardly replayable after its initial playthrough unless the gamer is a fan of speedrunning competition.
+
+Unless the story itself is incredibly compelling, therefore, it is usually wise for one to make sure that the underlying narratives of the game world are somewhat compatible with the nonlinear dynamics of gameplay. And this becomes hardly achievable when the designer fails to keep gameplay mechanics in mind when devising the structure of the fictional world and its storyline.
+
+(Problem): Lack of harmony between mechanics and narratives
+
+A major takeaway from the aforementioned two methodologies is that both of them are prone to cause a great split between the two pillars of game development - mechanics and narratives. If we start constructing the game out of the former, we will have a hard time formulating the latter which fits the former. And if we start constructing the game out of the latter, we will have a hard time formulating the former which fits the latter. Our line of reasoning then leads to the third way which is shown below.
+
+(Solution): Start with "mechanical narratives"
+
+If we suppose that a game is made out of basic building blocks, the conclusion we are likely to reach is that such fundamental units of assembly ought to be imbued with the properties of both mechanics and narratives for the sake of integrating both of them into the heart of the game. Otherwise, we will either have to figure out how to define each narrative in terms of a composition of mechanics, or how to define each mechanic in terms of a composition of narratives.
+
+Such multidisciplinary building blocks could be referred to as "mechanical narratives", as they are both mechanical and narrative in nature.
+
+The real challenge of doing this lies on the process of coming up with such intricate fragments of meaning. And my intuition leads me to postulate that the best way to discover them is to identify the most atomic (i.e. indivisible) constituents of the science of life which reside somewhere between the study of biology and the study of psychology.
+
+The reason behind this is that, once a person understands the nature of life, he/she will be able to control the behavior of whichever lifeform the game happens to interact with (aka "player"). This notion applies not only to games, but also other types of media such as books, movies, songs, electronic gadgets, home appliances, and the like.
+
+A major problem we are facing here, though, is that life is such an inexplicably complex phenomenon that we find it nearly impossible to fully depict it in terms of theoreical elements. The thing is, however, that we do not really have to.
+
+The RGB (Red-Green-Blue) color format does not cover the entire spectrum of colors which are recognizable by the human eye, yet it is being used universally as the basis of colors due to the fact that its coverage is satisfactorily broad. Likewise, we do not have to define every single nitpicky detail of life in order to establish a theoretical model of it in a manner that is as sufficiently general as to be considered "universal".
+
+Let us try not to plunge into the endless rabbit hole of rigorous academic studies, and simply focus on the basics of what qualifies a physical object as a "living thing". Here is the question - Why on earth do we say that some objects are animate, while others are inanimate?
+
+First of all, presence of causal relations among physical events does not necessarily distinguish animate objects from those which are inanimate because every physical entity possesses its own rules of interaction with respect to the rest of the world. When a box drops on top of a spring, the spring pushes it upwards to maintain its equilibrium. And when a ball drops on top of a ramp, the ramp lets the ball roll down its angled surface. These are all causal relations.
+
+One might fancy that lifeforms can be distinguished from inanimate objects due to their possession of mental traits such as beliefs, desires, and emotions, yet the legitimacy of this argument is highly questionable.
+
+For example, one can imagine that a mechanical spring "believes" that it must always endeavor to preserve its state of equilibrium (i.e. not being too compressed or too stretched), and that it "desires" to fulfill such a belief by means of an opposing force whenever an external event causes it to be either compressed or stretched. How can we tell for sure that a human being is something more than just an extremely sophisticated spring, despite the notion that one's mind may ultimately be able to be interpreted as a list of purely mechanical relations?
+
+Yet, here is a point to consider.
+
+Do we really have to make a strict distinction between things that are "living" and things that are "not living"? Can't we simply assume, for now, that the idea of life is just a human construct rather than a fundamental part of our reality? It doesn't really make that much of a difference from a game developer's point of view, does it?
+
+Even if we consider the player as a mere mechanical contrivance which shows a happy face whenever it is triggered by a particular sequence of stimuli, the end result is not likely to differ too much from a case in which it is supposed that the player as a real human being.
+
+What is important from a pragmatic point of view is the identification of types of elements which optimally contribute to player engagement, in ways which are quantitatively measurable such as the frequency of ad impressions and/or in-app purchases, time spent during each gameplay session, and so forth. The most difficult question lies on the matter of discovering such types as well as composing them in an elegant fashion, and this is usually considered an open-ended inquiry due to the reason that it depends on countless factors such as different kinds of potential audiences, game genres, market niches, and so on.
+
+Those who understand the virtue of abstraction, however, will accord with my train of logic that such open-endedness is mostly due to the fact that many game developers are highly sensation-oriented by heart, that their domain of intellect hardly stretches itself beyond that of mere case-by-case analysis. Their argument usually proceeds like this: "A videogame is such a complex piece of art, that one cannot possibly break it down into a few clever math equations as though it is some kind of hard science."
+
+If we are obliged to take such reasoning seriously, then, we will not be able to even dare to suggest a rational model of our economy, finance, psychological phenonema, biological phenomena, and many other intricate systems of the world in which we live, simply due to the personal feeling that they are "too complex". Why bother to formulate all sorts of fancy graphs and pie charts to analyze the stock market? Why bother to conduct all sorts of psychological experiments to analyze a patient's mind?
+
+When it comes to scientific reasoning, any decent thinker can be assumed to be humble enough to acknowledge that we cannot expect ourselves to be able to instantly grasp the full picture of whichever subject is under our scope of research. Yes - a person's brain is complex; our economy is complex; a living organism is complex. So what? Does it mean that nobody should even dare to approach any of these subjects from a rational standpoint, and that we should just all smoke weed and chill?
+
+Of course we cannot comprehend everything in advance, and this is precisely the reason why scientists study the totality of our nature by investigating small fractions of it one at a time, based upon specific experiments that are performed under strictly controlled scenarios. This is what I would refer to as a "modern" approach to mysteries which surround us, as opposed to mere superstition which propels us to remain content with a mud pool of wishful thinking.
+
+Games are not so different from other sciences in this regard. Some people may claim that this statement is so blatantly close-minded because a game is a "creative endeavor" or an "artform" and has nothing to do with science, yet an independent thinker who is endowed with an interdisciplinary taste of reasoning is likely to agree that such wordplay is so frustratingly naive, that it is not even worth the effort to prove why it hardly means anything significant from a holistic point of view.
