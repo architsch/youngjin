@@ -1058,7 +1058,7 @@ This, of course, starts to become too verbose as we keep elongating the game's m
 
 :d:An article about indie game prototyping.
 :k:Indie, Game, Prototype, Bertrand, Russell, Analysis, Mind, Empiricist, Idealist
-:l:2023-10-08
+:l:2023-10-09
 
 [Elements of an Indie Game] October 8, 2023
 
@@ -1080,7 +1080,7 @@ In this design philosophy, everything that the player will ever experience can b
 
 It is oftentimes convenient to design systems as tangible objects. For example, a button is a system because it emits a signal whenever somebody presses it. Here, the act of pressing the button is the system's input and the ensuing signal is the system's output.
 
-In this manner, you may devise quite a multitude of systems which are represented by various interactable objects such as "door", "switch", "light", "platform", "cable", "elevator", "sensor", and so on. Once you fully specify their causal relations, it will be easy for you to join them together to give birth to all sorts of interesting emergent phenomena.
+In this manner, you may devise quite a multitude of systems which are represented by various interactible objects such as "door", "switch", "light", "platform", "cable", "elevator", "sensor", and so on. Once you fully specify their causal relations, it will be easy for you to join them together to give birth to all sorts of interesting emergent phenomena.
 
 <005_69>
 
@@ -1116,7 +1116,7 @@ The real challenge of doing this lies on the process of coming up with such intr
 
 The reason behind this is that, once a person understands the nature of life, he/she will be able to control the behavior of whichever lifeform the game happens to interact with (aka "player"). This notion applies not only to games, but also other types of media such as books, movies, songs, electronic gadgets, home appliances, and the like.
 
-A major problem we are facing here, though, is that life is such an inexplicably complex phenomenon that we find it nearly impossible to fully depict it in terms of theoreical elements. The thing is, however, that we do not really have to.
+A major problem we are facing here, though, is that life is such an inexplicably complex phenomenon that we find it nearly impossible to fully depict it in terms of theoretical elements. The thing is, however, that we do not really have to.
 
 The RGB (Red-Green-Blue) color format does not cover the entire spectrum of colors which are recognizable by the human eye, yet it is being used universally as the basis of colors due to the fact that its coverage is satisfactorily broad. Likewise, we do not have to define every single nitpicky detail of life in order to establish a theoretical model of it in a manner that is as sufficiently general as to be considered "universal".
 
@@ -1138,10 +1138,10 @@ What is important from a pragmatic point of view is the identification of types 
 
 Those who understand the virtue of abstraction, however, will accord with my train of logic that such open-endedness is mostly due to the fact that many game developers are highly sensation-oriented by heart, that their domain of intellect hardly stretches itself beyond that of mere case-by-case analysis. Their argument usually proceeds like this: "A videogame is such a complex piece of art, that one cannot possibly break it down into a few clever math equations as though it is some kind of hard science."
 
-If we are obliged to take such reasoning seriously, then, we will not be able to even dare to suggest a rational model of our economy, finance, psychological phenonema, biological phenomena, and many other intricate systems of the world in which we live, simply due to the personal feeling that they are "too complex". Why bother to formulate all sorts of fancy graphs and pie charts to analyze the stock market? Why bother to conduct all sorts of psychological experiments to analyze a patient's mind?
+If we are obliged to take such reasoning seriously, then, we will not be able to even dare to suggest a rational model of our economy, finance, psychological phenomena, biological phenomena, and many other intricate systems of the world in which we live, simply due to the personal feeling that they are "too complex". Why bother to formulate all sorts of fancy graphs and pie charts to analyze the stock market? Why bother to conduct all sorts of psychological experiments to analyze a patient's mind?
 
 When it comes to scientific reasoning, any decent thinker can be assumed to be humble enough to acknowledge that we cannot expect ourselves to be able to instantly grasp the full picture of whichever subject is under our scope of research. Yes - a person's brain is complex; our economy is complex; a living organism is complex. So what? Does it mean that nobody should even dare to approach any of these subjects from a rational standpoint, and that we should just all smoke weed and chill?
 
 Of course we cannot comprehend everything in advance, and this is precisely the reason why scientists study the totality of our nature by investigating small fractions of it one at a time, based upon specific experiments that are performed under strictly controlled scenarios. This is what I would refer to as a "modern" approach to mysteries which surround us, as opposed to mere superstition which propels us to remain content with a mud pool of wishful thinking.
 
-Games are not so different from other sciences in this regard. Some people may claim that this statement is so blatantly close-minded because a game is a "creative endeavor" or an "artform" and has nothing to do with science, yet an independent thinker who is endowed with an interdisciplinary taste of reasoning is likely to agree that such wordplay is so frustratingly naive, that it is not even worth the effort to prove why it hardly means anything significant from a holistic point of view.
+Games are not so different from other sciences in this regard. Some people may claim that this statement is so blatantly close-minded because a game is a "creative endeavor" or an "art form" and has nothing to do with science, yet an independent thinker who is endowed with an interdisciplinary taste of reasoning is likely to agree that such wordplay is so frustratingly naive, that it is not even worth the effort to prove why it hardly means anything significant from a holistic point of view.

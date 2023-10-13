@@ -47,6 +47,7 @@ const nonfictionEntries = [
     ["blockchains", "On Legitimacy of Blockchains (2022)"],
     ["software-development", "Software Development (2022 - 2023)"],
     ["game-design", "Universal Laws of Game Design (2023)"],
+    ["reality", "The Origin of Reality (2023)"],
 ];
 const fictionEntries = [
     ["novels", "단편소설 (2012 - 2013)"],
