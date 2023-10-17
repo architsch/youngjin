@@ -79,3 +79,99 @@ Will this dichotomy even make sense, however, if we admit that consciousness its
 I feel that I possess consciousness, yet this is just a feeling. I cannot prove its existence, nor can I tell what it is at all, which means that consciousness is not something which can be defined. All I can say is that I just "feel" it, and as far as my reasoning goes, there is no method through which I can expand my domain of thoughts beyond this crude expression. And since consciousness is undefined, it will be logically fallacious for me to say that "consciousness exists". A statement whose procedure of evaluation depends on an undefined parameter must be expected to be undefined, unless there is a peculiar reason to presuppose that the idea of "undefinedness" itself, when applied to such a statement, provides a way to yield a definable result.
 
 (Will be continued in volume 3)
+
+
+
+
+
+:d:An article about the meaning of reality and its underlying theoretical bodies of knowledge.
+:k:Panpsychism, Monism, Materialism, Ontology, Epistemology, Metaphysics, Philosophy
+:l:2023-10-16
+
+[The Origin of Reality - Volume 3] October 16, 2023
+
+(Continued from volume 2)
+
+In order to discover the ultimate origin of reality, one must avoid taking made-up concepts for granted and attempting to produce logical arguments with them as though they are fundamental constituents of reason.
+
+In the previous volume, I have mentioned that my very own thoughts are the only ingredients from which my definition of reality can possibly originate, based upon the premise that the act of reasoning itself can solely be defined as a set of mysterious beings called "thoughts" and their mutual relations.
+
+One may definitely question this viewpoint by saying that the concept of thoughts, too, must be considered arbitrary, and that it is thus quite inadequate to assume that it should form the basis of one's reasoning. And yes, I do admit that the so-called "thoughts" themselves are mere crumbs of intuition which just popped out of nowhere and thus are undefinable in the sense that there is no concept which is antecedent to them.
+
+Another line of reasoning, however, evinces me that the nature of definitions and their collective system of logic do not necessarily require that every definition be preceded by another definition. That is, I do not perceive any particular reason to suppose that the scope of reality must exclude every definition which simply declares the presence of an arbitrary symbol.
+
+Yet, it is also equally important for us to realize that we should not keep inventing truckloads of symbols for the sake of divining the essence of reality, since there is no particular reason to claim that reality can be understood by means of mere plurality of symbols, either.
+
+The subsequent conclusion one is able to reach based off of the above speculations, then, is that the definition of reality as a whole must begin somewhere which may be characterized as arbitrary, yet such a groundless spot of reason must be kept as minimal as possible in order for us to avoid attaching superfluous ornaments on top of its surface.
+
+From my point of view, I would say that my own thoughts, regardless of what they are, constitute such a groundless spot. The main reason behind this is that I cannot define my thoughts in terms of other definitions, which subsequently obliges me to base my reason upon the arbitrary concept called "thoughts" by assuming that it is the ultimate origin of all definitions other than the one which says: "Let there be thoughts".
+
+Still, there may be objections which question the validity of such a conceptual choice. I will list some of the probable ones and try to refute them below.
+
+(Question 1) "How can you so proudly say that nothing precedes your thoughts? Can't we suppose that there could be an external cause, such as your biological brain from which your mental processes originate, which comes before the occurrence of your thoughts?"
+
+(Answer) What does it mean when someone says that something comes "before" or "after" another? Such a relation makes sense only when we presume some kind of order between at least two discrete entities. And this concept called "order" does not intrinsically show us that it is something so unique, that it cannot be made out of thoughts.
+
+(Question 2) "Since you are a thinking agent and there is no evidence that nothing can possibly exist outside of your domain of thoughts, don't you see that there could be external observers (e.g. other people) who possess their own versions of reality which are made up of their own thought processes?"
+
+(Answer) What does "outside" (or "inside") even mean, if all I can conceive are my own thoughts and absolutely nothing else? Unless I decide to split my area of thoughts into arbitrary subareas, there is no such thing as a boundary. And if there is no boundary, the concept of "outside" ("inside") will have no substance. And there is no such thing as an "external observer" either, since an object that is deemed as such is just part of my observation when it comes to pure sense data. I am the only observer in my definition of observation (unless the definition broadens itself out so that any object which functions as an information relay, such as a video recorder, claims its right to be referred to as an observer), which means that there is no reason to attach a special label called "observer" to myself for the purpose of distinguishing myself from "other observers".
+
+(Question 3) "Why are you telling me so confidently that a set of logical definitions are necessary ingredients of reality? Where is your evidence that logic is required for the purpose of illustrating its nature? Can't it be just as equally valid to suggest that an illogical concoction of ideas could serve as an even more accurate representation of what reality is?"
+
+(Answer) To be fair, an illogical juxtaposition of thoughts can be considered part of the initial condition of logic because a fully independent statement does not have to be bounded by a logical constraint (because there would be nothing antecedent to begin with). However, the course of deriving the definition of reality itself cannot be carried out by an illogical process, since it requires logic to derive a definition from an antecedent definition. If we exclude logic from our faculty of reasoning, any groundless supposition which popped out of nowhere will obtain a right to equate itself with reality (in which case any search for truth loses its volition).
+
+(Will be continued in volume 4)
+
+
+
+
+
+
+
+:d:An article about the philosophy of reality and its underlying components.
+:k:Plato, Russell, Monism, Type Theory, Category Theory, Morphism, Metaphysics, Philosophy
+:l:2023-10-18
+
+[The Origin of Reality - Volume 4] October 18, 2023
+
+(Continued from volume 3)
+
+In the last volume, I suggested the utilization of what are supposedly the most fundamental (indivisible) constituents of reality, which I referred to as "thoughts".
+
+But for the sake of detaching them from the widely accepted yet subjective understanding of what "thoughts" are (e.g. brain activities, etc), I will henceforth start denoting these hypothetical entities by the term "ideas" instead.
+
+It has been assumed that ideas, as long as one's faculty of reasoning declares that no process of logic can possibly involve a parameter which is unable to be broken down to a composition of ideas, must be considered "real" regardless of their inner or outer characteristics. It is because we are trying to come up with a definition of reality here, and such a definition must be derived logically from preceding ones which ultimately trace back to mere declaration of ideas.
+
+Therefore, we will begin by coming up with a sound method of denoting the availability of ideas and a way in which they can be synthesized with one another for the purpose of revealing more variety of patterns. The first axiom to kickstart the whole line of argument is:
+
+"Any arbitrary expression is an idea."
+
+This means that, no matter which expression we choose to speak in our language, it automatically counts as an idea (because in order to express something, the speaker must think about it). Another axiom which must hold in order to assert the validity of its being is:
+
+"Any idea is a fact."
+
+In our worldview, any idea is a "fact" regardless of the context to which it belongs. It is not an intermediary bridge aimed to serve a purpose, nor does it oblige itself to mean anything; it just "is".
+
+Now here is another primitive building block that is needed to let us formulate patterns out of individual ideas - "association". Ideas themselves are nothing more than instances of nil floating in the midst of nowhere; it is only when they associate themselves with one another that they begin to introduce more syntax than a set of isolated points. We henceforth assume here that there must be not just one, but two primitive data types in the grammar of reality - ideas and their associations.
+
+<001>
+
+In the context of mathematics, one can quite reasonably imagine that the domain of knowledge which is being represented here resembles that of graph theory, in the sense that each idea is an equivalent of a vertex and each association is an equivalent of an edge connecting a pair of vertices.
+
+<002>
+
+And this apparent resemblance may prompt some of those enthusiastic mathematicians in academia to insist that the model of reality I am proposing in this writing is nothing more than a mere reiteration of what has already been researched in the field of mathematics as well as other academic disciplines which depend on the language of graphs.
+
+But before being so quick to ejaculate such a preemptive judgement for the purpose of not letting me hurt the feeling of an army of professional student loan consumers, one's got to behold that analyzing the properties of a graph is not the goal we are aiming for; it is just a convenient tool for demonstrating one's route of reason, just as a finger can be utilized to indicate the Moon without having to be the Moon itself.
+
+Another potential objection which may come to surface is that, since I am initiating a whole stream of thoughts based upon a graph-based language, pretty much every one of its ensuing logical conclusions will still be confined to the boundary of graph theory. This may certainly be a valid point to some extent, yet I would argue that if such a side of reasoning is universally applicable without a single exception, it must also be okay to claim that the theory of finite state machines reveals no more knowledge than what a random graph can disclose due to the fact that such machines can be depicted in terms of state diagrams (i.e. directed graphs).
+
+Here is yet another question which might be raised. And that is: "Why graphs in particular?". Why not use sets, algebraic formulas, logical operators, vectors, matrices, geometric figures, computer algorithms, and myriads of other ways of outlining quantitative concepts?
+
+The reason for choosing the language of graphs is that it is probably the most comprehensive medium of illustration when it comes to pure concepts, including those in mathematics.
+
+<003>
+
+A function is just a bunch of input values being mapped to their respective output values, so it is something we can represent as a bipartite graph in which each edge denotes a mapping relation. A set is just a bunch of parent-child relations between itself and its children (i.e. elements), which can be depicted by a graph. A sequence? It is a graph made up of a chain of elements. A matrix? It is just a group of elements arranged in a mesh-like graph. A tree? It is just a graph without a loop. An algebraic expression? It is basically an expression tree, so it is a graph, too. A geometric shape? It is a graph consisting of a bunch of spatial points (vertices) and line segments (edges). A logical statement? It is just a pile of symbols and their relations, which can all be expressed in terms of vertices and edges. The list goes on.
+
+(Will be continued in volume 5)
