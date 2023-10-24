@@ -175,3 +175,158 @@ The reason for choosing the language of graphs is that it is probably the most c
 A function is just a bunch of input values being mapped to their respective output values, so it is something we can represent as a bipartite graph in which each edge denotes a mapping relation. A set is just a bunch of parent-child relations between itself and its children (i.e. elements), which can be depicted by a graph. A sequence? It is a graph made up of a chain of elements. A matrix? It is just a group of elements arranged in a mesh-like graph. A tree? It is just a graph without a loop. An algebraic expression? It is basically an expression tree, so it is a graph, too. A geometric shape? It is a graph consisting of a bunch of spatial points (vertices) and line segments (edges). A logical statement? It is just a pile of symbols and their relations, which can all be expressed in terms of vertices and edges. The list goes on.
 
 (Will be continued in volume 5)
+
+
+
+
+
+
+
+:d:On the philosophy of reality and the limit of ideas as well as languages which express it.
+:k:Idealism, Russell, Wittgenstein, Metaphysics, Philosophy, Epistemology, Ontology, Solipsism
+:l:2023-10-19
+
+[The Origin of Reality - Volume 5] October 19, 2023
+
+(Continued from volume 4)
+
+It has hitherto been suggested that the most minimal language which needs to be exhibited in order to let us build a model of reality comprises two fundamental units of existence; one is called "ideas", and the other one is called "associations". And we also saw that the syntactic possibility space which they allow us to traverse is prone to sprout a vivid conviction which tells us that it closely resembles that of graph theory.
+
+The major trouble we are forced to confront at this point is that it is not so straightforward to determine the most optimal direction of intellectual exploration we ought to pursue when we are only given such a tiny set of building blocks to expand our context of reasoning.
+
+To formulate this apprehension a bit more precisely, I would say that there is a dilemma between diversity and minimalism when it comes to approaching the nature of reality.
+
+<004>
+
+On the one hand, a person may begin the journey by simply identifying whatever pops up in one's mind as an idea, and then freely associating it with other randomly popped up ideas in a completely orderless manner.
+
+An example of this is not so difficult to illustrate. Suppose that the idea of an old-fashioned American doughnut just crossed my mind. This makes me declare that "Old-fashioned American doughnut" is an idea which can be depicted as a single point. Subsequently, I realize that this particular type of doughnut shares close resemblance with other types of doughnuts, such as Krispy Kreme's original glazed doughnut, Safeway's blueberry-flavored doughnut in U District, Seattle, and countless others. For the sake of free association, I declare all such instances as individual ideas, and draw a near-infinite number of lines among every one of them because they all share similarities with one another due to the fact that they are all doughnuts. And- oh! By the way, I know a celebrity who likes doughnuts, so let's express this person as an idea and associate it with the aforementioned ideas, too, and so on.
+
+If I keep allowing my stream of consciousness to lead me through this endless rabbit hole of seemingly random whims, I will soon find myself trapped inside a jungle of chaos, hardly capable of extracting any recognizable pattern from the hidden source of truth from which my thoughts are assumed to originate.
+
+<005>
+
+Alternatively, a person may as well choose to start one's analysis by only dealing with ideas which are purely abstract in the sense that they can only be represented in terms of mathematical symbols. Such ideas are akin to what vertices are in graph theory; they do not mean anything other than that they are arbitrary entities being defined within the context of the mathematical theory to which they belong.
+
+An example of this is just as easy to describe as that of the former. I may choose to declare two ideas called "A" and "B", and that these two are associated with each other under the name "C". This case is far simpler than the convoluted mess we witnessed before; here, we are able to safely analyze such an isolated body of imagination without having to constantly ask ourselves, "What if there is something else I am missing here?"
+
+At least within the scope of this strictly limited context, the aforementioned components (i.e. A, B, and C) cover the entirety of what we are supposed to reason with; they collectively form a controlled environment, which is reminiscent of an isolated chamber inside a scientific laboratory.
+
+This is indeed neat, and it rescues us from the pain of having to exhaustively search for all possible ways in which we can enumerate and arrange our thoughts for the sake of making sure that the collective sum of what we are reasoning with is fully disclosed and thorough. This method, however, comes with its own downside.
+
+Suppose that I come up with a set of arbitrary symbols (such as A and B) and call them "ideas". I may also make a bunch of random associations among them, and label them with yet another set of arbitrary symbols. Then what? If I simply keep doing this and try to map out a whole spectrum of ways in which such entities can be composed, I will only enable myself to find out a list of emergent properties which are confined to the study of graphs, which is essentially nothing more than what math people have already done a million times in their natural habitat.
+
+This is one of the curses of minimalistic abstraction. An a priori concept, seemingly untainted by any empirical relation, exercises its own dimension of infinite power by claiming its right to potentially mean anything, yet it never means anything specifically. Such a tenacious level of detachment from our worldly concerns makes it an inadequate means of propelling ourselves toward the direction of where truth is expected to be, since our everyday experiences do constitute part of our reality and therefore should be taken into account, no matter how superficial and distorted they might be when interpreted by our senses.
+
+(Will be continued in volume 6)
+
+
+
+
+
+
+:d:On the philosophy of reality and the nature of ideas.
+:k:Metaphysics, Philosophy, Epistemology, Data Science, Logic
+:l:2023-10-22
+
+[The Origin of Reality - Volume 6] October 22, 2023
+
+(Continued from volume 5)
+
+One's search for reality usually begins with the problem of abstracting out our worldly sensations for the purpose of approaching the unified essence which is hidden behind the apparent chaos we face every day.
+
+There are so many things happening before us at every moment, and it takes a substantial degree of theism to suppose that there is a supreme order which encompasses the ultimate ensemble of what we can sense and reason with. Even the most reductionist of all sciences is not exempt from this, as it still presumes that the universe is being governed by a law which dictates that almost every form of complexity is reducible to simpler ones.
+
+And the usual conjecture of ours is that the more abstract our context of reasoning becomes, the more accurately we will be able to embrace the nature of such a law. The primary reason behind this is that the total number of generic ideas is far smaller than that of specific ideas. Fewer things are usually easier to handle than many.
+
+Yet, we should be aware that there are different methods through which the course of abstraction can be carried out. In the previous volume, I demonstrated the problem of groundless abstraction which evinced a tendency to immure itself in its own tiny cell of contextual independence - a minimalist's badge of intellectual superiority which ignites the heart of pure mathematicians with a subtle kind of fervor, yet never quite sympathizes with the tides of everyday life.
+
+If we begin our train of thoughts with the most minimal fragments of qualia we can possibly express in our language, such as numbers, vectors, sets, algebraic symbols, operators, and the like, we will indeed be able to construct an isolated playground of reason in which we have the freedom to commit whichever genre of conceptual masturbation we desire.
+
+Such a self-made prison of thoughts, however, is so intrinsically disconnected from our immediate senses, that it presents us with an exceptional challenge when it comes to laying down a semantic bridge between itself and the rest of the world.
+
+But then, of course, we cannot abandon the necessity of mathematical simplification altogether because otherwise we will soon be lost amidst a vast field of infinite possibilities. This leads to the conviction that the key lies somewhere between free association and pure abstraction.
+
+<006>
+
+How to draw the landscape of this middle ground is yet another problem to solve. Fortunately, there is one major tool which comes in handy - generalization.
+
+Take a black cat as an example. This lovely creature can be represented as an idea because we are able to think about it. Furthermore, it makes sense to state that there are other kinds of cats as well, such as white cats, ginger cats, Siamese cats, Persian cats, and etc.
+
+These cats have one commonality in them in the sense that every one of them belongs to the particular class of feline beings which is typified by the word "cat", and a succinct way of expressing such a concept is to associate all these subspecies with the single binding point called "cat".
+
+<007>
+
+Here, we are able to witness that the degree of abstraction deeply correlates with the topology of associations. The more an idea associates itself with others, the more abstract it becomes due to the notion that it functions as a means of convergence by which those with shared traits are taxonomically grouped together.
+
+Such a method of genericizing concrete ideas into more general ones suggests us that we can keep building layers upon layers of abstraction this way. For instance, a cat is one of many types of mammals, a mammal is one of many types of animals, and an animal is one of many types of organisms. An organism is one of many types of objects, and an object is one of many types of ideas we can ever conceive.
+
+<008>
+
+This cascade of reason then guides us to model our universe as one gigantic hierarchy of beings, which is basically a tree of nodes from a computational standpoint. The closer you get to its leaves, the more specific your ideas will be. The closer you get to its root, the more generic your ideas will be.
+
+And the benefit of this classification-oriented formulation is that, unlike free association which is prone to conjure a great deal of chaos, it retains some kind of directionality in the way in which ideas are being associated. What we are seeing here is a nicely streamlined branching pattern, rather than a helplessly intertwined hairball of connections.
+
+One must not be so quick to conclude that the whole of our reality is required to be summarized as a tree, though, since there are reasons to say that each idea could be explicated in terms of not just inheritance but also composition.
+
+Let us imagine that there are four ideas which are called "black dog", "white dog", "black cat", and "white cat" respectively. It is not difficult to understand that "black dog" and "white dog" can both be associated with the idea of "dog", and that "black cat" and "white cat" can both be associated with the idea of "cat". This creates a level of abstraction which groups four ideas into two.
+
+A slightly different angle of view, however, tells us that it is also possible to group these four ideas by their chromatic attributes. For example, "black dog" and "black cat" can both be associated with the idea of "black", whereas "white dog" and "white cat" can both be associated with the idea of "white".
+
+And both of the aforementioned interpretations are valid as far as our usual habit of cognition goes, which subsequently makes it reasonable to let them simply coexist, thereby suggesting that a series connection of bipartite graphs should probably portray the map of our reality in a more accurate manner.
+
+<009>
+
+(Will be continued in volume 7)
+
+
+
+
+
+
+
+:d:On the philosophy of reality and the nature of ideas.
+:k:Metaphysics, Philosophy, Epistemology, Machine Learning, Artificial Intelligence, Feature Space
+:l:2023-10-24
+
+[The Origin of Reality - Volume 7] October 24, 2023
+
+(Continued from volume 6)
+
+In the previous volume, it was clearly demonstrated that at least the facade of our reality is capable of being modelled as a sequence of abstraction layers, whose direction of divergence corresponds to the process of specification and whose direction of convergence corresponds to the process of generalization.
+
+It was also suggested that, due to the possibility of composition among qualities, each layer of abstraction gives birth to a bipartite graph which topologically resembles that of a neural network.
+
+It will be too rash to conclude, however, that such a directed arrangement of ideas and their associations completes the full picture of what reality is made out of.
+
+First of all, the conceptual bridges I have been laying down in the recent example (e.g. black cat, white cat, etc) are quite suspiciously adduced by intuition and therefore should be deemed too inappropriate to constitute a legitimate portion of our system of logic.
+
+If someone asks me to explain the choice I have been making from a common sense point of view, I will confidently say that a black cat and a white cat are both cats and therefore they both deserve to be associated with the idea "cat". But if someone asks me to prove why such a choice must be correct, I will probably have to consult the virtue of statistics and say that I made such a decision because the majority of people agree that it is a decent way of grouping ideas together.
+
+Yet this methodology can hardly avoid the accusation that it is based upon a set of arbitrary assumptions, one of which is: "The majority's opinion is the right opinion". And you know that the usual fate of populism is mediocracy, as well as that there is no particular reason to believe that the position of truth coincides with the center of mass of our collective body of knowledge.
+
+The root of the problem of subjectivity lies on the very definition of association itself. So far, I have been implicitly supposing that two ideas are "associated" if conceiving one of them lets me conceive the other. And this kind of formulation is pretty fuzzy in the sense that the phenomenon of conception is not so satisfactorily consistent outside of the domain of experimental psychology (e.g. causal relation between stimulus and reflex).
+
+Thus in order to build a clear foundation of reason, it is crucial to transcend the semantic ambiguity of our raw ingredients called "associations" and begin thinking in higher dimensions.
+
+As soon as we notice that ideas are able to establish connections with one another, one must take into account the possibility that these things could represent different types of relations. The biggest challenge here is in figuring out how many types there are and how they should be defined.
+
+Before trying to come up with rather specific examples (so as not to trap ourselves inside a mud pool of mere wordplay), one's got to first devise a structural basis upon which subsequent thought experiments acquire their opportunities to participate. And for this purpose, let us start by recognizing some of the common patterns which are being exhibited by what we typically refer to as "relations".
+
+Love of minimalism hints us that there are two major categories of relations - undirected and directed.
+
+<010>
+
+If we imagine that there are two ideas called "A" and "B", we will be able to declare that there is a relation between A and B which does not depend on the order in which these two subjects are being treated (such as "A and B are in the same group" or "A and B are close to each other"). This order-independence allows it to be represented by a single intermediary idea which functions as a stepping stone between A and B.
+
+We can also envision a relation whose definition depends on the order between A and B (such as "A comes before B" or "B sends a message to A"). We need to denote this sort of relation by a pair of intermediary ideas instead of just one, for the purpose of giving directionality to it.
+
+Let us revisit the scenery of the previous example and suppose that there are two ideas called "black cat" and "black dog". Intuition tells us that these two are both associated with the idea "black", yet our thirst for logical clarity also renders it necessary to identify "black" as a functional binding point rather than a hazy stockroom of "some things here and there that look like they should be put together".
+
+The idea "black" combines "black cat" and "black dog" into the same group, based on the premise that they share a relation which could be illustrated as "chromatic coincidence".
+
+<011>
+
+In this interpretation, we may as well say that "black" is not just an idea, but also a relation which binds "black cat" and "black dog" together based upon their proximity in color space. Whether this proximity is sufficiently high as to justify the existence of such a relation does introduce a bit of room for subjectivity, yet it is not so hard to defer the necessity to resolve such a problem by simply fantasizing that there is only one absolute threshold somewhere in the universe which tells us exactly how much closeness is "close enough".
+
+(Will be continued in volume 8)
