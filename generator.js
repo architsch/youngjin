@@ -38,7 +38,7 @@ const gameEntries = [
     ],
 ];
 const devlogEntries = [
-    ["devlog-webgl-engine", "WebGL Game Engine"],
+    ["devlog-webgl-engine", "WebGL Game Engine (2023)"],
 ];
 const nonfictionEntries = [
     ["metaphysics", "형이상학 (2013 - 2014)"],
@@ -53,6 +53,10 @@ const fictionEntries = [
     ["novels", "단편소설 (2012 - 2013)"],
     ["alien-job-interview", "Alien Job Interview (2022)"],
     ["infinite-treasures", "The Island of Infinite Treasures (2022)"],
+];
+const artEntries = [
+    ["illustrations", "Illustrations (2009 - 2014)"],
+    ["cartoons", "Cartoons (2011 - 2015)"],
 ];
 
 const sitemapLines = [
@@ -88,6 +92,7 @@ async function run()
     await makeWritingPages(devlogEntries);
     await makeWritingPages(nonfictionEntries);
     await makeWritingPages(fictionEntries);
+    await makeWritingPages(artEntries);
 
     //------------------------------------------------------------------------------------
     // Generate index.html
@@ -99,17 +104,20 @@ async function run()
     htmlLines.push(`<img class="logoImage" src="${rootURL}/logo.png" alt="ThingsPool Logo">`);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
-    htmlLines.push(`<h2 class="banner">Games</h2>`);
-    addPromo(htmlLines);
+    makeWritingPagesList("Writings (Nonfiction)", nonfictionEntries, htmlLines);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+
+    makeWritingPagesList("Writings (Fiction)", fictionEntries, htmlLines);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+
+    makeWritingPagesList("Arts", artEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
     makeWritingPagesList("Devlog", devlogEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
-    makeWritingPagesList("Writings (Nonfiction)", nonfictionEntries, htmlLines);
-    htmlLines.push(`<div class="l_spacer"></div>`);
-
-    makeWritingPagesList("Writings (Fiction)", fictionEntries, htmlLines);
+    htmlLines.push(`<h2 class="banner">Games</h2>`);
+    addPromo(htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
     htmlLines.push(`<h2 class="banner">About Myself</h2>`);
@@ -119,9 +127,10 @@ async function run()
     htmlLines.push(`<h3>Hello!</h3>`);
     htmlLines.push(`<p>My name is Youngjin, and I am a software engineer who develops computer games, simulations, and other types of interactive media. I studied electrical and electronics engineering at the University of Washington, and worked as a software developer in game development companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>`);
     htmlLines.push(`<p>ThingsPool is an independent game development studio which I have founded for the purpose of making and publishing videogames that are easily accessible and furnished with unique personalities.</p>`);
+    htmlLines.push(`<p>Besides games, however, there are also a wide variety of arts, novels, and treatises available here. I recommend you to take a look at them if you are interested in philosophy, mathematics, engineering, literature, and other multidisciplinary topics.</p>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
-    htmlLines.push(`<h3><a href="https://github.com/architsch">GitHub Profile</a></h3>`);
     htmlLines.push(`<h3><a href="https://www.linkedin.com/in/youngjin-kang-55321882">LinkedIn Profile</a></h3>`);
+    htmlLines.push(`<h3><a href="https://github.com/architsch">GitHub Profile</a></h3>`);
     htmlLines.push(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Profile</a></h3>`);
 
     addFooterHTML(htmlLines);
@@ -265,11 +274,11 @@ function addHeaderHTML(htmlLines, title, description, keywords)
     htmlLines.push(`<meta name="keywords" content="${keywords}">`);
     htmlLines.push(`<meta name="author" content="ThingsPool">`);
     htmlLines.push(`<meta name="viewport" content="width=device-width, initial-scale=1">`);
-    htmlLines.push(`<meta property="og:title" content="Free Games"/>`);
+    htmlLines.push(`<meta property="og:title" content="ThingsPool"/>`);
     htmlLines.push(`<meta property="og:url" content="https://thingspool.net"/>`);
     htmlLines.push(`<meta property="og:type" content="website"/>`);
     htmlLines.push(`<meta property="og:site_name" content="ThingsPool"/>`);
-    htmlLines.push(`<meta property="og:description" content="Play free games on your browser!"/>`);
+    htmlLines.push(`<meta property="og:description" content="Games, Arts, and Writings"/>`);
     htmlLines.push(`<meta property="og:image" content="https://thingspool.net/share.jpg"/>`);
     htmlLines.push(`<meta property="og:image:width" content="1200">`);
     htmlLines.push(`<meta property="og:image:height" content="630">`);
