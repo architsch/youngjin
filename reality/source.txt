@@ -334,14 +334,167 @@ In this interpretation, we may as well say that "black" is not just an idea, but
 
 
 
-_CUT_
 
 
+:d:An article about a computational model of reality as well as the concept of existence.
+:k:Computational Metaphysics, Computational Philosophy, Mechanical Ontology, Theory of Knowledge
+:l:2023-10-29
 
-:d:On the philosophy of existence and the reality which surrounds it.
-:k:Metaphysics, Philosophy, Computational Psychology, Mechanical Psychology
-:l:2023-10-?
-
-[The Origin of Reality - Volume 8] October ?, 2023
+[The Origin of Reality - Volume 8] October 29, 2023
 
 (Continued from volume 7)
+
+Interpreting our ideas as relations is a pretty neat way of making sense of the world around us. However, it also compels us to ask ourselves whether it is absolutely necessary to separate ideas into two distinct categories called "relations" and "non-relations".
+
+We should note that there is another question which must be taken into consideration. It is the question of whether there is any idea which is incapable of being considered a relation.
+
+In the previous example, we saw that the idea "black" could be defined as a chromatic coincidence between "black cat" and "black dog". It is not hard to imagine that, in a similar fashion, the idea "cat" could be defined as a structural coincidence between "black cat" and "white cat" because these two are sufficiently close to each other in their morphological feature space.
+
+<012>
+
+What about the parameters of the aforementioned relations, such as "black cat", "white cat", etc? Are they just standalone units of perception which cannot be described in terms of ways in which they function as semantic binding points?
+
+Let us consider "black cat" for example. When I see an amorphous patch of blackness before me, I just call it "black" without mentioning the word "cat" because I do not perceive in this patch any form which can be identified as a cat. Likewise, when I see the shape of a cat before me which does not have any particular color in it, I just call it "cat" without mentioning the word "black" because I do not perceive any blackness in this shape.
+
+And the reason why neither of the two cases shown here can be termed "black cat" is straightforward; neither of them attaches "black" and "cat" to the same physical location, which is proven by the fact that it is possible for me to look at one of them without looking at the other. This allows me to say that "black cat" is a positional coincidence between "black" and "cat".
+
+<013>
+
+And the major takeaway from this is that there seems to be nothing which stops us from fancying that every idea is a relation, and that every relation can be depicted in terms of other relations (e.g. coincidences).
+
+<014>
+
+What makes it possible to freely translate from one layer of abstraction to another, according to the observation we have been making, is the availability of different categories of coincidence. Chromatic and structural coincidences give birth to the process of generalization which is based upon chromatic/structural proximity, and positional coincidences give birth to the process of specification which is based upon locational proximity.
+
+This is obviously not the end of the story, though. I still haven't explained the reason why there are apparently multiple kinds of coincidences, nor have I made any endeavor whatsoever to analyze their conceptual details.
+
+A couple of thought experiments are necessary to investigate this problem. Let us first assume that there is only one object called "black cat" somewhere in an empty space. And let us also assume that I am a bodiless spectator whose range of observation is confined to this empty space. In this particular context, no matter where I look at, the only two options I have is: (1) To see both "black" and "cat" simultaneously at a given moment, or (2) To see neither "black" nor "cat" at a given moment.
+
+The reason why this constraint holds is that, under the condition stated above, the idea of "black" and the idea of "cat" are both anchored to the same spot in physical space, which makes it impossible for me to observe one of them without observing the other. This is the quantitative definition of "positional coincidence".
+
+Other types of coincidence should share the same mechanistic root. In the case of chromatic coincidence, the empty space I illustrated above may be composed of color dimensions such as R (Red), G (Green), and B (Blue) instead of the usual spatial dimensions such as X, Y, and Z. In the case of structural coincidence, it may be composed of morphological dimensions such as length, compactness, surface area, and so forth.
+
+In this regard, we might as well claim that a coincidence essentially means a collision between a pair of entities in a hypothetical coordinate system, which is a subspace of the universal continuum of ideas (i.e. "idea space").
+
+<015>
+
+It is not difficult to imagine that the idea space is the ultimate collection of every idea we can ever manage to conceive. If we just suppose for a moment that this space only consists of two independent aspects of qualia called "position" and "color", we will be able to assert that every idea is a piece of data which contains two properties in it - position and color.
+
+And if we proceed to say that a position is a 3D vector (denoted by X,Y,Z) and a color is also a 3D vector (denoted by R,G,B), it will automatically suggest that an idea is a set of coordinate value specifications inside a 6-dimensional model of the idea space, wherein the first 3 components indicate its physical dimensions and the last 3 indicate its color dimensions.
+
+If all 6 of these coordinate values are specified, the idea will be a point. If only 5 of them are specified and others are left unbounded, it will be a line. If only 4 of them are specified and others are left unbounded, it will be a plane, and so forth.
+
+(Will be continued in volume 9)
+
+
+
+
+
+
+:d:A computational interpretation of metaphysics and possibly its underlying ontology.
+:k:Computer Science, Metaphysics, Ontology, Philosophy, Computational Logic
+:l:2023-10-31
+
+[The Origin of Reality - Volume 9] October 31, 2023
+
+(Continued from volume 8)
+
+As long as we suppose that an idea is a set of coordinate value specifications inside the space of all conceivable ideas, we have the authority to tell that any idea can be modelled as a vector wherein each element is either an unbounded variable or a constant.
+
+The "idea of idea" is the ultimate root of all other ideas. It represents the whole volume of the idea space, and is indicated by a vector which is unbounded in every direction.
+
+The idea of "black" is basically the RGB value of (0, 0, 0). If we assume that the idea space comprises only two distinct quantities called "position" (X, Y, Z) and "color" (R, G, B), as well as that they are juxtaposed under the format: (X, Y, Z, R, G, B), "black" will be formulated as the vector: (X, Y, Z, 0, 0, 0). Here, (X, Y, Z) are variables and (0, 0, 0) are constants.
+
+Similarly, the idea of the origin (center) of our physical space, since it can be written as the XYZ value of (0, 0, 0), will be rendered as the vector: (0, 0, 0, R, G, B). Here, (0, 0, 0) are constants and (R, G, B) are variables.
+
+For the sake of visual simplicity, let me fancy for now that the idea space is just a 2D vector space with only two scalar components: color and position.
+
+<016>
+
+In this experimental scenario, the idea "black" only possesses a fixed color value and does not care about its position because a color can potentially appear anywhere in space. Therefore, such an idea is a line which spans the entire spatial axis and confines itself to a single color.
+
+On the other hand, the idea of "the origin" only possesses a fixed position and does not care about its color because a point in space does not require any chromatic attribute to describe itself. Therefore, such an idea is a line which spans the entire chromatic axis while sticking itself to a single physical spot.
+
+And the point of intersection between these two lines is the idea which represents the existence of the given color at the given location, due to the fact that its chromatic and locational elements are both fully specified. It is an instance of coincidence between the two dimensions of qualia.
+
+From a computational standpoint, one may as well say that the conception of the aforementioned coincidence is functionally analogous to a logical operator which receives a pair of vectors as its parameters and outputs a new vector which is the result of collapsing some of their infinite numerical ranges down to pinpoint quantities (constants). The reason behind this is pretty simple; if you have an unknown variable called X and a statement which says that X is equal to 0, your conclusion will obviously be that any instance of X can be replaced with 0.
+
+<017>
+
+Reduction of dimensions through geometric intersection, however, is not the only type of coincidence demonstrated in our previous "cats and dogs" example. We also have coincidences which increment the number of dimensions by means of generalization which, instead of discovering the intersection between two geometric volumes, creates a brand new volume which contains both of them.
+
+Imagine that we are living in a 9-dimensional idea space, wherein each idea consists of 3 physical dimensions (X, Y, Z), 3 chromatic dimensions (R, G, B), and 3 structural dimensions (S1, S2, S3).
+
+And let us further suppose that, for ease of graphical illustration, we are plotting such ideas inside a hypothetical 3D space made up of three virtual dimensions: A single physical axis which substitutes the X, Y, Z values, a single color axis which substitutes the R, G, B values, and a single structural axis which substitutes the S1, S2, S3 values.
+
+If we declare that:
+
+(1) In the color dimension, 0 means black and 1 means white.
+(2) In the structural dimension, 0 means cat and 1 means dog.
+
+Then this will subsequently lead us to the following conclusions:
+
+(1) The idea of "black" is a plane crossing every point in space which satisfies the condition: "color = 0".
+(2) The idea of "cat" is a plane crossing every point in space which satisfies the condition: "structure = 0".
+(3) The idea of "black cat" is a line crossing every point in space which satisfies the two conditions: "color = 0, structure = 0".
+(4) The idea of "black dog" is a line crossing every point in space which satisfies the two conditions: "color = 0, structure = 1".
+
+<018>
+
+The so-called "coincidences" which were rather clumsily depicted before are now fully explicable in terms of geometric operations. The process of generalization (e.g. "black cat" and "black dog" being abstracted out into a generic class called "black") is equivalent to the creation of the smallest volume which contains both of the given volumes, and the process of specification (e.g. "black" and "cat" being synthesized into a specific object called "black cat") is equivalent to the identification of the intersection between the given volumes.
+
+<019>
+
+Numerically speaking, I may as well propose that generalization is the same thing as resolving the mismatch between two constants by turning them into a variable, whereas specification is the same thing as discarding a variable under the presence of a constant.
+
+(Will be continued in volume 10)
+
+
+
+
+
+
+
+:d:On computational metaphysics and mathematical epistemology.
+:k:Computational Mathematics, Computational Philosophy, Metaphysics, Computational Geometry, Semantics
+:l:2023-11-02
+
+[The Origin of Reality - Volume 10] November 2, 2023
+
+(Continued from volume 9)
+
+From a holistic perspective, my faculty of reasoning suggests that our reality consists of discrete entities called "ideas", and that each idea is a vector which resides in the idea space. If there are N dimensions of qualia in total, this all-encompassing space will have to be made out of N dimensions.
+
+It has so far been explained that the so-called "coincidences" among ideas are essentially just geometric operations happening in such a space, as well as that each of them is also capable of being carried out on a computational basis by means of numerical filters.
+
+One might be tempted to continue expanding this stream of consciousness by asking questions such as: "What if we take the union of two ideas instead of their intersection?", "What if we measure the difference between two ideas and come up with their derivative?", and so forth.
+
+However, the main objective of my writing is to discover the fundamental root of reality itself, rather than to keep digging its treasure cave of mathematical intricacies. Such intellectually stimulating details may indeed be of great use in practical scenarios (e.g. engineering), but they do not necessarily encourage us to approach the heart of our universe's divine order because they are based upon an arbitrary assumption which rather dogmatically claims that our ideas are made up of a set of hypothetical beings called "dimensions".
+
+In order to seriously search for the origin of reality instead of falling into the trap of "Abstraction for abstraction's sake", we better stop concentrating too much on the existing theory's internal synthetic revelations and instead question the validity of the theory itself.
+
+According to the model I have devised so far, reality is defined in terms of ideas and each idea is defined in terms of dimensions. If we desire to confirm that this sort of conceptuation is reasonable, therefore, we must be able to assure that a dimension really is an irreplaceable part of our ontology.
+
+What is a "dimension", anyways? From a pragmatic point of view, one may say that we use dimensions to differentiate one thing from another. The presence of a dimension called X, for example, lets us tell that point (X = 0) is different from point (X = 1) because they do not coincide in dimension X. In other words, the notion of "difference" is what necessitates the introduction of dimensions in our faculty of logic.
+
+Besides, it is the reason why we have the concept of numbers in the first place; we use a number to indicate a distinct mode of perception. Since we typically imagine that there are different types of qualia which do not mix up with one another (e.g. length, duration, weight, brightness, loudness, etc), such a number usually belongs to one of many independent dimensions.
+
+From a purely functional view, though, one cannot simply resist the urge to suggest that the so-called "dimension" is just a superfluous concept whose sole purpose is to help us categorize our senses, due to the fact that a single number can apparently represent multidimensional data. If we suppose that the dimension X only comprises integer values in range [0, 3] and that the dimension Y only comprises integer values in range [0, infinity], for instance, we will simply be able to state that each point in the (X,Y) coordinate system can uniquely be characterized as "X + 4Y", which is just a single scalar quantity.
+
+<020>
+
+And the reason why this technical possibility is of importance is that it appears to evince the lack of any necessity to presume the existence of multiple types of qualia which are so fundamentally isolated from one another, that their collective sum can never be expressed as a single numerical value.
+
+Colloquially, I would definitely say that a color and a musical pitch are separate phenomena which belong to separate dimensions. In the strictly metaphysical sense, however, it is not so straightforward to find a decisive proof that they are not just samples occupying different regions of the same exact spectrum of sensory information.
+
+Yet there is a clue which may suggest otherwise. When I think of a multitude of colors, I consider them as specific instances of the same class called "color", which is supposedly distinct from other classes. And a minimal graph-based illustration of this would be a nodal depiction of the idea of "color" which associates itself with the "idea of idea" (because a color is an idea) as well as color variants such as black, white, yellow, cyan, magenta, and so on.
+
+<021>
+
+A mathematical interpretation of this is that: (1) The "idea of idea" is the universal set of all ideas, (2) The idea of "color" is a subset of this universal set, and (3) Each specific color, such as "black", is a subset of the "color" set.
+
+<022>
+
+The previous multidimensional model fits this set analogy pretty nicely, in the sense that each geometric subvolume of the idea space is a spatial equivalent of a subset. In order to think outside of this tiny box of dimension-oriented reasoning, though, one must break away from the utilization of coordinate axes and begin handling data with a somewhat transcendental disposition of elegance.
+
+(Will be continued in volume 11)
