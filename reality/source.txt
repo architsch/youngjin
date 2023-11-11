@@ -457,7 +457,7 @@ Numerically speaking, I may as well propose that generalization is the same thin
 
 :d:On computational metaphysics and mathematical epistemology.
 :k:Computational Mathematics, Computational Philosophy, Metaphysics, Computational Geometry, Semantics
-:l:2023-11-02
+:l:2023-11-08
 
 [The Origin of Reality - Volume 10] November 2, 2023
 
@@ -473,7 +473,7 @@ However, the main objective of my writing is to discover the fundamental root of
 
 In order to seriously search for the origin of reality instead of falling into the trap of "Abstraction for abstraction's sake", we better stop concentrating too much on the existing theory's internal synthetic revelations and instead question the validity of the theory itself.
 
-According to the model I have devised so far, reality is defined in terms of ideas and each idea is defined in terms of dimensions. If we desire to confirm that this sort of conceptuation is reasonable, therefore, we must be able to assure that a dimension really is an irreplaceable part of our ontology.
+According to the model I have devised so far, reality is defined in terms of ideas and each idea is defined in terms of dimensions. If we desire to confirm that this sort of conception is reasonable, therefore, we must be able to assure that a dimension really is an irreplaceable part of our ontology.
 
 What is a "dimension", anyways? From a pragmatic point of view, one may say that we use dimensions to differentiate one thing from another. The presence of a dimension called X, for example, lets us tell that point (X = 0) is different from point (X = 1) because they do not coincide in dimension X. In other words, the notion of "difference" is what necessitates the introduction of dimensions in our faculty of logic.
 
@@ -498,3 +498,172 @@ A mathematical interpretation of this is that: (1) The "idea of idea" is the uni
 The previous multidimensional model fits this set analogy pretty nicely, in the sense that each geometric subvolume of the idea space is a spatial equivalent of a subset. In order to think outside of this tiny box of dimension-oriented reasoning, though, one must break away from the utilization of coordinate axes and begin handling data with a somewhat transcendental disposition of elegance.
 
 (Will be continued in volume 11)
+
+
+
+
+
+
+
+:d:On computational philosophy and its mathematical basis.
+:k:Computational Philosophy, Mechanical Psychology, Set Theory, Ontology, Type Theory, Category Theory
+:l:2023-11-05
+
+[The Origin of Reality - Volume 11] November 5, 2023
+
+(Continued from volume 10)
+
+When we think of a network of ideas as a nested body of sets, what we are able to witness is that there is a strong parallel between itself and its functionally analogous representations.
+
+First, I showed you that ideas and their respective relations could be illustrated as a graph in which each vertex denotes an idea and each edge denotes a relation between ideas.
+
+Secondly, I came up with a more quantitatively satisfying model which characterized ideas as vectors in a hypothetical space (aka "feature space" or "conceptual space"), wherein each dimension carries its own distinct way of measuring our senses.
+
+And by the end of the last volume, I hinted the feasibility of imagining that an idea is a set, which suggests that a relation can be depicted in terms of a set operator.
+
+A precise description of this framework requires an example. Let us suppose that the "idea of idea" is the universal set which contains all other ideas. And Let us say that "color" and "structure" are two of its subsets.
+
+We can keep expanding this thought experiment pretty easily. Since "black" is one of many chromatic subtypes, it is a subset of "color". Since "cat" is one of many structural subtypes, it is a subset of "structure". The list goes on.
+
+Now here is something slightly trickier; what about "black cat"? At first the hierarchical impression of sets seems to prevent us from formulating such a synthetic idea, but a bit of intuition soon leads us to the conviction that a composition (i.e. positional coincidence) between two ideas can be found within their intersection.
+
+Likewise, "black" can be defined as a chromatic coincidence between "black cat" and "black dog" based upon the premise that the union between "black cat" and "black dog" is a subset of "black".
+
+In other words, one is able to say that the process of generalization (i.e. mapping of multiple specific ideas to one abstract idea) involves a union of sets, whereas the process of specification (i.e. mapping of multiple abstract ideas to one specific idea) involves an intersection of sets. Such a construct reveals its own analogy in boolean algebra as well, in which the logical OR (+) operator translates to generalization (i.e. identification of a common feature in multiple places) and the logical AND (x) operator translates to specification (i.e. composition of multiple features in one place).
+
+<023>
+
+So, what's the point of building and showcasing such an analogous model, which is not even much simpler than our previous vector-based system? And yes - this bit of skepticism is totally understandable, as it looks like all I did was simply reinterpret my format of discourse from analytical geometry to set theory.
+
+However, one should also note that the set analogy provides us with a quite elucidating evidence that qualia do not have to be numerical in nature. Unlike dimensions and their coordinate axes, sets do not require numbers to signify their presence because they are symbolically defined.
+
+Fundamentally speaking, though, I do admit that numbers are symbols too. And the reason behind this is that a line of numbers can be fancied as a directed chain of symbols, each of which possesses only up to one incoming edge and one outgoing edge.
+
+<024>
+
+Such a chain may be referred to as a "dimension" as long as we assume that it endows us with a unique way of partitioning our fabric of thoughts.
+
+One must be aware, however, of the fact that a sequence is just one of many possibilities. Once we have symbols in our intellectual playground, nothing prevents us from joining them in the manner of a generic graph in which there is a plethora of potential variances such as branches, loops, and so on.
+
+So the general sentiment I have in regard to the necessity of numerical quantification is that of skepticism. At least from a technical perspective, a number line is nothing more than a special case of what we can do with symbols. And it is not so easy to divine a clue which imposes a decisive reason why we must prefer such a case over others.
+
+A set-based model frees us from numerical reasoning at least, while its ontological basis is still quite artificial in the sense that it presumes the existence of arbitrary categories such as "black" and "cat".
+
+It does indeed look like there is no external source of truth which dictates that our taxonomy of ideas must be taken for granted without presupposing some degree of subjectivity, yet I would still say that a set is closer to the heart of truth than a dimension because, at least, the language of sets does not limit the arrangement of symbols to a linear pattern.
+
+The next question lies on the legitimacy of set-based thinking. Its underlying motivation is that, for the sake of exercising our faculty of reason, we must somehow come up with a method of classifying our thoughts, for otherwise we will be stuck in the eternal inactivity of universal oneness - the bodiless spirit of unity from which nothing differentiable arises.
+
+(Will be continued in volume 12)
+
+
+
+
+
+
+
+:d:On computational representation of our reality and its underlying philosophy.
+:k:Computational Metaphysics, Symbolic Metaphysis, Dualism, Idealism, Epistemology
+:l:2023-11-07
+
+[The Origin of Reality - Volume 12] November 7, 2023
+
+(Continued from volume 11)
+
+So far, it has been suggested that a set-based model of ideas is more elegant than its multidimensional counterpart because it more directly derives its symbolic structure from the core of reason. Unlike dimensions which necessitate the use of numerical quantities, sets more concisely reflect the way in which we classify our thoughts.
+
+It is the very notion of classification itself and its ensuing "multitude of beings", however, which even set theory fails to illustrate from an ontological standpoint. Why do we believe that there are "many things", as opposed to "one thing"?
+
+Perhaps the simplest explanation is that if we do not presume the plurality of existence, there will be no way for us to justify any thought process. What is the point of thinking, if there is only one all-encompassing essence of being which provides absolutely no room for any comparison?
+
+This pragmatic morsel of wisdom, however, inevitably generates the impression that it merely puts a bandage on an intellectual hole in order to deliberately ignore a fundamental inquiry which deserves to be answered.
+
+When it comes to exploring the origin of what makes us think the way we think, one cannot overlook the importance of stepping aside from the pool of manifold imagination and begin reconstructing one's foundation of logic from the most minimalistic building blocks one can ever conceive, for it is how we prevent ourselves from getting stuck in the midst of complexity.
+
+Thus, it is crucial to unlearn the theoretical architecture which has hitherto been described for now and start afresh from a blank sheet of paper.
+
+<025>
+
+At the genesis of one's cognizance, there is unity. It is the heart of our knowledge - the absolute point of universal symmetry at which everything comes and goes at once. It is the source of oneness which fills up the entirety of space and time, yet possesses neither volume nor movement. It is nothingness itself, which is so utterly nil that we cannot even define it (because even a definition is "something" which must be capable of distinguishing itself from nothing).
+
+In this spirit of singularity, we have nothing to conceive in our mind due to the lack of any way of "not" conceiving anything, for there must be a boundary of contrast between an act and the absence of an act in order for us to let ourselves state that something exists. As long as everything is one, there is no contrast. And where there is no contrast, existence is nonsense.
+
+<026>
+
+Therefore, the bare minimum of syntax which we must cogitate for the purpose of establishing some form of ontology is that of dualism - the opposition between a pair of entities, each of which rationalizes its own presence based upon its differentiation from the other.
+
+There are numerous types of dualism, such as good and evil, brightness and darkness, positivity and negativity, proximity and distance, fullness and emptiness, action and reaction, push and pull, up and down, etc. Every one of them comes as a pair, since neither of its two halves makes sense without the other half.
+
+A major problem lies on the matter of configuration, though. When we desire to express the nature of dualistic properties as a schema rather than an assortment of vague metaphors, what we invariably encounter is an enormous list of alternative choices, every one of which claims its own right to be considered legitimate.
+
+I have been basing my system of reasoning on the belief that everything which constitutes our reality is reducible to an assembly of ideas and their associations; such an assumption narrows down our spectrum of choices, yet it still leaves us with a number of equally feasible symbolic arrangements.
+
+<027>
+
+For example, if there are two ideas corresponding to two mutually opposing forces, should we say that they are simply associated with each other? Or, should they be associated with yet another idea called "duality" which explicitly indicates that the two are supposed to make up a dyad?
+
+The answer is that it depends on the meaning of association. If it is synonymous with "mutual contrast", we will be able to ensure that a single association is all we need to express dualism. If not, we will need an intermediary idea to denote such a relation.
+
+And here is a clue which helps us solve this dilemma. It has been assumed that oneness is not a sufficient condition for existence because it requires us to think of nonexistence as the complement to existence, the process of which presupposes the availability of multiple entities. Thus the very notion of distinction, hence its underlying suggestion of duality, dictates that our most primeval units of being (i.e. ideas and associations), in order for them to "exist", must inherently pose dualism in them.
+
+<028>
+
+And since an idea itself does not enable the conception of plurality (because nothing differentiable arises from where there is only one idea), association is what duality is.
+
+(Will be continued in volume 13)
+
+
+
+
+
+
+
+:d:On the philosophy of reality and its computational model.
+:k:Computer Science, Philosophy, Metaphysics, Epistemology, Ontology, Mathematics
+:l:2023-11-10
+
+[The Origin of Reality - Volume 13] November 10, 2023
+
+(Continued from volume 12)
+
+The essence of our reality resides in ideas as well as their mutual associations. And since an association presumes the availability of multiple ideas, we cannot deny that the soul of oneness does not cover the whole picture of what can be defined as "real".
+
+Reality stems from existence, and existence stems from our cognizance of difference. And the most elementary form of difference is duality because once we perceive that there are two things instead of just one, we say: "This thing is different from the other". This is the moment at which the heart of our intuition inevitably acknowledges that differentiation is a necessary precondition of plurality.
+
+<029>
+
+In the beginning, there is this thing called "duality" which comprises a pair of ideas. Our common sense tells us that such a dichotomous construct alone does not fully explain the sheer complexity of our universe, since our experiences are not a mere collection of coin flips happening between the two most extreme stimuli (e.g. pure pain and pure pleasure).
+
+However, one may still argue that a fine-grained grayscale sensation, too, is essentially just a compound of microscopic dualities, just like a piece of digital data can be formulated as an array of binary digits.
+
+In order to justify such potency of emergence, one must come up with a topological example which is reducible to an assembly of simple dyads yet still reflects the pattern of our cognition.
+
+Suppose that there is an intermediary idea situated right in between the two poles of duality. This third entity presents us with an instance of synchronicity which serves as a unifier of the duo (aka "superposition"). It is also a relation because it tells us how one thing is related to the other.
+
+<030>
+
+As we fancy that our material universe is nothing more than a combination between two possible states which can be referred to as "empty" (i.e. minimum density of matter) and "full" (i.e. maximum density of matter), we realize that there are two primary ways of defining space. One is that space is a mixture between emptiness and fullness (because "space" has no meaning inside a completely uniform distribution of energy, whether its amplitude be minimum of maximum), and the other one is that space is something which emptiness and fullness both have in common.
+
+<031>
+
+The former signifies the idea of "form", which can be phrased as "emptiness AND fullness" coexisting in the same place. The latter signifies the idea of "space", which can be phrased as "emptiness OR fullness" coexisting as optional characteristics which can be added to the same place.
+
+The resulting schema consists of two equally valid types of triad, one descending and the other one ascending the universal hierarchy of beings. The "AND" operator presents us with a specific composition which assigns itself to a lower layer of abstraction by means of combination, whereas the "OR" operator presents us with a shared archetype which assigns itself to a higher layer of abstraction by means of correlation.
+
+The four direct pairs among the aforementioned four ideas (i.e. Emptiness, Fullness, Form (= emptiness AND fullness), and Space (= emptiness OR fullness)) can be illustrated as:
+
+(1) Space <---> Emptiness
+(2) Space <---> Fullness
+(3) Form <---> Emptiness
+(4) Form <---> Fullness
+
+The first duality makes sense because emptiness presupposes the existence of space, for there would be nothing capable of being empty if there were no such thing as space. And space cannot exist without emptiness because a universe solely made out of vacuum of indefinite size, which does not permit any distribution of mass in it, does not endue the concept of distance with any recognizable meaning due to the immeasurability of uniformity, thus preventing the definition of space from establishing itself (because space is defined in terms of distances).
+
+Fullness, too, is rooted in such a presupposition for an equivalent reason, which subsequently validates the second duality.
+
+The overall implication of the two statements above is that both emptiness and space, as well as fullness and space, are complementary pairs which cannot be broken down to isolated thoughts.
+
+The third and fourth dualities make sense because the presence of emptiness/fullness depends on the availability of a form, which is a morphological construct comprising spatial points that are either occupied or unoccupied by mass. Without a form, space is nothing more than a uniform field. Whether such a field is "completely empty" or "completely full" does not mean anything from a functional standpoint.
+
+This is reminiscent of the fact that an electric circuit which operates under the source voltage of 5V and ground voltage of 0V exhibits the same exact behavior as one with the identical configuration which operates under the source voltage of 0V and ground voltage of -5V. A quantitative value itself is just a linguistic construct; it is the difference between values which gives birth to observable phenomena.
+
+(Will be continued in volume 14)
