@@ -667,3 +667,115 @@ The third and fourth dualities make sense because the presence of emptiness/full
 This is reminiscent of the fact that an electric circuit which operates under the source voltage of 5V and ground voltage of 0V exhibits the same exact behavior as one with the identical configuration which operates under the source voltage of 0V and ground voltage of -5V. A quantitative value itself is just a linguistic construct; it is the difference between values which gives birth to observable phenomena.
 
 (Will be continued in volume 14)
+
+
+
+
+
+
+:d:On a mathematical interpretation of metaphysical ideas.
+:k:Metaphysics, Ontology, Theosophy, Theology, Theism, Computer Science
+:l:2023-11-16
+
+[The Origin of Reality - Volume 14] November 16, 2023
+
+(Continued from volume 13)
+
+What I have hitherto been expounding may sound superstitious to some extent. One might even proceed to claim that the theory which has been illustrated so far is hardly anything more than a typical rambling of pseudoscience.
+
+But I am not here to talk about "crystal energy", "astral projection", or any other sugary morsel of mysticism. My goal instead is to put aside all such fantasies which have been confounding the minds of truth seekers, and simply endeavor to divine the essence of reality by means of honest speculation.
+
+The so-called "emptiness" and "fullness" are rather concrete analogies intended to help us grasp the overall worldview in a tangible fashion. The spirit of what is being implied by their duality is the concept of diversity - the realization that we are able to distinguish one thing from another.
+
+Space is a womb which gives birth to either emptiness or fullness, and form is a cradle which simultaneously embraces both emptiness and fullness as a whole. In computer programming (C/C++), space is a union type and form is a struct type. And since emptiness and fullness are two sides of a dyad, it is not hard to fancy that space is a boolean variable (aka "bool") and form is a set of all boolean values.
+
+<032>
+
+What appears to be troublesome, though, is the fact that I have been treating space as a singleton here. Common sense tells us that there must be a multitude of spatial locations in our universe, each of which is occupied by its own material state. Plurality should apply not only to the dualism of our senses (such as the opposition between emptiness and fullness), but also to the notion that there are more than one place in which our senses possess the right to dwell.
+
+But here is a question; in which circumstance do we say that there are "multiple places"?
+
+Have we always been observing every single object in our universe simultaneously, we would've not been able to assure that space consists of more than one location.
+
+The reason why we do not believe that the whole world is just a single point is that, at each moment, we only manage to perceive a tiny subset of what we can ever perceive.
+
+Some may argue that this line of logic is flawed, by telling that it does not account for the possibility of entities appearing and disappearing over time at a fixed spot, which will then create an illusion of motion from one position to another. Such a proposition, however, holds true only when we imagine that time is something that is fundamentally separate from space. Inside the panorama of spacetime, different points in time (i.e. past, present, and future) are indistinguishable from different points in space, and nothing really "changes" over time on a holistic level.
+
+If our domain of experience is made out of two atomic sensations called "emptiness" and "fullness", we will be able to say that the act of beholding either emptiness or fullness (but not both) occurs when the scope of observation is confined to one of at least two discrete places, for there must be somewhere outside of one's range of vision which sustains the "other sensation" that is not being seen immediately but can potentially be seen.
+
+Neither the idea of space (i.e. emptiness OR fullness) nor the idea of form (i.e. emptiness AND fullness) renders a moment of either exclusively observing emptiness or exclusively observing fullness. There are of course two elementary ideas which are called "emptiness" and "fullness", respectively, yet they are purely conceptual entities, independent of spatial presence.
+
+Here is the thing. Suppose that there are multiple positions in space, and that my field of view is currently trapped inside one of them. I only feel emptiness surrounding myself, yet I know that there is also the idea of fullness which does not "exist" in the sense of being present right before my face but still "exists" in the sense that it has the potency to present itself later on.
+
+The overall implication of this becomes quite clear once we break it down to bite-sized pieces.
+
+First of all, I am certain that I only feel emptiness right at the present moment. This means that, if I am to represent the current scenario as a single idea, it will be obliged to involve "emptiness" as one of its components.
+
+Secondly, I know that there is some chance of feeling either emptiness or fullness at another moment. The content of this "another moment", therefore, ought to depict itself as "emptiness OR fullness", which is synonymous with "space".
+
+Thus, the whole situation must be defined as the state of coexistence between the (1) "feeling of emptiness" and the (2) "possibility of feeling either emptiness or fullness".
+
+And as you may have already realized, this is just a verbose way of defining a composition between emptiness and space. The same logic applies to the case of fullness, too.
+
+<033>
+
+The idea of "emptiness AND space" is one of at least 2 positions in space which is entirely filled with emptiness, and the idea of "fullness AND space" is one of at least 2 positions in space which is entirely filled with fullness.
+
+(Will be continued in volume 15)
+
+
+
+
+
+
+:d:On the metaphysical foundation of existence and the reality which surrounds it.
+:k:Metaphysics, Ontology, Theosophy, Theology, Theism, Computer Science, Philosophy
+:l:2023-11-18
+
+[The Origin of Reality - Volume 15] November 18, 2023
+
+(Continued from volume 14)
+
+A digital computer is an elegant reality simulator; its internal state is a long sequence of 0s and 1s, wherein 0 could be interpreted as "emptiness" and 1 could be interpreted as "fullness".
+
+Each binary digit (aka "bit") is an instance of the idea of space because it is capable of disclosing either 0 (emptiness) or 1 (fullness) in a fairly stochastic manner once we observe it. And as demonstrated in the prior volume, the availability of two or more of such instances (aka "positions") must be presumed as long as we decide to create a composition between either (1) emptiness and space, or (2) fullness and space.
+
+<034>
+
+A technical implication of this should be best expressed in the context of a state machine. Suppose that the mind of any conscious being is just a single FSM (Finite State Machine) which comprises two states that may be referred to as "feeling emptiness" and "feeling fullness", such that whenever it feels emptiness, its mental state belongs to the former, and whenever it feels fullness, its mental state belongs to the latter.
+
+<035>
+
+While feeling emptiness, we know that emptiness is definitely present in our mind, as well as that such a state of cognition can either stay in emptiness or transition into fullness. And while feeling fullness, we know that fullness is definitely present in our mind, as well as that such a state of cognition can either stay in fullness or transition into emptiness.
+
+The idea of "emptiness AND space" (as well as "fullness AND space"), therefore, can be thought of as a combination between the current state (i.e. left side of the AND relation) and its possible set of transitions (i.e. right side of the AND relation).
+
+The state diagram above can easily be imagined as a succinct depiction of a physical realm which consists of a network of spatial locations, each of which is either empty or full. The aforementioned state machine (i.e. the observer) would then be a spectator which traverses such points in space whilst perceiving only one of them at a given moment.
+
+<036>
+
+This is not the end of the story, for sure. You know that our senses are not so binary on a macroscopic level; they are oftentimes grayscale in appearance.
+
+In order to be able to handle such fine-grained differences, we must realize that this is what introduces dimensions to our system of quantitative reasoning. We need a dimension to represent a spectrum of senses rather than just a simple dichotomy. The question is, what are dimensions made out of?
+
+One thing to note is that they do not necessarily differ from the concepts we have hitherto been witnessing on a fundamental level. As long as we allow a dimension to have any finite range and resolution, we may imagine that a pair of values (i.e. a dyad) is the simplest kind of dimension one can ever conceive.
+
+<037>
+
+Since a dimension is a carrier of differences, a single value (i.e. sample point) cannot identify itself as a dimension. A pair of values, on the other hand, qualifies as one because it involves the concept of differentiation. As we add more values, we see that its axis gets more and more granular.
+
+But how does this process of "adding more values" occur, exactly? A breeze of intuition lets me just draw a line on a sheet of paper and keep dividing it into smaller and smaller segments, thereby "proving" that it is possible to come up with a dimension and increase its resolution to whichever degree we desire. However, it is such a clumsy way of defining what a dimension really is from a meta-mathematical point of view.
+
+A more logical method is to resort back to the pattern of abstraction/composition and start building from there. We have already seen that the idea of "form" is a mixture between one instance of emptiness and one instance of fullness, without any suggestion of one of them being greater than the other in terms of their ratio.
+
+The thing is, nothing really stops us from combining the idea of form itself (i.e. emptiness AND fullness) with pure emptiness, in which case we get "emptiness AND (emptiness AND fullness)" as the product. It consists of 2 instances of emptiness and 1 instance of fullness, just like a water molecule consists of 2 hydrogen atoms and 1 oxygen atom.
+
+The same exact pattern applies to the case of fullness, in which we have "fullness AND (emptiness AND fullness)" - the combination between 2 instances of fullness and 1 instance of emptiness.
+
+<038>
+
+This sort of formulation can repeat itself in a recursive manner, from which any fraction of two positive integers is able to emerge as a ratio between the two binary components. As we gather such fractions and line them up in an ordered sequence (under the guidance of some "ordering law"), we see that such a construct qualifies as the axis of a dimension.
+
+This reveals that a "dimension" can be defined as a rule under which a set of ideas can be arranged in a strictly ascending (or descending) order. In our particular case, it is based upon the ratio between the number of instances of emptiness and the number of instances of fullness.
+
+(Will be continued in volume 16)
