@@ -53,7 +53,7 @@ const fictionEntries = [
     ["novels", "단편소설 (2012 - 2013)"],
     ["alien-job-interview", "Alien Job Interview (2022)"],
     ["infinite-treasures", "The Island of Infinite Treasures (2022)"],
-    ["infsoc", "Influencial Social Posts (2023)"],
+    ["infsoc", "Influential Social Posts (2023)"],
 ];
 const artEntries = [
     ["illustrations", "Illustrations (2009 - 2014)"],
