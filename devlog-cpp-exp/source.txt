@@ -1,0 +1,25 @@
+:d:A devlog of the custom WebGL game engine.
+:k:Interpreter, C Programming, C++ Programming, CMake, Assembly Language, Scripting Language
+:l:2023-11-26
+
+[Pseudo-Assembly Interpreter] November 26, 2023
+
+<001>
+
+This is a custom pseudo-assembly language interpreter I made up from scratch, which runs inside C++.
+
+The "sourceCode.txt" file contains a script written in a pseudo-assembly language. I call it "pseudo" because it is a scripting language which resembles Assembly in some measure (e.g. explicit memory access, etc), but only to a limited extent.
+
+The application translates the script into its corresponding bytecode, and subsequently stores it inside the "byteCode.txt" file.
+
+It then executes the instructions in "byteCode.txt" line by line, treating each of them as an operator followed by operands.
+
+The "Interpreters.cpp" file lists all types of instructions you can use inside your script. If you want an additional functionality, all you need to do is simply implement a new procedure and put its name and function pointer in "interpreterNames" and "interpreters", respectively. Don't forget to make sure that they belong to the same array index.
+
+(NOTE: Colored log outputs in "LogUtil.cpp" may not work on Windows. Its text-based color codes are meant to behave correctly only on Linux and MacOS.)
+
+<002>
+
+In addition, there are optional debug switches which allow the user to selectively inspect the current state of the program as it reads and executes individual instructions.
+
+@@<a href="https://github.com/architsch/backroom">GitHub Repository</a>

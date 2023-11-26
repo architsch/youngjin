@@ -779,3 +779,114 @@ This sort of formulation can repeat itself in a recursive manner, from which any
 This reveals that a "dimension" can be defined as a rule under which a set of ideas can be arranged in a strictly ascending (or descending) order. In our particular case, it is based upon the ratio between the number of instances of emptiness and the number of instances of fullness.
 
 (Will be continued in volume 16)
+
+
+
+_CUT_
+
+
+
+:d:On the symbolism of metaphysical and ontological ideas.
+:k:Metaphysics, Worldview, Symbolism, Archetype, Collective Unconscious, Symbols
+:l:2023-11-22
+
+[The Origin of Reality - Volume 16] November 22, 2023
+
+(Continued from volume 15)
+
+It has been shown that one of the stepping stones of geometric reasoning, known as "dimension", is able to be defined in terms of ideas and their combinations. As long as we assume that ideas are discrete and indivisible atoms of thought, we are free to imagine that each of their compounds reveals a specific ratio among its atomic constituents.
+
+Such ratios, by nature of recursion, come in a variety of shades standing between the two extremes of our senses (i.e. emptiness and fullness). And together they comprise a dimension once they manage to line up as an ordered list.
+
+But instead of delving too much into the endless well of technicality, let us step aside a bit and go back to the initial philosophical motivation which gave birth to the concept of emptiness, fullness, and their relations.
+
+In order to fully comprehend the meaning of what we've seen so far, we must borrow the power of symbolism and leverage it for the sake of endowing our vision with human qualities.
+
+In Western civilization, there used to be a notion that our material realm is made out of 4 elements - Water, Air, Earth, and Fire. This, of course, is regarded as a myth in today's world.
+
+When it comes to metaphorical connotations, however, one cannot simply deny that this 4-element model plays a huge role in shaping people's worldview due to its prevalence. Its symbolic nature is of importance not because we are disciples of pseudoscience, but because we know that it contributes to the way in which we, as cultural beings, interpret the world around us in a figurative manner.
+
+<039>
+
+At the root of the hierarchy of our universe, there is Water - the primordial birthplace of all substances. It is the fountain from which every worldly being springs into existence, and it is the ultimate source of everything we are able to grasp, feel, and express in our language. It is the one, and only one pool of all possibilities from which every conceivable permutation of senses arises.
+
+<040>
+
+Then there comes the pure essence of every matter. It begins with the dualism of the two elements, Air and Earth, whose mutual contrast creates the horizon and splits the monotony of the void into cogitable duos which are characterized by "up and down", "front and back", "near and far", "in and out", "good and bad", "light and dark", "hot and cold", and other manifold interpretations.
+
+<041>
+
+Their dichotomous nature opens up the gateway to the fourth element, Fire, which fuels the furnace of synthesis and its divergent consequences. It is the site of fusion wherein multiple things embrace one another and merge into one collective body of existence, thereby yielding a composite whole which brings forth its own phantasmagoria of complexity.
+
+Water is the impetus from which Air and Earth emerge as two opposing forces. These two dwell in a constant state of alternation between conflict and harmony, driven by the dynamism of Fire - the engine of fusion which, by nature of combinatorics, bakes a plethora of intricate forms.
+
+These four elements altogether let the whole web of ideas blossom in the midst of primeval nothingness (i.e. Ether).
+
+Ether is the root of space (Water), and space is what gives birth to the duality of our perception (Air and Earth). From this duality and its means of combination (Fire), all the rest of the universe is born.
+
+What has been illustrated so far is just one of many symbolic representations. What is really important is the abstract meaning it conveys, and the role of symbolism is to help us envisage it in a tangible form.
+
+It is not hard to find a modern reenactment of such a metaphorical construct. Those who have been immersed in the fictional world of Starcraft, one of the bestselling videogames made by Blizzard, probably have noticed that the game's backstory revolves around the pancosmic race called "Xel'naga".
+
+Xel'naga, in pursuit of creating the most perfect lifeform, gave birth to two experimental races - Protoss and Zerg. The design of Protoss was based on "Purity of Form", while the design of Zerg was based on "Purity of Essence".
+
+Purity of Form indicates the organism's ability to formulate and maintain its most ideal form (i.e. structure), which is done by synthesizing various life-giving components in a quintessential manner. Such a way of evolution, however, was deemed too slow-paced by Xel'naga.
+
+Purity of Essence, on the other hand, indicates the organism's ability to adapt its core metabolism to whichever environment it is exposed to. It is one's capability to grow on its own from the simplest to the most complex of all forms. Such a powerhouse of emergence, however, unleashed itself and swallowed its very creator (Xel'naga).
+
+<042>
+
+By careful observation, we come to notice that Purity of Essence is equivalent to Water because it is where growth originates, as well as that Purity of Form is equivalent to Fire because it is where elements fuse to yield sophisticated compounds.
+
+And, as the underlying lore of Starcraft implies, totality is achieved when these two forces of creation come together and cooperate as one almighty being.
+
+(Will be continued in volume 17)
+
+
+
+
+
+
+
+
+:d:On the origin of dimensions and their underlying mathematical motivation.
+:k:Metaphysics, Dimension, Mathematics, Epistemology, Computational Mathematics, Combinatorics
+:l:2023-11-??
+
+[The Origin of Reality - Volume 17] November ?, 2023
+
+(Continued from volume 16)
+
+In the last volume, I demonstrated the feasibility of interpreting the four essential ideas and their unbreakable associations as a set of traditional symbols - Water, Air, Earth, and Fire.
+
+Such symbolism should not be taken too literally, though. They simply serve as a storytelling device, contrived to appeal to those who are not so fond of facing abstract concepts directly.
+
+Figurative worldview aside, we ought to be aware of the fact that the origin of multidimensionality has not been explained here yet. Volume 15 already mentioned the feasibility of constructing a dimension and its fine-grained spectrum of values, yet it never described a method through which multiplicity of dimensions could disclose its presence.
+
+Such a realization should probably concern anyone who is convinced that our world of perception reveals itself in discrete categories of qualia, such as visual, auditory, olfactory, and so forth.
+
+Technically speaking, we could just partition our list of grayscale values into multiple segments and pretend that each of them represents a separate dimension. Yet such an approach is more or less a cunning trick, devised to circumvent the problem rather than solving it.
+
+Let us revisit the procedural building blocks which have been introduced so far. Space (Water) establishes itself as the "OR" operation between ideas, and Form (Fire) establishes itself as the "AND" operation between ideas. The former is the birthplace of dual properties (i.e. emptiness, fullness), whereas the latter is the place in which they fuse into one.
+
+By repeatedly applying the "AND" process over emptiness, fullness, and their AND-constructs, one is able to render a whole sequence of scalar values, each of which can be expressed as a fraction of integers. Such a sequence qualifies as a dimension as long as we exclude irrational numbers from our faculty of reasoning.
+
+The two most extreme poles of our sensation may be worded as "emptiness" and "fullness", respectively. And one may theorize that an intermediate mixture between these two dwells somewhere in between. A decent analogy can be found in the case of auditory sense-data, in which "emptiness" is the lack of any sound, "fullness" is the loudest sound we can ever hear, and their fractional combination is a sound of a moderate volume.
+
+The trouble resides in the plurality of our senses, for anyone can ask, "What about the brightness of light? What about hues and saturation of colors? What about the sense of touch, smell, taste, emotions, abstract feelings, and many others?"
+
+So we do need some way of distinguishing different types of qualia from one another, aside from their levels of intensity.
+
+What seems to be a real trick is that each of these types may not exist in complete isolation. Our intuition often drives us to associate certain colors (e.g. red, yellow, orange) with warmth, or crackling sound with squiggly geometric features. They are poetically related to each other in ways which are somewhat loose yet nevertheless explicable in our language.
+
+Such blurriness, though, also evinces us the merit of not being too strict in terms of classification. We have a tendency to categorize our senses, yet such means of discretization may not be as axiomatic as it appears to be.
+
+Suppose that a category of sensation is a point on a continuous line. In this context, it is valid to assume that two infinitely close points are equivalent to two categories which are almost identical to each other except for an infinitesimal difference; that is, it is not absurd to say that there are categories for "color that is slightly warm", "sound that is slightly visible", and so on.
+
+<>
+
+What this suggests is that it is possible to imagine our qualia as points on a two-dimensional plane, whose two coordinate axes represent the intensity-dimension and category-dimension, respectively. The former is the amount of force with which a stimulus penetrates through our sphere of cognition; it is the identifier of quantity. The latter tells us the direction in which a stimulus approaches our sphere of cognition; it is the identifier of quality.
+
+<>
+
+Such a model, as long as it does not ground itself on tautology, successfully reduces our perceptual space from one which is (N+1)-dimensional (where "N" is the total number of categories and the other "1" is for the intensity level) to one which is 2-dimensional (one dimension for quantity and the other dimension for quality), thereby making it far easier to illustrate our qualia graphically.

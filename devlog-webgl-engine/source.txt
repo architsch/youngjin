@@ -1,6 +1,6 @@
 :d:A devlog of the custom WebGL game engine.
 :k:Game Engine, Javascript, Typescript, WebGL, HTML5, Webgame Engine, Web Engine, Indie Game
-:l:2023-10-29
+:l:2023-11-26
 
 [First Screenshot of the Engine] September 14, 2023
 
@@ -8,7 +8,7 @@ This is a game engine I am developing these days for upcoming games. It runs on 
 
 <sc01>
 
-@@<a href="https://github.com/architsch/hallway">Sample GitHub Repository</a>
+@@<a href="https://github.com/architsch/hallway">GitHub Repository</a>
 
 
 
@@ -16,7 +16,7 @@ This is a game engine I am developing these days for upcoming games. It runs on 
 
 :d:A devlog of the custom WebGL game engine.
 :k:Game Engine, Game Dev, Indie Game Developer, 3D Engine, 3D Programming, Custom Game Engine, Indie Game Engine
-:l:2023-10-29
+:l:2023-11-26
 
 [A Video Footage] September 24, 2023
 
@@ -27,7 +27,7 @@ Rudimentary graphics and physics systems are now up and running, and a framework
 
 @@<iframe width="560" height="315" src="https://www.youtube.com/embed/lS_Y1-lAkW0?si=XvZZc8n6Dl-Y854W" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-@@<a href="https://github.com/architsch/hallway">Sample GitHub Repository</a>
+@@<a href="https://github.com/architsch/hallway">GitHub Repository</a>
 
 
 
@@ -36,7 +36,7 @@ Rudimentary graphics and physics systems are now up and running, and a framework
 
 :d:A devlog of the custom WebGL game engine.
 :k:Game Engine, Javascript, Typescript, WebGL, HTML5, Webgame Engine, Web Engine, Indie Game
-:l:2023-10-29
+:l:2023-11-26
 
 [Repository is now Public] October 26, 2023
 
@@ -46,4 +46,4 @@ Please note, however, that the current implementation does not fully leverage th
 
 <sc02>
 
-@@<a href="https://github.com/architsch/hallway">Sample GitHub Repository</a>
+@@<a href="https://github.com/architsch/hallway">GitHub Repository</a>

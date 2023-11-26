@@ -39,6 +39,7 @@ const gameEntries = [
 ];
 const devlogEntries = [
     ["devlog-webgl-engine", "WebGL Game Engine (2023)"],
+    ["devlog-cpp-exp", "C/C++ Experiments (2023)"],
 ];
 const nonfictionEntries = [
     ["metaphysics", "형이상학 (2013 - 2014)"],

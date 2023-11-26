@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="description" content="A devlog of the custom WebGL game engine.">
-<meta name="keywords" content="game engine, javascript, typescript, webgl, html5, webgame engine, web engine, indie game">
+<meta name="keywords" content="interpreter, c programming, c++ programming, cmake, assembly language, scripting language">
 <meta name="author" content="ThingsPool">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="ThingsPool"/>
@@ -22,22 +22,29 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'G-JL7KHR7HK8');
 </script>
-<title>First Screenshot of the Engine</title>
+<title>Pseudo-Assembly Interpreter</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="canonical" href="https://thingspool.net/devlog-webgl-engine/page-1.html">
+<link rel="canonical" href="https://thingspool.net/devlog-cpp-exp/page-1.html">
 </head>
 <body>
-<h3><a href="https://thingspool.net/devlog-webgl-engine/list.html">&#171; Back</a></h3>
-<h1>First Screenshot of the Engine</h1>
+<h3><a href="https://thingspool.net/devlog-cpp-exp/list.html">&#171; Back</a></h3>
+<h1>Pseudo-Assembly Interpreter</h1>
 <h3>Author: Youngjin Kang</h3>
-<h3>Date: September 14, 2023</h3>
+<h3>Date: November 26, 2023</h3>
 <div class="l_spacer"></div>
-<p>This is a game engine I am developing these days for upcoming games. It runs on any web browser, and is based on pure WebGL (No graphics engine such as Pixi.js or Three.js). The code architecture is based on ECS (Entity Component System), so the whole engine is highly scalable and modular.</p>
-<img class="figureImage" src="https://thingspool.net/devlog-webgl-engine/sc01.jpg" alt="First Screenshot of the Engine (Figure 1)">
+<img class="figureImage" src="https://thingspool.net/devlog-cpp-exp/001.jpg" alt="Pseudo-Assembly Interpreter (Figure 1)">
+<p>This is a custom pseudo-assembly language interpreter I made up from scratch, which runs inside C++.</p>
+<p>The "sourceCode.txt" file contains a script written in a pseudo-assembly language. I call it "pseudo" because it is a scripting language which resembles Assembly in some measure (e.g. explicit memory access, etc), but only to a limited extent.</p>
+<p>The application translates the script into its corresponding bytecode, and subsequently stores it inside the "byteCode.txt" file.</p>
+<p>It then executes the instructions in "byteCode.txt" line by line, treating each of them as an operator followed by operands.</p>
+<p>The "Interpreters.cpp" file lists all types of instructions you can use inside your script. If you want an additional functionality, all you need to do is simply implement a new procedure and put its name and function pointer in "interpreterNames" and "interpreters", respectively. Don't forget to make sure that they belong to the same array index.</p>
+<p>(NOTE: Colored log outputs in "LogUtil.cpp" may not work on Windows. Its text-based color codes are meant to behave correctly only on Linux and MacOS.)</p>
+<img class="figureImage" src="https://thingspool.net/devlog-cpp-exp/002.jpg" alt="Pseudo-Assembly Interpreter (Figure 2)">
+<p>In addition, there are optional debug switches which allow the user to selectively inspect the current state of the program as it reads and executes individual instructions.</p>
 <div class="l_spacer"></div>
-<a href="https://github.com/architsch/hallway">GitHub Repository</a>
+<a href="https://github.com/architsch/backroom">GitHub Repository</a>
 <div class="xl_spacer"></div>
 <a class="noTextDeco" href="https://thingspool.net/Water-vs-Fire/page.html">
 <img class="gameLink" src="https://thingspool.net/Water-vs-Fire/entry.jpg" alt="Water vs Fire">
