@@ -782,7 +782,9 @@ This reveals that a "dimension" can be defined as a rule under which a set of id
 
 
 
-_CUT_
+
+
+
 
 
 
@@ -794,7 +796,7 @@ _CUT_
 
 (Continued from volume 15)
 
-It has been shown that one of the stepping stones of geometric reasoning, known as "dimension", is able to be defined in terms of ideas and their combinations. As long as we assume that ideas are discrete and indivisible atoms of thought, we are free to imagine that each of their compounds reveals a specific ratio among its atomic constituents.
+It has been shown that one of the stepping stones of geometric reasoning, known as "dimension", is able to be defined in terms of ideas and their combinations. As long as we assume that ideas are discrete and indivisible atoms of thought, we are free to imagine that each of their compounds reveals a specific quantitative ratio.
 
 Such ratios, by nature of recursion, come in a variety of shades standing between the two extremes of our senses (i.e. emptiness and fullness). And together they comprise a dimension once they manage to line up as an ordered list.
 
@@ -802,7 +804,7 @@ But instead of delving too much into the endless well of technicality, let us st
 
 In order to fully comprehend the meaning of what we've seen so far, we must borrow the power of symbolism and leverage it for the sake of endowing our vision with human qualities.
 
-In Western civilization, there used to be a notion that our material realm is made out of 4 elements - Water, Air, Earth, and Fire. This, of course, is regarded as a myth in today's world.
+In Western civilization, there used to be a notion that our material realm is made out of 4 elements - Water, Air, Earth, and Fire. This, of course, is regarded as a myth in today's standard.
 
 When it comes to metaphorical connotations, however, one cannot simply deny that this 4-element model plays a huge role in shaping people's worldview due to its prevalence. Its symbolic nature is of importance not because we are disciples of pseudoscience, but because we know that it contributes to the way in which we, as cultural beings, interpret the world around us in a figurative manner.
 
@@ -851,13 +853,13 @@ And, as the underlying lore of Starcraft implies, totality is achieved when thes
 
 :d:On the origin of dimensions and their underlying mathematical motivation.
 :k:Metaphysics, Dimension, Mathematics, Epistemology, Computational Mathematics, Combinatorics
-:l:2023-11-??
+:l:2023-11-28
 
-[The Origin of Reality - Volume 17] November ?, 2023
+[The Origin of Reality - Volume 17] November 28, 2023
 
 (Continued from volume 16)
 
-In the last volume, I demonstrated the feasibility of interpreting the four essential ideas and their unbreakable associations as a set of traditional symbols - Water, Air, Earth, and Fire.
+In the last volume, I demonstrated the feasibility of interpreting the four primordial ideas as a set of traditional symbols - Water, Air, Earth, and Fire.
 
 Such symbolism should not be taken too literally, though. They simply serve as a storytelling device, contrived to appeal to those who are not so fond of facing abstract concepts directly.
 
@@ -867,26 +869,82 @@ Such a realization should probably concern anyone who is convinced that our worl
 
 Technically speaking, we could just partition our list of grayscale values into multiple segments and pretend that each of them represents a separate dimension. Yet such an approach is more or less a cunning trick, devised to circumvent the problem rather than solving it.
 
-Let us revisit the procedural building blocks which have been introduced so far. Space (Water) establishes itself as the "OR" operation between ideas, and Form (Fire) establishes itself as the "AND" operation between ideas. The former is the birthplace of dual properties (i.e. emptiness, fullness), whereas the latter is the place in which they fuse into one.
+Let us revisit the procedural building blocks which have been introduced so far. Space (i.e. emptiness OR fullness) establishes itself as the "OR" operation between ideas, and Form (i.e. emptiness AND fullness) establishes itself as the "AND" operation between ideas. The former is the birthplace of the dual properties (i.e. emptiness, fullness), whereas the latter is the place in which they fuse into one.
 
 By repeatedly applying the "AND" process over emptiness, fullness, and their AND-constructs, one is able to render a whole sequence of scalar values, each of which can be expressed as a fraction of integers. Such a sequence qualifies as a dimension as long as we exclude irrational numbers from our faculty of reasoning.
 
 The two most extreme poles of our sensation may be worded as "emptiness" and "fullness", respectively. And one may theorize that an intermediate mixture between these two dwells somewhere in between. A decent analogy can be found in the case of auditory sense-data, in which "emptiness" is the lack of any sound, "fullness" is the loudest sound we can ever hear, and their fractional combination is a sound of a moderate volume.
 
-The trouble resides in the plurality of our senses, for anyone can ask, "What about the brightness of light? What about hues and saturation of colors? What about the sense of touch, smell, taste, emotions, abstract feelings, and many others?"
+The trouble resides in the plurality of our senses, though, for anyone can ask, "What about the brightness of light? What about hues and saturation of colors? What about the sense of touch, smell, taste, emotions, abstract feelings, and many others?"
 
 So we do need some way of distinguishing different types of qualia from one another, aside from their levels of intensity.
 
 What seems to be a real trick is that each of these types may not exist in complete isolation. Our intuition often drives us to associate certain colors (e.g. red, yellow, orange) with warmth, or crackling sound with squiggly geometric features. They are poetically related to each other in ways which are somewhat loose yet nevertheless explicable in our language.
 
-Such blurriness, though, also evinces us the merit of not being too strict in terms of classification. We have a tendency to categorize our senses, yet such means of discretization may not be as axiomatic as it appears to be.
+Such blurriness, though, also evinces us the merit of not being too strict in terms of classification. We have a tendency to split our senses into fundamentally separate domains, yet such means of discretization may not be as axiomatic as it appears to be.
 
-Suppose that a category of sensation is a point on a continuous line. In this context, it is valid to assume that two infinitely close points are equivalent to two categories which are almost identical to each other except for an infinitesimal difference; that is, it is not absurd to say that there are categories for "color that is slightly warm", "sound that is slightly visible", and so on.
+Suppose that a category of sensation is a point on a continuous line. In this context, it is valid to assume that two infinitely close points are equivalent to two categories which are almost identical to each other except for an infinitesimal difference; that is, it is not absurd to say that there could be categories which are qualitatively vague such as "slightly warm color", "slightly visible sound", and so on.
 
-<>
+<043>
 
 What this suggests is that it is possible to imagine our qualia as points on a two-dimensional plane, whose two coordinate axes represent the intensity-dimension and category-dimension, respectively. The former is the amount of force with which a stimulus penetrates through our sphere of cognition; it is the identifier of quantity. The latter tells us the direction in which a stimulus approaches our sphere of cognition; it is the identifier of quality.
 
-<>
+<044>
 
-Such a model, as long as it does not ground itself on tautology, successfully reduces our perceptual space from one which is (N+1)-dimensional (where "N" is the total number of categories and the other "1" is for the intensity level) to one which is 2-dimensional (one dimension for quantity and the other dimension for quality), thereby making it far easier to illustrate our qualia graphically.
+Such a model, as long as it does not ground itself on tautology, successfully reduces our space of perception from one which is N-dimensional (where "N" is the total number of categories and each axis indicates the intensity level of each category) to one which is 2-dimensional (one dimension for the category and the other dimension for the intensity), thereby making it far easier to illustrate our qualia graphically.
+
+The remaining problem is to figure out how to simultaneously express these two distinct dimensions in terms of ideas and their relations.
+
+As we have already witnessed, formulating a single dimension can easily be done by aggregating the "AND" process over the initial duo (i.e. emptiness and fullness) in a recursive manner. The trouble begins when we try to instantiate two dimensions and make them coexist within the same idea space.
+
+(Will be continued in volume 18)
+
+
+
+
+
+
+
+:d:On computational representation of qualia and other ideas.
+:k:Metaphysics, Cognitive Science, Discrete Math, Computational Psychology, Mechanical Psychology
+:l:2023-12-03
+
+[The Origin of Reality - Volume 18] December 3, 2023
+
+(Continued from volume 17)
+
+From a cognitive point of view, one may rightfully claim that the reality is an ensemble of ideas, and that a complex idea is nothing more than an assembly of simpler ones. The simplest of them are the two sides of a duality.
+
+However, we typically reason in terms of numerical values, each of which belongs to a dimension. This leads us to feel the necessity to search for a bridge between the two theoretical constructs - one which renders an idea as a node in a network (i.e. graph), and the other one which renders an idea as a numerical range residing in a multidimensional vector space.
+
+The portion of the bridge which has been revealed so far tells us that it is possible to translate a set of combinations between emptiness and fullness into a dimension by means of an ordering rule.
+
+The other portion of the bridge which is yet to be fathomed is the method of representing not just one, but two dimensions - one for quantity (i.e. intensity of sensation), and the other one for quality (i.e. category of sensation). Once we have this figured out, we will be able to define any object of perception as a 2D vector.
+
+Imagine that we are painting a canvas using only two colors - black and white. If we put these colors at the same spot, we will see that they mix up with each other and turn into a speck of gray. This is an instance of "positional coincidence", and is equivalent to the "AND" operation.
+
+If we put black and white at two different spots, on the other hand, we will see two separate specks of color at two different locations. This coexistence is a neutral (i.e. "co-gray") entity which is not really a "mixture" of the two colors, but their "co-mixture" instead. It is the underlying abstraction called "color" which manifests itself in either black or white by means of the "OR" operation.
+
+<045>
+
+Just as we can generate countless shades of gray by mixing ("AND"-ing) a sufficiently large number of black and white specks, so can we generate countless "shades" of the very idea of color itself by co-mixing ("OR"-ing) a sufficiently large number of black and white specks. The former is done by putting black and white at the same exact position on the canvas over and over, whereas the latter is done by scattering black and white all over the canvas, thereby rendering a picture.
+
+Such a piece of fine art is not a single shade of gray (i.e. quantity), but a unique black-and-white scenery involving its own set of figures and their underlying narratives (i.e. quality).
+
+As we have witnessed before, recursive application of the "AND" relation gives birth to varying degrees of quantity. In contrast, recursive application of the "OR" relation gives birth to varying degrees of quality (i.e. categories of imagination), each of which is characterized by a collection of numerous black and white dots which altogether constitute a unique shape.
+
+<046>
+
+Thus, it is not hard to say that the two ways of synthesizing a pair of ideas (i.e. "AND" and "OR") correspond to the two opposing ways of describing the two dimensions of our perception - intensity (i.e. quantity) and category (i.e. quality). The intensity-dimension is the result of repeating the "AND" process, while the category-dimension is the result of repeating the "OR" process.
+
+Let us suppose that there is a light of intensity 2/3. And let us also suppose that the category of this sensation, which is called "light", is indicated by the number 1/3. In other words, this particular light is a compound idea which is made out of two numerical values corresponding to two dimensions - one being its intensity (= 2/3), and the other one being its category (= light = 1/3). The intensity value can be defined as "emptiness AND fullness AND fullness", whereas the category value can be defined as "emptiness OR emptiness OR fullness". This is because 2/3 is the 2-to-1 ratio between fullness and emptiness, whereas 1/3 is the 1-to-2 ratio between fullness and emptiness.
+
+This means that the idea of "light of intensity 2/3", as a whole, is simply a composition (i.e. "AND" relation) between its intensity (2/3) and category (1/3).
+
+<047>
+
+This sort of reasoning can continue on and on, gradually filling up the two spectrums of manifold values, one being a dimension made up of repeated "AND" procedures and the other one being a dimension made up of repeated "OR" procedures. Anyone may take a pair of values from these two dimensions, fuse them into one, and declare that it is a particular instance of our sensation.
+
+<048>
+
+And as we keep connecting such atoms of perception together with additional rounds of "AND" and "OR", we will discover more and more complex ideas, each of which is a collective sum of myriads of elementary (indivisible) qualia.
