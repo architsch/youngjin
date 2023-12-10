@@ -55,6 +55,7 @@ const fictionEntries = [
     ["alien-job-interview", "Alien Job Interview (2022)"],
     ["infinite-treasures", "The Island of Infinite Treasures (2022)"],
     ["infsoc", "Influential Social Posts (2023)"],
+    ["gamedev-journey", "A Game Developer's Journey (2023)"],
 ];
 const artEntries = [
     ["illustrations", "Illustrations (2009 - 2014)"],
