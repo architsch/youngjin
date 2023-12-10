@@ -4,6 +4,8 @@
 
 [A Game Developer's Journey - Chapter 1] December 6, 2023
 
+<001>
+
 (Chapter 1 - The Beginning)
 
 Once upon a time, there was a game developer living in his mom's basement.
