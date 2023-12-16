@@ -63,3 +63,74 @@ The square continued her speech. "You are tired of this perpetual cycle of hopel
 "That's why I came over to you, from the deepest and most abused organ of your only friend over there," said the square majestically. A floating finger popped out of nowhere and indicated the gaming PC which was located in the darkest corner of the basement.
 
 While making a bouncy pointing gesture, the finger accidentally touched the headphone which was hanging on the chair. The headphone fell to the ground, so the finger grabbed and placed it back to where it was.
+
+
+
+
+
+
+:d:A fictional adventure story of an indie game developer.
+:k:Fiction, Novel, Game Developer, Indie Game, GameDev, Game Design, Game Engine, Gameplay Engineer, Game Artist, Game Mechanics, Videogame, Computer game, Game Marketing
+:l:2023-12-07
+
+[A Game Developer's Journey - Chapter 2] December 7, 2023
+
+<001>
+
+(Chapter 2 - The Way)
+
+"Anyway, you get the idea," said the square. "You are trapped in the middle of nowhere, not knowing what to do to make sense of what you are aiming for. You want to become a competent gamedev, yet do not possess any major resource to make that happen. You are left clueless in your own prison of wishful thinking."
+
+"Yes, you are right," GameDev conceded rather painfully. "What should I do, then?"
+
+"Which things have you been trying?" Asked the square.
+
+GameDev replied. "I tried many things, including concept arts, mechanics, lores, plots, dialogues, and many others. Some of them worked out pretty nicely, but the problem is that I am not the only one who makes such attempts."
+
+"You know it very well," answered the square with a light grin. "You know exactly what the problem is. The game industry is saturated. Even if you come up with the most groundbreaking masterpiece, your work will most likely be forgotten."
+
+"I know."
+
+"And people's attention span is shorter than the shortest ruler required to measure the size of your soul."
+
+"What to do, then?" Inquired GameDev.
+
+"Just give up, if you have enough humility to do so," she replied.
+
+"I cannot," he insisted. "It is not that games are my lifelong passion or something; I am way past that sort of juvenile ego. I am unable to forsake my dream not because I am emotionally attached to it, but because there is nothing else I am particularly good at."
+
+The square flickered a couple of times and resumed her voice. "You clearly understand why you are stuck in Limbo. You have a rather abstract goal to which you would like to dedicate your life, but you are not sure if you are approaching it the right way."
+
+She enlarged herself for a brief moment, and then shrank back in size. "Although you haven't mentioned, I know that you are aware of the horror that is visible everywhere. Every morning, you witness yet another technological 'innovation' which promises to render human endeavor obsolete. Meanwhile, more and more people join the party and the heat of competition never calms down because 'making a game' is becoming easier than ever."
+
+The square paused. GameDev tried to think of something to say, yet he failed to do so because her speech was rather dry and uninspiring. What she just said was pretty much what he already had in his mind.
+
+"But," she resumed, "You ought to behold that, while there are a thousand obstacles hindering your way, there are also a thousand keys to unlock your way out. They are all right before your face; you are just too blind to recognize them."
+
+"What do you mean?" Inquired GameDev.
+
+She explained. "Opportunities are everywhere. There are so many, yet most people do not perceive them because they do not see the other side of what they have been facing. This is why the competition never eases itself, nor does it ever change its trajectory; most of its participants only know how to solve a problem in one way, without ever thinking of the possibility that other solutions might exist."
+
+"I know that there are so-called 'hidden opportunities'," said GameDev, "which I take with a grain of salt because most of them are just trendy buzzwords pitched by marketing experts."
+
+"Exactly," said the square with a chuckle. "That is why most people grab false clues and constantly get lured into thinking that they are pioneers of something revolutionary, while all they are doing is simply worship the latest fad and follow it like a herd of clueless sheep."
+
+She continued. "I am speaking of real opportunities, not the phony ones you just mentioned."
+
+"Every salesman talks like that," he responded with a rather explicit form of contempt.
+
+"Unless you are conversing with someone trustworthy, for sure," the square reproached. "I am here not for the purpose of selling anything, but to show you the way."
+
+"What is the 'way' you are talking about?" He inquired suspiciously.
+
+"The way," she answered.
+
+GameDev thought for a couple of seconds and asked, "You mean, the way to become a successful game developer?"
+
+"It's a rhetorical question, isn't it?" She replied. "You know that the 'way' you are searching for is indeed supposed to fulfill your current desire. While there may be multiple ways, we will still be able to treat them as one as long as they all guide you to the same destination."
+
+"How can you tell for sure," interrupted GameDev with a doubt, "that you are able to show me a way which is guaranteed to work? I have made numerous attempts to find one, yet they all turned out to be in vain."
+
+The square moved closer to GameDev and gently whispered. "In order to discover a solution, you must dig deep into the heart of the problem and divine its true nature. And to do that, you must experience every aspect of what makes up a game."
+
+Before GameDev had time to respond, she ascended by a few inches and made a brief humming noise. In a second, the whole basement disappeared and they were both surrounded by a mysterious panorama of colorful lights.
