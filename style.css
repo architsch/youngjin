@@ -7,8 +7,8 @@ body {
 	font-family: Courier New;
 	font-style: normal;
 	font-weight: 400;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 }
 p {
 	position: relative;
@@ -19,8 +19,8 @@ p {
 	font-family: Courier New;
 	font-style: normal;
 	font-weight: 400;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 }
 h3 {
 	position: relative;
@@ -31,8 +31,8 @@ h3 {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 }
 h2 {
 	position: relative;
@@ -43,8 +43,8 @@ h2 {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 h1 {
 	position: relative;
@@ -55,20 +55,20 @@ h1 {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
+	background-color: #202020;
 	color: #e0d0a0;
 }
 a:link {
-  color: #909090;
+  color: #a0a0a0;
 }
 a:visited {
-  color: #909090;
+  color: #a0a0a0;
 }
 a:hover {
   color: #e0d0a0;
 }
 a:active {
-  color: #909090;
+  color: #a0a0a0;
 }
 footer {
 	position: relative;
@@ -82,7 +82,7 @@ footer {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
+	background-color: #202020;
 	color: #707070;
 }
 
@@ -95,7 +95,7 @@ footer {
 	font-family: Courier New;
 	font-style: normal;
 	font-weight: 700;
-	background-color: #202020;
+	background-color: #000000;
 	color: #80d070;
 	border-radius: 4.5vmin;
 	white-space: nowrap;
@@ -109,8 +109,8 @@ footer {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #909090;
-	color: #404040;
+	background-color: #a0a0a0;
+	color: #202020;
 	border-radius: 4.5vmin;
 }
 .s_spacer {
@@ -118,32 +118,32 @@ footer {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 0.5vmin 0.5vmin 0.5vmin 0.5vmin;	margin: 0.5vmin auto 0.5vmin auto;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .m_spacer {
 	position: relative;
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .l_spacer {
 	position: relative;
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .xl_spacer {
 	position: relative;
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 2.0vmin 2.0vmin 2.0vmin 2.0vmin;	margin: 2.0vmin auto 2.0vmin auto;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 
 @media (orientation: landscape) {
@@ -157,8 +157,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .logoImage {
 	position: relative;
@@ -169,8 +169,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .logoImageSmall {
 	position: relative;
@@ -181,8 +181,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .profileImage {
 	position: relative;
@@ -193,8 +193,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 }
 .figureImage {
@@ -206,8 +206,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 }
 .gameImage {
@@ -219,8 +219,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 }
 .button {
@@ -232,8 +232,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #909090;
-	color: #d0d0d0;
+	background-color: #a0a0a0;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 	border: 1.5vmin #e0d0a0 solid;
 }
@@ -247,10 +247,10 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 	border-radius: 4.5vmin;
-	border: 1.5vmin #909090 solid;
+	border: 1.5vmin #a0a0a0 solid;
 }
 .gameLink:hover {
 	border-color: #e0d0a0
@@ -264,8 +264,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .noTextDeco {
 	text-decoration: none;
@@ -284,8 +284,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .logoImage {
 	position: relative;
@@ -296,8 +296,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .logoImageSmall {
 	position: relative;
@@ -308,8 +308,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .profileImage {
 	position: relative;
@@ -320,8 +320,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 }
 .figureImage {
@@ -333,8 +333,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 }
 .gameImage {
@@ -346,8 +346,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #d0d0d0;
+	background-color: #202020;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 }
 .button {
@@ -359,8 +359,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #909090;
-	color: #d0d0d0;
+	background-color: #a0a0a0;
+	color: #f0f0f0;
 	border-radius: 4.5vmin;
 	border: 1.5vmin #e0d0a0 solid;
 }
@@ -374,10 +374,10 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 	border-radius: 4.5vmin;
-	border: 1.5vmin #909090 solid;
+	border: 1.5vmin #a0a0a0 solid;
 }
 .gameLink:hover {
 	border-color: #e0d0a0
@@ -391,8 +391,8 @@ iframe {
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
-	background-color: #404040;
-	color: #909090;
+	background-color: #202020;
+	color: #a0a0a0;
 }
 .noTextDeco {
 	text-decoration: none;

@@ -3,7 +3,7 @@ const css = require('./styleDictionary.js');
 const fs = require('fs/promises');
 const fss = require('fs');
 
-const rootURL = "https://thingspool.net";
+const rootURL = "https://thingspool.net";// "/Users/architsch/Desktop/youngjin"
 const globalLastmod = "2023-09-10";
 
 // [code (directory name), title, play link URL, YouTube URL, lastmod]

@@ -2,11 +2,11 @@
 // Global Parameters
 //------------------------------------------------------------------------
 
-const extraDarkColor = "#202020";
-const darkColor = "#404040";
-const dimColor = "#707070";
-const mediumColor = "#909090";
-const lightColor = "#d0d0d0";
+const extraDarkColor = "#000000";//"#202020";
+const darkColor = "#202020";//"#404040";
+const dimColor = "#707070";//"#707070";
+const mediumColor = "#a0a0a0";//"#909090";
+const lightColor = "#f0f0f0";//"#d0d0d0";
 const lightYellowColor = "#e0d0a0";
 const lightGreenColor = "#80d070";
 
