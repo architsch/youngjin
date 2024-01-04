@@ -330,7 +330,7 @@ function addFooterHTML(htmlLines)
 {
     htmlLines.push(`<footer>`);
     htmlLines.push(`<a class="noTextDeco" href="${rootURL}"><img class="logoImageSmall" src="${rootURL}/logo.png" alt="ThingsPool Logo"></a>`);
-    htmlLines.push(`&copy 2019-2023 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com`);
+    htmlLines.push(`&copy 2019-2024 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com`);
     htmlLines.push(`</footer>`);
     htmlLines.push(`</body>`);
     htmlLines.push(`</html>`);
