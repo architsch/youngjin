@@ -177,7 +177,7 @@ async function makeWritingPages(writingEntries)
 
         htmlLines.length = 0;
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles", listRelativeURL);
-        htmlLines.push(`<h3><a href="${rootURL}">&#171; Back</a></h3>`);
+        htmlLines.push(`<h3><a href="${rootURL}">&#171; Back to Homepage</a></h3>`);
         htmlLines.push(`<h1>${entryTitle}</h1>`);
         htmlLines.push(`<div class="l_spacer"></div>`);
 
@@ -356,7 +356,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText, code
         console.error(":k: is missing in -> " + gameTitle);
 
     addHeaderHTML(htmlLines, "ThingsPool - " + gameTitle, description, keywords, relativePageURL);
-    htmlLines.push(`<h3><a href="${rootURL}">Home</a></h3>`);
+    htmlLines.push(`<h3><a href="${rootURL}">&#171; Back to Homepage</a></h3>`);
     htmlLines.push(`<h1>${gameTitle}</h1>`);
 
     addGamePlayButton(htmlLines, gamePlayURL);
@@ -481,7 +481,7 @@ function createHTMLsForWritings(rawText, code)
             description = "A writing by ThingsPool.";
             keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
             lastmod = globalLastmod;
-            htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back</a></h3>`);
+            htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back to List</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
             htmlLines.push(`<h3>Author: Youngjin Kang</h3>`);
             htmlLines.push(`<h3>Date: ${date}</h3>`);
