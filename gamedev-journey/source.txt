@@ -342,3 +342,69 @@ She then raised herself a bit and whistled. The Haunted House came back to where
 "I do understand what you mean, though," said the square solemnly. She moved about in a rather nervous fashion and resumed her line of speech. "I will show you something else which you might be interested in."
 
 She shuddered a bit. A wave of mist came over and wrapped both of them in silence.
+
+
+
+
+
+
+
+:d:A fictional adventure story of an indie game developer.
+:k:Fiction, Novel, Game Developer, Indie Game, GameDev, Game Design, Game Engine, Gameplay Engineer, Game Artist, Game Mechanics, Videogame, Computer game, Game Marketing
+:l:2023-12-16
+
+[A Game Developer's Journey - Chapter 6] December 16, 2023
+
+<001>
+
+(Chapter 6 - The Laboratory of Intellects)
+
+After the mist was gone, GameDev saw that they were no longer in the house. Instead, they were inside a vast hallway with a great number of classical mahogany doors in it.
+
+"We are in the Laboratory of Intellects," explained the square. "This is where all sorts of exciting academic experiments take place."
+
+There were quite a considerable number of people moving from door to door, all wearing black gawns and wearing square hats.
+
+She continued to describe what they were seeing. "Each door leads to a small office room, in which a unique interdisciplinary research is going on. Come here, and let us enter room 105; this is where a team of bright minds are investigating a new, revolutionary way of developing a game."
+
+GameDev followed her guidance. As they entered the room, they were confronted by a couple of large whiteboards filled with numerous mathematical formulas and diagrams. Over these scholastic barricades were several desks, where there were about four researchers rapidly skimming through a pile of engineering books.
+
+One of them, noticing the square's presence, stood up and welcomed her with a courteous greeting. Then, after conversing a bit, the researcher faced GameDev and spoke.
+
+"Hello, I am glad to see you. We are a group of scientists who have been undertaking a mission to invent a whole new genre of serious games, which will defy the age-old prejudice that a game is nothing more than just a piece of entertainment," said the researcher with a great deal of enthusiasm.
+
+"I agree," said GameDev. "May I hear more about it?"
+
+"Oh, sure. We are currently investigating a new method of redefining the very conception of what a game is. We have found out that, in order to do so, we must design the entire game based upon a strictly mathematical model of our natural environment which can be derived from physics, chemistry, biology, and other academic disciplines."
+
+"Interesting," he pondered. "What kind of model would that be?"
+
+"It is essentially a graph-based automaton which simulates our planet's ecosystem, in which each vertex represents the population of a species and each directed edge represents the probability that a predator will consume its prey at each time step. The system's feedback loop is controlled by a series of bio-rhythms with their own adjustable coefficients, each of which is a temporal sinusoid with its own unique frequency. They play a crucial role when it comes to simulating the environmental effects of the day/night cycle, seasons, and other phenomena which would've been a nightmare to implement if we were to map them into abstract data objects and their real-time spatial relations."
+
+"Okay."
+
+"But of course, this is the internal mechanism. The player will simply observe the ecosystem by means of a top-down 3D view of the planet, which will only render the overall contour of the globe as long as the camera is sufficiently far away from the surface. As the camera zooms in, our procedural content generator will select terrain patches which intersect with the player's FOV and populate them on the fly using a coordinate-based random seed as well as the current state of the ecosystem. The latter will be used to deterministically populate each patch by instancing procedurally generated 3D animal/plant meshes. This way, the player will be able to look up any region of the planet and still confirm that it appropriately reflects the overall stochastic distribution of the species."
+
+"Sounds interesting."
+
+After the conversation was over, GameDev politely yet silently walked out of the room and sat down on a bench which was located next to the hallway's central palm garden.
+
+"Did it inspire you?" Asked the square.
+
+He muttered. "No. Although their theory does involve intriguing details, I don't think that it will stand out in the gaming market."
+
+"Why do you think so?" She queried. "Don't you see that their plan is thoroughly logical and elaborate?"
+
+He stood up and began to roam. "I agree with your point," he spoke with bitterness. "These guys are unfathomably smart and I know it. However, their intellect hardly applies outside of their own prison of sophistry, as far as gaming is concerned."
+
+The square came closer to him and chortled ironically.
+
+"So, you don't believe that creating an intelligent system and making a game out of it is not good?" She questioned.
+
+GameDev stopped walking and faced her directly. "I do believe that a game must be designed intelligently, and ought to be more self-consistent than a mere cesspool of random puzzle pieces which do not even fit together. But a system made out of pure logic alone is not going to work either, since it is utterly soulless!"
+
+"What do you prefer, then?" She inquired.
+
+He answered. "A game must possess not only solid mechanics, but also solid narratives. It must touch the heart of one's emotions in order to give meaning to the whole story. A system of logic alone cannot fulfill this unignorable goal."
+
+As soon as he finished talking, another wave of mist came over and veiled everything.
