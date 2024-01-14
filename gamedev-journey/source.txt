@@ -485,3 +485,68 @@ The square asked curiously. "What you are demanding is a fictional world which e
 "Yes, I can assure," he said.
 
 She flickered a couple of times, temporarily changed her color to pure green, and resumed her original appearance. An earthquake shook the entire cavern, destroying everything.
+
+
+
+
+
+
+:d:A fictional adventure story of an indie game developer.
+:k:Fiction, Novel, Game Developer, Indie Game, GameDev, Game Design, Game Engine, Gameplay Engineer, Game Artist, Game Mechanics, Videogame, Computer game, Game Marketing
+:l:2023-12-19
+
+[A Game Developer's Journey - Chapter 8] December 19, 2023
+
+<001>
+
+(Chapter 8 - The Fantasy Forest)
+
+GameDev was overwhelmed by the ensuing rain of gravel, so he passed out.
+
+After an unknown length of time, he opened his eyes again and found out that the square was still in front of him. He stood up on his feet and looked around; they were in a forest.
+
+"This is the Fantasy Forest, a fictional world which contains its own history, culture, and countless other intricate settings," explained the square proudly.
+
+She summoned a floating finger and pointed to her left, upon which there was an entrance to a monorail. "Come, let us ride this to explore the place around us," she said.
+
+The cart on the rail began to move swiftly as soon as GameDev got on. As soon as it climbed up the greatly tilted portion of the track, he started to see various details of the forest. He saw small rivers, lakes, ravines, swamps, and meadows, as well as manmade structures such as castles of various shapes, half-demolished fortresses, and huts.
+
+The square placed herself right behind his back and explained. "Look at those flags. Each flag denotes the center of each region in this fictional territory. That red flag over there is the center of the region of Agrifacus-Hermanglia, which is dwelled by mermaids who obtained their air-breathing ability from the deities of the middle lake of Ethereandum as a consequence of the battle of Aeosaliphia in 30447 BC."
+
+GameDev looked back at her and raised his eyebrows.
+
+She continued. "Look! There is the dark purple flag with a golden insignia over there, right next to Mount Triple-Raindeer. It is the region of Clandescenglica, founded by the magical mushroom-eating dwarfs of West Gloecendules who achieved independence from the kingdom of Deliclausium back in 11240 BC, after the infamous 3 years of worldwide purge caused by their secret ploys to overthrow the throne of Queen Tessendronomia VI, who was one of the 7 divine rulers of the Southeast province of Gallenbrimeleum."
+
+"Okay, that's enough!" Exclaimed GameDev.
+
+"What is the matter?"
+
+He faced her and uttered his frustration. "You are throwing a bunch of useless details on me. What is the point of these historical lessons which I won't be able to memorize anyways?"
+
+"What I have been telling you is the backstory of the vast universe you must be acquainted with in order to appreciate the game which is built on top of it," she reproached. "We are travelling inside the world of one of the most popular MMORPGs of all time. Millions of fans are already analyzing and expanding the rich history of this collaborative fiction, in their web forums, chat rooms, and even offline yoga clubs."
+
+He thought for a second and showed his disagreement. "That's probably because the game is already popular. I am an indie developer; complex worldbuilding won't help me at all because people will simply regard mine as a word salad."
+
+"Make fans, then," she replied.
+
+"I can't because I do not have sufficient resources to get the audience hooked," he said. "No marketing budget at all! If I were a celebrity, there would've been fans willing to dig out all sorts of hidden meanings from even the most obscure of the poems I happen to ejaculate. But since I am nobody, no one will even bother to entertain the notion that any of my work might be something worth looking at."
+
+She turned off the cart's engine to mute its ambient noise.
+
+She then got closer to GameDev and whispered. "This is why you need to come up with a highly sophisticated fictional world first. It is the everlasting place to which your future fans will be able to stick their heart. In order to win their love, you've got to build a cultural entity which lasts outside of the game itself. Isn't it what you suggested when we visited the cave?"
+
+He turned his face away from her and said, "Those manifold things you've mentioned have no meaning. Or, maybe they do, but they are not important to me anyways because I do not see why knowing them will help me live a better life."
+
+"So, you believe that practical use cases are a necessary precondition of interest?" She asked.
+
+"Yes, I do," he admitted. "People need to be convinced that the things they are meant to see will benefit them."
+
+"Good point," she conceded. "But how will you convince them?"
+
+GameDev became silent. There were quite a multitude of potential answers, yet he was not sure which one would apply to games.
+
+"Gamers typically follow their instincts," explained the square, "which are vastly prehistoric in nature. Before they are sophisticated social beings, they are hunter-gatherers clamoring to collect resources, expand their territories, reproduce, and secure their belongings. It is why RPGs and survival games are prone to attract large audiences."
+
+"I agree."
+
+"However, you cannot just focus on the idea of instinct alone. There must be something feasible, such as food, gold, pitfall, and the like, which will activate the player's latent instincts. And they must come in a variety, for otherwise the game will be too repetitive."
