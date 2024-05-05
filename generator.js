@@ -44,7 +44,7 @@ const devlogEntries = [
 const nonfictionEntries = [
     ["metaphysics", "형이상학 (2013 - 2014)"],
     ["game-analysis", "게임분석 (2019)"],
-    ["essays", "Miscellaneous Writings (2022 - 2023)"],
+    ["essays", "Miscellaneous Writings (2022 - 2024)"],
     ["blockchains", "On Legitimacy of Blockchains (2022)"],
     ["software-development", "Software Development (2022 - 2023)"],
     ["game-design", "Universal Laws of Game Design (2023)"],
