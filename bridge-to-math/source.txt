@@ -82,7 +82,7 @@ What is a "function", then? There are many ways of defining it, yet perhaps the 
 
 <006>
 
-Whenever you choose to gather a multitude of such machines and compose them in order to produce the result you desire, you are building a factory where the individual workers collaborate with one another in a streamlined manner. The output of one worker could be handed over to another worker as the input, or multiple workers could be grabbing the same input and working on it concurrently so as to double the speed of production, and so on. There are so many possiblilities here, and they can all be realized by joining functions with each other in creative ways. It all boils down to a network of input-output relations.
+Whenever you choose to gather a multitude of such machines and compose them in order to produce the result you desire, you are building a factory where the individual workers collaborate with one another in a streamlined manner. The output of one worker could be handed over to another worker as the input, or multiple workers could be grabbing the same input and working on it concurrently so as to double the speed of production, and so on. There are so many possibilities here, and they can all be realized by joining functions with each other in creative ways. It all boils down to a network of input-output relations.
 
 There is yet another way of defining what a function is, though. If you contemplate upon the meaning of a function in terms of what it does, you will soon come to the conclusion that a function is, on a purely conceptual level, just a bunch of connections between all of its possible inputs and their corresponding outputs.
 
