@@ -184,7 +184,7 @@ We know that baking a piece of dough gives us a biscuit, baking a piece of cooki
 
 <021>
 
-Now we have it. "output = input + 10" is the only formula we need to be able to derive the output of the "bake" function from any given input. This is the power of representing things numerically; since quantitative operators such as addition (+), subtraction (-), multiplication (x), and division (/) are endowed with the abilty to easily summarize the way in which one set of things can be mapped into with another set of things.
+Now we have it. "output = input + 10" is the only formula we need to be able to derive the output of the "bake" function from any given input. This is the power of representing things numerically; since quantitative operators such as addition (+), subtraction (-), multiplication (x), and division (/) are endowed with the ability to easily summarize the way in which one set of things can be mapped into with another set of things.
 
 One major concern which may arise here, though, is that utilizing numbers in the context of baking is perhaps a bit too "hacky". As you may have noticed already, attaching arbitrary numbers to a bunch of seemingly unrelated objects such as "dough", "cookie", "shortbread", and so on, feels way too random when we think about it. Why should "cookie" always be identified by number 11? Why can't it be 42, 990, -83794, or 51.230774 instead?
 
