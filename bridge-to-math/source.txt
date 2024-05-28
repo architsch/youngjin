@@ -397,7 +397,7 @@ Here is a key observation which will support the statement I just made. As you c
 
 <048>
 
-A number which belongs to this alternative dimension tells us which characteristic of the object corresponds to the value of 3. Such an uncommon way of expression may hardly be useful for practical purposes, but it is neverthelss a perfect demonstration of the fact that a dimension is not a magical entity imbued with its own irreplicable qualities.
+A number which belongs to this alternative dimension tells us which characteristic of the object corresponds to the value of 3. Such an uncommon way of expression may hardly be useful for practical purposes, but it is nevertheless a perfect demonstration of the fact that a dimension is not a magical entity imbued with its own irreplicable qualities.
 
 It feels like there is a clear difference between a dimension and a non-dimension, though. We are not likely to come up with a dimension just by picking a bunch of random ideas and putting them in a sequence, since the result is almost guaranteed to be meaningless. It is only when a sequence has at least one common idea (e.g. "temperature") as well as a range of numerical values to grant a sense of variability to such an idea, that it will qualify itself as a dimension.
 
