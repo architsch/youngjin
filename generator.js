@@ -3,7 +3,7 @@ const css = require('./styleDictionary.js');
 const fs = require('fs/promises');
 const fss = require('fs');
 
-const rootURL = "https://thingspool.net";// "/Users/architsch/Desktop/youngjin"
+const rootURL = "https://thingspool.net";
 const globalLastmod = "2023-09-10";
 
 // [code (directory name), title, play link URL, YouTube URL, lastmod]
@@ -37,10 +37,7 @@ const gameEntries = [
         "2023-09-20",
     ],
 ];
-const devlogEntries = [
-    ["devlog-webgl-engine", "WebGL Game Engine (2023)"],
-    ["devlog-cpp-exp", "C/C++ Experiments (2023)"],
-];
+
 const nonfictionEntries = [
     ["metaphysics", "형이상학 (2013 - 2014)"],
     ["game-analysis", "게임분석 (2019)"],
@@ -61,6 +58,9 @@ const fictionEntries = [
 const artEntries = [
     ["illustrations", "Illustrations (2009 - 2014)"],
     ["cartoons", "Cartoons (2011 - 2015)"],
+];
+const linkEntries = [
+    ["read-rec", "Recommended Readings (2024)"],
 ];
 
 const sitemapLines = [
@@ -93,10 +93,10 @@ async function run()
     // Generate HTMLs for writings
     //------------------------------------------------------------------------------------
 
-    await makeWritingPages(devlogEntries);
     await makeWritingPages(nonfictionEntries);
     await makeWritingPages(fictionEntries);
     await makeWritingPages(artEntries);
+    await makeWritingPages(linkEntries, true);
 
     //------------------------------------------------------------------------------------
     // Generate index.html
@@ -117,7 +117,7 @@ async function run()
     makeWritingPagesList("Arts", artEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
-    makeWritingPagesList("Devlog", devlogEntries, htmlLines);
+    makeWritingPagesList("Recommendations", linkEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
     htmlLines.push(`<h2 class="banner">Games</h2>`);
@@ -164,7 +164,7 @@ function makeWritingPagesList(title, writingEntries, htmlLines)
     }
 }
 
-async function makeWritingPages(writingEntries)
+async function makeWritingPages(writingEntries, omitDateAndAuthor = false)
 {
     const htmlLines = [];
     for (let i = 0; i < writingEntries.length; ++i)
@@ -174,7 +174,7 @@ async function makeWritingPages(writingEntries)
 
         const entryTitle = writingEntries[i][1];
         const rawText = await read(`${code}/source.txt`);
-        const {fileIndices, fileTitles, fileTexts, fileLastmods} = createHTMLsForWritings(rawText, code);
+        const {fileIndices, fileTitles, fileTexts, fileLastmods} = createHTMLsForWritings(rawText, code, omitDateAndAuthor);
 
         htmlLines.length = 0;
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles", listRelativeURL);
@@ -196,7 +196,7 @@ async function makeWritingPages(writingEntries)
             addSitemapEntry(`${rootURL}/${entryRelativeURL}`, fileLastmod);
         }
 
-        addPromo(htmlLines);
+        //addPromo(htmlLines);
         addFooterHTML(htmlLines);
 
         await write(listRelativeURL, htmlLines.join("\n"));
@@ -416,7 +416,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText, code
     return htmlLines.join("\n");
 }
 
-function createHTMLsForWritings(rawText, code)
+function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
 {
     let isFirstArticle = true;
     let title = "???";
@@ -467,7 +467,7 @@ function createHTMLsForWritings(rawText, code)
             const date = line.match(/\](.*?)$/)[1].trim();
             if (!isFirstArticle)
             {
-                addPromo(htmlLines);
+                //addPromo(htmlLines);
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
                 fileTexts.push(htmlLines.join("\n"));
@@ -484,8 +484,13 @@ function createHTMLsForWritings(rawText, code)
             lastmod = globalLastmod;
             htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back to List</a></h3>`);
             htmlLines.push(`<h1>${title}</h1>`);
-            htmlLines.push(`<h3>Author: Youngjin Kang</h3>`);
-            htmlLines.push(`<h3>Date: ${date}</h3>`);
+
+            if (!omitDateAndAuthor)
+            {
+                htmlLines.push(`<h3>Author: Youngjin Kang</h3>`);
+                htmlLines.push(`<h3>Date: ${date}</h3>`);
+            }
+
             htmlLines.push(`<div class="l_spacer"></div>`);
         }
         else if (line.startsWith("<")) // image reference
@@ -498,9 +503,8 @@ function createHTMLsForWritings(rawText, code)
                 htmlLines.push(`<img class="figureImage" src="${imgPath}" alt="${title} (Figure ${imageIndex++})">`);
             }
         }
-        else if (line.startsWith("@@")) // Spaced custom HTML tag (such as an embedded video clip)
+        else if (line.startsWith("@@")) // Custom HTML tag
         {
-            htmlLines.push(`<div class="l_spacer"></div>`);
             htmlLines.push(line.substring(2));
         }
         else if (line.startsWith("#$")) // snippet
@@ -530,7 +534,7 @@ function createHTMLsForWritings(rawText, code)
         }
     }
     endParagraph();
-    addPromo(htmlLines);
+    //addPromo(htmlLines);
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
     fileTexts.push(htmlLines.join("\n"));

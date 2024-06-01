@@ -80,19 +80,6 @@ gtag('config', 'G-JL7KHR7HK8');
 <img class="figureImage" src="https://thingspool.net/software-development/003_08.jpg" alt="Functional Programming for Game Development (Figure 3)">
 <p>This, of course, starts to become too verbose as we keep elongating the game's memory stream. Therefore, a much more realistic implementation would be to represent the history of the game's state as a single list variable rather than a sequence of manually specified function arguments.</p>
 <p class="snippet">(defun&nbsp;update-loop&nbsp;(stateHistory)<br>&nbsp;&nbsp;&nbsp;&nbsp;(wait-for-next-frame)<br>&nbsp;&nbsp;&nbsp;&nbsp;(update-loop&nbsp;(cons&nbsp;(update-state&nbsp;stateHistory)&nbsp;(without-last&nbsp;stateHistory))))</p>
-<div class="xl_spacer"></div>
-<a class="noTextDeco" href="https://thingspool.net/Water-vs-Fire/page.html">
-<img class="gameLink" src="https://thingspool.net/Water-vs-Fire/entry.jpg" alt="Water vs Fire">
-</a>
-<a class="noTextDeco" href="https://thingspool.net/HuntLand/page.html">
-<img class="gameLink" src="https://thingspool.net/HuntLand/entry.jpg" alt="HuntLand">
-</a>
-<a class="noTextDeco" href="https://thingspool.net/PoliceChase/page.html">
-<img class="gameLink" src="https://thingspool.net/PoliceChase/entry.jpg" alt="Police Chase">
-</a>
-<a class="noTextDeco" href="https://thingspool.net/SpaceTown/page.html">
-<img class="gameLink" src="https://thingspool.net/SpaceTown/entry.jpg" alt="SpaceTown">
-</a>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2024 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com

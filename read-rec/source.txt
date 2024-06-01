@@ -1,0 +1,29 @@
+:d:Introduction to Metaphysical Notes by Thomas Scarborough
+:k:Thomas Scarborough, Philosophical Investigations, Metaphysical Notes, Philosophy, Relational Math, Symbolic Logic
+:l:2024-06-01
+
+[Metaphysical Notes - by Thomas Scarborough] June 1, 2024
+
+Let me introduce "Metaphysical Notes", written by Thomas Scarborough.
+
+@@<h3>You can read it <a href="https://www.thomas-scarborough.com/p/links.html">Here</a>.</h3>
+@@<div class="l_spacer"></div>
+<001>
+@@<hr>
+@@<div class="l_spacer"></div>
+
+@@<h3><b>Introduction:</b></h3>
+
+Thomas O. Scarborough is one of the prominent philosophical writers in the United Kingdom, who has professional background in both theology and linguistics. "Metaphysical Notes" is one of his most iconic primers on the field of philosophy.
+
+@@<h3><b>Key Notes:</b></h3>
+
+1. There have traditionally been a multitude of metaphysical worldviews, yet today's interconnected (global) world demands us to come up with a new, reformed kind of metaphysics which unifies them all.
+
+2. Our whole domain of reality can be modeled as a network of relations. Individual "things" (such as objects) do not really exist because each of them is defined in terms of how it is associated with other things. From a purely definitional standpoint, all we are left with is a set of relations, and "things" are just their points of intersection.
+
+3. We define our world in terms of relations which we can identify in nature. However, there is a major dilemma between two methodologies. Whenever we focus on analyzing a small group of relations with utmost accuracy (as in natural sciences), we become nearsighted. Whenever we focus on surveying a large group of relations (as in human sciences), on the other hand, our reason loses precision.
+
+4. The apparent gap between fact and value further increases the complexity of our analysis. Sometimes we notice that a set of relations we observe are not what they ought to be, which subsequently motivates us to carry out a list of actions to fix it. Yet we also know that other people have their own ideals, as well as that they communicate such ideals using their own semiotic methods (which are subject to misinterpretation). The prevalence of such multifaceted factors leaves us puzzled.
+
+5. Therefore, we must somehow figure out the best way to "pick and choose" the kind of relations we ought to pay attention to. In order to do so, we should first realize that we have multiple centers (i.e. beliefs) in our domain of intuition, and proceed to come up with a super-center (i.e. super-belief) which will supersede all other centers. Once we pivot our attention around such an absolute and singular reference point, we will be able to build a solid foundation of our new metaphysics.
