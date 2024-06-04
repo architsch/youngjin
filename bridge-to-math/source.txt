@@ -669,7 +669,7 @@ A biscuit with 0 position particle is a biscuit located at position 0, and a bis
 
 The concept is pretty simple. Every attribute of an object (e.g. "temperature", "sweetness", or "position") is a distinct particle type, and the attribute's quantity is determined by the number of particles which belong to that specific type.
 
-In this new worldview, a two-dimensional point in space can be expressed as a composition of X particles and Y particles. The number of X particles indicates the x-coordiante of the point, and the number of Y particles indicates the y-coordinate of the point. You can change the location of this point by changing the number of its X and Y particles (X for horizontal movement, Y for vertical movement).
+In this new worldview, a two-dimensional point in space can be expressed as a composition of X particles and Y particles. The number of X particles indicates the x-coordinate of the point, and the number of Y particles indicates the y-coordinate of the point. You can change the location of this point by changing the number of its X and Y particles (X for horizontal movement, Y for vertical movement).
 
 <078>
 
