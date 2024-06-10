@@ -897,7 +897,7 @@ In our "subtractBiscuit" function, the condition we want to check is whether the
 
 If this condition is met, we will proceed to remove "biscuit ID" from the belt. This is our "YES" path.
 
-Otherwise, we must leave the belt as it is without changing anything. This is out "NO" path.
+Otherwise, we must leave the belt as it is without changing anything. This is our "NO" path.
 
 CONDITION: Does conveyorBelt contain "biscuit ID"?
 IF "YES": subtractBiscuit(conveyorBelt) = pushFront(conveyorBelt - biscuit ID)

@@ -70,7 +70,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>A conditional statement allows us to choose which of the two pathways we must follow. If the given condition is satisfied, we will follow the "YES" path. If not, we will follow the "NO" path.</p>
 <p>In our "subtractBiscuit" function, the condition we want to check is whether the conveyor belt's frontmost slot has a biscuit or not. Algebraically, it is the same thing as saying whether the formula contains the "biscuit ID" term or not.</p>
 <p>If this condition is met, we will proceed to remove "biscuit ID" from the belt. This is our "YES" path.</p>
-<p>Otherwise, we must leave the belt as it is without changing anything. This is out "NO" path.</p>
+<p>Otherwise, we must leave the belt as it is without changing anything. This is our "NO" path.</p>
 <p>CONDITION: Does conveyorBelt contain "biscuit ID"?<br>IF "YES": subtractBiscuit(conveyorBelt) = pushFront(conveyorBelt - biscuit ID)<br>IF "NO": subtractBiscuit(conveyorBelt) = conveyorBelt</p>
 <img class="figureImage" src="https://thingspool.net/bridge-to-math/100.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 9)">
 <p>What shall we do if the conveyor belt's frontmost slot is occupied by a cookie instead of a biscuit? The answer is pretty straightforward because we now know what the condition is. The formula does not have "biscuit ID" in it, so we will do nothing and simply return the original conveyor belt.</p>
