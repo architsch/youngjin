@@ -189,7 +189,7 @@ async function makeWritingPages(writingEntries, omitDateAndAuthor = false)
             const fileText = fileTexts[j];
             const fileLastmod = fileLastmods[j];
             const fileHTMLFileName = `page-${fileIndex}.html`;
-            htmlLines.push(`<h3><a href="${rootURL}/${code}/${fileHTMLFileName}">${fileTitle}</a></h3>`);
+            htmlLines.push(`<h3>${fileTitle}<br><a href="${rootURL}/${code}/${fileHTMLFileName}">View</a></h3>`);
 
             const entryRelativeURL = `${code}/${fileHTMLFileName}`;
             await write(entryRelativeURL, fileText);
