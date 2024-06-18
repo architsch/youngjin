@@ -423,6 +423,7 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
     let fileIndex = 1;
     let imageIndex = 1;
     let snippetOn = false;
+    let excerptOn = false;
     const paragraphLinesPending = [];
     const fileIndices = [];
     const fileTitles = [];
@@ -439,6 +440,8 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
         {
             if (snippetOn)
                 htmlLines.push(`<p class="snippet">${paragraphLinesPending.join("<br>").replaceAll(" ", "&nbsp;")}</p>`);
+            else if (excerptOn)
+                htmlLines.push(`<p class="excerpt">${paragraphLinesPending.join("<br>")}</p>`);
             else
                 htmlLines.push(`<p>${paragraphLinesPending.join("<br>")}</p>`);
             paragraphLinesPending.length = 0;
@@ -449,12 +452,12 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
     for (let i = 0; i < lines.length; ++i)
     {
         let line = lines[i];
-        if (!snippetOn)
+        if (!snippetOn && !excerptOn)
             line = line.trim();
 
         if (line.length == 0) // empty line
         {
-            if (snippetOn)
+            if (snippetOn || excerptOn)
                 paragraphLinesPending.push(`<br>`);
             else
                 endParagraph();
@@ -493,7 +496,7 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
 
             htmlLines.push(`<div class="l_spacer"></div>`);
         }
-        else if (line.startsWith("<")) // image reference
+        else if (line.startsWith("<") && !snippetOn && !excerptOn) // image reference
         {
             endParagraph();
             const imgName = line.match(/<(.*?)>/)[1];
@@ -512,6 +515,11 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
             endParagraph();
             snippetOn = !snippetOn;
         }
+        else if (line.startsWith("#\"")) // excerpt
+        {
+            endParagraph();
+            excerptOn = !excerptOn;
+        }
         else if (line.startsWith(":d:"))
         {
             description = line.substring(3);
@@ -523,10 +531,6 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
         else if (line.startsWith(":l:"))
         {
             lastmod = line.substring(3);
-        }
-        else if (line.startsWith("_CUT_"))
-        {
-            break;
         }
         else // plain text
         {

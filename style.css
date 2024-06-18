@@ -3,7 +3,7 @@ body {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 0.5vmin 0.5vmin 0.5vmin 0.5vmin;	margin: 0.5vmin auto 0.5vmin auto;
-	font-size: min(2.8vmax, 18px);
+	font-size: min(2.24vmax, 18.00px);
 	font-family: Courier New;
 	font-style: normal;
 	font-weight: 400;
@@ -15,7 +15,7 @@ p {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
-	font-size: min(2.8vmax, 18px);
+	font-size: min(2.24vmax, 18.00px);
 	font-family: Courier New;
 	font-style: normal;
 	font-weight: 400;
@@ -27,7 +27,7 @@ h3 {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(3.36vmax, 22px);
+	font-size: min(2.69vmax, 22.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -39,7 +39,7 @@ h2 {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
-	font-size: min(4.0vmax, 26px);
+	font-size: min(3.20vmax, 26.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -51,7 +51,7 @@ h1 {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -78,7 +78,7 @@ footer {
 	margin-left: 5vw;
 	margin-right: 5vw;
 	padding: 3vmax 3vmax 3vmax 3vmax;
-	font-size: min(3.36vmax, 22px);
+	font-size: min(2.69vmax, 22.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -91,7 +91,7 @@ footer {
 	display: inline-block;
 	width: auto;
 	text-align: left;	padding: 2.0vmin 2.0vmin 2.0vmin 2.0vmin;	margin: 2.0vmin auto 2.0vmin auto;
-	font-size: min(2.8vmax, 18px);
+	font-size: min(2.24vmax, 18.00px);
 	font-family: Courier New;
 	font-style: normal;
 	font-weight: 700;
@@ -100,12 +100,25 @@ footer {
 	border-radius: 4.5vmin;
 	white-space: nowrap;
 }
+.excerpt {
+	position: relative;
+	display: inline-block;
+	width: auto;
+	text-align: center;	padding: 1.5vmin 1.5vmin 1.5vmin 1.5vmin;	margin: 1.5vmin auto 1.5vmin auto;
+	font-size: min(2.24vmax, 18.00px);
+	font-family: Courier New;
+	font-style: italic;
+	font-weight: 400;
+	background-color: #000000;
+	color: #80d070;
+	border-radius: 4.5vmin;
+}
 .banner {
 	position: relative;
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 2.0vmin 2.0vmin 2.0vmin 2.0vmin;	margin: 2.0vmin auto 2.0vmin auto;
-	font-size: min(4.0vmax, 26px);
+	font-size: min(3.20vmax, 26.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -153,7 +166,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(4.0vmax, 26px);
+	font-size: min(3.20vmax, 26.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -165,7 +178,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -177,7 +190,7 @@ iframe {
 	display: block;
 	max-width: 23vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -189,7 +202,7 @@ iframe {
 	display: block;
 	max-width: 28vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -202,7 +215,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -215,7 +228,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -228,7 +241,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -243,7 +256,7 @@ iframe {
 	width: 30vw;
 	height: 9.1714vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -260,7 +273,7 @@ iframe {
 	display: inline-block;
 	width: 30vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -280,7 +293,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(4.0vmax, 26px);
+	font-size: min(3.20vmax, 26.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -292,7 +305,7 @@ iframe {
 	display: block;
 	max-width: 80vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -304,7 +317,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -316,7 +329,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -329,7 +342,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -342,7 +355,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -355,7 +368,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -370,7 +383,7 @@ iframe {
 	width: 80vw;
 	height: 24.4571vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;
@@ -387,7 +400,7 @@ iframe {
 	display: block;
 	width: 60vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin 1.0vmin 1.0vmin;	margin: 1.0vmin auto 1.0vmin auto;
-	font-size: min(5.6vmax, 36px);
+	font-size: min(4.48vmax, 36.00px);
 	font-family: Courier New;
 	font-style: italic;
 	font-weight: 700;

@@ -79,3 +79,74 @@ It has traditionally been claimed that "showing" is better than "telling" when i
 
 @@<h3><a href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/">PART 11, THE MEANING-MAKER’S SPACE</a></h3>
 This article explains how a narrative can be modeled inside a "conceptual space" (i.e. a hypothetical geometry in which narrative elements are being placed as spatial objects). The underlying motivation behind this space-oriented approach is that each spatial axis (dimension) essentially represents a duality between two opposing forces (e.g. Good and Evil, Life and Death, Visible and Invisible, etc), so that, if we construct an N-dimensional conceptual space, we will be able to define every single narrative element as a combination of N dualistic attributes. Also, the center of the conceptual space may be considered the observer's position, and we may suppose that points close to the observer are things that are familiar, while points far away from the observer are things that are unfamiliar. The author explains that the space may as well be "warped" by the way in which narrative elements are placed (in the form of obstacles, shortcuts, etc), which will then drive the audience (observer) to either move from the familiar to the unfamiliar, or from the unfamiliar to the familiar (The former case could be described as "a moment of surprise", and the latter case could be described as "a moment of relief").
+
+
+
+
+
+
+
+
+:d:About the role of the unconscious in goal-driven narratives.
+:k:Katarina Gyllenbäck, Narrative Construction, Narrative Bridging, Narrative Designer, Mixed Media, Interactive Media, E Learning, Edutainment, Educational Games
+:l:2024-06-18
+
+[The Benefit and Disadvantage of Unconsciousness - by Katarina Gyllenbäck] June 18, 2024
+
+Let me introduce "PART 2, THE BENEFIT AND DISADVANTAGE OF UNCONSCIOUSNESS", a narrative design article written by Katarina Gyllenbäck.
+
+@@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/benefit-disadvantage-of-unconsciousness/">Here</a>.</h3>
+@@<div class="s_spacer"></div>
+<002>
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Introduction:</b></h3>
+
+Katarina Gyllenbäck is a researcher, educator, and writer in the field of narrative design. Her areas of expertise include storytelling, drama & theatre, and interactive media such as games. She is also known for her unique method of narrative construction called "Narrative Bridging".
+
+"PART 2, THE BENEFIT AND DISADVANTAGE OF UNCONSCIOUSNESS" is one of her early blog articles which explains the role of the unconscious in the recognition of a goal in a narrative, as well as how a person's "fear of the unknown" becomes an implicit motive behind one's willingness to learn by means of exploration.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 1:</b></h3>
+
+When we are talking about a goal which is already meaningful to us, we often overlook the fact that other people do not necessarily share the same goal. This is because one's unconscious mind tends to process familiar pieces of information automatically behind the scene, without informing the conscious mind.
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+(...) the cognitive psychologist Jerome Bruner says the reason why we find it hard to achieve consciousness about how we interpret (evaluate) information and create meaning is that we are “too expert” and we cannot see what we so easily do automatically. Bruner calls the condition the “unconsciousness of the automatic” (Bruner, 1996).
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 2:</b></h3>
+
+Therefore, aiming for humanity's common goal is oftentimes a fast and easy solution to resolve the problem of dissonance. This will effectively "sync up" our unconscious minds, letting us understand each other deeply (not just superficially).
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+So if one truly likes to engage people in a meaningful experience, the desired goal has to make sense to all.
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 3:</b></h3>
+
+A narrative, on the other hand, usually involves a conflict among multiple goals. However, such a conflict is desirable because it is fictional. The only requirement is that the constructor of a narrative must not be too emotionally attached to any one of the goals specifically; that is, the constructor must remain "value neutral" (lest his/her work be classified as a political propaganda).
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+(...) for a narrative constructor, the most important is to at least make sure to be the last man standing when everyone else gives in to the “unconsciousness of the automatic” and want to cry.
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 4:</b></h3>
+
+Whenever we encounter something that is unfamiliar to us, we feel urged to make sense of it by means of observation and reasoning. The designer can create this kind of motivation by selectively hiding information from the viewer (e.g. 'Fog of War' in video games).
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+Since we like to avoid the anxiety that occurs when not understanding (by seeing strange things that we can´t identify) we create meanings (assumptions) to get in control. (...) And it´s here, in the very heart of the “anxiety-driven” learning narrative constructors reside by holding back and forwarding information to create curiosity.
+#"

@@ -87,11 +87,17 @@ const m_spacing_leftText = spacing("1.0vmin", true, true, "left");
 const l_spacing_leftText = spacing("1.5vmin", true, true, "left");
 const xl_spacing_leftText = spacing("2.0vmin", true, true, "left");
 
-const s_font = font("min(2.8vmax, 18px)", false, 400);
-const s_bold_font = font("min(2.8vmax, 18px)", false, 700); // x1.2
-const m_font = font("min(3.36vmax, 22px)", true, 700); // x1.2
-const l_font = font("min(4.0vmax, 26px)", true, 700); // x1.2
-const xl_font = font("min(5.6vmax, 36px)", true, 700); // x1.4
+const fontScaleFactor_vmax = 0.8;
+const fontScaleFactor_px = 1.0;
+
+const size_s_font = `min(${(2.8*fontScaleFactor_vmax).toFixed(2)}vmax, ${(18*fontScaleFactor_px).toFixed(2)}px)`;
+
+const s_font = font(size_s_font, false, 400);
+const s_italic_font = font(size_s_font, true, 400);
+const s_bold_font = font(size_s_font, false, 700);
+const m_font = font(`min(${(3.36*fontScaleFactor_vmax).toFixed(2)}vmax, ${(22*fontScaleFactor_px).toFixed(2)}px)`, true, 700);
+const l_font = font(`min(${(4.0*fontScaleFactor_vmax).toFixed(2)}vmax, ${(26*fontScaleFactor_px).toFixed(2)}px)`, true, 700);
+const xl_font = font(`min(${(5.6*fontScaleFactor_vmax).toFixed(2)}vmax, ${(36*fontScaleFactor_px).toFixed(2)}px)`, true, 700);
 
 const light_color_frame = simpleFrame(darkColor, lightColor);
 const medium_color_frame = simpleFrame(darkColor, mediumColor);
@@ -103,6 +109,7 @@ const gameLinkImageHover_frame = borderedFrame(darkColor, mediumColor, lightYell
 const button_frame = borderedFrame(mediumColor, lightColor, lightYellowColor);
 const img_frame = roundedFrame(darkColor, lightColor);
 const snippet_frame = roundedFrame(extraDarkColor, lightGreenColor);
+const excerpt_frame = roundedFrame(extraDarkColor, lightGreenColor);
 
 //------------------------------------------------------------------------
 // Orientation-Dependent Styles
@@ -244,6 +251,14 @@ footer {
 	${s_bold_font}
 	${snippet_frame}
 	white-space: nowrap;
+}
+.excerpt {
+	position: relative;
+	display: inline-block;
+	width: auto;
+	${l_spacing}
+	${s_italic_font}
+	${excerpt_frame}
 }
 .banner {
 	${full_row_area}
