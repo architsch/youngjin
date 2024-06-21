@@ -120,11 +120,11 @@ async function run()
     makeWritingPagesList("Recommendations", linkEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
-    htmlLines.push(`<h2 class="banner">Games</h2>`);
+    htmlLines.push(`<h1>Games</h1>`);
     addPromo(htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
-    htmlLines.push(`<h2 class="banner">About Myself</h2>`);
+    htmlLines.push(`<h1>About Myself</h1>`);
     htmlLines.push(`<div class="l_spacer"></div>`);
     htmlLines.push(`<img class="profileImage" src="${rootURL}/profile.jpg" alt="Youngjin Kang">`);
     htmlLines.push(`<div class="l_spacer"></div>`);
@@ -154,8 +154,8 @@ async function run()
 
 function makeWritingPagesList(title, writingEntries, htmlLines)
 {
-    htmlLines.push(`<h2 class="banner">${title}</h2>`);
-    
+    htmlLines.push(`<h1>${title}</h1>`);
+
     writingEntries.reverse();
 
     for (let i = 0; i < writingEntries.length; ++i)
