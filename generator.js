@@ -155,12 +155,14 @@ async function run()
 function makeWritingPagesList(title, writingEntries, htmlLines)
 {
     htmlLines.push(`<h2 class="banner">${title}</h2>`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
+    
+    writingEntries.reverse();
+
     for (let i = 0; i < writingEntries.length; ++i)
     {
         const code = writingEntries[i][0];
         const entryName = writingEntries[i][1];
-        htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">${entryName}</a></h3>`);
+        htmlLines.push(`<a class="listEntry" href="${rootURL}/${code}/list.html">${entryName}</a>`);
     }
 }
 
@@ -178,18 +180,19 @@ async function makeWritingPages(writingEntries, omitDateAndAuthor = false)
 
         htmlLines.length = 0;
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles", listRelativeURL);
-        htmlLines.push(`<h3><a href="${rootURL}">&#171; Back to Homepage</a></h3>`);
+        htmlLines.push(`<div class="l_spacer"></div>`);
+        htmlLines.push(`<a class="homeButton" href="${rootURL}">Home</a>`);
         htmlLines.push(`<h1>${entryTitle}</h1>`);
         htmlLines.push(`<div class="l_spacer"></div>`);
 
-        for (let j = 0; j < fileIndices.length; ++j)
+        for (let j = fileIndices.length-1; j >= 0; --j)
         {
             const fileIndex = fileIndices[j];
             const fileTitle = fileTitles[j];
             const fileText = fileTexts[j];
             const fileLastmod = fileLastmods[j];
             const fileHTMLFileName = `page-${fileIndex}.html`;
-            htmlLines.push(`<h3>${fileTitle}<br><a href="${rootURL}/${code}/${fileHTMLFileName}">View</a></h3>`);
+            htmlLines.push(`<a class="listEntry" href="${rootURL}/${code}/${fileHTMLFileName}">${fileTitle}</a>`);
 
             const entryRelativeURL = `${code}/${fileHTMLFileName}`;
             await write(entryRelativeURL, fileText);
@@ -357,7 +360,8 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText, code
         console.error(":k: is missing in -> " + gameTitle);
 
     addHeaderHTML(htmlLines, "ThingsPool - " + gameTitle, description, keywords, relativePageURL);
-    htmlLines.push(`<h3><a href="${rootURL}">&#171; Back to Homepage</a></h3>`);
+    htmlLines.push(`<div class="l_spacer"></div>`);
+    htmlLines.push(`<a class="homeButton" href="${rootURL}">Home</a>`);
     htmlLines.push(`<h1>${gameTitle}</h1>`);
 
     addGamePlayButton(htmlLines, gamePlayURL);
@@ -485,7 +489,8 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
             description = "A writing by ThingsPool.";
             keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
             lastmod = globalLastmod;
-            htmlLines.push(`<h3><a href="${rootURL}/${code}/list.html">&#171; Back to List</a></h3>`);
+            htmlLines.push(`<div class="l_spacer"></div>`);
+            htmlLines.push(`<a class="homeButton" href="${rootURL}">Home</a>`);
             htmlLines.push(`<h1>${title}</h1>`);
 
             if (!omitDateAndAuthor)
