@@ -495,8 +495,8 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
 
             if (!omitDateAndAuthor)
             {
-                htmlLines.push(`<h3>Author: Youngjin Kang</h3>`);
-                htmlLines.push(`<h3>Date: ${date}</h3>`);
+                htmlLines.push(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);
+                htmlLines.push(`<h3 style="color:#707070">Date: ${date}</h3>`);
             }
 
             htmlLines.push(`<div class="l_spacer"></div>`);
