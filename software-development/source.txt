@@ -1145,3 +1145,34 @@ When it comes to scientific reasoning, any decent thinker can be assumed to be h
 Of course we cannot comprehend everything in advance, and this is precisely the reason why scientists study the totality of our nature by investigating small fractions of it one at a time, based upon specific experiments that are performed under strictly controlled scenarios. This is what I would refer to as a "modern" approach to mysteries which surround us, as opposed to mere superstition which propels us to remain content with a mud pool of wishful thinking.
 
 Games are not so different from other sciences in this regard. Some people may claim that this statement is so blatantly close-minded because a game is a "creative endeavor" or an "art form" and has nothing to do with science, yet an independent thinker who is endowed with an interdisciplinary taste of reasoning is likely to agree that such wordplay is so frustratingly naive, that it is not even worth the effort to prove why it hardly means anything significant from a holistic point of view.
+
+
+
+
+
+
+
+
+:d:About the difficulties of indie game development.
+:k:Indie Game, Game Dev, Game Development, Game Narrative, Narrative Design, Narrative Construction, New Media, Branding, Interactive Media, Game Mechanics, Game Design, Storytelling
+:l:2024-06-23
+
+[An Extraordinary Solution] June 23, 2024
+
+The game industry is morbidly saturated, and the toughness of competition is far beyond the grasp of even fairly competent individuals. What should an aspiring indie developer do, then, in order to cope with this dark age of video games?
+
+Being unique, of course, is one easy solution for being ahead of the race. Since anyone can conceive it, however, "being unique" is not so unique a strength to show off in today's world.
+
+This concern does not solely apply to the game industry. Are you a starving artist, desperately waiting for your hidden masterpiece to be recognized? Good luck! Countless other artists, whose post-adolescent selves missed the last opportunity to take off their medals of ego, are thinking in the same exact way.
+
+If you are not a game developer and haven't seriously considered pursuing game development as your career, I would say that keeping it as a hobby is probably the best way to go. If you are either already a game developer or are reluctant to abandon your dream of becoming one, I would say the following thing:
+
+"An extraordinary problem requires an extraordinary solution."
+
+Making of a successful video game is an extraordinary problem. And the thing is, one can hardly gain a accurate insight by emphasizing the virtue of "not overthinking it" or "keeping it simple" (which is such a cliché nowadays but so many people still manage to keep repeatedly mentioning it without even cringing a bit), when success in game development is at stake.
+
+The question is, what would that "extraordinary solution" be?
+
+Any educated person with a decent degree of intellectual sharpness will readily agree that "being different" is not the same thing as being superior in quality. You may summon the queerest of your wild imaginations and brew some kind of forced uniqueness out of it, yet proving that it is something more than just a desperate cry to reinforce one's ego as a creative genius is a whole separate matter.
+
+An extraordinary solution, which tackles an actual problem instead of an imaginary one, should not be made out of one's collection of passionate whims which merely serve to echoe the glory of expressive freedom. It must win the heart of at least a niche audience, and the challenge of achieving it far surpasses that of simply screaming, "Look, look at me! Look how creative I am!"
