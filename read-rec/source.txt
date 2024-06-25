@@ -186,3 +186,67 @@ This one is significantly more challenging to read than "The Problems of Philoso
 @@<h3><b>(3) The Conquest of Happiness</b></h3>
 
 This is probably one of the easiest and most relaxed books ever written by Bertrand Russell. Unlike his other treatises, this one focuses on everyday human emotions and their hints on morality, rather than topics that are mathematically engaged. So if you are more of a fan of humanities than purely abstract concepts (such as those in metaphysics), I recommend reading it. It feels a bit like C.S. Lewis's "Mere Christianity", although Russell tends to speak of ethical topics from a more secular and rational viewpoint. (You can read it <a href="https://russell-j.com/beginner/COH-TEXT.HTM">Here</a>)
+
+
+
+
+
+
+
+
+:d:Methodology of designing educational narratives.
+:k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
+:l:2024-06-25
+
+[When the Cognitive Vehicle of Narrative Backfires - by Katarina Gyllenbäck] June 25, 2024
+
+Let me introduce "PART 3, WHEN THE COGNITIVE VEHICLE OF NARRATIVE BACKFIRES", a narrative design article written by Katarina Gyllenbäck.
+
+@@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/cognitive-vehicle-narrative-backfire/">Here</a>.</h3>
+@@<div class="s_spacer"></div>
+<007>
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Introduction:</b></h3>
+
+Katarina Gyllenbäck is a professional narrative researcher who is also an interdisciplinary educator in the field of interactive media. She is also the pioneer of the new method of designing narratives called "Narrative Bridging".
+
+"PART 3, WHEN THE COGNITIVE VEHICLE OF NARRATIVE BACKFIRES" is one of her articles which outlines the significance of curiosity in the process of learning, as well as how the presence of a common (archetypal) goal helps us trigger such an emotion.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 1:</b></h3>
+
+People learn new things when they naturally become curious, not when they are forced to be curious. The source of spontaneous curiosity is any goal whose motives are easy to comprehend but requires additional knowledge to accomplish. (Example: "Oh, I really want to open this treasure chest, but it is locked. Therefore, I ought to learn where the key is!")
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+To stress the process of learning by saying “can´t you see it, can´t you see it?” would not make anyone learn better or faster. In worse cases, it might even increase anxiety. Increased anxiety can cause people to reject new information.
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 2:</b></h3>
+
+Curiosity-driven learning, which is a one of the core components of narrative design, turns out to be particularly beneficial in the field of education. One way of releasing its full potential is to teach children by letting them play educational games (aka "edutainment").
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+Basically, the same cognitive mechanism that I had experienced ten years earlier within the academics also permeated the context of education.
+(...)
+They who believed games were bad or a hinder to formal schoolwork did not see what the children that played actually did. From my cognitive perspective on learning, I could see how the children that played were involved in highly advanced cognitive activities by setting up strategies, reasoning, making decisions, making choices, and collaborating.
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 3:</b></h3>
+
+A school often fails to teach children effectively, due to the absense of easy-to-understand goals. Since the way a game works closely matches the way our society works (Simulation games such as "SimCity" and "Capitalism 2" are obvious examples), games can play a major role in education as long as they provide children with a set of clear goals as well as clues to achieve them.
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+(...) whereby the goal to learn wasn’t reciprocally shared, made the school turning into a meaningless “red herring” for the children.
+(...)
+and what runs a game is the same mechanism that runs society. The contrasts, though, were that games need to be meaningful to everyone involved otherwise no one will or can play them.
+#"
