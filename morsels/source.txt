@@ -1,0 +1,30 @@
+:d:Methodology of designing educational narratives.
+:k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
+:l:2024-06-27
+
+[Game Design Concepts] June 27, 2024
+
+This is a collection of game design concepts.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<001>
+@@<h3><b>Mechanical Narratives</b></h3>
+
+A game is usually a combination of two factors - mechanics and narratives.
+
+Mechanics represent the systematic aspects of the game, such as physics, AI, crafting rules, progression curves, and others which rely on the knowledge of math/engineering.
+
+Narratives represent the volitional aspects of the game, such as lores, stories, personalities, goals, and others which rely on the knowledge of arts/humanities.
+
+A problem we often experience is that it is too tricky to fit these two together in one place. Many ambiguous cases are prone to arise, such as:
+
+(1) Having a cool story (narrative) for a video game, but not knowing how to turn it into gameplay (mechanic).
+(2) Knowing how to implement a clever enemy AI (mechanic), but not knowing how to design an appropriate enemy character for it (narrative).
+(3) Having an interesting NPC with a unique personality (narrative), but not knowing which in-game role it ought to play (mechanic).
+
+A solution is to start designing the game with building blocks which can both be considered mechanics and narratives at the same time (aka "mechanical narratives").
+
+If we start by laying out the game's narratives first, it will be difficult to devise mechanics which are compatible with the given narratives. If we start by laying out the game's mechanics first, on the other hand, it will be difficult to devise narratives which are compatible with the given mechanics.
+
+Such a dilemma can be bypassed by simply collecting a number of "mechanical narratives" and assembling them together.

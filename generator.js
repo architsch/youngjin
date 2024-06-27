@@ -47,6 +47,7 @@ const nonfictionEntries = [
     ["game-design", "Universal Laws of Game Design (2023)"],
     ["reality", "The Origin of Reality (2023)"],
     ["bridge-to-math", "A Layman's Bridge to Mathematics (2024)"],
+    ["morsels", "Morsels of Thought (2024)"],
 ];
 const fictionEntries = [
     ["novels", "단편소설 (2012 - 2013)"],
