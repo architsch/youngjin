@@ -102,7 +102,7 @@ const fontScaleFactor_vmax = 0.7;
 const fontScaleFactor_px = 1.0;
 const vmax_minValue = 2.6//2.8;
 const px_minValue = 16;
-const fontScaleInc = 1.18;
+const fontScaleInc = 1.2;
 const fontScaleInc2 = fontScaleInc*fontScaleInc;
 const fontScaleInc3 = fontScaleInc*fontScaleInc*fontScaleInc;
 

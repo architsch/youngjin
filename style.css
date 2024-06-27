@@ -27,7 +27,7 @@ h3 {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.15vmax, 18.88px);
+	font-size: min(2.18vmax, 19.20px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -39,7 +39,7 @@ h2 {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.5vmin 1.5vmin;	margin: 1.5vmin auto;
-	font-size: min(2.53vmax, 22.28px);
+	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -51,7 +51,7 @@ h1 {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.5vmin 1.5vmin;	margin: 1.5vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -78,7 +78,7 @@ footer {
 	margin-left: 5vw;
 	margin-right: 5vw;
 	padding: 3vmax 3vmax 3vmax 3vmax;
-	font-size: min(2.15vmax, 18.88px);
+	font-size: min(2.18vmax, 19.20px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -118,7 +118,7 @@ footer {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 2.0vmin 2.0vmin;	margin: 2.0vmin auto;
-	font-size: min(2.53vmax, 22.28px);
+	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -183,7 +183,7 @@ footer {
 	width: fit-content;
 	block-size: fit-content;
 	text-align: center;	padding: 1.0vmin 3.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.15vmax, 18.88px);
+	font-size: min(2.18vmax, 19.20px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -202,7 +202,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.53vmax, 22.28px);
+	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -214,7 +214,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -226,7 +226,7 @@ iframe {
 	display: block;
 	max-width: 23vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -238,7 +238,7 @@ iframe {
 	display: block;
 	max-width: 28vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -251,7 +251,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -264,7 +264,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -277,7 +277,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -293,7 +293,7 @@ iframe {
 	width: 30vw;
 	height: 9.1714vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -311,7 +311,7 @@ iframe {
 	display: inline-block;
 	width: 30vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -331,7 +331,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.53vmax, 22.28px);
+	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -343,7 +343,7 @@ iframe {
 	display: block;
 	max-width: 80vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -355,7 +355,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -367,7 +367,7 @@ iframe {
 	display: block;
 	max-width: 40vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -380,7 +380,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -393,7 +393,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -406,7 +406,7 @@ iframe {
 	display: block;
 	max-width: 90vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -422,7 +422,7 @@ iframe {
 	width: 80vw;
 	height: 24.4571vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
@@ -440,7 +440,7 @@ iframe {
 	display: block;
 	width: 60vw;
 	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
-	font-size: min(2.99vmax, 26.29px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 700;
