@@ -28,3 +28,31 @@ A solution is to start designing the game with building blocks which can both be
 If we start by laying out the game's narratives first, it will be difficult to devise mechanics which are compatible with the given narratives. If we start by laying out the game's mechanics first, on the other hand, it will be difficult to devise narratives which are compatible with the given mechanics.
 
 Such a dilemma can be bypassed by simply collecting a number of "mechanical narratives" and assembling them together.
+
+
+
+
+
+
+
+:d:Mathematical models of our own thoughts, feelings, and the sense of curiosity.
+:k:Curiosity, Motivation, Motive Force, Curiosity Force, Conceptual Space, Physical Space, Katarina Gyllenbäck, Feature Space, Idealism, Ontology, Epistemology
+:l:2024-06-28
+
+[Mathematics of the Mind] June 28, 2024
+
+This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
+
+@@<h3>The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, click <a href="https://thingspool.net/read-rec/page-2.html">Here</a>.</h3>
+@@<hr>
+@@<div class="l_spacer"></div>
+<006>
+@@<h3><b>Physical Space and Conceptual Space</b></h3>
+
+There are two different spaces in our universe - physical space and conceptual space.
+
+Physical space is the space we usually refer to whenever we are employing the word "space". It consists of spatial and temporal axes (e.g. X, Y, Z, and Time), and serves as a frame of reference when it comes to describing physical entities such as rigid bodies.
+
+Conceptual space, on the other hand, is the space of qualitative features. For example, a color is a position in the RGB color space, where the axes (R, G, B) represent the intensity levels of the three primary color components (i.e. Red, Green, Blue). The RGB color space is one of many types of conceptual spaces we can imagine.
+
+Each object has its own position in physical space as well as a position in conceptual space. The former tells us where the object is, and the latter tells us what the object looks like.
