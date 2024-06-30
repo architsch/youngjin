@@ -29,6 +29,26 @@ If we start by laying out the game's narratives first, it will be difficult to d
 
 Such a dilemma can be bypassed by simply collecting a number of "mechanical narratives" and assembling them together.
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<002>
+@@<h3><b>Sensors, Filters, and Motors</b></h3>
+
+In general, a gameplay agent can be constructed by assembling 3 types of modules - sensors, filters, and motors.
+
+Sensors collect data from the environment, filters process the data (for analysis), and motors trigger the agent to take actions based upon the filtered data.
+
+Here is an example. Imagine that there is an anti-aircraft gun whose role is to shoot down enemy airplanes in range. We can model this gun as a composition of:
+
+(1) A sensor (i.e. radar) which detects anything within the specified range,
+(2) A filter (i.e. computing module) which looks up the database to see if the detected object is an enemy airplane, and
+(3) A motor (i.e. the gun itself) which fires bullets at any object which is identified as an enemy airplane.
+
+The gun detects an aircraft, checks to see if it is an enemy, shoots at it if so, and then detects another aircraft, checks to see if it is an enemy, shoots at it if so, and then detects another aircraft... and so on.
+
+This is just a simple example. For more complex behaviors, you may as well equip it with multiple sensors (e.g. radar, camera, antenna), multiple filters (e.g. distance filter, look-angle filter), multiple motors (e.g. gun, horizontal rotor, vertical rotor, ammunition reloader), etc.
+
+Such a multitude of modules can then communicate with one another by means of series connections, parallel connections, or both.
 
 
 

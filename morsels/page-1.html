@@ -48,6 +48,17 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>A solution is to start designing the game with building blocks which can both be considered mechanics and narratives at the same time (aka "mechanical narratives").</p>
 <p>If we start by laying out the game's narratives first, it will be difficult to devise mechanics which are compatible with the given narratives. If we start by laying out the game's mechanics first, on the other hand, it will be difficult to devise narratives which are compatible with the given mechanics.</p>
 <p>Such a dilemma can be bypassed by simply collecting a number of "mechanical narratives" and assembling them together.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/002.jpg" alt="Game Design Concepts (Figure 2)">
+<h3><b>Sensors, Filters, and Motors</b></h3>
+<p>In general, a gameplay agent can be constructed by assembling 3 types of modules - sensors, filters, and motors.</p>
+<p>Sensors collect data from the environment, filters process the data (for analysis), and motors trigger the agent to take actions based upon the filtered data.</p>
+<p>Here is an example. Imagine that there is an anti-aircraft gun whose role is to shoot down enemy airplanes in range. We can model this gun as a composition of:</p>
+<p>(1) A sensor (i.e. radar) which detects anything within the specified range,<br>(2) A filter (i.e. computing module) which looks up the database to see if the detected object is an enemy airplane, and<br>(3) A motor (i.e. the gun itself) which fires bullets at any object which is identified as an enemy airplane.</p>
+<p>The gun detects an aircraft, checks to see if it is an enemy, shoots at it if so, and then detects another aircraft, checks to see if it is an enemy, shoots at it if so, and then detects another aircraft... and so on.</p>
+<p>This is just a simple example. For more complex behaviors, you may as well equip it with multiple sensors (e.g. radar, camera, antenna), multiple filters (e.g. distance filter, look-angle filter), multiple motors (e.g. gun, horizontal rotor, vertical rotor, ammunition reloader), etc.</p>
+<p>Such a multitude of modules can then communicate with one another by means of series connections, parallel connections, or both.</p>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2024 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com
