@@ -301,3 +301,80 @@ To be honest, most of the key lessons of this treatise are contained in the firs
 However, I also would like to say that not all of his personal remarks deserve to be skimmed so lightly as though they are mere byproducts of his momentary indignation. During the very first section of his treatise (namely, "Of the Different Species of Philosophy"), Hume expresses his frustration with the fact that most people prefer "easy philosophy" which is inspired by emotional appeals and a strong sense of entertainment (e.g. political propaganda), over a more objective and truth-seeking kind of philosophy which, despite its sincere endeavors to touch the very essence of our philosophical problems, fails to win the heart of the mass because it does not sugarcoat itself with worldly passions.
 
 And I must confess that this first section of the book really touched my heart - far more than I would expect from a philosophical treatise. It made me understand the sheer sense of frustration which Hume, after publishing "A Treatise of Human Nature", must have felt when he realized that his ambitious work was almost completely ignored by the public, and that his intellect had no place in this world.
+
+
+
+
+
+
+
+
+:d:On the importance of intrinsic and reciprocally shared goals in a narrative.
+:k:Katarina Borg Gyllenbäck, Narrative Bridging, Narrative Construction, Computational Narrative Design, Procedural Narrative, Game Narrative, Consciousness, Psychoanalysis, Behavioral Science, Cognitive Science, Jerome Bruner, Storytelling
+:l:2024-07-01
+
+[The Need for Retrieval of the Consciousness - by Katarina Gyllenbäck] July 1, 2024
+
+Let me introduce "PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS", a narrative design article written by Katarina Gyllenbäck.
+
+@@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/the-retrieval-of-the-consciousness/">Here</a>.</h3>
+@@<div class="s_spacer"></div>
+<009>
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Introduction:</b></h3>
+
+Katarina Gyllenbäck is an educator, researcher, and innovator in the field of narrative design and cognitive science. Starting from the drama and film industry, she pioneered a number of novel techniques in the design of interactive media such as a custom narrative AI, the method of "Narrative Bridging" (Click <a href="https://www.researchgate.net/publication/226504927_Narrative_Bridging">Here</a> to view), and many others.
+
+"PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS" is one of her articles which highlights the significance of including an intrinsic goal in a narrative, especially when it comes to educating young children who desperately need natural motivation. Inspired by the American psychologist Jerome Bruner, she then investigates the potential causes of the prevanence of extrinsic (forced) goals in contemporary media, such as the exclusion of spontaneous personal feelings from the supposed goal.
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 1:</b></h3>
+
+Our intrinsic form of motivation is oftentimes superceded by "forced motivation" - one which is driven by external reward and punishment rather than genuine curiosity. This makes the goal "extrinsic", as opposed to "intrinsic". A meaningful experience should be triggered by an intrinsic goal.
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+(...) one excluded the motivating engine by how we like to do the “2 + 2” and where we don´t want to know that we are working for our meal but where conditions of rewards or punishments moved intrinsic motives to become extrinsic and where people got the “4” and had to act upon the risk to be punished for their behaviors.
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 2:</b></h3>
+
+Trying to define our reality based upon a set of metaphysical assumptions is perhaps the most common bigotry in Western philosophy. It plagues intellectuals with meaningless word play, making them draw artificial boundaries between ideas which aren't even clearly defined and therefore not strictly distinguishable (e.g. "mind vs body", "subject vs object", "nature vs nurture", "good vs evil", "something vs nothing", etc). We are discouraged from pointing out such logical absurdity, however, due to the fact that such an attempt is very likely to be dismissed as "postmodern nonsense".
+
+When studying narratives, therefore, we must stop thinking in terms of the dichotomy between facts and feelings. Such a conceptual division may be useful in physics and other natural sciences, but not in the domain of cognitive science and psychology in which our very own thoughts are part of what we are supposed to analyze.
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+All versus I had experienced through the years as narrative vs gameplay, narrative vs games, narrative vs itself, etc., was originated from the Western culture that separated mind from body.
+(...)
+And if Jerome Bruner, who reached a respectable age of 100 years, and many with him, found it hard to change how science regarded thoughts, beliefs, intentions, and dreams, others than being illusionary, how could I?
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 3:</b></h3>
+
+The main problem of an unconsciously inspired goal is that we cannot be sure of its universality. An extremely religious man, for example, has his religious belief so deeply ingrained in his unconscious mind, that he automatically assumes that others will instantly share his creed as soon as he reads off a few inspirational quotes from his holy manuscript.
+
+A goal which is universal, therefore, must be able to express itself in a consciously identifiable format (i.e. in the form of something rational, rather than a mere assortment of vague symbols/metaphors which only appeal to the unconscious). This is probably the reason why the article is titled: "The Need for Retrieval of the Consciousness".
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+When making my claim to the academic to rethink narrative as to retrieve a consciousness I knew it was unlikely that they would embrace the idea since what I did was to suggest a paradigm shift.
+#"
+
+@@<div class="l_spacer"></div>
+@@<h3><b>Key Note 4:</b></h3>
+
+Academics often reject the notion that a story can be part of our objective reality. Such an attitude, however, is misleading because a story accurately portrays how we, as observers, map the sequence of events in nature and the way in which they are causally related to one another. This is a core component of empirical reasoning.
+
+#"
+<font color="#707070"><b>Related quote from the article:</b></font>
+
+In 1996 Bruner wrote in “The culture of education”:
+“But it is usually the case that discussions of narrative reality lead not to reflections on the negotiation of meaning within the human community, but the indignant rejection of “stories” as sources of human illusion. Stories, for all that they require verisimilitude, cannot produce the Truth. Truth-finding is the prerogative of science and logic alone – the paradigmatic mode of knowing.”
+#"
