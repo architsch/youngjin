@@ -68,7 +68,8 @@ Such a multitude of modules can then communicate with one another by means of se
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
-@@<h3>The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, click <a href="https://thingspool.net/read-rec/page-2.html">Here</a>.</h3>
+The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, visit <a href="https://thingspool.net/read-rec/page-2.html">Here</a>.
+
 @@<hr>
 @@<div class="l_spacer"></div>
 <006>
