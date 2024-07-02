@@ -50,6 +50,11 @@ This is just a simple example. For more complex behaviors, you may as well equip
 
 Such a multitude of modules can then communicate with one another by means of series connections, parallel connections, or both.
 
+@@<div class="l_spacer"></div>
+@@<hr>
+@@<div class="l_spacer"></div>
+(To be continued...)
+
 
 
 
@@ -76,3 +81,47 @@ Physical space is the space we usually refer to whenever we are employing the wo
 Conceptual space, on the other hand, is the space of qualitative features. For example, a color is a position in the RGB color space, where the axes (R, G, B) represent the intensity levels of the three primary color components (i.e. Red, Green, Blue). The RGB color space is one of many types of conceptual spaces we can imagine.
 
 Each object has its own position in physical space as well as a position in conceptual space. The former tells us where the object is, and the latter tells us what the object looks like.
+
+@@<div class="l_spacer"></div>
+@@<hr>
+@@<div class="l_spacer"></div>
+(To be continued...)
+
+
+
+
+
+
+:d:A mathematical interpretation of David Hume's philosophy.
+:k:David Hume, Empiricism, Empirical Philosophy, Metaphysics, Epistemology, Ontology, Discrete Math, Philosophy Of Mind, Computational Psychology
+:l:2024-07-02
+
+[Mathematical Interpretation of Hume's Philosophy] July 2, 2024
+
+This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
+
+I drew most of my inspirations from his book, "An Enquiry Concerning Human Understanding". For more information, visit <a href="https://thingspool.net/read-rec/page-6.html">Here</a>.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<011>
+@@<h3><b>Introduction</b></h3>
+
+Hume's empiricist worldview begins with a hierarchy of concepts.
+
+There are two major types of components in his domain of knowledge. One is "perceptions", and the other one is "objects of reason". Perceptions are the atoms of the mind, whereas objects of reason are molecules which can be formed by bonding those atoms together.
+
+A perception is any "thought" we can conceive in our minds. It belongs to either one of the two categories - impressions and ideas.
+
+An impression is a direct stimulus received by our sense organs. Things we directly see, hear, smell, taste, and feel are all impressions.
+
+In contrast, an idea is an afterthought on the impressions we received. For example, what we see is an impression, but the recollection of what we just saw is an idea. Impressions are vivid, while ideas are dim.
+
+Objects of reason can be subdivided into two categories - "relations of ideas" and "matters of fact".
+
+A relation of ideas is a result of pure logic, such as a mathematical theorem which manages to prove itself based upon a set of ideas only, without relying on the presence of external stimuli. A matter of fact, on the other hand, requires a considerable amount of empirical data to validate itself (like the law of gravitation).
+
+@@<div class="l_spacer"></div>
+@@<hr>
+@@<div class="l_spacer"></div>
+(To be continued...)
