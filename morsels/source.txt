@@ -50,6 +50,25 @@ This is just a simple example. For more complex behaviors, you may as well equip
 
 Such a multitude of modules can then communicate with one another by means of series connections, parallel connections, or both.
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<003>
+@@<h3><b>Psychological Force Field</b></h3>
+
+Psychological force field is a useful concept in game design.
+
+We typically imagine each individual game character as an observer, equipped with its own independent mind. It continuously scans the environment and makes decisions off of it.
+
+Each observer carries its own psychological force field which permeates the entirety of the game world. Every entity other than the observer itself essentially "warps" the field nearby, modifying the magnitudes and directions of the force vectors which guide the observer's movement.
+
+A repulsive entity adds outward forces to the field, whereas an attractive entity adds inward forces to the field. This makes the observer move away from repulsive entities and closer to attractive entities.
+
+Whether an entity is repulsive or attractive is determined by the observer's personal preference.
+
+The force that is to be applied to the observer can be computed by the function "PsyForce(id, X, Y)", where "id" is the unique ID of the observer and (X, Y) is the observer's current position. This function returns the psychological force vector which gets added to the observer's net force.
+
+A real life example of psychological force field is Feng Shui, where architectural patterns are believed to shape the field in which the residents of the house reside, thereby influencing the way they behave.
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
