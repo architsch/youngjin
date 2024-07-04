@@ -102,6 +102,21 @@ Conceptual space, on the other hand, is the space of qualitative features. For e
 
 Each object has its own position in physical space as well as a position in conceptual space. The former tells us where the object is, and the latter tells us what the object looks like.
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<007>
+@@<h3><b>Particulars and Universals</b></h3>
+
+There are two types of objects - particulars and universals.
+
+A particular is an object which exists at a specific point in space and time. All tangible objects, such as a table we can touch, a sandwich we can eat, a cup we can hold, and countless other "real" things, can be classified as particulars.
+
+A universal is different from a particular in the sense that we cannot directly perceive it, since it exists only in conceptual space and not in physical space. It is a pure idea which resides only in the spiritual realm; it does not belong to anywhere in our material world.
+
+In computer science, a class is a universal. It is purely spiritual because it lives in the static memory, which is fixed and therefore "eternal" in the sense that it spans the entirety of the application's runtime.
+
+An instance of a class, which is dynamically allocated in memory, is a particular. It is a mortal being which gets created at some point in time and gets destroyed at some other point in time. It is never eternal because it does not span the entirety of the application's runtime.
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
