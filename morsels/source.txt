@@ -156,6 +156,19 @@ Objects of reason can be subdivided into two categories - "relations of ideas" a
 
 A relation of ideas is a result of pure logic, such as a mathematical theorem which manages to prove itself based upon a set of ideas only, without relying on the presence of external stimuli. A matter of fact, on the other hand, requires a considerable amount of empirical data to validate itself (like the law of gravitation).
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<012>
+@@<h3><b>Impressions and Ideas</b></h3>
+
+Hume's definition of "impressions" and "ideas" provides us with a rudimentary ground of logic, upon which we can formulate a model of how we sense and recall our own thoughts.
+
+Impressions are what we typically refer to as "sensory stimuli". These are the most immediate and piercing kind of perceptions which we feel with the utmost degree of intensity.
+
+Ideas, on the other hand, are byproducts of impressions. They linger in our minds like ghosts, which occasionally touch our feelings but to a much lesser degree. Unlike impressions which are momentary, ideas stay in the person's memory and get recalled on demand.
+
+In a way, therefore, ideas are Lego bricks which can fit one another nicely in our minds, whereas impressions are just raw plastic ingredients which are yet to be molded into such bricks.
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
