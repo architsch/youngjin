@@ -70,6 +70,19 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>Whether an entity is repulsive or attractive is determined by the observer's personal preference.</p>
 <p>The force that is to be applied to the observer can be computed by the function "PsyForce(id, X, Y)", where "id" is the unique ID of the observer and (X, Y) is the observer's current position. This function returns the psychological force vector which gets added to the observer's net force.</p>
 <p>A real life example of psychological force field is Feng Shui, where architectural patterns are believed to shape the field in which the residents of the house reside, thereby influencing the way they behave.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/004.jpg" alt="Game Design Concepts (Figure 4)">
+<h3><b>Parallel-Attention Timeline</b></h3>
+<p>A parallel-attention timeline is a pretty useful tool to use in gameplay AI.</p>
+<p>It starts from a simple analogy.</p>
+<p>When I am stirring a pot of spaghetti while also heating a plate of frozen garlic bread in the oven, you can say that I must be multitasking.</p>
+<p>However, it should be noted that I am paying way more attention to the pot of spaghetti than to the oven because the latter basically takes care of itself and only demands occasional supervision.</p>
+<p>When designing a game, it is convenient to assume that each game character carries its own schedule in its mind, filled with tasks which start and end at its own designated points in time.</p>
+<p>It is sometimes even more desirable, though, to model a schedule not as a one-dimensional queue of tasks, but as a two-dimensional grid in which each column represents a time slot and each row represents what could be referred to as "attention priority".</p>
+<p>A character which follows this two-dimensional schedule always runs the task which occupies the highest row (i.e. highest attention priority) among all the tasks which occupy the current time slot.</p>
+<p>Whenever an "attention trigger" (i.e. any object which demands attention) tries to register a new task to the schedule, the schedule will either ignore this new task if it happens to collide with an existing one, or proceed to register it if not.</p>
+<p>Each task possesses its own intrinsic attention priority (i.e. row) which cannot be modified.</p>
 <div class="l_spacer"></div>
 <hr>
 <div class="l_spacer"></div>
