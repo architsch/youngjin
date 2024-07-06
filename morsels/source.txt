@@ -1,8 +1,8 @@
 :d:Methodology of designing educational narratives.
 :k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
-:l:2024-06-27
+:l:2024-07-06
 
-[Game Design Concepts] June 27, 2024
+[Game Design Concepts] June 27, 2024 - July 6, 2024
 
 This is a collection of game design concepts.
 
@@ -139,6 +139,19 @@ A universal is different from a particular in the sense that we cannot directly 
 In computer science, a class is a universal. It is purely spiritual because it lives in the static memory, which is fixed and therefore "eternal" in the sense that it spans the entirety of the application's runtime.
 
 An instance of a class, which is dynamically allocated in memory, is a particular. It is a mortal being which gets created at some point in time and gets destroyed at some other point in time. It is never eternal because it does not span the entirety of the application's runtime.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<008>
+@@<h3><b>Contiguity and Resemblance</b></h3>
+
+Since an object exists in two different spaces (namely, "physical space" and "conceptual space"), a distance between a pair of objects can possess either one of two meanings depending on the type of space in which it is measured.
+
+Physical proximity implies contiguity. When two things are very close to each other in physical space, we say that they are contiguous because looking at one of them lets us look at the other much more easily.
+
+Conceptual proximity implies resemblance. When two things are very close to each other in conceptual space, we say that they resemble each other because thinking of one of them lets us think of the other much more easily.
+
+Proximity can be measured by taking the reciprocal of the distance. Less distance means more proximity, and more distance means less proximity.
 
 @@<div class="l_spacer"></div>
 @@<hr>
