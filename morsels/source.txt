@@ -82,7 +82,7 @@ When I am stirring a pot of spaghetti while also heating a plate of frozen garli
 
 However, it should be noted that I am paying way more attention to the pot of spaghetti than to the oven because the latter basically takes care of itself and only demands occasional supervision.
 
-When designing a game, it is convenient to assume that each game character carries its own schedule in its mind, filled with tasks which start and end at its own designated points in time.
+When designing a game, it is convenient to assume that each game character carries its own schedule in its mind, filled with tasks which start and end at their own designated points in time.
 
 It is sometimes even more desirable, though, to model a schedule not as a one-dimensional queue of tasks, but as a two-dimensional grid in which each column represents a time slot and each row represents what could be referred to as "attention priority".
 
