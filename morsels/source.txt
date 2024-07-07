@@ -205,6 +205,17 @@ Ideas, on the other hand, are byproducts of impressions. They linger in our mind
 
 In a way, therefore, ideas are Lego bricks which can fit one another nicely in our minds, whereas impressions are just raw plastic ingredients which are yet to be molded into such bricks.
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<013>
+@@<h3><b>Generation of Ideas</b></h3>
+
+According to Hume's philosophy, each impression generates its corresponding idea when it enters our domain of cognition.
+
+However, he also mentions that the relation between impressions and their ideas is not necessarily one-to-one. There may as well be cases in which a wide spectrum of ideas manage to emerge from a relatively few impressions.
+
+An impression of "light blue" and an impression of "dark blue", for example, may allow us to imagine an intermediate shade of blue (by mixing the qualities of light blue and dark blue) and remember it as a distinct idea. This lets us picture the full spectrum of blue without having to directly sense every single one of its variants via external stimuli.
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
