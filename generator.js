@@ -126,14 +126,14 @@ async function run()
     htmlLines.push(`<div class="l_spacer"></div>`);
 
     htmlLines.push(`<h1>About Myself</h1>`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
     htmlLines.push(`<img class="profileImage" src="${rootURL}/profile.jpg" alt="Youngjin Kang">`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
+    htmlLines.push(`<div class="m_spacer"></div>`);
     htmlLines.push(`<h3>Hello!</h3>`);
     htmlLines.push(`<p>My name is Youngjin, and I am a software engineer who develops computer games, simulations, and other types of interactive media. I studied electrical and electronics engineering at the University of Washington, and worked as a software developer in game development companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>`);
     htmlLines.push(`<p>ThingsPool is an independent game development studio which I have founded for the purpose of making and publishing videogames that are easily accessible and furnished with unique personalities.</p>`);
     htmlLines.push(`<p>Besides games, however, there are also a wide variety of arts, novels, and treatises available here. I recommend you to take a look at them if you are interested in philosophy, mathematics, engineering, literature, and other multidisciplinary topics.</p>`);
-    htmlLines.push(`<div class="l_spacer"></div>`);
+    htmlLines.push(`<div class="m_spacer"></div>`);
+    htmlLines.push(`<h3><a href="${rootURL}/youngjin_resume.pdf">Resume</a></h3>`);
     htmlLines.push(`<h3><a href="https://www.linkedin.com/in/youngjin-kang-55321882">LinkedIn Profile</a></h3>`);
     htmlLines.push(`<h3><a href="https://github.com/architsch">GitHub Profile</a></h3>`);
     htmlLines.push(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Profile</a></h3>`);
@@ -312,7 +312,6 @@ function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL)
 
 function addPromo(htmlLines)
 {
-    htmlLines.push(`<div class="xl_spacer"></div>`);
     for (const gameEntry of gameEntries)
         addGameLink(htmlLines, gameEntry[1], `${rootURL}/${gameEntry[0]}/page.html`, `${rootURL}/${gameEntry[0]}/entry.jpg`);
 }
@@ -335,7 +334,7 @@ function addFooterHTML(htmlLines)
 {
     htmlLines.push(`<footer>`);
     htmlLines.push(`<a class="noTextDeco" href="${rootURL}"><img class="logoImageSmall" src="${rootURL}/logo.png" alt="ThingsPool Logo"></a>`);
-    htmlLines.push(`&copy 2019-2024 ThingsPool.<br>All rights reserved.<br>Contact: thingspool@gmail.com`);
+    htmlLines.push(`&copy 2019-2024 ThingsPool.<br>All rights reserved.`);
     htmlLines.push(`</footer>`);
     htmlLines.push(`</body>`);
     htmlLines.push(`</html>`);
