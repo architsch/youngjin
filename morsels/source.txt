@@ -92,6 +92,27 @@ Whenever an "attention trigger" (i.e. any object which demands attention) tries 
 
 Each task possesses its own intrinsic attention priority (i.e. row) which cannot be modified.
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<005>
+@@<h3><b>Partial Movement Constraints</b></h3>
+
+Both too much freedom and too little freedom are undesirable in gameplay.
+
+Suppose that there are enemy characters whom the player must defeat in order to finish the level.
+
+If the enemies are able to move in any direction, it will be a bit too bland because it reduces the functional significance of the level's peculiar spatial configuration (e.g. If you are being chased by an enemy who can only move horizontally, you can take refuge in a vertical space).
+
+If the enemies are completely immobile, on the other hand, it will be pretty bland as well because it makes gameplay less dynamic.
+
+A nice middle ground which leverages the benefits of both is to confine each enemy's locomotive freedom to a set of simple pathways, as though it is a train following a railway.
+
+This mixed approach has 3 main advantages:
+
+(1) It makes it easy to diversify enemy behaviors and introduce a wide variety of in-game strategies.
+(2) Its pathfinding algorithm is easier to implement and way less computationally expensive than, say, the A-Star algorithm.
+(3) It prevents extreme gameplay scenarios, such as letting the player be completely surrounded by a truckload of enemies because they always keep chasing the player without a pause. By limiting each enemy's maximum range of movement, we can spread out the distribution of enemies throughout the level and prevent them from concentrating too much in one place.
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
