@@ -1,8 +1,8 @@
 :d:Methodology of designing educational narratives.
 :k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
-:l:2024-07-06
+:l:2024-07-09
 
-[Game Design Concepts] June 27, 2024 - July 6, 2024
+[Game Design Concepts] June 27, 2024 - July 9, 2024
 
 This is a collection of game design concepts.
 
@@ -125,9 +125,9 @@ This mixed approach has 3 main advantages:
 
 :d:Mathematical models of our own thoughts, feelings, and the sense of curiosity.
 :k:Curiosity, Motivation, Motive Force, Curiosity Force, Conceptual Space, Physical Space, Katarina Gyllenbäck, Feature Space, Idealism, Ontology, Epistemology
-:l:2024-06-28
+:l:2024-07-10
 
-[Mathematics of the Mind] June 28, 2024
+[Mathematics of the Mind] June 28, 2024 - July 10, 2024
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
@@ -173,6 +173,21 @@ Physical proximity implies contiguity. When two things are very close to each ot
 Conceptual proximity implies resemblance. When two things are very close to each other in conceptual space, we say that they resemble each other because thinking of one of them lets us think of the other much more easily.
 
 Proximity can be measured by taking the reciprocal of the distance. Less distance means more proximity, and more distance means less proximity.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<009>
+@@<h3><b>Surprise</b></h3>
+
+How to measure the amount of surprise between two objects?
+
+Each object has two distinct positions - one in physical space, and the other one in conceptual space. Therefore, we are able to compute two separate distances between a pair of objects - physical distance and conceptual distance.
+
+The amount of surprise between two objects is proportional to their conceptual distance because the more qualitatively different they are, the more surprised they will be when they see each other.
+
+On the other hand, the amount of surprise between two objects is inversely proportional to their physical distance because the closer they are, the more vividly they will observe each other's qualitative differences.
+
+Thus, we can measure the amount of surprise by measuring the conceptual distance and then dividing it by the physical distance.
 
 @@<div class="l_spacer"></div>
 @@<hr>
