@@ -201,9 +201,9 @@ Thus, we can measure the amount of surprise by measuring the conceptual distance
 
 :d:A mathematical interpretation of David Hume's philosophy.
 :k:David Hume, Empiricism, Empirical Philosophy, Metaphysics, Epistemology, Ontology, Discrete Math, Philosophy Of Mind, Computational Psychology
-:l:2024-07-02
+:l:2024-07-11
 
-[Mathematical Interpretation of Hume's Philosophy] July 2, 2024
+[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 11, 2024
 
 This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
 
@@ -251,6 +251,19 @@ According to Hume's philosophy, each impression generates its corresponding idea
 However, he also mentions that the relation between impressions and their ideas is not necessarily one-to-one. There may as well be cases in which a wide spectrum of ideas manage to emerge from a relatively few impressions.
 
 An impression of "light blue" and an impression of "dark blue", for example, may allow us to imagine an intermediate shade of blue (by mixing the qualities of light blue and dark blue) and remember it as a distinct idea. This lets us picture the full spectrum of blue without having to directly sense every single one of its variants via external stimuli.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<014>
+@@<h3><b>Relations between Ideas</b></h3>
+
+We assign meaning to our ideas by establishing relations between them. In Hume's model of the human mind, there are three fundamental types of such relations - resemblance, contiguity, and causality (aka "cause and effect").
+
+Resemblance tells us that two ideas are qualitatively similar to each other (such as two slightly different shades of blue). This is something we can immediately tell from our perceptions.
+
+Contiguity tells us how close two ideas are to each other in spacetime. This, too, is something we can immediately tell from our perceptions.
+
+Causality, however, is not something we can identify in such a straightforward manner. We must derive it from the other two types of relations (i.e. resemblance and contiguity).
 
 @@<div class="l_spacer"></div>
 @@<hr>
