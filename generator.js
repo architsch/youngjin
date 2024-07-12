@@ -43,7 +43,7 @@ const nonfictionEntries = [
     ["game-analysis", "게임분석 (2019)"],
     ["essays", "Miscellaneous Writings (2022 - 2024)"],
     ["blockchains", "On Legitimacy of Blockchains (2022)"],
-    ["software-development", "Software Development (2022 - 2023)"],
+    ["software-development", "Software Development (2022 - 2024)"],
     ["game-design", "Universal Laws of Game Design (2023)"],
     ["reality", "The Origin of Reality (2023)"],
     ["bridge-to-math", "A Layman's Bridge to Mathematics (2024)"],
