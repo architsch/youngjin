@@ -33,7 +33,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <a class="homeButton" href="https://thingspool.net">Home</a>
 <h1>Game Design Concepts</h1>
 <h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: June 27, 2024 - July 9, 2024</h3>
+<h3 style="color:#707070">Date: June 27, 2024 - July 12, 2024</h3>
 <div class="l_spacer"></div>
 <p>This is a collection of game design concepts.</p>
 <hr>
@@ -94,6 +94,17 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>A nice middle ground which leverages the benefits of both is to confine each enemy's locomotive freedom to a set of simple pathways, as though it is a train following a railway.</p>
 <p>This mixed approach has 3 main advantages:</p>
 <p>(1) It makes it easy to diversify enemy behaviors and introduce a wide variety of in-game strategies.<br>(2) Its pathfinding algorithm is easier to implement and way less computationally expensive than, say, the A-Star algorithm.<br>(3) It prevents extreme gameplay scenarios, such as letting the player be completely surrounded by a truckload of enemies because they always keep chasing the player without a pause. By limiting each enemy's maximum range of movement, we can spread out the distribution of enemies throughout the level and prevent them from concentrating too much in one place.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/022.jpg" alt="Game Design Concepts (Figure 6)">
+<h3><b>Emotional State Machine</b></h3>
+<p>When it comes to designing gameplay systems, it is often useful to model each game character as a state machine (i.e. an object with a set of possible states). There are more advanced models indeed, but state machines usually suffice for fairly simple purposes.</p>
+<p>Such a state machine typically comprises the character's action states, such as "idle", "attacking", "stunned", "wandering", and so on. However, this representation does not reflect the character's inner psychological states such as emotions.</p>
+<p>In order to give depth to the game's narratives, we must let game characters have their own emotions. And this can be done by designing each character as an emotional state machine.</p>
+<p>An emotional state machine resides in a 3D space called "emotion space", whose 3 spatial axes represent the character's happiness, excitement, and confidence.</p>
+<p>The characters's emotional state is a point in the emotion space, and a change in the emotion is the same thing as a displacement of the point from one location to another.</p>
+<p>When happiness, excitement, and confidence are all low, the character is depressed and timid. When happiness, excitement, and confidence are all high, the character is fascinated and arrogant. When happiness is high but excitement and confidence are low, the character is quietly happy in its selfless devotion. And when happiness and excitement are low but confidence is high, the character is in the mood of Squidward.</p>
+<p>You can change the emotion's current state by applying a "psychological force" to it. The way you do it is to put the emotion's position under a psychological force field.</p>
 <div class="l_spacer"></div>
 <hr>
 <div class="l_spacer"></div>
