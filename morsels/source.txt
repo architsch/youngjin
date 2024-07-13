@@ -144,9 +144,9 @@ You can change the emotion's current state by applying a "psychological force" t
 
 :d:Mathematical models of our own thoughts, feelings, and the sense of curiosity.
 :k:Curiosity, Motivation, Motive Force, Curiosity Force, Conceptual Space, Physical Space, Katarina Gyllenbäck, Feature Space, Idealism, Ontology, Epistemology
-:l:2024-07-10
+:l:2024-07-13
 
-[Mathematics of the Mind] June 28, 2024 - July 10, 2024
+[Mathematics of the Mind] June 28, 2024 - July 13, 2024
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
@@ -207,6 +207,17 @@ The amount of surprise between two objects is proportional to their conceptual d
 On the other hand, the amount of surprise between two objects is inversely proportional to their physical distance because the closer they are, the more vividly they will observe each other's qualitative differences.
 
 Thus, we can measure the amount of surprise by measuring the conceptual distance and then dividing it by the physical distance.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<010>
+@@<h3><b>Curiosity Force</b></h3>
+
+Curiosity often drives us to move from familiar places to unfamiliar places. It is possible to devise a mathematical formula which tells us exactly how the force of curiosity will initiate such a movement.
+
+Suppose that there is an observer somewhere in physical space. We can first compute the observer's "surprise vectors", each of which represents the amount of surprise that the observer feels in regard to an external object.
+
+If you take the sum of all the surprise vectors which involve the observer and multiply the resulting "net surprise vector" by the amount of the observer's curiosity, you will obtain the "curiosity force vector" which is responsible for pushing the observer to venture into the unknown.
 
 @@<div class="l_spacer"></div>
 @@<hr>
