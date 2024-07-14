@@ -231,9 +231,9 @@ If you take the sum of all the surprise vectors which involve the observer and m
 
 :d:A mathematical interpretation of David Hume's philosophy.
 :k:David Hume, Empiricism, Empirical Philosophy, Metaphysics, Epistemology, Ontology, Discrete Math, Philosophy Of Mind, Computational Psychology
-:l:2024-07-11
+:l:2024-07-14
 
-[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 11, 2024
+[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 14, 2024
 
 This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
 
@@ -294,6 +294,17 @@ Resemblance tells us that two ideas are qualitatively similar to each other (suc
 Contiguity tells us how close two ideas are to each other in spacetime. This, too, is something we can immediately tell from our perceptions.
 
 Causality, however, is not something we can identify in such a straightforward manner. We must derive it from the other two types of relations (i.e. resemblance and contiguity).
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<015>
+@@<h3><b>Causal Relations</b></h3>
+
+An idea alone does not have the word "cause" or "effect" written on its face, and the only way for us to prove that an idea "causes" another idea is that one of them frequently precedes (or succeeds) the other in spacetime.
+
+Also, since it is almost impossible for us to reproduce the same exact idea over and over in our material world (which is plagued with all sorts of random noises such as acoustic waves, electromagnetic disturbances, thermal noise, etc), we must rely on our belief that similar causes are likely to produce similar effects.
+
+This leads us to the conclusion that, if a set of mutually resembling ideas are contiguous with another set of mutually resembling ideas, we can say that these two sets are causally related to each other.
 
 @@<div class="l_spacer"></div>
 @@<hr>
