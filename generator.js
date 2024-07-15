@@ -490,7 +490,7 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
             keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
             lastmod = globalLastmod;
             htmlLines.push(`<div class="l_spacer"></div>`);
-            htmlLines.push(`<a class="homeButton" href="${rootURL}">Home</a>`);
+            htmlLines.push(`<a class="homeButton" href="${rootURL}/${code}/list.html">Back to List</a>`);
             htmlLines.push(`<h1>${title}</h1>`);
 
             if (!omitDateAndAuthor)
