@@ -163,9 +163,9 @@ One of the main advantages of using either a monotheistic or polytheistic system
 
 :d:Mathematical models of our own thoughts, feelings, and the sense of curiosity.
 :k:Curiosity, Motivation, Motive Force, Curiosity Force, Conceptual Space, Physical Space, Katarina Gyllenbäck, Feature Space, Idealism, Ontology, Epistemology
-:l:2024-07-13
+:l:2024-07-16
 
-[Mathematics of the Mind] June 28, 2024 - July 13, 2024
+[Mathematics of the Mind] June 28, 2024 - July 16, 2024
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
@@ -280,7 +280,7 @@ I drew most of my inspirations from his book, "An Enquiry Concerning Human Under
 @@<hr>
 @@<div class="l_spacer"></div>
 <011>
-@@<h3><b>Introduction</b></h3>
+@@<h3><b>1. Introduction</b></h3>
 
 Hume's empiricist worldview begins with a hierarchy of concepts.
 
@@ -299,7 +299,7 @@ A relation of ideas is a result of pure logic, such as a mathematical theorem wh
 @@<hr>
 @@<div class="l_spacer"></div>
 <012>
-@@<h3><b>Impressions and Ideas</b></h3>
+@@<h3><b>2. Impressions and Ideas</b></h3>
 
 Hume's definition of "impressions" and "ideas" provides us with a rudimentary ground of logic, upon which we can formulate a model of how we sense and recall our own thoughts.
 
@@ -312,7 +312,7 @@ In a way, therefore, ideas are Lego bricks which can fit one another nicely in o
 @@<hr>
 @@<div class="l_spacer"></div>
 <013>
-@@<h3><b>Generation of Ideas</b></h3>
+@@<h3><b>3. Generation of Ideas</b></h3>
 
 According to Hume's philosophy, each impression generates its corresponding idea when it enters our domain of cognition.
 
@@ -323,7 +323,7 @@ An impression of "light blue" and an impression of "dark blue", for example, may
 @@<hr>
 @@<div class="l_spacer"></div>
 <014>
-@@<h3><b>Relations between Ideas</b></h3>
+@@<h3><b>4. Relations between Ideas</b></h3>
 
 We assign meaning to our ideas by establishing relations between them. In Hume's model of the human mind, there are three fundamental types of such relations - resemblance, contiguity, and causality (aka "cause and effect").
 
@@ -336,13 +336,28 @@ Causality, however, is not something we can identify in such a straightforward m
 @@<hr>
 @@<div class="l_spacer"></div>
 <015>
-@@<h3><b>Causal Relations</b></h3>
+@@<h3><b>5. Causal Relations</b></h3>
 
 An idea alone does not have the word "cause" or "effect" written on its face, and the only way for us to prove that an idea "causes" another idea is that one of them frequently precedes (or succeeds) the other in spacetime.
 
 Also, since it is almost impossible for us to reproduce the same exact idea over and over in our material world (which is plagued with all sorts of random noises such as acoustic waves, electromagnetic disturbances, thermal noise, etc), we must rely on our belief that similar causes are likely to produce similar effects.
 
 This leads us to the conclusion that, if a set of mutually resembling ideas are contiguous with another set of mutually resembling ideas, we can say that these two sets are causally related to each other.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<017>
+@@<h3><b>6. Facts</b></h3>
+
+What is a "fact", really?
+
+There are many ideas in our domain of reason, yet the boundary between ones that are supposed to be "facts" and ones that are mere personal feelings often looks a bit fuzzy.
+
+Hume's philosophy tells us that an idea can be considered a "fact" if it is caused by a sufficiently large number of causes (e.g. preceded by a sufficiently long chain of causal relations).
+
+Each cause works as a proof of the idea's truthfulness. The more causes there are, the more confidently we are able to say that the idea is true. If it is so true that its truthfulness is hardly questionable, we say that the idea is a "fact".
+
+People who know how a blockchain works (such as Bitcoin or Ethereum) will easily come to the realization that ideas are reminiscent of blockchain transactions, and that a "fact" is basically a transaction which has been mined (verified) and is given credit by a long chain of preceding blocks.
 
 @@<div class="l_spacer"></div>
 @@<hr>
