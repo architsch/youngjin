@@ -1,8 +1,8 @@
 :d:Methodology of designing educational narratives.
 :k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
-:l:2024-07-15
+:l:2024-07-18
 
-[Game Design Concepts] June 27, 2024 - July 15, 2024
+[Game Design Concepts] June 27, 2024 - July 18, 2024
 
 This is a collection of game design concepts.
 
@@ -151,6 +151,19 @@ Inside a pantheistic game world, the game characters' feedback loops are not bei
 
 One of the main advantages of using either a monotheistic or polytheistic system is that it allows the gamemaster to occasionally override the game's default laws by means of admin privilege. In computer science, it is called "miracle".
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<025>
+@@<h3><b>Modular Behavior Tree</b></h3>
+
+Behavior trees are useful in game AI. You can implement a wide range of complex decision-making agents based upon them.
+
+Sometimes, however, we feel overwhelmed by the urge to make a behavior tree unreasonably enormous when there are way too many types of items with which the agent is supposed to interact.
+
+For example, imagine that a game character has a behavior tree which involves a task called "eat". In order to tell the character exactly what to do when it runs this task, the "eat" node must be able to handle all possible ways of eating, such as how to eat a salmon, how to eat a donut, how to eat a taco, and so on.
+
+Thus, it is oftentimes convenient to make behavior trees modular, so that a tree of tasks that is specific to the object of interaction can simply reside within the object, temporarily stick itself to the character's "eat" task during the interaction, and then depart once the interaction is over.
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
@@ -257,11 +270,6 @@ A halfway mixture between familiar and unfamiliar elements creates a "Goldilocks
 
 If everything is already uncovered, there will be no secret to uncover and so you won't feel the necessity to start an adventure. If everything is veiled in darkness, you will feel clueless and thus not even dare to start an adventure.
 
-@@<div class="l_spacer"></div>
-@@<hr>
-@@<div class="l_spacer"></div>
-(To be continued...)
-
 
 
 
@@ -269,9 +277,9 @@ If everything is already uncovered, there will be no secret to uncover and so yo
 
 :d:A mathematical interpretation of David Hume's philosophy.
 :k:David Hume, Empiricism, Empirical Philosophy, Metaphysics, Epistemology, Ontology, Discrete Math, Philosophy Of Mind, Computational Psychology
-:l:2024-07-14
+:l:2024-07-17
 
-[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 14, 2024
+[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 17, 2024
 
 This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
 

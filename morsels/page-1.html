@@ -33,7 +33,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <a class="homeButton" href="https://thingspool.net/morsels/list.html">Back to List</a>
 <h1>Game Design Concepts</h1>
 <h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: June 27, 2024 - July 15, 2024</h3>
+<h3 style="color:#707070">Date: June 27, 2024 - July 18, 2024</h3>
 <div class="l_spacer"></div>
 <p>This is a collection of game design concepts.</p>
 <hr>
@@ -116,6 +116,14 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>Inside a polytheistic game world, multiple control modules regulate the feedback loops of the game characters.</p>
 <p>Inside a pantheistic game world, the game characters' feedback loops are not being regulated by any external module; the characters themselves are their own regulators.</p>
 <p>One of the main advantages of using either a monotheistic or polytheistic system is that it allows the gamemaster to occasionally override the game's default laws by means of admin privilege. In computer science, it is called "miracle".</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/025.jpg" alt="Game Design Concepts (Figure 8)">
+<h3><b>Modular Behavior Tree</b></h3>
+<p>Behavior trees are useful in game AI. You can implement a wide range of complex decision-making agents based upon them.</p>
+<p>Sometimes, however, we feel overwhelmed by the urge to make a behavior tree unreasonably enormous when there are way too many types of items with which the agent is supposed to interact.</p>
+<p>For example, imagine that a game character has a behavior tree which involves a task called "eat". In order to tell the character exactly what to do when it runs this task, the "eat" node must be able to handle all possible ways of eating, such as how to eat a salmon, how to eat a donut, how to eat a taco, and so on.</p>
+<p>Thus, it is oftentimes convenient to make behavior trees modular, so that a tree of tasks that is specific to the object of interaction can simply reside within the object, temporarily stick itself to the character's "eat" task during the interaction, and then depart once the interaction is over.</p>
 <div class="l_spacer"></div>
 <hr>
 <div class="l_spacer"></div>

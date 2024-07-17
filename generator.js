@@ -115,10 +115,10 @@ async function run()
     makeWritingPagesList("Writings (Fiction)", fictionEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
-    makeWritingPagesList("Arts", artEntries, htmlLines);
+    makeWritingPagesList("Recommendations", linkEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
-    makeWritingPagesList("Recommendations", linkEntries, htmlLines);
+    makeWritingPagesList("Arts", artEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
     htmlLines.push(`<h1>Games</h1>`);
