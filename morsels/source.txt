@@ -277,9 +277,9 @@ If everything is already uncovered, there will be no secret to uncover and so yo
 
 :d:A mathematical interpretation of David Hume's philosophy.
 :k:David Hume, Empiricism, Empirical Philosophy, Metaphysics, Epistemology, Ontology, Discrete Math, Philosophy Of Mind, Computational Psychology
-:l:2024-07-17
+:l:2024-07-20
 
-[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 17, 2024
+[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 20, 2024
 
 This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
 
@@ -366,6 +366,21 @@ Hume's philosophy tells us that an idea can be considered a "fact" if it is caus
 Each cause works as a proof of the idea's truthfulness. The more causes there are, the more confidently we are able to say that the idea is true. If it is so true that its truthfulness is hardly questionable, we say that the idea is a "fact".
 
 People who know how a blockchain works (such as Bitcoin or Ethereum) will easily come to the realization that ideas are reminiscent of blockchain transactions, and that a "fact" is basically a transaction which has been mined (verified) and is given credit by a long chain of preceding blocks.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<027>
+@@<h3><b>7. Simple and Complex Ideas</b></h3>
+
+In "A Treatise of Human Nature", Hume makes a clear distinction between simple and complex ideas.
+
+Based upon his rejection of the infinite divisibility of our sense-data, he says that "simple ideas" are ideas which cannot be further divided into its component parts, meaning that they are the "atoms" of our mind.
+
+Examples of simple ideas include the primary color components (e.g. red, green, and blue), musical notes, and other irreducible units of sensation.
+
+"Complex ideas", on the other hand, are groups of simple ideas. Each complex idea is a product of synthesis among two or more simple ideas. It is also possible to group complex ideas to form even more complex ideas.
+
+A simple impression (i.e. external stimulus) gives birth to a simple idea. A multitude of simple ideas, then, give birth to complex ideas based on the way in which they are related to each other.
 
 @@<div class="l_spacer"></div>
 @@<hr>
