@@ -124,7 +124,7 @@ const dim_color_frame = simpleFrame(darkColor, dimColor);
 const lightYellow_color_frame = simpleFrame(darkColor, lightYellowColor);
 const banner_frame = roundedFrame(mediumColor, darkColor);
 const gameLinkImage_frame = borderedFrame(darkColor, mediumColor, mediumColor);
-const gameLinkImageHover_frame = borderedFrame(darkColor, mediumColor, lightYellowColor);
+const featureLinkImage_frame = borderedFrame(darkColor, mediumColor, mediumColor);
 const button_frame = borderedFrame(mediumColor, lightColor, lightYellowColor);
 const img_frame = roundedFrame(darkColor, lightColor);
 const snippet_frame = roundedFrame(extraDarkColor, lightGreenColor);
@@ -189,6 +189,18 @@ iframe {
 	${gameLinkImage_frame}
 }
 .gameLink:hover {
+	border-color: ${lightYellowColor}
+}
+.featureLink {
+	position: relative;
+	display: ${landscape ? "inline-block" : "block"};
+	width: ${landscape ? "30vw" : "80vw"};
+	height: ${landscape ? "17.1429vw" : "45.7143vw"};
+	${m_spacing}
+	${xl_font}
+	${featureLinkImage_frame}
+}
+.featureLink:hover {
 	border-color: ${lightYellowColor}
 }
 .playButton {

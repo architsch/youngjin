@@ -109,6 +109,12 @@ async function run()
     htmlLines.push(`<img class="logoImage" src="${rootURL}/logo.png" alt="ThingsPool Logo">`);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
+    htmlLines.push(`<h1>Featured</h1>`);
+    addFeatureLink(htmlLines, "Model of the Mind", "https://thingspool.net/morsels/page-2.html", "https://thingspool.net/feat2.jpg");
+    addFeatureLink(htmlLines, "Serious Game Design", "https://thingspool.net/morsels/page-1.html", "https://thingspool.net/feat1.jpg");
+    addFeatureLink(htmlLines, "Thought Simulator", "https://thingspool.net/morsels/page-3.html", "https://thingspool.net/feat3.jpg");
+    htmlLines.push(`<div class="l_spacer"></div>`);
+
     makeWritingPagesList("Writings (Nonfiction)", nonfictionEntries, htmlLines);
     htmlLines.push(`<div class="l_spacer"></div>`);
 
@@ -200,7 +206,6 @@ async function makeWritingPages(writingEntries, omitDateAndAuthor = false)
             addSitemapEntry(`${rootURL}/${entryRelativeURL}`, fileLastmod);
         }
 
-        //addPromo(htmlLines);
         addFooterHTML(htmlLines);
 
         await write(listRelativeURL, htmlLines.join("\n"));
@@ -320,6 +325,13 @@ function addGameLink(htmlLines, gameTitle, gameURL, imageURL)
 {
     htmlLines.push(`<a class="noTextDeco" href="${gameURL}">`);
     htmlLines.push(`<img class="gameLink" src="${imageURL}" alt="${gameTitle}">`);
+    htmlLines.push(`</a>`);
+}
+
+function addFeatureLink(htmlLines, featureTitle, featureURL, imageURL)
+{
+    htmlLines.push(`<a class="noTextDeco" href="${featureURL}">`);
+    htmlLines.push(`<img class="featureLink" src="${imageURL}" alt="${featureTitle}">`);
     htmlLines.push(`</a>`);
 }
 
@@ -474,7 +486,6 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
             const date = line.match(/\](.*?)$/)[1].trim();
             if (!isFirstArticle)
             {
-                //addPromo(htmlLines);
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
                 fileTexts.push(htmlLines.join("\n"));
@@ -543,7 +554,6 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
         }
     }
     endParagraph();
-    //addPromo(htmlLines);
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
     fileTexts.push(htmlLines.join("\n"));

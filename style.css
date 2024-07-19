@@ -306,6 +306,25 @@ iframe {
 .gameLink:hover {
 	border-color: #e0d0a0
 }
+.featureLink {
+	position: relative;
+	display: inline-block;
+	width: 30vw;
+	height: 17.1429vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
+	font-size: min(3.14vmax, 27.65px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #202020;
+	color: #a0a0a0;
+	border-radius: 4.5vmin;
+	border-bottom: 1.5vmin #a0a0a0 solid;
+	border-right: 1.5vmin #a0a0a0 solid;
+}
+.featureLink:hover {
+	border-color: #e0d0a0
+}
 .playButton {
 	position: relative;
 	display: inline-block;
@@ -433,6 +452,25 @@ iframe {
 	border-right: 1.5vmin #a0a0a0 solid;
 }
 .gameLink:hover {
+	border-color: #e0d0a0
+}
+.featureLink {
+	position: relative;
+	display: block;
+	width: 80vw;
+	height: 45.7143vw;
+	text-align: center;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin auto;
+	font-size: min(3.14vmax, 27.65px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #202020;
+	color: #a0a0a0;
+	border-radius: 4.5vmin;
+	border-bottom: 1.5vmin #a0a0a0 solid;
+	border-right: 1.5vmin #a0a0a0 solid;
+}
+.featureLink:hover {
 	border-color: #e0d0a0
 }
 .playButton {
