@@ -9,7 +9,7 @@ This is a collection of game design concepts.
 @@<hr>
 @@<div class="l_spacer"></div>
 <001>
-@@<h3><b>Mechanical Narratives</b></h3>
+@@<h3><b>1. Mechanical Narratives</b></h3>
 
 A game is usually a combination of two factors - mechanics and narratives.
 
@@ -32,7 +32,7 @@ Such a dilemma can be bypassed by simply collecting a number of "mechanical narr
 @@<hr>
 @@<div class="l_spacer"></div>
 <002>
-@@<h3><b>Sensors, Filters, and Motors</b></h3>
+@@<h3><b>2. Sensors, Filters, and Motors</b></h3>
 
 In general, a gameplay agent can be constructed by assembling 3 types of modules - sensors, filters, and motors.
 
@@ -53,7 +53,7 @@ Such a multitude of modules can then communicate with one another by means of se
 @@<hr>
 @@<div class="l_spacer"></div>
 <003>
-@@<h3><b>Psychological Force Field</b></h3>
+@@<h3><b>3. Psychological Force Field</b></h3>
 
 Psychological force field is a useful concept in game design.
 
@@ -72,7 +72,7 @@ A real life example of psychological force field is Feng Shui, where architectur
 @@<hr>
 @@<div class="l_spacer"></div>
 <004>
-@@<h3><b>Parallel-Attention Timeline</b></h3>
+@@<h3><b>4. Parallel-Attention Timeline</b></h3>
 
 A parallel-attention timeline is a pretty useful tool to use in gameplay AI.
 
@@ -95,7 +95,7 @@ Each task possesses its own intrinsic attention priority (i.e. row) which cannot
 @@<hr>
 @@<div class="l_spacer"></div>
 <005>
-@@<h3><b>Partial Movement Constraints</b></h3>
+@@<h3><b>5. Partial Movement Constraints</b></h3>
 
 Both too much freedom and too little freedom are undesirable in gameplay.
 
@@ -116,7 +116,7 @@ This mixed approach has 3 main advantages:
 @@<hr>
 @@<div class="l_spacer"></div>
 <022>
-@@<h3><b>Emotional State Machine</b></h3>
+@@<h3><b>6. Emotional State Machine</b></h3>
 
 When it comes to designing gameplay systems, it is often useful to model each game character as a state machine (i.e. an object with a set of possible states). There are more advanced models indeed, but state machines usually suffice for fairly simple purposes.
 
@@ -135,7 +135,7 @@ You can change the emotion's current state by applying a "psychological force" t
 @@<hr>
 @@<div class="l_spacer"></div>
 <023>
-@@<h3><b>Deities of the Game World</b></h3>
+@@<h3><b>7. Deities of the Game World</b></h3>
 
 Designing a game is essentially the same thing as designing your own virtual world.
 
@@ -154,7 +154,7 @@ One of the main advantages of using either a monotheistic or polytheistic system
 @@<hr>
 @@<div class="l_spacer"></div>
 <025>
-@@<h3><b>Modular Behavior Tree</b></h3>
+@@<h3><b>8. Modular Behavior Tree</b></h3>
 
 Behavior trees are useful in game AI. You can implement a wide range of complex decision-making agents based upon them.
 
@@ -187,7 +187,7 @@ The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more 
 @@<hr>
 @@<div class="l_spacer"></div>
 <006>
-@@<h3><b>Physical Space and Conceptual Space</b></h3>
+@@<h3><b>1. Physical Space and Conceptual Space</b></h3>
 
 There are two different spaces in our universe - physical space and conceptual space.
 
@@ -200,7 +200,7 @@ Each object has its own position in physical space as well as a position in conc
 @@<hr>
 @@<div class="l_spacer"></div>
 <007>
-@@<h3><b>Particulars and Universals</b></h3>
+@@<h3><b>2. Particulars and Universals</b></h3>
 
 There are two types of objects - particulars and universals.
 
@@ -215,7 +215,7 @@ An instance of a class, which is dynamically allocated in memory, is a particula
 @@<hr>
 @@<div class="l_spacer"></div>
 <008>
-@@<h3><b>Contiguity and Resemblance</b></h3>
+@@<h3><b>3. Contiguity and Resemblance</b></h3>
 
 Since an object exists in two different spaces (namely, "physical space" and "conceptual space"), a distance between a pair of objects can possess either one of two meanings depending on the type of space in which it is measured.
 
@@ -228,7 +228,7 @@ Proximity can be measured by taking the reciprocal of the distance. Less distanc
 @@<hr>
 @@<div class="l_spacer"></div>
 <009>
-@@<h3><b>Surprise</b></h3>
+@@<h3><b>4. Surprise</b></h3>
 
 How to measure the amount of surprise between two objects?
 
@@ -243,7 +243,7 @@ Thus, we can measure the amount of surprise by measuring the conceptual distance
 @@<hr>
 @@<div class="l_spacer"></div>
 <010>
-@@<h3><b>Curiosity Force</b></h3>
+@@<h3><b>5. Curiosity Force</b></h3>
 
 Curiosity often drives us to move from familiar places to unfamiliar places. It is possible to devise a mathematical formula which tells us exactly how the force of curiosity will initiate such a movement.
 
@@ -254,7 +254,7 @@ If you take the sum of all the surprise vectors which involve the observer and m
 @@<hr>
 @@<div class="l_spacer"></div>
 <016>
-@@<h3><b>How to Compute Curiosity</b></h3>
+@@<h3><b>6. How to Compute Curiosity</b></h3>
 
 Can we represent curiosity as a numerical quantity?
 
@@ -269,6 +269,11 @@ It is only when you are surrounded by a moderately surprising environment (i.e. 
 A halfway mixture between familiar and unfamiliar elements creates a "Goldilocks zone of motivation" which will encourage you to uncover partially hidden secrets.
 
 If everything is already uncovered, there will be no secret to uncover and so you won't feel the necessity to start an adventure. If everything is veiled in darkness, you will feel clueless and thus not even dare to start an adventure.
+
+@@<div class="l_spacer"></div>
+@@<hr>
+@@<div class="l_spacer"></div>
+(To be continued...)
 
 
 
