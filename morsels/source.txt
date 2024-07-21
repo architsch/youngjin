@@ -1,8 +1,8 @@
 :d:Methodology of designing educational narratives.
 :k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
-:l:2024-07-18
+:l:2024-07-21
 
-[Game Design Concepts] June 27, 2024 - July 18, 2024
+[Game Design Concepts] June 27, 2024 - July 21, 2024
 
 This is a collection of game design concepts.
 
@@ -163,6 +163,23 @@ Sometimes, however, we feel overwhelmed by the urge to make a behavior tree unre
 For example, imagine that a game character has a behavior tree which involves a task called "eat". In order to tell the character exactly what to do when it runs this task, the "eat" node must be able to handle all possible ways of eating, such as how to eat a salmon, how to eat a donut, how to eat a taco, and so on.
 
 Thus, it is oftentimes convenient to make behavior trees modular, so that a tree of tasks that is specific to the object of interaction can simply reside within the object, temporarily stick itself to the character's "eat" task during the interaction, and then depart once the interaction is over.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<026>
+@@<h3><b>9. Brand-Building</b></h3>
+
+One thing I learned while developing and publishing indie games, was that a game needs to have its own brand in order to be truly successful.
+
+Creating a brand is such a monumental challenge. One cannot just put a bunch of buzzwords together and expect it to leave a lasting impact upon the heart of the audience. In my opinion, a great brand requires 3 major elements: Purpose, Logic, and Mystery.
+
+A brand needs a purpose because otherwise the customer won't be encouraged to partake in its narrative. Without a purpose, there is no need to support the brand's growth by any means.
+
+A brand cannot flourish without any logic either. It must have a logically sound solution to fulfill the said purpose. Our reason must be able to grasp it, for otherwise everybody will be left confounded.
+
+However, a brand also ought to preserve a decent amount of mystery in it. Even a perfectly logical solution, guaranteed to solve the most urgent problem in the most quintessential way, won't attract the audience if they are not given their own roles to participate in a journey to freely explore the unknown and discover hidden treasures.
+
+In general, I believe that the most appealing brand must have its own purpose, logic, and mystery in equal measures. This corresponds to the center point of the circular diagram I have shown here (denoted by the Sun).
 
 @@<div class="l_spacer"></div>
 @@<hr>
