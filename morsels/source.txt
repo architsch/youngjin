@@ -193,9 +193,9 @@ In general, I believe that the most appealing brand must have its own purpose, l
 
 :d:Mathematical models of our own thoughts, feelings, and the sense of curiosity.
 :k:Curiosity, Motivation, Motive Force, Curiosity Force, Conceptual Space, Physical Space, Katarina Gyllenbäck, Feature Space, Idealism, Ontology, Epistemology
-:l:2024-07-16
+:l:2024-07-22
 
-[Mathematics of the Mind] June 28, 2024 - July 16, 2024
+[Model of the Mind] June 28, 2024 - July 22, 2024
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
@@ -286,6 +286,21 @@ It is only when you are surrounded by a moderately surprising environment (i.e. 
 A halfway mixture between familiar and unfamiliar elements creates a "Goldilocks zone of motivation" which will encourage you to uncover partially hidden secrets.
 
 If everything is already uncovered, there will be no secret to uncover and so you won't feel the necessity to start an adventure. If everything is veiled in darkness, you will feel clueless and thus not even dare to start an adventure.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<046>
+@@<h3><b>7. Uniformity</b></h3>
+
+It is possible to measure the amount of uniformity between two objects.
+
+In order for a pair of objects to comprise one uniform body, they must satisfy two conditions.
+
+First, they must be physically close to each other. If they are too far apart, we will clearly be able to see that there is a significant spatial gap between them, showing that they are discontinuous and thus not uniform.
+
+Secondly, they must resemble each other (i.e. similar in characteristics). If they look too drastically different, we will be able to tell that their mutual contrast is too huge to ensure that they are part of one smooth, uniform body.
+
+Therefore, the amount of uniformity can be computed by taking the inverse of the product between their physical and conceptual distances.
 
 @@<div class="l_spacer"></div>
 @@<hr>
