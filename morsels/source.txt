@@ -466,6 +466,23 @@ Therefore, I personally find that it is much more convenient to consider an impr
 
 When expressed in the language of computer science, both impressions and ideas are mere instances of the same data structure called "Idea", which contains 3 integers - Quality, Quantity, and Vivacity.
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<031>
+@@<h3><b>11. Metaphor</b></h3>
+
+Metaphors are everywhere. They appear in poetry, novels, songs, and many other forms of media. However, they are often accused of being irrational.
+
+Hume's philosophy suggests otherwise. It is possible to define a metaphor on a rational basis.
+
+An idea has a location in conceptual space, which is composed of two dimensions called "quality" and "quantity". Quality indicates the category of sensation (e.g. brightness, loudness, temperature, etc), and quantity indicates its level of intensity.
+
+We say that there is a resemblance between two ideas when they are close to each other in conceptual space. There are two types of resemblances: (1) Resemblance in quality, and (2) Resemblance in quantity.
+
+Coldness and hotness do not resemble each other quantitatively, since their intensity levels (i.e. temperature) differ significantly. However, they resemble each other qualitatively because they both belong to the same category called "temperature".
+
+On the contrary, red and hotness do not resemble each other qualitatively because they belong to two drastically different categories of sensation. However, they resemble each other quantitatively because the high emotional intensity of red is similar in magnitude to the high temperature of hotness. This is what we call "a metaphor".
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
