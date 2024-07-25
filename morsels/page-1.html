@@ -134,6 +134,18 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>A brand cannot flourish without any logic either. It must have a logically sound solution to fulfill the said purpose. Our reason must be able to grasp it, for otherwise everybody will be left confounded.</p>
 <p>However, a brand also ought to preserve a decent amount of mystery in it. Even a perfectly logical solution, guaranteed to solve the most urgent problem in the most quintessential way, won't attract the audience if they are not given their own roles to participate in a journey to freely explore the unknown and discover hidden treasures.</p>
 <p>In general, I believe that the most appealing brand must have its own purpose, logic, and mystery in equal measures. This corresponds to the center point of the circular diagram I have shown here (denoted by the Sun).</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/043.jpg" alt="Game Design Concepts (Figure 10)">
+<h3><b>10. Image as a Game Map</b></h3>
+<p>Using an image to generate a game map is sometimes a good idea.</p>
+<p>Suppose that your game comprises one vast terrain, modeled as a 2D voxel grid.</p>
+<p>All you need to do is create an image and simply assume that its pixels represent to the terrain's voxels.</p>
+<p>Each pixel's brightness may indicate the terrain's height. This can be graphically implemented by rendering the terrain as a grid of quads and letting the vertex shader set the y-coordinate of each vertex based on the corresponding pixel's brightness.</p>
+<p>Each pixel's saturaion may indicate the density of props, where low saturation means low probability of spawning a prop at the pixel's location, and high saturation means high probability of spawning a prop at the pixel's location.</p>
+<p>Lastly, each pixel's hue may indicate the terrain's biome type, where "green" means forest/meadow, "orange" means village, "magenta" means palace, and so on.</p>
+<p>Additional data-embedding is possible, too, as long as your image is transparent. The opacity of each pixel can be used to specify some other physical properties of the terrain, such as temperature, humidity, etc. Or it may be used for metadata, in which the game's trigger zones, waypoints, and spawn hotspots can be encoded.</p>
+<p>With this image-based map generation system, you can even manipulate the terrain while playing the game because it is just a matter of image processing (run by fragment shaders). The overall erosion of the terrain is the same thing as blurring the image, and hitting the terrain with a meteorite is the same thing as painting the impact zone with a semi-transparent black brush.</p>
 <div class="l_spacer"></div>
 <hr>
 <div class="l_spacer"></div>

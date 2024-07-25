@@ -181,6 +181,27 @@ However, a brand also ought to preserve a decent amount of mystery in it. Even a
 
 In general, I believe that the most appealing brand must have its own purpose, logic, and mystery in equal measures. This corresponds to the center point of the circular diagram I have shown here (denoted by the Sun).
 
+@@<hr>
+@@<div class="l_spacer"></div>
+<043>
+@@<h3><b>10. Image as a Game Map</b></h3>
+
+Using an image to generate a game map is sometimes a good idea.
+
+Suppose that your game comprises one vast terrain, modeled as a 2D voxel grid.
+
+All you need to do is create an image and simply assume that its pixels represent to the terrain's voxels.
+
+Each pixel's brightness may indicate the terrain's height. This can be graphically implemented by rendering the terrain as a grid of quads and letting the vertex shader set the y-coordinate of each vertex based on the corresponding pixel's brightness.
+
+Each pixel's saturaion may indicate the density of props, where low saturation means low probability of spawning a prop at the pixel's location, and high saturation means high probability of spawning a prop at the pixel's location.
+
+Lastly, each pixel's hue may indicate the terrain's biome type, where "green" means forest/meadow, "orange" means village, "magenta" means palace, and so on.
+
+Additional data-embedding is possible, too, as long as your image is transparent. The opacity of each pixel can be used to specify some other physical properties of the terrain, such as temperature, humidity, etc. Or it may be used for metadata, in which the game's trigger zones, waypoints, and spawn hotspots can be encoded.
+
+With this image-based map generation system, you can even manipulate the terrain while playing the game because it is just a matter of image processing (run by fragment shaders). The overall erosion of the terrain is the same thing as blurring the image, and hitting the terrain with a meteorite is the same thing as painting the impact zone with a semi-transparent black brush.
+
 @@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
