@@ -330,7 +330,7 @@ Therefore, the amount of uniformity can be computed by taking the inverse of the
 
 If you measure the amount of uniformity between the observer and a nearby object, you will obtain a number which tells you how familiar the observer is with the object.
 
-And if you represent this number as the magnitude of a vector which starts at the observer's physical location and points itself to the object's physical location, you will get a vector which can be referred to as a "uniformity vector".
+And if you represent this number as the magnitude of a vector which starts at the observer's conceptual location and points itself to the object's conceptual location, you will get a vector which can be referred to as a "uniformity vector".
 
 Take the sum of all uniformity vectors which originate from the observer, and you will acquire the net uniformity vector. This vector informs us the strength and direction of the surrounding environment's familiarity with respect to the observer.
 
