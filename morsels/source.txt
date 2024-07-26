@@ -1,8 +1,8 @@
 :d:Methodology of designing educational narratives.
 :k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
-:l:2024-07-21
+:l:2024-07-26
 
-[Game Design Concepts] June 27, 2024 - July 21, 2024
+[Game Design Concepts] June 27, 2024 - July 26, 2024
 
 This is a collection of game design concepts.
 
@@ -194,7 +194,7 @@ All you need to do is create an image and simply assume that its pixels represen
 
 Each pixel's brightness may indicate the terrain's height. This can be graphically implemented by rendering the terrain as a grid of quads and letting the vertex shader set the y-coordinate of each vertex based on the corresponding pixel's brightness.
 
-Each pixel's saturaion may indicate the density of props, where low saturation means low probability of spawning a prop at the pixel's location, and high saturation means high probability of spawning a prop at the pixel's location.
+Each pixel's saturation may indicate the density of props, where low saturation means low probability of spawning a prop at the pixel's location, and high saturation means high probability of spawning a prop at the pixel's location.
 
 Lastly, each pixel's hue may indicate the terrain's biome type, where "green" means forest/meadow, "orange" means village, "magenta" means palace, and so on.
 
@@ -214,9 +214,9 @@ With this image-based map generation system, you can even manipulate the terrain
 
 :d:Mathematical models of our own thoughts, feelings, and the sense of curiosity.
 :k:Curiosity, Motivation, Motive Force, Curiosity Force, Conceptual Space, Physical Space, Katarina Gyllenbäck, Feature Space, Idealism, Ontology, Epistemology
-:l:2024-07-22
+:l:2024-07-27
 
-[Model of the Mind] June 28, 2024 - July 22, 2024
+[Model of the Mind] June 28, 2024 - July 27, 2024
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
@@ -322,6 +322,19 @@ First, they must be physically close to each other. If they are too far apart, w
 Secondly, they must resemble each other (i.e. similar in characteristics). If they look too drastically different, we will be able to tell that their mutual contrast is too huge to ensure that they are part of one smooth, uniform body.
 
 Therefore, the amount of uniformity can be computed by taking the inverse of the product between their physical and conceptual distances.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<047>
+@@<h3><b>8. Force of Adaptation</b></h3>
+
+If you measure the amount of uniformity between the observer and a nearby object, you will obtain a number which tells you how familiar the observer is with the object.
+
+And if you represent this number as the magnitude of a vector which starts at the observer's physical location and points itself to the object's physical location, you will get a vector which can be referred to as a "uniformity vector".
+
+Take the sum of all uniformity vectors which originate from the observer, and you will acquire the net uniformity vector. This vector informs us the strength and direction of the surrounding environment's familiarity with respect to the observer.
+
+Scale this net uniformity vector by the observer's adaptivity (which is a scalar value) and you will obtain the force vector which is currently pushing the observer's viewpoint in conceptual space. This force gradually "adapts" the observer to the surroundings, making them become more and more familiar as time passes by.
 
 @@<div class="l_spacer"></div>
 @@<hr>
