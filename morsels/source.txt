@@ -336,10 +336,19 @@ Take the sum of all uniformity vectors which originate from the observer, and yo
 
 Scale this net uniformity vector by the observer's adaptivity (which is a scalar value) and you will obtain the force vector which is currently pushing the observer's viewpoint in conceptual space. This force gradually "adapts" the observer to the surroundings, making them become more and more familiar as time passes by.
 
-@@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
-(To be continued...)
+<048>
+@@<h3><b>9. Dynamics of Exploration</b></h3>
+
+The force of curiosity pushes the observer's body in physical space, toward areas which are unfamiliar to him.
+
+Meanwhile, the force of adaptation pushes the observer's viewpoint in conceptual space, toward areas which are as familiar to him as possible. This lets him quickly adapt himself to his surroundings.
+
+These two forces work together in parallel, continuously propelling both the observer's body (location in physical space) and viewpoint (location in conceptual space) in the direction of spontaneous exploration.
+
+The back-and-forth interaction between these two forces creates a feedback system. The force of curiosity puts the observer in unfamiliar places, which in turn compels the observer to adapt his viewpoint to the unfamiliar. Once his surroundings become too familiar to him, his curiosity then drives him to search for other unfamiliar territories to explore.
+
 
 
 
