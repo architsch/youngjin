@@ -538,7 +538,7 @@ On the contrary, red and hotness do not resemble each other qualitatively becaus
 
 
 :d:Possible usage of Peter Gärdenfors' two-vector event model in the design of gameplay systems.
-:k:Peter Gärdenfors, Cognitive Science, Causality, Causation, Causal Loops, Systems Thinking, System Dynamics, Game Design, Game Mechanics, Game Systems, Philosophy, Epistemology, Russell, Hume, Gameplay Systems Design, Technical Design
+:k:Peter Gärdenfors, Cognitive Science, Causality, Causation, Causal Loops, Systems Thinking, System Dynamics, Game Design, Game Mechanics, Game Systems, Philosophy, Epistemology, Russell, Hume, Gameplay Systems Design, Technical Design, Lund University
 :l:2024-07-28
 
 [Game Design using Gärdenfors' Event Model] July 28, 2024
@@ -551,7 +551,7 @@ When developing a game, one of the biggest challenges that the developer often e
 
 A large-scale game project often involves various in-game events, such as instantaneous actions (e.g. malee attack), firing of projectiles, casting of spells (i.e. status conditions), area effects, upgrades, and many others. It is not so easy to make sure that all these events will coexist in harmony, due to undesired side effects which might be caused by factors such as: (1) Race condition, (2) Combination of multiple events, (3) Criteria for deciding whether an event should be applied or not, and so on.
 
-Professor Gärdenfors, in the Department of Philosophy and Cognitive Science at Lund University, has introduced a structurally elegant model of events and their internal causal relations. It is called the "Two-Vector Model", and it leverages vector quantities as means of specifying the cause and effect of an event. In other words, his model defines an event as an instance of vector transformation.
+Professor Gärdenfors, who is both a cognitive scientist and a philosopher at the University of Lund (Sweden), has introduced a structurally elegant model of events and their internal causal relations. It is called the "Two-Vector Model", and it leverages vector quantities as means of specifying the cause and effect of an event. In other words, his model defines an event as an instance of vector transformation.
 
 What I have personally noticed is that his event model works beautifully in the context of game development. Many of the complexities which are prone to arise in gameplay systems can easily be mitigated (or even avoided) by applying the two-vector model, due to the fact that it lets us nicely encapsulate each gameplay event's causal relation as a simple algebraic operation.
 
