@@ -1,5 +1,5 @@
-:d:Methodology of designing educational narratives.
-:k:Katarina Gyllenbäck, Edutainment, Educational Games, Narrative Design, Screen Writer, Script Writer, Branding, Brand Design, Computational Aesthetics, Educational Narrative
+:d:A list of game design concepts.
+:k:Game Design, Game Mechanics, Game Narratives, Technical Game Design, Game AI, Gameplay Systems, Game Development, Mechanical Narratives, Gameplay Algorithms, Gameplay Semantics, Game Logic
 :l:2024-07-26
 
 [Game Design Concepts] June 27, 2024 - July 26, 2024
@@ -212,7 +212,7 @@ With this image-based map generation system, you can even manipulate the terrain
 
 
 
-:d:Mathematical models of our own thoughts, feelings, and the sense of curiosity.
+:d:A mathematical model of our own thoughts, feelings, and the sense of curiosity.
 :k:Curiosity, Motivation, Motive Force, Curiosity Force, Conceptual Space, Physical Space, Katarina Gyllenbäck, Feature Space, Idealism, Ontology, Epistemology
 :l:2024-07-27
 

@@ -287,7 +287,7 @@ function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL,
     htmlLines.push(`<meta name="keywords" content="${keywords}">`);
     htmlLines.push(`<meta name="author" content="ThingsPool">`);
     htmlLines.push(`<meta name="viewport" content="width=device-width, initial-scale=1">`);
-    htmlLines.push(`<meta property="og:title" content="${title}"/>`);
+    htmlLines.push(`<meta property="og:title" content="${title.replaceAll("\"", "&quot;")}"/>`);
 
     if (relativePageURL != undefined)
         htmlLines.push(`<meta property="og:url" content="${rootURL}/${relativePageURL}"/>`);
@@ -465,6 +465,11 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
     let keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
     let lastmod = globalLastmod;
 
+    let prev_title = title;
+    let prev_description = description;
+    let prev_keywords = keywords;
+    let prev_lastmod = lastmod;
+
     const endParagraph = () => {
         if (paragraphLinesPending.length > 0)
         {
@@ -495,16 +500,21 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
         else if (line.startsWith("[")) // header
         {
             endParagraph();
+            if (!isFirstArticle)
+                prev_title = title;
             title = line.match(/\[(.*?)\]/)[1].trim();
             fileTitles.push(title);
             const date = line.match(/\](.*?)$/)[1].trim();
             if (!isFirstArticle)
             {
                 htmlLines_header.length = 0;
-                addHeaderHTML(htmlLines_header, title, description, keywords, `${code}/page-${fileIndex}.html`, firstImgPath);
-                description = "A writing by ThingsPool.";
-                keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
-                lastmod = globalLastmod;
+                addHeaderHTML(htmlLines_header, prev_title, prev_description, prev_keywords, `${code}/page-${fileIndex}.html`, firstImgPath);
+                prev_description = description;
+                prev_keywords = keywords;
+                prev_lastmod = lastmod;
+                //description = "A writing by ThingsPool.";
+                //keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
+                //lastmod = globalLastmod;
 
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
@@ -557,14 +567,20 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
         }
         else if (line.startsWith(":d:"))
         {
+            if (!isFirstArticle)
+                prev_description = description;
             description = line.substring(3);
         }
         else if (line.startsWith(":k:"))
         {
+            if (!isFirstArticle)
+                prev_keywords = keywords;
             keywords = line.substring(3).toLowerCase().replaceAll("-", " ");
         }
         else if (line.startsWith(":l:"))
         {
+            if (!isFirstArticle)
+                prev_lastmod = lastmod;
             lastmod = line.substring(3);
         }
         else // plain text
@@ -576,9 +592,6 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
 
     htmlLines_header.length = 0;
     addHeaderHTML(htmlLines_header, title, description, keywords, `${code}/page-${fileIndex}.html`, firstImgPath);
-    description = "A writing by ThingsPool.";
-    keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
-    lastmod = globalLastmod;
 
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
