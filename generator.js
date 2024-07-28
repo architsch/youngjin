@@ -272,7 +272,7 @@ function addSitemapEntry(url, lastmod)
     sitemapLines.push(`<url>`);
 }
 
-function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL)
+function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL, ogImageURLOverride)
 {
     if (description.indexOf("\"") >= 0)
         console.error("Description contains a double quote ---> " + description);
@@ -287,12 +287,22 @@ function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL)
     htmlLines.push(`<meta name="keywords" content="${keywords}">`);
     htmlLines.push(`<meta name="author" content="ThingsPool">`);
     htmlLines.push(`<meta name="viewport" content="width=device-width, initial-scale=1">`);
-    htmlLines.push(`<meta property="og:title" content="ThingsPool"/>`);
-    htmlLines.push(`<meta property="og:url" content="https://thingspool.net"/>`);
+    htmlLines.push(`<meta property="og:title" content="${title}"/>`);
+
+    if (relativePageURL != undefined)
+        htmlLines.push(`<meta property="og:url" content="${rootURL}/${relativePageURL}"/>`);
+    else
+        htmlLines.push(`<meta property="og:url" content="${rootURL}"/>`);
+
     htmlLines.push(`<meta property="og:type" content="website"/>`);
     htmlLines.push(`<meta property="og:site_name" content="ThingsPool"/>`);
-    htmlLines.push(`<meta property="og:description" content="Games, Arts, and Writings"/>`);
-    htmlLines.push(`<meta property="og:image" content="https://thingspool.net/share.jpg"/>`);
+    htmlLines.push(`<meta property="og:description" content="${description}"/>`);
+
+    if (ogImageURLOverride != undefined)
+        htmlLines.push(`<meta property="og:image" content="${ogImageURLOverride}"/>`);
+    else
+        htmlLines.push(`<meta property="og:image" content="https://thingspool.net/share.jpg"/>`);
+
     htmlLines.push(`<meta property="og:image:width" content="1200">`);
     htmlLines.push(`<meta property="og:image:height" content="630">`);
 
@@ -309,8 +319,10 @@ function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL)
     htmlLines.push(`<link rel="shortcut icon" href="${rootURL}/favicon.ico">`);
     htmlLines.push(`<link rel="stylesheet" href="${rootURL}/style.css">`);
     htmlLines.push(`<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">`);
+
     if (relativePageURL != undefined)
         htmlLines.push(`<link rel="canonical" href="${rootURL}/${relativePageURL}">`);
+
     htmlLines.push(`</head>`);
     htmlLines.push(`<body>`);
 }
@@ -438,6 +450,7 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
     let title = "???";
     let fileIndex = 1;
     let imageIndex = 1;
+    let firstImgPath = undefined;
     let snippetOn = false;
     let excerptOn = false;
     const paragraphLinesPending = [];
@@ -446,6 +459,7 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
     const fileTexts = [];
     const fileLastmods = [];
     const htmlLines = [];
+    const htmlLines_header = [];
 
     let description = "A writing by ThingsPool.";
     let keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
@@ -486,20 +500,23 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
             const date = line.match(/\](.*?)$/)[1].trim();
             if (!isFirstArticle)
             {
+                htmlLines_header.length = 0;
+                addHeaderHTML(htmlLines_header, title, description, keywords, `${code}/page-${fileIndex}.html`, firstImgPath);
+                description = "A writing by ThingsPool.";
+                keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
+                lastmod = globalLastmod;
+
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
-                fileTexts.push(htmlLines.join("\n"));
+                fileTexts.push(htmlLines_header.join("\n") + "\n" + htmlLines.join("\n"));
                 htmlLines.length = 0;
                 imageIndex = 1;
+                firstImgPath = undefined;
             }
             isFirstArticle = false;
 
             fileLastmods.push(lastmod);
 
-            addHeaderHTML(htmlLines, title, description, keywords, `${code}/page-${fileIndex}.html`);
-            description = "A writing by ThingsPool.";
-            keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
-            lastmod = globalLastmod;
             htmlLines.push(`<div class="l_spacer"></div>`);
             htmlLines.push(`<a class="homeButton" href="${rootURL}/${code}/list.html">Back to List</a>`);
             htmlLines.push(`<h1>${title}</h1>`);
@@ -519,6 +536,8 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
             if (imgName.length > 0)
             {
                 const imgPath = `${rootURL}/${code}/${imgName}.jpg`;
+                if (firstImgPath == undefined)
+                    firstImgPath = imgPath;
                 htmlLines.push(`<img class="figureImage" src="${imgPath}" alt="${title} (Figure ${imageIndex++})">`);
             }
         }
@@ -554,11 +573,19 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
         }
     }
     endParagraph();
+
+    htmlLines_header.length = 0;
+    addHeaderHTML(htmlLines_header, title, description, keywords, `${code}/page-${fileIndex}.html`, firstImgPath);
+    description = "A writing by ThingsPool.";
+    keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
+    lastmod = globalLastmod;
+
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
-    fileTexts.push(htmlLines.join("\n"));
+    fileTexts.push(htmlLines_header.join("\n") + "\n" + htmlLines.join("\n"));
     htmlLines.length = 0;
     imageIndex = 1;
+    firstImgPath = undefined;
 
     return {fileIndices, fileTitles, fileTexts, fileLastmods};
 }
