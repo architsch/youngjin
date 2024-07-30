@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="A computational interpretation of Good and Evil.">
+<meta name="keywords" content="good and evil, dichotomy, dualism, binarism, philosophy, computational philosophy, computational ethics, ethics, monotheism, theology, theism, theosophy">
+<meta name="author" content="ThingsPool">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Good and Evil"/>
+<meta property="og:url" content="https://thingspool.net/morsels/page-5.html"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="A computational interpretation of Good and Evil."/>
+<meta property="og:image" content="https://thingspool.net/morsels/018.jpg"/>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<title>Good and Evil</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="canonical" href="https://thingspool.net/morsels/page-5.html">
+</head>
+<body>
+<div class="l_spacer"></div>
+<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back to List</a>
+<h1>Good and Evil</h1>
+<h3 style="color:#707070">Author: Youngjin Kang</h3>
+<h3 style="color:#707070">Date: July 30, 2024</h3>
+<div class="l_spacer"></div>
+<p>This is a computational interpresentation of Good and Evil, as well as how to model their dynamics using vector math. This is useful for technical systems design in the development of computer games.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/018.jpg" alt="Good and Evil (Figure 1)">
+<h3><b>Heaven and Hell</b></h3>
+<p>Good and evil are measurable quantities.</p>
+<p>There are three points in space - the center of Heaven, the center of Hell, and the center of the world.</p>
+<p>The center of Heaven is the best possible state of the world; it is the pivot of pure good.</p>
+<p>The center of Hell is the worst possible state of the world; it is the pivot of pure evil.</p>
+<p>The center of the world belongs to neither of these two pivots. It represents the current state of the world, which is a mixture between both good and evil. Therefore, it is located somewhere between Heaven and Hell.</p>
+<p>Both Heaven and Hell are perfect spheres. The radius of Heaven is the radius of its spherical event horizon (i.e. threshold beyond which the world can no longer escape from the volume of Heaven), and the radius of Hell is the radius of its spherical event horizon (i.e. threshold beyond which the world can no longer escape from the volume of Hell).</p>
+<p>The amount of good in the world is its distance from Hell, minus its distance from Heaven. The farther away the world is from Hell, the more "good" it is. The closer the world is to Heaven, the more "good" it is.</p>
+<p>The opposite scenario applies to the amount of evil in the world; it is the world's distance from Heaven, minus its distance from Hell.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/019.jpg" alt="Good and Evil (Figure 2)">
+<h3><b>Goodness of Movement</b></h3>
+<p>There are three regions in space - Heaven, Hell, and the world in which we live. All three of them have their own center positions.</p>
+<p>The world can either be moving toward Heaven, toward Hell, or somewhere in between. A movement directed toward Heaven is a "good movement", and a movement directed toward Hell is an "evil movement".</p>
+<p>The world's movement is characterized by its velocity vector. This vector tells us how fast and in which direction the world is currently moving.</p>
+<p>Suppose that there is a unit vector which starts from the center of the world and points directly to the center of Heaven. This indicates the best direction in which the world can ever move with respect to Heaven.</p>
+<p>Furthermore, suppose that there is yet another unit vector which starts from the center of the world and points directly away from the center of Hell. This indicates the best direction in which the world can ever move with respect to Hell.</p>
+<p>Combine these two unit vectors together and you will get the best direction of movement with respect to both Heaven and Hell.</p>
+<p>If you compute the dot product between this vector and the world's velocity vector, you will obtain the degree of how good the world's velocity is.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/020.jpg" alt="Good and Evil (Figure 3)">
+<h3><b>Thermostat's World</b></h3>
+<p>How to calculate the position of Heaven and Hell? It really depends on the definition of our world.</p>
+<p>A world made up of a single thermostat dwells in a one-dimensional space which represents the full range of temperatures. The center of the world refers to the current temperature.</p>
+<p>This one-dimensional space's lower edge indicates the lowest temperature that the thermostat can ever reach. It is one of the two centers of Hell (i.e. It is the center of the headquarter of Hell's ice department).</p>
+<p>In contrast, the upper edge indicates the highest temperature that the thermostat can ever reach. This, too, is one of the two centers of Hell (i.e. It is the center of the headquarter of Hell's fire department).</p>
+<p>The center of Heaven is the thermostat's most ideal temperature (i.e. Temperature that the thermostat is ordered to reach).</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/021.jpg" alt="Good and Evil (Figure 4)">
+<h3><b>Force of Morality</b></h3>
+<p>Measurement of the force of morality starts from the realization of our best desire.</p>
+<p>The center of the world is constantly moving. The rate at which it simultaneously approaches Heaven and escapes Hell indicates the overall goodness of its movement.</p>
+<p>The best velocity of the world is its most optimal direction of movement (That is, the direction which decreases the distance between the world and Heaven and increases the distance between the world and Hell as quickly as possible), scaled by the maximum possible speed of the world.</p>
+<p>Our best desire is the direction which guides the world's current velocity to its best velocity as quickly as possible. If you multiply it by the world's overall amount of morality, you will get the force of morality which is currently pushing the world.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/morsels/024.jpg" alt="Good and Evil (Figure 5)">
+<h3><b>Multiple Eras</b></h3>
+<p>The world's timeline consists of multiple eras. As time passes by, the world advances from one era to the next in a sequential manner.</p>
+<p>Each era has its own Heaven and Hell, meaning that the amount of good (or evil) in the world is determined by the particular era in which we live.</p>
+<p>Once the world enters Heaven 1 during Era 1, the era changes from Era 1 to Era 2. Then, once the world enters Heaven 2 during Era 2, the era changes from Era 2 to Era 3.</p>
+<p>If Era 3 is the last of all eras, the world will finally merge with Heaven 3 (i.e. the final Heaven) after entering it.</p>
+<p>On the other hand, entering the current era's Hell brings the world back to its previous era instead of the next.</p>
+<p>As a side note, it is also feasible to connect the last era to the first era, thus forming an infinite loop of eras. In this case, time will be eternal and the world will keep on moving in its orbit forever.</p>
+<footer>
+<a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
+&copy 2019-2024 ThingsPool.<br>All rights reserved.
+</footer>
+</body>
+</html>

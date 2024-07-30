@@ -97,7 +97,7 @@ async function run()
     await makeWritingPages(nonfictionEntries);
     await makeWritingPages(fictionEntries);
     await makeWritingPages(artEntries);
-    await makeWritingPages(linkEntries, true);
+    await makeWritingPages(linkEntries);
 
     //------------------------------------------------------------------------------------
     // Generate index.html
@@ -173,7 +173,7 @@ function makeWritingPagesList(title, writingEntries, htmlLines)
     }
 }
 
-async function makeWritingPages(writingEntries, omitDateAndAuthor = false)
+async function makeWritingPages(writingEntries)
 {
     const htmlLines = [];
     for (let i = 0; i < writingEntries.length; ++i)
@@ -183,7 +183,7 @@ async function makeWritingPages(writingEntries, omitDateAndAuthor = false)
 
         const entryTitle = writingEntries[i][1];
         const rawText = await read(`${code}/source.txt`);
-        const {fileIndices, fileTitles, fileTexts, fileLastmods} = createHTMLsForWritings(rawText, code, omitDateAndAuthor);
+        const {fileIndices, fileTitles, fileTexts, fileLastmods} = createHTMLsForWritings(rawText, code);
 
         htmlLines.length = 0;
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles", listRelativeURL);
@@ -444,7 +444,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText, code
     return htmlLines.join("\n");
 }
 
-function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
+function createHTMLsForWritings(rawText, code)
 {
     let isFirstArticle = true;
     let title = "???";
@@ -512,9 +512,6 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
                 prev_description = description;
                 prev_keywords = keywords;
                 prev_lastmod = lastmod;
-                //description = "A writing by ThingsPool.";
-                //keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
-                //lastmod = globalLastmod;
 
                 addFooterHTML(htmlLines);
                 fileIndices.push(fileIndex++);
@@ -531,11 +528,8 @@ function createHTMLsForWritings(rawText, code, omitDateAndAuthor)
             htmlLines.push(`<a class="homeButton" href="${rootURL}/${code}/list.html">Back to List</a>`);
             htmlLines.push(`<h1>${title}</h1>`);
 
-            if (!omitDateAndAuthor)
-            {
-                htmlLines.push(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);
-                htmlLines.push(`<h3 style="color:#707070">Date: ${date}</h3>`);
-            }
+            htmlLines.push(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);
+            htmlLines.push(`<h3 style="color:#707070">Date: ${date}</h3>`);
 
             htmlLines.push(`<div class="l_spacer"></div>`);
         }
