@@ -734,7 +734,7 @@ To learn more about her areas of insight, please visit <a href="https://thingspo
 
 [Good and Evil] July 30, 2024
 
-This is a computational interpresentation of Good and Evil, as well as how to model their dynamics using vector math. This is useful for technical systems design in the development of computer games.
+This is a computational interpretation of Good and Evil, as well as how to model their dynamics using vector math. This is useful for technical systems design in the development of computer games.
 
 @@<hr>
 @@<div class="l_spacer"></div>
