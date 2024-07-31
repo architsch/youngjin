@@ -202,10 +202,6 @@ Additional data-embedding is possible, too, as long as your image is transparent
 
 With this image-based map generation system, you can even manipulate the terrain while playing the game because it is just a matter of image processing (run by fragment shaders). The overall erosion of the terrain is the same thing as blurring the image, and hitting the terrain with a meteorite is the same thing as painting the impact zone with a semi-transparent black brush.
 
-@@<div class="l_spacer"></div>
-@@<hr>
-@@<div class="l_spacer"></div>
-(To be continued...)
 
 
 
@@ -357,9 +353,9 @@ The back-and-forth interaction between these two forces creates a feedback syste
 
 :d:A mathematical interpretation of David Hume's philosophy.
 :k:David Hume, Empiricism, Empirical Philosophy, Metaphysics, Epistemology, Ontology, Discrete Math, Philosophy Of Mind, Computational Psychology
-:l:2024-07-23
+:l:2024-07-31
 
-[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 23, 2024
+[Mathematical Interpretation of Hume's Philosophy] July 2, 2024 - July 31, 2024
 
 This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
 
@@ -526,10 +522,208 @@ Coldness and hotness do not resemble each other quantitatively, since their inte
 
 On the contrary, red and hotness do not resemble each other qualitatively because they belong to two drastically different categories of sensation. However, they resemble each other quantitatively because the high emotional intensity of red is similar in magnitude to the high temperature of hotness. This is what we call "a metaphor".
 
-@@<div class="l_spacer"></div>
 @@<hr>
 @@<div class="l_spacer"></div>
-(To be continued...)
+<032>
+@@<h3><b>12. Unity between Two Positions</b></h3>
+
+An idea must have its own quality and quantity. However, we ought to be aware that it must also have its own physical location in order for the mind to conceive it.
+
+For example, when you are imagining a colored point, you cannot do it without locating it somewhere inside your imaginary field of vision.
+
+Hume suggests that, in order for an idea to "exist", we must be able to perceive it either through external senses or our own imagination. Therefore, an idea is required to have a pair of positions - one in conceptual space, and the other one in physical space.
+
+It may theoretically be insisted that it is also feasible to formulate "pure ideas" which belong to either physical space or conceptual space but not both. Such constructs, however, are not directly sensible and thus do not belong to the domain of cognition.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<033>
+@@<h3><b>13. Position of a Complex Idea</b></h3>
+
+How to compute the position of an idea?
+
+The position of a simple (atomic) idea does not have to be computed. It is simply given to our faculty of senses the very moment it is perceived.
+
+The position of a complex idea, on the other hand, must be computed based upon those of its component ideas.
+
+An object in physical space appears to be a single point when viewed from a sufficiently long distance. The physical position of such a point is the center of mass of the object's components in physical space.
+
+Meanwhile, the object's individual color spots "average out" when they are condensed into a single point. This means that its conceptual position is the center of mass of the object's components in conceptual space.
+
+The "mass" of an idea is its vivacity.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<034>
+@@<h3><b>14. Word and Symbol</b></h3>
+
+Whenever we communicate, we use words and symbols to reference our ideas.
+
+The difference between a word and a symbol can be found in the two fundamental relations between ideas - contiguity (i.e. proximity in physical space) and resemblance (i.e. proximity in conceptual space).
+
+When you open up a children's book intended to teach basic English words, you will see that there are lots of images with words next to them. For example, if there is an image of fire, the book will also put the word "fire" right next to it in order to teach the child that the word "fire" is associated with the appearance of fire.
+
+Here, the word "fire" and the appearance of fire do not visually resemble each other, but the child nevertheless learns that the former indicates the latter because these two things have been displayed contiguously in physical space (i.e. page of the book).
+
+What about a symbol? Here is an example. An airplane's safety manual typically uses an icon of fire (aka pictogram) to reference real fire.
+
+In this case, the icon is a symbol of fire, not because we have necessarily seen this icon appearing right next to real fire in physical space, but because we know that these two things visually resemble each other.
+
+Therefore, a word is an idea which references another idea by means of proximity in physical space, whereas a symbol is an idea which references another idea by means of proximity in conceptual space.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<035>
+@@<h3><b>15. Rate of Change</b></h3>
+
+When there is a moving car, how do we measure its speed?
+
+Suppose that we have two snapshots available, one of them showing the car's position at one point in time, and the other one showing the car's position at another point in time.
+
+Let us refer to the first snapshot's position and time as (p1, t1), and the second snapshot's position and time as (p2, t2). Since p1 and t1 appear together in the same snapshot, we know that they are contiguous. And since p2 and t2 appear together in the same snapshot, we know that they, too, are contiguous. Furthermore, since the two snapshots are juxtaposed right next to each other, they are contiguous as well.
+
+And since they (p1, t1, p2, t2) all make up a single body of contiguities, we can tell that they all belong to the same context.
+
+t1 and t2, although they are not physically nearby, belong to the same "quality" in conceptual space (because they are both time values). From this coincidence, we are able to tell that their quantities are comparable. The result of their comparison is the change in time (Δt = t2 - t1).
+
+Similarly, p1 and p2 belong to the same "quality" in conceptual space (because they are both position values), so we are able to tell that their quantities are comparable as well. The result of their comparison is the change in position (Δp = p2 - p1).
+
+The car's speed according to the two snapshots, then, is the ratio between Δt and Δp (i.e. ratio between the lengths of the vertical line segments in conceptual space which are associated with the two snapshots).
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<036>
+@@<h3><b>16. Cause and Effect</b></h3>
+
+Ideas often represent events, and we know that the human mind is prone to associate events with one another in terms of cause and effect (i.e. causality).
+
+Hume says that, by making a sufficient number of observations, we are able to notice a "constant conjuction" between two classes of objects. Hence, he explains that this "constant conjuction" is the data from which we draw the notion of causality.
+
+In order to decide which event is the cause (or effect) of the other, however, we should make an additional analysis. It is the concept of "precedence" to which we ought to pay attention, since it is what gives a direction to the causal relation.
+
+If there is a relation of causality between X and Y, we say that X must be the cause of Y if X precedes Y in time, and vice versa.
+
+This endows the chain of events with a fixed direction of progress, flowing from the past to the future.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<037>
+@@<h3><b>17. Belief</b></h3>
+
+It is possible to compute the amount of belief in an idea.
+
+Our minds are populated by various ideas. Some of them are considered fictitious, while others are considered real. We make such a distinction based upon the amount of belief in each idea.
+
+Imagine that an idea is preceded by a chain of causes (i.e. causal relations). The longer and more vivid the chain is, the more we are convinced that the idea is "real". And the shorter and less vivid the chain is, the more we are convinced that the idea is "fake".
+
+Thus, the total amount of belief in an idea is the sum of vivacities of its preceding ideas, plus its own vivacity.
+
+An impression (i.e. external stimulus) is "real" because, although it is not preceded by a chain of causes, its own vivacity is so sufficiently high that it easily conjures up a strong sense of belief.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<038>
+@@<h3><b>18. Conditional Probability</b></h3>
+
+When a cause is given, how do we measure the probability of occurrence of each of its effects?
+
+Our minds are filled with ideas, and ideas usually represent events. Our belief in the occurrence of an event possesses its own numerical quantity, which can be computed by the "Belief(X)" function where X is the event of interest.
+
+Given a cause, we say that the probability of occurrence of one of its potential effects is the proportion of the belief in the given effect with respect to the sum of the beliefs in all the potential effects.
+
+The more frequently we observe an event, its vivacity increases. And the less frequently we observe an event, its vivacity decreases.
+
+Since the amount of belief in an event is the sum of the vivacities of its history, we can say that more observation yields higher probability and less observation yields lower probability.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<039>
+@@<h3><b>19. Attention</b></h3>
+
+A person's attention is a pointer which points to an idea.
+
+Ideas, which fill up the mind's mental space, stay inactive as long as they are being neglected. It is because their vivacity levels are zero by default.
+
+When an external stimulus enters the person's sensory organ, an impression gets created. It sticks itself to the corresponding idea and breathes vivacity into its mouth, thereby making it alive.
+
+At the same time, the impression attracts the mind's attenion and induces it to point to the idea. The impression soon dies out (due to the cooling down of the stimulus), but the attention remains for a while, cogitating the idea to which it was summoned.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<040>
+@@<h3><b>20. Attention's Job</b></h3>
+
+A person's mind contains at least one active agent of cognition called "attention". An attention points itself to one idea at a time.
+
+There may as well be multiple attentions navigating the person's mental space concurrently. If it is the case, we will refer to them as "primary attention", "secondary attention", and so on.
+
+An attention performs two major jobs while it is pointing to an idea.
+
+(1) It connects the idea with nearby ideas. In physical space, such a connection is called "contiguity". In conceptual space, such a connection is called "resemblance".
+
+(2) It boosts up the vivacity level of the idea.
+
+The more we pay attention to certain ideas, the more vivid they get. This, in turn, strengthens our belief in these ideas.
+
+Ceremonies and rituals are important in human society because citizens need to share a set of common beliefs. Such activities basically "recharge" the vivacity levels of a set of ideas, ensuring that their connections are firmly fixed in our minds.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<041>
+@@<h3><b>21. Attention Shift</b></h3>
+
+The dots you see here are ideas. Ideas can be connected to each other (denoted by line segments) if they are either contiguous in physical space or if they resemble each other in conceptual space.
+
+The mind contains a self-moving agent called "attention" which constantly crawls the vast network of ideas and their connections, boosting their vivacity levels.
+
+Each idea possesses its own "belief" number. This number tells us how strongly the mind believes in the existence of the idea.
+
+When the attention encounters multiple alternative pathways through which it can move, it tends to move toward nearby ideas with higher beliefs than those with lower beliefs.
+
+Over time, this tendency forces only a few strongly believed ideas to survive and all the other ideas to die out. It is reminiscent of gas clouds in space gradually being condensed into a few dense balls of mass (i.e. planets).
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<042>
+@@<h3><b>22. Thinning of the Cloud</b></h3>
+
+A person's mind is like a galaxy; it is a dense celestial body of innumerable ideas, all shining desperately to be embraced by the attention of the consciousness.
+
+The mind must pay attention to an idea at least occasionally in order to keep it alive. Otherwise, its vivacity will decrease over time and, once it reaches zero, it will kill the idea.
+
+Unfortunately, the mind can pay attention to only a small number of ideas at a time. So, even if the mind happens to have a vast cloud of ideas (due to a sudden appearance of a huge number of external stimuli, for instance), time will eventually do its job of "thinning out" such a cloud into a rigid skeleton of only a selected few ideas which are deemed way more important than others.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<044>
+@@<h3><b>23. Plenum and Vacuum</b></h3>
+
+Hume's rejection of the infinite divisibility of matter in our minds eventually leads us to the conclusion that ideas must be discrete and finite in nature.
+
+The reason is simple. A brain does not possess infinite processing power, so it cannot possibly perceive an infinite number of ideas.
+
+Therefore, our mental space must be discrete (i.e. not continuous), and must be enclosed by finite boundaries beyond which no further ideas are conceivable (We cannot see things whiter than white itself, for instance).
+
+What this means is that there must be a "minimum distance between ideas". No two distinct ideas can ever be closer than this.
+
+If a pair of ideas separated by the minimum distance are connected to each other (either via the relation of contiguity or resemblance), we can define this interval as the most basic unit of "plenum" (i.e. filled space).
+
+If a pair of ideas separated by the minimum distance are disjoint from each other, we can define this interval as the most basic unit of "vacuum" (i.e. empty space).
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<045>
+@@<h3><b>24. Idea Field</b></h3>
+
+Since ideas are discrete, we can imagine the mind as a vast field of ideas which are placed at regular intervals. The size of each interval is the minimum distance allowed between a pair of ideas.
+
+Most of these ideas, however, are in sleep because their vivacity levels are zero. The mind cannot perceive them because they "do not exist".
+
+External stimuli, which enter the mind via sense organs, give birth to impressions. These impressions, in turn, pump up the vivacity levels of their respective ideas.
+
+The vivified ideas attract the mind's attention. The attention, then, connects these ideas by "smearing" their fluids of vivacity toward each other. If they are too far apart, however, there won't be enough vivacity to spread and the connection will fall short.
+
+
 
 
 
