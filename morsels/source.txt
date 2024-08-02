@@ -1014,3 +1014,229 @@ If Era 3 is the last of all eras, the world will finally merge with Heaven 3 (i.
 On the other hand, entering the current era's Hell brings the world back to its previous era instead of the next.
 
 As a side note, it is also feasible to connect the last era to the first era, thus forming an infinite loop of eras. In this case, time will be eternal and the world will keep on moving in its orbit forever.
+
+
+
+
+
+
+
+
+:d:This a new way of designing biology-inspired emergent systems, based upon Glenn Puchtel's biocybernetic theory. It encompasses the construction of artificial life, artificial mind, virtual ecosystems, wetware, and other nature-inspired phenomena, based on ideas such as Systems Thinking and Unconventional Computing.
+:k:Glenn Puchtel, Emergent Systems, Control Systems, Feedback Loop, Control Theory, Cybernetics, Biocybernetics, Swarm Intelligence, Software Design, Software Architecture, System Dynamics, Systems Thinking, Systems Engineering, Signal Processing, DSP, Communication Systems, Communication Network, Wetware, Unconventional Computing, Unconventional Cognition, Cognitive Science
+:l:2024-08-02
+
+[Emergent Systems based on Glenn Puchtel's Biocybernetic Theory] August 2, 2024
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Introduction</b></h3>
+
+If you are a software engineer, you will probably agree that designing a well-organized system is a necessary step in the development of an application. Not that many engineers, however, agree that the system must be "emergent" in order for us to maximize its robustness as well as resilience.
+
+It is probably true that emergence is not a necessary ingredient when it comes to creating a rather static, single-purpose program. When it comes to highly dynamic applications such as simulations and video games, though, we cannot help ourselves realizing that the sheer complexity of the system we are dealing with is not something which can be thoroughly grasped by the developer's intellect alone.
+
+A large-scale application with its own adaptive behaviors is oftentimes too complex in nature, that the developer is inevitably led to the conclusion that the system must be broken down into smaller subsystems. Such a divide-and-conqure approach comes in handy especially when a fairly large team of developers are simultaneously working on the same codebase (Modularization helps us reduce interdependencies, for example).
+
+There is a much more profound advantage in the aforementioned design philosophy, however, and it is often referred to as "emergence". As you might have already guessed, expressing a system as a group of multiple subsystems (rather than a single, monolithic blackbox) is a good idea not only because it makes it easy for developers to tackle each individual part separately, but also because the collective behavior of such subsystems makes room for what we would like to describe as "swarm intelligence" - an army of relatively dumb agents which, when coordinated under a common goal, display surprisingly robust and resilient phenomena (e.g. self-recovery of a multicellular organism).
+
+Such a multi-agent system is called "emergent", due to the fact that its complexity is something which emerges out of simpler elements, rather than something which was carved like a rigid sculpture by the developer.
+
+<a0_1>
+
+Glenn Puchtel, who is an interdisciplinary software architect with expertise in system dynamics and cognitive science, has introduced a set of novel concepts in the design of emergent systems. Explained in the context of cybernetics, these concepts tell us that they can be used as building blocks of what may be termed "artificial biological organs" - modules that a cyborg would attach to its body in order to adapt itself to the surrounding environment.
+
+In the following sections, I will be illustrating a collection of Glenn Puchtel's ideas which are indispensable for the construction of emergent systems. They are inspired by some of his major articles, which are listed below:
+
+1. <a href="#bibliography_1">"Cybernetic-Oriented Design (CyOD)"</a>
+2. <a href="#bibliography_2">"Coordination without (direct) Communication"</a>
+3. <a href="#bibliography_3">"Cybernetic Waves"</a>
+4. <a href="#bibliography_4">"Reaction Networks"</a>
+5. <a href="#bibliography_5">"Biological Models of Reactionary Networks"</a>
+6. <a href="#bibliography_6">"Temporality"</a>
+7. <a href="#bibliography_7">"Bio-Cybernetic Patterns"</a>
+
+These articles, however, are not the only ones he has written. If you want to read more of his works, please visit his LinkedIn newsletter: <a href="https://www.linkedin.com/newsletters/cyborg-bio-cybernetics-6879770834110689280/">"Cyborg - (bio)cybernetics"</a>.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>1. Separation of State and Behavior</b></h3>
+
+Glenn Puchtel begins his introduction to cybernetic-oriented design with the notion of "separation of state and behavior" <a href="#bibliography_1">[1]</a>. Programmers who have learned OOP (Object Oriented Programming) will remember that a system (i.e. "object") is practically a blockbox which encapsulates both a behavior and a state. This is quite syntactically apparent in a class declaration, where the member functions characterize its behavior and the member variables characterize its state.
+
+People who dislike OOP may insist that the very idea of wrapping both a behavior and a state inside the same container called "object" is a bad decision, since the mixture of these two drastically different elements is prone to spill nasty side effects such as race conditions and deadlocks.
+
+This, however, is not really an intrinsic aspect of OOP, but rather a result of misunderstanding the way this paradigm should be handled. Most of its undesirable side effects can be attributed to the lack of enough separation between systems (objects), not the lack of a thick, gigantic wall which segregates everything into two global zones - one containing all the functions (behavior), and the other one containing all the state variables.
+
+It is okay to let each system have its own behavior AND its own local state. After all, a system without any state is memoryless, and the range of actions that a memoryless system can take is extremely limited (since it is only able to react to the current input and none of the previous inputs).
+
+One of the main sources of OOP's complexity problem is one's attempt to pack too many functionalities in a single object. Such a mistake can be prevented by making each object as simple as possible. However, we should also take care not to use this design approach as a means of justifying tight coupling (i.e. direct communication) among objects which are functionally closely related.
+
+<a1_1>
+
+Tight coupling might be okay to have if we are dealing with just a few objects. If there are too many of them, the overall architecture will start to degenerate into a jungle of entangled, disorderly web of communication.
+
+<a1_2>
+
+So, what's the solution? The key lies on Glenn Puchtel's concept of "coordination without direct communication" <a href="#bibliography_2">[2]</a>. I will explain it in detail throughout the upcoming sections.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>2. Indirect Communication</b></h3>
+
+If you have looked at Glenn Puchtel's bio-inspired systems (i.e. biocybernetic systems) <a href="#bibliography_5">[5]</a>, you will be able to tell that they do not allow their biological subsystems (e.g. cells) to share information simply by directly invoking each other's member functions. Instead, these subsystems communicate via a "medium" - a chemical mixture which exists somewhere in space and decays over time. Such a medium continuously emits waves <a href="#bibliography_3">[3]</a>, which are signals waiting to be picked up by nearby systems (e.g. neighboring cells) and be processed according to their own behavioral logic (i.e. goal + rules).
+
+<a2_1>
+
+What I just mentioned is the essence of indirect communication. Instead of directly feeding signals to each other (which creates dependency), systems can instead talk to each other by means of a medium. A medium could be interpreted as some form of "shared state" among multiple systems, yet we should also be aware that it carries its own behavior as well (e.g. continual emission of waves, interaction with environmental factors, etc). Such a dual aspect, combined with the architect's demand for structural consistency, eventually leads us to conclude that the place which holds a medium is itself yet another system, composed of its own state and behavior.
+
+(For a specific example, please refer to the component called "Pipe" in Glenn Puchtel's article, "Biological Models of Reactionary Networks" <a href="#bibliography_5">[5]</a>.)
+
+<a2_2>
+
+This is analogous to typical communication networks which we use daily. Our cellphones exchange data by means of cellphone towers, and out personal computers exchange data by means of servers and routers (which altogether constitute the internet). Two most widely known benefits of such a networking scheme are: (1) Reduction of the number of connections between nodes, and (2) Simplification of the overall topology of the connections.
+
+In Glenn Puchtel's biocybernetic design philosophy, however, he reveals yet another major advantage of indirect communication - scoping of information.
+
+In the "Space (scope)" and "Time" sections of his article, "Coordination without (direct) Communication" <a href="#bibliography_2">[2]</a>, Glenn Puchtel mentions that "giving individuals access to too much information may lead to sensory overload", suggesting that limiting the scope of information is crucial.
+
+He says that it can be achieved by using a medium as the gateway of communication. As long as a medium occupies only a limited region in space and time, systems which communicate via such a medium will be guaranteed to receive information which is only relevant to the local region to which they belong.
+
+The importance of scoping eventually leads us to the conclusion that the application as a whole should comprise multiple layers of scope, which necessitates the notion of a "hierarchy".
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>3. Hierarchy of Systems</b></h3>
+
+When developing a large-scale application, a hierarchical worldview oftentime helps. The reason behind this is not difficult to grasp; whenever the system we are required to implement is too complex, we feel the necessity to break it down to a collection of simpler subsystems, devise each of them separately, and then join them together to let them collaborate as a whole.
+
+For instance, a biological organism is a complex system which can be broken down to a number of major subsystems such as the digestive system, circulatory system, respiratory system, nervous system, immune system, and so on. Since these subsystems are still pretty complex, we still have to break them down to even simpler subsystems, etc, in a recursive (tree-like) manner. This means that a complex system should be hierarchical in structure.
+
+<a3_1>
+
+(According to Glenn Puchtel, "Complex systems organize themselves in hierarchical layers of abstraction-a structure achieved by encapsulating smaller, more specific systems within more extensive, more general systems" <a href="#bibliography_1">[1]</a>.)
+
+In fact, we have already seen an example of hierarchical modeling in the previous section (i.e. "2. Indirect Communication"). When two systems are communicating through a medium, we may as well say that they are both physically bound to the same place to which the medium belongs. In other words, these two communicators should be deemed as two neighboring objects which are occupying the same region in space.
+
+This is the simplest example of a hierarchy, in which the two communicating agents are the children of their common parent. In a way, therefore, one could claim that each branching point of a tree of systems is basically a place (i.e. a medium-provider) through which its subsystems are allowed to communicate, as though it is a LAN (Local Area Network).
+
+<a3_2>
+
+In general, a hierarchical breakdown of systems allows us to handle our problems via multiple layers of abstraction (where the root of the tree represents the most general (abstract) system, and each leaf of the tree represents the most specific (single-purpose) system). At the same time, it also lets systems communicate with one another by means of their parent systems, which means that they are able to transmit messages across multiple layers of the hierarchy.
+
+("The result is the control or dynamic regulation of behavior between layers" - Glenn Puchtel <a href="#bibliography_1">[1]</a>)
+
+For example, suppose that we are modeling an animal's anatomy as a hierarchy of systems. And let us also suppose that cells are subsystems of a tissue and tissues are subsystems of a bloodstream (Note: I know that this is not an accurate reflection of how the body really works, but let's just ignore it for the sake of demonstration). If a cell wants to send a signal to another cell, it won't require a direct connection to that cell to do so. It will only release a chemical which will eventually be delivered to the other cell through the following steps:
+
+(1) First, the cell's chemical will be absorbed by the surrounding tissue.
+(2) The tissue will release the chemical to the adjacent bloodstream.
+(3) The chemical in the bloodstream will be picked up by the other tissue.
+(4) And finally, the other cell's receptor will receive the chemical's signal.
+
+<a3_3>
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>4. Polymorphism</b></h3>
+
+Glenn Puchtel's "separation of statics and dynamics" <a href="#bibliography_1">[1]</a> is an extremely useful concept not just for the sake of organization, but also for the sake of enabling polymorphism.
+
+The foundation of polymorphism lies on the idea of decoupling. Glenn Puchtel mentions in his article that individual systems which are decoupled by knowledge "need not know about the other; only that stimulus introduction affects the state" <a href="#bibliography_2">[2]</a>. What he means by this is that the stimulus (information) can simply reveal its presence in a shared medium, exposing itself to nearby systems and hardly doing anything else. The individual systems, then, can pick up the stimulus from the shared medium and respond to it based on their own decision-making processes.
+
+<a4_1>
+
+The main advantage of polymorphism is that it enhances the modularity of systems. The sender of a stimulus does not have to care who the recipient is, or in which fashion the stimulus ought to be presented in order to fit the recipient's expectations. Those who want to receive it will receive it, and those who want to respond to it will respond to it. And the type of response is entirely up to the recipient's own behavior. The sender only needs to care about sending, and the recipient only needs to care about receiving.
+
+Since a single type of stimulus is able to trigger different responses when detected by different types of recipients, the effects of its presence can be considered "polymorphic" - "poly" because it exhibits a one-to-many relationship (i.e. single input, multiple outputs), and "morphic" because the effects appear in distinct forms.
+
+<a4_2>
+
+A great example of polymorphism can be found in the case of ants and their pheromone-based communication. Glenn Puchtel says in his article that: "Just as the same pheromone elicits different behavior, whereby a worker ant might respond differently from a soldier ant, messages trigger receptors' behavior depending on their role" <a href="#bibliography_2">[2]</a>. Here, a pheromone is a stimulus (input signal) which triggers two separate responses when received by two different recipients (i.e. worker ant and solider ant).
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>5. Feedback Loops</b></h3>
+
+Another benefit of indirect (medium-based) communication is that it allows us to create indirect feedback loops - i.e. long, circular chains of causality which control the flow of the overall system based on not only short-term effects, but also long-term effects (aka "Circular Causality", as mentioned by Glenn Puchtel in his introduction to cybernetic-oriented design <a href="#bibliography_1">[1]</a>). Such a phenomenon is indispensable for the design of dynamics systems which involve multiple causal loops that are intertwined with one another, such as an ecosystem, a marketplace, an electrical grid, and many others which appear in the study of System Dynamics (aka "Systems Thinking").
+
+<a5_1>
+
+A direct (i.e. internal) feedback loop is something which can easily be constructed within the anatomy of the system itself; those of you who have studied systems engineering will probably know how to design such a thing. All you need to do is branch off the output signal, feed it into a stream of time-delay elements (just 1 delay element for a first-order system, or 2 delay elements for a second-order system, etc), and then use that stream as part of the subsequent input of the system. This is an example of how a system can leverage part of its own history of outputs as means of calculating its current input.
+
+<a5_2>
+
+An indirect (i.e. external) feedback loop, on the other hand, requires a collaboration of multiple systems. The output of a system in such a loop first leaves the system, enters another system, leaves that system too, enters yet another system, and so on, until its effect eventually comes back to the input port of the original system. This is how you can simulate long-term effects in complex systems, such as too much population growth eventually leading to more deaths due to food shortage, and so on.
+
+<a5_3>
+
+The most obvious way of implementing indirect feedback loops is to first draw a CLD (<a href="https://en.wikipedia.org/wiki/Causal_loop_diagram">Causal Loop Diagram</a>) and then devise systematic components (e.g. stocks and flows) based on its graph structure. This approach, however, forces the overall architecture to be static (i.e. hard to modify) due to the way it tightly couples its individual subsystems with each other.
+
+Indirect communication offers a nice solution to this lack of structural flexibility. As long as the individual systems communicate only via their "shared pool of information" (i.e. medium), we will be free to either add an additional system to the pool or remove an existing system from the pool without invoking undesirable side effects. This allows systems to dynamically reproduce or destroy themselves as though they are part of a living organism, allowing the overall architecture to continuously modify its shape (which is indispensable for adaptive, self-regulatory behaviors).
+
+Besides, medium-based communication is far superior to predefined communication routes when it comes to the creation of indirect feedback loops, due to one simple reason; a shared medium allows its members to indirectly influence each other in any order/combination, as illustrated in the diagram below.
+
+<a5_4>
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>6. Divisibility means Resilience</b></h3>
+
+Expressing the overall system as an assembly of numerous subsystems has yet another advantage to offer; it is the sense of resilience.
+
+In the "Weight [measure]" section of his article, "Coordination without (direct) Communication", Glenn Puchtel mentions that "emergent systems favor small, lightweight, almost negligible parts; losing any part does not adversely affect the whole" <a href="#bibliography_2">[2]</a>.
+
+What he means by this is that a system which is divisible in nature (i.e. able to cut some of its parts off and still manage to function) is capable of sacrificing small portions of itself for larger gains - a sign of flexibility. If the system were a single, inseparable unit, any risk which involves its loss would cost the total annihilation of the system and would have to be avoided entirely.
+
+<a6_1>
+
+In general, a divisible system is robust because it is composed of rearrangeable parts. Such a system can grow, shrink, and change its shape as needed, and is able to accept relatively minor risks (e.g. A lion hunts down a giraffe despite the risk of being injured, since it can regrow its damaged tissues).
+
+(Look at "Apoptosis" in Glenn Puchtel's "Coordination without (direct) Communication" <a href="#bibliography_2">[2]</a>.)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>7. Goal</b></h3>
+
+There is one major factor in systems design which I haven't mentioned yet. It is "goal" - a sense of purpose. A system needs a goal to serve its designated role; otherwise there is no point in designing a system, unless all we want is an engineering equivalent of "art for art's sake".
+
+<a7_1>
+
+A goal is what drives the system's control mechanism. A goal-oriented system constantly strives to keep its current state as close to the desired state as possible; for instance, a thermostat's "goal" is to minimize the difference between its current temperature and the desired temperature.
+
+("A goal-oriented system must actively intervene to achieve or maintain its goal" - Glenn Puchtel <a href="#bibliography_1">[1]</a>)
+
+For a simple system such as a thermostat, the goal is easy to define. It only requires us to state simple numerical relations, such as: "The difference between X and X0 should be kept minimal", and so on. In the case of a complex system whose goal is way too complicated to be fully explicated in such a manner, however, we need a somewhat more advanced way of defining goals. From my point of view, one of the best ways of illustrating a complex goal is to decompose it into a list of more specific goals (aka "subgoals"), decompose each of them into even more specific goals, and so on, thereby creating a hierarchy of goals. This is similar to the so-called "behavior tree" in video games.
+
+What's interesting in this model of reasoning is that it is structurally analogous to a hierarchical arrangement of systems. In fact, this happy correlation is due to the intrinsic one-to-one correspondence between each system and the goal it is expected to serve (e.g. The root system serves the root goal, the left subtree's system serves the left subtree's goal, etc).
+
+<a7_2>
+
+Here is an example. An organism's goal is to survive. In this case, "organism" is the root system and "survive" is the root goal. The problem is that the words "organism" and "survive" are so broad in scope, that they fail to delineate all the necessary details.
+
+Therefore, we must repeatedly break them down into more specific components, up until the moment at which we finally feel assured that everything is broken down to a set of "atoms" which do not demand further conceptual decomposition. In computer engineering, the atoms are primitive data types (e.g. char, int, float) and machine level instructions (e.g. MOV, ADD, MUL). In electrical engineering, the atoms are basic circuit components (e.g. transistors, capacitors, inductors).
+
+In this example, the "survive" goal can be defined as a compound of 2 subgoals - "eat" and "breathe". Serving the "survive" goal is the same thing as serving both the "eat" and "breathe" goals. 
+
+The hierarchy of systems can be expected to mirror the hierarchy of goals. Since the "survive" goal is the parent of its 2 child goals ("eat" and "breathe"), the organism (whose goal is to "survive") should be considered the parent of its 2 child systems which serve the "eat" and "breathe" goals, respectively. The first one is the digestive system, and the second one is the respiratory system.
+
+<s7_3>
+
+The presence of a hierarchy of goals helps us design the hierarchy of systems because these two have a direct one-to-one relationship (i.e. they are structurally identical). All we have to do is look at each of the goals and construct a system which fulfills that goal.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Bibliography</b></h3>
+
+1. <a id="bibliography_1" href="https://www.linkedin.com/pulse/cybernetic-oriented-design-cyod-glenn-puchtel/">Cybernetic-Oriented Design (CyOD)</a> by Glenn Puchtel (This introductory article outlines pretty much all the main concepts in the design of emergent systems, including: (1) Separation of state and behavior (which enables polymorphism), (2) Hierarchical arrangement of individual subsystems (which is a neat way of breaking down a complex system into a collaborative network of simpler systems), (3) Back-and-forth interaction between state and behavior, which gives rise to feedback loops, and so on.)
+
+2. <a id="bibliography_2" href="https://www.linkedin.com/pulse/coordination-without-direct-communication-glenn-puchtel/">Coordination without (direct) Communication</a> by Glenn Puchtel (Reading this article is crucial for understanding the nature of emergence and how its full potential might be leveraged. Here, the author suggests "indirect communication" (i.e. communication by means of a medium, rather than by means of a direct and instantaneous feeding of signals) as a method of letting individual subsystems collaborate with each other in an implicit manner, which eventually reveals highly emergent patterns such as those we can find in cellular automata.)
+
+3. <a id="bibliography_3" href="https://www.linkedin.com/pulse/cybernetic-waves-glenn-puchtel/">Cybernetic Waves</a> by Glenn Puchtel (This article suggests a chemistry-inspired method of designing a signal-transmitting medium in a cybernetic communication network. The author tell us that a "medium", a mixture of multiple chemical substances of varying saturations, along with several physical parameters such as temperature and pressure, can be placed in the environment, which in turn will emit waves (signals) to the surroundings for some limited duration.)
+
+4. <a id="bibliography_4" href="https://www.linkedin.com/pulse/reaction-networks-glenn-puchtel/">Reaction Networks</a> by Glenn Puchtel (Here, the author directly shows us how to define a chemical mixture in a software simulation and use it as a medium of communication between virtual biological modules. He also suggests specific ways of interpreting the content of such a mixture for the purpose of evaluating/modifying the surrounding environment (aka "conditions" and "cures"). Additionally, the very last diagram of the article deserves special attention, since it summarizes the grand cycle of information flow in a cybernetic-oriented system. In this diagram, "signals" is where an organism receives information, "rules" and "states" are where the organism evaluates and stores the received information, and "actions" is where the organism emits actions based on the result of evaluation. The "world" is the outside environment, which is governed by its own environmental factors such as chemical mixtures (media). These factors continuously emit waves, which the organism's receptors then receive as "signals".)
+
+5. <a id="bibliography_5" href="https://www.linkedin.com/pulse/biological-models-reactionary-networks-glenn-puchtel/">Biological Models of Reactionary Networks</a> by Glenn Puchtel (This one explains in detail the specific building blocks of the author's (bio)cybernetic systems architecture, including nodes, edges, pipes, rules, applicators, kits, and others. Nodes are basically the entry/exit points of signals, edges are transmitters of signals, and pipes/applicators are the ones which make decisions based on the received signals.)
+
+6. <a id="bibliography_6" href="https://www.linkedin.com/pulse/temporality-glenn-puchtel/">Temporality</a> by Glenn Puchtel (This article illustrates the inner workings of time-related cybernetic components (e.g. temporals) using specific code examples. By doing this, the author proves us that these components are highly useful for simulating the ways in which signals vary their intensity levels as time passes by - an extremely crucial concept for implementing time delays in the system's feedback mechanism, as well as for implementing gradual memory decay.)
+
+7. <a id="bibliography_7" href="https://www.linkedin.com/pulse/cybernetic-patterns-glenn-puchtel/">Bio-Cybernetic Patterns</a> by Glenn Puchtel (This is the graphical summary of the major building blocks in cybernetic-oriented design. They resemble digital circuit components in some sense, yet are much more functionally abstract. Within this collection, "pipe" is probably the most notable component because it represents the very concept of "controlled transmission of signals" - an ever-recurring theme in the activity of neurons, protein receptors, and other biological signal-processors.)
