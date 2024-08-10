@@ -542,7 +542,7 @@ function createHTMLsForWritings(rawText, code)
                 const imgPath = `${rootURL}/${code}/${imgName}.jpg`;
                 if (firstImgPath == undefined)
                     firstImgPath = imgPath;
-                htmlLines.push(`<img class="figureImage" src="${imgPath}" alt="${title} (Figure ${imageIndex++})">`);
+                htmlLines.push(`<img class="figureImage" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageIndex++})">`);
             }
         }
         else if (line.startsWith("@@")) // Custom HTML tag
