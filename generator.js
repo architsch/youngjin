@@ -474,9 +474,9 @@ function createHTMLsForWritings(rawText, code)
         if (paragraphLinesPending.length > 0)
         {
             if (snippetOn)
-                htmlLines.push(`<p class="snippet">${paragraphLinesPending.join("<br>").replaceAll(" ", "&nbsp;")}</p>`);
+                htmlLines.push(`<div class="snippet"><pre><code>${paragraphLinesPending.join("\n")}</code></pre></div>`);
             else if (excerptOn)
-                htmlLines.push(`<p class="excerpt">${paragraphLinesPending.join("<br>")}</p>`);
+                htmlLines.push(`<pre><div class="excerpt">${paragraphLinesPending.join("\n")}</div></pre>`);
             else
                 htmlLines.push(`<p>${paragraphLinesPending.join("<br>")}</p>`);
             paragraphLinesPending.length = 0;
@@ -493,7 +493,7 @@ function createHTMLsForWritings(rawText, code)
         if (line.length == 0) // empty line
         {
             if (snippetOn || excerptOn)
-                paragraphLinesPending.push(`<br>`);
+                paragraphLinesPending.push("\n");
             else
                 endParagraph();
         }

@@ -278,19 +278,26 @@ footer {
 .snippet {
 	position: relative;
 	display: inline-block;
+	width: 90vw;
 	width: auto;
 	${xl_spacing_leftText}
 	${s_bold_font}
 	${snippet_frame}
+	overflow: auto;
 	white-space: nowrap;
 }
 .excerpt {
 	position: relative;
 	display: inline-block;
-	width: auto;
+	width: 90vw;
 	${l_spacing}
 	${s_italic_font}
 	${excerpt_frame}
+	white-space: pre-wrap;
+	white-space: -moz-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: -o-pre-wrap;
+	word-wrap: break-word;
 }
 .banner {
 	${full_row_area}

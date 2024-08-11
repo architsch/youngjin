@@ -89,6 +89,7 @@ footer {
 .snippet {
 	position: relative;
 	display: inline-block;
+	width: 90vw;
 	width: auto;
 	text-align: left;	padding: 2.0vmin 2.0vmin;	margin: 2.0vmin auto;
 	font-size: min(1.82vmax, 16.00px);
@@ -98,12 +99,13 @@ footer {
 	background-color: #000000;
 	color: #80d070;
 	border-radius: 4.5vmin;
+	overflow: auto;
 	white-space: nowrap;
 }
 .excerpt {
 	position: relative;
 	display: inline-block;
-	width: auto;
+	width: 90vw;
 	text-align: center;	padding: 1.5vmin 1.5vmin;	margin: 1.5vmin auto;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
@@ -112,6 +114,11 @@ footer {
 	background-color: #000000;
 	color: #80d070;
 	border-radius: 4.5vmin;
+	white-space: pre-wrap;
+	white-space: -moz-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: -o-pre-wrap;
+	word-wrap: break-word;
 }
 .banner {
 	position: relative;
