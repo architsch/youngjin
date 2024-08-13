@@ -68,7 +68,7 @@ This is a very concise and easy explanation of what a narrative is. This will gi
 <003>
 
 @@<h3><a href="https://katarinagyllenback.com/2017/04/06/search-for-invisible-narrative/">PART 1, IN SEARCH OF THE INVISIBLE NARRATIVE</a></h3>
-This is the backstory of what inspired the author to develop her own method of narrative design called "Narrative Bridging". As alluded <a href="https://katarinagyllenback.com/about/">Here</a>, for instance, Narrative Bridging primarily aims to bridge the gap between narratives (i.e. things which writers/designers focus on) and mechanics (i.e. things which programmers/engineers focus on), by means of iteration between the bottom-up (i.e. "mechanics-to-narratives") and top-down (i.e. "narratives-to-mechanics") design processes. In the former case, developers start by creating a set of basic building blocks of interaction, and then build layers of abstraction on top of them to give birth to a body of dynamic storytelling. In the latter case, developers start by devising the overall body of narratives (e.g. storyline, theme, etc), and then add systematic elements to it to give life to the story.
+This is the backstory of what inspired the author to develop her own method of narrative design called "Narrative Bridging". As alluded {{a href="https://katarinagyllenback.com/about/"}}Here{{/a}}, for instance, Narrative Bridging primarily aims to bridge the gap between narratives (i.e. things which writers/designers focus on) and mechanics (i.e. things which programmers/engineers focus on), by means of iteration between the bottom-up (i.e. "mechanics-to-narratives") and top-down (i.e. "narratives-to-mechanics") design processes. In the former case, developers start by creating a set of basic building blocks of interaction, and then build layers of abstraction on top of them to give birth to a body of dynamic storytelling. In the latter case, developers start by devising the overall body of narratives (e.g. storyline, theme, etc), and then add systematic elements to it to give life to the story.
 
 <002>
 
@@ -113,7 +113,7 @@ Katarina Gyllenbäck is a researcher, educator, and writer in the field of narra
 When we are talking about a goal which is already meaningful to us, we often overlook the fact that other people do not necessarily share the same goal. This is because one's unconscious mind tends to process familiar pieces of information automatically behind the scene, without informing the conscious mind.
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 (...) the cognitive psychologist Jerome Bruner says the reason why we find it hard to achieve consciousness about how we interpret (evaluate) information and create meaning is that we are “too expert” and we cannot see what we so easily do automatically. Bruner calls the condition the “unconsciousness of the automatic” (Bruner, 1996).
 #"
@@ -124,7 +124,7 @@ When we are talking about a goal which is already meaningful to us, we often ove
 Therefore, aiming for humanity's common goal is oftentimes a fast and easy solution to resolve the problem of dissonance. This will effectively "sync up" our unconscious minds, letting us understand each other deeply (not just superficially).
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 So if one truly likes to engage people in a meaningful experience, the desired goal has to make sense to all.
 #"
@@ -135,7 +135,7 @@ So if one truly likes to engage people in a meaningful experience, the desired g
 A narrative, on the other hand, usually involves a conflict among multiple goals. However, such a conflict is desirable because it is fictional. The only requirement is that the constructor of a narrative must not be too emotionally attached to any one of the goals specifically; that is, the constructor must remain "value neutral" (lest his/her work be classified as a political propaganda).
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 (...) for a narrative constructor, the most important is to at least make sure to be the last man standing when everyone else gives in to the “unconsciousness of the automatic” and want to cry.
 #"
@@ -146,7 +146,7 @@ A narrative, on the other hand, usually involves a conflict among multiple goals
 Whenever we encounter something that is unfamiliar to us, we feel urged to make sense of it by means of observation and reasoning. The designer can create this kind of motivation by selectively hiding information from the viewer (e.g. 'Fog of War' in video games).
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 Since we like to avoid the anxiety that occurs when not understanding (by seeing strange things that we can´t identify) we create meanings (assumptions) to get in control. (...) And it´s here, in the very heart of the “anxiety-driven” learning narrative constructors reside by holding back and forwarding information to create curiosity.
 #"
@@ -175,17 +175,17 @@ Bertrand Russell is one of my favorite philosophers. One interesting thing about
 @@<div class="l_spacer"></div>
 @@<h3><b>(1) The Problems of Philosophy</b></h3>
 
-This is perhaps the best primer to philosophy in general (maybe not for humanity-related areas such as ethics and aesthetics, but definitely for metaphysics, epistemology, and ontology). In this book, Russell introduces some of the most common questions in philosophy such as the conflict between idealism and realism (i.e. "Matter is a byproduct of mind" vs "Mind is a byproduct of matter"), the definition of "idea" in Plato's metaphysical worldview, and so on. Then he even proceeds to explain his endeavors to define the whole of reality itself, as well as ways in which we may induce it from our sense-data and their apparent relations. (You can read it <a href="https://www.gutenberg.org/cache/epub/5827/pg5827-images.html">Here</a>)
+This is perhaps the best primer to philosophy in general (maybe not for humanity-related areas such as ethics and aesthetics, but definitely for metaphysics, epistemology, and ontology). In this book, Russell introduces some of the most common questions in philosophy such as the conflict between idealism and realism (i.e. "Matter is a byproduct of mind" vs "Mind is a byproduct of matter"), the definition of "idea" in Plato's metaphysical worldview, and so on. Then he even proceeds to explain his endeavors to define the whole of reality itself, as well as ways in which we may induce it from our sense-data and their apparent relations. (You can read it {{a href="https://www.gutenberg.org/cache/epub/5827/pg5827-images.html"}}Here{{/a}})
 
 @@<div class="l_spacer"></div>
 @@<h3><b>(2) The Analysis of Mind</b></h3>
 
-This one is significantly more challenging to read than "The Problems of Philosophy". Nevertheless, I strongly recommend this book due to its interdisciplinary approaches to the study of psychology, cognitive science, and problems of epistemology in general. Although there aren't any diagrams in this book (which is unfortunate because I think it would have helped a lot), the reader will probably be able to realize that many of the concepts which Russell introduces here can be illustrated in terms of graph theory (i.e. where ideas are denoted by vertices, and associations between ideas are denoted by edges). For example, according to Russell's reasoning, the difference between a "vague" idea and an "abstract" idea is that the former is an idea which is closely associated with ideas that are not so closely associated with each other, whereas the latter is an idea which is closely associated with ideas that are also closely associated with each other. This is one example, but there are many more, and they can all be rendered graphically using points and lines on a sheet of paper. (You can read it <a href="https://www.gutenberg.org/cache/epub/2529/pg2529-images.html">Here</a>)
+This one is significantly more challenging to read than "The Problems of Philosophy". Nevertheless, I strongly recommend this book due to its interdisciplinary approaches to the study of psychology, cognitive science, and problems of epistemology in general. Although there aren't any diagrams in this book (which is unfortunate because I think it would have helped a lot), the reader will probably be able to realize that many of the concepts which Russell introduces here can be illustrated in terms of graph theory (i.e. where ideas are denoted by vertices, and associations between ideas are denoted by edges). For example, according to Russell's reasoning, the difference between a "vague" idea and an "abstract" idea is that the former is an idea which is closely associated with ideas that are not so closely associated with each other, whereas the latter is an idea which is closely associated with ideas that are also closely associated with each other. This is one example, but there are many more, and they can all be rendered graphically using points and lines on a sheet of paper. (You can read it {{a href="https://www.gutenberg.org/cache/epub/2529/pg2529-images.html"}}Here{{/a}})
 
 @@<div class="l_spacer"></div>
 @@<h3><b>(3) The Conquest of Happiness</b></h3>
 
-This is probably one of the easiest and most relaxed books ever written by Bertrand Russell. Unlike his other treatises, this one focuses on everyday human emotions and their hints on morality, rather than topics that are mathematically engaged. So if you are more of a fan of humanities than purely abstract concepts (such as those in metaphysics), I recommend reading it. It feels a bit like C.S. Lewis's "Mere Christianity", although Russell tends to speak of ethical topics from a more secular and rational viewpoint. (You can read it <a href="https://russell-j.com/beginner/COH-TEXT.HTM">Here</a>)
+This is probably one of the easiest and most relaxed books ever written by Bertrand Russell. Unlike his other treatises, this one focuses on everyday human emotions and their hints on morality, rather than topics that are mathematically engaged. So if you are more of a fan of humanities than purely abstract concepts (such as those in metaphysics), I recommend reading it. It feels a bit like C.S. Lewis's "Mere Christianity", although Russell tends to speak of ethical topics from a more secular and rational viewpoint. (You can read it {{a href="https://russell-j.com/beginner/COH-TEXT.HTM"}}Here{{/a}})
 
 
 
@@ -220,7 +220,7 @@ Katarina Gyllenbäck is a professional narrative researcher who is also an inter
 People learn new things when they naturally become curious, not when they are forced to be curious. The source of spontaneous curiosity is any goal whose motives are easy to comprehend but requires additional knowledge to accomplish. (Example: "Oh, I really want to open this treasure chest, but it is locked. Therefore, I ought to learn where the key is!")
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 To stress the process of learning by saying “can´t you see it, can´t you see it?” would not make anyone learn better or faster. In worse cases, it might even increase anxiety. Increased anxiety can cause people to reject new information.
 #"
@@ -231,7 +231,7 @@ To stress the process of learning by saying “can´t you see it, can´t you see
 Curiosity-driven learning, which is a one of the core components of narrative design, turns out to be particularly beneficial in the field of education. One way of releasing its full potential is to teach children by letting them play educational games (aka "edutainment").
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 Basically, the same cognitive mechanism that I had experienced ten years earlier within the academics also permeated the context of education.
 (...)
@@ -244,7 +244,7 @@ They who believed games were bad or a hinder to formal schoolwork did not see wh
 A school often fails to teach children effectively, due to the absense of easy-to-understand goals. Since the way a game works closely matches the way our society works (Simulation games such as "SimCity" and "Capitalism 2" are obvious examples), games can play a major role in education as long as they provide children with a set of clear goals as well as clues to achieve them.
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 (...) whereby the goal to learn wasn’t reciprocally shared, made the school turning into a meaningless “red herring” for the children.
 (...)
@@ -324,7 +324,7 @@ Let me introduce "PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS", a narrat
 @@<div class="l_spacer"></div>
 @@<h3><b>Introduction:</b></h3>
 
-Katarina Gyllenbäck is an educator, researcher, and innovator in the field of narrative design and cognitive science. Starting from the drama and film industry, she pioneered a number of novel techniques in the design of interactive media such as a custom narrative AI, the method of "Narrative Bridging" (Click <a href="https://www.researchgate.net/publication/226504927_Narrative_Bridging">Here</a> to view), and many others.
+Katarina Gyllenbäck is an educator, researcher, and innovator in the field of narrative design and cognitive science. Starting from the drama and film industry, she pioneered a number of novel techniques in the design of interactive media such as a custom narrative AI, the method of "Narrative Bridging" (Click {{a href="https://www.researchgate.net/publication/226504927_Narrative_Bridging"}}Here{{/a}} to view), and many others.
 
 "PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS" is one of her articles which highlights the significance of including an intrinsic goal in a narrative, especially when it comes to educating young children who desperately need natural motivation. Inspired by the American psychologist Jerome Bruner, she then investigates the potential causes of the prevanence of extrinsic (forced) goals in contemporary media, such as the exclusion of spontaneous personal feelings from the supposed goal.
 
@@ -334,7 +334,7 @@ Katarina Gyllenbäck is an educator, researcher, and innovator in the field of n
 Our intrinsic form of motivation is oftentimes superceded by "forced motivation" - one which is driven by external reward and punishment rather than genuine curiosity. This makes the goal "extrinsic", as opposed to "intrinsic". A meaningful experience should be triggered by an intrinsic goal.
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 (...) one excluded the motivating engine by how we like to do the “2 + 2” and where we don´t want to know that we are working for our meal but where conditions of rewards or punishments moved intrinsic motives to become extrinsic and where people got the “4” and had to act upon the risk to be punished for their behaviors.
 #"
@@ -347,7 +347,7 @@ Trying to define our reality based upon a set of metaphysical assumptions is per
 When studying narratives, therefore, we must stop thinking in terms of the dichotomy between facts and feelings. Such a conceptual division may be useful in physics and other natural sciences, but not in the domain of cognitive science and psychology in which our very own thoughts are part of what we are supposed to analyze.
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 All versus I had experienced through the years as narrative vs gameplay, narrative vs games, narrative vs itself, etc., was originated from the Western culture that separated mind from body.
 (...)
@@ -362,7 +362,7 @@ The main problem of an unconsciously inspired goal is that we cannot be sure of 
 A goal which is universal, therefore, must be able to express itself in a consciously identifiable format (i.e. in the form of something rational, rather than a mere assortment of vague symbols/metaphors which only appeal to the unconscious). This is probably the reason why the article is titled: "The Need for Retrieval of the Consciousness".
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 When making my claim to the academic to rethink narrative as to retrieve a consciousness I knew it was unlikely that they would embrace the idea since what I did was to suggest a paradigm shift.
 #"
@@ -373,7 +373,7 @@ When making my claim to the academic to rethink narrative as to retrieve a consc
 Academics often reject the notion that a story can be part of our objective reality. Such an attitude, however, is misleading because a story accurately portrays how we, as observers, map the sequence of events in nature and the way in which they are causally related to one another. This is a core component of empirical reasoning.
 
 #"
-<font color="#707070"><b>Related quote from the article:</b></font>
+{{font color="#707070"}}{{b}}Related quote from the article:{{/b}}{{/font}}
 
 In 1996 Bruner wrote in “The culture of education”:
 “But it is usually the case that discussions of narrative reality lead not to reflections on the negotiation of meaning within the human community, but the indignant rejection of “stories” as sources of human illusion. Stories, for all that they require verisimilitude, cannot produce the Truth. Truth-finding is the prerogative of science and logic alone – the paradigmatic mode of knowing.”

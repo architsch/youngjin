@@ -130,7 +130,7 @@ public class StateVector : IAbstractVector { ... }</code></pre></div>
 
 
         int N = TransferValues.Length;
-        for (int i = 0; i < N; ++i)
+        for (int i = 0; i &lt; N; ++i)
             TransferValues[i] += modifier.TransferValues[i];
     }
 
@@ -144,7 +144,7 @@ public class StateVector : IAbstractVector { ... }</code></pre></div>
 
 
         int N = TransferValues.Length;
-        for (int i = 0; i < N; ++i)
+        for (int i = 0; i &lt; N; ++i)
             TransferValues[i] -= modifier.TransferValues[i];
     }
 
@@ -164,7 +164,7 @@ public class StateVector : IAbstractVector { ... }</code></pre></div>
 <p>The following code shows a wrapper class which will works as a "parcel" for delivering force vectors. This class is simply called "Force", and is where the force vector and its metadata are packaged together. This is what an actor actually sends to other actors whenever it "emits a force".</p>
 <div class="snippet"><pre><code>public class Force
 {
-    public HashSet<Place> VisitedPlaces;
+    public HashSet&lt;Place&gt; VisitedPlaces;
     public int TargetPositionX;
     public int TargetPositionY;
     public int TargetRadius;
@@ -176,14 +176,14 @@ public class StateVector : IAbstractVector { ... }</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/b2_1.jpg" alt="Force-Exchange Network for Gameplay Systems (Figure 5)">
 <p>A place acts as a "cellphone tower" in this respect. It "routes" forces to their rightful recipients, just like a cellphone tower routes voice signals to their receivers' mobile devices. One of the main benefits of this indirect means of communication is that it prevents tight coupling among the actors themselves.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/b2_2.jpg" alt="Force-Exchange Network for Gameplay Systems (Figure 6)">
-<p>What if the sender and recipient are in two different places? In this case, the sender's place should first route the sender's force to the recipient's place. The recipient's place, then, will route the received to the recipient, thereby completeing the line of delivery.</p>
+<p>What if the sender and recipient are in two different places? In this case, the sender's place should first route the sender's force to the recipient's place. The recipient's place, then, will route the received to the recipient, thereby completing the line of delivery.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/b2_3.jpg" alt="Force-Exchange Network for Gameplay Systems (Figure 7)">
 <p>The following snippet shows the code implementation of the "Place" data structure. From a topological point of view, each place is a node in a graph with its own edges to its adjacent places (i.e. "neighboringPlaces") as well as a set of actors it contains. The four numbers, "boundaryX1", "boundaryY1", "boundaryX2", and "boundaryY2", refer to the place's spatial boundaries.</p>
 <p>Whenever a place receives a force, its "RouteForce" function gets called. This function compares the force's target region with the spatial regions of the place's constituent actors as well as neighboring places, and routes the force to every one of them whose region intersects that of the target region (because anyone who lies outside of the target region is not supposed to receive the force).</p>
 <div class="snippet"><pre><code>public abstract class Place
 {
-    private HashSet<Actor> actors;
-    private HashSet<Place> neighboringPlaces;
+    private HashSet&lt;Actor&gt; actors;
+    private HashSet&lt;Place&gt; neighboringPlaces;
 
 
     private int boundaryX1;
@@ -218,8 +218,8 @@ public class StateVector : IAbstractVector { ... }</code></pre></div>
                 int forceY1 = force.TargetPositionY - force.TargetRadius;
                 int forceX2 = force.TargetPositionX + force.TargetRadius;
                 int forceY2 = force.TargetPositionY + force.TargetRadius;
-                if ((forceX1 <= boundaryX2 && forceX2 >= boundaryX1) &&
-                    (forceY1 <= boundaryY2 && forceY2 >= boundaryY1))
+                if ((forceX1 &lt;= boundaryX2 && forceX2 &gt;= boundaryX1) &&
+                    (forceY1 &lt;= boundaryY2 && forceY2 &gt;= boundaryY1))
                 {
                     neighboringPlace.RouteForce(force);
                 }
@@ -259,7 +259,7 @@ public class DamageDisabledPlace : Place
 {
     private void ApplyFilter(Force force)
     {
-        if (force.ForceVector.Components[(int)ForceVectorComponentIndex.HealthForce] < 0)
+        if (force.ForceVector.Components[(int)ForceVectorComponentIndex.HealthForce] &lt; 0)
             force.ForceVector.Components[(int)ForceVectorComponentIndex.HealthForce] = 0
     }
 }
@@ -310,23 +310,23 @@ public class MechanicalForceDisabledPlace : Place
 
 public static class StatusConditionFactory
 {
-    public static Dictionary<ForceVectorComponentIndex, () => StatusCondition> GenerationMethods = {
+    public static Dictionary&lt;ForceVectorComponentIndex, () =&gt; StatusCondition&gt; GenerationMethods = {
         {ForceVectorComponentIndex.StatusConditionAddForce_HealBlocker,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
         {ForceVectorComponentIndex.StatusConditionRemoveForce_HealBlocker,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
         {ForceVectorComponentIndex.StatusConditionAddForce_Stun,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
         {ForceVectorComponentIndex.StatusConditionRemoveForce_Stun,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
         {ForceVectorComponentIndex.StatusConditionAddForce_Poison,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
         {ForceVectorComponentIndex.StatusConditionRemoveForce_Poison,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
         {ForceVectorComponentIndex.StatusConditionAddForce_Freeze,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
         {ForceVectorComponentIndex.StatusConditionRemoveForce_Freeze,
-            () => new StatusCondition(...)},
+            () =&gt; new StatusCondition(...)},
     };
 }</code></pre></div>
 <hr>
@@ -347,17 +347,17 @@ public static class StatusConditionFactory
     private StateVector stateVector;
 
 
-    private HashSet<TransferFunction> transferFunctions;
-    private HashSet<ForceEmitter> forceEmitters;
+    private HashSet&lt;TransferFunction&gt; transferFunctions;
+    private HashSet&lt;ForceEmitter&gt; forceEmitters;
 
 
-    private HashSet<StatusCondition> statusConditions;
-    private List<StatusCondition> removePendingStatusConditions;
+    private HashSet&lt;StatusCondition&gt; statusConditions;
+    private List&lt;StatusCondition&gt; removePendingStatusConditions;
 
 
-    public int PositionX => stateVector.Components[(int)StateVectorComponentIndex.PositionX];
-    public int PositionY => stateVector.Components[(int)StateVectorComponentIndex.PositionY];
-    public int Radius => stateVector.Components[(int)StateVectorComponentIndex.Radius];
+    public int PositionX =&gt; stateVector.Components[(int)StateVectorComponentIndex.PositionX];
+    public int PositionY =&gt; stateVector.Components[(int)StateVectorComponentIndex.PositionY];
+    public int Radius =&gt; stateVector.Components[(int)StateVectorComponentIndex.Radius];
 
 
     public Actor(...)
@@ -374,7 +374,7 @@ public static class StatusConditionFactory
 
 
         // Receive the incoming force only if the actor intersects the target region.
-        if (dx*dx + dy*dy <= thresDist*thresDist)
+        if (dx*dx + dy*dy &lt;= thresDist*thresDist)
         {
             netIncomingForceVectorPending += incomingForce.ForceVector;
         }
@@ -392,12 +392,12 @@ public static class StatusConditionFactory
         foreach (TransferFunction transferFunction in transferFunctions)
         {
             int N = netIncomingForceVectorPending.Components.Length;
-            for (int i = 0; i < N; ++i)
+            for (int i = 0; i &lt; N; ++i)
             {
                 if (StatusConditionFactory.GenerationMethods.TryGetValue((ForceVectorComponentIndex)i, out var method))
                 {
                     int numStatusConditionsToAdd = netIncomingForceVectorPending.Components[i];
-                    for (int j = 0; j < numStatusConditionsToAdd; ++j)
+                    for (int j = 0; j &lt; numStatusConditionsToAdd; ++j)
                     {
                         AddStatusCondition(method());
                     }
@@ -414,7 +414,7 @@ public static class StatusConditionFactory
         }
 
 
-        for (int i = 0; i < netIncomingForceVectorPending.Components.Length; ++i)
+        for (int i = 0; i &lt; netIncomingForceVectorPending.Components.Length; ++i)
         {
             netIncomingForceVectorPending.Components[i] = 0;
         }
@@ -422,7 +422,7 @@ public static class StatusConditionFactory
 
         foreach (StatusCondition statusCondition in statusConditions)
         {
-            if (statusCondition.ExpirationTime > Time.time)
+            if (statusCondition.ExpirationTime &gt; Time.time)
                 removePendingStatusConditions.Add(statusCondition);
         }
 

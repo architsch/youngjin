@@ -64,7 +64,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <div class="snippet"><pre><code>if (goalTree.Contains("Eat"))
 {
     player.stats.Add("Hunger");
-    player.stats.OnZero("Hunger", _ => player.Die());
+    player.stats.OnZero("Hunger", _ =&gt; player.Die());
 }
 if (goalTree.Contains("FindFood"))
 {
@@ -73,8 +73,8 @@ if (goalTree.Contains("FindFood"))
 if (goalTree.Contains("DodgeHazard"))
 {
     player.stats.Add("Health");
-    player.stats.OnZero("Health", _ => player.Die());
-    collision.Between("Hazard", "Player").OnStart(_ => player.DecreaseStat("Health"));
+    player.stats.OnZero("Health", _ =&gt; player.Die());
+    collision.Between("Hazard", "Player").OnStart(_ =&gt; player.DecreaseStat("Health"));
 }</code></pre></div>
 <p>This one-to-one correspondence between goals and their respective rules, however, is still not enough for enriching the player's goal-chasing experience. What we saw earlier was a tree of goals, rather than a set of independent goals that are completely separate from one another. If the goals are distributed as a horde of individual targets that the player is supposed to aim for but are scattered all over the place, the player is likely to be confused as to which goal to approach first. As an example, let's suppose that we simply distribute a bunch of foods, shelters, hazards, and enemies uniformly on the ground, according to the presence of the individual goals mentioned above. This setting will technically encourage the player to search for foods and eat them, occasionally find shelters and sleep in one of them, dodge hazards, and fight against enemies. But, that's it! The gameplay, as a whole, will be so blend that it will practically replace all the goals in this game with a single goal called: "Don't get bored".</p>
 <p>Rich gameplay experience originates from a set of motivating goals which do not emerge all at once, but rather in a variety of alternative arrangements. The player may be compelled to "survive" first and then "avoid death" later, or "avoid death" first and then "survive" later. The player may be compelled to "eat" first and then "sleep" later, or "sleep" first and then "eat" later. In other words, there should be a variety of scenarios each of which assigns a unique permutation of priority levels to the tree's component goals. For example, the game should be able to introduce one of the following goal-trees in one occasion, and the other in yet another occasion.</p>
@@ -114,14 +114,14 @@ PlayGame :- AvoidDeath, Survive
 |               |     Death     |
 |               |               |
 |               |               |
-|               >               |
+|               &gt;               |
 |               |               |
 +-------------------------------+
 
 
 (O = Player's Initial Position)
-(> = Door)</code></pre></div>
-<p>The result of spatial partition shown above creates a physical barrier which prevents the player from reaching the "avoid death" region before passing through the "survive" region. Now let's subdivide these two regions into yet another layer of subgoals, which are "eat -> sleep" for the "survive" goal and "dodge hazard -> fight enemy" for the "avoid death" goal. Such a partitioning process is easily achievable via recursive function calls.</p>
+(&gt; = Door)</code></pre></div>
+<p>The result of spatial partition shown above creates a physical barrier which prevents the player from reaching the "avoid death" region before passing through the "survive" region. Now let's subdivide these two regions into yet another layer of subgoals, which are "eat -&gt; sleep" for the "survive" goal and "dodge hazard -&gt; fight enemy" for the "avoid death" goal. Such a partitioning process is easily achievable via recursive function calls.</p>
 <div class="snippet"><pre><code>Top-Down view of the game world:
 
 
@@ -135,13 +135,13 @@ PlayGame :- AvoidDeath, Survive
 |               |               |
 |               |-------------^-|
 |    Sleep      |     Dodge     |
-|               >     Hazard    |
+|               &gt;     Hazard    |
 |               |               |
 +-------------------------------+
 
 
 (O = Player's Initial Position)
-(> = Door)</code></pre></div>
+(&gt; = Door)</code></pre></div>
 <p>Here, the physical barriers are clearly guiding the player to first enter the "eat" region, then enter the "sleep" region, then enter the "dodge hazard" region, and then finally enter the "fight enemy" region. The strict partitioning of space allows this natural emergence of order between goals, without even requiring the procedural algorithm to interpret the meaning of each of them.</p>
 <p>Now we could theoretically subdivide these four regions into yet another layer of subgoals (which would correspond to "find food", "swallow food", "go to shelter", "lie down", "find hazard", "move away from hazard", "find enemy", and "kill enemy", respectively), but the truth is that this new set of goals are no longer abstract; they are primitive instructions which are supposed to dictate the player to take specific actions (i.e. they are leaf nodes in the goal-tree). Therefore, we have finally reached the end of this recursive space-partitioning process, and are responsible for populating each partitioned region with objects which encourage the player to carry out the corresponding goal's intended list of actions (e.g. "find food" and "swallow food" for the case of the "eat" region, etc).</p>
 <div class="snippet"><pre><code>Top-Down view of the game world:
@@ -157,30 +157,30 @@ PlayGame :- AvoidDeath, Survive
 |               |      e        |
 |    s          |-------------^-|
 |               |               |
-|               >    h          |
+|               &gt;    h          |
 |          s    |           h   |
 +-------------------------------+
 
 
 (O = Player's Initial Position)
-(> = Door)
+(&gt; = Door)
 (f = food, s = shelter, h = hazard, e = enemy)</code></pre></div>
 <p>As you can see from the figure above, a straightforward implementation would be to randomly distribute "food" objects inside the "eat" region (in order to let the player "find food" and "swallow food"), randomly distribute "shelter" objects inside the "sleep" region (in order to let the player "go to shelter" and "lie down"), randomly distribute "hazard" objects inside the "dodge hazard" region (in order to let the player "find hazard" and "move away from hazard"), and randomly distribute "enemy" objects inside the "fight enemy" region (in order to let the player "find enemy" and "kill enemy"). However, the algorithm could be more sophisticated than the one presented here, for the purpose of making the gameplay a bit more interesting. One may consider placing such objects in the form of clusters rather than uniformly scattered points, for instance. Or the partitioning process itself could be converted into a grayscale (rather than black-and-white) model, in which spatial locations blend from one region to the other in the form of gradation.</p>
-<p>The spatial configuration presented here can be considered one of many possible instances of the player's set of goals. we can append to this game world yet another chunk of space which instantiates a variant of the same goal-tree, in which the order of goals is different from the previous one. For instance, we can divide this new chunk of space into two regions called "avoid death" and "survive" just like before, but this time in a different order ("avoid death" -> "survive" instead of "survive" -> "avoid death").</p>
+<p>The spatial configuration presented here can be considered one of many possible instances of the player's set of goals. we can append to this game world yet another chunk of space which instantiates a variant of the same goal-tree, in which the order of goals is different from the previous one. For instance, we can divide this new chunk of space into two regions called "avoid death" and "survive" just like before, but this time in a different order ("avoid death" -&gt; "survive" instead of "survive" -&gt; "avoid death").</p>
 <div class="snippet"><pre><code>Top-Down view of the game world:
 
 
 +-------------------------------+-------------------------------+
 |O         f    |               |                               |
 |               |            e  |         Avoid Death           |
-|     f         |     e         >                               |
+|     f         |     e         &gt;                               |
 |         f     |               |                               |
 |   f           |          e    |--------------------------v----|
 |-------v-------|               |                               |
 |               |      e        |                               |
 |    s          |-------------^-|                               |
 |               |               |             Survive           |
-|               >    h          |                               |
+|               &gt;    h          |                               |
 |          s    |           h   |                               |
 +-------------------------------+-------------------------------+</code></pre></div>
 <p>We keep recursively subdividing this new chunk of space, where the general procedure is exactly the same but the order between subgoals can potentially differ.</p>
@@ -190,14 +190,14 @@ PlayGame :- AvoidDeath, Survive
 +-------------------------------+-------------------------------+
 |O         f    |               |                  |            |
 |               |            e  |      Fight       |   Dodge    |
-|     f         |     e         >      Enemy       >   Hazard   |
+|     f         |     e         &gt;      Enemy       &gt;   Hazard   |
 |         f     |               |                  |            |
 |   f           |          e    |--------------------------v----|
 |-------v-------|               |        |                      |
 |               |      e        |        |                      |
-|    s          |-------------^-|        <                      |
+|    s          |-------------^-|        &lt;                      |
 |               |               | Sleep  |        Eat           |
-|               >    h          |        |                      |
+|               &gt;    h          |        |                      |
 |          s    |           h   |        |                      |
 +-------------------------------+-------------------------------+</code></pre></div>
 <p>In the case above, for instance, the "fight enemy" subgoal comes before the "dodge hazard" subgoal instead of after.</p>
@@ -207,14 +207,14 @@ PlayGame :- AvoidDeath, Survive
 +-------------------------------+-------------------------------+
 |O         f    |               |         e        |  h        h|
 |               |            e  |                  |      h     |
-|     f         |     e         >      e           >       h    |
+|     f         |     e         &gt;      e           &gt;       h    |
 |         f     |               |             e    |            |
 |   f           |          e    |--------------------------v----|
 |-------v-------|               |    s   |                      |
 |               |      e        |   s    |       f              |
-|    s          |-------------^-|        <                    f |
+|    s          |-------------^-|        &lt;                    f |
 |               |               |        |    f                 |
-|               >    h          |    s   |          f           |
+|               &gt;    h          |    s   |          f           |
 |          s    |           h   |        |               f      |
 +-------------------------------+-------------------------------+</code></pre></div>
 <p>The end result presents the player with quite a variety of goal sequences. Sometimes the player will face enemies after hazards, as opposed to hazards after enemies, and sometimes the player will be forced to survive after being forced to avoid death, as opposed to being forced to avoid death after being forced to survive. And so on.</p>

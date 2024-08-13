@@ -274,7 +274,7 @@ function addSitemapEntry(url, lastmod)
 
 function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL, ogImageURLOverride)
 {
-    title = title.replaceAll("\"", "&quot;");
+    title = title.replaceAll("\"", "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     description = description.replaceAll("\"", "&quot;");
     keywords = keywords.replaceAll("\"", "&quot;");
 
@@ -433,6 +433,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText, code
         }
         else // plain text
         {
+            line = line.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{{", "<").replaceAll("}}", ">");
             paragraphLinesPending.push(line);
         }
     }
@@ -581,6 +582,7 @@ function createHTMLsForWritings(rawText, code)
         }
         else // plain text
         {
+            line = line.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{{", "<").replaceAll("}}", ">");
             paragraphLinesPending.push(line);
         }
     }
