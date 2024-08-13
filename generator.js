@@ -274,10 +274,9 @@ function addSitemapEntry(url, lastmod)
 
 function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL, ogImageURLOverride)
 {
-    if (description.indexOf("\"") >= 0)
-        console.error("Description contains a double quote ---> " + description);
-    if (keywords.indexOf("\"") >= 0)
-        console.error("Keywords contains a double quote ---> " + keywords);
+    title = title.replaceAll("\"", "&quot;");
+    description = description.replaceAll("\"", "&quot;");
+    keywords = keywords.replaceAll("\"", "&quot;");
 
     htmlLines.push(`<!DOCTYPE html>`);
     htmlLines.push(`<html>`);
@@ -285,16 +284,20 @@ function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL,
     htmlLines.push(`<meta charset="utf-8">`);
     htmlLines.push(`<meta name="description" content="${description}">`);
     htmlLines.push(`<meta name="keywords" content="${keywords}">`);
-    htmlLines.push(`<meta name="author" content="ThingsPool">`);
+    htmlLines.push(`<meta name="author" content="Youngjin Kang">`);
     htmlLines.push(`<meta name="viewport" content="width=device-width, initial-scale=1">`);
-    htmlLines.push(`<meta property="og:title" content="${title.replaceAll("\"", "&quot;")}"/>`);
+    htmlLines.push(`<meta property="og:title" content="${title}"/>`);
 
     if (relativePageURL != undefined)
         htmlLines.push(`<meta property="og:url" content="${rootURL}/${relativePageURL}"/>`);
     else
         htmlLines.push(`<meta property="og:url" content="${rootURL}"/>`);
 
-    htmlLines.push(`<meta property="og:type" content="website"/>`);
+    if (relativePageURL != undefined)
+        htmlLines.push(`<meta property="og:type" content="article"/>`);
+    else
+        htmlLines.push(`<meta property="og:type" content="website"/>`);
+
     htmlLines.push(`<meta property="og:site_name" content="ThingsPool"/>`);
     htmlLines.push(`<meta property="og:description" content="${description}"/>`);
 
@@ -303,8 +306,7 @@ function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL,
     else
         htmlLines.push(`<meta property="og:image" content="https://thingspool.net/share.jpg"/>`);
 
-    htmlLines.push(`<meta property="og:image:width" content="1200">`);
-    htmlLines.push(`<meta property="og:image:height" content="630">`);
+    htmlLines.push(`<meta property="og:image:alt" content="${title}">`);
 
     htmlLines.push(`<!-- Google tag (gtag.js) -->`);
     htmlLines.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>`);
