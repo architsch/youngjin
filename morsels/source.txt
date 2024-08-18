@@ -216,7 +216,7 @@ With this image-based map generation system, you can even manipulate the terrain
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
-The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, visit {{a href="https://thingspool.net/read-rec/page-2.html"}}Here{{/a}}.
+The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, visit {%a href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%}.
 
 @@<hr>
 @@<div class="l_spacer"></div>
@@ -359,7 +359,7 @@ The back-and-forth interaction between these two forces creates a feedback syste
 
 This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
 
-I drew most of my inspirations from his book, "An Enquiry Concerning Human Understanding". For more information, visit {{a href="https://thingspool.net/read-rec/page-6.html"}}Here{{/a}}.
+I drew most of my inspirations from his book, "An Enquiry Concerning Human Understanding". For more information, visit {%a href="https://thingspool.net/read-rec/page-6.html"%}Here{%/a%}.
 
 @@<hr>
 @@<div class="l_spacer"></div>
@@ -775,7 +775,7 @@ I think the most prominent advantage of modeling an event this way is that it al
 
 <051>
 
-As a side note, I would like to briefly introduce yet another mathematical interpretation of an event. In his paper on event structure and force dynamics (See Fig 11 of {{a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"}}"Event structure, force dynamics and verb semantics"{{/a}}), Gärdenfors explains Croft's alternative definition of causality. According to Croft, a cause-and-effect relation between forces can be explicated as the propagation of a "causal signal" across the dimension of causality. What's really interesting in this worldview is that it imagines "causality" as yet another dimension in spacetime, via which various worldly phenomena (i.e. events) establish causal links with one another.
+As a side note, I would like to briefly introduce yet another mathematical interpretation of an event. In his paper on event structure and force dynamics (See Fig 11 of {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}), Gärdenfors explains Croft's alternative definition of causality. According to Croft, a cause-and-effect relation between forces can be explicated as the propagation of a "causal signal" across the dimension of causality. What's really interesting in this worldview is that it imagines "causality" as yet another dimension in spacetime, via which various worldly phenomena (i.e. events) establish causal links with one another.
 
 This philosophically fascinating design, however, requires both the force vector and the result vector to reside in the same set of dimensions, thereby disallowing the result vector from identifying itself as part of its own hypothetical space which is of a different type from that of the force vector. This apparent lack of expressive freedom, I think, is one of the reasons why this unified spatial representation of causality is not so widely used.
 
@@ -785,7 +785,7 @@ This philosophically fascinating design, however, requires both the force vector
 
 <052>
 
-In {{a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"}}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{{/a}}, as well as the latter half of {{a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"}}"Event structure, force dynamics and verb semantics"{{/a}}, Gärdenfors suggests a possible usage of his two-vector event model as a device for explaining sentence structures in our language. An "event", according to him, can be expressed as an English sentence because it has its own subject (agent), verb (force), and object (patient).
+In {%a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{%/a%}, as well as the latter half of {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}, Gärdenfors suggests a possible usage of his two-vector event model as a device for explaining sentence structures in our language. An "event", according to him, can be expressed as an English sentence because it has its own subject (agent), verb (force), and object (patient).
 
 Both the agent and patient can be described by nouns, yet adjectives and prepositions can also be leveraged as "filters" for specifying them more precisely. For example, in conceptual space (aka "feature space" in machine learning and artifical intelligence), a noun can be imagined as a voluminous region (which encloses a cluster of data points that are associated with that noun) and an adjective can be imagined as a thin plane which partially intersects such a region. A combination between a noun and an adjective (e.g. "black cat", "white rose", or "wooden jar"), therefore, indicates the intersection (i.e. a plane segment) between the noun's region and the adjective's plane.
 
@@ -813,7 +813,7 @@ Let me show you a simple gameplay scenario to explain why the concept shown so f
 
 <054>
 
-In the two-vector model, it is necessary to represent this simultaneous presence of attacking/healing effects as a combination of force vectors. Imagine that there is a hypothetical space called "force space" in which all the contributing forces of the event reside (The idea of representing the force/result vectors in their own conceptual spaces is illustrated in {{a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"}}"Event structure, force dynamics and verb semantics"{{/a}}). When an event kicks in, these contributing forces all add up to yield a single net force vector. This net force vector, then, gets mapped into its corresponding result vector. The result vector exists in another hypothetical space called "result space".
+In the two-vector model, it is necessary to represent this simultaneous presence of attacking/healing effects as a combination of force vectors. Imagine that there is a hypothetical space called "force space" in which all the contributing forces of the event reside (The idea of representing the force/result vectors in their own conceptual spaces is illustrated in {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}). When an event kicks in, these contributing forces all add up to yield a single net force vector. This net force vector, then, gets mapped into its corresponding result vector. The result vector exists in another hypothetical space called "result space".
 
 <055>
 
@@ -869,7 +869,7 @@ The main benefit of threshold-oriented gameplay scenarios (where you either CAN 
 
 <061>
 
-In his article on force dynamics (See {{a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"}}"Event structure, force dynamics and verb semantics"{{/a}}), Gärdenfors shows us that an event's force vector can be classified into one of the following categories under the presence of a goal - "Enable", "Help", "Prevent", and "Despite". The "Enable" force, when added to the patient's current force vector, allows him/her to achieve the desired result which was unachievable before. The "Help" force is similar to the "Enable" force, except that its presence is not absolutely necessary because the patient is already able to achieve the desired result (with just a bit of additional time and effort). The "Prevent" force is the opposite of the "Enable" force because it disables the patient from achieving the goal which would have been achievable otherwise, and the "Despite" force is the opposite of the "Help" force.
+In his article on force dynamics (See {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}), Gärdenfors shows us that an event's force vector can be classified into one of the following categories under the presence of a goal - "Enable", "Help", "Prevent", and "Despite". The "Enable" force, when added to the patient's current force vector, allows him/her to achieve the desired result which was unachievable before. The "Help" force is similar to the "Enable" force, except that its presence is not absolutely necessary because the patient is already able to achieve the desired result (with just a bit of additional time and effort). The "Prevent" force is the opposite of the "Enable" force because it disables the patient from achieving the goal which would have been achievable otherwise, and the "Despite" force is the opposite of the "Help" force.
 
 Such categorization of forces is definitely feasible in a threshold-based scenario, such as the problem of jumping to reach the top of the steep hill. For example, if the player's initial jump force is only 1 and there is a "booster" item in the inventory which he/she can consume in order to add an extra boost of 1 to the jump force (which will achieve enough level of force to reach the top of the hill), we will be able to tell that this item is the "enabler" of the player's hill-mounting event. This way, we are able to sort various items, abilities, spells, and other numerous in-game factors into the four major categories (i.e. Enable, Help, Prevent, and Despite) and implement them appropriately based on how their presence will affect the progression of the game in binary (i.e. threshold-driven) gameplay scenarios.
 
@@ -879,7 +879,7 @@ Such categorization of forces is definitely feasible in a threshold-based scenar
 
 Many of you who have implemented large-scale gameplay systems may have heard of the term, "data-driven". It is one of the most popular design philosophies in game development, in which the game's rules are specified in the form of declarative statements (e.g. data tables, English sentences, block diagrams, etc) instead of being hard-coded as part of the game's script itself.
 
-Gärdenfors' event model nicely fits the spirit of data-driven gameplay design, due to the fact that it allows us to fully describe an event and its causal relation in the form of a plain English sentence (i.e. a declarative statement), instead of a bunch of conditional and iterative statements which are intertwined with one another (See {{a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"}}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{{/a}}). Engineers who have studied a logic programming language (e.g. Prolog) will instantly grasp the beauty of this, as well as how neatly it is going to mitigate many of the design complexities which tend to arise in gameplay engineering.
+Gärdenfors' event model nicely fits the spirit of data-driven gameplay design, due to the fact that it allows us to fully describe an event and its causal relation in the form of a plain English sentence (i.e. a declarative statement), instead of a bunch of conditional and iterative statements which are intertwined with one another (See {%a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{%/a%}). Engineers who have studied a logic programming language (e.g. Prolog) will instantly grasp the beauty of this, as well as how neatly it is going to mitigate many of the design complexities which tend to arise in gameplay engineering.
 
 As long as we manage to express gameplay events as English sentences, we will be able to summarize all gameplay rules simply as a list of sentences and hardly anything else.
 
@@ -899,23 +899,23 @@ Designing a transfer function which maps a multidimensional force vector to a mu
 
 I would really like to thank Katarina Gyllenbäck for introducing the works of Professor Gärdenfors. I would have not had a chance to delve into his profound insights in the field of cognitive science, if she did not introduce his papers in her articles.
 
-Katarina Gyllenbäck, who is both a narrative designer and a researcher of interactive media, has shown me a narrative-driven interpretation of Gärdenfors' two-vector event model. It is most thoroughly illustrated in her description of conceptual space in the article, {{a href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/"}}"Part 11, The Meaning-Maker's Space"{{/a}}.
+Katarina Gyllenbäck, who is both a narrative designer and a researcher of interactive media, has shown me a narrative-driven interpretation of Gärdenfors' two-vector event model. It is most thoroughly illustrated in her description of conceptual space in the article, {%a href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/"%}"Part 11, The Meaning-Maker's Space"{%/a%}.
 
-To learn more about her areas of insight, please visit {{a href="https://thingspool.net/read-rec/page-2.html"}}Here{{/a}} to see my review of her writings on narrative design. Or, you may want to visit her website and read her vast collection of articles {{a href="https://katarinagyllenback.com"}}Here{{/a}}.
+To learn more about her areas of insight, please visit {%a href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%} to see my review of her writings on narrative design. Or, you may want to visit her website and read her vast collection of articles {%a href="https://katarinagyllenback.com"%}Here{%/a%}.
 
 @@<hr>
 @@<div class="l_spacer"></div>
 @@<h3><b>Bibliography</b></h3>
 
-1. {{a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"}}Event structure, force dynamics and verb semantics{{/a}} by Peter Gärdenfors (This article most accurately summarizes the mathematical pattern behind the causal relations of the two-vector event model.)
+1. {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}Event structure, force dynamics and verb semantics{%/a%} by Peter Gärdenfors (This article most accurately summarizes the mathematical pattern behind the causal relations of the two-vector event model.)
 
-2. {{a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"}}Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure{{/a}} by Peter Gärdenfors (This one most thoroughly describes the linguistic interpretation of the two-vector event model, explaining why an event can be considered a sentence and each element of the event can be considered a phrase such as a "noun phrase", "verb phrase", etc)
+2. {%a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure{%/a%} by Peter Gärdenfors (This one most thoroughly describes the linguistic interpretation of the two-vector event model, explaining why an event can be considered a sentence and each element of the event can be considered a phrase such as a "noun phrase", "verb phrase", etc)
 
-3. {{a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.584017/full"}}Primary Cognitive Categories Are Determined by Their Invariances{{/a}} by Peter Gärdenfors (This is a great introductory text to the idea of "Conceptual Space" - a hypothetical space which expresses the qualitative attributes of an object as a point in geometry. It also explains how a set of invariances in our domain of cognition (i.e. a dense cluster of sense-data) eventually manifest themselves in the form of a discrete entity called "object". This is one of the most foundational ideas in the study of artificial intelligence and machine learning (often referred to as "pattern recognition").)
+3. {%a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.584017/full"%}Primary Cognitive Categories Are Determined by Their Invariances{%/a%} by Peter Gärdenfors (This is a great introductory text to the idea of "Conceptual Space" - a hypothetical space which expresses the qualitative attributes of an object as a point in geometry. It also explains how a set of invariances in our domain of cognition (i.e. a dense cluster of sense-data) eventually manifest themselves in the form of a discrete entity called "object". This is one of the most foundational ideas in the study of artificial intelligence and machine learning (often referred to as "pattern recognition").)
 
-4. {{a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.00630/full"}}Events and Causal Mappings Modeled in Conceptual Spaces{{/a}} by Peter Gärdenfors (This is a general overview of how the force and result vectors are related to one another in an event. In this paper, Professor Gärdenfors tells us various subleties that are involved in the dynamics of causality, such as the capacity of the human mind to perform interpolation between two force vectors (which means that the total domain of forces which can be formed by a set of basis force vectors is their convex hull), etc.)
+4. {%a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.00630/full"%}Events and Causal Mappings Modeled in Conceptual Spaces{%/a%} by Peter Gärdenfors (This is a general overview of how the force and result vectors are related to one another in an event. In this paper, Professor Gärdenfors tells us various subleties that are involved in the dynamics of causality, such as the capacity of the human mind to perform interpolation between two force vectors (which means that the total domain of forces which can be formed by a set of basis force vectors is their convex hull), etc.)
 
-5. {{a href="https://www.researchgate.net/publication/322314237_From_Sensations_to_Concepts_a_Proposal_for_Two_Learning_Processes"}}From Sensations to Concepts: a Proposal for Two Learning Processes{{/a}} by Peter Gärdenfors (This article introduces some of the experimental results which show us that, during early childhood development, young children do manage to learn how much an object (i.e. a cluster of data points) differs from another object (i.e. another cluster of data points), but not necessarily the direction (i.e. dimension) in which they differ. It is only later stages in life during which they acquire the ability to break down each object as a product of multiple dimensions and make comparisons based upon individual dimensions, not only in terms of the overall distance between two clusters of data).
+5. {%a href="https://www.researchgate.net/publication/322314237_From_Sensations_to_Concepts_a_Proposal_for_Two_Learning_Processes"%}From Sensations to Concepts: a Proposal for Two Learning Processes{%/a%} by Peter Gärdenfors (This article introduces some of the experimental results which show us that, during early childhood development, young children do manage to learn how much an object (i.e. a cluster of data points) differs from another object (i.e. another cluster of data points), but not necessarily the direction (i.e. dimension) in which they differ. It is only later stages in life during which they acquire the ability to break down each object as a product of multiple dimensions and make comparisons based upon individual dimensions, not only in terms of the overall distance between two clusters of data).
 
 
 
@@ -1048,21 +1048,21 @@ Glenn Puchtel, who is an interdisciplinary software architect with expertise in 
 
 In the following sections, I will be illustrating a collection of Glenn Puchtel's ideas which are indispensable for the construction of emergent systems. They are inspired by some of his major articles, which are listed below:
 
-1. {{a href="#bibliography_1"}}"Cybernetic-Oriented Design (CyOD)"{{/a}}
-2. {{a href="#bibliography_2"}}"Coordination without (direct) Communication"{{/a}}
-3. {{a href="#bibliography_3"}}"Cybernetic Waves"{{/a}}
-4. {{a href="#bibliography_4"}}"Reaction Networks"{{/a}}
-5. {{a href="#bibliography_5"}}"Biological Models of Reactionary Networks"{{/a}}
-6. {{a href="#bibliography_6"}}"Temporality"{{/a}}
-7. {{a href="#bibliography_7"}}"Bio-Cybernetic Patterns"{{/a}}
+1. {%a href="#bibliography_1"%}"Cybernetic-Oriented Design (CyOD)"{%/a%}
+2. {%a href="#bibliography_2"%}"Coordination without (direct) Communication"{%/a%}
+3. {%a href="#bibliography_3"%}"Cybernetic Waves"{%/a%}
+4. {%a href="#bibliography_4"%}"Reaction Networks"{%/a%}
+5. {%a href="#bibliography_5"%}"Biological Models of Reactionary Networks"{%/a%}
+6. {%a href="#bibliography_6"%}"Temporality"{%/a%}
+7. {%a href="#bibliography_7"%}"Bio-Cybernetic Patterns"{%/a%}
 
-These articles, however, are not the only ones he has written. If you want to read more of his works, please visit his LinkedIn newsletter: {{a href="https://www.linkedin.com/newsletters/cyborg-bio-cybernetics-6879770834110689280/"}}"Cyborg - (bio)cybernetics"{{/a}}.
+These articles, however, are not the only ones he has written. If you want to read more of his works, please visit his LinkedIn newsletter: {%a href="https://www.linkedin.com/newsletters/cyborg-bio-cybernetics-6879770834110689280/"%}"Cyborg - (bio)cybernetics"{%/a%}.
 
 @@<hr>
 @@<div class="l_spacer"></div>
 @@<h3><b>1. Separation of State and Behavior</b></h3>
 
-Glenn Puchtel begins his introduction to cybernetic-oriented design with the notion of "separation of state and behavior" {{a href="#bibliography_1"}}[1]{{/a}}. Programmers who have learned OOP (Object Oriented Programming) will remember that a system (i.e. "object") is practically a blockbox which encapsulates both a behavior and a state. This is quite syntactically apparent in a class declaration, where the member functions characterize its behavior and the member variables characterize its state.
+Glenn Puchtel begins his introduction to cybernetic-oriented design with the notion of "separation of state and behavior" {%a href="#bibliography_1"%}[1]{%/a%}. Programmers who have learned OOP (Object Oriented Programming) will remember that a system (i.e. "object") is practically a blockbox which encapsulates both a behavior and a state. This is quite syntactically apparent in a class declaration, where the member functions characterize its behavior and the member variables characterize its state.
 
 People who dislike OOP may insist that the very idea of wrapping both a behavior and a state inside the same container called "object" is a bad decision, since the mixture of these two drastically different elements is prone to spill nasty side effects such as race conditions and deadlocks.
 
@@ -1078,19 +1078,19 @@ Tight coupling might be okay to have if we are dealing with just a few objects. 
 
 <a1_2>
 
-So, what's the solution? The key lies on Glenn Puchtel's concept of "coordination without direct communication" {{a href="#bibliography_2"}}[2]{{/a}}. I will explain it in detail throughout the upcoming sections.
+So, what's the solution? The key lies on Glenn Puchtel's concept of "coordination without direct communication" {%a href="#bibliography_2"%}[2]{%/a%}. I will explain it in detail throughout the upcoming sections.
 
 @@<hr>
 @@<div class="l_spacer"></div>
 @@<h3><b>2. Indirect Communication</b></h3>
 
-If you have looked at Glenn Puchtel's bio-inspired systems (i.e. biocybernetic systems) {{a href="#bibliography_5"}}[5]{{/a}}, you will be able to tell that they do not allow their biological subsystems (e.g. cells) to share information simply by directly invoking each other's member functions. Instead, these subsystems communicate via a "medium" - a chemical mixture which exists somewhere in space and decays over time. Such a medium continuously emits waves {{a href="#bibliography_3"}}[3]{{/a}}, which are signals waiting to be picked up by nearby systems (e.g. neighboring cells) and be processed according to their own behavioral logic (i.e. goal + rules).
+If you have looked at Glenn Puchtel's bio-inspired systems (i.e. biocybernetic systems) {%a href="#bibliography_5"%}[5]{%/a%}, you will be able to tell that they do not allow their biological subsystems (e.g. cells) to share information simply by directly invoking each other's member functions. Instead, these subsystems communicate via a "medium" - a chemical mixture which exists somewhere in space and decays over time. Such a medium continuously emits waves {%a href="#bibliography_3"%}[3]{%/a%}, which are signals waiting to be picked up by nearby systems (e.g. neighboring cells) and be processed according to their own behavioral logic (i.e. goal + rules).
 
 <a2_1>
 
 What I just mentioned is the essence of indirect communication. Instead of directly feeding signals to each other (which creates dependency), systems can instead talk to each other by means of a medium. A medium could be interpreted as some form of "shared state" among multiple systems, yet we should also be aware that it carries its own behavior as well (e.g. continual emission of waves, interaction with environmental factors, etc). Such a dual aspect, combined with the architect's demand for structural consistency, eventually leads us to conclude that the place which holds a medium is itself yet another system, composed of its own state and behavior.
 
-(For a specific example, please refer to the component called "Pipe" in Glenn Puchtel's article, "Biological Models of Reactionary Networks" {{a href="#bibliography_5"}}[5]{{/a}}.)
+(For a specific example, please refer to the component called "Pipe" in Glenn Puchtel's article, "Biological Models of Reactionary Networks" {%a href="#bibliography_5"%}[5]{%/a%}.)
 
 <a2_2>
 
@@ -1098,7 +1098,7 @@ This is analogous to typical communication networks which we use daily. Our cell
 
 In Glenn Puchtel's biocybernetic design philosophy, however, he reveals yet another major advantage of indirect communication - scoping of information.
 
-In the "Space (scope)" and "Time" sections of his article, "Coordination without (direct) Communication" {{a href="#bibliography_2"}}[2]{{/a}}, Glenn Puchtel mentions that "giving individuals access to too much information may lead to sensory overload", suggesting that limiting the scope of information is crucial.
+In the "Space (scope)" and "Time" sections of his article, "Coordination without (direct) Communication" {%a href="#bibliography_2"%}[2]{%/a%}, Glenn Puchtel mentions that "giving individuals access to too much information may lead to sensory overload", suggesting that limiting the scope of information is crucial.
 
 He says that it can be achieved by using a medium as the gateway of communication. As long as a medium occupies only a limited region in space and time, systems which communicate via such a medium will be guaranteed to receive information which is only relevant to the local region to which they belong.
 
@@ -1114,7 +1114,7 @@ For instance, a biological organism is a complex system which can be broken down
 
 <a3_1>
 
-(According to Glenn Puchtel, "Complex systems organize themselves in hierarchical layers of abstraction-a structure achieved by encapsulating smaller, more specific systems within more extensive, more general systems" {{a href="#bibliography_1"}}[1]{{/a}}.)
+(According to Glenn Puchtel, "Complex systems organize themselves in hierarchical layers of abstraction-a structure achieved by encapsulating smaller, more specific systems within more extensive, more general systems" {%a href="#bibliography_1"%}[1]{%/a%}.)
 
 In fact, we have already seen an example of hierarchical modeling in the previous section (i.e. "2. Indirect Communication"). When two systems are communicating through a medium, we may as well say that they are both physically bound to the same place to which the medium belongs. In other words, these two communicators should be deemed as two neighboring objects which are occupying the same region in space.
 
@@ -1124,7 +1124,7 @@ This is the simplest example of a hierarchy, in which the two communicating agen
 
 In general, a hierarchical breakdown of systems allows us to handle our problems via multiple layers of abstraction (where the root of the tree represents the most general (abstract) system, and each leaf of the tree represents the most specific (single-purpose) system). At the same time, it also lets systems communicate with one another by means of their parent systems, which means that they are able to transmit messages across multiple layers of the hierarchy.
 
-("The result is the control or dynamic regulation of behavior between layers" - Glenn Puchtel {{a href="#bibliography_1"}}[1]{{/a}})
+("The result is the control or dynamic regulation of behavior between layers" - Glenn Puchtel {%a href="#bibliography_1"%}[1]{%/a%})
 
 For example, suppose that we are modeling an animal's anatomy as a hierarchy of systems. And let us also suppose that cells are subsystems of a tissue and tissues are subsystems of a bloodstream (Note: I know that this is not an accurate reflection of how the body really works, but let's just ignore it for the sake of demonstration). If a cell wants to send a signal to another cell, it won't require a direct connection to that cell to do so. It will only release a chemical which will eventually be delivered to the other cell through the following steps:
 
@@ -1139,9 +1139,9 @@ For example, suppose that we are modeling an animal's anatomy as a hierarchy of 
 @@<div class="l_spacer"></div>
 @@<h3><b>4. Polymorphism</b></h3>
 
-Glenn Puchtel's "separation of statics and dynamics" {{a href="#bibliography_1"}}[1]{{/a}} is an extremely useful concept not just for the sake of organization, but also for the sake of enabling polymorphism.
+Glenn Puchtel's "separation of statics and dynamics" {%a href="#bibliography_1"%}[1]{%/a%} is an extremely useful concept not just for the sake of organization, but also for the sake of enabling polymorphism.
 
-The foundation of polymorphism lies on the idea of decoupling. Glenn Puchtel mentions in his article that individual systems which are decoupled by knowledge "need not know about the other; only that stimulus introduction affects the state" {{a href="#bibliography_2"}}[2]{{/a}}. What he means by this is that the stimulus (information) can simply reveal its presence in a shared medium, exposing itself to nearby systems and hardly doing anything else. The individual systems, then, can pick up the stimulus from the shared medium and respond to it based on their own decision-making processes.
+The foundation of polymorphism lies on the idea of decoupling. Glenn Puchtel mentions in his article that individual systems which are decoupled by knowledge "need not know about the other; only that stimulus introduction affects the state" {%a href="#bibliography_2"%}[2]{%/a%}. What he means by this is that the stimulus (information) can simply reveal its presence in a shared medium, exposing itself to nearby systems and hardly doing anything else. The individual systems, then, can pick up the stimulus from the shared medium and respond to it based on their own decision-making processes.
 
 <a4_1>
 
@@ -1151,13 +1151,13 @@ Since a single type of stimulus is able to trigger different responses when dete
 
 <a4_2>
 
-A great example of polymorphism can be found in the case of ants and their pheromone-based communication. Glenn Puchtel says in his article that: "Just as the same pheromone elicits different behavior, whereby a worker ant might respond differently from a soldier ant, messages trigger receptors' behavior depending on their role" {{a href="#bibliography_2"}}[2]{{/a}}. Here, a pheromone is a stimulus (input signal) which triggers two separate responses when received by two different recipients (i.e. worker ant and solider ant).
+A great example of polymorphism can be found in the case of ants and their pheromone-based communication. Glenn Puchtel says in his article that: "Just as the same pheromone elicits different behavior, whereby a worker ant might respond differently from a soldier ant, messages trigger receptors' behavior depending on their role" {%a href="#bibliography_2"%}[2]{%/a%}. Here, a pheromone is a stimulus (input signal) which triggers two separate responses when received by two different recipients (i.e. worker ant and solider ant).
 
 @@<hr>
 @@<div class="l_spacer"></div>
 @@<h3><b>5. Feedback Loops</b></h3>
 
-Another benefit of indirect (medium-based) communication is that it allows us to create indirect feedback loops - i.e. long, circular chains of causality which control the flow of the overall system based on not only short-term effects, but also long-term effects (aka "Circular Causality", as mentioned by Glenn Puchtel in his introduction to cybernetic-oriented design {{a href="#bibliography_1"}}[1]{{/a}}). Such a phenomenon is indispensable for the design of dynamics systems which involve multiple causal loops that are intertwined with one another, such as an ecosystem, a marketplace, an electrical grid, and many others which appear in the study of System Dynamics (aka "Systems Thinking").
+Another benefit of indirect (medium-based) communication is that it allows us to create indirect feedback loops - i.e. long, circular chains of causality which control the flow of the overall system based on not only short-term effects, but also long-term effects (aka "Circular Causality", as mentioned by Glenn Puchtel in his introduction to cybernetic-oriented design {%a href="#bibliography_1"%}[1]{%/a%}). Such a phenomenon is indispensable for the design of dynamics systems which involve multiple causal loops that are intertwined with one another, such as an ecosystem, a marketplace, an electrical grid, and many others which appear in the study of System Dynamics (aka "Systems Thinking").
 
 <a5_1>
 
@@ -1169,7 +1169,7 @@ An indirect (i.e. external) feedback loop, on the other hand, requires a collabo
 
 <a5_3>
 
-The most obvious way of implementing indirect feedback loops is to first draw a CLD ({{a href="https://en.wikipedia.org/wiki/Causal_loop_diagram"}}Causal Loop Diagram{{/a}}) and then devise systematic components (e.g. stocks and flows) based on its graph structure. This approach, however, forces the overall architecture to be static (i.e. hard to modify) due to the way it tightly couples its individual subsystems with each other.
+The most obvious way of implementing indirect feedback loops is to first draw a CLD ({%a href="https://en.wikipedia.org/wiki/Causal_loop_diagram"%}Causal Loop Diagram{%/a%}) and then devise systematic components (e.g. stocks and flows) based on its graph structure. This approach, however, forces the overall architecture to be static (i.e. hard to modify) due to the way it tightly couples its individual subsystems with each other.
 
 Indirect communication offers a nice solution to this lack of structural flexibility. As long as the individual systems communicate only via their "shared pool of information" (i.e. medium), we will be free to either add an additional system to the pool or remove an existing system from the pool without invoking undesirable side effects. This allows systems to dynamically reproduce or destroy themselves as though they are part of a living organism, allowing the overall architecture to continuously modify its shape (which is indispensable for adaptive, self-regulatory behaviors).
 
@@ -1183,7 +1183,7 @@ Besides, medium-based communication is far superior to predefined communication 
 
 Expressing the overall system as an assembly of numerous subsystems has yet another advantage to offer; it is the sense of resilience.
 
-In the "Weight [measure]" section of his article, "Coordination without (direct) Communication", Glenn Puchtel mentions that "emergent systems favor small, lightweight, almost negligible parts; losing any part does not adversely affect the whole" {{a href="#bibliography_2"}}[2]{{/a}}.
+In the "Weight [measure]" section of his article, "Coordination without (direct) Communication", Glenn Puchtel mentions that "emergent systems favor small, lightweight, almost negligible parts; losing any part does not adversely affect the whole" {%a href="#bibliography_2"%}[2]{%/a%}.
 
 What he means by this is that a system which is divisible in nature (i.e. able to cut some of its parts off and still manage to function) is capable of sacrificing small portions of itself for larger gains - a sign of flexibility. If the system were a single, inseparable unit, any risk which involves its loss would cost the total annihilation of the system and would have to be avoided entirely.
 
@@ -1191,7 +1191,7 @@ What he means by this is that a system which is divisible in nature (i.e. able t
 
 In general, a divisible system is robust because it is composed of rearrangeable parts. Such a system can grow, shrink, and change its shape as needed, and is able to accept relatively minor risks (e.g. A lion hunts down a giraffe despite the risk of being injured, since it can regrow its damaged tissues).
 
-(Look at "Apoptosis" in Glenn Puchtel's "Coordination without (direct) Communication" {{a href="#bibliography_2"}}[2]{{/a}}.)
+(Look at "Apoptosis" in Glenn Puchtel's "Coordination without (direct) Communication" {%a href="#bibliography_2"%}[2]{%/a%}.)
 
 @@<hr>
 @@<div class="l_spacer"></div>
@@ -1203,7 +1203,7 @@ There is one major factor in systems design which I haven't mentioned yet. It is
 
 A goal is what drives the system's control mechanism. A goal-oriented system constantly strives to keep its current state as close to the desired state as possible; for instance, a thermostat's "goal" is to minimize the difference between its current temperature and the desired temperature.
 
-("A goal-oriented system must actively intervene to achieve or maintain its goal" - Glenn Puchtel {{a href="#bibliography_1"}}[1]{{/a}})
+("A goal-oriented system must actively intervene to achieve or maintain its goal" - Glenn Puchtel {%a href="#bibliography_1"%}[1]{%/a%})
 
 For a simple system such as a thermostat, the goal is easy to define. It only requires us to state simple numerical relations, such as: "The difference between X and X0 should be kept minimal", and so on. In the case of a complex system whose goal is way too complicated to be fully explicated in such a manner, however, we need a somewhat more advanced way of defining goals. From my point of view, one of the best ways of illustrating a complex goal is to decompose it into a list of more specific goals (aka "subgoals"), decompose each of them into even more specific goals, and so on, thereby creating a hierarchy of goals. This is similar to the so-called "behavior tree" in video games.
 
@@ -1227,19 +1227,19 @@ The presence of a hierarchy of goals helps us design the hierarchy of systems be
 @@<div class="l_spacer"></div>
 @@<h3><b>Bibliography</b></h3>
 
-1. {{a id="bibliography_1" href="https://www.linkedin.com/pulse/cybernetic-oriented-design-cyod-glenn-puchtel/"}}Cybernetic-Oriented Design (CyOD){{/a}} by Glenn Puchtel (This introductory article outlines pretty much all the main concepts in the design of emergent systems, including: (1) Separation of state and behavior (which enables polymorphism), (2) Hierarchical arrangement of individual subsystems (which is a neat way of breaking down a complex system into a collaborative network of simpler systems), (3) Back-and-forth interaction between state and behavior, which gives rise to feedback loops, and so on.)
+1. {%a id="bibliography_1" href="https://www.linkedin.com/pulse/cybernetic-oriented-design-cyod-glenn-puchtel/"%}Cybernetic-Oriented Design (CyOD){%/a%} by Glenn Puchtel (This introductory article outlines pretty much all the main concepts in the design of emergent systems, including: (1) Separation of state and behavior (which enables polymorphism), (2) Hierarchical arrangement of individual subsystems (which is a neat way of breaking down a complex system into a collaborative network of simpler systems), (3) Back-and-forth interaction between state and behavior, which gives rise to feedback loops, and so on.)
 
-2. {{a id="bibliography_2" href="https://www.linkedin.com/pulse/coordination-without-direct-communication-glenn-puchtel/"}}Coordination without (direct) Communication{{/a}} by Glenn Puchtel (Reading this article is crucial for understanding the nature of emergence and how its full potential might be leveraged. Here, the author suggests "indirect communication" (i.e. communication by means of a medium, rather than by means of a direct and instantaneous feeding of signals) as a method of letting individual subsystems collaborate with each other in an implicit manner, which eventually reveals highly emergent patterns such as those we can find in cellular automata.)
+2. {%a id="bibliography_2" href="https://www.linkedin.com/pulse/coordination-without-direct-communication-glenn-puchtel/"%}Coordination without (direct) Communication{%/a%} by Glenn Puchtel (Reading this article is crucial for understanding the nature of emergence and how its full potential might be leveraged. Here, the author suggests "indirect communication" (i.e. communication by means of a medium, rather than by means of a direct and instantaneous feeding of signals) as a method of letting individual subsystems collaborate with each other in an implicit manner, which eventually reveals highly emergent patterns such as those we can find in cellular automata.)
 
-3. {{a id="bibliography_3" href="https://www.linkedin.com/pulse/cybernetic-waves-glenn-puchtel/"}}Cybernetic Waves{{/a}} by Glenn Puchtel (This article suggests a chemistry-inspired method of designing a signal-transmitting medium in a cybernetic communication network. The author tell us that a "medium", a mixture of multiple chemical substances of varying saturations, along with several physical parameters such as temperature and pressure, can be placed in the environment, which in turn will emit waves (signals) to the surroundings for some limited duration.)
+3. {%a id="bibliography_3" href="https://www.linkedin.com/pulse/cybernetic-waves-glenn-puchtel/"%}Cybernetic Waves{%/a%} by Glenn Puchtel (This article suggests a chemistry-inspired method of designing a signal-transmitting medium in a cybernetic communication network. The author tell us that a "medium", a mixture of multiple chemical substances of varying saturations, along with several physical parameters such as temperature and pressure, can be placed in the environment, which in turn will emit waves (signals) to the surroundings for some limited duration.)
 
-4. {{a id="bibliography_4" href="https://www.linkedin.com/pulse/reaction-networks-glenn-puchtel/"}}Reaction Networks{{/a}} by Glenn Puchtel (Here, the author directly shows us how to define a chemical mixture in a software simulation and use it as a medium of communication between virtual biological modules. He also suggests specific ways of interpreting the content of such a mixture for the purpose of evaluating/modifying the surrounding environment (aka "conditions" and "cures"). Additionally, the very last diagram of the article deserves special attention, since it summarizes the grand cycle of information flow in a cybernetic-oriented system. In this diagram, "signals" is where an organism receives information, "rules" and "states" are where the organism evaluates and stores the received information, and "actions" is where the organism emits actions based on the result of evaluation. The "world" is the outside environment, which is governed by its own environmental factors such as chemical mixtures (media). These factors continuously emit waves, which the organism's receptors then receive as "signals".)
+4. {%a id="bibliography_4" href="https://www.linkedin.com/pulse/reaction-networks-glenn-puchtel/"%}Reaction Networks{%/a%} by Glenn Puchtel (Here, the author directly shows us how to define a chemical mixture in a software simulation and use it as a medium of communication between virtual biological modules. He also suggests specific ways of interpreting the content of such a mixture for the purpose of evaluating/modifying the surrounding environment (aka "conditions" and "cures"). Additionally, the very last diagram of the article deserves special attention, since it summarizes the grand cycle of information flow in a cybernetic-oriented system. In this diagram, "signals" is where an organism receives information, "rules" and "states" are where the organism evaluates and stores the received information, and "actions" is where the organism emits actions based on the result of evaluation. The "world" is the outside environment, which is governed by its own environmental factors such as chemical mixtures (media). These factors continuously emit waves, which the organism's receptors then receive as "signals".)
 
-5. {{a id="bibliography_5" href="https://www.linkedin.com/pulse/biological-models-reactionary-networks-glenn-puchtel/"}}Biological Models of Reactionary Networks{{/a}} by Glenn Puchtel (This one explains in detail the specific building blocks of the author's (bio)cybernetic systems architecture, including nodes, edges, pipes, rules, applicators, kits, and others. Nodes are basically the entry/exit points of signals, edges are transmitters of signals, and pipes/applicators are the ones which make decisions based on the received signals.)
+5. {%a id="bibliography_5" href="https://www.linkedin.com/pulse/biological-models-reactionary-networks-glenn-puchtel/"%}Biological Models of Reactionary Networks{%/a%} by Glenn Puchtel (This one explains in detail the specific building blocks of the author's (bio)cybernetic systems architecture, including nodes, edges, pipes, rules, applicators, kits, and others. Nodes are basically the entry/exit points of signals, edges are transmitters of signals, and pipes/applicators are the ones which make decisions based on the received signals.)
 
-6. {{a id="bibliography_6" href="https://www.linkedin.com/pulse/temporality-glenn-puchtel/"}}Temporality{{/a}} by Glenn Puchtel (This article illustrates the inner workings of time-related cybernetic components (e.g. temporals) using specific code examples. By doing this, the author proves us that these components are highly useful for simulating the ways in which signals vary their intensity levels as time passes by - an extremely crucial concept for implementing time delays in the system's feedback mechanism, as well as for implementing gradual memory decay.)
+6. {%a id="bibliography_6" href="https://www.linkedin.com/pulse/temporality-glenn-puchtel/"%}Temporality{%/a%} by Glenn Puchtel (This article illustrates the inner workings of time-related cybernetic components (e.g. temporals) using specific code examples. By doing this, the author proves us that these components are highly useful for simulating the ways in which signals vary their intensity levels as time passes by - an extremely crucial concept for implementing time delays in the system's feedback mechanism, as well as for implementing gradual memory decay.)
 
-7. {{a id="bibliography_7" href="https://www.linkedin.com/pulse/cybernetic-patterns-glenn-puchtel/"}}Bio-Cybernetic Patterns{{/a}} by Glenn Puchtel (This is the graphical summary of the major building blocks in cybernetic-oriented design. They resemble digital circuit components in some sense, yet are much more functionally abstract. Within this collection, "pipe" is probably the most notable component because it represents the very concept of "controlled transmission of signals" - an ever-recurring theme in the activity of neurons, protein receptors, and other biological signal-processors.)
+7. {%a id="bibliography_7" href="https://www.linkedin.com/pulse/cybernetic-patterns-glenn-puchtel/"%}Bio-Cybernetic Patterns{%/a%} by Glenn Puchtel (This is the graphical summary of the major building blocks in cybernetic-oriented design. They resemble digital circuit components in some sense, yet are much more functionally abstract. Within this collection, "pipe" is probably the most notable component because it represents the very concept of "controlled transmission of signals" - an ever-recurring theme in the activity of neurons, protein receptors, and other biological signal-processors.)
 
 
 
@@ -1291,11 +1291,11 @@ I drew inspirations for this model of gameplay from two people.
 
 @@<b>(1) Peter Gärdenfors</b>
 
-Professor Gärdenfors is a cognitive scientist and a philosopher at Lund University (Lund, Sweden), whose two-vector model of causality and the idea of "forces in conceptual space" helped me model gameplay events as instances of vector transformation. Please read {{a href="https://thingspool.net/morsels/page-4.html"}}Game Design using Gärdenfors' Event Model{{/a}} to learn more about the way his ideas contributed to the computational modeling of events and their causal relations.
+Professor Gärdenfors is a cognitive scientist and a philosopher at Lund University (Lund, Sweden), whose two-vector model of causality and the idea of "forces in conceptual space" helped me model gameplay events as instances of vector transformation. Please read {%a href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%} to learn more about the way his ideas contributed to the computational modeling of events and their causal relations.
 
 @@<b>(2) Glenn Puchtel</b>
 
-Glenn Puchtel is a principal software architect/engineer at GRUBBRR (Boca Raton, Florida), whose ideas in bio-inspired emergent systems (i.e. biocybernetics, wetware, etc) as well as their architectural implications inspired me to construct a network-based topology of the gameplay system. Please read {{a href="https://thingspool.net/morsels/page-6.html"}}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{{/a}} to learn more about the way his ideas contributed to the formation of the force-exchange network model.
+Glenn Puchtel is a principal software architect/engineer at GRUBBRR (Boca Raton, Florida), whose ideas in bio-inspired emergent systems (i.e. biocybernetics, wetware, etc) as well as their architectural implications inspired me to construct a network-based topology of the gameplay system. Please read {%a href="https://thingspool.net/morsels/page-6.html"%}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{%/a%} to learn more about the way his ideas contributed to the formation of the force-exchange network model.
 
 @@<hr>
 @@<div class="l_spacer"></div>
@@ -1311,7 +1311,7 @@ When an actor receives a force from another actor, it applies that force to itse
 
 <b1_2>
 
-What is really important, though, is the inner workings of the event itself. In {{a href="https://thingspool.net/morsels/page-4.html"}}Game Design using Gärdenfors' Event Model{{/a}}, I have mentioned that an event can be interpreted as a process of transforming the incoming force vector to its corresponding result vector, as well as that such transformation can be achieved by means of a transfer function (i.e. a list of one-to-one mappings between scalar values).
+What is really important, though, is the inner workings of the event itself. In {%a href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%}, I have mentioned that an event can be interpreted as a process of transforming the incoming force vector to its corresponding result vector, as well as that such transformation can be achieved by means of a transfer function (i.e. a list of one-to-one mappings between scalar values).
 
 In addition, what is happening inside an actor as it undergoes an event should also be noted. An actor first receives an incoming force vector, transforms it into the result vector (via the transfer function), and accumulates that result vector in its own persistent vector called "state vector". This special vector represents the current state of the actor, and can be considered the cumulative sum of all the result vectors produced so far.
 
@@ -1430,7 +1430,7 @@ So, we have this thing called "Force" which is analogous to a letter in a mail d
 
 First of all, let us imagine that the game world consists of a number of places, where a "place" is a fixed region in space. Each place contains a number of actors in it, who are responsible for exchanging forces with one another.
 
-Spatially speaking, a place is an area which encloses its actors. From a communication point of view, though, a place is something more than that. Since an actor communicates with another actor "through space", we ought to imagine a place not as a static region, but as a "force router" which works as a medium of signal transmission (This concept is thoroughly explained in the "Indirect Communication" section of {{a href="https://thingspool.net/morsels/page-6.html"}}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{{/a}}).
+Spatially speaking, a place is an area which encloses its actors. From a communication point of view, though, a place is something more than that. Since an actor communicates with another actor "through space", we ought to imagine a place not as a static region, but as a "force router" which works as a medium of signal transmission (This concept is thoroughly explained in the "Indirect Communication" section of {%a href="https://thingspool.net/morsels/page-6.html"%}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{%/a%}).
 
 <b2_1>
 
@@ -1550,7 +1550,7 @@ public class MechanicalForceDisabledPlace : Place
 @@<div class="l_spacer"></div>
 @@<h3><b>4. Status Conditions</b></h3>
 
-In {{a href="https://thingspool.net/morsels/page-4.html"}}Game Design using Gärdenfors' Event Model{{/a}}, I have mentioned that an actor's status condition (e.g. spell, upgrade, etc) can be implemented as a modification to the event's transfer function. The simplest approach is to model each status condition as a function which temporarily gets added to the event's original transfer function, thereby "warping" the way in which the event transforms the incoming force vector.
+In {%a href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%}, I have mentioned that an actor's status condition (e.g. spell, upgrade, etc) can be implemented as a modification to the event's transfer function. The simplest approach is to model each status condition as a function which temporarily gets added to the event's original transfer function, thereby "warping" the way in which the event transforms the incoming force vector.
 
 <058>
 
@@ -1777,3 +1777,408 @@ Just like actors are capable of emitting forces, places may need to be able to e
 @@<b>(4) Observation by means of "notification forces"</b>
 
 While it is definitely possible to let actors directly perceive each other's presence based on references (i.e. reference to the current place + reference to neighboring places + reference to each place's constituent actors, etc), such direct dependency is not so desirable from an architectural point of view. Also, it makes it hard to implement visibility-warping gameplay features such as stealth-mode, and so on. Thus, it may be better to let each actor emit not only state-changing forces such as "knockback", "heal", "damage", etc, but also "notification forces" which notify the actor's presence. This lets the process of observing other actors be passive (i.e. You just wait to receive notification forces instead of actively searching for other actors on your own).
+
+
+
+
+
+
+
+
+
+
+
+:d:How to use state machine networks (multi-state machines) to design dynamics systems, including gameplay systems, industrial simulations, scientific applications, cellular automata, and many others.
+:k:Game Design, Technical Game Design, Game Mechanics, State Machine, FSM, Finite State Machine, Multi State Machine, Systems Engineering, Electrical Engineering, Electronics, Digital Circuits, Digital Logic, Digital Design, Verilog, HDL, Boolean Algebra, Systems Design, Cellular Automata, Circuit Simulator
+:l:2024-08-18
+
+[Technical Design using Multi-State Machines] August 18, 2024
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Introduction</b></h3>
+
+There are many ways of conceptualizing a system. In computer science, it is typical to picture it as a state machine. One of the main downsides of this approach, however, is the ensuing complexity.
+
+A fairly small system with only a few number of possible states is pretty easy to model as a state machine; all we need to do is come up with a set of states (i.e. nodes in a graph), and a set of transitions between states (i.e. edges between the nodes). This lets us devise the entire system simply by drawing a state diagram.
+
+A system with an enormous number of states, on the other hand, is not something which we are able to design in terms of a single state machine without pulling our hair off out of sheer confusion. While it is technically possible to formultae even an extremely complex system (such as a whole computer) as an FSM (Finite State Machine) in which the current state of the system is represented as one of the nodes in a graph, such a way of modeling the system is prohibitively convoluted.
+
+Therefore, it usually makes more sense to imagine a complex (non-trivial) system not as a single state machine, but as a collection of multiple state machines (i.e. modules), each of which keeps track of its own state. This design philosophy also aligns itself with the OOP (Object Oriented Programming) paradigm, where each object is a state machine with its own set of states (i.e. all possible permutations of the member variables) and state transitions (i.e. all possible ways in which the member variables can change their values).
+
+Such a multitude of state machines, though, can operate as parts of one underlying system only if they are able to influence each other - that is, they must be able to communicate. If not, they will be a mere juxtaposition of completely isolated systems.
+
+<c00>
+
+The question is, "What kind of communication"? There are innumerable ways of sharing information with one another, yet some of them are far more efficient than others. Thus, a wise designer of a system should be able to choose an optimal (or at least a nearly optimal) means of letting state machines affect each other's state.
+
+In this article, I will showcase a new method of communication between state machines which I consider as fairly optimized for a wide variety of applications in system design, such as video games, cellular automata, circuit simulators, and many others.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Multi-State Machine</b></h3>
+
+Since I am personally more familiar with game development than any other area of engineering, it is probably appropriate for me to start with an example which takes place in a video game.
+
+Suppose that there is a top-down game in which the player is going on an adventure in a maze-like world. There are walls preventing him from moving freely, so he is forced to use doors. Unfortunately, some of the doors are locked, which means that the player must figure out how to unlock them in order to get to the other side of the wall.
+
+The image below is an example of a locked door. This door stays open only when the nearby button is being pressed, and immediately closes itself as soon as the button is released. So the only way for our player to cross the door is to first place a box right in front of the button to press it. Unless somebody moves it away, the box will continue pressing the button, and the player will be free to cross the door.
+
+<c01>
+
+How shall we implement such a game mechanic? One of the most intuitive ways, obviously, is to model each individual object as a state machine. For instance, the door is a state machine with two states called "Closed" and "Open", and the button is a state machine with two states called "Released" and "Pressed".
+
+The diagram below shows how the button "talks" to the door, so as to make the aforementioned rule work. Whenever the door is closed and the button is pressed, the button tells the door to open up. And whenever the door is open and the button is released, the button tells the door to close.
+
+<c02>
+
+What we are witnessing here is a pair of state machines - the door and the button. Both of them have their own states and state transitions, and they run concurrently (i.e. both the door's state and button's state are active at the same time). Yet they are not disjoint from each other; the button's state influences the door's state, thereby forming a cause-and-effect relation.
+
+We may refer to such a network of state machines as a "multi-state machine", since the whole thing behaves as though it is a state machine with multiple concurrent states.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Logic without Logic Gates</b></h3>
+
+Let us take a look at a slightly more involved scenario. Suppose that there are two buttons called "button A" and "button B", and that there is a door which stays open only when both of these buttons are simultaneously being pressed (not just one of them, but both). This is an AND relation in boolean logic, and the image below shows an electric circuit analogy of such a logical operation. Here, the two buttons are analogous to two electrical switches which are connected in series. Only when both of them are pressed, the whole circuit becomes conductive and enables itself to activate (open) the door.
+
+<c03>
+
+An engineer might be tempted to implement this using a logic gate (i.e. AND gate), which is a sound approach in a general computing environment in which binary logic operators (such as &&, ||) are some of the most primitive building blocks of expressions. The temptation gets even larger when the engineer is developing a game which is meant to be executed not on a personal computing device (e.g. PC or mobile), but on a piece of programmable hardware, such as FPGA (Field-Programmable Gate Array), wherein logic is being configured by establishing connections upon a vast 2D array of pre-embedded logic gates.
+
+Outside of the realm of digital design, however, logic gates may not be the most appropriate elements to use. A video game, for example, is often filled with a myriad of wild mechanics which are not so easily explicable in terms of binary logic operators, such as dialogues, spatial reasoning (e.g. rush hour puzzles), various causal chains, and many others.
+
+In order to encompass most (if not all) of all these non-boolean mechanics in our design protocol, therefore, we must come up with a framework which is more versatile than a mere assembly of binary logic elements. In my opinion, such a framework can easily be discovered when we stop thinking in terms of logic gates (e.g. AND, OR, NOT, etc) and begin to design the whole system using state machines and their transition rules only.
+
+The diagram shown below is an example of how the aforementioend "AND" logic can be implementated by introducing an intermediatry state machine called "ButtonSeq" (i.e. "Button Sequence"), whose current state indicates the most recently ongoing sequence of button-presses. For instance,
+
+(1) "None" means that neither button A nor button B is being pressed.
+(2) "A" means that only button A is being pressed.
+(3) "AB" means that button A was pressed first, button B was pressed second, and that they both have been being pressed since then.
+
+<c04>
+
+What you can see here is that both the "AB" and "BA" states trigger the door's transition from "Closed" to "Open". This means that, whenever button A and button B are both being pressed (regardless of the order in which they were initially pressed), the door is forced to be open.
+
+In this example alone, we are already seeing an advantage of designing mechanics in terms of state machines instead of logic gates. Logical operators such as "AND", since they are commutative (i.e. they don't care about the order of the input parameters), are insufficient for handling cases in which the order of pressing these two buttons matters, and so forth. Imagine that, inside a game studio, the game designer comes over to the engineering team, gets mad, and says,
+
+"Hey, the way you implemented my design was wrong. When I said that pressing button A and button B should open up the door, what I meant was that pressing button A AND THEN pressing button B should open up the door. I never said that pressing them the other way around should give the same result. What you guys made is clearly a bug. The entire level won't make any sense at all if you do not fix this immediately!"
+
+Try making the requested adjustment by rearranging logic gates; it is fairly complicated to do so. If you configure things in terms of state machines, on the other hand, you will have an easier life because state machines are much more malleable than logic gates.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Rule Dictionary</b></h3>
+
+But of course, I can totally feel the sentiment that the above example somehow appears to "overcomplicate" a fairly simple piece of logic by not leveraging built-in logical operators. However, there is an enormous benefit in trying to formulate everything solely in terms of state machines; it is what I would call "structural uniformity".
+
+In the model we have been seeing so far, there has really been only a single type of semantic building blocks - state transition rules. Every one of these rules, without an exception, can be interpreted as a mapping of two states (i.e. "current state" and "trigger state") into another state (i.e. "next state"). In case of the state "AB" triggering the door to open, for instance, we can say that it is due to a rule in which "current state" is "Closed", "trigger state" is "AB" (because "AB" is the thing that triggers the door to open), and "next state" is "Open".
+
+<c05>
+
+And if we gather all such rules in one place called "rule dictionary", we may claim that this dictionary alone fully describes the behavior of the whole system. This kind of simplicity is extremely helpful especially if we are aiming to implement it as a custom electronic module (in the form of an ASIC (Application-Specific Integrated Circuit), etc); less variety in the data structure means less complexity in the hardware.
+
+<c06>
+
+The most challenging part is the implementation of the rules. It really depends on the hardware, but let us begin with the assumption that we are developing an application for a general-purpose computer (e.g. PC or mobile). The most brute-force approach is to execute the rules as a bunch of conditional statements, like the ones displayed below.
+
+#$
+if (ButtonSeq.CurrState == "None" && ButtonA.CurrState == "Pressed")
+    ButtonSeq.NextState = "A";
+if (ButtonSeq.CurrState == "A" && ButtonA.CurrState == "Released")
+    ButtonSeq.NextState = "None";
+if (ButtonSeq.CurrState == "A" && ButtonB.CurrState == "Pressed")
+    ButtonSeq.NextState = "AB";
+if (ButtonSeq.CurrState == "AB" && ButtonA.CurrState == "Released")
+    ButtonSeq.NextState = "B";
+if (ButtonSeq.CurrState == "AB" && ButtonB.CurrState == "Released")
+    ButtonSeq.NextState = "A";
+...
+if (ButtonSeq.CurrState == "AB" && Door.CurrState == "Closed")
+    Door.NextState = "Open";
+if (ButtonSeq.CurrState == "BA" && Door.CurrState == "Closed")
+    Door.NextState = "Open";
+if (ButtonSeq.CurrState == "None" && Door.CurrState == "Open")
+    Door.NextState = "Closed";
+if (ButtonSeq.CurrState == "A" && Door.CurrState == "Open")
+    Door.NextState = "Closed";
+if (ButtonSeq.CurrState == "B" && Door.CurrState == "Open")
+    Door.NextState = "Closed";
+#$
+
+It is not difficult to interpret the meaning of what is going on here. If ButtonSeq's state is "None" and ButtonA's state is "Pressed", ButtonSeq's state must change into "A", and so on. Each IF statement here is an individual state transition rule.
+
+Of course, this is not the best way of implementing the rules. It is both hard-coded (which means it is not data-driven) and inefficient (because it introduces a long sequence of statements that the program needs to visit), so obviously we need a better approach.
+
+A better (although not the best) way is to define the rules as entries in a nested dictionary which, in C# programming language, could be written as:
+
+#$
+Dictionary<CurrStateOwner,
+    Dictionary<CurrStateName,
+        Dictionary<TriggerStateOwner,
+            Dictionary<TriggerStateName,
+                NextState>>>> RuleDictionary;
+#$
+
+"CurrStateOwner" is the state machine whose "current state" is to be examined, and "TriggerStateOwner" is the state machine whose "trigger state" is to be examined. The rule dictionary is the data structure which maps these two states (i.e. "current state" and "trigger state") to the desired future state of "CurrStateOwner".
+
+If we represent the rule dictionary of the previous two-button scenario in JSON format, it will be written as:
+
+#$
+"RuleDictionary": {
+    "ButtonSeq": {
+        "None": {
+            "ButtonA": {
+                "Pressed": "A"
+            },
+            "ButtonB": {
+                "Pressed": "B"
+            }
+        },
+        "A": {
+            "ButtonA": {
+                "Released": "None"
+            },
+            "ButtonB": {
+                "Pressed": "AB"
+            }
+        },
+        "AB": {
+            "ButtonA": {
+                "Released": "B"
+            },
+            "ButtonB": {
+                "Released": "A"
+            }
+        },
+        ...
+    },
+    "Door": {
+        "Closed": {
+            "ButtonSeq": {
+                "AB": "Open"
+            },
+            "ButtonSeq": {
+                "BA": "Open"
+            }
+        },
+        "Open": {
+            "ButtonSeq": {
+                "None": "Closed"
+            },
+            "ButtonSeq": {
+                "A": "Closed"
+            },
+            "ButtonSeq": {
+                "B": "Closed"
+            }
+        }
+    }
+}
+#$
+
+While a nested dictionary is a pretty complicated and computationally inefficient data structure, one of its upsides is that it is extremely easy to use. Whenever the program happens to run the update loop of the "ButtonSeq" object, for instance, all it has to do is access the "ButtonSeq" entry of "RuleDictionary" to look up all the rules which belong to the "ButtonSeq" object. And within that "ButtonSeq" entry, all it has to do is access the inner entry which corresponds to the current state of the "ButtonSeq" object to look up all "trigger states" which may potentially determine the object's future state.
+
+This makes a nested dictionary a great choice for quick data access. A more optimal means of implementing this dictionary is to come up with a number of relational data tables (like in SQL) and chain them together by means of primary/secondary keys, etc.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Templates for Rules</b></h3>
+
+Syntactic redundancy, though, is going to ensue if we construct all the rules on a case-by-case manner. Imagine that there are 100 doors inside the game, each of which opens up only when a unique pair of buttons are simultaneously being pressed. There are numerous buttons (at least 50 or so), from which 100 such unique combinations are to be made for those doors. Indeed, we do not want to manually type all the rules for a hundred "ButtonSeq" objects. Fortunately, we know that we can abstract out the logic of "ButtonSeq" (i.e. AND operator) and turn it into a template which can be replicated as many times as we want.
+
+In order for this to happen, we must first turn all the relevant states and their transitions into generic, parameterizable entities, like the ones shown below.
+
+<c07>
+
+The idea is that, once they are all parameterized, we will be able to write a function which automatically creates a set of rules based on the given parameters. Such a function works as a template for generating rules, and is demonstrated in the Javascript code below:
+
+#$
+const buttonA = {
+    name: "buttonA",
+    states: {
+        "0": "Released",
+        "1": "Pressed",
+    },
+};
+const buttonB = {
+    name: "buttonB",
+    states: {
+        "0": "Released",
+        "1": "Pressed",
+    },
+};
+const door = {
+    name: "door",
+    states: {
+        "0": "Closed",
+        "1": "Open",
+    },
+};
+
+function AND(output, input0, input1)
+{
+    return `{
+        "AND(${output.name}, ${input0.name}, ${input1.name})": {
+            "null": {
+                "${input0.name}": {
+                    "${input0.states["1"]}": "0"
+                },
+                "${input1.name}": {
+                    "${input1.states["1"]}": "1"
+                },
+            },
+            "0": {
+                "${input0.name}": {
+                    "${input0.states["0"]}": "null"
+                },
+                "${input1.name}": {
+                    "${input1.states["1"]}": "01"
+                },
+            },
+            "01": {
+                "${input0.name}": {
+                    "${input0.states["0"]}": "1"
+                },
+                "${input1.name}": {
+                    "${input1.states["0"]}": "0"
+                },
+            },
+            ...
+        },
+        "${output.name}": {
+            "${output.states["0"]}": {
+                "AND(${output.name}, ${input0.name}, ${input1.name})": {
+                    "01": "${output.states["1"]}"
+                },
+                "AND(${output.name}, ${input0.name}, ${input1.name})": {
+                    "10": "${output.states["1"]}"
+                },
+            },
+            "${output.states["1"]}": {
+                "AND(${output.name}, ${input0.name}, ${input1.name})": {
+                    "null": "${output.states["0"]}"
+                },
+                "AND(${output.name}, ${input0.name}, ${input1.name})": {
+                    "0": "${output.states["0"]}"
+                },
+                "AND(${output.name}, ${input0.name}, ${input1.name})": {
+                    "1": "${output.states["0"]}"
+                },
+            }
+        }
+    }`;
+}
+
+const rule_door = AND(door, buttonA, buttonB);
+#$
+
+Here, the code just genereated the two-button rule (i.e. "Both button A and B must be pressed in order to open the door") by calling the "AND" function, which took the door as the operator's output parameter and the two buttons (A and B) as the operator's two input parameters.
+
+Leveraging this function-based rule instantiator, the developer is able to quickly come up with a wide spectrum of complex rules simply by calling functions. For example, take a look at the scenario below, expressed in the form of an electric circuit. It tells us that there are two doors (A and B) and three buttons (A, B, and C); door A opens up only when button A and B are both being pressed, whereas door B opens up only when button B and C are both being pressed.
+
+<c08>
+
+By calling the "AND" function twice, each time with a unique combination of arguments, one can easily create two sets of rules which are different yet share the same type of logic (i.e. AND operator). These two sets of rules, when combined as a whole, will fully depict the above scenario. The following code shows us how to do it.
+
+#$
+const rules_doorA = AND(doorA, buttonA, buttonB);
+const rules_doorB = AND(doorB, buttonB, buttonC);
+
+const ruleDictionary = `{
+    ${rules_doorA},
+    ${rules_doorB}
+}`;
+#$
+
+Here is a slightly trickier example. What if there is a door which opens up only when all 3 of the buttons are being pressed, not just 2? This may baffle the designer a bit because the AND function only takes two inputs. This problem, though, is not hard to solve. All we need is an intermediary object (i.e. "wire") whose state is the result of applying the AND function to the first two buttons (A and B). This intermediary object, then, can be fed as an input parameter to another AND function along with the third button (C). The result of this AND function will be equivalent to the result of applying the AND operator to all three buttons (A, B, and C).
+
+<c09>
+
+And the snippet below is the code implementation of what I just mentioned.
+
+#$
+const wire = {
+    name: "wire",
+    states: {
+        "0": "LowVoltage",
+        "1": "HighVoltage",
+    },
+};
+
+const rules_wire = AND(wire, buttonA, buttonB);
+const rules_door = AND(doorB, wire, buttonC);
+
+const ruleDictionary = `{
+    ${rules_wire},
+    ${rules_door}
+}`;
+#$
+
+Such a dynamic rule-generation script, as those of you with expertise in embedded systems may have noticed, closely resembles a hardware description language such as Verilog, since it is composed of a set of declarative statements which tell us the input-output relations between modules.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Race Conditions</b></h3>
+
+One may question the feasibility of this multi-state design scheme by saying, "What if the system accidentally triggers an undesirable race condition? For instance, in your second example, I noticed that it is possible to cause a race condition when ButtonSeq's current state is 'None' and both button A and B are pressed at the same exact time. What should ButtonSeq's next state be - A, or B? This kind of ambiguity makes me question the legitimacy of what you are expounding here."
+
+In a parallel or concurrent (e.g. multi-threaded) environment, such edge cases will be detrimental to the system if they are not being handled properly. They may even cause two or more mutually exclusive states to be simultaneously active! I will deal with this problem near the end of this article (i.e. in the "Race Conditions in Parallel Processing" section).
+
+If the system is simply running on a single-threaded environment, though, we have nothing to worry about. When the system's update loop runs the update procedure of one of the state machines, it will simply scan the rule dictionary from top to bottom and apply the first rule which happens to trigger the state to change. If the rule which makes ButtonSeq respond to button A is listed BEFORE the rule which makes ButtonSeq respond to button B, simultaneously pressing both button A and B will make ButtonSeq respond to button A only. No fatal error will arise, and no one but an over-enthusiastic QA will say anything about it.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Compression of Rule Data</b></h3>
+
+The JSON representation of the rule dictionary, which I have demonstrated above, is a bit too inefficient both in terms of memory and speed. Thus, it is desirable to format the dictionary in a more compact manner.
+
+There are a number of things we ought to do to make it happen. First, we should reference each individual state with a binary code instead of a string of characters (as shown in the table below). This greatly reduces the amount of data needed for referencing the states. Furthermore, it helps us significantly speed up the dictionary's lookup process because a numerical value can directly be used as an index in the hash table (whereas a string requires the application to compute its hash code first).
+
+<c10>
+
+Secondly, we can even get rid of the nested dictionary data structure altogether if we express all the rules using two binary sequences (illustrated in the picture above), which may be referred to as "Rule Ranges" and "Rules", respectively.
+
+The "Rule Ranges" sequence lists all the states of the system and their corresponding ranges in the "Rules" sequence (specified in terms of memory addresses). The "Rules" sequence lists all the rules which correspond to the given CurrState, each of which is denoted by the (TriggerState, NextState) pair.
+
+When the system updates a state machine whose current state is 0101, for instance, it first looks up the range which corresponds to the entry 0101 in the "Rule Ranges" sequence (which corresponds to the range [start1, end1]). It then jumps into the "Rules" sequence, scans the entries in the range [start1, end1], and checks to see if the state 0010 or 0100 is currently active (Note: A state is "active" if it is the current state of one of the state machines). If 0010 is active, the program will change the current state of the machine from 0101 to 0110. If 0100 is active instead, the program will change the current state of the machine from 0101 to 0111.
+
+Such raw-data representation of rules helps us minimize the size of its storage space, minimize the frequency of cache-miss (because more compactness of data means more data can be packed into the cache), and prevent potential incompatibility between ways in which different computing envirionments (e.g. operating systems) tend to handle data (because raw binary data does not make assumptions on how the environment will interpret it; the "rules engine" will simply interpret the data based upon its own custom way, regardless of on which platform it is running).
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Parallel Processing</b></h3>
+
+Versatility and compactness are not the only advantages of the multi-state model I have shown so far. Another major advantage of it is its ability to run on a parallel computing environment, given a custom hardware module.
+
+In order to explain what sort of hardware it is, I must first introduce a hypothetical electronic component called "state activation indicator". It is a 1-bit memory storage (similar to a D Flip-Flop) which tells us whether each state is active or not. So, for example, if there is a state activation indicator which indicates the activation status of the door's "Closed" state, we say that the door's current state is "Closed" if and only if the indicator's output bit is currently 1.
+
+<c11>
+
+This means that the "current state" of the whole system, which is really the ensemble of all the current states of its constituent state machines, is a binary string of length N containing M number of 1s (where 'N' is the total number of all possible states of all the state machines, and 'M' is the number of the state machines themselves). The figure below demonstrates how this data representation works.
+
+<c12>
+
+The system's current state can be characterized by an array of state activation indicators. Similarly, the system's next state (i.e. pending future state which is to be assigned back to the current state by the end of the application's clock cycle), too, can be characterized by an array of state activation indicators.
+
+The image below is the hardware implementation that is necessary for the parallel multi-state machine to work. Between the two bit arrays which respectively represent the system's current state and next state, there is a two-dimensional grid of wire intersections, formed by both horizontally and vertically oriented electrical wires (i.e. conductors) which are placed at regular intervals. Each black dot denotes connection between the two intersecting wires (which means that if the value of one of the wires is 1, the value of the other wire will be 1 as well), and each green dot refers to the presence of an AND logic gate between the two intersecting wires. The result of this logic gate gets communicated through the green line.
+
+<c13>
+
+Here, each green dot (AND logic gate) corresponds to a state transition rule; it takes a "current state" and a "trigger state" as a pair of inputs, and yields the next state as the output. Imagine the green parts of the image above as the ones which are dynamically configured on a programmable hardware module (by means of tri-state buffers, transisters, etc), while the black parts are static and cannot be modified. Installing a rule dictionary, thus, is the same thing as establishing a bunch of green wirings between the grid's intersection points and their corresponding next-state memory input ports.
+
+Once the wiring process is done, all we need to do is set the initial state of the system by pre-configuring the bits of CurrState and then starting the clock to initiate the cyclic flow of signals between CurrState and NextState. This will let the system update all of its states in parallel, without requiring the CPU to visit every individual state machine and update it sequentially.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Race Conditions in Parallel Processing</b></h3>
+
+The aforementioned parallel implementation, though, is prone to introduce race conditions which may inadvertently make a state machine carry two or more concurrent states (which is inappropriate for a state machine). Therefore, we must add some kind of "postprocessing" stage to the end of the state transition cycle to resolve race conditions. For such a purpose, let me introduce yet another hypothetical module called "tie-breaker". It is an electronic component which takes a bit sequence as an input, leaves only a single "1" in it (if there are multiple of them), and returns the resulting sequence as the output.
+
+<c14>
+
+Then, when the system's clock cycle (update loop) ends and its NextState is to be transferred back to CurrState, the system will need to feed each group of states in NextState (corresponding to each individual state machine) to a tie-breaker and assign its result to the respective group in CurrState, instead of simply copying the bits from NextState to CurrState directly. It is demonstrated in the image below.
+
+<c15>
+
+This is how the system can prevent any potential race conditions; each tie-breaker ensures that each state machine contains only ONE current state.

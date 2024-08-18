@@ -433,7 +433,7 @@ function createHTMLForGame(gameTitle, gamePlayURL, gameYouTubeTag, rawText, code
         }
         else // plain text
         {
-            line = line.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{{", "<").replaceAll("}}", ">");
+            line = line.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{%", "<").replaceAll("%}", ">");
             paragraphLinesPending.push(line);
         }
     }
@@ -582,7 +582,7 @@ function createHTMLsForWritings(rawText, code)
         }
         else // plain text
         {
-            line = line.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{{", "<").replaceAll("}}", ">");
+            line = line.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{%", "<").replaceAll("%}", ">");
             paragraphLinesPending.push(line);
         }
     }
