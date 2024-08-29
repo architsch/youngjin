@@ -2522,7 +2522,7 @@ Suppose that there is a clock which ticks at regular intervals. Every time it ti
 #$
 void Update(Actor x)
 {
-	x.hunger = x.hunger + 1;
+    x.hunger = x.hunger + 1;
 }
 #$
 

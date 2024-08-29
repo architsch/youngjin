@@ -69,7 +69,7 @@ loyalty(X, Y, 2) :- cat(X), human(Y).</code></pre></div>
 <p>Suppose that there is a clock which ticks at regular intervals. Every time it ticks, it calls a function called "Update". If there is an actor who is supposed to get hungrier and hungrier as time passes by, all we have to do in an imperative language is to access the actor's state variable called "hunger" and increase its value whenever the "Update" function runs (See the code below).</p>
 <div class="snippet"><pre><code>void Update(Actor x)
 {
-	x.hunger = x.hunger + 1;
+    x.hunger = x.hunger + 1;
 }</code></pre></div>
 <p>This kind of logic is possible because the variable we are dealing with (i.e. hunger) is a state variable; we are allowed to assign a new value to it at any moment.</p>
 <p>In a declarative language such as Prolog, unfortunately, we cannot just declare a state variable and modify its value whenever we want to. Logical relations are timeless beings; they exist outside of the realm of time, which means that it is nonsensical to try to associate them with variables which are bound to certain points in time.</p>
