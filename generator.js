@@ -453,7 +453,7 @@ function createHTMLsForWritings(rawText, code)
     let title = "???";
     let fileIndex = 1;
     let imageIndex = 1;
-    let firstImgPath = undefined;
+    let chosenImgPath = undefined;
     let snippetOn = false;
     let excerptOn = false;
     const paragraphLinesPending = [];
@@ -511,7 +511,7 @@ function createHTMLsForWritings(rawText, code)
             if (!isFirstArticle)
             {
                 htmlLines_header.length = 0;
-                addHeaderHTML(htmlLines_header, prev_title, prev_description, prev_keywords, `${code}/page-${fileIndex}.html`, firstImgPath);
+                addHeaderHTML(htmlLines_header, prev_title, prev_description, prev_keywords, `${code}/page-${fileIndex}.html`, chosenImgPath);
                 prev_description = description;
                 prev_keywords = keywords;
                 prev_lastmod = lastmod;
@@ -521,7 +521,7 @@ function createHTMLsForWritings(rawText, code)
                 fileTexts.push(htmlLines_header.join("\n") + "\n" + htmlLines.join("\n"));
                 htmlLines.length = 0;
                 imageIndex = 1;
-                firstImgPath = undefined;
+                chosenImgPath = undefined;
             }
             isFirstArticle = false;
 
@@ -543,8 +543,8 @@ function createHTMLsForWritings(rawText, code)
             if (imgName.length > 0)
             {
                 const imgPath = `${rootURL}/${code}/${imgName}.jpg`;
-                if (firstImgPath == undefined)
-                    firstImgPath = imgPath;
+                if (chosenImgPath == undefined || line.endsWith("*"))
+                    chosenImgPath = imgPath;
                 htmlLines.push(`<img class="figureImage" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageIndex++})">`);
             }
         }
@@ -589,14 +589,14 @@ function createHTMLsForWritings(rawText, code)
     endParagraph();
 
     htmlLines_header.length = 0;
-    addHeaderHTML(htmlLines_header, title, description, keywords, `${code}/page-${fileIndex}.html`, firstImgPath);
+    addHeaderHTML(htmlLines_header, title, description, keywords, `${code}/page-${fileIndex}.html`, chosenImgPath);
 
     addFooterHTML(htmlLines);
     fileIndices.push(fileIndex++);
     fileTexts.push(htmlLines_header.join("\n") + "\n" + htmlLines.join("\n"));
     htmlLines.length = 0;
     imageIndex = 1;
-    firstImgPath = undefined;
+    chosenImgPath = undefined;
 
     return {fileIndices, fileTitles, fileTexts, fileLastmods};
 }
