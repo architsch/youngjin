@@ -103,7 +103,7 @@ rainy(City[n]) :- cloudy(City[n-1]).</code></pre></div>
 <p>This is the kind of race condition which may occur if we do not take sufficient care when ordering horn clauses whose lefthand and righthand sides both reference the same time step (i.e. "n"). There are multiple ways of preventing this kind of error, such as:</p>
 <p>(1) Forcing the Prolog interpreter to scan the list of rules twice instead of just once, so that the "carryUmbrella" predicate will be recognized and be activated during the second scan (because the "rainy" predicate would have been activated by the end of the first scan), or,<br>(2) Just writing the rules in the correct order.</p>
 <p>Both of these solutions will work, although they both involve their own tradeoffs. The first solution allows the two horn clauses to be written in any order, yet the necessity of scanning the whole code multiple times decreases the efficiency of the program. The second solution is great for efficiency, yet it requires extra care when writing the code.</p>
-<p>(Will be continued in Part 4)</p>
+<p>(Will be continued in <a href="https://thingspool.net/morsels/page-13.html">Part 4</a>)</p>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2024 ThingsPool.<br>All rights reserved.
