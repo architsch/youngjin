@@ -147,7 +147,7 @@ motionProgress(rock, Y[n], Projectile[n], 0.6) :- !interrupt(Projectile[n-1]), m
 motionProgress(rock, Y[n], Projectile[n], 0.8) :- !interrupt(Projectile[n-1]), motionProgress(rock, Y[n-1], Projectile[n-1], 0.6).
 motionProgress(rock, Y[n], Projectile[n], 1.0) :- !interrupt(Projectile[n-1]), motionProgress(rock, Y[n-1], Projectile[n-1], 0.8).
 hit(Y[n], Projectile[n]) :- motionProgress(rock, Y[n], Projectile[n], 1.0).</code></pre></div>
-<p>(Will be continued in Part 6)</p>
+<p>(Will be continued in <a href="https://thingspool.net/morsels/page-15.html">Part 6</a>)</p>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2024 ThingsPool.<br>All rights reserved.
