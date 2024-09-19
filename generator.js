@@ -110,6 +110,7 @@ async function run()
     htmlLines.push(`<div class="l_spacer"></div>`);
 
     htmlLines.push(`<h1>Featured</h1>`);
+    addFeatureLink(htmlLines, "Games in Prolog", "https://thingspool.net/morsels/page-10.html", "https://thingspool.net/feat0.jpg");
     addFeatureLink(htmlLines, "Model of the Mind", "https://thingspool.net/morsels/page-2.html", "https://thingspool.net/feat2.jpg");
     addFeatureLink(htmlLines, "Serious Game Design", "https://thingspool.net/morsels/page-1.html", "https://thingspool.net/feat1.jpg");
     addFeatureLink(htmlLines, "Thought Simulator", "https://thingspool.net/morsels/page-3.html", "https://thingspool.net/feat3.jpg");
