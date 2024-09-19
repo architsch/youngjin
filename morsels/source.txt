@@ -3373,7 +3373,7 @@ Now you may understand why I listed "Vector" as one of the built-in types. A vec
 
 Being able to put an arbitrary number of things together (i.e. vector) is an indispensable feature to have in a programming language. Thus, why not just let us assume that we are using a special Prolog interpreter which is designed to support this by default?
 
-<e54>
+<e54>*
 
 One might argue that introducing Vector as a built-in type should be considered a source of innumerable pitfalls, due to the possibility of forming weird nested structures such as a variable inside a vector, a vector inside a vector, and so forth.
 
