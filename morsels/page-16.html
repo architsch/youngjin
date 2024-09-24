@@ -100,7 +100,7 @@ layEgg[n](X) :- chicken[n](X).</code></pre></div>
 <p>The event "layEgg" is unique to a particular combination between the egg's source (X) and the time at which it was born (n). At each moment in time, therefore, there can only be at most one instance of "layEgg" which could originate from a particular chicken. The implication of this is that the expression "n_Src_layEgg", in which "n" is the time at which the event "layEgg" took place and "Src" is the ID of the chicken which laid the egg, must be unique for every single egg. Do you know what this means? It means that "n_Src_layEgg" can be used as the egg's unique ID.</p>
 <p>The following code shows how this logic works.</p>
 <div class="snippet"><pre><code>layEgg[n](X) :- chicken[n](X).
-spawn[n](X, layEgg, Pos) :- layEgg[n](X), position(X, Pos).
+spawn[n](X, layEgg, Pos) :- layEgg[n](X), position[n](X, Pos).
 spawned[n]("{n}_{Src}_{Cause}", Src, Cause, Pos) :- spawn[n-1](Src, Cause, Pos).</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/e63.jpg" alt="Game Programming in Prolog - Part 7 (Figure 8)">
 <p>The first horn clause simply states that a chicken is supposed to lay an egg at each time step. The second clause says that, whenever a chicken lays an egg at position "Pos", it must trigger an event called "spawn" with 3 parameters:</p>
@@ -117,9 +117,9 @@ layEgg2[n](X) :- chicken[n](X), extraEggBoost[n](X, NumExtra), greaterThan(NumEx
 layEgg3[n](X) :- chicken[n](X), extraEggBoost[n](X, NumExtra), greaterThan(NumExtra, 1).
 
 
-spawn[n](X, layEgg, Pos) :- layEgg[n](X), position(X, Pos).
-spawn[n](X, layEgg2, Pos) :- layEgg2[n](X), position(X, Pos).
-spawn[n](X, layEgg3, Pos) :- layEgg3[n](X), position(X, Pos).</code></pre></div>
+spawn[n](X, layEgg, Pos) :- layEgg[n](X), position[n](X, Pos).
+spawn[n](X, layEgg2, Pos) :- layEgg2[n](X), position[n](X, Pos).
+spawn[n](X, layEgg3, Pos) :- layEgg3[n](X), position[n](X, Pos).</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/e64.jpg" alt="Game Programming in Prolog - Part 7 (Figure 9)">
 <p>Suppose that the "extraEggBoost" predicate denotes the presence of that magic spell the designer talked about, under the assumption that "X" is the ID of the chicken and "NumExtra" indicates the number of extra eggs that the chicken is required to lay each time the clock ticks. The rules above, then, show us that the following three scenarios are possible depending on what the value of "NumExtra" is:</p>
 <p>(1) If either NumExtra is 0 or "extraEggBoost(X, NumExtra)" does not even exist for X (meaning that chicken X is currently not endowed with any active extra-egg spell), only "layEgg" will be triggered.<br>(2) If NumExtra is at least 1, both "layEgg" and "layEgg2" will be triggered.<br>(3) If NumExtra is at least 2, both "layEgg" and "layEgg2", as well as "layEgg3", will be triggered.</p>
@@ -136,12 +136,12 @@ spawned[16](16_foo_layEgg3, foo, layEgg3, &lt;3, 4&gt;)</code></pre></div>
 layEggs[n](X, NumEggs) :- chicken[n](X), extraEggBoost[n](X, NumExtra), add(1, NumExtra, NumEggs).
 
 
-spawn[n](X, &lt;layEggs, NumEggs&gt;, Pos, NumEggs) :- layEggs[n](X, NumEggs), position(X, Pos).
+spawn[n](X, &lt;layEggs, NumEggs&gt;, Pos, NumEggs) :- layEggs[n](X, NumEggs), position[n](X, Pos).
 spawned[n]("{n}_{Src}_{Cause}", Src, Cause, Pos) :- spawn[n-1](Src, Cause, Pos).
 
 
 numCopies(Id, NumCopies) :- spawned[n](Id, Src, Cause, Pos), y(Cause, NumCopies).</code></pre></div>
-<p>(Will be continued in Part 8)</p>
+<p>(Will be continued in <a href="https://thingspool.net/morsels/page-17.html">Part 8</a>)</p>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2024 ThingsPool.<br>All rights reserved.
