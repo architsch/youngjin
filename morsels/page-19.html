@@ -123,7 +123,7 @@ localPosition[n](X, LP) :- !addChild[n-1](_, X), !removeChild[n-1](_, X),
 <div class="snippet"><pre><code>despawn[n](Child) :- parent[n](Parent, Child), despawn[n](Parent).
 removeChild[n](Parent, Child) :- parent[n](Parent, Child), !alive[n](Child).</code></pre></div>
 <p>The things I have mentioned so far are all the essential stuff we need to know to be able to play with parent-child relations. In the next article, I will explain how these building blocks can be used to represent an omurice as a standalone actor, rather than a mere extraneous identity which is superficially being attached to one of its components (i.e. fried rice).</p>
-<p>(Will be continued in Part 11)</p>
+<p>(Will be continued in <a href="https://thingspool.net/morsels/page-20.html">Part 11</a>)</p>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2024 ThingsPool.<br>All rights reserved.
