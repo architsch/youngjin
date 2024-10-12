@@ -10,6 +10,8 @@ const lightColor = "#e0e0e0";//"#d0d0d0";
 const lightYellowColor = "#e0d0a0";
 const lightGreenColor = "#80d070";
 
+const defaultTextAlign = "left";
+
 //------------------------------------------------------------------------
 // Functions
 //------------------------------------------------------------------------
@@ -39,7 +41,7 @@ const fullCoverChildArea = (display) =>
 const spacing = (verticalSize, horizontalSize, includePadding, includeMargin, textAlign) =>
 `text-align: ${textAlign};` +
 (includePadding ? `\tpadding: ${verticalSize} ${horizontalSize};` : "") +
-(includeMargin ? `\tmargin: ${verticalSize} auto;` : "");
+(includeMargin ? `\tmargin: ${verticalSize};` : "");
 
 const font = (fontSize, isItalic, fontWeight) =>
 `font-size: ${fontSize};
@@ -74,29 +76,23 @@ const flexible_row_area = relativeAndFlexibleArea(true);
 const visible_full_cover_child_area = fullCoverChildArea(true);
 const invisible_full_cover_child_area = fullCoverChildArea(false);
 
-const zero_spacing = spacing("0", "0", true, true, "center");
-const s_spacing = spacing("0.5vmin", "0.5vmin", true, true, "center");
-const m_spacing = spacing("1.0vmin", "1.0vmin", true, true, "center");
-const l_spacing = spacing("1.5vmin", "1.5vmin", true, true, "center");
-const xl_spacing = spacing("2.0vmin", "2.0vmin", true, true, "center");
+const zero_spacing = spacing("0", "0", true, true, defaultTextAlign);
+const s_spacing = spacing("0.5vmin", "0.5vmin", true, true, defaultTextAlign);
+const m_spacing = spacing("1.0vmin", "1.0vmin", true, true, defaultTextAlign);
+const l_spacing = spacing("1.5vmin", "1.5vmin", true, true, defaultTextAlign);
+const xl_spacing = spacing("2.0vmin", "2.0vmin", true, true, defaultTextAlign);
 
-const m_spacing_horizontallyWider = spacing("1.0vmin", "3.0vmin", true, true, "center");
+const m_spacing_horizontallyWider = spacing("1.0vmin", "3.0vmin", true, true, defaultTextAlign);
 
-const s_spacing_paddingOnly = spacing("0.5vmin", "0.5vmin", true, false, "center");
-const m_spacing_paddingOnly = spacing("1.0vmin", "1.0vmin", true, false, "center");
-const l_spacing_paddingOnly = spacing("1.5vmin", "1.5vmin", true, false, "center");
-const xl_spacing_paddingOnly = spacing("2.0vmin", "2.0vmin", true, false, "center");
+const s_spacing_paddingOnly = spacing("0.5vmin", "0.5vmin", true, false, defaultTextAlign);
+const m_spacing_paddingOnly = spacing("1.0vmin", "1.0vmin", true, false, defaultTextAlign);
+const l_spacing_paddingOnly = spacing("1.5vmin", "1.5vmin", true, false, defaultTextAlign);
+const xl_spacing_paddingOnly = spacing("2.0vmin", "2.0vmin", true, false, defaultTextAlign);
 
-const s_spacing_marginOnly = spacing("0.5vmin", "0.5vmin", false, true, "center");
-const m_spacing_marginOnly = spacing("1.0vmin", "1.0vmin", false, true, "center");
-const l_spacing_marginOnly = spacing("1.5vmin", "1.5vmin", false, true, "center");
-const xl_spacing_marginOnly = spacing("2.0vmin", "2.0vmin", false, true, "center");
-
-const zero_spacing_leftText = spacing("0", "0", true, true, "left");
-const s_spacing_leftText = spacing("0.5vmin", "0.5vmin", true, true, "left");
-const m_spacing_leftText = spacing("1.0vmin", "1.0vmin", true, true, "left");
-const l_spacing_leftText = spacing("1.5vmin", "1.5vmin", true, true, "left");
-const xl_spacing_leftText = spacing("2.0vmin", "2.0vmin", true, true, "left");
+const s_spacing_marginOnly = spacing("0.5vmin", "0.5vmin", false, true, defaultTextAlign);
+const m_spacing_marginOnly = spacing("1.0vmin", "1.0vmin", false, true, defaultTextAlign);
+const l_spacing_marginOnly = spacing("1.5vmin", "1.5vmin", false, true, defaultTextAlign);
+const xl_spacing_marginOnly = spacing("2.0vmin", "2.0vmin", false, true, defaultTextAlign);
 
 const fontScaleFactor_vmax = 0.7;
 const fontScaleFactor_px = 1.0;
@@ -280,7 +276,7 @@ footer {
 	display: inline-block;
 	width: 90vw;
 	width: auto;
-	${xl_spacing_leftText}
+	${xl_spacing}
 	${s_bold_font}
 	${snippet_frame}
 	overflow: auto;
