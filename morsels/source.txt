@@ -5051,6 +5051,7 @@ FACTS:
     humid.
 RULES:
     humid :- rainy.
+
 ------------------------------
 #$
 
