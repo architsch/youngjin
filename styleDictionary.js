@@ -66,11 +66,11 @@ roundedFrame(backgroundColor, foregroundColor) + "\n" +
 // Elementary Styles
 //------------------------------------------------------------------------
 
-const full_row_area = relativeArea(true, "90vw");
-const near_full_row_area = relativeArea(true, "80vw");
-const twoThirds_row_area = relativeArea(true, "60vw");
-const half_row_area = relativeArea(true, "40vw");
-const third_row_area = relativeArea(true, "28vw");
+const full_row_area = relativeArea(true, "95vw");
+const near_full_row_area = relativeArea(true, "85vw");
+const twoThirds_row_area = relativeArea(true, "65vw");
+const half_row_area = relativeArea(true, "47vw");
+const third_row_area = relativeArea(true, "32vw");
 const quarter_row_area = relativeArea(true, "23vw");
 const flexible_row_area = relativeAndFlexibleArea(true);
 const visible_full_cover_child_area = fullCoverChildArea(true);
@@ -146,7 +146,7 @@ iframe {
 	${medium_color_frame}
 }
 .logoImageSmall {
-	${landscape ? quarter_row_area : half_row_area}
+	${landscape ? third_row_area : twoThirds_row_area}
 	${m_spacing}
 	${xl_font}
 	${medium_color_frame}
@@ -260,13 +260,8 @@ a:active {
   color: ${mediumColor};
 }
 footer {
-	position: relative;
-	display: block;
-	margin-top: 5vh;
-	margin-bottom: 5vh;
-	margin-left: 5vw;
-	margin-right: 5vw;
-	padding: 3vmax 3vmax 3vmax 3vmax;
+	${full_row_area}
+	${l_spacing}
 	${m_font}
 	${dim_color_frame}
 }

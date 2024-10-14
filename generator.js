@@ -206,7 +206,7 @@ async function makeWritingPages(writingEntries)
             await write(entryRelativeURL, fileText);
             addSitemapEntry(`${rootURL}/${entryRelativeURL}`, fileLastmod);
         }
-
+        htmlLines.push(`<a class="listEntry" href="${rootURL}">... Other Works</a>`);
         addFooterHTML(htmlLines);
 
         await write(listRelativeURL, htmlLines.join("\n"));
