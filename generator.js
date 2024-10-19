@@ -68,6 +68,12 @@ const sitemapLines = [
     `</urlset>`,
 ];
 
+const feedLines = [
+    `</feed>`,
+];
+
+globalLatestUpdate = new Date(globalLastmod);
+
 async function run()
 {
     const htmlLines = [];
@@ -88,6 +94,7 @@ async function run()
         relativeURL = `${gameEntry[0]}/page.html`;
         await write(relativeURL, createHTMLForGame(gameEntry[1], gameEntry[2], gameEntry[3], await read(`${gameEntry[0]}/source.txt`), gameEntry[0], relativeURL));
         addSitemapEntry(`${rootURL}/${relativeURL}`, gameEntry[4]);
+        addFeedEntry(`${rootURL}/${relativeURL}`, gameEntry[1], gameEntry[4], gameEntry[1]);
     }
 
     //------------------------------------------------------------------------------------
@@ -158,6 +165,23 @@ async function run()
     sitemapLines.push(`<?xml version="1.0" encoding="UTF-8"?>`);
     sitemapLines.reverse();
     await write(`sitemap.xml`, sitemapLines.join("\n"));
+
+    //------------------------------------------------------------------------------------
+    // Generate atom.xml
+    //------------------------------------------------------------------------------------
+
+    feedLines.push(`<id>urn:uuid:02210672-5391-4cc8-800a-2a88f3a6d00c</id>`); // uuid randomly generated
+    feedLines.push(`</author>`);
+    feedLines.push(`  <name>Youngjin Kang</name>`);
+    feedLines.push(`<author>`);
+    feedLines.push(`<updated>${globalLatestUpdate.toISOString()}</updated>`);
+    feedLines.push(`<link href="${rootURL}"/>`);
+    feedLines.push(`<link rel="self" type="application/atom+xml" href="${rootURL}/feed.atom"/>`);
+    feedLines.push(`<title>ThingsPool</title>`);
+    feedLines.push(`<feed xmlns="http://www.w3.org/2005/Atom">`);
+    feedLines.push(`<?xml version="1.0" encoding="utf-8"?>`);
+    feedLines.reverse();
+    await write(`feed.atom`, feedLines.join("\n"));
 }
 
 function makeWritingPagesList(title, writingEntries, htmlLines)
@@ -184,7 +208,7 @@ async function makeWritingPages(writingEntries)
 
         const entryTitle = writingEntries[i][1];
         const rawText = await read(`${code}/source.txt`);
-        const {fileIndices, fileTitles, fileTexts, fileLastmods} = createHTMLsForWritings(rawText, code);
+        const {fileIndices, fileTitles, fileTexts, fileLastmods, fileDescs} = createHTMLsForWritings(rawText, code);
 
         htmlLines.length = 0;
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles", listRelativeURL);
@@ -199,12 +223,14 @@ async function makeWritingPages(writingEntries)
             const fileTitle = fileTitles[j];
             const fileText = fileTexts[j];
             const fileLastmod = fileLastmods[j];
+            const fileDesc = fileDescs[j];
             const fileHTMLFileName = `page-${fileIndex}.html`;
             htmlLines.push(`<a class="listEntry" href="${rootURL}/${code}/${fileHTMLFileName}">${fileTitle}</a>`);
 
             const entryRelativeURL = `${code}/${fileHTMLFileName}`;
             await write(entryRelativeURL, fileText);
             addSitemapEntry(`${rootURL}/${entryRelativeURL}`, fileLastmod);
+            addFeedEntry(`${rootURL}/${entryRelativeURL}`, fileTitle, fileLastmod, fileDesc);
         }
         htmlLines.push(`<a class="listEntry" href="${rootURL}">... Other Works</a>`);
         addFooterHTML(htmlLines);
@@ -273,6 +299,20 @@ function addSitemapEntry(url, lastmod)
     sitemapLines.push(`<url>`);
 }
 
+function addFeedEntry(url, title, lastmod, description)
+{
+    let date = new Date(lastmod);
+    if (date > globalLatestUpdate) { globalLatestUpdate = date; }
+
+    feedLines.push(`</entry>`);
+    feedLines.push(`  <summary>${description}</summary>`);
+    feedLines.push(`  <updated>${date.toISOString()}</updated>`);
+    feedLines.push(`  <id>${url}</id>`); // not ideal to use the url as unique never changing id but there is no other id for each article.
+    feedLines.push(`  <link href="${url}"/>`);
+    feedLines.push(`  <title>${title}</title>`);
+    feedLines.push(`<entry>`);
+}
+
 function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL, ogImageURLOverride)
 {
     title = title.replaceAll("\"", "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -322,6 +362,7 @@ function addHeaderHTML(htmlLines, title, description, keywords, relativePageURL,
     htmlLines.push(`<link rel="shortcut icon" href="${rootURL}/favicon.ico">`);
     htmlLines.push(`<link rel="stylesheet" href="${rootURL}/style.css">`);
     htmlLines.push(`<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">`);
+    htmlLines.push(`<link rel="alternate" type="application/atom+xml" href="${rootURL}/feed.atom" title="Atom Feed">`);
 
     if (relativePageURL != undefined)
         htmlLines.push(`<link rel="canonical" href="${rootURL}/${relativePageURL}">`);
@@ -462,6 +503,7 @@ function createHTMLsForWritings(rawText, code)
     const fileTitles = [];
     const fileTexts = [];
     const fileLastmods = [];
+    const fileDescs = [];
     const htmlLines = [];
     const htmlLines_header = [];
 
@@ -527,6 +569,7 @@ function createHTMLsForWritings(rawText, code)
             isFirstArticle = false;
 
             fileLastmods.push(lastmod);
+            fileDescs.push(description);
 
             htmlLines.push(`<div class="l_spacer"></div>`);
             htmlLines.push(`<a class="homeButton" href="${rootURL}/${code}/list.html">Back to List</a>`);
@@ -599,7 +642,7 @@ function createHTMLsForWritings(rawText, code)
     imageIndex = 1;
     chosenImgPath = undefined;
 
-    return {fileIndices, fileTitles, fileTexts, fileLastmods};
+    return {fileIndices, fileTitles, fileTexts, fileLastmods, fileDescs};
 }
 
 run();
