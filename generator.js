@@ -94,7 +94,7 @@ async function run()
         relativeURL = `${gameEntry[0]}/page.html`;
         await write(relativeURL, createHTMLForGame(gameEntry[1], gameEntry[2], gameEntry[3], await read(`${gameEntry[0]}/source.txt`), gameEntry[0], relativeURL));
         addSitemapEntry(`${rootURL}/${relativeURL}`, gameEntry[4]);
-        addFeedEntry(`${rootURL}/${relativeURL}`, gameEntry[0], gameEntry[4]);
+        addFeedEntry(`${rootURL}/${relativeURL}`, gameEntry[1], gameEntry[4], gameEntry[1]);
     }
 
     //------------------------------------------------------------------------------------
@@ -208,7 +208,7 @@ async function makeWritingPages(writingEntries)
 
         const entryTitle = writingEntries[i][1];
         const rawText = await read(`${code}/source.txt`);
-        const {fileIndices, fileTitles, fileTexts, fileLastmods} = createHTMLsForWritings(rawText, code);
+        const {fileIndices, fileTitles, fileTexts, fileLastmods, fileDescs} = createHTMLsForWritings(rawText, code);
 
         htmlLines.length = 0;
         addHeaderHTML(htmlLines, "ThingsPool - " + entryTitle, entryTitle, "thingspool, web game, browser game, html5 game, blog, writings, articles", listRelativeURL);
@@ -223,13 +223,14 @@ async function makeWritingPages(writingEntries)
             const fileTitle = fileTitles[j];
             const fileText = fileTexts[j];
             const fileLastmod = fileLastmods[j];
+            const fileDesc = fileDescs[j];
             const fileHTMLFileName = `page-${fileIndex}.html`;
             htmlLines.push(`<a class="listEntry" href="${rootURL}/${code}/${fileHTMLFileName}">${fileTitle}</a>`);
 
             const entryRelativeURL = `${code}/${fileHTMLFileName}`;
             await write(entryRelativeURL, fileText);
             addSitemapEntry(`${rootURL}/${entryRelativeURL}`, fileLastmod);
-            addFeedEntry(`${rootURL}/${entryRelativeURL}`, fileTitle, fileLastmod);
+            addFeedEntry(`${rootURL}/${entryRelativeURL}`, fileTitle, fileLastmod, fileDesc);
         }
         htmlLines.push(`<a class="listEntry" href="${rootURL}">... Other Works</a>`);
         addFooterHTML(htmlLines);
@@ -298,13 +299,13 @@ function addSitemapEntry(url, lastmod)
     sitemapLines.push(`<url>`);
 }
 
-function addFeedEntry(url, title, lastmod)
+function addFeedEntry(url, title, lastmod, description)
 {
     let date = new Date(lastmod);
     if (date > globalLatestUpdate) { globalLatestUpdate = date; }
 
     feedLines.push(`</entry>`);
-    feedLines.push(`  <summary>${title}</summary>`); // no real summary at hand.
+    feedLines.push(`  <summary>${description}</summary>`);
     feedLines.push(`  <updated>${date.toISOString()}</updated>`);
     feedLines.push(`  <id>${url}</id>`); // not ideal to use the url as unique never changing id but there is no other id for each article.
     feedLines.push(`  <link href="${url}"/>`);
@@ -502,6 +503,7 @@ function createHTMLsForWritings(rawText, code)
     const fileTitles = [];
     const fileTexts = [];
     const fileLastmods = [];
+    const fileDescs = [];
     const htmlLines = [];
     const htmlLines_header = [];
 
@@ -567,6 +569,7 @@ function createHTMLsForWritings(rawText, code)
             isFirstArticle = false;
 
             fileLastmods.push(lastmod);
+            fileDescs.push(description);
 
             htmlLines.push(`<div class="l_spacer"></div>`);
             htmlLines.push(`<a class="homeButton" href="${rootURL}/${code}/list.html">Back to List</a>`);
@@ -639,7 +642,7 @@ function createHTMLsForWritings(rawText, code)
     imageIndex = 1;
     chosenImgPath = undefined;
 
-    return {fileIndices, fileTitles, fileTexts, fileLastmods};
+    return {fileIndices, fileTitles, fileTexts, fileLastmods, fileDescs};
 }
 
 run();
