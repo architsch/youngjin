@@ -3,7 +3,7 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2024-10-16T00:00:00.000Z</updated>
+<updated>2024-10-19T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
@@ -980,6 +980,13 @@
   <id>https://thingspool.net/morsels/page-24.html</id>
   <updated>2024-10-16T00:00:00.000Z</updated>
   <summary>Developing a Prolog game engine is a challenge, but it is worth the effort. In this article, I will be illustrating subtle aspects of relational database design and how they constitute the core of Prolog's query-based game logic.</summary>
+</entry>
+<entry>
+  <title>Game Programming in Prolog - Part 16</title>
+  <link href="https://thingspool.net/morsels/page-25.html"/>
+  <id>https://thingspool.net/morsels/page-25.html</id>
+  <updated>2024-10-19T00:00:00.000Z</updated>
+  <summary>How to design an efficient gameplay system in Prolog? Here is the answer. In this article, I will demonstrate some of the efficient search algorithms which can be leveraged to let us create a video game using Prolog's logic programming syntax.</summary>
 </entry>
 <entry>
   <title>A Layman's Bridge to Mathematics - Preface</title>
