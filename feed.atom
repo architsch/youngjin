@@ -3,7 +3,7 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2024-10-19T00:00:00.000Z</updated>
+<updated>2024-10-24T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
@@ -987,6 +987,20 @@
   <id>https://thingspool.net/morsels/page-25.html</id>
   <updated>2024-10-19T00:00:00.000Z</updated>
   <summary>How to design an efficient gameplay system in Prolog? Here is the answer. In this article, I will demonstrate some of the efficient search algorithms which can be leveraged to let us create a video game using Prolog's logic programming syntax.</summary>
+</entry>
+<entry>
+  <title>Game Programming in Prolog - Part 17</title>
+  <link href="https://thingspool.net/morsels/page-26.html"/>
+  <id>https://thingspool.net/morsels/page-26.html</id>
+  <updated>2024-10-24T00:00:00.000Z</updated>
+  <summary>Prolog is widely known as a logic programming language, but it can also be used for developing a game. In this article, I will explain how the concept of transcompilation (from Prolog to a popular language such as C#) can be used to create a "virtual Prolog machine" which is optimized to run on personal computing devices.</summary>
+</entry>
+<entry>
+  <title>Game Programming in Prolog - Part 18</title>
+  <link href="https://thingspool.net/morsels/page-27.html"/>
+  <id>https://thingspool.net/morsels/page-27.html</id>
+  <updated>2024-10-24T00:00:00.000Z</updated>
+  <summary>Prolog is a useful tool for developing a purely data-driven, ECS-like game engine. In this last volume, I will be illustrating the last remaining details of game development in Prolog, as well as how its design philosophy can help us shape the game into its own unified system of logic.</summary>
 </entry>
 <entry>
   <title>A Layman's Bridge to Mathematics - Preface</title>

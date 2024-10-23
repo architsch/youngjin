@@ -6101,4 +6101,821 @@ For such a purpose, we will need to come up with yet another notation - "[single
 collide[n](X, Y) :- position[n]([key]X, [single]P), position[n](Y, [key]P).
 #$
 
-(Will be continued in Part 17)
+(Will be continued in {%a href="https://thingspool.net/morsels/page-26.html"%}Part 17{%/a%})
+
+
+
+
+
+
+
+
+
+
+
+
+
+:d:Prolog is widely known as a logic programming language, but it can also be used for developing a game. In this article, I will explain how the concept of transcompilation (from Prolog to a popular language such as C#) can be used to create a "virtual Prolog machine" which is optimized to run on personal computing devices.
+:k:Prolog, Logic Programming, Virtual Machine, Transpiler, Transcompiler, Coffeescript, Typescript, Babel, Computer Science, Game Design, Game Development, Game Engine, Game Science, Algorithms, Data Structures, C#, Unity, Declarative Programming, Expert Systems, Symbolic AI, Knowledge Graph
+:l:2024-10-24
+
+[Game Programming in Prolog - Part 17] October 24, 2024
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Before You Read...</b></h3>
+
+This is Part 17 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Transcompiler</b></h3>
+
+At this point, you might be wondering, "Okay, what's with all this talk about HashSets and Dictionaries? Aren't you trying to come up with a Prolog-based game development framework? Why are you using C# data structures to explain your Prolog code?"
+
+Let me tell you a reason why I have been taking such a route when illustrating the concepts.
+
+First of all, the underlying assumption is that a Prolog-based game is not necessarily built entirely out of Prolog's logic programming system alone. A game is inexplicably broad in scope when it comes to software architecture; its development strategy oftentimes demands the aid of multiple programming paradigms, including not just logic programming, but also functional programming, object-oriented programming, etc.
+
+Because of that, it is far more desirable to construct a specialized Prolog system inside the overall game project and make it be responsible for just the core gameplay logic and nothing else, rather than forcing ourselves to code the entire application in Prolog and letting the standard Prolog interpreter to run the whole thing. Such a methodology will be terribly inefficient, both performance and development-wise.
+
+This is the main reason why I have been showing C# code to explain the inner workings of our custom Prolog engine. Eventually, it is not going to be the Prolog script itself which will be executed directly by the program. There will be some kind of "Prolog transcompiler" which will translate our (pseudo) Prolog code into a more machine-friendly language, such as C/C++, C#, Java, etc, so that embedding it within the project's general programming environment (e.g. .NET, Unity, or whatever) will be as swift as putting chocolate syrup on top of chocolate ice cream.
+
+<f32>
+
+Code which is written in Prolog, by default, is not necessarily the most efficient thing to run for most computers (Most contemporary computing devices are optimized to run machine-level instructions, which are imperative in nature and thus show direct correspondence to Assembly, C, and other procedural programming languages). Therefore, it does not make much sense to execute a Prolog-based application on a PC and expect it to do its job well.
+
+A custom transcompiler can come to our rescue for this reason. When crafting the core gameplay logic, we can simply write most of the mechanics in Prolog in order to keep the code clean. And then, we should be able to feed this code into the transcompiler to convert it into its imperative equivalent (e.g. C#), so that the resulting source code will be easily compiled (along with the rest of the project's codebase) into a list of highly optimized binary instructions.
+
+Here's how it could be done. For the sake of demonstration, I will suppose that the goal is to translate Prolog into executable C# code.
+
+The very first step of our hypothetical transcompiler is to take the Prolog script, read its lines one by one, and turn each of them into a piece of C# code which can be placed alongside other generated pieces (e.g. a class, a function, or an entry in a data structure). The question is, what kind of code would that be?
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Translation of Facts</b></h3>
+
+As you may have realized, the C# examples I showcased in the previous few articles were more or less pseudo code. However, they still reflect the general spirit of cross-language development pretty well, and only demand a little bit of adjustment to make everything come together and fit nicely as a whole, like pieces of a jigsaw puzzle.
+
+The following Prolog script is just an arbitrary example I wrote from scratch. It consists of two sections - facts and rules. The former denotes a bunch of initial facts which will be given to the world by the time the game begins (You can tell it quite clearly, since they all belong to time 0). The latter, on the other hand, gives us ways of deriving new facts out of the given ones.
+
+#$
+% INITIAL FACTS
+bar1[0]("hello", 30).
+bar1[0]("hello", 40).
+bar1[0]("world", 8).
+bar2[0](<42, -550>, 999, "something").
+bar3[0](72).
+
+% RULES
+foo1[n](X, Y) :- bar1[n]([key]X, Z), bar2[n-1](Y, [key]Z, W).
+foo2[n](X) :- bar3[n-1](Y), bar1[n-1](X, [key]Y).
+#$
+
+What the Prolog transcompiler will need to do when converting this script into its C# equivalent, therefore, will consist of two major steps.
+
+The first step, which I will be describing shortly, is to write a C# class which initializes data structures that are responsible for storing all the facts. Such facts are either initially provided (by the script's initial list of facts at time 0) or are able to be inferred via the rules as time passes by. Upon instantiation, these structures will be stuffed with all the initial facts which must be available when the game starts.
+
+The second step is to write the individual rules as custom C# classes, with custom methods for evaluating them in their own unique ways. The central engine of our Prolog system, then, will iterate the instances of these classes and run their evaluation methods during every game loop, thus simulating the real-time rule evaluation logic.
+
+Let me begin with the first step - the initialization of data structures which will be storing facts. The following code is our hypothetical result of transcompiling the "initial facts" section of the above Prolog script into an equivalent C# class. It is called "State", and its job is to store facts which belong to a certain point in time. This means that, if the game needs to remember the history of its own state for three 3 consecutive time steps (e.g. from "n-2" to "n"), it will need to create 3 instances of the "State" class and update them in a cyclic manner (which will let us simulate the "window of remembrance" which shifts itself over time - see the last few paragraphs of the "Causality" section in {%a href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%} for details).
+
+#$
+public class State
+{
+    public Dictionary<string, HashSet<int>> bar1_byX = new();
+    public Dictionary<int, HashSet<string>> bar1_byY = new();
+    public Dictionary<int, HashSet<((int, int), string)>> bar2 = new();
+    public HashSet<int> bar3 = new();
+    public Dictionary<string, HashSet<(int, int)>> foo1 = new();
+    public HashSet<string> foo2 = new();
+
+    public State(int n)
+    {
+        if (n == 0)
+        {
+            bar1_byX["hello"] = new(){ 30, 40 };
+            bar1_byX["world"] = new(){ 8 };
+            bar1_byY[30] = new(){ "hello" };
+            bar1_byY[40] = new(){ "hello" };
+            bar1_byY[8] = new(){ "world" };
+            bar2[999] = new(){ ((42, -550), "something") };
+            bar3.Add(72);
+        }
+    }
+
+    public void Clear()
+    {
+        bar1_byX.Clear();
+        bar1_byY.Clear();
+        bar2.Clear();
+        bar3.Clear();
+        foo1.Clear();
+        foo2.Clear();
+    }
+}
+#$
+
+<f33>
+
+As you can see, all current and future facts which have been mentioned in the Prolog code (i.e. bar1, bar2, bar3, foo1, and foo2) have their corresponding storage spaces in the form of either Dictionaries or HashSets. Adding and removing facts will be nothing more than adding and removing data entries to/from these custom structures, which are basically just hash tables from a computational point of view.
+
+The underlying assumption here is that our "Prolog transcompiler" will parse the developer's Prolog script, read all types of facts which have been mentioned inside the script, infer their arguments' data types from the way in which their literal values are being specified in the initial list of facts (e.g. "bar3" is a set of integer values because "bar3[0](72)" suggests that bar3's argument is supposed to indicate a numerical quantity, etc), and create the appropriate data storages for them.
+
+One noteworthy thing here is that any fact of type "bar1" must be stored in both "bar1_byX" and "bar1_byY" simultaneously, where the former one maps the first argument to the second, while the latter one maps the second argument to the first. The reason why the transcompiler is supposed to do this is that the "bar1" relation is required to be able to utilize both of its two arguments as keys.
+
+In the first rule, the key specifier in "bar1[n]([key]X, Z)" orders the system to use bar1's first argument as the key when looking up the value of the second argument. In the second rule, in contrast, the key specifier in "bar1[n-1](X, [key]Y)" orders the system to use bar1's second argument as the key when looking up the value of the first argument. Therefore, the transcompiler must be able to recognize the bidirectionality of bar1's lookup pattern and come up with two different dictionaries for the sake of search efficiency.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Translation of Rules</b></h3>
+
+After initializing the facts and their appropriate data structures, the transcompiler will then proceed to make custom C# classes for all the rules listed in the Prolog script.
+
+In our example, there are only two rules - the one for deriving facts of type "foo1", and the other one for deriving facts of type "foo2". Thus, it makes sense to imagine that the parsing algorithm will create two distinct rule classes (i.e. "Rule_foo1", "Rule_foo2") and provide them with their means of evaluation. The generated C# code will look something like the one shown below.
+
+#$
+public abstract class Rule
+{
+    public abstract int Evaluate(int n, State[] states);
+}
+
+public class Rule_foo1 : Rule
+{
+    public override int Evaluate(int n, State[] states)
+    {
+        int numNewFactsDerived = 0;
+
+        State currState = states[n % states.Length];
+        State prevState = states[(n-1) % states.Length];
+
+        foreach (var kvp1 in currState.bar1_byX)
+        {
+            var X = kvp1.Key;
+            var Z = kvp1.Value;
+
+            foreach (var kvp2 in prevState.bar2[Z])
+            {
+                var Y = kvp2.Value.Item1;
+                var W = kvp2.Value.Item2;
+
+                if (X == Y)
+                {
+                    if (!currState.foo1.ContainsKey(X))
+                        currState.foo1[X] = new();
+                    if (!currState.foo1[X].Contains(Y))
+                    {
+                        currState.foo1[X].Add(Y);
+                        numNewFactsDerived++;
+                    }
+                }
+            }
+        }
+
+        return numNewFactsDerived;
+    }
+}
+
+public class Rule_foo2 : Rule
+{
+    public override int Evaluate(int n, State[] states)
+    {
+        int numNewFactsDerived = 0;
+
+        State currState = states[n % states.Length];
+        State prevState = states[(n-1) % states.Length];
+
+        foreach (var Y in prevState.bar3)
+        {
+            foreach (var kvp1 in prevState.bar1_byY[Y])
+            {
+                var X = kvp1.Value;
+
+                if (!currState.foo2.Contains(X))
+                {
+                    currState.foo2.Add(X);
+                    numNewFactsDerived++;
+                }
+            }
+        }
+
+        return numNewFactsDerived;
+    }
+}
+#$
+
+Here, each rule has its own C# class. It has a method called "Evaluate()" which, when called, looks up all the relevant facts, evaluates the conditions, and creates/stores a new fact if all of them are satisfied.
+
+Each of these Rule classes runs its own nested for-loops when asked to evaluate itself, going over all possible combinations of arguments which may result in the discovery of new facts. Derived facts get added immediately to the current state object (i.e. instance of the aforementioned State class which belongs to the current time step), thereby allowing other rules to access them thereafter.
+
+For the sake of thorough demonstration, I will introduce yet another rule (called "foo3") which contains a bit of slightly more advanced syntax - negation (denoted by "!") and pattern-matching of vector quantities. It is shown below.
+
+#$
+foo3[n](G) :- bar1[n](X, G), !foo1[n-1](X, <G, 33>).
+#$
+
+Comparing vector quantities is not that complicated. You just compare each of its elements with its specified value, and then check to see if all these comparisons return TRUE when evaluated. In our example, the first component of <G, 33> turns out to be the variable "G" and the second component turns out to be the constant "33", so the resulting conditional statement will be a logical AND (&&) between "G == [first component of <G, 33>]" and "33 == [second component of <G, 33>]".
+
+Handling negation is trickier, but it is not rocket science either. Instead of just iterating all the entries and picking up the pattern-matching ones, the algorithm simply needs to check if ANY of these entries pattern-match at all. If none of them does, then boom! We just found a new fact.
+
+The following code is the precise implementation of what I just described.
+
+#$
+public class Rule_foo3 : Rule
+{
+    public override int Evaluate(int n, State[] states)
+    {
+        int numNewFactsDerived = 0;
+
+        State currState = states[n % states.Length];
+        State prevState = states[(n-1) % states.Length];
+
+        foreach (var kvp1 in currState.bar1_byX)
+        {
+            var X = kvp1.Key;
+            var G = kvp1.Value;
+
+            bool matchFound = false;
+            foreach (var kvp2 in prevState.foo1[X])
+            {
+                if (G == kvp2.Value.Item1 && 33 == kvp2.Value.Item2)
+                {
+                    matchFound = true;
+                    break;
+                }
+            }
+            if (!matchFound)
+            {
+                if (!currState.foo3.Contains(G))
+                {
+                    currState.foo3.Add(G);
+                    numNewFactsDerived++;
+                }
+            }
+        }
+
+        return numNewFactsDerived;
+    }
+}
+#$
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Built-In Utilities</b></h3>
+
+Prolog code is made up of rules, and each rule is made up of a series of relations which must be satisfied in order to infer a fact out of it. In the previous section, I treated all the relations as though they are based upon whichever facts that are currently available. This made the resulting C# code simply look up the fact-storing data structures (i.e. HashSets and Dictionaries) to evaluate these relations.
+
+There have also been, however, certain types of "utility relations" which were meant to perform mathematical operations such as simple arithmetics (e.g. addition, substraction, etc).
+
+#$
+add(X, Y, Z)
+subtract(X, Y, Z)
+greaterThan(X, Y)
+lessThan(X, Y)
+#$
+
+It is obviously impractical to try to find answers to such relations by referring to a lookup table and trying out all possible combinations of inputs to see which of them happens to match their desired output. Therefore, it makes much more sense to let the transcompiler override their default pattern-matching algorithm (i.e. dictionary lookups, etc) with functions which are built-in somewhere else in the C# codebase.
+
+<f34>
+
+So, for instance, we may consider classifying Prolog's utility relations into their appropriate categories, like the ones shown below.
+
+#$
+MATH::add(X, Y, Z)
+MATH::subtract(X, Y, Z)
+LOGIC::greaterThan(X, Y)
+LOGIC::lessThan(X, Y)
+#$
+
+Relations which belong to such categories, then, will be interpreted by the transcompiler as ones whose arguments must be evaluated by invoking static utility functions which have been written separately from the process of transpilation itself (See the code below).
+
+#$
+public static class MATH
+{
+    public static bool add_XYZ(int X, int Y, int Z) // All 3 arguments are given
+    {
+        return X + Y == Z;
+    }
+    public static int add_XY(int X, int Y) // Both inputs are given but not the output (Returns the value of Z)
+    {
+        return X + Y;
+    }
+    public static int add_XZ(int X, int Z) // First input and the output are given (Returns the value of Y)
+    {
+        return Z - X;
+    }
+    public static int add_YZ(int Y, int Z) // Second input and the output are given (Returns the value of X)
+    {
+        return Z - Y;
+    }
+    ...
+}
+
+public static class LOGIC
+{
+    ...
+}
+#$
+
+For example, suppose that we've got another rule in the Prolog script called "foo4", which utilizes the process of addition like this:
+
+#$
+foo4[n](H) :- bar1[n](X, G), MATH::add(G, 2, H).
+#$
+
+This rule should then be transformed into a class whose method of evaluation directly calls a utility function (called "add_XY()") in the "MATH" class which had been pre-written outside of the transcompiler-generated source code. The "Rule_foo4" class below demonstrates how this type of reasoning would work.
+
+#$
+public class Rule_foo4 : Rule
+{
+    public override int Evaluate(int n, State[] states)
+    {
+        int numNewFactsDerived = 0;
+
+        State currState = states[n % states.Length];
+        State prevState = states[(n-1) % states.Length];
+
+        foreach (var kvp1 in currState.bar1_byX)
+        {
+            var X = kvp1.Key;
+            var G = kvp1.Value;
+
+            var H = MATH.add_XY(G, 2);
+
+            if (!currState.foo4.Contains(H))
+            {
+                currState.foo4.Add(H);
+                numNewFactsDerived++;
+            }
+        }
+
+        return numNewFactsDerived;
+    }
+}
+#$
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Putting Things Together</b></h3>
+
+Overall, the Prolog transcompiler does many things. It creates data structures for storing facts, as well as initially filling them up with facts which are initially given. It also creates custom Rule classes that are equipped with their own methods of evaluation, which involve either: (1) pattern-matching of relations with their relevant facts, or (2) direct invocation of utility functions.
+
+All these specialized modules, however, won't be of use unless there be a central place in which they can come together and collaborate as a whole. And that is exactly what our transcompiler should be writing in its final stage of script interpretation; eventually, it will produce a singleton class which will be responsible for executing the overall Prolog-based gameplay logic system (namely, "VirtualPrologMachine"). The implementation of such a class is displayed below.
+
+#$
+public class VirtualPrologMachine
+{
+    private int n;
+
+    private State[] states;
+    private Rule[] rules;
+
+    public VirtualPrologMachine()
+    {
+        states = new() {
+            new State(0),
+            new State(-1),
+            ...
+        };
+        rules = new() {
+            new Rule_foo1(),
+            new Rule_foo2(),
+            new Rule_foo3(),
+            ...
+        };
+    }
+
+    public void Update()
+    {
+        int currStateIndex = n % states.Length;
+
+        // Delete facts that are too old.
+        states[currStateIndex].Clear();
+
+        // Evaluate the rules until no more new facts can be derived.
+        int numNewFactsDerived = 0;
+        int trial = 0;
+        do
+        {
+            foreach (var rule in rules)
+            {
+                numNewFactsDerived += rule.Evaluate(n, states);
+            }
+        } while (++trial > 3 || numNewFactsDerived == 0);
+
+        n++;
+    }
+}
+#$
+
+<f35>
+
+The "states" array represents the most recent history of the game's state, which covers the present moment and stretches all the way back to the most distant past which will ever be referenced by the game's rules. The "rules" array is just the list of all the rules (i.e. horn clauses) which were written in the original Prolog script, and "n" is the current time step.
+
+The "Update()" method is what runs the game. Whenever it is called, it: (1) erases facts that are too old, (2) evalutes all the given rules, (3) infers new facts out of them, and (4) increments the current time step.
+
+Calling this method over and over again, therefore, will basically repeat these steps in a cyclic fashion, thereby progressing the game forward by continuously generating new facts out of what happened during the recent past.
+
+(Will be continued in {%a href="https://thingspool.net/morsels/page-27.html"%}Part 18{%/a%})
+
+
+
+
+
+
+
+
+
+
+:d:Prolog is a useful tool for developing a purely data-driven, ECS-like game engine. In this last volume, I will be illustrating the last remaining details of game development in Prolog, as well as how its design philosophy can help us shape the game into its own unified system of logic.
+:k:Prolog, Logic Programming, Game Engine, Compiler Design, Computer Science, Programming Paradigms, Game Design, Declarative Programming, Functional Programming, LISP, Haskell, Expert Systems, Data Driven, ECS, DOTS, Engineering Math, Game Math, Multithreading, Parallel Computing, Symbolic Reasoning, Symbolic AI, Knowledge Graph
+:l:2024-10-24
+
+[Game Programming in Prolog - Part 18] October 24, 2024
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Before You Read...</b></h3>
+
+This is Part 18 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Multithreading</b></h3>
+
+Quite frankly, though, I should admit that running all the rules on a single thread may significantly hurt the performance of the system, especially if the total number of rules is not so small. A typical rule tends to involve nested for-loops. And, while these loops can be optimized pretty well under careful algorithmic choices, the cumulative sum of the work involved may be detrimental to the game's average framerate.
+
+Fortunately, we know that most of the rules are parallelizable; they are able to be evaluated concurrently without necessarily relying on each other's results. And even if they do, we can resolve such issues of dependency by running the same list of rules multiple times during each time step. This will hurt the performance a bit, of course, but the good news is that it enables us to save a lot more bandwidth in exchange by letting things run in parallel.
+
+Here is how we are going to do it. Rules are encapsulated in their own class instances, so they are already pretty modular in nature. Their only place of mutual interference is the instance of the State class which belongs to the current time step (namely, "currState"), so the only major adjustment we ought to make is to let the individual rules temporarily keep their newly derived facts in their own local spaces, instead of directly committing them to the shared state object during the "Evaluate(...)" method call.
+
+Once the concurrent evaluation of the rules is over, the central system can then gather all the new facts which were generated by the rules, and put them all into the current state of the game before starting the next cycle of rule evaluation. That way, individual rules will be free to evaluate themselves in parallel without interfering with one another. The diagram below will show you in detail how this concept works.
+
+<f36>
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>ECS (Entity Component System)</b></h3>
+
+This Prolog-based gameplay design technique, by the way, may feel already familiar to you. In my opinion, it shares the same spirit with that of the ECS (Entity Component System) framework which used to be (and perhaps still is) one of the hottest areas of research amongst the developers of Unity game engine (namely, Unity DOTS & Unity ECS).
+
+The so-called "systems" in ECS can be interpreted as rules (i.e. horn clauses) in the language of Prolog, since they are the ones responsible for updating the game's state by looking at existing entities and generating new ones based off of them. Entities and their components in ECS can be thought of as facts and their arguments in Prolog, respectively. Although ECS and Prolog may not necessarily be fully analogous to each other from a technical standpoint, they do share pretty much the same motivation in the sense that they both make the gameplay logic highly parallelizable and data-driven.
+
+<f37>
+
+{%a href="https://github.com/architsch/hallway"%}Here{%/a%} is an example of what a purely ECS-based game engine would look like. It is a custom HTML5 game engine I wrote using Typescript and WebGL, and it supports both rudimentary 3D graphics and real-time physics. It does not fully leverage the multithreading capability of ECS, yet it does manage to render its structural elegance. In this repository, you will see many similarities between the engine's data-driven systems and the rules I have been writing in Prolog.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Input and Output</b></h3>
+
+Of course, the gameplay system will just be a silent blackbox unless it displays things on the screen, emits sound, and takes input from the user (via mouse, keyboard, etc).
+
+You know that Prolog, by default, is not a fitting language for general-purpose software development. And because of that, there has not been many popular input/output frameworks (e.g. GUI) designed to work nicely in a Prolog-based programming context.
+
+Since what I am proposing in this article is a kind of "virtual Prolog machine" which is different from the standard Prolog environment, however, nothing really prevents us from attaching external I/O endpoints to it, thereby letting this quasi-Prolog system freely interact with the rest of the game engine.
+
+Let me start with user inputs. In {%a href="https://thingspool.net/morsels/page-13.html"%}Part 4{%/a%}, I supposed that there will eventually be some sort of "I/O utility" for the Prolog script to use, such as ones which let the system tell whether the user is currently pressing the given key on the keyboard, and so forth. With the aforementioned transcompilation approach (i.e. translation of the Prolog code into its C# equivalent), this kind of design won't be hard to implement at all. For example, if we decide to write the following code (shown below) to let the player character move to the left whenever the left arrow key is pressed,
+
+#$
+moveLeft[n](X) :- player[n](X), IO::keyPressed(IO::leftKey).
+#$
+
+The only thing we will need to do is let the transcompiler recognize the prepended keyword "IO" and look up all of its referenced methods/constants in the separately implemented static class called "IO". Such a class will be the place where the game's IO-related functions will be located (See the code below).
+
+#$
+public static class IO
+{
+    public static leftKey = KeyCode.LeftArrow;
+
+    public static bool keyPressed(KeyCode keyCode)
+    {
+        return Input.GetKey(keyCode);
+    }
+    ...
+}
+#$
+
+And, just like in the "MATH" utility example which I introduced before, the "IO" utility will be directly accessed by the Prolog rules whenever they encounter the prefix "IO". The code below, for instance, is the C# equivalent of the "moveLeft" rule shown above. You can see here that the second relation of the rule (i.e. "keyPressed") gets evaluated not by looking up a dictionary of available facts, but by directly calling the appropriate function in the IO class.
+
+#$
+public class Rule_moveLeft : Rule
+{
+    public override int Evaluate(int n, State[] states)
+    {
+        int numNewFactsDerived = 0;
+
+        State currState = states[n % states.Length];
+
+        foreach (var X in currState.player)
+        {
+            if (IO.keyPressed(IO.leftKey))
+            {
+                if (!currState.moveLeft.Contains(X))
+                {
+                    currState.moveLeft.Add(X);
+                    numNewFactsDerived++;
+                }
+            }
+        }
+
+        return numNewFactsDerived;
+    }
+}
+#$
+
+What about the output part of the game? As you may have already realized, outputs are not so fundamentally distinct from inputs when it comes to transcompilation. The "IO" utility class I have illustrated above can be used for output-related Prolog relations as well; they just happen to be serving slightly different purposes.
+
+There indeed are many aspects of a computer program which could be referred to as "output", including graphics, sound, outgoing file streams, outgoing packets in a network, and so on. The most important of them, though, is probably graphics. A video game can be played without sound or networking, but it cannot be played without displaying anything on the screen. Thus, let me start with a graphics-related example.
+
+In a typical 3D game, we render an actor by identifying its position and rendering a mesh of its type there. In Prolog, such a line of logic should be realizable by means of direct access to external utility functions. A brief demonstration of this idea is shown below.
+
+#$
+mesh[n](X, "bread.fbx") :- bread[n](X).
+IO::renderMesh(M, P) :- mesh[n](X, M), position[n](X, [single]P).
+#$
+
+Here, a fact of type "mesh" lets the system identify the mesh of any "bread" actor as the 3D asset whose file path is "bread.fbx". As long as an actor is a piece of bread, its mesh is supposed to be "bread.fbx".
+
+The second horn clause is the the rule which is responsible for displaying the "bread.fbx" mesh on the screen by calling the IO class's "renderMesh" function whenever a bread happens to exist at a specific location. Such a function will then request the game's graphics engine to render an instance of "bread.fbx" at the designated spot.
+
+#$
+public static class IO
+{
+    ...
+    public static void renderMesh(Mesh M, (int, int) P)
+    {
+        RenderParams rp = new RenderParams(getMaterialForMesh(M));
+        Graphics.RenderMesh(rp, M, 0,
+            Matrix4x4.Translate(new Vector3((float)P.Item1, (float)P.Item2, 0f)));
+    }
+    ...
+}
+#$
+
+More advanced output functionalities, too, can be constructed via IO functions and a handful of information-relaying facts. A "cat prefab" which plays its own animation and sound whenever it eats something, for instance, will be able to be instantiated via the game engine's dynamic allocator (which is separate from Prolog's fact-tracking logic). The code below is a demonstration of this.
+
+#$
+IO::createGameObject(X, "cat.prefab") :- spawned[n-1](X, Src, Cause, Pos), cat[n](X).
+IO::destroyGameObject(X) :- despawn[n](X).
+
+eatingPosition[n](X, P) :- eat[n](X, Food), position[n](X, [single]P).
+
+IO::playAnim(GO, "eat") :- eatingPosition[n](X, [single]P), IO::getGameObject(X, GO).
+IO::playSound(GO, "eat") :- eatingPosition[n](X, [single]P), IO::getGameObject(X, GO).
+#$
+
+Last but not least, we also ought not to neglect the importance of logging (i.e. debugging) in a gameplay system. It will help us troubleshoot errors by providing us with detailed clues in regard to what was going on while the game was running.
+
+Logging, too, should be able to be carried out via externally implemented utility functions. The Prolog rule displayed below is an example of how we can order the system to print out a log message whenever an actor spawns.
+
+#$
+LOG::write("Spawned new actor ({Id}) at time {n}") :-
+    spawned[n](Id, Src, Cause, Pos).
+#$
+
+When pattern-matched, such a rule will simply invoke the LOG class's "write" function with the given string parameter instead of trying to register a new fact of type "write".
+
+#$
+public static class LOG
+{
+    public static void write(string message)
+    {
+        Debug.Log(message);
+    }
+}
+#$
+
+Labelling debug-related method calls with the word "LOG" comes with its own additional advantage, which is the ability for the transcompiler to exclude them when asked to produce the final production build. The process of logging itself incurs its own computational cost, which means that, once the development process is over, rules which are dedicated to logging should no longer be included for the sake of optimization.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Preventing Repetitive Evaluation</b></h3>
+
+At this point, you might have noticed that some of the rules introduced so far (especially the ones which simply invoke external methods) are not supposed to be evaluated multiple times during the same exact time frame. Unfortunately, the possibility of mutual dependencies amongst the Prolog rules obliges us to keep evaluating them over and over until no more new facts can be drawn out of them.
+
+There is a simple fix for this, though. First of all, let us go back to the initial implementation of the virtual Prolog machine's "Update()" method (I will reproduce it below).
+
+#$
+public class VirtualPrologMachine
+{
+    ...
+
+    public void Update()
+    {
+        int currStateIndex = n % states.Length;
+
+        // Delete facts that are too old.
+        states[currStateIndex].Clear();
+
+        // Evaluate the rules until no more new facts can be derived.
+        int numNewFactsDerived = 0;
+        int trial = 0;
+        do
+        {
+            foreach (var rule in rules)
+            {
+                numNewFactsDerived += rule.Evaluate(n, states);
+            }
+        } while (++trial > 3 || numNewFactsDerived == 0);
+
+        n++;
+    }
+}
+#$
+
+As you can see, the current C# code repeatedly evaluates ALL of the given rules while it manages to infer at least one new fact out of them. This, of course, will be inappropriate for rules which should never be evaluated multiple times within the same update frame, such as: "IO::renderMesh(M, P) :- mesh[n](X, M), position[n](X, [single]P)" (because drawing the same mesh over and over is wasteful).
+
+Thus, we will need to add some additional properties to each Rule class to be able to control its nature of repetitive evaluation. For example, we may consider adding two new fields which are respectively called "EvalCount" and "MaxEvalCountPerTimeStep", where "EvalCount" indicates the number of times the rule has been evaluated during the current frame and "MaxEvalCountPerTimeStep" indicates the maximum number of times the rule should ever be allowed to be evaluated during the current frame.
+
+#$
+public abstract class Rule
+{
+    public int EvalCount = 0;
+    public abstract int MaxEvalCountPerTimeStep { get; }
+
+    public abstract int Evaluate(int n, State[] states);
+}
+#$
+
+Then, the virtual Prolog machine's "Update()" procedure will be able to selectively re-evaluate the rules based upon their current EvalCount values. A rule whose MaxEvalCountPerTimeStep is set to 1, for instance, will be evaluated only once even if it gets visited multiple times during multiple iterations of the do-while loop.
+
+#$
+public class VirtualPrologMachine
+{
+    ...
+
+    public void Update()
+    {
+        int currStateIndex = n % states.Length;
+
+        // Delete facts that are too old.
+        states[currStateIndex].Clear();
+
+        // Reset the evaluation counts.
+        foreach (var rule in rules)
+            rule.EvalCount = 0;
+
+        // Evaluate the rules until no more new facts can be derived.
+        int numNewFactsDerived = 0;
+        do
+        {
+            foreach (var rule in rules)
+            {
+                if (++rule.EvalCount <= rule.MaxEvalCountPerTimeStep)
+                    numNewFactsDerived += rule.Evaluate(n, states);
+            }
+        } while (numNewFactsDerived == 0);
+
+        n++;
+    }
+}
+#$
+
+Let me show you a specific example of this. First, take a look at the following line of Prolog code; it is the "renderMesh" rule I have introduced before. Since its sole responsibility is to render each actor's mesh onto the screen, we do not want this rule to be evaluated more than once during each frame.
+
+#$
+IO::renderMesh(M, P) :- mesh[n](X, M), position[n](X, [single]P).
+#$
+
+Therefore, the Prolog transcompiler will need to be programmed to recognize such a special rule (by noticing that the result of the rule is an external IO method call instead of the derivation of a new fact) and set its "MaxEvalCountPerTimeStep" to 1 accordingly. The following C# class is the implementation of it.
+
+#$
+public class Rule_IO_renderMesh : Rule
+{
+    public override int MaxEvalCountPerTimeStep => 1;
+
+    public override int Evaluate(int n, State[] states)
+    {
+        State currState = states[n % states.Length];
+
+        foreach (var kvp1 in currState.mesh)
+        {
+            var X = kvp1.Key;
+            var M = kvp1.Value;
+
+            if (currState.position.ContainsKey(X))
+            {
+                var P = currState.position[X];
+                IO.renderMesh(M, P);
+            }
+        }
+
+        return 0;
+    }
+}
+#$
+
+(Side Note: Another way to solve the problem of repetitive evaluation is to simply force the game loop to evaluate its rules only once during each frame, after making sure that each rule only contains references to the past (n-1, n-2, etc) on its right-hand side relations. This will inevitably produce quite a bit of delay when generating a chain of facts (e.g. spawning a bread causes it to be labelled as "bread" after a delay of 1 time step, which in turn will subsequently cause it to be labelled as "edible" after yet another delay of 1 time step, and so on), but doing this will render repeated rule-evaluation totally unnecessary.)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Physics, AI, and More</b></h3>
+
+Besides those related to I/O, there are other gameplay subsystems such as physics, AI, etc. While it is not entirely impossible to implement such features in Prolog, the efficiency of the end result is more or less doubtful.
+
+The code shown above is an example of how you could simulate real-time collision between two circles in Prolog. Notice that there are so many things going on here, yet the overall idea is that the following set of rules will detect collision on a uniform voxel grid (where each voxel is treated as an actor) by checking a series of conditions.
+
+#$
+circleCollider(actor1, 0.5).
+circleCollider(actor2, 0.5).
+
+voxel(actor3, <0, 0>).
+voxel(actor4, <1, 0>).
+
+voxelsIntersect(actor3, actor3).
+voxelsIntersect(actor4, actor4).
+voxelsIntersect(actor3, actor4).
+voxelsIntersect(actor4, actor3).
+
+getVoxelAt(Pos, Voxel) :-
+    voxel(Voxel, [single]P), x(P, X), y(P, Y),
+    MATH::absDiff(P, Pos, DiffX), MATH::absDiff(P, Pos, DiffY),
+    MATH::lessThanOrEqualTo(DiffX, 0.5), MATH::lessThanOrEqualTo(DiffY, 0.5).
+
+actorIsInVoxel[n](X, Voxel) :- position[n](X, [single]Pos), getVoxelAt(Pos, Voxel).
+
+actorsMayCollide[n](X, Y) :-
+    circleCollider[n](X, _), circleCollider[n](Y, _),
+    actorIsInVoxel[n](X, Voxel1), actorIsInVoxel[n](Y, Voxel2),
+    voxelsIntersect([key]Voxel1, [key]Voxel2).
+
+collide[n](X, Y) :-
+    actorsMayCollide[n]([key]X, [key]Y),
+    circleCollider[n](X, [single]Rx), circleCollider[n](Y, [single]Ry),
+    position[n](X, [single]Px), position[n](Y, [single]Py),
+    MATH::add(Rx, Ry, DistThres), MATH::absDiff(Px, Py, Dist),
+    MATH::lessThanOrEqualTo(Dist, DistThres).
+#$
+
+<f38>
+
+The problem with this kind of approach is that there are just too many things to compute here. It forces the gameplay system to evaluate a bunch of rules, each of which only contributes to a fraction of the full collision detection process (i.e. one for identifying actors in each voxel, another one for voxel adjacency check, plus another one for distance comparsion, etc).
+
+This might not be too bad, as long as we manage to parallelize and/or pipeline these rules in an elegant manner. Will this strategy outperform a dedicated physics engine, though?
+
+As I had mentioned in the first section of {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%}, the aim of Prolog-based game programming in this series of articles is to figure out how to construct the core gameplay logic based upon the language of Prolog. The reason behind the presumption of such specialization is that a declarative language is not necessarily optimized for aspects of the game which are not so easy to model in terms of logical relations, such as physics, graphics, etc.
+
+Besides, it is a bit of a wasted effort to try to reinvent the wheel which already works nicely. And we should also remind ourselves that such a wheel is highly modular in nature, that it is quite trivial to just grab and use it as a blackbox.
+
+The code below shows how an external "physics library" could be used within the context of Prolog rules. The idea is that you simply access/modify each actor's collision status via external utility functions, and make gameplay-related decisions off of it.
+
+#$
+mechanicalForce[n](X, [acc]F) :-
+    PHYS::getCollidingPairs(X, Y),
+    PHYS::getOverlappingVolume(X, Y, V), stiffness[n](X, [single]St),
+    MATH::multiply(V, St, F).
+
+say[n](X, "Ouch! Don't hit me hard.") :-
+    mechanicalForce[n-1](X, F), MATH::length(F, L), MATH::greaterThan(L, 10).
+#$
+
+Advanced gameplay AI features, too, should probably follow the same design philosophy. Complex decision-making algorithms, such as that of A* pathfinding, have their own procedures nicely encapsulated as external libraries. Thus, it is probably wise to separate such pieces of behavioral logic from the core set of Prolog-based gameplay rules.
+
+The code shown below is a demonstration of how the game's pathfinder can easily be separated into its own external module. The logic which drives an actor to follow a path will have to be part of the Prolog script, but the job of pathfinding itself can simply be undertaken by external utility functions.
+
+#$
+AI::calculateNewPath(X, TargetPos) :-
+    chasing[n](X, Target),
+    AI::getCurrentPath(X, Path), !AI::isPathValid(Path),
+    position[n](Target, TargetPos).
+
+move[n](X, NextPos) :-
+    AI::getCurrentPath(X, Path), AI::isPathValid(Path),
+    position[n](X, [single]P), speed[n](X, [single]S),
+    AI::getNextPosInPath(X, P, S, Path, NextPos).
+#$
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Painting the Bigger Picture</b></h3>
+
+I believe that, at this point, I have gone over pretty much all major aspects of Prolog-based game development.
+
+First of all, I explained how some of the core game mechanics (e.g. births, deaths, interactions, semantic relations, hierarchies, etc) could be devised in the language of Prolog without too much difficulty.
+
+And then, I spent quite a bit of time explicating the details of how a Prolog script is able to be transcompiled into its imperative (e.g. C#) analogue, thus allowing the computer to run it with utmost efficiency.
+
+I also mentioned ways in which external libraries could be utilized by letting them communicate with our "virtual Prolog machine" through special endpoints, thereby supplementing some of the functional deficiencies of the Prolog-based logic system.
+
+There is one missing piece of puzzle which I have not gone over yet, though. It is the problem of integrating the aforementioned techniques into the very design of the game itself.
+
+The concepts I have illustrated so far only covered the implementation side of the game. The problem is that, if we want to implement something, we must at least partially contribute to the design of it in the first place.
+
+One might reject this notion by saying, "Oh, it's the designer's job. Engineers have nothing to do with how the game shall be designed". However, I would insist that design and engineering are inseparable aspects of the same coin, and thus must be able to collaborate under the same underlying system.
+
+A great furniture designer is one who understands the basics of human-centered engineering as well as the economics of manufacturing, and a great airplane designer is one who understands the basics of aerodynamics as well as control theory. One does not simply "design an airplane", give its concept art to a nerd who does all the math and stuff, and say, "Now, make it fly!"
+
+A similar line of reasoning should apply to the subject of game design as well.
+
+When developing something, one does not simply contrive its individual parts (which do not necessarily fit each other well), duct-tape them together, and call it a well-functioning product; that's what amateurs do, despite the fact that many of them constantly manage to save their ass due to the low visibility of tech debt accruing on the backs of their hard-working yet unsung fellows.
+
+Both design and implementation are parts of the same underlying process. Therefore, it is not absurd to claim that the success in the establishment of these individual parts depends on the understanding of both.
+
+Knowing how to program a game using Prolog is indeed a valuable asset to have in one's skillset. Yet, this alone does not quite complete the full picture of what endows a video game with its own long-lasting spirit. Besides mastering the hidden intricacies of programming, one must also learn how to incorporate them in the grand scheme of game design, which includes mechanics, narratives, and the philosophy of its inner worldview.
+
+<f39>
+
+There is another series of articles I wrote back in 2023, {%a href="https://thingspool.net/game-design/list.html"%}Universal Laws of Game Design{%/a%}, which expounds this interdisciplinary topic in detail. If you are interested in expanding the scope of your reading material beyond that of mere technical elaboration, please check this out.
+
+(End of "Game Programming in Prolog")

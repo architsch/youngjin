@@ -173,7 +173,7 @@ public Dictionary&lt;Vector2, HashSet&lt;string&gt;&gt; positionToActors;</code>
 <p>This, however, still does not tell the Prolog system that each actor can only have up to 1 position (i.e. The "actorToPosition" dictionary should have "Vector2" as its value type instead of "HashSet&lt;Vector2&gt;"). Clarifying this point is crucial because we do not want the interpreter to create a HashSet just to store a single element in it.</p>
 <p>For such a purpose, we will need to come up with yet another notation - "[single]". Attaching this in front of an argument will imply that it only permits a single value for each key. The following code, for instance, makes sure that the type of our "actorToPosition" dictionary is "Dictionary&lt;string, Vector2&gt;" instead of "Dictionary&lt;string, HashSet&lt;Vector2&gt;&gt;".</p>
 <div class="snippet"><pre><code>collide[n](X, Y) :- position[n]([key]X, [single]P), position[n](Y, [key]P).</code></pre></div>
-<p>(Will be continued in Part 17)</p>
+<p>(Will be continued in <a href="https://thingspool.net/morsels/page-26.html">Part 17</a>)</p>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2024 ThingsPool.<br>All rights reserved.
