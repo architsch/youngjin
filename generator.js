@@ -55,6 +55,7 @@ const fictionEntries = [
     ["infinite-treasures", "The Island of Infinite Treasures (2022)"],
     ["infsoc", "Influential Social Posts (2023)"],
     ["gamedev-journey", "A Game Developer's Journey (2023)"],
+    ["sandwich", "Sandwich Engineering (2025)"],
 ];
 const artEntries = [
     ["illustrations", "Illustrations (2009 - 2014)"],
@@ -402,7 +403,7 @@ function addFooterHTML(htmlLines)
 {
     htmlLines.push(`<footer>`);
     htmlLines.push(`<a class="noTextDeco" href="${rootURL}"><img class="logoImageSmall" src="${rootURL}/logo.png" alt="ThingsPool Logo"></a>`);
-    htmlLines.push(`&copy 2019-2024 ThingsPool.<br>All rights reserved.`);
+    htmlLines.push(`&copy 2019-2025 ThingsPool.<br>All rights reserved.`);
     htmlLines.push(`</footer>`);
     htmlLines.push(`</body>`);
     htmlLines.push(`</html>`);
