@@ -3,7 +3,7 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2025-01-17T00:00:00.000Z</updated>
+<updated>2025-01-19T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
@@ -161,6 +161,13 @@
   <id>https://thingspool.net/sandwich/page-1.html</id>
   <updated>2025-01-17T00:00:00.000Z</updated>
   <summary>How to design and implement the most perfect sandwich we can ever imagine? This is a quick introduction to the study of Sandwich Engineering.</summary>
+</entry>
+<entry>
+  <title>Sandwich Engineering - Chapter 2</title>
+  <link href="https://thingspool.net/sandwich/page-2.html"/>
+  <id>https://thingspool.net/sandwich/page-2.html</id>
+  <updated>2025-01-19T00:00:00.000Z</updated>
+  <summary>The future of tech innovation belongs to sandwiches. This article introduces you to Sandwich Engieering - the study of the world's most underrated next-gen technology which will redefine the way we live!</summary>
 </entry>
 <entry>
   <title>A Game Developer's Journey - Chapter 1</title>
