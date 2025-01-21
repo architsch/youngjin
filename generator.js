@@ -48,6 +48,7 @@ const nonfictionEntries = [
     ["reality", "The Origin of Reality (2023)"],
     ["bridge-to-math", "A Layman's Bridge to Mathematics (2024)"],
     ["morsels", "Morsels of Thought (2024)"],
+    ["concepts-of-plan", "Concepts of a Plan (2025)"],
 ];
 const fictionEntries = [
     ["novels", "단편소설 (2012 - 2013)"],

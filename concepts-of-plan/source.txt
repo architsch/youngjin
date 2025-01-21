@@ -1,0 +1,24 @@
+:d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
+:k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
+:l:2025-01-21
+
+[Designing a Software Product] January 21, 2025
+
+This is a collection of my personal thoughts in regard to how a software product can be designed.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<001>
+@@<h3><b>1. Where to Begin</b></h3>
+
+Imagine that you are trying to design a software product. Depending on your field of interest, it could be a game, a social networking service, a chatbot, an educational platform, or something else.
+
+No matter what type of product you have in mind, however, we can all agree that it ought to be something meaningful. And by "meaningful", I mean a set of qualitative measures which transcend a mere assortment of dry, mechanistic details.
+
+When designing a software, it is necessary to resolve a gap between the product's end goal and its implementation details. We can surmount this difficulty via quantitative reasoning.
+
+For example, suppose that we are trying to create a pet simulator (similar to Tamagotchi). What shall we do to fulfill such an objective?
+
+First, we need to devise a list of meaningful pet-related experiences. In addition, we need to figure out how to translate them into computational procedures (because they must be part of a computer program).
+
+We can achieve this by defining our pet simulator not in terms of vague emotional descriptions, but in terms of numerical quantities.
