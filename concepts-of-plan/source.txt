@@ -1,8 +1,8 @@
 :d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
 :k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
-:l:2025-01-21
+:l:2025-01-24
 
-[Designing a Software Product] January 21, 2025
+[Designing a Software Product] January 21, 2025 - January 24, 2025
 
 This is a collection of my personal thoughts in regard to how a software product can be designed.
 
@@ -22,3 +22,22 @@ For example, suppose that we are trying to create a pet simulator (similar to Ta
 First, we need to devise a list of meaningful pet-related experiences. In addition, we need to figure out how to translate them into computational procedures (because they must be part of a computer program).
 
 We can achieve this by defining our pet simulator not in terms of vague emotional descriptions, but in terms of numerical quantities.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<002>
+@@<h3><b>2. Quantification of Meaning</b></h3>
+
+The question is, what kinds of numerical quantities do we want in our pet simulator?
+
+This is where the problem of ambiguity arises. Overcoming this initial barrier is crucial for the sake of designing something meaningful.
+
+To kick-start the design process, let me come up with a couple of ideas. The very first thing which crosses my mind is that the pet needs food to survive.
+
+Whenever the pet eats something, its energy level increases. If it doesn't eat anything, its energy level will gradually drop.
+
+What comes next? Let me guess. Note that food is not the only biological need. For example, the pet also needs to be caressed to feel that it is being loved.
+
+For prototyping purposes, then, it will be sensible to add a pair of buttons to let us interact with the pet - one for feeding, and the other one for caressing. Clicking the former will increase the energy level, while clicking the latter will increase the affection level.
+
+Here, we can see an example of a dilemma between two choices. While we are feeding the pet, it cannot be caressed. And while we are caressing the pet, it cannot be fed.
