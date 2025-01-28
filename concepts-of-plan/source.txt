@@ -1,8 +1,8 @@
 :d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
 :k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
-:l:2025-01-24
+:l:2025-01-28
 
-[Designing a Software Product] January 21, 2025 - January 24, 2025
+[Designing a Software Product] January 21, 2025 - January 28, 2025
 
 This is a collection of my personal thoughts in regard to how a software product can be designed.
 
@@ -41,3 +41,21 @@ What comes next? Let me guess. Note that food is not the only biological need. F
 For prototyping purposes, then, it will be sensible to add a pair of buttons to let us interact with the pet - one for feeding, and the other one for caressing. Clicking the former will increase the energy level, while clicking the latter will increase the affection level.
 
 Here, we can see an example of a dilemma between two choices. While we are feeding the pet, it cannot be caressed. And while we are caressing the pet, it cannot be fed.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<003>
+@@<h3><b>3. The Geometry of Variables</b></h3>
+
+The design of a virtual pet, then, can be summarized as the following two steps:
+
+(1) Create a set of variables, each of which represents a unique aspect of the pet's state.
+(2) Create a set of actions, which either increment or decrement these variables when invoked.
+
+The act of feeding, for instance, may greatly amplify the pet's energy level but slightly reduce its affection level. The act of caressing, on the other hand, may greatly amplify the pet's affection level but slighly reduce its energy level.
+
+And if we spend time without doing anything, both the pet's energy and affection levels can be expected to decay as time passes by.
+
+The dynamics of pet simulation can be easily visualized. For example, we can treat the pet's current state as a particle on a 2D plane, whose axes denote the pet's energy and affection levels, respectively.
+
+Each action, then, will be interpreted as a force which pushes the particle in a specific direction.
