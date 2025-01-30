@@ -52,7 +52,7 @@ The design of a virtual pet, then, can be summarized as the following two steps:
 (1) Create a set of variables, each of which represents a unique aspect of the pet's state.
 (2) Create a set of actions, which either increment or decrement these variables when invoked.
 
-The act of feeding, for instance, may greatly amplify the pet's energy level but slightly reduce its affection level. The act of caressing, on the other hand, may greatly amplify the pet's affection level but slighly reduce its energy level.
+The act of feeding, for instance, may greatly amplify the pet's energy level but slightly reduce its affection level. The act of caressing, on the other hand, may greatly amplify the pet's affection level but slightly reduce its energy level.
 
 And if we spend time without doing anything, both the pet's energy and affection levels can be expected to decay as time passes by.
 
