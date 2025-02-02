@@ -74,3 +74,22 @@ There is a way to overcome such a barrier, though. All we have to do is provide 
 From a game design point of view, such a means of scaling introduces the notion of progression. By adding more and more pets to the inventory, the user is now able to participate in a mission towards continual improvement.
 
 This is an indispensable feature to have, as it is necessary to ensure that the user won't run out of goals to pursue.
+
+
+
+
+
+
+
+
+:d: A collection of memes that are formatted in a rather technical manner.
+:k:Memes, Visual Language, Diagram, Schematic, Math, Graph, Visualization, Graphical Language, Systems Engineering, Industrial Engineering, Engineering Math
+:l:2025-02-02
+
+[Technical Memes] February 2, 2025
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Four Quadrants of Sleep</b></h3>
+
+<t01>
