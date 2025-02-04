@@ -704,4 +704,140 @@ What's next? Oh well, it is not so hard to imagine the sheer variety of opportun
 
 The horizon of possibilities is endless.
 
-(Will be continued in Chapter 6)
+(Will be continued in {%a href="https://thingspool.net/sandwich/page-6.html"%}Chapter 6{%/a%})
+
+
+
+
+
+
+
+
+
+:d:Sandwich Engineering will change the world via its innovation and technical excellence! In this article, you will learn how to optimize your sandwich's gastronomic user experience and figure out the most efficient way of reproducing it.
+:k:Sandwich Engineering, Logic System, Expert Systems, Artificial Intelligence, Industrial Engineering, IT, Innovation, Creativity, Manufacturing, Systems Thinking, System Dynamics, Scientific Computing, Applied Math
+:l:2025-02-04
+
+[Sandwich Engineering - Chapter 6] February 4, 2025
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Multiple Pathways</b></h3>
+
+Suppose that we are running a sandwich factory. We are trying to manufacture sandwiches here.
+
+Let's begin with a bread dispenser (shown in the image below). This is the very first step in the making of a sandwich. Every sandwich starts with a piece of bread.
+
+<087>
+
+All right. What shall we do, if we want to make a cheese sandwich?
+
+Since a cheese sandwich is just a stack of a piece of bread, a slice of cheese, and another piece of bread, it is not so hard to imagine that lining up 3 dispensers (i.e. a bread dispenser, a cheese dispenser, and another bread dispenser) will let our conveyor belt pour out cheese sandwiches.
+
+<088>
+
+So far, so good. But here is the thing. What if we want to generate more than just a single type of sandwiches? Imagine that our factory is required to produce not just cheese sandwiches, but also ham sandwiches. What shall we do?
+
+The answer is, we need to "branch out" our production line into multiple pathways. What I mean by this is that we need separate conveyor belts to be able to make different types of sandwiches.
+
+For now, let us assume that there are two belts - one for putting slices of cheese for cheese sandwiches, and another one for putting slices of ham for ham sandwiches.
+
+<089>
+
+This is not the end of the story, though. Note that both of these belts are receiving bottom pieces of bread, upon which either cheese or ham could be placed. Where do these pieces of bread come from?
+
+For sure, it is technically possible to supply bread by equipping both of these conveyor belts with their own bread dispensers.
+
+<090>
+
+This is a bit too wasteful from an economic point of view, however. Each machine comes with its own price (for purchase and maintenance). Also, more machines means more chance of failure in the manufacturing process. So we ought to keep the number of machines as low as possible.
+
+The solution is pretty simple, really. We only need one bread dispenser for both of these two sandwich types, as long as we distribute the bread into two separate conveyor belts. These two belts, then, will manage to produce two types of sandwiches.
+
+<091>
+
+But then, of course, these sandwiches will have to have their tops closed. Otherwise, they will end up remaining as "open sandwiches", rather than regular sandwiches.
+
+Again, a straightforward approach is to simply add a bread dispenser for cheese sandwiches, and another bread dispenser for ham sandwiches, like the ones shown below.
+
+<092>
+
+This will ensure that the resulting sandwiches are "sandwiches" instead of "open sandwiches". However, this is not the best solution.
+
+Just like we do not need 2 bread dispensers for the bottom pieces of bread, we do not need 2 bread dispensers for the top pieces of bread. And the reason is that we are able to merge 2 conveyor belts into 1, just as we are able to split 1 conveyor belt into 2.
+
+<093>
+
+All we need to do is merge the two manufacturing lines into one. One tricky question which may arise, though, is: "How shall we arrange these two different types of sandwiches on a single belt?"
+
+There are a multitude of ways in which they can be arranged. In our case, however, the most intuitive approach is to simply put them in an alternating manner, so that the resulting queue will look something like: [cheese, ham, cheese, ham, cheese, ham, ...].
+
+To summarize the whole process, let me simplify our notations a bit. For example, let us suppose that an arrow denotes a conveyor belt.
+
+<094>
+
+Then, the full manufacturing process of both cheese and ham sandwiches can be illustrated as a neat diagram, like the one shown here:
+
+<095>
+
+The first production line creates a sequence of bottom pieces of bread. It then splits itself into two lines, one for adding cheese and the other one for adding ham. And then, these two lines merge back to a single line, upon which they both receive their top pieces of bread.
+
+The result is the following sequences of sandwiches:
+
+<096>
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Package Processing</b></h3>
+
+Imagine, though, that our factory's goal is to manufacture not just sandwiches, but lunch boxes with multiple sandwiches in them. Let's say that each of our lunch boxes is expected to have 2 sandwiches in it - a cheese sandwich and a ham sandwich. What shall we do to mass-produce it?
+
+<097>
+
+We probably all agree that, in order for us to pack two sandwiches in one box, we must first pack each one of them individually first. Otherwise, how shall the customer even manage to tell which ingredients belong to which sandwich? If we do not pack these 2 sandwiches separately, consumers will just look at the whole chunk and assume that it is just a Big Mac (i.e. one super thick sandwich with a bit of extra bread in the middle).
+
+So, let us install a new equipment called "packer". A packer's job is fairly simple; it just packs stacks of ingredients which happen to be passing underneath.
+
+<098>
+
+Now the conveyor belt is carrying sandwiches that are individually wrapped, thereby allowing us to treat them as fully legitimate sandwiches instead of mere stacks of edible components.
+
+The next step is to put each pair of sandwiches (i.e. a cheese sandwich and a ham sandwich) in the same spot, so that we can put them in the same lunch box. For such a purpose, I will introduce yet another type of factory equipment called "holder".
+
+A holder is capable of holding whatever is underneath, and then dropping it after a bit of time delay. In our case, it should first grab a cheese sandwich it sees.
+
+<099>
+
+While it is holding the cheese sandwich, then, the ham sandwich which was moving right behind it will continue moving forward.
+
+<100>
+
+Soon, this ham sandwich will come right beneath the cheese sandwich which has been held above. At this point, the only thing the holder needs to do is drop the cheese sandwich, so that it will land right on top of the ham sandwich. This is how we put two sandwiches together.
+
+<101>
+
+And, if we let our holder repeat these two actions (i.e. "hold" and "drop") over and over again, we will see that it will effectively end up transforming the alternating sequence of cheese and ham sandwiches into another sequence in which these two types of sandwiches are put together as pairs.
+
+<102>
+
+Such a process is different from that of a simple dispenser (such as "cheese dispenser"), whose only job is to simply keep dropping the same ingredient over and over.
+
+<103>
+
+The figure below illustrates the difference between a holder and a dispenser. A holder can both hold AND drop things, which means that it is capable of transporting something from one place to another. A dispenser, on the other hand, can only introduce new elements to the system; it is incapable of fiddling with what's already been out there on the belt.
+
+<104>
+
+Anyways, now that we have our cheese sandwiches sitting on top of our ham sandwiches, the remaining step is to pack each of these pairs, as a whole, to prevent them from separating from each other.
+
+<105>
+
+The result is the sequence of lunch boxes, each of which is a pack of a (packed) cheese sandwich and a (packed) ham sandwich.
+
+The diagram shown below is the summary of what has been demonstrated so far.
+
+<106>
+
+First, we started from nothing (i.e. an empty conveyor belt). Next, we laid down pieces of bread and distributed them over two separate belts (one for cheese and the other one for ham). We then recombined these 2 into a single line of open sandwiches, closed their tops, packed the results, put them together as pairs, and finally packed them to obtain lunch boxes.
+
+(Will be continued in Chapter 7)
