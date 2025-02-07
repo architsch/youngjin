@@ -190,8 +190,8 @@ iframe {
 .featureLink {
 	position: relative;
 	display: ${landscape ? "inline-block" : "block"};
-	width: ${landscape ? "30vw" : "80vw"};
-	height: ${landscape ? "17.1429vw" : "45.7143vw"};
+	width: ${landscape ? "20vw" : "40vw"};
+	height: ${landscape ? "11.4286vw" : "22.8571vw"};
 	${m_spacing}
 	${xl_font}
 	${featureLinkImage_frame}

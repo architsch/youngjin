@@ -313,8 +313,8 @@ iframe {
 .featureLink {
 	position: relative;
 	display: inline-block;
-	width: 30vw;
-	height: 17.1429vw;
+	width: 20vw;
+	height: 11.4286vw;
 	text-align: left;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
@@ -461,8 +461,8 @@ iframe {
 .featureLink {
 	position: relative;
 	display: block;
-	width: 80vw;
-	height: 45.7143vw;
+	width: 40vw;
+	height: 22.8571vw;
 	text-align: left;	padding: 1.0vmin 1.0vmin;	margin: 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;

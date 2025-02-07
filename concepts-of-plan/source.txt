@@ -110,3 +110,34 @@ Such a conflict of interests serves as an important factor in the design of subt
 @@<h3><b>Four Quadrants of Sleep</b></h3>
 
 <t01>
+
+
+
+
+
+
+
+
+
+:d: A collection of memes that are formatted in a rather technical manner.
+:k:Archetypes, Jung, Analytical Psychology, Psychoanalysis, Collective Unconscious, Subconscious, Symbolism, Semantics, Game Design, Game Development, Game Narratives, Mandala, Semiotics
+:l:2025-02-07
+
+[Archetypes of Play] February 7, 2025
+
+The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<a01>
+@@<h3><b>1. Doll</b></h3>
+
+A doll is a special object. It is inanimate from a functional point of view, yet it is nevertheless endowed with the appearances of an animate being. In a way, therefore, a doll plays the role of a mediator between the realm of life (spirits) and the realm of death.
+
+A doll is a piece of dead matter which is given its own spirit. The spirit lets the doll come alive as its own quasi-living thing. The act of fabricating a doll and giving it a name (identity), therefore, tears the boundary between the overworld and the underworld, giving birth to a "middle region" in which both the live and dead come together and establish a meaningful symbiosis. This place is an intersection between soul and matter.
+
+Dolls can be found in a variety of forms in today's free market. A consumer good, for instance, is a doll which is imbued with the brand's spirit. Some people choose to buy goods of a specific brand because they assign metaphysical meanings to it, other than the pragmatic implication of the product's mere material composition.
+
+Shopping, therefore, could be imagined as a process of furnishing one's own inventory of dolls - an intricate collection of enchanted icons, ready to connect the consumer's identity to the edge of reality where the distinction between the real and unreal blurs itself.
+
+(Keywords: #PsychicInterface #Identity #Icon #Idol #Simulacrum #Toy #Plaything)
