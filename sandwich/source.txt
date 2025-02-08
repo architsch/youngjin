@@ -982,7 +982,7 @@ A grilled cheese itself is undoubtedly made up of a piece of toast, a slice of t
 
 These four steps are the "ingredients" of the recipe; they exist as a stack not in our physical space where we can touch and view things, but in the space of events (aka "possibility space"). They are part of our imperative knowledge, as opposed to declarative knowledge.
 
-(Will be continued in {%a href="https://thingspool.net/sandwich/page-8.html"%}Chapter 8{%/a%}))
+(Will be continued in {%a href="https://thingspool.net/sandwich/page-8.html"%}Chapter 8{%/a%})
 
 
 
@@ -1157,7 +1157,7 @@ drop
 
 However, it is also true that even such a universal machine is incapable of summoning resources out of nowhere; it must fetch the necessary ingredients from somewhere else, which is the reason why it had to have access to a stack of bread (i.e. position "2") as well as a stack of ham (i.e. position "3").
 
-<151>
+<151>*
 
 This is not the end of the story.
 
