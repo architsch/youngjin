@@ -121,9 +121,9 @@ Such a conflict of interests serves as an important factor in the design of subt
 
 :d: A collection of memes that are formatted in a rather technical manner.
 :k:Archetypes, Jung, Analytical Psychology, Psychoanalysis, Collective Unconscious, Subconscious, Symbolism, Semantics, Game Design, Game Development, Game Narratives, Mandala, Semiotics
-:l:2025-02-07
+:l:2025-02-09
 
-[Archetypes of Play] February 7, 2025
+[Archetypes of Play] February 7, 2025 - February 9, 2025
 
 The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
 
@@ -141,3 +141,18 @@ Dolls can be found in a variety of forms in today's free market. A consumer good
 Shopping, therefore, could be imagined as a process of furnishing one's own inventory of dolls - an intricate collection of enchanted icons, ready to connect the consumer's identity to the edge of reality where the distinction between the real and unreal blurs itself.
 
 (Keywords: #PsychicInterface #Identity #Icon #Idol #Simulacrum #Toy #Plaything)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<a02>
+@@<h3><b>2. Treasure Box</b></h3>
+
+A treasure box is full of hidden wonders. The moment you open it up, it may present you with either a pleasant surprise (reward) or punishment. It is a box of mystery, and you never know what kind of thing will reveal itself until you decide to open it.
+
+The core mechanic of a treasure box is random reward, driven by the principle of uncertainty. The act of disclosing it brings you either a good luck or bad luck, and such an outcome is determined by pure chance and not by your personal will. It is a game of randomness.
+
+This hypothetical box shows up in different forms across a variety of cases. In the context of mining, it could be a chunk of dirt and stone beyond which precious minerals might be hidden. In the context of fishing, it could be an opaque pond in which you might be able to catch a fish. And in the context of gambling, you could imagine it as a slot machine.
+
+In every one of the aforementioned scenarios, though, the essence of what constitutes a treasure box stays the same. It is basically an "enclosure of a secret" - a nutshell, when cracked open, throws you upon an unexpected line of destiny. And the way to open it usually involves just a simple kind of action, such as digging the ground with a pickaxe, casting a fishing rod, or pulling the lever of a slot machine.
+
+(Keywords: #RandomReward #PleasantSurprise #Uncertainty #Probability #StochasticProcesses #ParallelUniverse)
