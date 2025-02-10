@@ -1,8 +1,8 @@
 :d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
 :k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
-:l:2025-02-05
+:l:2025-02-10
 
-[Designing a Software Product] January 21, 2025 - February 5, 2025
+[Designing a Software Product] January 21, 2025 - February 10, 2025
 
 This is a collection of my personal thoughts in regard to how a software product can be designed.
 
@@ -91,6 +91,21 @@ For example, we may come up with a new variable which represents the degree of j
 The main benefit of this is that it introduces a wide variety of dynamic behaviors to the system. Too much jealousy, for instance, may trigger a pet to start a fight with another pet, resulting in mutual damage.
 
 Such a conflict of interests serves as an important factor in the design of subtle narratives. It urges the user to make choices carefully, since each choice may incur a catastrophic side effect.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<006>
+@@<h3><b>6. Partitioning</b></h3>
+
+We may imagine a pet simulator as a network of pets and their relationships.
+
+If every pet is capable of interacting with every other pet at any given moment, however, the whole system will plunge into chaos.
+
+The most effective solution to this is to partition our simulation space into rooms that are separate from each other, meaning that pets in one room won't be able to interact with those in another room.
+
+Such a mechanic allows us to create local environments, each of which is imbued with its own personality. It also provides the user with an extra dimension of self inquiry, such as: "Should I put these two pets in the same room? They might fight with each other."
+
+Another advantage is that it makes things more digestible. By splitting a large herd of pets into isolated groups, the user is now only required to pay attention to a handful of them at a time, rather than having to monitor the entire community of pets like an omniscient deity.
 
 
 
