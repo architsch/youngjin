@@ -116,15 +116,21 @@ Another advantage is that it makes things more digestible. By splitting a large 
 
 :d: A collection of memes that are formatted in a rather technical manner.
 :k:Memes, Visual Language, Diagram, Schematic, Math, Graph, Visualization, Graphical Language, Systems Engineering, Industrial Engineering, Engineering Math
-:l:2025-02-02
+:l:2025-02-11
 
-[Technical Memes] February 2, 2025
+[Technical Memes] February 2, 2025 - February 11, 2025
 
 @@<hr>
 @@<div class="l_spacer"></div>
 @@<h3><b>Four Quadrants of Sleep</b></h3>
 
 <t01>
+
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Caffeine Crafting Rules</b></h3>
+
+<t02>
 
 
 
