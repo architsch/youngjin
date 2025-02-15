@@ -1,8 +1,8 @@
 :d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
 :k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
-:l:2025-02-10
+:l:2025-02-15
 
-[Designing a Software Product] January 21, 2025 - February 10, 2025
+[Designing a Software Product] January 21, 2025 - February 15, 2025
 
 This is a collection of my personal thoughts in regard to how a software product can be designed.
 
@@ -106,6 +106,21 @@ The most effective solution to this is to partition our simulation space into ro
 Such a mechanic allows us to create local environments, each of which is imbued with its own personality. It also provides the user with an extra dimension of self inquiry, such as: "Should I put these two pets in the same room? They might fight with each other."
 
 Another advantage is that it makes things more digestible. By splitting a large herd of pets into isolated groups, the user is now only required to pay attention to a handful of them at a time, rather than having to monitor the entire community of pets like an omniscient deity.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<007>
+@@<h3><b>7. Modes of Interaction</b></h3>
+
+The richness of user experience can be further amplified by splitting it into multiple channels.
+
+In our pet simulator, for example, the user might be allowed to not only take care of one's pets, but also send them to schools, consult a vet, visit a local pet shop, and so on. Since these activities differ from each other significantly, we may assume that they belong to separate classes.
+
+The overall structure of the UI, then, could be depicted as a list of global menu options. Each of them, when clicked, will bring the user to a distinct local space, equipped with its own category of user interactions.
+
+The exact layout of this sort of UI may vary, of course, depending on what kind of product it is intending to convey.
+
+What is noteworthy, though, is the fact that it prevents confusion by neatly segmenting the system into specialized modules, each of which focuses on its own topic and nothing else.
 
 
 
