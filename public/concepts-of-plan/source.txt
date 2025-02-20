@@ -163,9 +163,9 @@ What is noteworthy, though, is the fact that it prevents confusion by neatly seg
 
 :d: A collection of memes that are formatted in a rather technical manner.
 :k:Archetypes, Jung, Analytical Psychology, Psychoanalysis, Collective Unconscious, Subconscious, Symbolism, Semantics, Game Design, Game Development, Game Narratives, Mandala, Semiotics
-:l:2025-02-16
+:l:2025-02-20
 
-[Archetypes of Play] February 7, 2025 - February 16, 2025
+[Archetypes of Play] February 7, 2025 - February 20, 2025
 
 The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
 
@@ -226,3 +226,18 @@ What would a furnace signify from a functional standpoint? There could be many i
 One of the key takeaways of such synthesis is the very notion of unexpectedness. Familiar elements, when combined, sometimes merge into a surprising result which may either bless or destroy the creator. This queer sort of jumpscare, emerging off of the middle of one's otherwise ordinary experience, introduces a sudden "turn" in our familiar storyline, thereby reshaping the perfectly logic-driven clockwork universe into one which is interleaved with caverns of lurking chaos.
 
 (Keywords: #Crafting #Alchemy #Mixer #Combination #Relations #Interactions)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<a05>
+@@<h3><b>5. Light</b></h3>
+
+Light is an essential ingredient of visibility. We need it in order to observe our surroundings, gather information, and draw a picture of where we are and what kinds of things wait before us. Its presence ensures the overcoming of darkness - an indispensable precondition of knowledge.
+
+It is our instinct to struggle to learn more and more about the environment in which we live. And the root of such an innate tendency can be traced back to the evolutionary fact that the more we know, the more likely we will manage to survive in this hostile world which is full of hidden dangers.
+
+This also explains why darkness is a common element of horror in literature, as well as other forms of media such as films, games, etc. Fear originates from the unknown, and the lack of one's capacity to explain things that are happening nearby. By covering our eyes with the veil of ignorance, darkness renders us vulnerable against the phantasmagoria of potential threats.
+
+The very moment we turn on a source of light, this chamber of uncertainty dissolves itself into oblivion and lets us surmount the unfounded fear which has been haunting us. Light, therefore, is a symbol of courage, grounded upon the promise that everything is and will stay lit in our field of vision.
+
+(Keywords: #Unveiling #OvercomingOfDarkness #Enlightenment #Knowledge #Discovery)
