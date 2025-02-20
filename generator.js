@@ -242,11 +242,11 @@ async function makeWritingPages(writingEntries)
     }
 }
 
-async function read(filepath)
+async function read(filepath, rootDir = "public")
 {
     try
     {
-        const data = await fs.readFile(filepath, {encoding: 'utf8'});
+        const data = await fs.readFile(`./${rootDir}/` + filepath, {encoding: 'utf8'});
         return data;
     }
     catch (err)
@@ -256,11 +256,11 @@ async function read(filepath)
     }
 }
 
-async function write(filepath, content)
+async function write(filepath, content, rootDir = "public")
 {
     try
     {
-        await fs.writeFile(filepath, content);
+        await fs.writeFile(`./${rootDir}/` + filepath, content);
     }
     catch (err)
     {
@@ -268,11 +268,11 @@ async function write(filepath, content)
     }
 }
 
-async function copyFile(sourcePath, targetPath)
+async function copyFile(sourcePath, targetPath, rootDir = "public")
 {
     try
     {
-        await fs.copyFile(sourcePath, targetPath);
+        await fs.copyFile(`./${rootDir}/` + sourcePath, `./${rootDir}/` + targetPath);
     }
     catch (err)
     {
@@ -280,12 +280,12 @@ async function copyFile(sourcePath, targetPath)
     }
 }
 
-async function mkdir(fileOrDirPath)
+async function mkdir(fileOrDirPath, rootDir = "public")
 {
     try
     {
-        if (!fss.existsSync(fileOrDirPath))
-            await fs.mkdir(fileOrDirPath);
+        if (!fss.existsSync(`./${rootDir}/` + fileOrDirPath))
+            await fs.mkdir(`./${rootDir}/` + fileOrDirPath);
     }
     catch (err)
     {
