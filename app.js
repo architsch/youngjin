@@ -1,17 +1,24 @@
 const path = require('node:path');
 const express = require('express');
-const session = require('express-session');
+require('dotenv').config();
 
 const app = express();
 
 // config
 
-app.set('view engine', 'ejs');
+app.engine('.html', require('ejs').__express);
 app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'html');
 
 // middleware
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// routes
+
+app.get('/server/test', (req, res) => {
+  res.render('test');
+});
 
 // start
 

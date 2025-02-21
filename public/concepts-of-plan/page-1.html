@@ -33,7 +33,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <a class="homeButton" href="https://thingspool.net/concepts-of-plan/list.html">Back to List</a>
 <h1>Designing a Software Product</h1>
 <h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: January 21, 2025 - February 15, 2025</h3>
+<h3 style="color:#707070">Date: January 21, 2025 - February 21, 2025</h3>
 <div class="l_spacer"></div>
 <p>This is a collection of my personal thoughts in regard to how a software product can be designed.</p>
 <hr>
@@ -104,6 +104,13 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>The overall structure of the UI, then, could be depicted as a list of global menu options. Each of them, when clicked, will bring the user to a distinct local space, equipped with its own category of user interactions.</p>
 <p>The exact layout of this sort of UI may vary, of course, depending on what kind of product it is intending to convey.</p>
 <p>What is noteworthy, though, is the fact that it prevents confusion by neatly segmenting the system into specialized modules, each of which focuses on its own topic and nothing else.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/concepts-of-plan/008.jpg" alt="Designing a Software Product (Figure 8)">
+<h3><b>8. UI State VS System State</b></h3>
+<p>When we think about a software product as a state machine (as in automata theory), we quickly come to the conclusion that it consists of two distinct types of state - one which is bound to user interaction (aka "UI State"), and the other one which is bound to the system's internal dynamics (aka "System State").</p>
+<p>The UI state mirrors the way in which the user is currently interacting with the app's virtual world. The dimensions of the viewport (i.e. camera), the position of the page's scollbar, the current menu selection, and the like, are all parts of the application's UI state. They do not directly influence things that are happening in the world.</p>
+<p>The System state, on the other hand, refers to the current state of the world itself. In our pet simulator, for example, the individual pets' positions and energy/affection levels should all be taken as parts of the application's System state because they all contribute to what is happening inside the world.</p>
 <footer>
 <a class="noTextDeco" href="https://thingspool.net"><img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo"></a>
 &copy 2019-2025 ThingsPool.<br>All rights reserved.

@@ -1,8 +1,8 @@
 :d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
 :k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
-:l:2025-02-15
+:l:2025-02-21
 
-[Designing a Software Product] January 21, 2025 - February 15, 2025
+[Designing a Software Product] January 21, 2025 - February 21, 2025
 
 This is a collection of my personal thoughts in regard to how a software product can be designed.
 
@@ -121,6 +121,17 @@ The overall structure of the UI, then, could be depicted as a list of global men
 The exact layout of this sort of UI may vary, of course, depending on what kind of product it is intending to convey.
 
 What is noteworthy, though, is the fact that it prevents confusion by neatly segmenting the system into specialized modules, each of which focuses on its own topic and nothing else.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<008>
+@@<h3><b>8. UI State VS System State</b></h3>
+
+When we think about a software product as a state machine (as in automata theory), we quickly come to the conclusion that it consists of two distinct types of state - one which is bound to user interaction (aka "UI State"), and the other one which is bound to the system's internal dynamics (aka "System State").
+
+The UI state mirrors the way in which the user is currently interacting with the app's virtual world. The dimensions of the viewport (i.e. camera), the position of the page's scollbar, the current menu selection, and the like, are all parts of the application's UI state. They do not directly influence things that are happening in the world.
+
+The System state, on the other hand, refers to the current state of the world itself. In our pet simulator, for example, the individual pets' positions and energy/affection levels should all be taken as parts of the application's System state because they all contribute to what is happening inside the world.
 
 
 
