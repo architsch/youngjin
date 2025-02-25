@@ -11,10 +11,33 @@ const lightYellowColor = "#e0d0a0";
 const lightGreenColor = "#80d070";
 
 const defaultTextAlign = "left";
+const fullscreenBarTextAlign = "center";
+
+const fullscreenLeftBarWidthPercent = 14;
+const fullscreenTopBarHeightPercent = 5;
+
+const gameLinkWidthPercent_landscape = 20;
+const gameLinkWidthPercent_portrait = 40;
+const featureLinkWidthPercent_landscape = 15;
+const featureLinkWidthPercent_portrait = 40;
+const playButtonWidthPercent_landscape = 30;
+const playButtonWidthPercent_portrait = 60;
 
 //------------------------------------------------------------------------
 // Functions
 //------------------------------------------------------------------------
+
+// Areas
+
+const fixedArea = (leftPercent, rightPercent, topPercent, bottomPercent, widthPercent, heightPercent) =>
+`position: fixed;
+\tdisplay: block;
+\tleft: ${leftPercent}vw;
+\tright: ${rightPercent}vw;
+\ttop: ${topPercent}vh;
+\tbottom: ${bottomPercent}vh;
+\twidth: ${widthPercent}vw;
+\theight: ${heightPercent}vh;`;
 
 const relativeArea = (nextline, maxWidth) =>
 `position: relative;
@@ -28,26 +51,21 @@ const relativeAndFlexibleArea = (nextline) =>
 \twidth: fit-content;
 \tblock-size: fit-content;`;
 
-const fullCoverChildArea = (display) =>
-`position: absolute;
-\tdisplay: ${display ? "block" : "none"};
-\ttop: 0;
-\tbottom: 0;
-\tleft: 0;
-\tright: 0;
-\twidth: 100%;
-\theight: 100%;`;
+// Spacing
 
-const spacing = (verticalSize, horizontalSize, includePadding, includeMargin, textAlign) =>
-`text-align: ${textAlign};` +
-(includePadding ? `\tpadding: ${verticalSize} ${horizontalSize};` : "") +
-(includeMargin ? `\tmargin: ${verticalSize};` : "");
+const spacing = (verticalSize, horizontalSize, suppressMargin = false, suppressPadding = false) =>
+`padding: ${suppressPadding ? "0" : verticalSize} ${suppressPadding ? "0" : horizontalSize};
+\tmargin: ${suppressMargin ? "0" : verticalSize} ${suppressMargin ? "0" : horizontalSize};`;
+
+// Font
 
 const font = (fontSize, isItalic, fontWeight) =>
 `font-size: ${fontSize};
 \tfont-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 \tfont-style: ${isItalic ? "italic" : "normal"};
 \tfont-weight: ${fontWeight};`;
+
+// Frames
 
 const simpleFrame = (backgroundColor, foregroundColor) =>
 `background-color: ${backgroundColor};
@@ -57,7 +75,7 @@ const roundedFrame = (backgroundColor, foregroundColor) =>
 simpleFrame(backgroundColor, foregroundColor) + "\n" +
 `\tborder-radius: 4.5vmin;`;
 
-const borderedFrame = (backgroundColor, foregroundColor, borderColor, borderThickness = "1.5") =>
+const borderedFrame = (backgroundColor, foregroundColor, borderColor, borderThickness = "1.25") =>
 roundedFrame(backgroundColor, foregroundColor) + "\n" +
 `\tborder-bottom: ${borderThickness}vmin ${borderColor} solid;` + "\n" +
 `\tborder-right: ${borderThickness}vmin ${borderColor} solid;`;
@@ -66,33 +84,33 @@ roundedFrame(backgroundColor, foregroundColor) + "\n" +
 // Elementary Styles
 //------------------------------------------------------------------------
 
-const full_row_area = relativeArea(true, "95vw");
-const near_full_row_area = relativeArea(true, "85vw");
-const twoThirds_row_area = relativeArea(true, "65vw");
-const half_row_area = relativeArea(true, "47vw");
-const third_row_area = relativeArea(true, "32vw");
-const quarter_row_area = relativeArea(true, "23vw");
+const fullscreen_whole_area = fixedArea(0, 0, 0, 0, 100, 100);
+const fullscreen_left_bar_area = fixedArea(0, 100 - fullscreenLeftBarWidthPercent, 0, 0, fullscreenLeftBarWidthPercent, 100);
+const fullscreen_top_bar_area = fixedArea(0, 0, 0, 100 - fullscreenTopBarHeightPercent, 100, fullscreenTopBarHeightPercent);
+const fullscreen_right_panel_area = fixedArea(fullscreenLeftBarWidthPercent, 0, 0, 0, 100 - fullscreenLeftBarWidthPercent, 100);
+const fullscreen_bottom_panel_area = fixedArea(0, 0, fullscreenTopBarHeightPercent, 0, 100, 100 - fullscreenTopBarHeightPercent);
+const full_row_area = relativeArea(true, "95%");
+const near_full_row_area = relativeArea(true, "85%");
+const twoThirds_row_area = relativeArea(true, "65%");
+const half_row_area = relativeArea(true, "47%");
+const third_row_area = relativeArea(true, "32%");
+const quarter_row_area = relativeArea(true, "23%");
 const flexible_row_area = relativeAndFlexibleArea(true);
-const visible_full_cover_child_area = fullCoverChildArea(true);
-const invisible_full_cover_child_area = fullCoverChildArea(false);
 
-const zero_spacing = spacing("0", "0", true, true, defaultTextAlign);
-const s_spacing = spacing("0.5vmin", "0.5vmin", true, true, defaultTextAlign);
-const m_spacing = spacing("1.0vmin", "1.0vmin", true, true, defaultTextAlign);
-const l_spacing = spacing("1.5vmin", "1.5vmin", true, true, defaultTextAlign);
-const xl_spacing = spacing("2.0vmin", "2.0vmin", true, true, defaultTextAlign);
-
-const m_spacing_horizontallyWider = spacing("1.0vmin", "3.0vmin", true, true, defaultTextAlign);
-
-const s_spacing_paddingOnly = spacing("0.5vmin", "0.5vmin", true, false, defaultTextAlign);
-const m_spacing_paddingOnly = spacing("1.0vmin", "1.0vmin", true, false, defaultTextAlign);
-const l_spacing_paddingOnly = spacing("1.5vmin", "1.5vmin", true, false, defaultTextAlign);
-const xl_spacing_paddingOnly = spacing("2.0vmin", "2.0vmin", true, false, defaultTextAlign);
-
-const s_spacing_marginOnly = spacing("0.5vmin", "0.5vmin", false, true, defaultTextAlign);
-const m_spacing_marginOnly = spacing("1.0vmin", "1.0vmin", false, true, defaultTextAlign);
-const l_spacing_marginOnly = spacing("1.5vmin", "1.5vmin", false, true, defaultTextAlign);
-const xl_spacing_marginOnly = spacing("2.0vmin", "2.0vmin", false, true, defaultTextAlign);
+const zero_spacing = spacing("0", "0");
+const s_spacing = spacing("0.5vmin", "0.5vmin");
+const m_spacing = spacing("1.0vmin", "1.0vmin");
+const l_spacing = spacing("1.5vmin", "1.5vmin");
+const xl_spacing = spacing("2.0vmin", "2.0vmin");
+const s_spacing_paddingOnly = spacing("0.5vmin", "0.5vmin", true, false);
+const m_spacing_paddingOnly = spacing("1.0vmin", "1.0vmin", true, false);
+const l_spacing_paddingOnly = spacing("1.5vmin", "1.5vmin", true, false);
+const xl_spacing_paddingOnly = spacing("2.0vmin", "2.0vmin", true, false);
+const m_spacing_horizontallyWider = spacing("1.0vmin", "3.0vmin");
+const fullscreen_left_bar_spacing = spacing("0", "0", true, false);
+const fullscreen_top_bar_spacing = spacing("0", "0", true, false);
+const fullscreen_right_panel_spacing = spacing("2.5vmin", "2.5vmin", true, false);
+const fullscreen_bottom_panel_spacing = spacing("2.5vmin", "2.5vmin", true, false);
 
 const fontScaleFactor_vmax = 0.7;
 const fontScaleFactor_px = 1.0;
@@ -116,6 +134,7 @@ const xl_font = font(size_xl_font, true, 700);
 
 const light_color_frame = simpleFrame(darkColor, lightColor);
 const medium_color_frame = simpleFrame(darkColor, mediumColor);
+const inverted_medium_color_frame = simpleFrame(mediumColor, darkColor);
 const dim_color_frame = simpleFrame(darkColor, dimColor);
 const lightYellow_color_frame = simpleFrame(darkColor, lightYellowColor);
 const banner_frame = roundedFrame(mediumColor, darkColor);
@@ -137,6 +156,39 @@ iframe {
 	${full_row_area}
 	${m_spacing}
 	${l_font}
+	${medium_color_frame}
+}
+.fullscreenBarLogo {
+	${medium_color_frame}
+}
+.fullscreenBar {
+	${landscape ? fullscreen_left_bar_area : fullscreen_top_bar_area}
+	${landscape ? fullscreen_left_bar_spacing : fullscreen_top_bar_spacing}
+	${m_font}
+	${inverted_medium_color_frame}
+	text-align: ${fullscreenBarTextAlign};
+	z-index: 1;
+}
+.fullscreenPanel {
+	${landscape ? fullscreen_right_panel_area : fullscreen_bottom_panel_area}
+	${landscape ? fullscreen_right_panel_spacing : fullscreen_bottom_panel_spacing}
+	${l_font}
+	${medium_color_frame}
+	overflow-y: scroll;
+}
+.fullscreenBarMenuButton {
+	display: ${landscape ? "block" : "inline-block"};
+	${landscape ? "width: 100%;" : "height: 100%;"}
+	${m_spacing_paddingOnly}
+	box-sizing: border-box;
+}
+.fullscreenBarMenuButton.idle {
+	${inverted_medium_color_frame}
+}
+.fullscreenBarMenuButton.idle:hover {
+	color: ${lightYellowColor};
+}
+.fullscreenBarMenuButton.selected {
 	${medium_color_frame}
 }
 .logoImage {
@@ -177,32 +229,32 @@ iframe {
 }
 .gameLink {
 	position: relative;
-	display: ${landscape ? "inline-block" : "block"};
-	width: ${landscape ? "30vw" : "80vw"};
-	height: ${landscape ? "9.1714vw" : "24.4571vw"};
+	display: inline-block;
+	width: ${landscape ? `${gameLinkWidthPercent_landscape}vw` : `${gameLinkWidthPercent_portrait}vw`};
+	height: ${landscape ? `${(gameLinkWidthPercent_landscape * 0.305715).toFixed(4)}vw` : `${(gameLinkWidthPercent_portrait * 0.305715).toFixed(4)}vw`};
 	${m_spacing}
 	${xl_font}
 	${gameLinkImage_frame}
 }
 .gameLink:hover {
-	border-color: ${lightYellowColor}
+	border-color: ${lightYellowColor};
 }
 .featureLink {
 	position: relative;
-	display: ${landscape ? "inline-block" : "block"};
-	width: ${landscape ? "20vw" : "40vw"};
-	height: ${landscape ? "11.4286vw" : "22.8571vw"};
+	display: inline-block;
+	width: ${landscape ? `${featureLinkWidthPercent_landscape}vw` : `${featureLinkWidthPercent_portrait}vw`};
+	height: ${landscape ? `${(featureLinkWidthPercent_landscape * 0.5714).toFixed(4)}vw` : `${(featureLinkWidthPercent_portrait * 0.5714).toFixed(4)}vw`};
 	${m_spacing}
 	${xl_font}
 	${featureLinkImage_frame}
 }
 .featureLink:hover {
-	border-color: ${lightYellowColor}
+	border-color: ${lightYellowColor};
 }
 .playButton {
 	position: relative;
 	display: ${landscape ? "inline-block" : "block"};
-	width: ${landscape ? "30vw" : "60vw"};
+	width: ${landscape ? `${playButtonWidthPercent_landscape}vw` : `${playButtonWidthPercent_portrait}vw`};
 	${m_spacing}
 	${xl_font}
 	${medium_color_frame}
@@ -218,10 +270,12 @@ iframe {
 
 const css =
 `body {
-	${full_row_area}
-	${s_spacing}
+	${fullscreen_whole_area}
+	${zero_spacing}
 	${s_font}
 	${light_color_frame}
+	text-align: ${defaultTextAlign};
+	z-index: 0;
 }
 p {
 	${full_row_area}

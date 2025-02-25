@@ -164,6 +164,12 @@ The System state, on the other hand, refers to the current state of the world it
 
 <t03>
 
+@@<hr>
+@@<div class="l_spacer"></div>
+@@<h3><b>Five Phases of Game Development</b></h3>
+
+<t04>
+
 
 
 
@@ -174,9 +180,9 @@ The System state, on the other hand, refers to the current state of the world it
 
 :d: A collection of memes that are formatted in a rather technical manner.
 :k:Archetypes, Jung, Analytical Psychology, Psychoanalysis, Collective Unconscious, Subconscious, Symbolism, Semantics, Game Design, Game Development, Game Narratives, Mandala, Semiotics
-:l:2025-02-20
+:l:2025-02-25
 
-[Archetypes of Play] February 7, 2025 - February 20, 2025
+[Archetypes of Play] February 7, 2025 - February 25, 2025
 
 The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
 
@@ -252,3 +258,18 @@ This also explains why darkness is a common element of horror in literature, as 
 The very moment we turn on a source of light, this chamber of uncertainty dissolves itself into oblivion and lets us surmount the unfounded fear which has been haunting us. Light, therefore, is a symbol of courage, grounded upon the promise that everything is and will stay lit in our field of vision.
 
 (Keywords: #Unveiling #OvercomingOfDarkness #Enlightenment #Knowledge #Discovery)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<a06>
+@@<h3><b>6. Compass</b></h3>
+
+Everyone longs to discover the ultimate purpose in life. Everyone searches for a direction whenever a mist of uncertainty surrounds them. And whenever such a sentiment is being recognized, a spiritual guidance comes into play and saves the day.
+
+A compass is what we need whenever we are lost in the thin air of motivational void. Being a direction-provider, a compass often symbolizes our hope for a parental figure who will lead us to a sequence of persistent goals as well as means to achieve them.
+
+A compass gives us a sense of purpose - a belief that the peak of the mountain to which it is pointing is somewhere worth reaching. It gives us a reason to stay alive and continually strive to become a better version of ourselves every morning, for the hope of getting closer and closer to our ideal destination. It is what endows even the most trivial of our actions with its own meaning.
+
+It can also be understood that a compass only provides us with a fragmentary view of a more holistic vision, which is represented by a map. A map is an overall outline (i.e. a bigger picture) of a panorama of goals that are waiting to be accomplished and how they should be approached. Since such a map can be too complex to read, however, a compass is often preferred when it comes to helping the user focus on one goal at a time, on a step-by-step basis.
+
+(Keywords: #Purpose #Pathway #Journey #Direction #Goal #Guidance #Mentor)
