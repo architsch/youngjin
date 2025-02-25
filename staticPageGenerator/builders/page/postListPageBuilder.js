@@ -16,7 +16,7 @@ function PostListPageBuilder(sitemapBuilder, atomFeedBuilder)
 
             cb.addHeader("library", "ThingsPool - " + entry.title, entry.title, "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", listRelativeURL);
             cb.addLine(`<div class="l_spacer"></div>`);
-            cb.addLine(`<a class="homeButton" href="${process.env.ROOT_URL}">Home</a>`);
+            cb.addLine(`<a class="homeButton" href="${process.env.ROOT_URL}/library.html">Back</a>`);
             cb.addLine(`<h1>${entry.title}</h1>`);
             cb.addLine(`<div class="l_spacer"></div>`);
 

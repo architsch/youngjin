@@ -8,7 +8,7 @@ function HTMLChunkBuilder()
     const addFullscreenBarMenuButton = (currPageName, pageName, pageDisplayName) => {
         const classAttrib = `class="noTextDeco fullscreenBarMenuButton ${currPageName == pageName ? 'selected' : 'idle'}"`;
         const relativePageURL = (pageName == "") ? "" : `/${pageName}.html`;
-        const clickResponseAttrib = (currPageName == pageName) ? "" : `href="${process.env.ROOT_URL}${relativePageURL}"`;
+        const clickResponseAttrib = `href="${process.env.ROOT_URL}${relativePageURL}"`;
         lines.push(`<a ${classAttrib} ${clickResponseAttrib}>${pageDisplayName}</a>`);
     }
 

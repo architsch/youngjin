@@ -94,7 +94,7 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                 isFirstArticle = false;
 
                 cb.addLine(`<div class="l_spacer"></div>`);
-                cb.addLine(`<a class="homeButton" href="${process.env.ROOT_URL}/${entry.dirName}/list.html">Back to List</a>`);
+                cb.addLine(`<a class="homeButton" href="${process.env.ROOT_URL}/${entry.dirName}/list.html">Back</a>`);
                 cb.addLine(`<h1>${title}</h1>`);
 
                 cb.addLine(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);

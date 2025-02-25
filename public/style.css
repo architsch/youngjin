@@ -286,12 +286,12 @@ iframe {
 	margin: 0 0;
 	box-sizing: border-box;
 }
+.fullscreenBarMenuButton:hover {
+	color: #e0d0a0;
+}
 .fullscreenBarMenuButton.idle {
 	background-color: #a0a0a0;
 	color: #202020;
-}
-.fullscreenBarMenuButton.idle:hover {
-	color: #e0d0a0;
 }
 .fullscreenBarMenuButton.selected {
 	background-color: #202020;
@@ -505,12 +505,12 @@ iframe {
 	margin: 0 0;
 	box-sizing: border-box;
 }
+.fullscreenBarMenuButton:hover {
+	color: #e0d0a0;
+}
 .fullscreenBarMenuButton.idle {
 	background-color: #a0a0a0;
 	color: #202020;
-}
-.fullscreenBarMenuButton.idle:hover {
-	color: #e0d0a0;
 }
 .fullscreenBarMenuButton.selected {
 	background-color: #202020;

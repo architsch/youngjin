@@ -182,11 +182,11 @@ iframe {
 	${m_spacing_paddingOnly}
 	box-sizing: border-box;
 }
+.fullscreenBarMenuButton:hover {
+	color: ${lightYellowColor};
+}
 .fullscreenBarMenuButton.idle {
 	${inverted_medium_color_frame}
-}
-.fullscreenBarMenuButton.idle:hover {
-	color: ${lightYellowColor};
 }
 .fullscreenBarMenuButton.selected {
 	${medium_color_frame}
