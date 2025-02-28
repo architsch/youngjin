@@ -3,74 +3,11 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2025-02-25T00:00:00.000Z</updated>
+<updated>2025-02-28T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
 <id>urn:uuid:02210672-5391-4cc8-800a-2a88f3a6d00c</id>
-<entry>
-  <title>Books by Bernard Werber (베르나르 베르베르)</title>
-  <link href="https://thingspool.net/read-rec/page-9.html"/>
-  <id>https://thingspool.net/read-rec/page-9.html</id>
-  <updated>2024-08-07T00:00:00.000Z</updated>
-  <summary>A review of French novelist, Bernard Werber (베르나르 베르베르), who is perhaps the most popular French science fiction writer in Korea. His novels, however, can also be classified as works of philosophical fiction, combined with spiritualist metaphors and non-mainstream humor.</summary>
-</entry>
-<entry>
-  <title>Flatland: A Romance of Many Dimensions - by Edwin Abbott</title>
-  <link href="https://thingspool.net/read-rec/page-8.html"/>
-  <id>https://thingspool.net/read-rec/page-8.html</id>
-  <updated>2024-07-12T00:00:00.000Z</updated>
-  <summary>A review of Flatland: A Romance of Many Dimensions by Edwin Abbott.</summary>
-</entry>
-<entry>
-  <title>The Need for Retrieval of the Consciousness - by Katarina Gyllenbäck</title>
-  <link href="https://thingspool.net/read-rec/page-7.html"/>
-  <id>https://thingspool.net/read-rec/page-7.html</id>
-  <updated>2024-07-01T00:00:00.000Z</updated>
-  <summary>On the importance of intrinsic and reciprocally shared goals in a narrative.</summary>
-</entry>
-<entry>
-  <title>An Enquiry Concerning Human Understanding - by David Hume</title>
-  <link href="https://thingspool.net/read-rec/page-6.html"/>
-  <id>https://thingspool.net/read-rec/page-6.html</id>
-  <updated>2024-06-29T00:00:00.000Z</updated>
-  <summary>A review (and analysis) of David Hume's empiricist philosophy.</summary>
-</entry>
-<entry>
-  <title>When the Cognitive Vehicle of Narrative Backfires - by Katarina Gyllenbäck</title>
-  <link href="https://thingspool.net/read-rec/page-5.html"/>
-  <id>https://thingspool.net/read-rec/page-5.html</id>
-  <updated>2024-06-25T00:00:00.000Z</updated>
-  <summary>Methodology of designing educational narratives.</summary>
-</entry>
-<entry>
-  <title>Books by Bertrand Russell</title>
-  <link href="https://thingspool.net/read-rec/page-4.html"/>
-  <id>https://thingspool.net/read-rec/page-4.html</id>
-  <updated>2024-06-20T00:00:00.000Z</updated>
-  <summary>Introduction to books written by the famous British philosopher, Bertrand Russell.</summary>
-</entry>
-<entry>
-  <title>The Benefit and Disadvantage of Unconsciousness - by Katarina Gyllenbäck</title>
-  <link href="https://thingspool.net/read-rec/page-3.html"/>
-  <id>https://thingspool.net/read-rec/page-3.html</id>
-  <updated>2024-06-18T00:00:00.000Z</updated>
-  <summary>About the role of the unconscious in goal-driven narratives.</summary>
-</entry>
-<entry>
-  <title>Narrative Construction - by Katarina Gyllenbäck</title>
-  <link href="https://thingspool.net/read-rec/page-2.html"/>
-  <id>https://thingspool.net/read-rec/page-2.html</id>
-  <updated>2024-06-14T00:00:00.000Z</updated>
-  <summary>Introduction to the topic of narrative bridging and meaning-making, pioneered by Katarina Gyllenbäck.</summary>
-</entry>
-<entry>
-  <title>Metaphysical Notes - by Thomas Scarborough</title>
-  <link href="https://thingspool.net/read-rec/page-1.html"/>
-  <id>https://thingspool.net/read-rec/page-1.html</id>
-  <updated>2024-06-01T00:00:00.000Z</updated>
-  <summary>Introduction to Metaphysical Notes by Thomas Scarborough</summary>
-</entry>
 <entry>
   <title>Doublethink (Samples 2)</title>
   <link href="https://thingspool.net/cartoons/page-5.html"/>
@@ -887,7 +824,7 @@
   <title>Designing a Software Product</title>
   <link href="https://thingspool.net/concepts-of-plan/page-1.html"/>
   <id>https://thingspool.net/concepts-of-plan/page-1.html</id>
-  <updated>2025-02-21T00:00:00.000Z</updated>
+  <updated>2025-02-28T00:00:00.000Z</updated>
   <summary> A collection of thoughts on the topic of software product design, as well as its potential methodologies.</summary>
 </entry>
 <entry>
@@ -1078,6 +1015,69 @@
   <id>https://thingspool.net/morsels/page-1.html</id>
   <updated>2024-07-26T00:00:00.000Z</updated>
   <summary>A list of game design concepts.</summary>
+</entry>
+<entry>
+  <title>Books by Bernard Werber (베르나르 베르베르)</title>
+  <link href="https://thingspool.net/read-rec/page-9.html"/>
+  <id>https://thingspool.net/read-rec/page-9.html</id>
+  <updated>2024-08-07T00:00:00.000Z</updated>
+  <summary>A review of French novelist, Bernard Werber (베르나르 베르베르), who is perhaps the most popular French science fiction writer in Korea. His novels, however, can also be classified as works of philosophical fiction, combined with spiritualist metaphors and non-mainstream humor.</summary>
+</entry>
+<entry>
+  <title>Flatland: A Romance of Many Dimensions - by Edwin Abbott</title>
+  <link href="https://thingspool.net/read-rec/page-8.html"/>
+  <id>https://thingspool.net/read-rec/page-8.html</id>
+  <updated>2024-07-12T00:00:00.000Z</updated>
+  <summary>A review of Flatland: A Romance of Many Dimensions by Edwin Abbott.</summary>
+</entry>
+<entry>
+  <title>The Need for Retrieval of the Consciousness - by Katarina Gyllenbäck</title>
+  <link href="https://thingspool.net/read-rec/page-7.html"/>
+  <id>https://thingspool.net/read-rec/page-7.html</id>
+  <updated>2024-07-01T00:00:00.000Z</updated>
+  <summary>On the importance of intrinsic and reciprocally shared goals in a narrative.</summary>
+</entry>
+<entry>
+  <title>An Enquiry Concerning Human Understanding - by David Hume</title>
+  <link href="https://thingspool.net/read-rec/page-6.html"/>
+  <id>https://thingspool.net/read-rec/page-6.html</id>
+  <updated>2024-06-29T00:00:00.000Z</updated>
+  <summary>A review (and analysis) of David Hume's empiricist philosophy.</summary>
+</entry>
+<entry>
+  <title>When the Cognitive Vehicle of Narrative Backfires - by Katarina Gyllenbäck</title>
+  <link href="https://thingspool.net/read-rec/page-5.html"/>
+  <id>https://thingspool.net/read-rec/page-5.html</id>
+  <updated>2024-06-25T00:00:00.000Z</updated>
+  <summary>Methodology of designing educational narratives.</summary>
+</entry>
+<entry>
+  <title>Books by Bertrand Russell</title>
+  <link href="https://thingspool.net/read-rec/page-4.html"/>
+  <id>https://thingspool.net/read-rec/page-4.html</id>
+  <updated>2024-06-20T00:00:00.000Z</updated>
+  <summary>Introduction to books written by the famous British philosopher, Bertrand Russell.</summary>
+</entry>
+<entry>
+  <title>The Benefit and Disadvantage of Unconsciousness - by Katarina Gyllenbäck</title>
+  <link href="https://thingspool.net/read-rec/page-3.html"/>
+  <id>https://thingspool.net/read-rec/page-3.html</id>
+  <updated>2024-06-18T00:00:00.000Z</updated>
+  <summary>About the role of the unconscious in goal-driven narratives.</summary>
+</entry>
+<entry>
+  <title>Narrative Construction - by Katarina Gyllenbäck</title>
+  <link href="https://thingspool.net/read-rec/page-2.html"/>
+  <id>https://thingspool.net/read-rec/page-2.html</id>
+  <updated>2024-06-14T00:00:00.000Z</updated>
+  <summary>Introduction to the topic of narrative bridging and meaning-making, pioneered by Katarina Gyllenbäck.</summary>
+</entry>
+<entry>
+  <title>Metaphysical Notes - by Thomas Scarborough</title>
+  <link href="https://thingspool.net/read-rec/page-1.html"/>
+  <id>https://thingspool.net/read-rec/page-1.html</id>
+  <updated>2024-06-01T00:00:00.000Z</updated>
+  <summary>Introduction to Metaphysical Notes by Thomas Scarborough</summary>
 </entry>
 <entry>
   <title>A Layman's Bridge to Mathematics - Part 9</title>

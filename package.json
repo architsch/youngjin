@@ -3,7 +3,8 @@
 	"main": "app.js",
 	"type": "commonjs",
 	"scripts": {
-		"gen": "node staticPageGenerator/generator.js",
+		"gendev": "MODE=dev node staticPageGenerator/generator.js",
+		"genprod": "MODE=prod node staticPageGenerator/generator.js",
 		"dev": "nodemon app.js",
 		"start": "node app.js"
 	},

@@ -1,4 +1,5 @@
 const fileUtil = require("../utils/fileUtil.js");
+const envUtil = require("../utils/envUtil.js");
 require("dotenv").config();
 
 function AtomFeedBuilder()
@@ -26,8 +27,8 @@ function AtomFeedBuilder()
         lines.push(`  <name>Youngjin Kang</name>`);
         lines.push(`<author>`);
         lines.push(`<updated>${globalLatestUpdate.toISOString()}</updated>`);
-        lines.push(`<link href="${process.env.ROOT_URL}"/>`);
-        lines.push(`<link rel="self" type="application/atom+xml" href="${process.env.ROOT_URL}/feed.atom"/>`);
+        lines.push(`<link href="${envUtil.getRootURL()}"/>`);
+        lines.push(`<link rel="self" type="application/atom+xml" href="${envUtil.getRootURL()}/feed.atom"/>`);
         lines.push(`<title>ThingsPool</title>`);
         lines.push(`<feed xmlns="http://www.w3.org/2005/Atom">`);
         lines.push(`<?xml version="1.0" encoding="utf-8"?>`);

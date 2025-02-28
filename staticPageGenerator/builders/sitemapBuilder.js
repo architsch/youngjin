@@ -1,4 +1,5 @@
 const fileUtil = require("../utils/fileUtil.js");
+const envUtil = require("../utils/envUtil.js");
 require("dotenv").config();
 
 function SitemapBuilder()
@@ -8,7 +9,7 @@ function SitemapBuilder()
     this.addEntry = (relativeURL, lastmod) => {
         lines.push(`</url>`);
         lines.push(`  <lastmod>${lastmod}</lastmod>`);
-        lines.push(`  <loc>${process.env.ROOT_URL}/${relativeURL}</loc>`);
+        lines.push(`  <loc>${envUtil.getRootURL()}/${relativeURL}</loc>`);
         lines.push(`<url>`);
     };
 

@@ -1,4 +1,5 @@
 const fileUtil = require("../../utils/fileUtil.js");
+const envUtil = require("../../utils/envUtil.js");
 const HTMLChunkBuilder = require("../htmlChunkBuilder.js");
 require("dotenv").config();
 
@@ -51,7 +52,7 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
             cb = new HTMLChunkBuilder();
 
             sitemapBuilder.addEntry(postRelativeURL, lastmod);
-            atomFeedBuilder.addEntry(`${process.env.ROOT_URL}/${postRelativeURL}`, title, lastmod, desc);
+            atomFeedBuilder.addEntry(`${envUtil.getRootURL()}/${postRelativeURL}`, title, lastmod, desc);
 
             postInfoList.push({ pageNumber, title, lastmod, desc, keywords, customOGImagePath });
             pageNumber++;
@@ -94,7 +95,7 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                 isFirstArticle = false;
 
                 cb.addLine(`<div class="l_spacer"></div>`);
-                cb.addLine(`<a class="homeButton" href="${process.env.ROOT_URL}/${entry.dirName}/list.html">Back</a>`);
+                cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">Back</a>`);
                 cb.addLine(`<h1>${title}</h1>`);
 
                 cb.addLine(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);
@@ -108,7 +109,7 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                 const imgName = line.match(/<(.*?)>/)[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${process.env.ROOT_URL}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${envUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
                     if (customOGImagePath == undefined || line.endsWith("*"))
                         customOGImagePath = imgPath;
                     cb.addLine(`<img class="figureImage" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);

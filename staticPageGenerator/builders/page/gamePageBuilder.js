@@ -1,4 +1,5 @@
 const fileUtil = require("../../utils/fileUtil.js");
+const envUtil = require("../../utils/envUtil.js");
 const HTMLChunkBuilder = require("../htmlChunkBuilder.js");
 require("dotenv").config();
 
@@ -25,13 +26,13 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
             console.error(":k: is missing in -> " + entry.title);
 
         cb = new HTMLChunkBuilder();
-        cb.addHeader("library", "ThingsPool - " + entry.title, description, keywords, relativeURL);
+        cb.addHeader("arcade", "ThingsPool - " + entry.title, description, keywords, relativeURL);
         cb.addLine(`<div class="l_spacer"></div>`);
-        cb.addLine(`<a class="homeButton" href="${process.env.ROOT_URL}">Home</a>`);
+        cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/arcade.html">Back</a>`);
         cb.addLine(`<h1>${entry.title}</h1>`);
 
         cb.addLine(`<a class="noTextDeco" href="${entry.playLinkURL}">`);
-        cb.addLine(`<img class="playButton" src="${process.env.ROOT_URL}/play.png" alt="Play">`);
+        cb.addLine(`<img class="playButton" src="${envUtil.getRootURL()}/play.png" alt="Play">`);
         cb.addLine(`</a>`);
 
         let imageIndex = 1;
@@ -69,7 +70,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
                 const imgName = line.match(/<(.*?)>/)[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${process.env.ROOT_URL}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${envUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
                     cb.addLine(`<img class="gameImage" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
                 }
             }
@@ -89,7 +90,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
         cb.addFooter();
 
         sitemapBuilder.addEntry(relativeURL, entry.lastmod);
-        atomFeedBuilder.addEntry(`${process.env.ROOT_URL}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
+        atomFeedBuilder.addEntry(`${envUtil.getRootURL()}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
 
         await cb.build(relativeURL);
     };

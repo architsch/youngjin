@@ -30,9 +30,10 @@ gtag('config', 'G-JL7KHR7HK8');
 </head>
 <body>
 <div class="fullscreenBar">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/">Home</a>
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/about.html">About</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Works</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
 </div>
 <div class="fullscreenPanel">
 <img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
@@ -41,7 +42,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <a class="homeButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>
 <h1>Designing a Software Product</h1>
 <h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: January 21, 2025 - February 21, 2025</h3>
+<h3 style="color:#707070">Date: January 21, 2025 - February 28, 2025</h3>
 <div class="l_spacer"></div>
 <p>This is a collection of my personal thoughts in regard to how a software product can be designed.</p>
 <hr>
@@ -119,6 +120,15 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>When we think about a software product as a state machine (as in automata theory), we quickly come to the conclusion that it consists of two distinct types of state - one which is bound to user interaction (aka "UI State"), and the other one which is bound to the system's internal dynamics (aka "System State").</p>
 <p>The UI state mirrors the way in which the user is currently interacting with the app's virtual world. The dimensions of the viewport (i.e. camera), the position of the page's scollbar, the current menu selection, and the like, are all parts of the application's UI state. They do not directly influence things that are happening in the world.</p>
 <p>The System state, on the other hand, refers to the current state of the world itself. In our pet simulator, for example, the individual pets' positions and energy/affection levels should all be taken as parts of the application's System state because they all contribute to what is happening inside the world.</p>
+<hr>
+<div class="l_spacer"></div>
+<img class="figureImage" src="https://thingspool.net/concepts-of-plan/009.jpg" alt="Designing a Software Product (Figure 9)">
+<h3><b>9. State Hierarchy</b></h3>
+<p>A software product, regardless of its kind, possesses its own state. An important concept to keep in mind is that the state itself may be broken down to smaller states, each of which can then be broken down to even smaller states, and so on.</p>
+<p>Eventually, this sort of breakdown reveals its own hierarchical structure.</p>
+<p>Based on this kind of reasoning, we can easily design the entire tree of states from a top-down perspective. All we need to do is first define a few general state objects, and then describe each of them as a collection of more specific state objects, and so forth.</p>
+<p>What is interesting is that there are direct one-to-one mappings between states which are equivalent but designed to serve different purposes.</p>
+<p>The state of the UI which displays the current hunger level of a virtual pet, for instance, could be bound to reflect the actual hunger level of the pet to which it corresponds. This is an example of "UI binding" - a recurring concept in the domain of reactive programming.</p>
 <footer>
 &copy 2019-2025 ThingsPool. All rights reserved.
 </footer>

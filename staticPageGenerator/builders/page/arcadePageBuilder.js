@@ -1,8 +1,10 @@
 const fileUtil = require("../../utils/fileUtil.js");
+const envUtil = require("../../utils/envUtil.js");
 const HTMLChunkBuilder = require("../htmlChunkBuilder.js");
+const GamePageBuilder = require("./gamePageBuilder.js");
 require("dotenv").config();
 
-function StaticIndexPageBuilder(sitemapBuilder, atomFeedBuilder)
+function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
 {
     const gameEntries = [
         {
@@ -41,33 +43,25 @@ function StaticIndexPageBuilder(sitemapBuilder, atomFeedBuilder)
         cb.addLine(`</a>`);
     };
 
-    const addFeatureLink = (cb, featureTitle, featureURL, imageURL) => {
-        cb.addLine(`<a class="noTextDeco" href="${featureURL}">`);
-        cb.addLine(`<img class="featureLink" src="${imageURL}" alt="${featureTitle}">`);
-        cb.addLine(`</a>`);
-    };
-
     this.build = async () => {
         const cb = new HTMLChunkBuilder();
 
-        cb.addHeader("", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined);
+        cb.addHeader("arcade", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined);
         
         cb.addLine(`<h1>Games</h1>`);
         for (const e of gameEntries)
-            addGameLink(cb, e.title, `${process.env.ROOT_URL}/${e.dirName}/page.html`, `${process.env.ROOT_URL}/${e.dirName}/entry.jpg`);
+            addGameLink(cb, e.title, `${envUtil.getRootURL()}/${e.dirName}/page.html`, `${envUtil.getRootURL()}/${e.dirName}/entry.jpg`);
         cb.addLine(`<div class="s_spacer"></div>`);
-
-        cb.addLine(`<h1>Featured Articles</h1>`);
-        addFeatureLink(cb, "Games in Prolog", `${process.env.ROOT_URL}/morsels/page-10.html`, `${process.env.ROOT_URL}/feat0.jpg`);
-        addFeatureLink(cb, "Model of the Mind", `${process.env.ROOT_URL}/morsels/page-2.html`, `${process.env.ROOT_URL}/feat2.jpg`);
-        addFeatureLink(cb, "Serious Game Design", `${process.env.ROOT_URL}/morsels/page-1.html`, `${process.env.ROOT_URL}/feat1.jpg`);
-        addFeatureLink(cb, "Thought Simulator", `${process.env.ROOT_URL}/morsels/page-3.html`, `${process.env.ROOT_URL}/feat3.jpg`);
-        cb.addLine(`<div class="l_spacer"></div>`);
 
         cb.addFooter();
 
-        await cb.build("index.html");
+        sitemapBuilder.addEntry("arcade.html", "2025-02-28");
+
+        await cb.build("arcade.html");
+
+        for (const entry of gameEntries)
+            await new GamePageBuilder(sitemapBuilder, atomFeedBuilder).build(entry);
     };
 }
 
-module.exports = StaticIndexPageBuilder;
+module.exports = ArcadePageBuilder;

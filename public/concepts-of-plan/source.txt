@@ -1,8 +1,8 @@
 :d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
 :k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
-:l:2025-02-21
+:l:2025-02-28
 
-[Designing a Software Product] January 21, 2025 - February 21, 2025
+[Designing a Software Product] January 21, 2025 - February 28, 2025
 
 This is a collection of my personal thoughts in regard to how a software product can be designed.
 
@@ -132,6 +132,21 @@ When we think about a software product as a state machine (as in automata theory
 The UI state mirrors the way in which the user is currently interacting with the app's virtual world. The dimensions of the viewport (i.e. camera), the position of the page's scollbar, the current menu selection, and the like, are all parts of the application's UI state. They do not directly influence things that are happening in the world.
 
 The System state, on the other hand, refers to the current state of the world itself. In our pet simulator, for example, the individual pets' positions and energy/affection levels should all be taken as parts of the application's System state because they all contribute to what is happening inside the world.
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<009>
+@@<h3><b>9. State Hierarchy</b></h3>
+
+A software product, regardless of its kind, possesses its own state. An important concept to keep in mind is that the state itself may be broken down to smaller states, each of which can then be broken down to even smaller states, and so on.
+
+Eventually, this sort of breakdown reveals its own hierarchical structure.
+
+Based on this kind of reasoning, we can easily design the entire tree of states from a top-down perspective. All we need to do is first define a few general state objects, and then describe each of them as a collection of more specific state objects, and so forth.
+
+What is interesting is that there are direct one-to-one mappings between states which are equivalent but designed to serve different purposes.
+
+The state of the UI which displays the current hunger level of a virtual pet, for instance, could be bound to reflect the actual hunger level of the pet to which it corresponds. This is an example of "UI binding" - a recurring concept in the domain of reactive programming.
 
 
 

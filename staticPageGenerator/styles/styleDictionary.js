@@ -17,11 +17,11 @@ const fullscreenLeftBarWidthPercent = 14;
 const fullscreenTopBarHeightPercent = 5;
 
 const gameLinkWidthPercent_landscape = 20;
-const gameLinkWidthPercent_portrait = 40;
+const gameLinkWidthPercent_portrait = 80;
 const featureLinkWidthPercent_landscape = 15;
 const featureLinkWidthPercent_portrait = 40;
-const playButtonWidthPercent_landscape = 30;
-const playButtonWidthPercent_portrait = 60;
+const playButtonWidthPercent_landscape = 20;
+const playButtonWidthPercent_portrait = 40;
 
 //------------------------------------------------------------------------
 // Functions
@@ -182,14 +182,17 @@ iframe {
 	${m_spacing_paddingOnly}
 	box-sizing: border-box;
 }
-.fullscreenBarMenuButton:hover {
-	color: ${lightYellowColor};
-}
 .fullscreenBarMenuButton.idle {
 	${inverted_medium_color_frame}
 }
 .fullscreenBarMenuButton.selected {
 	${medium_color_frame}
+}
+.fullscreenBarMenuButton.idle:hover {
+	color: ${lightYellowColor};
+}
+.fullscreenBarMenuButton.selected:hover {
+	color: ${lightYellowColor};
 }
 .logoImage {
 	${landscape ? half_row_area : near_full_row_area}

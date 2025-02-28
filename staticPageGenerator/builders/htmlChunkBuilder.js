@@ -1,4 +1,5 @@
 const fileUtil = require("../utils/fileUtil.js");
+const envUtil = require("../utils/envUtil.js");
 require("dotenv").config();
 
 function HTMLChunkBuilder()
@@ -7,8 +8,8 @@ function HTMLChunkBuilder()
 
     const addFullscreenBarMenuButton = (currPageName, pageName, pageDisplayName) => {
         const classAttrib = `class="noTextDeco fullscreenBarMenuButton ${currPageName == pageName ? 'selected' : 'idle'}"`;
-        const relativePageURL = (pageName == "") ? "" : `/${pageName}.html`;
-        const clickResponseAttrib = `href="${process.env.ROOT_URL}${relativePageURL}"`;
+        const relativePageURL = (pageName == "index" && !envUtil.isDevMode()) ? "" : `${pageName}.html`;
+        const clickResponseAttrib = `href="${envUtil.getRootURL()}/${relativePageURL}"`;
         lines.push(`<a ${classAttrib} ${clickResponseAttrib}>${pageDisplayName}</a>`);
     }
 
@@ -32,9 +33,9 @@ function HTMLChunkBuilder()
         lines.push(`<meta property="og:title" content="${title}"/>`);
 
         if (relativePageURL != undefined)
-            lines.push(`<meta property="og:url" content="${process.env.ROOT_URL}/${relativePageURL}"/>`);
+            lines.push(`<meta property="og:url" content="${envUtil.getRootURL()}/${relativePageURL}"/>`);
         else
-            lines.push(`<meta property="og:url" content="${process.env.ROOT_URL}"/>`);
+            lines.push(`<meta property="og:url" content="${envUtil.getRootURL()}"/>`);
 
         if (relativePageURL != undefined)
             lines.push(`<meta property="og:type" content="article"/>`);
@@ -51,36 +52,40 @@ function HTMLChunkBuilder()
 
         lines.push(`<meta property="og:image:alt" content="${title}">`);
 
-        lines.push(`<!-- Google tag (gtag.js) -->`);
-        lines.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>`);
-        lines.push(`<script>`);
-        lines.push(`window.dataLayer = window.dataLayer || [];`);
-        lines.push(`function gtag(){dataLayer.push(arguments);}`);
-        lines.push(`gtag('js', new Date());`);
-        lines.push(`gtag('config', 'G-JL7KHR7HK8');`);
-        lines.push(`</script>`);
+        if (!envUtil.isDevMode())
+        {
+            lines.push(`<!-- Google tag (gtag.js) -->`);
+            lines.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>`);
+            lines.push(`<script>`);
+            lines.push(`window.dataLayer = window.dataLayer || [];`);
+            lines.push(`function gtag(){dataLayer.push(arguments);}`);
+            lines.push(`gtag('js', new Date());`);
+            lines.push(`gtag('config', 'G-JL7KHR7HK8');`);
+            lines.push(`</script>`);
+        }
         
         lines.push(`<title>${title}</title>`);
-        lines.push(`<link rel="shortcut icon" href="${process.env.ROOT_URL}/favicon.ico">`);
-        lines.push(`<link rel="stylesheet" href="${process.env.ROOT_URL}/style.css">`);
+        lines.push(`<link rel="shortcut icon" href="${envUtil.getRootURL()}/favicon.ico">`);
+        lines.push(`<link rel="stylesheet" href="${envUtil.getRootURL()}/style.css">`);
         lines.push(`<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">`);
-        lines.push(`<link rel="alternate" type="application/atom+xml" href="${process.env.ROOT_URL}/feed.atom" title="Atom Feed">`);
+        lines.push(`<link rel="alternate" type="application/atom+xml" href="${envUtil.getRootURL()}/feed.atom" title="Atom Feed">`);
 
         if (relativePageURL != undefined)
-            lines.push(`<link rel="canonical" href="${process.env.ROOT_URL}/${relativePageURL}">`);
+            lines.push(`<link rel="canonical" href="${envUtil.getRootURL()}/${relativePageURL}">`);
 
         lines.push(`</head>`);
         lines.push(`<body>`);
 
         lines.push(`<div class="fullscreenBar">`);
-        addFullscreenBarMenuButton(currPageName, "", "Home");
+        addFullscreenBarMenuButton(currPageName, "index", "Home");
         addFullscreenBarMenuButton(currPageName, "about", "About");
-        addFullscreenBarMenuButton(currPageName, "library", "Works");
+        addFullscreenBarMenuButton(currPageName, "arcade", "Arcade");
+        addFullscreenBarMenuButton(currPageName, "library", "Library");
         lines.push(`</div>`);
 
         lines.push(`<div class="fullscreenPanel">`);
 
-        lines.push(`<img class="logoImageSmall" src="${process.env.ROOT_URL}/logo.png" alt="ThingsPool Logo">`);
+        lines.push(`<img class="logoImageSmall" src="${envUtil.getRootURL()}/logo.png" alt="ThingsPool Logo">`);
         lines.push(`<div class="s_spacer"></div>`);
     };
 

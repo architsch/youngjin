@@ -286,9 +286,6 @@ iframe {
 	margin: 0 0;
 	box-sizing: border-box;
 }
-.fullscreenBarMenuButton:hover {
-	color: #e0d0a0;
-}
 .fullscreenBarMenuButton.idle {
 	background-color: #a0a0a0;
 	color: #202020;
@@ -296,6 +293,12 @@ iframe {
 .fullscreenBarMenuButton.selected {
 	background-color: #202020;
 	color: #a0a0a0;
+}
+.fullscreenBarMenuButton.idle:hover {
+	color: #e0d0a0;
+}
+.fullscreenBarMenuButton.selected:hover {
+	color: #e0d0a0;
 }
 .logoImage {
 	position: relative;
@@ -424,7 +427,7 @@ iframe {
 .playButton {
 	position: relative;
 	display: inline-block;
-	width: 30vw;
+	width: 20vw;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -505,9 +508,6 @@ iframe {
 	margin: 0 0;
 	box-sizing: border-box;
 }
-.fullscreenBarMenuButton:hover {
-	color: #e0d0a0;
-}
 .fullscreenBarMenuButton.idle {
 	background-color: #a0a0a0;
 	color: #202020;
@@ -515,6 +515,12 @@ iframe {
 .fullscreenBarMenuButton.selected {
 	background-color: #202020;
 	color: #a0a0a0;
+}
+.fullscreenBarMenuButton.idle:hover {
+	color: #e0d0a0;
+}
+.fullscreenBarMenuButton.selected:hover {
+	color: #e0d0a0;
 }
 .logoImage {
 	position: relative;
@@ -603,8 +609,8 @@ iframe {
 .gameLink {
 	position: relative;
 	display: inline-block;
-	width: 40vw;
-	height: 12.2286vw;
+	width: 80vw;
+	height: 24.4572vw;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -643,7 +649,7 @@ iframe {
 .playButton {
 	position: relative;
 	display: block;
-	width: 60vw;
+	width: 40vw;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
