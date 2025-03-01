@@ -1,12 +1,14 @@
 body {
 	position: fixed;
 	display: block;
-	left: 0vw;
-	right: 0vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: 100vw;
-	height: 100vh;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
 	padding: 0 0;
 	margin: 0 0;
 	font-size: min(1.82vmax, 16.00px);
@@ -149,38 +151,34 @@ footer {
 .s_spacer {
 	position: relative;
 	display: block;
-	max-width: 95%;
+	max-width: 1%;
 	padding: 0.5vmin 0.5vmin;
 	margin: 0.5vmin 0.5vmin;
-	background-color: #202020;
-	color: #a0a0a0;
+	opacity: 0;
 }
 .m_spacer {
 	position: relative;
 	display: block;
-	max-width: 95%;
+	max-width: 1%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
-	background-color: #202020;
-	color: #a0a0a0;
+	opacity: 0;
 }
 .l_spacer {
 	position: relative;
 	display: block;
-	max-width: 95%;
+	max-width: 1%;
 	padding: 1.5vmin 1.5vmin;
 	margin: 1.5vmin 1.5vmin;
-	background-color: #202020;
-	color: #a0a0a0;
+	opacity: 0;
 }
 .xl_spacer {
 	position: relative;
 	display: block;
-	max-width: 95%;
+	max-width: 1%;
 	padding: 2.0vmin 2.0vmin;
 	margin: 2.0vmin 2.0vmin;
-	background-color: #202020;
-	color: #a0a0a0;
+	opacity: 0;
 }
 .listEntry {
 	position: relative;
@@ -236,19 +234,17 @@ iframe {
 	background-color: #202020;
 	color: #a0a0a0;
 }
-.fullscreenBarLogo {
-	background-color: #202020;
-	color: #a0a0a0;
-}
 .fullscreenBar {
 	position: fixed;
 	display: block;
-	left: 0vw;
-	right: 86vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: 14vw;
-	height: 100vh;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 86%;
+	top: 0%;
+	bottom: 0%;
+	width: 14%;
+	height: 100%;
 	padding: 0 0;
 	margin: 0 0;
 	font-size: min(2.18vmax, 19.20px);
@@ -263,13 +259,15 @@ iframe {
 .fullscreenPanel {
 	position: fixed;
 	display: block;
-	left: 14vw;
-	right: 0vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: 86vw;
-	height: 100vh;
-	padding: 2.5vmin 2.5vmin;
+	max-width: 100%;
+	max-height: 100%;
+	left: 14%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 86%;
+	height: 100%;
+	padding: 2.0vmin 2.0vmin;
 	margin: 0 0;
 	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
@@ -279,9 +277,45 @@ iframe {
 	color: #a0a0a0;
 	overflow-y: scroll;
 }
+.fullscreenBarLogo {
+	position: absolute;
+	display: block;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 86%;
+	width: 100%;
+	height: 14%;
+}
+.fullscreenBarLogoImage {
+	position: relative;
+	display: block;
+	max-width: 80%;
+	max-height: 70%;
+	margin: auto;
+  top: 50%;
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+.fullscreenBarMenu {
+	position: absolute;
+	display: block;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 14%;
+	bottom: 0%;
+	width: 100%;
+	height: 80%;
+}
 .fullscreenBarMenuButton {
+	position: relative;
 	display: block;
 	width: 100%;
+	max-height: 100%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 0 0;
 	box-sizing: border-box;
@@ -303,7 +337,7 @@ iframe {
 .logoImage {
 	position: relative;
 	display: block;
-	max-width: 47%;
+	max-width: 50%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -316,7 +350,7 @@ iframe {
 .logoImageSmall {
 	position: relative;
 	display: block;
-	max-width: 32%;
+	max-width: 33.33%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -329,7 +363,7 @@ iframe {
 .profileImage {
 	position: relative;
 	display: block;
-	max-width: 32%;
+	max-width: 33.33%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -343,7 +377,7 @@ iframe {
 .figureImage {
 	position: relative;
 	display: block;
-	max-width: 47%;
+	max-width: 50%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -357,7 +391,7 @@ iframe {
 .gameImage {
 	position: relative;
 	display: block;
-	max-width: 47%;
+	max-width: 50%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -371,7 +405,7 @@ iframe {
 .button {
 	position: relative;
 	display: block;
-	max-width: 47%;
+	max-width: 50%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -458,19 +492,17 @@ iframe {
 	background-color: #202020;
 	color: #a0a0a0;
 }
-.fullscreenBarLogo {
-	background-color: #202020;
-	color: #a0a0a0;
-}
 .fullscreenBar {
 	position: fixed;
 	display: block;
-	left: 0vw;
-	right: 0vw;
-	top: 0vh;
-	bottom: 95vh;
-	width: 100vw;
-	height: 5vh;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 88%;
+	width: 100%;
+	height: 12%;
 	padding: 0 0;
 	margin: 0 0;
 	font-size: min(2.18vmax, 19.20px);
@@ -485,13 +517,15 @@ iframe {
 .fullscreenPanel {
 	position: fixed;
 	display: block;
-	left: 0vw;
-	right: 0vw;
-	top: 5vh;
-	bottom: 0vh;
-	width: 100vw;
-	height: 95vh;
-	padding: 2.5vmin 2.5vmin;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 12%;
+	bottom: 0%;
+	width: 100%;
+	height: 88%;
+	padding: 2.0vmin 2.0vmin;
 	margin: 0 0;
 	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
@@ -501,9 +535,45 @@ iframe {
 	color: #a0a0a0;
 	overflow-y: scroll;
 }
+.fullscreenBarLogo {
+	position: absolute;
+	display: block;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 35%;
+	width: 100%;
+	height: 65%;
+}
+.fullscreenBarLogoImage {
+	position: relative;
+	display: block;
+	max-width: 80%;
+	max-height: 70%;
+	margin: auto;
+  top: 50%;
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+.fullscreenBarMenu {
+	position: absolute;
+	display: block;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 65%;
+	bottom: 0%;
+	width: 100%;
+	height: 35%;
+}
 .fullscreenBarMenuButton {
+	position: relative;
 	display: inline-block;
-	height: 100%;
+	top: 100%; -ms-transform: translateY(-100%); transform: translateY(-100%);
+	max-height: 100%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 0 0;
 	box-sizing: border-box;
@@ -538,7 +608,7 @@ iframe {
 .logoImageSmall {
 	position: relative;
 	display: block;
-	max-width: 65%;
+	max-width: 66.66%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -551,7 +621,7 @@ iframe {
 .profileImage {
 	position: relative;
 	display: block;
-	max-width: 47%;
+	max-width: 50%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);

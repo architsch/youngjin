@@ -77,21 +77,24 @@ function HTMLChunkBuilder()
         lines.push(`<body>`);
 
         lines.push(`<div class="fullscreenBar">`);
+        lines.push(`<div class="fullscreenBarLogo">`);
+        lines.push(`<img class="fullscreenBarLogoImage" src="${envUtil.getRootURL()}/logo_light.png" alt="ThingsPool Logo">`);
+        lines.push(`</div>`);
+        lines.push(`<div class="fullscreenBarMenu">`);
         addFullscreenBarMenuButton(currPageName, "index", "Home");
-        addFullscreenBarMenuButton(currPageName, "about", "About");
         addFullscreenBarMenuButton(currPageName, "arcade", "Arcade");
         addFullscreenBarMenuButton(currPageName, "library", "Library");
+        addFullscreenBarMenuButton(currPageName, "about", "About Me");
+        lines.push(`</div>`);
         lines.push(`</div>`);
 
         lines.push(`<div class="fullscreenPanel">`);
-
-        lines.push(`<img class="logoImageSmall" src="${envUtil.getRootURL()}/logo.png" alt="ThingsPool Logo">`);
-        lines.push(`<div class="s_spacer"></div>`);
     };
 
     this.addFooter = () => {
         lines.push(`<footer>`);
         lines.push(`&copy 2019-2025 ThingsPool. All rights reserved.`);
+        lines.push(`<div class="l_spacer"></div>`);
         lines.push(`</footer>`);
         lines.push(`</div>`);
         lines.push(`</body>`);

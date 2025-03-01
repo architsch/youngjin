@@ -10,6 +10,9 @@ function AboutPageBuilder(sitemapBuilder, atomFeedBuilder)
 
         cb.addHeader("about", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined);
         
+        cb.addLine(`<div class="l_spacer"></div>`);
+        cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}${envUtil.isDevMode() ? "/index.html" : ""}">Back</a>`);
+
         cb.addLine(`<h1>About Myself</h1>`);
         cb.addLine(`<img class="profileImage" src="${envUtil.getRootURL()}/profile.jpg" alt="Youngjin Kang">`);
         cb.addLine(`<div class="m_spacer"></div>`);

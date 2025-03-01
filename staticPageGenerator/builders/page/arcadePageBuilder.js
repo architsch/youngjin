@@ -48,6 +48,9 @@ function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
 
         cb.addHeader("arcade", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined);
         
+        cb.addLine(`<div class="l_spacer"></div>`);
+        cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}${envUtil.isDevMode() ? "/index.html" : ""}">Back</a>`);
+
         cb.addLine(`<h1>Games</h1>`);
         for (const e of gameEntries)
             addGameLink(cb, e.title, `${envUtil.getRootURL()}/${e.dirName}/page.html`, `${envUtil.getRootURL()}/${e.dirName}/entry.jpg`);

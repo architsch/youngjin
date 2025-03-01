@@ -14,7 +14,11 @@ const defaultTextAlign = "left";
 const fullscreenBarTextAlign = "center";
 
 const fullscreenLeftBarWidthPercent = 14;
-const fullscreenTopBarHeightPercent = 5;
+const fullscreenTopBarHeightPercent = 12;
+const fullscreenLeftBarLogoAreaHeightPercent = 14;
+const fullscreenTopBarLogoAreaHeightPercent = 65;
+
+const logoWidthToHeightRatio = 3;
 
 const gameLinkWidthPercent_landscape = 20;
 const gameLinkWidthPercent_portrait = 80;
@@ -29,15 +33,17 @@ const playButtonWidthPercent_portrait = 40;
 
 // Areas
 
-const fixedArea = (leftPercent, rightPercent, topPercent, bottomPercent, widthPercent, heightPercent) =>
-`position: fixed;
+const absoluteArea = (withRespectToWholeScreen, leftPercent, rightPercent, topPercent, bottomPercent, widthPercent, heightPercent) =>
+`position: ${withRespectToWholeScreen ? "fixed" : "absolute"};
 \tdisplay: block;
-\tleft: ${leftPercent}vw;
-\tright: ${rightPercent}vw;
-\ttop: ${topPercent}vh;
-\tbottom: ${bottomPercent}vh;
-\twidth: ${widthPercent}vw;
-\theight: ${heightPercent}vh;`;
+\tmax-width: 100%;
+\tmax-height: 100%;
+\tleft: ${leftPercent}%;
+\tright: ${rightPercent}%;
+\ttop: ${topPercent}%;
+\tbottom: ${bottomPercent}%;
+\twidth: ${(widthPercent == 0) ? "max-content" : `${widthPercent}%`};
+\theight: ${(heightPercent == 0) ? "max-content" : `${heightPercent}%`};`;
 
 const relativeArea = (nextline, maxWidth) =>
 `position: relative;
@@ -84,17 +90,24 @@ roundedFrame(backgroundColor, foregroundColor) + "\n" +
 // Elementary Styles
 //------------------------------------------------------------------------
 
-const fullscreen_whole_area = fixedArea(0, 0, 0, 0, 100, 100);
-const fullscreen_left_bar_area = fixedArea(0, 100 - fullscreenLeftBarWidthPercent, 0, 0, fullscreenLeftBarWidthPercent, 100);
-const fullscreen_top_bar_area = fixedArea(0, 0, 0, 100 - fullscreenTopBarHeightPercent, 100, fullscreenTopBarHeightPercent);
-const fullscreen_right_panel_area = fixedArea(fullscreenLeftBarWidthPercent, 0, 0, 0, 100 - fullscreenLeftBarWidthPercent, 100);
-const fullscreen_bottom_panel_area = fixedArea(0, 0, fullscreenTopBarHeightPercent, 0, 100, 100 - fullscreenTopBarHeightPercent);
+const fullscreen_whole_area = absoluteArea(true, 0, 0, 0, 0, 100, 100);
+const fullscreen_left_bar_area = absoluteArea(true, 0, 100 - fullscreenLeftBarWidthPercent, 0, 0, fullscreenLeftBarWidthPercent, 100);
+const fullscreen_top_bar_area = absoluteArea(true, 0, 0, 0, 100 - fullscreenTopBarHeightPercent, 100, fullscreenTopBarHeightPercent);
+const fullscreen_right_panel_area = absoluteArea(true, fullscreenLeftBarWidthPercent, 0, 0, 0, 100 - fullscreenLeftBarWidthPercent, 100);
+const fullscreen_bottom_panel_area = absoluteArea(true, 0, 0, fullscreenTopBarHeightPercent, 0, 100, 100 - fullscreenTopBarHeightPercent);
+const fullscreen_left_bar_logo_area = absoluteArea(false, 0, 0, 0, 100 - fullscreenLeftBarLogoAreaHeightPercent, 100, fullscreenLeftBarLogoAreaHeightPercent);
+const fullscreen_left_bar_menu_area = absoluteArea(false, 0, 0, fullscreenLeftBarLogoAreaHeightPercent, 0, 100, 80);
+const fullscreen_top_bar_logo_area = absoluteArea(false, 0, 0, 0, 100 - fullscreenTopBarLogoAreaHeightPercent, 100, fullscreenTopBarLogoAreaHeightPercent);
+const fullscreen_top_bar_menu_area = absoluteArea(false, 0, 0, fullscreenTopBarLogoAreaHeightPercent, 0, 100, 100 - fullscreenTopBarLogoAreaHeightPercent);
+
 const full_row_area = relativeArea(true, "95%");
 const near_full_row_area = relativeArea(true, "85%");
-const twoThirds_row_area = relativeArea(true, "65%");
-const half_row_area = relativeArea(true, "47%");
-const third_row_area = relativeArea(true, "32%");
-const quarter_row_area = relativeArea(true, "23%");
+const twoThirds_row_area = relativeArea(true, "66.66%");
+const half_row_area = relativeArea(true, "50%");
+const third_row_area = relativeArea(true, "33.33%");
+const quarter_row_area = relativeArea(true, "25%");
+const fifth_row_area = relativeArea(true, "20%");
+const tiny_row_area = relativeArea(true, "1%");
 const flexible_row_area = relativeAndFlexibleArea(true);
 
 const zero_spacing = spacing("0", "0");
@@ -107,10 +120,6 @@ const m_spacing_paddingOnly = spacing("1.0vmin", "1.0vmin", true, false);
 const l_spacing_paddingOnly = spacing("1.5vmin", "1.5vmin", true, false);
 const xl_spacing_paddingOnly = spacing("2.0vmin", "2.0vmin", true, false);
 const m_spacing_horizontallyWider = spacing("1.0vmin", "3.0vmin");
-const fullscreen_left_bar_spacing = spacing("0", "0", true, false);
-const fullscreen_top_bar_spacing = spacing("0", "0", true, false);
-const fullscreen_right_panel_spacing = spacing("2.5vmin", "2.5vmin", true, false);
-const fullscreen_bottom_panel_spacing = spacing("2.5vmin", "2.5vmin", true, false);
 
 const fontScaleFactor_vmax = 0.7;
 const fontScaleFactor_px = 1.0;
@@ -132,6 +141,7 @@ const m_font = font(size_m_font, true, 700);
 const l_font = font(size_l_font, true, 700);
 const xl_font = font(size_xl_font, true, 700);
 
+const transparent_frame = `opacity: 0;`;
 const light_color_frame = simpleFrame(darkColor, lightColor);
 const medium_color_frame = simpleFrame(darkColor, mediumColor);
 const inverted_medium_color_frame = simpleFrame(mediumColor, darkColor);
@@ -158,12 +168,9 @@ iframe {
 	${l_font}
 	${medium_color_frame}
 }
-.fullscreenBarLogo {
-	${medium_color_frame}
-}
 .fullscreenBar {
 	${landscape ? fullscreen_left_bar_area : fullscreen_top_bar_area}
-	${landscape ? fullscreen_left_bar_spacing : fullscreen_top_bar_spacing}
+	${zero_spacing}
 	${m_font}
 	${inverted_medium_color_frame}
 	text-align: ${fullscreenBarTextAlign};
@@ -171,14 +178,32 @@ iframe {
 }
 .fullscreenPanel {
 	${landscape ? fullscreen_right_panel_area : fullscreen_bottom_panel_area}
-	${landscape ? fullscreen_right_panel_spacing : fullscreen_bottom_panel_spacing}
+	${xl_spacing_paddingOnly}
 	${l_font}
 	${medium_color_frame}
 	overflow-y: scroll;
 }
+.fullscreenBarLogo {
+	${landscape ? fullscreen_left_bar_logo_area : fullscreen_top_bar_logo_area}
+}
+.fullscreenBarLogoImage {
+	position: relative;
+	display: block;
+	max-width: 80%;
+	max-height: 70%;
+	margin: auto;
+  top: 50%;
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+.fullscreenBarMenu {
+	${landscape ? fullscreen_left_bar_menu_area : fullscreen_top_bar_menu_area}
+}
 .fullscreenBarMenuButton {
+	position: relative;
 	display: ${landscape ? "block" : "inline-block"};
-	${landscape ? "width: 100%;" : "height: 100%;"}
+	${landscape ? "width: 100%;" : "top: 100%; -ms-transform: translateY(-100%); transform: translateY(-100%);"}
+	max-height: 100%;
 	${m_spacing_paddingOnly}
 	box-sizing: border-box;
 }
@@ -354,24 +379,24 @@ footer {
 	${banner_frame}
 }
 .s_spacer {
-	${full_row_area}
+	${tiny_row_area}
 	${s_spacing}
-	${medium_color_frame}
+	${transparent_frame}
 }
 .m_spacer {
-	${full_row_area}
+	${tiny_row_area}
 	${m_spacing}
-	${medium_color_frame}
+	${transparent_frame}
 }
 .l_spacer {
-	${full_row_area}
+	${tiny_row_area}
 	${l_spacing}
-	${medium_color_frame}
+	${transparent_frame}
 }
 .xl_spacer {
-	${full_row_area}
+	${tiny_row_area}
 	${xl_spacing}
-	${medium_color_frame}
+	${transparent_frame}
 }
 .listEntry {
 	${flexible_row_area}
