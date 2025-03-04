@@ -20,7 +20,7 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
         let cb = new HTMLChunkBuilder();
 
         let desc = "A writing by ThingsPool.";
-        let keywords = "thingspool, free game, web game, html5 game, browser game, writing, article";
+        let keywords = "thingspool, software, engineering, philosophy";
         let lastmod = process.env.GLOBAL_LAST_MOD;
 
         let prev_title = title;

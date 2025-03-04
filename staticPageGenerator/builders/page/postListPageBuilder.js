@@ -30,7 +30,7 @@ function PostListPageBuilder(sitemapBuilder, atomFeedBuilder)
             cb.addFooter();
             
             await cb.build(listRelativeURL);
-            sitemapBuilder.addEntry(listRelativeURL, postInfoList.sort((info1, info2) => info2.lastmod - info1.lastmod).pop());
+            sitemapBuilder.addEntry(listRelativeURL, postInfoList.sort((info1, info2) => info2.lastmod - info1.lastmod).pop().lastmod);
         }
     };
 }
