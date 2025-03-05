@@ -6,7 +6,7 @@
 		"gendev": "MODE=dev node staticPageGenerator/generator.js",
 		"genprod": "MODE=prod node staticPageGenerator/generator.js",
 		"dev": "pm2-dev app.js",
-		"start": "pm2 start app.js --watch"
+		"start": "pm2 start app.js"
 	},
 	"dependencies": {
 		"body-parser": "^1.20.3",
