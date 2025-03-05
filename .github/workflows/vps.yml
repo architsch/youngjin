@@ -39,4 +39,5 @@ jobs:
         echo "GLOBAL_LAST_MOD=2023-09-10" >> ./.env
     - run: npm run build --if-present
     - run: npm run genprod
-    - run: pm2 reload 0
+    - run: npm run stop
+    - run: npm run start
