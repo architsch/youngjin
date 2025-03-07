@@ -195,9 +195,9 @@ The state of the UI which displays the current hunger level of a virtual pet, fo
 
 :d: A list of archetypes which appear commonely in popular media, including literature, film, games, and other forms of storytelling.
 :k:Archetypes, Jung, Analytical Psychology, Psychoanalysis, Collective Unconscious, Subconscious, Symbolism, Semantics, Game Design, Game Development, Game Narratives, Mandala, Semiotics
-:l:2025-03-04
+:l:2025-03-07
 
-[Archetypes of Play] February 7, 2025 - March 4, 2025
+[Archetypes of Play] February 7, 2025 - March 7, 2025
 
 The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
 
@@ -316,3 +316,18 @@ While the most basic building blocks are purely structural (i.e. They are static
 In a way, therefore, building blocks serve as the core components of the world and its dynamic system. Their particular arrangement may trigger the emergence of a series of particular events, which in turn may modify the original arrangement which triggered those events in the first place. Such a cyclic pattern of interaction signals the birth of an emergent system, which evolves over time by means of a recurring feedback loop and self-adaptation.
 
 (Keywords: #Assembly #Construction #Emergence #Modularity #CreativeFreedom #Reductionism)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<a09>
+@@<h3><b>9. Cabinet of Curiosities</b></h3>
+
+There are multiple universes in our mental landscape. As imaginative beings, we all possess "bubbles" of ideas within the deep waters of our psychic realm. Each of these bubbles is a fictional world, governed by its own laws of nature and populated by its own families of both animate and inanimate entities.
+
+A cabinet of curiosities, which is an assortment of scientific wonders gathered from the nature, is a symbol of such a fictional universe which serves as a fuel for one's creative endeavors. As there are multiple cabinets across different rooms and buildings, a person, too, carries an entire museum of miniature universes in one's mind.
+
+Some of these inner spheres of imagination might be collective in nature, meaning that many of us share significant portions of them as part of our culture. If you and I have read the same fantasy novel, for example, we would be sharing more or less the same world which is being depicted by that novel.
+
+Popular media, as well as their myriad genres of entertainment, comprise a dense network of imaginary spaces, each of which possesses its own share of virtual citizens including fans, critics, and other types of audiences. Depending on how the media's narratives unfold, such spaces may freely merge, split, grow, or shrink as time passes by, as though they are celestial bodies in outerspace.
+
+(Keywords: #CollectiveExperience #SharedUniverse #Library #Museum #ScientificInquiry #Taxonomy #CollectiveUnconscious)

@@ -1,6 +1,8 @@
 const fileUtil = require("../../utils/fileUtil.js");
 const envUtil = require("../../utils/envUtil.js");
-const HTMLChunkBuilder = require("../htmlChunkBuilder.js");
+const TextFileBuilder = require("../textFileBuilder.js");
+const Header = require("../chunk/header.js");
+const Footer = require("../chunk/footer.js");
 require("dotenv").config();
 
 function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -17,7 +19,7 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
 
         const postInfoList = [];
         
-        let cb = new HTMLChunkBuilder();
+        let builder = new TextFileBuilder();
 
         let desc = "A writing by ThingsPool.";
         let keywords = "thingspool, software, engineering, philosophy";
@@ -32,11 +34,11 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
             if (paragraphLinesPending.length > 0)
             {
                 if (snippetOn)
-                    cb.addLine(`<div class="snippet"><pre><code>${paragraphLinesPending.join("\n")}</code></pre></div>`);
+                    builder.addLine(`<div class="snippet"><pre><code>${paragraphLinesPending.join("\n")}</code></pre></div>`);
                 else if (excerptOn)
-                    cb.addLine(`<pre><div class="excerpt">${paragraphLinesPending.join("\n")}</div></pre>`);
+                    builder.addLine(`<pre><div class="excerpt">${paragraphLinesPending.join("\n")}</div></pre>`);
                 else
-                    cb.addLine(`<p>${paragraphLinesPending.join("<br>")}</p>`);
+                    builder.addLine(`<p>${paragraphLinesPending.join("<br>")}</p>`);
                 paragraphLinesPending.length = 0;
             }
         };
@@ -44,12 +46,12 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
         const buildPostPage = async (title, lastmod, desc, keywords) => {
             const postRelativeURL = `${entry.dirName}/page-${pageNumber}.html`;
 
-            const cb_wrapper = new HTMLChunkBuilder();
-            cb_wrapper.addHeader("library", title, desc, keywords, postRelativeURL, customOGImagePath);
-            cb_wrapper.addLine(cb.getText());
-            cb_wrapper.addFooter();
-            await cb_wrapper.build(postRelativeURL);
-            cb = new HTMLChunkBuilder();
+            const builder_wrapper = new TextFileBuilder();
+            builder_wrapper.addLine(Header("library", title, desc, keywords, postRelativeURL, customOGImagePath));
+            builder_wrapper.addLine(builder.getText());
+            builder_wrapper.addLine(Footer());
+            await builder_wrapper.build(postRelativeURL);
+            builder = new TextFileBuilder();
 
             sitemapBuilder.addEntry(postRelativeURL, lastmod);
             atomFeedBuilder.addEntry(`${envUtil.getRootURL()}/${postRelativeURL}`, title, lastmod, desc);
@@ -94,14 +96,14 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                 }
                 isFirstArticle = false;
 
-                cb.addLine(`<div class="l_spacer"></div>`);
-                cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">Back</a>`);
-                cb.addLine(`<h1>${title}</h1>`);
+                builder.addLine(`<div class="l_spacer"></div>`);
+                builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">Back</a>`);
+                builder.addLine(`<h1>${title}</h1>`);
 
-                cb.addLine(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);
-                cb.addLine(`<h3 style="color:#707070">Date: ${date}</h3>`);
+                builder.addLine(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);
+                builder.addLine(`<h3 style="color:#707070">Date: ${date}</h3>`);
 
-                cb.addLine(`<div class="l_spacer"></div>`);
+                builder.addLine(`<div class="l_spacer"></div>`);
             }
             else if (line.startsWith("<") && !snippetOn && !excerptOn) // image reference
             {
@@ -112,12 +114,12 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                     const imgPath = `${envUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
                     if (customOGImagePath == undefined || line.endsWith("*"))
                         customOGImagePath = imgPath;
-                    cb.addLine(`<img class="figureImage" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);
+                    builder.addLine(`<img class="figureImage" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);
                 }
             }
             else if (line.startsWith("@@")) // Custom HTML tag
             {
-                cb.addLine(line.substring(2));
+                builder.addLine(line.substring(2));
             }
             else if (line.startsWith("#$")) // snippet
             {

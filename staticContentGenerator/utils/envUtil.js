@@ -6,7 +6,7 @@ const envUtil =
     {
         switch (process.env.MODE)
         {
-            case "dev": return process.env.PWD + "/" + process.env.STATIC_PAGE_ROOT_DIR;
+            case "dev": return `http://localhost:${process.env.PORT}`;
             case "prod": return process.env.ROOT_URL;
             default: console.error(`Unknown mode :: ${process.env.MODE}`);
         }

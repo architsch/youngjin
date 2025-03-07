@@ -1,11 +1,10 @@
-const fileUtil = require("../../utils/fileUtil.js");
 const envUtil = require("../../utils/envUtil.js");
-const HTMLChunkBuilder = require("../htmlChunkBuilder.js");
-const GamePageBuilder = require("./gamePageBuilder.js");
 require("dotenv").config();
 
-function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
+function GameLinks()
 {
+    const lines = [];
+
     const gameEntries = [
         {
             dirName: "Water-vs-Fire",
@@ -37,34 +36,18 @@ function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
         },
     ];
 
-    const addGameLink = (cb, gameTitle, gameURL, imageURL) => {
-        cb.addLine(`<a class="noTextDeco" href="${gameURL}">`);
-        cb.addLine(`<img class="gameLink" src="${imageURL}" alt="${gameTitle}">`);
-        cb.addLine(`</a>`);
+    const addGameLink = (gameTitle, gameURL, imageURL) => {
+        lines.push(`<a class="noTextDeco" href="${gameURL}">`);
+        lines.push(`<img class="gameLink" src="${imageURL}" alt="${gameTitle}">`);
+        lines.push(`</a>`);
     };
 
-    this.build = async () => {
-        const cb = new HTMLChunkBuilder();
+    lines.push(`<h1>Games</h1>`);
+    for (const e of gameEntries)
+        addGameLink(e.title, `${envUtil.getRootURL()}/${e.dirName}/page.html`, `${envUtil.getRootURL()}/${e.dirName}/entry.jpg`);
+    lines.push(`<div class="s_spacer"></div>`);
 
-        cb.addHeader("arcade", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined);
-        
-        cb.addLine(`<div class="l_spacer"></div>`);
-        cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}${envUtil.isDevMode() ? "/index.html" : ""}">Back</a>`);
-
-        cb.addLine(`<h1>Games</h1>`);
-        for (const e of gameEntries)
-            addGameLink(cb, e.title, `${envUtil.getRootURL()}/${e.dirName}/page.html`, `${envUtil.getRootURL()}/${e.dirName}/entry.jpg`);
-        cb.addLine(`<div class="s_spacer"></div>`);
-
-        cb.addFooter();
-
-        sitemapBuilder.addEntry("arcade.html", "2025-02-28");
-
-        await cb.build("arcade.html");
-
-        for (const entry of gameEntries)
-            await new GamePageBuilder(sitemapBuilder, atomFeedBuilder).build(entry);
-    };
+    return lines.join("\n");
 }
 
-module.exports = ArcadePageBuilder;
+module.exports = GameLinks;

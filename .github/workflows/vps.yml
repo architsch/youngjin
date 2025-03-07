@@ -36,8 +36,10 @@ jobs:
         echo "PORT=${{ secrets.PORT }}" >> ./.env
         echo "ROOT_URL=${{ secrets.ROOT_URL }}" >> ./.env
         echo "STATIC_PAGE_ROOT_DIR=public" >> ./.env
+        echo "VIEWS_ROOT_DIR=views" >> ./.env
         echo "GLOBAL_LAST_MOD=2023-09-10" >> ./.env
+        echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> ./.env
     - run: npm run build --if-present
     - run: npm run genprod
-    - run: npm run stop
-    - run: npm run start
+    - run: cd ~/actions-runner/_work/youngjin/youngjin
+    - run: pm2 restart admin

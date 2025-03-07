@@ -1,7 +1,8 @@
-const fileUtil = require("../../utils/fileUtil.js");
 const envUtil = require("../../utils/envUtil.js");
-const HTMLChunkBuilder = require("../htmlChunkBuilder.js");
+const TextFileBuilder = require("../textFileBuilder.js");
 const PostListPageBuilder = require("./postListPageBuilder.js");
+const Header = require("../chunk/header.js");
+const Footer = require("../chunk/footer.js");
 require("dotenv").config();
 
 function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -32,50 +33,38 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
         { dirName: "cartoons", title: "Cartoons (2011 - 2015)"},
     ];
 
-    const addPostLinks = (cb, title, entries) => {
-        cb.addLine(`<h1>${title}</h1>`);
+    const addPostLinks = (builder, title, entries) => {
+        builder.addLine(`<h1>${title}</h1>`);
 
         for (let i = entries.length - 1; i >= 0; --i)
         {
             const entry = entries[i];
-            cb.addLine(`<a class="listEntry" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">${entry.title}</a>`);
+            builder.addLine(`<a class="listEntry" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">${entry.title}</a>`);
         }
     };
 
-    const addGameLink = (cb, gameTitle, gameURL, imageURL) => {
-        cb.addLine(`<a class="noTextDeco" href="${gameURL}">`);
-        cb.addLine(`<img class="gameLink" src="${imageURL}" alt="${gameTitle}">`);
-        cb.addLine(`</a>`);
-    };
-
-    const addFeatureLink = (cb, featureTitle, featureURL, imageURL) => {
-        cb.addLine(`<a class="noTextDeco" href="${featureURL}">`);
-        cb.addLine(`<img class="featureLink" src="${imageURL}" alt="${featureTitle}">`);
-        cb.addLine(`</a>`);
-    };
-
     this.build = async () => {
-        const cb = new HTMLChunkBuilder();
+        const builder = new TextFileBuilder();
 
-        cb.addHeader("library", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined);
+        builder.addLine(Header("library", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined));
 
-        cb.addLine(`<div class="l_spacer"></div>`);
-        cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}${envUtil.isDevMode() ? "/index.html" : ""}">Back</a>`);
+        builder.addLine(`<div class="l_spacer"></div>`);
+        builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
 
-        addPostLinks(cb, "Nonfiction", nonfictionEntries);
-        cb.addLine(`<div class="l_spacer"></div>`);
+        addPostLinks(builder, "Nonfiction", nonfictionEntries);
+        builder.addLine(`<div class="l_spacer"></div>`);
 
-        addPostLinks(cb, "Fiction", fictionEntries);
-        cb.addLine(`<div class="l_spacer"></div>`);
+        addPostLinks(builder, "Fiction", fictionEntries);
+        builder.addLine(`<div class="l_spacer"></div>`);
 
-        addPostLinks(cb, "Arts", artEntries);
-        cb.addLine(`<div class="l_spacer"></div>`);
+        addPostLinks(builder, "Arts", artEntries);
+        builder.addLine(`<div class="l_spacer"></div>`);
 
-        cb.addFooter();
+        builder.addLine(Footer());
 
         sitemapBuilder.addEntry("library.html", "2025-02-28");
 
-        await cb.build("library.html");
+        await builder.build("library.html");
 
         await new PostListPageBuilder(sitemapBuilder, atomFeedBuilder).build(nonfictionEntries);
         await new PostListPageBuilder(sitemapBuilder, atomFeedBuilder).build(fictionEntries);

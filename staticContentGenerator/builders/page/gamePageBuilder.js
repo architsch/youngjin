@@ -1,12 +1,14 @@
 const fileUtil = require("../../utils/fileUtil.js");
 const envUtil = require("../../utils/envUtil.js");
-const HTMLChunkBuilder = require("../htmlChunkBuilder.js");
+const TextFileBuilder = require("../textFileBuilder.js");
+const Header = require("../chunk/header.js");
+const Footer = require("../chunk/footer.js");
 require("dotenv").config();
 
 function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
 {
     this.build = async (entry) => {
-        let cb = new HTMLChunkBuilder();
+        let builder = new TextFileBuilder();
 
         const relativeURL = `${entry.dirName}/page.html`;
         const rawText = await fileUtil.read(`${entry.dirName}/source.txt`);
@@ -25,15 +27,15 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
         else
             console.error(":k: is missing in -> " + entry.title);
 
-        cb = new HTMLChunkBuilder();
-        cb.addHeader("arcade", "ThingsPool - " + entry.title, description, keywords, relativeURL);
-        cb.addLine(`<div class="l_spacer"></div>`);
-        cb.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/arcade.html">Back</a>`);
-        cb.addLine(`<h1>${entry.title}</h1>`);
+        builder = new TextFileBuilder();
+        builder.addLine(Header("arcade", "ThingsPool - " + entry.title, description, keywords, relativeURL));
+        builder.addLine(`<div class="l_spacer"></div>`);
+        builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/arcade.html">Back</a>`);
+        builder.addLine(`<h1>${entry.title}</h1>`);
 
-        cb.addLine(`<a class="noTextDeco" href="${entry.playLinkURL}">`);
-        cb.addLine(`<img class="playButton" src="${envUtil.getRootURL()}/play.png" alt="Play">`);
-        cb.addLine(`</a>`);
+        builder.addLine(`<a class="noTextDeco" href="${entry.playLinkURL}">`);
+        builder.addLine(`<img class="playButton" src="${envUtil.getRootURL()}/play.png" alt="Play">`);
+        builder.addLine(`</a>`);
 
         let imageIndex = 1;
         const paragraphLinesPending = [];
@@ -41,7 +43,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
         const endParagraph = () => {
             if (paragraphLinesPending.length > 0)
             {
-                cb.addLine(`<p>${paragraphLinesPending.join("<br>")}</p>`);
+                builder.addLine(`<p>${paragraphLinesPending.join("<br>")}</p>`);
                 paragraphLinesPending.length = 0;
             }
         };
@@ -61,7 +63,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
                 const paragraphTitle = line.match(/\[(.*?)\]/)[1].trim();
                 if (paragraphTitle.length > 0)
                 {
-                    cb.addLine(`<h2>${paragraphTitle}</h2>`);
+                    builder.addLine(`<h2>${paragraphTitle}</h2>`);
                 }
             }
             else if (line.startsWith("<")) // image reference
@@ -71,7 +73,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
                 if (imgName.length > 0)
                 {
                     const imgPath = `${envUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
-                    cb.addLine(`<img class="gameImage" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
+                    builder.addLine(`<img class="gameImage" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
                 }
             }
             else // plain text
@@ -83,16 +85,16 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
         endParagraph();
         if (entry.videoTag != null && entry.videoTag != undefined)
         {
-            cb.addLine(`<div class="l_spacer"></div>`);
-            cb.addLine(entry.videoTag);
+            builder.addLine(`<div class="l_spacer"></div>`);
+            builder.addLine(entry.videoTag);
         }
 
-        cb.addFooter();
+        builder.addLine(Footer());
 
         sitemapBuilder.addEntry(relativeURL, entry.lastmod);
         atomFeedBuilder.addEntry(`${envUtil.getRootURL()}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
 
-        await cb.build(relativeURL);
+        await builder.build(relativeURL);
     };
 }
 

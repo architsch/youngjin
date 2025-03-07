@@ -3,16 +3,17 @@
 	"main": "app.js",
 	"type": "commonjs",
 	"scripts": {
-		"gendev": "MODE=dev node staticPageGenerator/generator.js",
-		"genprod": "MODE=prod node staticPageGenerator/generator.js",
+		"gendev": "MODE=dev node staticContentGenerator/generator.js",
+		"genprod": "MODE=prod node staticContentGenerator/generator.js",
 		"dev": "pm2-dev app.js",
-		"stop": "pm2 kill",
-		"start": "pm2 start app.js"
+		"start": "pm2 start app.js --name=admin"
 	},
 	"dependencies": {
+		"bcrypt": "^5.1.1",
 		"body-parser": "^1.20.3",
 		"dotenv": "^16.4.7",
 		"ejs": "^3.1.10",
-		"express": "^4.21.2"
+		"express": "^4.21.2",
+		"jsonwebtoken": "^9.0.2"
 	}
 }
