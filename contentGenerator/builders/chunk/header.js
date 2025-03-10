@@ -49,7 +49,7 @@ function Header(currPageName, title, desc, keywords, relativePageURL,
     if (ogImageURLOverride != undefined)
         lines.push(`<meta property="og:image" content="${ogImageURLOverride}"/>`);
     else
-        lines.push(`<meta property="og:image" content="https://thingspool.net/share.jpg"/>`);
+        lines.push(`<meta property="og:image" content="${envUtil.getRootURL()}/share.jpg"/>`);
 
     lines.push(`<meta property="og:image:alt" content="${title}">`);
 
@@ -90,6 +90,7 @@ function Header(currPageName, title, desc, keywords, relativePageURL,
     lines.push(`</div>`);
 
     lines.push(`<div class="fullscreenPanel">`);
+    lines.push(`<div class="m_spacer"></div>`);
 
     return lines.join("\n");
 }

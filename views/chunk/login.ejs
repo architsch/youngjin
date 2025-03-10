@@ -1,0 +1,56 @@
+<script>
+    let login_pending = false;
+
+    async function login_callback()
+    {
+        if (login_pending)
+            return;
+        login_pending = true;
+
+        const username = document.getElementById("username_input").value;
+        const password = document.getElementById("password_input").value;
+
+        try
+        {
+            const res = await fetch("https://thingspool.net/api/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (res.ok)
+            {
+                fetch("https://thingspool.net");
+            }
+            else
+            {
+                const json = await res.json();
+                throw new Error(json);
+            }
+        }
+        catch (err)
+        {
+            login_pending = false;
+            alert(err);
+        }
+    }
+    function register_callback()
+    {
+        if (login_pending)
+            return;
+        fetch("https://thingspool.net/page/register");
+    }
+</script>
+<h3>Please log in.</h3>
+<div class="s_spacer"></div>
+<div class="textInputLabel">ID</div>
+<input id="username_input" type="text" class="textInput">
+<div class="zero_spacer"></div>
+<div class="textInputLabel">Password</div>
+<input id="password_input" type="text" class="textInput">
+<div class="s_spacer"></div>
+<div class="inlineButton" onclick="login_callback()">Log In</div>
+<div class="inlineButton" onclick="register_callback()">Register</div>
+<div class="m_spacer"></div>

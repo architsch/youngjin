@@ -48,7 +48,6 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
 
         builder.addLine(Header("library", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined));
 
-        builder.addLine(`<div class="l_spacer"></div>`);
         builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
 
         addPostLinks(builder, "Nonfiction", nonfictionEntries);

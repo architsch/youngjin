@@ -195,9 +195,9 @@ The state of the UI which displays the current hunger level of a virtual pet, fo
 
 :d: A list of archetypes which appear commonely in popular media, including literature, film, games, and other forms of storytelling.
 :k:Archetypes, Jung, Analytical Psychology, Psychoanalysis, Collective Unconscious, Subconscious, Symbolism, Semantics, Game Design, Game Development, Game Narratives, Mandala, Semiotics
-:l:2025-03-07
+:l:2025-03-10
 
-[Archetypes of Play] February 7, 2025 - March 7, 2025
+[Archetypes of Play] February 7, 2025 - March 10, 2025
 
 The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
 
@@ -331,3 +331,18 @@ Some of these inner spheres of imagination might be collective in nature, meanin
 Popular media, as well as their myriad genres of entertainment, comprise a dense network of imaginary spaces, each of which possesses its own share of virtual citizens including fans, critics, and other types of audiences. Depending on how the media's narratives unfold, such spaces may freely merge, split, grow, or shrink as time passes by, as though they are celestial bodies in outerspace.
 
 (Keywords: #CollectiveExperience #SharedUniverse #Library #Museum #ScientificInquiry #Taxonomy #CollectiveUnconscious)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<a10>
+@@<h3><b>10. City</b></h3>
+
+From the megalithic city of Babylon to modern day metropolis, cities have been the symbol of spiritual dissonance and inner nihilism. Unlike a small neighborhood in which you are honored as an irreplaceable member of the community, a city is an unfathomably gigantic, cold, inhuman vacuum in which you will hardly find a home.
+
+A busy metropolitan city is a center of prosperity. However, it is also a place in which individuality is utterly crushed under the weight of the populace. The city's densely populated urban areas are full of cheap, dispensable workers, constantly being told that they are nothing more than mere lines on a chart, ready to be erased the moment they are deemed useless.
+
+Therefore, it is not hard to understand why so many forms of contemporary media, including novels, games, and films, often depict the city as the ultimate enemy of mankind in today's world.
+
+A hero in our modern life is no longer a muscular warrior who fights in a battlefield or partakes in a journey to the wilderness. Instead, it is the kind of individual who is meek yet not afraid to build a kingdom of infinite space in the midst of this shallow, crowded world - someone who possesses a courage to stand up against the city's bloodless apathy and its callous breath to wipe everybody's dignity out of existence.
+
+(Keywords: #Metropolis #Babylon #ModernLife #Hitchhiker #Globalism #Internet #Wired #Hyperconnectivity)

@@ -148,6 +148,14 @@ footer {
 	color: #202020;
 	border-radius: 4.5vmin;
 }
+.zero_spacer {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 0 0;
+	margin: 0 0;
+	opacity: 0;
+}
 .s_spacer {
 	position: relative;
 	display: block;
@@ -295,9 +303,9 @@ iframe {
 	max-width: 80%;
 	max-height: 70%;
 	margin: auto;
-  top: 50%;
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
+  	top: 50%;
+  	-ms-transform: translateY(-50%);
+  	transform: translateY(-50%);
 }
 .fullscreenBarMenu {
 	position: absolute;
@@ -337,7 +345,7 @@ iframe {
 .logoImage {
 	position: relative;
 	display: block;
-	max-width: 50%;
+	max-width: 45%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -350,7 +358,7 @@ iframe {
 .logoImageSmall {
 	position: relative;
 	display: block;
-	max-width: 33.33%;
+	max-width: 20%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -363,7 +371,7 @@ iframe {
 .profileImage {
 	position: relative;
 	display: block;
-	max-width: 33.33%;
+	max-width: 29%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -377,7 +385,7 @@ iframe {
 .figureImage {
 	position: relative;
 	display: block;
-	max-width: 50%;
+	max-width: 45%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -391,7 +399,7 @@ iframe {
 .gameImage {
 	position: relative;
 	display: block;
-	max-width: 50%;
+	max-width: 45%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -405,7 +413,7 @@ iframe {
 .button {
 	position: relative;
 	display: block;
-	max-width: 50%;
+	max-width: 45%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -474,7 +482,70 @@ iframe {
 .noTextDeco {
 	text-decoration: none;
 }
+.textInput {
+	position: relative;
+	display: inline-block;
+	max-width: 29%;
+	padding: 0.5vmin 0.5vmin;
+	margin: 0.5vmin 0.5vmin;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #707070;
+	color: #e0e0e0;
+	border-radius: 4.5vmin;
+	border-bottom: 0.25vmin #a0a0a0 solid;
+	border-right: 0.25vmin #a0a0a0 solid;
+}
+.textInputLabel {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 0.5vmin 0.5vmin;
+	margin: 0.5vmin 0.5vmin;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #202020;
+	color: #a0a0a0;
+}
+.inlineButton {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 0.5vmin 1.5vmin;
+	margin: 0.5vmin 1.5vmin;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #000000;
+	color: #a0a0a0;
+	border-radius: 4.5vmin;
+	border-bottom: 0.5vmin #707070 solid;
+	border-right: 0.5vmin #707070 solid;
+	text-decoration: none;
+}
+.inlineButton:hover {
+	color: #e0d0a0;
+}
 
+	
+	::-webkit-scrollbar {
+		-webkit-appearance: none;
+		width: 10px;
+	}
+	::-webkit-scrollbar-thumb {
+		border-radius: 5px;
+		background-color: rgba(0,0,0,.5);
+		-webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
+	}
 }
 
 @media (orientation: portrait) {
@@ -553,9 +624,9 @@ iframe {
 	max-width: 80%;
 	max-height: 70%;
 	margin: auto;
-  top: 50%;
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
+  	top: 50%;
+  	-ms-transform: translateY(-50%);
+  	transform: translateY(-50%);
 }
 .fullscreenBarMenu {
 	position: absolute;
@@ -608,7 +679,7 @@ iframe {
 .logoImageSmall {
 	position: relative;
 	display: block;
-	max-width: 66.66%;
+	max-width: 45%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -621,7 +692,7 @@ iframe {
 .profileImage {
 	position: relative;
 	display: block;
-	max-width: 50%;
+	max-width: 45%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -635,7 +706,7 @@ iframe {
 .figureImage {
 	position: relative;
 	display: block;
-	max-width: 95%;
+	max-width: 85%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -649,7 +720,7 @@ iframe {
 .gameImage {
 	position: relative;
 	display: block;
-	max-width: 95%;
+	max-width: 85%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(3.14vmax, 27.65px);
@@ -731,6 +802,59 @@ iframe {
 }
 .noTextDeco {
 	text-decoration: none;
+}
+.textInput {
+	position: relative;
+	display: inline-block;
+	max-width: 61%;
+	padding: 1.0vmin 1.0vmin;
+	margin: 1.0vmin 1.0vmin;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #707070;
+	color: #e0e0e0;
+	border-radius: 4.5vmin;
+	border-bottom: 0.25vmin #a0a0a0 solid;
+	border-right: 0.25vmin #a0a0a0 solid;
+}
+.textInputLabel {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.0vmin 1.0vmin;
+	margin: 1.0vmin 1.0vmin;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #202020;
+	color: #a0a0a0;
+}
+.inlineButton {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.0vmin 3.0vmin;
+	margin: 1.0vmin 3.0vmin;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #000000;
+	color: #a0a0a0;
+	border-radius: 4.5vmin;
+	border-bottom: 0.5vmin #707070 solid;
+	border-right: 0.5vmin #707070 solid;
+	text-decoration: none;
+}
+.inlineButton:hover {
+	color: #e0d0a0;
 }
 
 }

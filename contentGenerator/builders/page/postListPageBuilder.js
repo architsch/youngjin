@@ -18,7 +18,6 @@ function PostListPageBuilder(sitemapBuilder, atomFeedBuilder)
             const builder = new TextFileBuilder();
 
             builder.addLine(Header("library", "ThingsPool - " + entry.title, entry.title, "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", listRelativeURL));
-            builder.addLine(`<div class="l_spacer"></div>`);
             builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/library.html">Back</a>`);
             builder.addLine(`<h1>${entry.title}</h1>`);
             builder.addLine(`<div class="l_spacer"></div>`);

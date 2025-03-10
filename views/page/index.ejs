@@ -1,0 +1,12 @@
+<%- include("../chunk/header.ejs", { pageName: "index" }) %>
+
+<% if (user) { %>
+    <%- include("../chunk/dashboard.ejs") %>
+<% } else { %>
+    <%- include("../chunk/login.ejs") %>
+<% } %>
+
+<%- include("../chunk/featureLinks.ejs") %>
+<%- include("../chunk/gameLinks.ejs") %>
+
+<%- include("../chunk/footer.ejs") %>

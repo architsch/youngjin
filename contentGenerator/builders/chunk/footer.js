@@ -6,6 +6,7 @@ function Footer()
     const lines = [];
 
     lines.push(`<footer>`);
+    lines.push(`<img class="logoImageSmall" src="${envUtil.getRootURL()}/logo.png" alt="ThingsPool Logo">`);
     lines.push(`&copy 2019-2025 ThingsPool. All rights reserved.`);
     lines.push(`<div class="l_spacer"></div>`);
     lines.push(`</footer>`);

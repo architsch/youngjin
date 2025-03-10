@@ -96,7 +96,6 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                 }
                 isFirstArticle = false;
 
-                builder.addLine(`<div class="l_spacer"></div>`);
                 builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">Back</a>`);
                 builder.addLine(`<h1>${title}</h1>`);
 

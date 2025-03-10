@@ -102,13 +102,23 @@ const fullscreen_top_bar_menu_area = absoluteArea(false, 0, 0, fullscreenTopBarL
 
 const full_row_area = relativeArea(true, "95%");
 const near_full_row_area = relativeArea(true, "85%");
-const twoThirds_row_area = relativeArea(true, "66.66%");
-const half_row_area = relativeArea(true, "50%");
-const third_row_area = relativeArea(true, "33.33%");
-const quarter_row_area = relativeArea(true, "25%");
-const fifth_row_area = relativeArea(true, "20%");
+const twoThirds_row_area = relativeArea(true, "61%");
+const half_row_area = relativeArea(true, "45%");
+const third_row_area = relativeArea(true, "29%");
+const quarter_row_area = relativeArea(true, "20%");
+const fifth_row_area = relativeArea(true, "15%");
 const tiny_row_area = relativeArea(true, "1%");
 const flexible_row_area = relativeAndFlexibleArea(true);
+
+const full_col_area = relativeArea(false, "95%");
+const near_full_col_area = relativeArea(false, "85%");
+const twoThirds_col_area = relativeArea(false, "61%");
+const half_col_area = relativeArea(false, "45%");
+const third_col_area = relativeArea(false, "29%");
+const quarter_col_area = relativeArea(false, "20%");
+const fifth_col_area = relativeArea(false, "15%");
+const tiny_col_area = relativeArea(false, "1%");
+const flexible_col_area = relativeAndFlexibleArea(false);
 
 const zero_spacing = spacing("0", "0");
 const s_spacing = spacing("0.5vmin", "0.5vmin");
@@ -119,6 +129,7 @@ const s_spacing_paddingOnly = spacing("0.5vmin", "0.5vmin", true, false);
 const m_spacing_paddingOnly = spacing("1.0vmin", "1.0vmin", true, false);
 const l_spacing_paddingOnly = spacing("1.5vmin", "1.5vmin", true, false);
 const xl_spacing_paddingOnly = spacing("2.0vmin", "2.0vmin", true, false);
+const s_spacing_horizontallyWider = spacing("0.5vmin", "1.5vmin");
 const m_spacing_horizontallyWider = spacing("1.0vmin", "3.0vmin");
 
 const fontScaleFactor_vmax = 0.7;
@@ -155,6 +166,7 @@ const img_frame = roundedFrame(darkColor, lightColor);
 const snippet_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const excerpt_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const list_entry_frame = borderedFrame(extraDarkColor, mediumColor, dimColor, "0.5");
+const text_input_frame = borderedFrame(dimColor, lightColor, mediumColor, "0.25");
 
 //------------------------------------------------------------------------
 // Orientation-Dependent Styles
@@ -192,9 +204,9 @@ iframe {
 	max-width: 80%;
 	max-height: 70%;
 	margin: auto;
-  top: 50%;
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
+  	top: 50%;
+  	-ms-transform: translateY(-50%);
+  	transform: translateY(-50%);
 }
 .fullscreenBarMenu {
 	${landscape ? fullscreen_left_bar_menu_area : fullscreen_top_bar_menu_area}
@@ -226,7 +238,7 @@ iframe {
 	${medium_color_frame}
 }
 .logoImageSmall {
-	${landscape ? third_row_area : twoThirds_row_area}
+	${landscape ? quarter_row_area : half_row_area}
 	${m_spacing}
 	${xl_font}
 	${medium_color_frame}
@@ -238,13 +250,13 @@ iframe {
 	${img_frame}
 }
 .figureImage {
-	${landscape ? half_row_area : full_row_area}
+	${landscape ? half_row_area : near_full_row_area}
 	${m_spacing}
 	${xl_font}
 	${img_frame}
 }
 .gameImage {
-	${landscape ? half_row_area : full_row_area}
+	${landscape ? half_row_area : near_full_row_area}
 	${m_spacing}
 	${xl_font}
 	${img_frame}
@@ -289,6 +301,28 @@ iframe {
 }
 .noTextDeco {
 	text-decoration: none;
+}
+.textInput {
+	${landscape ? third_col_area : twoThirds_col_area}
+	${landscape ? s_spacing : m_spacing}
+	${landscape ? s_font : m_font}
+	${text_input_frame}
+}
+.textInputLabel {
+	${flexible_col_area}
+	${landscape ? s_spacing : m_spacing}
+	${landscape ? s_font : m_font}
+	${medium_color_frame}
+}
+.inlineButton {
+	${flexible_col_area}
+	${landscape ? s_spacing_horizontallyWider : m_spacing_horizontallyWider}
+	${landscape ? s_font : m_font}
+	${list_entry_frame}
+	text-decoration: none;
+}
+.inlineButton:hover {
+	color: ${lightYellowColor};
 }
 `;
 
@@ -378,6 +412,11 @@ footer {
 	${l_font}
 	${banner_frame}
 }
+.zero_spacer {
+	${tiny_row_area}
+	${zero_spacing}
+	${transparent_frame}
+}
 .s_spacer {
 	${tiny_row_area}
 	${s_spacing}
@@ -415,6 +454,16 @@ footer {
 
 @media (orientation: landscape) {
 	${stylesForOrientation(true)}
+	
+	::-webkit-scrollbar {
+		-webkit-appearance: none;
+		width: 10px;
+	}
+	::-webkit-scrollbar-thumb {
+		border-radius: 5px;
+		background-color: rgba(0,0,0,.5);
+		-webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
+	}
 }
 
 @media (orientation: portrait) {

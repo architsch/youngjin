@@ -29,7 +29,6 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
 
         builder = new TextFileBuilder();
         builder.addLine(Header("arcade", "ThingsPool - " + entry.title, description, keywords, relativeURL));
-        builder.addLine(`<div class="l_spacer"></div>`);
         builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/arcade.html">Back</a>`);
         builder.addLine(`<h1>${entry.title}</h1>`);
 

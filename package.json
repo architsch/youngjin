@@ -1,19 +1,21 @@
 {
 	"name": "youngjin",
-	"main": "app.js",
+	"main": "server/app.js",
 	"type": "commonjs",
 	"scripts": {
-		"gendev": "MODE=dev node staticContentGenerator/generator.js",
-		"genprod": "MODE=prod node staticContentGenerator/generator.js",
-		"dev": "pm2-dev app.js",
-		"start": "pm2 start app.js --name=admin"
+		"gendev": "MODE=dev node contentGenerator/generator.js",
+		"genprod": "MODE=prod node contentGenerator/generator.js",
+		"dev": "MODE=dev pm2-dev server/app.js",
+		"start": "MODE=prod pm2 start server/app.js --name=admin"
 	},
 	"dependencies": {
 		"bcrypt": "^5.1.1",
 		"body-parser": "^1.20.3",
+		"cookie-parser": "^1.4.7",
 		"dotenv": "^16.4.7",
 		"ejs": "^3.1.10",
 		"express": "^4.21.2",
-		"jsonwebtoken": "^9.0.2"
+		"jsonwebtoken": "^9.0.2",
+		"nodemailer": "^6.10.0"
 	}
 }

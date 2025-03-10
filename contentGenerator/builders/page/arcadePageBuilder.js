@@ -44,11 +44,8 @@ function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
 
         builder.addLine(Header("arcade", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined));
         
-        builder.addLine(`<div class="l_spacer"></div>`);
         builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
-
         builder.addLine(GameLinks());
-
         builder.addLine(Footer());
 
         sitemapBuilder.addEntry("arcade.html", "2025-02-28");

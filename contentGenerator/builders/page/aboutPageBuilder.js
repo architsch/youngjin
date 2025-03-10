@@ -11,7 +11,6 @@ function AboutPageBuilder(sitemapBuilder, atomFeedBuilder)
 
         builder.addLine(Header("about", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined));
         
-        builder.addLine(`<div class="l_spacer"></div>`);
         builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
 
         builder.addLine(`<h1>About Myself</h1>`);
