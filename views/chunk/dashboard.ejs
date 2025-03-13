@@ -1,37 +1,29 @@
+<h3>Welcome, <%= user.username %>!</h3>
+<div class="inlineButton" id="logout_button">Log Out</div>
+<div class="s_spacer"></div>
+
+<p>Your Data: <%= JSON.stringify(user, null, 4) %></p>
+<div class="m_spacer"></div>
+
+<script src="https://code.jquery.com/jquery.min.js"></script>
 <script>
     let logout_pending = false;
 
-    async function logout_callback()
-    {
+    $("#logout_button").click(function() {
         if (logout_pending)
             return;
         logout_pending = true;
 
-        try
-        {
-            const res = await fetch("https://thingspool.net/api/logout", {
-                method: "DELETE"
-            });
-
-            if (res.ok)
-            {
-                fetch("https://thingspool.net");
+        $.ajax({
+            url: "<%= envUtil.getRootURL() %>/api/logout",
+            method: "DELETE",
+            success: function(result) {
+                window.location.href = "<%= envUtil.getRootURL() %>";
+            },
+            error: function(xhr) {
+                logout_pending = false;
+                alert(`ERROR :: (status = ${xhr.status}, statusText = ${xhr.statusText})`);
             }
-            else
-            {
-                const json = await res.json();
-                throw new Error(json.message);
-            }
-        }
-        catch (err)
-        {
-            logout_pending = false;
-            alert(err);
-        }
-    }
+        });
+    });
 </script>
-<h3>Welcome, <%= user.username %>!</h3>
-<div class="inlineButton" onclick="logout_callback()">Log Out</div>
-<div class="s_spacer"></div>
-<p>Your Data: <%= JSON.stringify(user, null, 4) %></p>
-<div class="m_spacer"></div>

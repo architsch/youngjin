@@ -1,7 +1,6 @@
-const envUtil = require("../../utils/envUtil.js");
+const envUtil = require("../../../server/util/envUtil.js");
+const ejsUtil = require("../../../server/util/ejsUtil.js");
 const TextFileBuilder = require("../textFileBuilder.js");
-const Header = require("../chunk/header.js");
-const Footer = require("../chunk/footer.js");
 require("dotenv").config();
 
 function AboutPageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -9,8 +8,15 @@ function AboutPageBuilder(sitemapBuilder, atomFeedBuilder)
     this.build = async () => {
         const builder = new TextFileBuilder();
 
-        builder.addLine(Header("about", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined));
-        
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
+            pageName: "about",
+            title: "ThingsPool",
+            desc: "ThingsPool is a developer of experimental software and tools.",
+            keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
+            relativePageURL: undefined,
+            ogImageURLOverride: undefined,
+        }));
+
         builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
 
         builder.addLine(`<h1>About Myself</h1>`);
@@ -25,7 +31,7 @@ function AboutPageBuilder(sitemapBuilder, atomFeedBuilder)
         builder.addLine(`<h3><a href="https://github.com/architsch">GitHub Profile</a></h3>`);
         builder.addLine(`<h3><a href="https://www.pacogames.com/developers/thingspool">PacoGames Profile</a></h3>`);
 
-        builder.addLine(Footer());
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
 
         sitemapBuilder.addEntry("about.html", "2025-02-28");
 

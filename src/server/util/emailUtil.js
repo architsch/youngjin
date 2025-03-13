@@ -40,7 +40,7 @@ const emailUtil =
             transporter.sendMail(mailOptions, function(error, info) {
                 if (error)
                 {
-                    return res.status(500).json({ message: `Error while sending the verification code to "${email}" (Error: ${error}).` });
+                    res.status(500).json({ message: `Error while sending the verification code to "${email}" (Error: ${error}).` });
                 }
                 else
                 {
@@ -70,7 +70,6 @@ const emailUtil =
             return res.status(403).json({ message: `Verification of email "${email}" failed. Please try again.` });
 
         delete pendingEmailVerifications[email];
-        res.sendStatus(201);
     },
 }
 

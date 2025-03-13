@@ -1,8 +1,7 @@
-const envUtil = require("../../utils/envUtil.js");
+const envUtil = require("../../../server/util/envUtil.js");
+const ejsUtil = require("../../../server/util/ejsUtil.js");
 const TextFileBuilder = require("../textFileBuilder.js");
 const PostListPageBuilder = require("./postListPageBuilder.js");
-const Header = require("../chunk/header.js");
-const Footer = require("../chunk/footer.js");
 require("dotenv").config();
 
 function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -46,7 +45,14 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
     this.build = async () => {
         const builder = new TextFileBuilder();
 
-        builder.addLine(Header("library", "ThingsPool", "ThingsPool is a developer of experimental software and tools.", "thingspool, software toys, technical design, computer science, systems engineering, game design, game development", undefined));
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
+            pageName: "library",
+            title: "ThingsPool",
+            desc: "ThingsPool is a developer of experimental software and tools.",
+            keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
+            relativePageURL: undefined,
+            ogImageURLOverride: undefined,
+        }));
 
         builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
 
@@ -59,7 +65,7 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
         addPostLinks(builder, "Arts", artEntries);
         builder.addLine(`<div class="l_spacer"></div>`);
 
-        builder.addLine(Footer());
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
 
         sitemapBuilder.addEntry("library.html", "2025-02-28");
 

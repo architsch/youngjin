@@ -1,5 +1,5 @@
-const fileUtil = require("../utils/fileUtil.js");
-const envUtil = require("../utils/envUtil.js");
+const fileUtil = require("../../server/util/fileUtil.js");
+const envUtil = require("../../server/util/envUtil.js");
 require("dotenv").config();
 
 function AtomFeedBuilder()

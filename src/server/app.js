@@ -2,8 +2,9 @@ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const authUtil = require("./utils/authUtil");
-const emailUtil = require("./utils/emailUtil");
+const authUtil = require("./util/authUtil");
+const emailUtil = require("./util/emailUtil");
+const envUtil = require("./util/envUtil");
 require("dotenv").config();
 
 //if (process.env.MODE == "dev")
@@ -57,10 +58,15 @@ app.get("/api/users", async (req, res) => {
 //-----------------------------------------------------------------
 
 app.get("/", authUtil.authenticateTokenOptional, async (req, res) => {
-    res.render("page/index", { user: req.user }); // login page or dashboard
+    res.render("page/index", {
+        user: req.user,
+        envUtil,
+    }); // login page or dashboard
 });
 app.get("/page/register", (req, res) => {
-    res.render("page/register");
+    res.render("page/register", {
+        envUtil,
+    });
 });
 
 //-----------------------------------------------------------------
@@ -68,6 +74,7 @@ app.get("/page/register", (req, res) => {
 //-----------------------------------------------------------------
 
 app.use(express.static(path.join(process.env.PWD, process.env.STATIC_PAGE_ROOT_DIR)));
+app.use("/src_client", express.static(path.join(process.env.PWD, "src/client")));
 
 //-----------------------------------------------------------------
 // Start

@@ -805,8 +805,8 @@ iframe {
 }
 .textInput {
 	position: relative;
-	display: inline-block;
-	max-width: 61%;
+	display: block;
+	max-width: 85%;
 	padding: 1.0vmin 1.0vmin;
 	margin: 1.0vmin 1.0vmin;
 	font-size: min(2.18vmax, 19.20px);
@@ -821,7 +821,7 @@ iframe {
 }
 .textInputLabel {
 	position: relative;
-	display: inline-block;
+	display: block;
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;

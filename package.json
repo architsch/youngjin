@@ -3,10 +3,10 @@
 	"main": "server/app.js",
 	"type": "commonjs",
 	"scripts": {
-		"gendev": "MODE=dev node contentGenerator/generator.js",
-		"genprod": "MODE=prod node contentGenerator/generator.js",
-		"dev": "MODE=dev pm2-dev server/app.js",
-		"start": "MODE=prod pm2 start server/app.js --name=admin"
+		"gendev": "MODE=dev node src/contentGenerator/generator.js",
+		"genprod": "MODE=prod node src/contentGenerator/generator.js",
+		"dev": "MODE=dev pm2-dev src/server/app.js",
+		"start": "MODE=prod pm2 start src/server/app.js --name=admin"
 	},
 	"dependencies": {
 		"bcrypt": "^5.1.1",

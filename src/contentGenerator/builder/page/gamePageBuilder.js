@@ -1,8 +1,7 @@
-const fileUtil = require("../../utils/fileUtil.js");
-const envUtil = require("../../utils/envUtil.js");
+const fileUtil = require("../../../server/util/fileUtil.js");
+const envUtil = require("../../../server/util/envUtil.js");
+const ejsUtil = require("../../../server/util/ejsUtil.js");
 const TextFileBuilder = require("../textFileBuilder.js");
-const Header = require("../chunk/header.js");
-const Footer = require("../chunk/footer.js");
 require("dotenv").config();
 
 function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -28,7 +27,14 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
             console.error(":k: is missing in -> " + entry.title);
 
         builder = new TextFileBuilder();
-        builder.addLine(Header("arcade", "ThingsPool - " + entry.title, description, keywords, relativeURL));
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
+            pageName: "arcade",
+            title: "ThingsPool - " + entry.title,
+            desc: description,
+            keywords: keywords,
+            relativePageURL: relativeURL,
+            ogImageURLOverride: undefined,
+        }));
         builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/arcade.html">Back</a>`);
         builder.addLine(`<h1>${entry.title}</h1>`);
 
@@ -88,7 +94,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
             builder.addLine(entry.videoTag);
         }
 
-        builder.addLine(Footer());
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
 
         sitemapBuilder.addEntry(relativeURL, entry.lastmod);
         atomFeedBuilder.addEntry(`${envUtil.getRootURL()}/${relativeURL}`, entry.title, entry.lastmod, entry.title);

@@ -1,4 +1,4 @@
-:d: A collection of thoughts on the topic of software product design, as well as its potential methodologies.
+:d:A collection of thoughts on the topic of software product design, as well as its potential methodologies.
 :k:Software Product, Product Design, Software Design, Life Simulator, Tamagotchi, Electronic Gadget, Software Toy, Automata, User Experience, UI, UX, EduTech, Entertainment, Indie Development
 :l:2025-02-28
 
@@ -155,7 +155,7 @@ The state of the UI which displays the current hunger level of a virtual pet, fo
 
 
 
-:d: A collection of memes that are formatted in a rather technical manner.
+:d:A collection of memes that are formatted in a rather technical manner.
 :k:Memes, Visual Language, Diagram, Schematic, Math, Graph, Visualization, Graphical Language, Systems Engineering, Industrial Engineering, Engineering Math
 :l:2025-02-14
 
@@ -193,11 +193,11 @@ The state of the UI which displays the current hunger level of a virtual pet, fo
 
 
 
-:d: A list of archetypes which appear commonely in popular media, including literature, film, games, and other forms of storytelling.
+:d:A list of archetypes which appear commonely in popular media, including literature, film, games, and other forms of storytelling.
 :k:Archetypes, Jung, Analytical Psychology, Psychoanalysis, Collective Unconscious, Subconscious, Symbolism, Semantics, Game Design, Game Development, Game Narratives, Mandala, Semiotics
-:l:2025-03-10
+:l:2025-03-13
 
-[Archetypes of Play] February 7, 2025 - March 10, 2025
+[Archetypes of Play] February 7, 2025 - March 13, 2025
 
 The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
 
@@ -346,3 +346,20 @@ Therefore, it is not hard to understand why so many forms of contemporary media,
 A hero in our modern life is no longer a muscular warrior who fights in a battlefield or partakes in a journey to the wilderness. Instead, it is the kind of individual who is meek yet not afraid to build a kingdom of infinite space in the midst of this shallow, crowded world - someone who possesses a courage to stand up against the city's bloodless apathy and its callous breath to wipe everybody's dignity out of existence.
 
 (Keywords: #Metropolis #Babylon #ModernLife #Hitchhiker #Globalism #Internet #Wired #Hyperconnectivity)
+
+@@<hr>
+@@<div class="l_spacer"></div>
+<a11>
+@@<h3><b>11. Word</b></h3>
+
+The power of a word is immesurable. A word is a point of intersection between the material and psychic realms, serving as an interface via which feelings can be transmitted. Whenever you say a word, you are breathing a portion of your soul into that word, turning it into a carrier of a spirit.
+
+A spirit might be thought of as a "piece of information" from a scientific standpoint. It means that we should consider a word as a volume in space which is able to be possessed by a spirit, and remain so as long as it stays legible.
+
+By means of words, we share our spirits with those who decide to read them. And the swiftness of such a process is determined by how vividly each word depicts its corresponding spirit, as well as how compatible it is with the reader's system of thoughts.
+
+In this sense, a computer may be imagined as a "spirit-processing machine" which inhales a stream of words (i.e. commands), rearranges their spirits according to rules established by their friends living in the motherboard's psychic ecosystem, and exhales a modified stream of words.
+
+In popular forms of media such as video games, therefore, words are being used as basic building blocks out of which ghosts of meaning come out, reveal themselves through the silhouette of the stage's veiling curtain, and greet their audiences.
+
+(Keywords: #Word #Language #Linguistics #Communication #Informatics #Spirit #Ghost #Interface #Medium)

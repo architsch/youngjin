@@ -2,42 +2,44 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="description" content="ThingsPool is a developer of experimental software and tools.">
-<meta name="keywords" content="thingspool, software toys, technical design, computer science, systems engineering, game design, game development">
+<meta name="description" content="<%= desc.replaceAll("\"", "&quot;") %>">
+<meta name="keywords" content="<%= keywords.replaceAll("\"", "&quot;") %>">
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta property="og:title" content="ThingsPool"/>
-<meta property="og:url" content="https://thingspool.net/"/>
-<meta property="og:type" content="article"/>
+<meta property="og:title" content="<%= title.replaceAll("\"", "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;") %>"/>
+<meta property="og:url" content="<%= envUtil.getRootURL() %>/<%= (relativePageURL != undefined) ? relativePageURL : '' %>"/>
+<meta property="og:type" content="<%= (relativePageURL != undefined) ? 'article' : 'website' %>"/>
 <meta property="og:site_name" content="ThingsPool"/>
-<meta property="og:description" content="ThingsPool is a developer of experimental software and tools."/>
-<meta property="og:image" content="https://thingspool.net/share.jpg"/>
-<meta property="og:image:alt" content="ThingsPool">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-JL7KHR7HK8');
-</script>
-<title>ThingsPool</title>
-<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
-<link rel="stylesheet" href="https://thingspool.net/style.css">
+<meta property="og:description" content="<%= desc.replaceAll("\"", "&quot;") %>"/>
+<meta property="og:image" content="<%= (ogImageURLOverride != undefined) ? ogImageURLOverride : `${envUtil.getRootURL()}/share.jpg` %>"/>
+<meta property="og:image:alt" content="<%= title.replaceAll("\"", "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;") %>">
+<% if (!envUtil.isDevMode()) { %>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-JL7KHR7HK8');
+    </script>
+<% } %>
+<title><%= title.replaceAll("\"", "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;") %></title>
+<link rel="shortcut icon" href="<%= envUtil.getRootURL() %>/favicon.ico">
+<link rel="stylesheet" href="<%= envUtil.getRootURL() %>/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
-<link rel="canonical" href="https://thingspool.net/">
+<link rel="alternate" type="application/atom+xml" href="<%= envUtil.getRootURL() %>/feed.atom" title="Atom Feed">
+<link rel="canonical" href="<%= (relativePageURL != undefined) ? `${envUtil.getRootURL()}/${relativePageURL}` : envUtil.getRootURL() %>">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="<%= envUtil.getRootURL() %>/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "index") ? "selected" : "idle" %>" href="https://thingspool.net/">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "about") ? "selected" : "idle" %>" href="https://thingspool.net/about.html">About</a>
-<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "arcade") ? "selected" : "idle" %>" href="https://thingspool.net/arcade.html">Games</a>
-<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "library") ? "selected" : "idle" %>" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "index") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "about") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/about.html">About</a>
+<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "arcade") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/arcade.html">Games</a>
+<a class="noTextDeco fullscreenBarMenuButton <%= (pageName == "library") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/library.html">Library</a>
 </div>
 </div>
 <div class="fullscreenPanel">

@@ -303,13 +303,13 @@ iframe {
 	text-decoration: none;
 }
 .textInput {
-	${landscape ? third_col_area : twoThirds_col_area}
+	${landscape ? third_col_area : near_full_row_area}
 	${landscape ? s_spacing : m_spacing}
 	${landscape ? s_font : m_font}
 	${text_input_frame}
 }
 .textInputLabel {
-	${flexible_col_area}
+	${landscape ? flexible_col_area : flexible_row_area}
 	${landscape ? s_spacing : m_spacing}
 	${landscape ? s_font : m_font}
 	${medium_color_frame}

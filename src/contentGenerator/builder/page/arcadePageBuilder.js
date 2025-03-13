@@ -1,10 +1,11 @@
-const envUtil = require("../../utils/envUtil.js");
+const envUtil = require("../../../server/util/envUtil.js");
+const ejsUtil = require("../../../server/util/ejsUtil.js");
+const TextFileBuilder = require("../textFileBuilder.js");
+const GamePageBuilder = require("./gamePageBuilder.js");
 require("dotenv").config();
 
-function GameLinks()
+function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
 {
-    const lines = [];
-
     const gameEntries = [
         {
             dirName: "Water-vs-Fire",
@@ -35,19 +36,29 @@ function GameLinks()
             lastmod: "2023-09-20",
         },
     ];
+    
+    this.build = async () => {
+        const builder = new TextFileBuilder();
 
-    const addGameLink = (gameTitle, gameURL, imageURL) => {
-        lines.push(`<a class="noTextDeco" href="${gameURL}">`);
-        lines.push(`<img class="gameLink" src="${imageURL}" alt="${gameTitle}">`);
-        lines.push(`</a>`);
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
+            pageName: "arcade",
+            title: "ThingsPool",
+            desc: "ThingsPool is a developer of experimental software and tools.",
+            keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
+            relativePageURL: undefined,
+            ogImageURLOverride: undefined,
+        }));
+        builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/gameLinks.ejs"));
+        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
+
+        sitemapBuilder.addEntry("arcade.html", "2025-02-28");
+
+        await builder.build("arcade.html");
+
+        for (const entry of gameEntries)
+            await new GamePageBuilder(sitemapBuilder, atomFeedBuilder).build(entry);
     };
-
-    lines.push(`<h1>Games</h1>`);
-    for (const e of gameEntries)
-        addGameLink(e.title, `${envUtil.getRootURL()}/${e.dirName}/page.html`, `${envUtil.getRootURL()}/${e.dirName}/entry.jpg`);
-    lines.push(`<div class="s_spacer"></div>`);
-
-    return lines.join("\n");
 }
 
-module.exports = GameLinks;
+module.exports = ArcadePageBuilder;

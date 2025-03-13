@@ -93,30 +93,32 @@ const authUtil =
             }
             else
             {
-                return res.status(401).json({ message: "Token not provided." });
+                res.status(401).json({ message: "Token not provided." });
             }
         }
-
-        jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
-            if (err)
-            {
-                if (optional)
+        else
+        {
+            jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
+                if (err)
                 {
-                    req.user = undefined;
-                    next();
+                    if (optional)
+                    {
+                        req.user = undefined;
+                        next();
+                    }
+                    else
+                    {
+                        res.status(403).json({ message: "Invalid token." });
+                    }
                 }
                 else
                 {
-                    return res.status(403).json({ message: "Invalid token." });
+                    req.user = user;
+                    authUtil.addToken(user, res); // refresh the token
+                    next();
                 }
-            }
-            else
-            {
-                req.user = user;
-                authUtil.addToken(user, res); // refresh the token
-                next();
-            }
-        });
+            });
+        }
     }
 }
 

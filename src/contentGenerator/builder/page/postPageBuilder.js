@@ -1,8 +1,7 @@
-const fileUtil = require("../../utils/fileUtil.js");
-const envUtil = require("../../utils/envUtil.js");
+const fileUtil = require("../../../server/util/fileUtil.js");
+const envUtil = require("../../../server/util/envUtil.js");
+const ejsUtil = require("../../../server/util/ejsUtil.js");
 const TextFileBuilder = require("../textFileBuilder.js");
-const Header = require("../chunk/header.js");
-const Footer = require("../chunk/footer.js");
 require("dotenv").config();
 
 function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -47,9 +46,16 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
             const postRelativeURL = `${entry.dirName}/page-${pageNumber}.html`;
 
             const builder_wrapper = new TextFileBuilder();
-            builder_wrapper.addLine(Header("library", title, desc, keywords, postRelativeURL, customOGImagePath));
+            builder_wrapper.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
+                pageName: "library",
+                title: title,
+                desc: desc,
+                keywords: keywords,
+                relativePageURL: postRelativeURL,
+                ogImageURLOverride: customOGImagePath,
+            }));
             builder_wrapper.addLine(builder.getText());
-            builder_wrapper.addLine(Footer());
+            builder_wrapper.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
             await builder_wrapper.build(postRelativeURL);
             builder = new TextFileBuilder();
 
