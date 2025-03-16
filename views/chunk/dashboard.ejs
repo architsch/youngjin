@@ -7,12 +7,12 @@
 
 <script src="https://code.jquery.com/jquery.min.js"></script>
 <script>
-    let logout_pending = false;
+    let process_pending = false;
 
     $("#logout_button").click(function() {
-        if (logout_pending)
+        if (process_pending)
             return;
-        logout_pending = true;
+        process_pending = true;
 
         $.ajax({
             url: "<%= envUtil.getRootURL() %>/api/logout",
@@ -21,8 +21,8 @@
                 window.location.href = "<%= envUtil.getRootURL() %>";
             },
             error: function(xhr) {
-                logout_pending = false;
-                alert(`ERROR :: (status = ${xhr.status}, statusText = ${xhr.statusText})`);
+                alert(xhr.responseText);
+                process_pending = false;
             }
         });
     });

@@ -1,5 +1,9 @@
 const jwt = require("jsonwebtoken");
+const envUtil = require("./envUtil.js");
+const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
 require("dotenv").config();
+
+const users = {}; // dummy database
 
 const authUtil =
 {
@@ -7,13 +11,25 @@ const authUtil =
     {
         try
         {
+            const usernameError = textUtil.findErrorInUsername(req.body.username);
+            if (usernameError != null)
+                return res.status(400).send(usernameError);
+
+            const passwordError = textUtil.findErrorInPassword(req.body.password);
+            if (passwordError != null)
+                return res.status(400).send(passwordError);
+
+            const emailError = textUtil.findErrorInEmailAddress(req.body.email);
+            if (emailError != null)
+                return res.status(400).send(emailError);
+
             if (users[req.body.username] != undefined)
-                return res.status(403).json({ message: `User "${req.body.username}" already exists.` });
+                return res.status(403).send(`User "${req.body.username}" already exists.`);
     
             for (const userInfo of Object.values(users))
             {
                 if (userInfo.email == req.body.email)
-                    return res.status(403).json({ message: `There is already an account with the email "${req.body.username}".` });
+                    return res.status(403).send(`There is already an account with the email "${req.body.username}".`);
             }
     
             emailUtil.endEmailVerification(req, res);
@@ -24,7 +40,7 @@ const authUtil =
     
             const newUser = {
                 username: req.body.username,
-                password: passwordHash,
+                passwordHash: passwordHash,
                 email: req.body.email,
             };
             users[newUser.username] = newUser;
@@ -33,28 +49,36 @@ const authUtil =
         }
         catch (err)
         {
-            res.status(500).json({ message: `ERROR: Failed to register the user (${err}).` });
+            res.status(500).send(`ERROR: Failed to register the user (${err}).`);
         }
     },
     login: async (req, res) =>
     {
         try
         {
+            const usernameError = textUtil.findErrorInUsername(req.body.username);
+            if (usernameError != null)
+                return res.status(400).send(usernameError);
+
+            const passwordError = textUtil.findErrorInPassword(req.body.password);
+            if (passwordError != null)
+                return res.status(400).send(passwordError);
+
             const user = users[req.body.username];
 
             if (user == undefined)
-                return res.status(404).json({ message: `Username "${req.body.username}" does not exist.` });
+                return res.status(404).send(`Username "${req.body.username}" does not exist in the database.`);
 
-            const validPassword = await bcrypt.compare(req.body.password, user.password);
+            const validPassword = await bcrypt.compare(req.body.password, user.passwordHash);
 
             if (!validPassword)
-                return res.status(401).json({ message: "Wrong password." });
+                return res.status(401).send("Wrong password.");
 
             authUtil.addToken(user, res);
         }
         catch (err)
         {
-            res.status(500).json({ message: "ERROR: Failed to login." });
+            res.status(500).send(`ERROR: Failed to login (${err}).`);
         }
     },
     addToken: (user, res) => {
@@ -64,7 +88,7 @@ const authUtil =
             { expiresIn: "30m" }
         );
         res.cookie("thingspool_token", token, {
-            //secure: true,
+            secure: envUtil.isDevMode() ? false : true,
             httpOnly: true,
             sameSite: "strict",
         });
@@ -93,7 +117,7 @@ const authUtil =
             }
             else
             {
-                res.status(401).json({ message: "Token not provided." });
+                res.status(401).send("Token not provided.");
             }
         }
         else
@@ -108,7 +132,7 @@ const authUtil =
                     }
                     else
                     {
-                        res.status(403).json({ message: "Invalid token." });
+                        res.status(403).send("Invalid token.");
                     }
                 }
                 else

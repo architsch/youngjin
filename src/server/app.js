@@ -7,8 +7,8 @@ const emailUtil = require("./util/emailUtil");
 const envUtil = require("./util/envUtil");
 require("dotenv").config();
 
-//if (process.env.MODE == "dev")
-//    require("../contentGenerator/generator.js");
+if (envUtil.isDevMode())
+    require("../contentGenerator/generator.js");
 
 const app = express();
 
@@ -24,7 +24,7 @@ app.use(cookieParser());
 
 // database
 
-const users = {}; // dummy database
+//...
 
 //-----------------------------------------------------------------
 // API Routes
@@ -42,13 +42,6 @@ app.post("/api/login", async (req, res) => {
 app.delete("/api/logout", (req, res) => {
     authUtil.clearToken(res);
 })
-app.get("/api/user/:username", authUtil.authenticateToken, async (req, res) => {
-    if (!req.params.username)
-        return res.status(401).json({ message: "Username not specified." });
-    if (users[req.params.username] == undefined)
-        return res.status(404).json({ message: "Username not found." });
-    res.send(JSON.stringify(users[req.params.username]));
-});
 app.get("/api/users", async (req, res) => {
     res.send(JSON.stringify(users));
 });
@@ -59,13 +52,30 @@ app.get("/api/users", async (req, res) => {
 
 app.get("/", authUtil.authenticateTokenOptional, async (req, res) => {
     res.render("page/index", {
-        user: req.user,
         envUtil,
-    }); // login page or dashboard
+        ejsChunkRootPath: "../chunk",
+        isStaticPage: false,
+        user: req.user,
+        loginDestination: "",
+    });
 });
-app.get("/page/register", (req, res) => {
+app.get("/page/register.html", (req, res) => {
     res.render("page/register", {
         envUtil,
+        ejsChunkRootPath: "../chunk",
+        isStaticPage: false,
+        user: req.user,
+        registerDestination: ""
+    });
+});
+
+app.get("/page/social.html", authUtil.authenticateTokenOptional, async (req, res) => {
+    res.render("page/social", {
+        envUtil,
+        ejsChunkRootPath: "../chunk",
+        isStaticPage: false,
+        user: req.user,
+        loginDestination: "page/social.html",
     });
 });
 
@@ -75,6 +85,7 @@ app.get("/page/register", (req, res) => {
 
 app.use(express.static(path.join(process.env.PWD, process.env.STATIC_PAGE_ROOT_DIR)));
 app.use("/src_client", express.static(path.join(process.env.PWD, "src/client")));
+app.use("/src_shared", express.static(path.join(process.env.PWD, "src/shared")));
 
 //-----------------------------------------------------------------
 // Start

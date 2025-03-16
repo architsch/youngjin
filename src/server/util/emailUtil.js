@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
 require("dotenv").config();
 
 const pendingEmailVerifications = {};
@@ -12,10 +13,14 @@ const emailUtil =
     {
         try
         {
+            const emailError = textUtil.findErrorInEmailAddress(req.body.email);
+            if (emailError != null)
+                return res.status(400).send(emailError);
+
             const email = req.body.email;
 
             if (pendingEmailVerifications[email] != undefined)
-                return res.status(403).json({ message: `Email "${email}" is already undergoing verification.` });
+                return res.status(403).send(`Email "${email}" is already undergoing verification.`);
 
             const verificationCode = new Array(8)
                 .fill(null)
@@ -34,13 +39,13 @@ const emailUtil =
                 from: "thingspool@gmail.com",
                 to: email,
                 subject: "Here is your email verification code.",
-                text: `Your verification code is ${verificationCode}. Please enter this number in your registration form to verify that this email address is yours.`,
+                text: `Your verification code is ${verificationCode}`,
             };
 
             transporter.sendMail(mailOptions, function(error, info) {
                 if (error)
                 {
-                    res.status(500).json({ message: `Error while sending the verification code to "${email}" (Error: ${error}).` });
+                    res.status(500).send(`Error while sending the verification code to "${email}" (Error: ${error}).`);
                 }
                 else
                 {
@@ -57,17 +62,21 @@ const emailUtil =
         }
         catch (err)
         {
-            res.status(500).json({ message: `ERROR: Failed to start email verification (${err}).` });
+            res.status(500).send(`ERROR: Failed to start email verification (${err}).`);
         }
     },
     endEmailVerification: (req, res) =>
     {
+        const emailError = textUtil.findErrorInEmailAddress(req.body.email);
+        if (emailError != null)
+            return res.status(400).send(emailError);
+        
         const email = req.body.email;
         const verificationCode = req.body.verificationCode;
 
         const pendingVerification = pendingEmailVerifications[email];
         if (pendingVerification == undefined || pendingVerification.code != verificationCode)
-            return res.status(403).json({ message: `Verification of email "${email}" failed. Please try again.` });
+            return res.status(403).send(`Verification of email "${email}" failed. Please try again.`);
 
         delete pendingEmailVerifications[email];
     },

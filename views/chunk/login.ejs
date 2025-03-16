@@ -1,7 +1,7 @@
-<h3>Please log in.</h3>
+<h1>Please Log In:</h1>
 <div class="s_spacer"></div>
 
-<div class="textInputLabel">ID</div>
+<div class="textInputLabel">Username</div>
 <input type="text" class="textInput" id="username_input">
 <div class="zero_spacer"></div>
 
@@ -14,39 +14,58 @@
 <div class="m_spacer"></div>
 
 <script src="https://code.jquery.com/jquery.min.js"></script>
-<script src="<%= envUtil.getRootURL() %>/src_client/util/textUtil.js"></script>
-<script>
-    let login_pending = false;
+<script type="module">
+    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
+    let process_pending = false;
+
+    $("#username_input").on("input", function() {
+        this.value = textUtil.sanitizeUsername(this.value);
+    });
+    $("#password_input").on("input", function() {
+        this.value = textUtil.sanitizePassword(this.value);
+    });
 
     $("#login_button").click(function() {
-        if (login_pending)
+        if (process_pending)
             return;
-        login_pending = true;
+        process_pending = true;
+
+        const username = $("#username_input").val();
+        const usernameError = textUtil.findErrorInUsername(username);
+        if (usernameError != null)
+        {
+            alert(usernameError);
+            process_pending = false;
+            return;
+        }
+
+        const password = $("#password_input").val();
+        const passwordError = textUtil.findErrorInPassword(password);
+        if (passwordError != null)
+        {
+            alert(passwordError);
+            process_pending = false;
+            return;
+        }
 
         $.ajax({
             url: "<%= envUtil.getRootURL() %>/api/login",
             method: "POST",
-            data: {
-                username: $("username_input").value,
-                password: $("password_input").value,
-            },
+            data: { username, password },
             success: function(result) {
                 window.location.href = "<%= envUtil.getRootURL() %>/<%= loginDestination %>";
             },
             error: function(xhr) {
-                login_pending = false;
-                alert(`ERROR :: (status = ${xhr.status}, statusText = ${xhr.statusText})`);
+                alert(xhr.responseText);
+                process_pending = false;
             }
         });
     });
 
     $("#register_button").click(function() {
-        if (login_pending)
+        if (process_pending)
             return;
 
-        console.log("register button clicked");
-        textUtil.test();
-
-        window.location.href = "<%= envUtil.getRootURL() %>/page/register";
+        window.location.href = "<%= envUtil.getRootURL() %>/page/register.html";
     });
 </script>

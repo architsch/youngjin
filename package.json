@@ -1,12 +1,13 @@
 {
 	"name": "youngjin",
-	"main": "server/app.js",
+	"main": "src/server/app.js",
 	"type": "commonjs",
 	"scripts": {
 		"gendev": "MODE=dev node src/contentGenerator/generator.js",
 		"genprod": "MODE=prod node src/contentGenerator/generator.js",
-		"dev": "MODE=dev pm2-dev src/server/app.js",
-		"start": "MODE=prod pm2 start src/server/app.js --name=admin"
+		"dev": "MODE=dev pm2 start src/server/app.js --no-daemon --watch --ignore-watch=\"public .git\"",
+		"start": "MODE=prod pm2 start src/server/app.js --name=admin",
+		"stop": "pm2 stop all && pm2 delete all"
 	},
 	"dependencies": {
 		"bcrypt": "^5.1.1",
