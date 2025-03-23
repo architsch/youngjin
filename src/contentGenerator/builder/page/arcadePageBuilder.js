@@ -35,13 +35,6 @@ function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
             videoTag: `<iframe width="560" height="315" src="https://www.youtube.com/embed/NoiQzEKJM-A?si=o8vTNqW1kxCJ4MnW" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`,
             lastmod: "2023-09-20",
         },
-        /*{
-            dirName: "ArtRoom",
-            title: "ArtRoom",
-            playLinkURL: `${envUtil.getRootURL()}/ArtRoom/build.html`,
-            videoTag: `<iframe width="560" height="315" src="https://www.youtube.com/embed/NoiQzEKJM-A?si=o8vTNqW1kxCJ4MnW" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`,
-            lastmod: "2025-03-16",
-        },*/
     ];
     
     this.build = async () => {

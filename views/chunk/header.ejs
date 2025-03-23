@@ -31,6 +31,26 @@
 <link rel="canonical" href="<%= (relativePageURL != undefined) ? `${envUtil.getRootURL()}/${relativePageURL}` : envUtil.getRootURL() %>">
 </head>
 <body>
+<script src="https://code.jquery.com/jquery.min.js"></script>
+<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
+<script>
+    let process_pending = false;
+
+    function process_pending_on()
+    {
+        if (process_pending)
+            alert("Error: Process is already pending.");
+        process_pending = true;
+        $("#loadingScreen").css("display", "block");
+    }
+    function process_pending_off()
+    {
+        if (!process_pending)
+            alert("Error: Process is inactive.");
+        process_pending = false;
+        $("#loadingScreen").css("display", "none");
+    }
+</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="<%= envUtil.getRootURL() %>/logo_light.png" alt="ThingsPool Logo">

@@ -31,6 +31,26 @@
 <link rel="canonical" href="https://thingspool.net">
 </head>
 <body>
+<script src="https://code.jquery.com/jquery.min.js"></script>
+<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
+<script>
+    let process_pending = false;
+
+    function process_pending_on()
+    {
+        if (process_pending)
+            alert("Error: Process is already pending.");
+        process_pending = true;
+        $("#loadingScreen").css("display", "block");
+    }
+    function process_pending_off()
+    {
+        if (!process_pending)
+            alert("Error: Process is inactive.");
+        process_pending = false;
+        $("#loadingScreen").css("display", "none");
+    }
+</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
@@ -58,9 +78,6 @@
 <a class="noTextDeco" href="https://thingspool.net/SpaceTown/page.html">
 <img class="gameLink" src="https://thingspool.net/SpaceTown/entry.jpg" alt="SpaceTown">
 </a>
-<!--<a class="noTextDeco" href="https://thingspool.net/ArtRoom/page.html">
-<img class="gameLink" src="https://thingspool.net/ArtRoom/entry.jpg" alt="ArtRoom">
-</a>-->
 <div class="s_spacer"></div>
 <footer>
 <img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">

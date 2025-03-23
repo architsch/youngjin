@@ -31,6 +31,26 @@
 <link rel="canonical" href="https://thingspool.net">
 </head>
 <body>
+<script src="https://code.jquery.com/jquery.min.js"></script>
+<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
+<script>
+    let process_pending = false;
+
+    function process_pending_on()
+    {
+        if (process_pending)
+            alert("Error: Process is already pending.");
+        process_pending = true;
+        $("#loadingScreen").css("display", "block");
+    }
+    function process_pending_off()
+    {
+        if (!process_pending)
+            alert("Error: Process is inactive.");
+        process_pending = false;
+        $("#loadingScreen").css("display", "none");
+    }
+</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
@@ -49,6 +69,7 @@
     <h3>Login feature is coming soon... (<a href="https://github.com/architsch/youngjin">Current Progress</a>)</h3>
 
 
+<div class="l_spacer"></div>
 <a class="noTextDeco" href="https://thingspool.net/morsels/page-10.html">
 <img class="featureLink" src="https://thingspool.net/feat0.jpg" alt="Games in Prolog">
 </a>
@@ -62,11 +83,13 @@
 <img class="featureLink" src="https://thingspool.net/feat3.jpg" alt="Thought Simulator">
 </a>
 <div class="s_spacer"></div>
+<div class="l_spacer"></div>
+
 <h1>About ThingsPool</h1>
 <p>ThingsPool is an experimental web community for collaborative research and development in arts, games, and other forms of interactive media. <b style="color: #d02020;">(Note: This site is currently under construction)</b></p>
 <div class="m_spacer"></div>
 <img class="profileImage" src="https://thingspool.net/profile.jpg" alt="Youngjin Kang">
-<h1>About the Admin</h1>
+<h1>About Me</h1>
 <p>My name is Youngjin, and I am a software engineer with a background in game development. I studied electrical and electronics engineering at the University of Washington, and worked for game companies including Signal Studios (Bothell, WA), Valkyrie Entertainment (Seattle, WA), and Galactic Entertainment (United Kingdom).</p>
 <p>ThingsPool is a website I made as a personal project. It started as a simple blog, but it is nowadays undergoing a process of becoming a shared workspace.</p>
 <p><a href="https://www.linkedin.com/in/youngjin-kang-55321882">LinkedIn Profile</a></p>

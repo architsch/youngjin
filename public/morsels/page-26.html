@@ -31,6 +31,26 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-26.html">
 </head>
 <body>
+<script src="https://code.jquery.com/jquery.min.js"></script>
+<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
+<script>
+    let process_pending = false;
+
+    function process_pending_on()
+    {
+        if (process_pending)
+            alert("Error: Process is already pending.");
+        process_pending = true;
+        $("#loadingScreen").css("display", "block");
+    }
+    function process_pending_off()
+    {
+        if (!process_pending)
+            alert("Error: Process is inactive.");
+        process_pending = false;
+        $("#loadingScreen").css("display", "none");
+    }
+</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
@@ -85,7 +105,7 @@ foo2[n](X) :- bar3[n-1](Y), bar1[n-1](X, [key]Y).</code></pre></div>
 <p>What the Prolog transcompiler will need to do when converting this script into its C# equivalent, therefore, will consist of two major steps.</p>
 <p>The first step, which I will be describing shortly, is to write a C# class which initializes data structures that are responsible for storing all the facts. Such facts are either initially provided (by the script's initial list of facts at time 0) or are able to be inferred via the rules as time passes by. Upon instantiation, these structures will be stuffed with all the initial facts which must be available when the game starts.</p>
 <p>The second step is to write the individual rules as custom C# classes, with custom methods for evaluating them in their own unique ways. The central engine of our Prolog system, then, will iterate the instances of these classes and run their evaluation methods during every game loop, thus simulating the real-time rule evaluation logic.</p>
-<p>Let me begin with the first step - the initialization of data structures which will be storing facts. The following code is our hypothetical result of transcompiling the "initial facts" section of the above Prolog script into an equivalent C# class. It is called "State", and its job is to store facts which belong to a certain point in time. This means that, if the game needs to remember the history of its own state for three 3 consecutive time steps (e.g. from "n-2" to "n"), it will need to create 3 instances of the "State" class and update them in a cyclic manner (which will let us simulate the "window of remembrance" which shifts itself over time - see the last few paragraphs of the "Causality" section in <a href="https://thingspool.net/morsels/page-12.html">Part 3</a> for details).</p>
+<p>Let me begin with the first step - the initialization of data structures which will be storing facts. The following code is our hypothetical result of transcompiling the "initial facts" section of the above Prolog script into an equivalent C# class. It is called "State", and its job is to store facts which belong to a certain point in time. This means that, if the game needs to remember the history of its own state for 3 consecutive time steps (e.g. from "n-2" to "n"), it will need to create 3 instances of the "State" class and update them in a cyclic manner (which will let us simulate the "window of remembrance" which shifts itself over time - see the last few paragraphs of the "Causality" section in <a href="https://thingspool.net/morsels/page-12.html">Part 3</a> for details).</p>
 <div class="snippet"><pre><code>public class State
 {
     public Dictionary&lt;string, HashSet&lt;int&gt;&gt; bar1_byX = new();

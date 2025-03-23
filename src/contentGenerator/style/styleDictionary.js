@@ -18,8 +18,6 @@ const fullscreenTopBarHeightPercent = 12;
 const fullscreenLeftBarLogoAreaHeightPercent = 14;
 const fullscreenTopBarLogoAreaHeightPercent = 65;
 
-const logoWidthToHeightRatio = 3;
-
 const gameLinkWidthPercent_landscape = 20;
 const gameLinkWidthPercent_portrait = 80;
 const featureLinkWidthPercent_landscape = 15;
@@ -73,18 +71,18 @@ const font = (fontSize, isItalic, fontWeight) =>
 
 // Frames
 
-const simpleFrame = (backgroundColor, foregroundColor) =>
+const simpleFrame = (backgroundColor, foregroundColor, opacity = 1) =>
 `background-color: ${backgroundColor};
-\tcolor: ${foregroundColor};`;
+\tcolor: ${foregroundColor};${(opacity < 1) ? `\n\topacity: ${opacity};` : ""}`;
 
-const roundedFrame = (backgroundColor, foregroundColor) =>
+const roundedFrame = (backgroundColor, foregroundColor, opacity = 1) =>
 simpleFrame(backgroundColor, foregroundColor) + "\n" +
-`\tborder-radius: 4.5vmin;`;
+`\tborder-radius: 4.5vmin;${(opacity < 1) ? `\n\topacity: ${opacity};` : ""}`;
 
-const borderedFrame = (backgroundColor, foregroundColor, borderColor, borderThickness = "1.25") =>
+const borderedFrame = (backgroundColor, foregroundColor, borderColor, borderThickness = "1.25", opacity = 1) =>
 roundedFrame(backgroundColor, foregroundColor) + "\n" +
 `\tborder-bottom: ${borderThickness}vmin ${borderColor} solid;` + "\n" +
-`\tborder-right: ${borderThickness}vmin ${borderColor} solid;`;
+`\tborder-right: ${borderThickness}vmin ${borderColor} solid;${(opacity < 1) ? `\n\topacity: ${opacity};` : ""}`;
 
 //------------------------------------------------------------------------
 // Elementary Styles
@@ -139,11 +137,13 @@ const px_minValue = 16;
 const fontScaleInc = 1.2;
 const fontScaleInc2 = fontScaleInc*fontScaleInc;
 const fontScaleInc3 = fontScaleInc*fontScaleInc*fontScaleInc;
+const fontScaleInc4 = fontScaleInc*fontScaleInc*fontScaleInc*fontScaleInc;
 
 const size_s_font = `min(${(vmax_minValue * fontScaleFactor_vmax).toFixed(2)}vmax, ${(px_minValue * fontScaleFactor_px).toFixed(2)}px)`;
 const size_m_font = `min(${(vmax_minValue * fontScaleInc * fontScaleFactor_vmax).toFixed(2)}vmax, ${(px_minValue * fontScaleInc * fontScaleFactor_px).toFixed(2)}px)`;
 const size_l_font = `min(${(vmax_minValue * fontScaleInc2 * fontScaleFactor_vmax).toFixed(2)}vmax, ${(px_minValue * fontScaleInc2 * fontScaleFactor_px).toFixed(2)}px)`;
 const size_xl_font = `min(${(vmax_minValue * fontScaleInc3 * fontScaleFactor_vmax).toFixed(2)}vmax, ${(px_minValue * fontScaleInc3 * fontScaleFactor_px).toFixed(2)}px)`;
+const size_xxl_font = `min(${(vmax_minValue * fontScaleInc4 * fontScaleFactor_vmax).toFixed(2)}vmax, ${(px_minValue * fontScaleInc4 * fontScaleFactor_px).toFixed(2)}px)`;
 
 const s_font = font(size_s_font, false, 400);
 const s_italic_font = font(size_s_font, true, 400);
@@ -151,8 +151,10 @@ const s_bold_font = font(size_s_font, false, 700);
 const m_font = font(size_m_font, true, 700);
 const l_font = font(size_l_font, true, 700);
 const xl_font = font(size_xl_font, true, 700);
+const xxl_font = font(size_xxl_font, true, 700);
 
 const transparent_frame = `opacity: 0;`;
+const loading_screen_frame = simpleFrame("#000000", lightColor, 0.5);
 const light_color_frame = simpleFrame(darkColor, lightColor);
 const medium_color_frame = simpleFrame(darkColor, mediumColor);
 const inverted_medium_color_frame = simpleFrame(mediumColor, darkColor);
@@ -323,6 +325,7 @@ iframe {
 }
 .inlineButton:hover {
 	color: ${lightYellowColor};
+	cursor: pointer;
 }
 `;
 
@@ -382,6 +385,15 @@ footer {
 	${dim_color_frame}
 }
 
+.loadingScreen {
+	${fullscreen_whole_area}
+	${zero_spacing}
+	${xxl_font}
+	${loading_screen_frame}
+	text-align: center;
+	z-index: 999;
+	line-height: 100%;
+}
 .snippet {
 	position: relative;
 	display: inline-block;

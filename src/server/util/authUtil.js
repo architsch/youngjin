@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const envUtil = require("./envUtil.js");
+const emailUtil = require("./emailUtil.js");
 const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
 require("dotenv").config();
 
@@ -7,6 +9,14 @@ const users = {}; // dummy database
 
 const authUtil =
 {
+    getAllUsers: async () =>
+    {
+        return users;
+    },
+    getUser: async (username) =>
+    {
+        return users[username];
+    },
     register: async (req, res) =>
     {
         try
@@ -33,8 +43,11 @@ const authUtil =
             }
     
             emailUtil.endEmailVerification(req, res);
-            if (!res.ok)
+            if (res.statusCode != 202)
+            {
+                console.error(`Failed to end email verification (status = ${res.statusCode})`);
                 return;
+            }
     
             const passwordHash = await bcrypt.hash(req.body.password, 10);
     
@@ -45,7 +58,7 @@ const authUtil =
             };
             users[newUser.username] = newUser;
     
-            authUtil.addToken(user, res);
+            authUtil.addToken(newUser, res);
         }
         catch (err)
         {
@@ -91,10 +104,10 @@ const authUtil =
             secure: envUtil.isDevMode() ? false : true,
             httpOnly: true,
             sameSite: "strict",
-        });
+        }).status(201);
     },
     clearToken: (res) => {
-        res.clearCookie("thingspool_token");
+        res.clearCookie("thingspool_token").status(204);
     },
     authenticateToken: (req, res, next) =>
     {

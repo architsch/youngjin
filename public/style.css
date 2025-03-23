@@ -98,6 +98,30 @@ footer {
 	color: #707070;
 }
 
+.loadingScreen {
+	position: fixed;
+	display: block;
+	max-width: 100%;
+	max-height: 100%;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+	padding: 0 0;
+	margin: 0 0;
+	font-size: min(3.77vmax, 33.18px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 700;
+	background-color: #000000;
+	color: #e0e0e0;
+	opacity: 0.5;
+	text-align: center;
+	z-index: 999;
+	line-height: 100%;
+}
 .snippet {
 	position: relative;
 	display: inline-block;
@@ -534,6 +558,7 @@ iframe {
 }
 .inlineButton:hover {
 	color: #e0d0a0;
+	cursor: pointer;
 }
 
 	
@@ -855,6 +880,7 @@ iframe {
 }
 .inlineButton:hover {
 	color: #e0d0a0;
+	cursor: pointer;
 }
 
 }

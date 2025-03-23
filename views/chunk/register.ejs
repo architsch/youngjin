@@ -25,10 +25,9 @@
 <div class="inlineButton" id="register_button">Register</div>
 <div class="m_spacer"></div>
 
-<script src="https://code.jquery.com/jquery.min.js"></script>
 <script type="module">
     import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
-    let process_pending = false;
+
     let cached_email = null;
 
     function verification_mode_on(email)
@@ -62,14 +61,14 @@
     $("#verify_button").click(function() {
         if (process_pending)
             return;
-        process_pending = true;
+        process_pending_on();
 
         const email = $("#email_input").val();
         const emailError = textUtil.findErrorInEmailAddress(email);
         if (emailError != null)
         {
             alert(emailError);
-            process_pending = false;
+            process_pending_off();
             return;
         }
 
@@ -81,12 +80,12 @@
             data: { email: cached_email },
             success: function(result) {
                 $("#code_sent_indicator").css("display", "block");
-                process_pending = false;
+                process_pending_off();
             },
             error: function(xhr) {
                 verification_mode_off();
                 alert(xhr.responseText);
-                process_pending = false;
+                process_pending_off();
             }
         });
     });
@@ -94,14 +93,14 @@
     $("#register_button").click(function() {
         if (process_pending)
             return;
-        process_pending = true;
+        process_pending_on();
 
         const username = $("#username_input").val();
         const usernameError = textUtil.findErrorInUsername(username);
         if (usernameError != null)
         {
             alert(usernameError);
-            process_pending = false;
+            process_pending_off();
             return;
         }
 
@@ -110,22 +109,22 @@
         if (passwordError != null)
         {
             alert(passwordError);
-            process_pending = false;
+            process_pending_off();
             return;
         }
         const confirmPassword = $("#confirm_password_input").val();
         if (password != confirmPassword)
         {
             alert("Passwords do not match. Please make sure that 'Password' and 'Confirm Password' are the same.");
-            process_pending = false;
+            process_pending_off();
             return;
         }
 
-        const verificationCode = $("#verify_input").val();
+        const verificationCode = $("#verify_input").val().trim();
         if (verificationCode.length == 0)
         {
             alert("Please enter your email verification code.");
-            process_pending = false;
+            process_pending_off();
             return;
         }
 
@@ -139,7 +138,7 @@
             error: function(xhr) {
                 verification_mode_off();
                 alert(xhr.responseText);
-                process_pending = false;
+                process_pending_off();
             }
         });
     });

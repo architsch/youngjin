@@ -5,14 +5,11 @@
 <p>Your Data: <%= JSON.stringify(user, null, 4) %></p>
 <div class="m_spacer"></div>
 
-<script src="https://code.jquery.com/jquery.min.js"></script>
 <script>
-    let process_pending = false;
-
     $("#logout_button").click(function() {
         if (process_pending)
             return;
-        process_pending = true;
+        process_pending_on();
 
         $.ajax({
             url: "<%= envUtil.getRootURL() %>/api/logout",
@@ -22,7 +19,7 @@
             },
             error: function(xhr) {
                 alert(xhr.responseText);
-                process_pending = false;
+                process_pending_off();
             }
         });
     });

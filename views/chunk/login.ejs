@@ -13,10 +13,8 @@
 <div class="inlineButton" id="register_button">Register</div>
 <div class="m_spacer"></div>
 
-<script src="https://code.jquery.com/jquery.min.js"></script>
 <script type="module">
     import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
-    let process_pending = false;
 
     $("#username_input").on("input", function() {
         this.value = textUtil.sanitizeUsername(this.value);
@@ -28,14 +26,14 @@
     $("#login_button").click(function() {
         if (process_pending)
             return;
-        process_pending = true;
+        process_pending_on();
 
         const username = $("#username_input").val();
         const usernameError = textUtil.findErrorInUsername(username);
         if (usernameError != null)
         {
             alert(usernameError);
-            process_pending = false;
+            process_pending_off();
             return;
         }
 
@@ -44,7 +42,7 @@
         if (passwordError != null)
         {
             alert(passwordError);
-            process_pending = false;
+            process_pending_off();
             return;
         }
 
@@ -57,7 +55,7 @@
             },
             error: function(xhr) {
                 alert(xhr.responseText);
-                process_pending = false;
+                process_pending_off();
             }
         });
     });
