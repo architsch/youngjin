@@ -2,28 +2,19 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const envUtil = require("./envUtil.js");
 const emailUtil = require("./emailUtil.js");
+const dbUtil = require("./dbUtil.js");
 const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
 require("dotenv").config();
 
-const users = {}; // dummy database
-
 const authUtil =
 {
-    getAllUsers: async () =>
-    {
-        return users;
-    },
-    getUser: async (username) =>
-    {
-        return users[username];
-    },
     register: async (req, res) =>
     {
         try
         {
-            const usernameError = textUtil.findErrorInUsername(req.body.username);
-            if (usernameError != null)
-                return res.status(400).send(usernameError);
+            const userNameError = textUtil.findErrorInUserName(req.body.userName);
+            if (userNameError != null)
+                return res.status(400).send(userNameError);
 
             const passwordError = textUtil.findErrorInPassword(req.body.password);
             if (passwordError != null)
@@ -33,17 +24,20 @@ const authUtil =
             if (emailError != null)
                 return res.status(400).send(emailError);
 
-            if (users[req.body.username] != undefined)
-                return res.status(403).send(`User "${req.body.username}" already exists.`);
+            let existingUsers = await dbUtil.users.selectByUserName(res, req.body.userName);
+            if (res.statusCode < 200 || res.statusCode >= 300)
+                return;
+            if (existingUsers && existingUsers.length > 0)
+                return res.status(403).send(`User "${req.body.userName}" already exists.`);
+
+            existingUsers = await dbUtil.users.selectByEmail(res, req.body.email);
+            if (res.statusCode < 200 || res.statusCode >= 300)
+                return;
+            if (existingUsers && existingUsers.length > 0)
+                return res.status(403).send(`There is already an account with the email "${req.body.email}".`);
     
-            for (const userInfo of Object.values(users))
-            {
-                if (userInfo.email == req.body.email)
-                    return res.status(403).send(`There is already an account with the email "${req.body.username}".`);
-            }
-    
-            emailUtil.endEmailVerification(req, res);
-            if (res.statusCode != 202)
+            await emailUtil.endEmailVerification(req, res);
+            if (res.statusCode < 200 || res.statusCode >= 300)
             {
                 console.error(`Failed to end email verification (status = ${res.statusCode})`);
                 return;
@@ -51,14 +45,11 @@ const authUtil =
     
             const passwordHash = await bcrypt.hash(req.body.password, 10);
     
-            const newUser = {
-                username: req.body.username,
-                passwordHash: passwordHash,
-                email: req.body.email,
-            };
-            users[newUser.username] = newUser;
+            await dbUtil.users.insert(res, req.body.userName, passwordHash, req.body.email);
+            if (res.statusCode < 200 || res.statusCode >= 300)
+                return;
     
-            authUtil.addToken(newUser, res);
+            return authUtil.addToken(req.body.userName, res);
         }
         catch (err)
         {
@@ -69,37 +60,39 @@ const authUtil =
     {
         try
         {
-            const usernameError = textUtil.findErrorInUsername(req.body.username);
-            if (usernameError != null)
-                return res.status(400).send(usernameError);
+            const userNameError = textUtil.findErrorInUserName(req.body.userName);
+            if (userNameError != null)
+                return res.status(400).send(userNameError);
 
             const passwordError = textUtil.findErrorInPassword(req.body.password);
             if (passwordError != null)
                 return res.status(400).send(passwordError);
 
-            const user = users[req.body.username];
+            let existingUsers = await dbUtil.users.selectByUserName(res, req.body.userName);
+            if (res.statusCode < 200 || res.statusCode >= 300)
+                return;
+            if (!existingUsers || existingUsers.length == 0)
+                return res.status(404).send(`There is no account with userName "${req.body.userName}".`);
 
-            if (user == undefined)
-                return res.status(404).send(`Username "${req.body.username}" does not exist in the database.`);
-
-            const validPassword = await bcrypt.compare(req.body.password, user.passwordHash);
+            const validPassword = await bcrypt.compare(req.body.password, existingUsers[0].passwordHash);
 
             if (!validPassword)
                 return res.status(401).send("Wrong password.");
 
-            authUtil.addToken(user, res);
+            return authUtil.addToken(req.body.userName, res);
         }
         catch (err)
         {
             res.status(500).send(`ERROR: Failed to login (${err}).`);
         }
     },
-    addToken: (user, res) => {
+    addToken: (userName, res) => {
         const token = jwt.sign(
-            { username: user.username },
+            { userName: userName },
             process.env.JWT_SECRET_KEY,
-            { expiresIn: "30m" }
+            { expiresIn: "60m" }
         );
+
         res.cookie("thingspool_token", token, {
             secure: envUtil.isDevMode() ? false : true,
             httpOnly: true,
@@ -151,7 +144,7 @@ const authUtil =
                 else
                 {
                     req.user = user;
-                    authUtil.addToken(user, res); // refresh the token
+                    authUtil.addToken(user.userName, res); // refresh the token
                     next();
                 }
             });

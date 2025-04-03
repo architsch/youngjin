@@ -3,8 +3,11 @@
 	"main": "src/server/app.js",
 	"type": "commonjs",
 	"scripts": {
-		"gendev": "MODE=dev node src/contentGenerator/generator.js",
-		"genprod": "MODE=prod node src/contentGenerator/generator.js",
+		"gendev": "MODE=dev node -e \"require('./src/contentGenerator/generator.js').run()\"",
+		"genprod": "MODE=prod node -e \"require('./src/contentGenerator/generator.js').run()\"",
+		"dbdev": "MODE=dev node -e \"require('./src/server/util/dbUtil.js').runSQLFile('init.sql')\"",
+		"dbdevclear": "MODE=dev node -e \"require('./src/server/util/dbUtil.js').runSQLFile('clear.sql')\"",
+		"dbprod": "MODE=prod node -e \"require('./src/server/util/dbUtil.js').runSQLFile('init.sql')\"",
 		"dev": "MODE=dev pm2 start src/server/app.js --no-daemon --watch --ignore-watch=\"public .git\"",
 		"start": "MODE=prod pm2 start src/server/app.js --name=admin",
 		"stop": "pm2 stop all && pm2 delete all"
@@ -16,8 +19,8 @@
 		"dotenv": "^16.4.7",
 		"ejs": "^3.1.10",
 		"express": "^4.21.2",
-		"googleapis": "^148.0.0",
 		"jsonwebtoken": "^9.0.2",
+		"mysql2": "^3.14.0",
 		"nodemailer": "^6.10.0"
 	}
 }

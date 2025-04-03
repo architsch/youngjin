@@ -2,11 +2,11 @@
 <div class="s_spacer"></div>
 
 <div class="textInputLabel">Username</div>
-<input type="text" class="textInput" id="username_input">
+<input type="text" class="textInput" id="userName_input">
 <div class="zero_spacer"></div>
 
 <div class="textInputLabel">Password</div>
-<input type="text" class="textInput" id="password_input">
+<input type="password" class="textInput" id="password_input">
 <div class="s_spacer"></div>
 
 <div class="inlineButton" id="login_button">Log In</div>
@@ -16,8 +16,8 @@
 <script type="module">
     import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
 
-    $("#username_input").on("input", function() {
-        this.value = textUtil.sanitizeUsername(this.value);
+    $("#userName_input").on("input", function() {
+        this.value = textUtil.sanitizeUserName(this.value);
     });
     $("#password_input").on("input", function() {
         this.value = textUtil.sanitizePassword(this.value);
@@ -28,11 +28,11 @@
             return;
         process_pending_on();
 
-        const username = $("#username_input").val();
-        const usernameError = textUtil.findErrorInUsername(username);
-        if (usernameError != null)
+        const userName = $("#userName_input").val();
+        const userNameError = textUtil.findErrorInUserName(userName);
+        if (userNameError != null)
         {
-            alert(usernameError);
+            alert(userNameError);
             process_pending_off();
             return;
         }
@@ -49,7 +49,7 @@
         $.ajax({
             url: "<%= envUtil.getRootURL() %>/api/login",
             method: "POST",
-            data: { username, password },
+            data: { userName, password },
             success: function(result) {
                 window.location.href = "<%= envUtil.getRootURL() %>/<%= loginDestination %>";
             },

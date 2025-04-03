@@ -42,4 +42,4 @@ async function run()
     await fileUtil.write("style.css", require('./style/styleDictionary.js'));
 }
 
-run();
+module.exports.run = run;

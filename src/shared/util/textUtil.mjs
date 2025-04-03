@@ -1,13 +1,13 @@
 export const textUtil =
 {
-    findErrorInUsername: (text) =>
+    findErrorInUserName: (text) =>
     {
         if (text.length < 4)
-            return "Username must be at least 4 characters long.";
+            return "UserName must be at least 4 characters long.";
         if (text.length > 16)
-            return "Username cannot be longer than 16 characters.";
-        if (text != textUtil.sanitizeUsername(text))
-            return "Username can only contain alphabets, numbers and underbar(_).";
+            return "UserName cannot be longer than 16 characters.";
+        if (text != textUtil.sanitizeUserName(text))
+            return "UserName can only contain alphabets, numbers and underbar(_).";
         return null;
     },
     findErrorInPassword: (text) =>
@@ -22,12 +22,14 @@ export const textUtil =
     },
     findErrorInEmailAddress: (text) =>
     {
+        if (text.length > 64)
+            return "Email address is too long. It must be less than 64 characters.";
         const regex = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
         if (!regex.test(text))
             return "Please enter a valid email address."
         return null;
     },
-    sanitizeUsername: (text) => {
+    sanitizeUserName: (text) => {
         if (text.length > 16)
             text = text.substring(0, 16);
         return text.replace(/[^a-zA-Z0-9_]/g, "");

@@ -2,7 +2,7 @@
 <div class="s_spacer"></div>
 
 <div class="textInputLabel">Username</div>
-<input type="text" class="textInput" id="username_input">
+<input type="text" class="textInput" id="userName_input">
 <div class="zero_spacer"></div>
 
 <div class="textInputLabel">Password</div>
@@ -48,8 +48,8 @@
     }
     verification_mode_off();
 
-    $("#username_input").on("input", function() {
-        this.value = textUtil.sanitizeUsername(this.value);
+    $("#userName_input").on("input", function() {
+        this.value = textUtil.sanitizeUserName(this.value);
     });
     $("#password_input").on("input", function() {
         this.value = textUtil.sanitizePassword(this.value);
@@ -95,11 +95,11 @@
             return;
         process_pending_on();
 
-        const username = $("#username_input").val();
-        const usernameError = textUtil.findErrorInUsername(username);
-        if (usernameError != null)
+        const userName = $("#userName_input").val();
+        const userNameError = textUtil.findErrorInUserName(userName);
+        if (userNameError != null)
         {
-            alert(usernameError);
+            alert(userNameError);
             process_pending_off();
             return;
         }
@@ -131,7 +131,7 @@
         $.ajax({
             url: "<%= envUtil.getRootURL() %>/api/register",
             method: "POST",
-            data: { username, password, email: cached_email, verificationCode },
+            data: { userName, password, email: cached_email, verificationCode },
             success: function(result) {
                 window.location.href = "<%= envUtil.getRootURL() %>/<%= registerDestination %>";
             },

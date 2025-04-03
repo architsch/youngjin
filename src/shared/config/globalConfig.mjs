@@ -3,7 +3,7 @@ export const globalConfig =
     page: {
         bypassDynamicPages: false,
     },
-    userRegistration: {
+    auth: {
         bypassEmailVerification: false,
     },
 }

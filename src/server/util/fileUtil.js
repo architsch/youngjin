@@ -6,29 +6,25 @@ const fileUtil =
 {
     read: async (relativeFilePath, rootDir = undefined) =>
     {
-        try
-        {
+        try {
             const absoluteFilePath = getAbsoluteFilePath(relativeFilePath, rootDir);
             //console.log(`Reading ---> ${absoluteFilePath}`);
             const data = await fs.readFile(absoluteFilePath, {encoding: 'utf8'});
             return data;
         }
-        catch (err)
-        {
+        catch (err) {
             console.error(`fileUtil.js :: Failed to read file (relativeFilePath = "${relativeFilePath}") :: ${err}`);
             return "";
         }
     },
     write: async (relativeFilePath, content, rootDir = undefined) =>
     {
-        try
-        {
+        try {
             const absoluteFilePath = getAbsoluteFilePath(relativeFilePath, rootDir);
             //console.log(`Writing ---> ${absoluteFilePath}`);
             await fs.writeFile(absoluteFilePath, content);
         }
-        catch (err)
-        {
+        catch (err) {
             console.error(`fileUtil.js :: Failed to write file (relativeFilePath = "${relativeFilePath}") :: ${err}`);
         }
     },
