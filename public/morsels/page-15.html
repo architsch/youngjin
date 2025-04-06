@@ -52,7 +52,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>This is Part 6 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
 <h3><b>Time Allocation of Events</b></h3>
-<p>In <a href="https://thingspool.net/morsels/page-12.html">Part 3</a>, I mentioned that an event can be represented as a relation in the language of Prolog, as long as it belongs to a certain point in time. An event is usually a result of a set of preceding events (i.e. causes).</p>
+<p>In <a target="_blank" href="https://thingspool.net/morsels/page-12.html">Part 3</a>, I mentioned that an event can be represented as a relation in the language of Prolog, as long as it belongs to a certain point in time. An event is usually a result of a set of preceding events (i.e. causes).</p>
 <p>The time-related notations I have been using, though, may not reflect this underlying concept with a sufficient degree of accuracy. The main reason why this is so is that I have been attaching time parameters to the individual arguments of an event, rather than the event itself.</p>
 <p>The example below is a simple instance of causation. In this case, the occurrence of "event1" during the previous time step (n-1) caused "event2" to happen during the current time step (n).</p>
 <div class="snippet"><pre><code>event2(X[n]) :- event1(X[n-1]).</code></pre></div>

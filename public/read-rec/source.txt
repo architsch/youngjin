@@ -6,7 +6,7 @@
 
 Let me introduce "Metaphysical Notes", written by Thomas Scarborough.
 
-@@<h3>You can read it <a href="https://www.thomas-scarborough.com/p/links.html">Here</a>.</h3>
+@@<h3>You can read it <a target="_blank" href="https://www.thomas-scarborough.com/p/links.html">Here</a>.</h3>
 <001>
 @@<hr>
 
@@ -39,7 +39,7 @@ Thomas O. Scarborough is one of the prominent philosophical writers in the Unite
 
 Let me introduce a series of articles on Narrative Construction, written by Katarina Gyllenbäck.
 
-@@<h3>Read the whole series <a href="https://katarinagyllenback.com/">Here</a>.</h3>
+@@<h3>Read the whole series <a target="_blank" href="https://katarinagyllenback.com/">Here</a>.</h3>
 @@<hr>
 
 @@<h3><b>Introduction:</b></h3>
@@ -56,22 +56,22 @@ Outside of academia, she worked as a design director & narrative designer of vid
 
 <005>
 
-@@<h3><a href="https://katarinagyllenback.com/2017/03/24/what-is-narrative/">WHAT IS NARRATIVE?</a></h3>
+@@<h3><a target="_blank" href="https://katarinagyllenback.com/2017/03/24/what-is-narrative/">WHAT IS NARRATIVE?</a></h3>
 This is a very concise and easy explanation of what a narrative is. This will give you a nice overview of what the author intends to communicate through her articles.
 
 <003>
 
-@@<h3><a href="https://katarinagyllenback.com/2017/04/06/search-for-invisible-narrative/">PART 1, IN SEARCH OF THE INVISIBLE NARRATIVE</a></h3>
-This is the backstory of what inspired the author to develop her own method of narrative design called "Narrative Bridging". As alluded {%a href="https://katarinagyllenback.com/about/"%}Here{%/a%}, for instance, Narrative Bridging primarily aims to bridge the gap between narratives (i.e. things which writers/designers focus on) and mechanics (i.e. things which programmers/engineers focus on), by means of iteration between the bottom-up (i.e. "mechanics-to-narratives") and top-down (i.e. "narratives-to-mechanics") design processes. In the former case, developers start by creating a set of basic building blocks of interaction, and then build layers of abstraction on top of them to give birth to a body of dynamic storytelling. In the latter case, developers start by devising the overall body of narratives (e.g. storyline, theme, etc), and then add systematic elements to it to give life to the story.
+@@<h3><a target="_blank" href="https://katarinagyllenback.com/2017/04/06/search-for-invisible-narrative/">PART 1, IN SEARCH OF THE INVISIBLE NARRATIVE</a></h3>
+This is the backstory of what inspired the author to develop her own method of narrative design called "Narrative Bridging". As alluded {%a target="_blank" href="https://katarinagyllenback.com/about/"%}Here{%/a%}, for instance, Narrative Bridging primarily aims to bridge the gap between narratives (i.e. things which writers/designers focus on) and mechanics (i.e. things which programmers/engineers focus on), by means of iteration between the bottom-up (i.e. "mechanics-to-narratives") and top-down (i.e. "narratives-to-mechanics") design processes. In the former case, developers start by creating a set of basic building blocks of interaction, and then build layers of abstraction on top of them to give birth to a body of dynamic storytelling. In the latter case, developers start by devising the overall body of narratives (e.g. storyline, theme, etc), and then add systematic elements to it to give life to the story.
 
 <002>
 
-@@<h3><a href="https://katarinagyllenback.com/2018/02/15/part-1-dont-show-involve/">PART 1, DON´T SHOW, INVOLVE</a></h3>
+@@<h3><a target="_blank" href="https://katarinagyllenback.com/2018/02/15/part-1-dont-show-involve/">PART 1, DON´T SHOW, INVOLVE</a></h3>
 It has traditionally been claimed that "showing" is better than "telling" when it comes to communicating one's thoughts. This article, however, explains why even "showing" is not enough when we are delivering our narratives through an interactive medium instead of a one-way medium (such as a book or a film, in which the viewer's choice of action does not influence the story's progress). The author says that a dynamic (interactive) narrative should neither "tell" nor "show" the story, but instead "involve" the viewer by motivating him/her to make meaningful choices. The author further expounds that such a motivation can be triggered by introducing a conflict between two opposing forces (i.e. duality), and that one's recognition of such a conflict should be made possible by exploring the world and discovering its dual properties.
 
 <004>
 
-@@<h3><a href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/">PART 11, THE MEANING-MAKER’S SPACE</a></h3>
+@@<h3><a target="_blank" href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/">PART 11, THE MEANING-MAKER’S SPACE</a></h3>
 This article explains how a narrative can be modeled inside a "conceptual space" (i.e. a hypothetical geometry in which narrative elements are being placed as spatial objects). The underlying motivation behind this space-oriented approach is that each spatial axis (dimension) essentially represents a duality between two opposing forces (e.g. Good and Evil, Life and Death, Visible and Invisible, etc), so that, if we construct an N-dimensional conceptual space, we will be able to define every single narrative element as a combination of N dualistic attributes. Also, the center of the conceptual space may be considered the observer's position, and we may suppose that points close to the observer are things that are familiar, while points far away from the observer are things that are unfamiliar. The author explains that the space may as well be "warped" by the way in which narrative elements are placed (in the form of obstacles, shortcuts, etc), which will then drive the audience (observer) to either move from the familiar to the unfamiliar, or from the unfamiliar to the familiar (The former case could be described as "a moment of surprise", and the latter case could be described as "a moment of relief").
 
 
@@ -89,7 +89,7 @@ This article explains how a narrative can be modeled inside a "conceptual space"
 
 Let me introduce "PART 2, THE BENEFIT AND DISADVANTAGE OF UNCONSCIOUSNESS", a narrative design article written by Katarina Gyllenbäck.
 
-@@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/benefit-disadvantage-of-unconsciousness/">Here</a>.</h3>
+@@<h3>Read the full article <a target="_blank" href="https://katarinagyllenback.com/2017/04/06/benefit-disadvantage-of-unconsciousness/">Here</a>.</h3>
 <002>
 @@<hr>
 @@<h3><b>Introduction:</b></h3>
@@ -162,15 +162,15 @@ Bertrand Russell is one of my favorite philosophers. One interesting thing about
 
 @@<h3><b>(1) The Problems of Philosophy</b></h3>
 
-This is perhaps the best primer to philosophy in general (maybe not for humanity-related areas such as ethics and aesthetics, but definitely for metaphysics, epistemology, and ontology). In this book, Russell introduces some of the most common questions in philosophy such as the conflict between idealism and realism (i.e. "Matter is a byproduct of mind" vs "Mind is a byproduct of matter"), the definition of "idea" in Plato's metaphysical worldview, and so on. Then he even proceeds to explain his endeavors to define the whole of reality itself, as well as ways in which we may induce it from our sense-data and their apparent relations. (You can read it {%a href="https://www.gutenberg.org/cache/epub/5827/pg5827-images.html"%}Here{%/a%})
+This is perhaps the best primer to philosophy in general (maybe not for humanity-related areas such as ethics and aesthetics, but definitely for metaphysics, epistemology, and ontology). In this book, Russell introduces some of the most common questions in philosophy such as the conflict between idealism and realism (i.e. "Matter is a byproduct of mind" vs "Mind is a byproduct of matter"), the definition of "idea" in Plato's metaphysical worldview, and so on. Then he even proceeds to explain his endeavors to define the whole of reality itself, as well as ways in which we may induce it from our sense-data and their apparent relations. (You can read it {%a target="_blank" href="https://www.gutenberg.org/cache/epub/5827/pg5827-images.html"%}Here{%/a%})
 
 @@<h3><b>(2) The Analysis of Mind</b></h3>
 
-This one is significantly more challenging to read than "The Problems of Philosophy". Nevertheless, I strongly recommend this book due to its interdisciplinary approaches to the study of psychology, cognitive science, and problems of epistemology in general. Although there aren't any diagrams in this book (which is unfortunate because I think it would have helped a lot), the reader will probably be able to realize that many of the concepts which Russell introduces here can be illustrated in terms of graph theory (i.e. where ideas are denoted by vertices, and associations between ideas are denoted by edges). For example, according to Russell's reasoning, the difference between a "vague" idea and an "abstract" idea is that the former is an idea which is closely associated with ideas that are not so closely associated with each other, whereas the latter is an idea which is closely associated with ideas that are also closely associated with each other. This is one example, but there are many more, and they can all be rendered graphically using points and lines on a sheet of paper. (You can read it {%a href="https://www.gutenberg.org/cache/epub/2529/pg2529-images.html"%}Here{%/a%})
+This one is significantly more challenging to read than "The Problems of Philosophy". Nevertheless, I strongly recommend this book due to its interdisciplinary approaches to the study of psychology, cognitive science, and problems of epistemology in general. Although there aren't any diagrams in this book (which is unfortunate because I think it would have helped a lot), the reader will probably be able to realize that many of the concepts which Russell introduces here can be illustrated in terms of graph theory (i.e. where ideas are denoted by vertices, and associations between ideas are denoted by edges). For example, according to Russell's reasoning, the difference between a "vague" idea and an "abstract" idea is that the former is an idea which is closely associated with ideas that are not so closely associated with each other, whereas the latter is an idea which is closely associated with ideas that are also closely associated with each other. This is one example, but there are many more, and they can all be rendered graphically using points and lines on a sheet of paper. (You can read it {%a target="_blank" href="https://www.gutenberg.org/cache/epub/2529/pg2529-images.html"%}Here{%/a%})
 
 @@<h3><b>(3) The Conquest of Happiness</b></h3>
 
-This is probably one of the easiest and most relaxed books ever written by Bertrand Russell. Unlike his other treatises, this one focuses on everyday human emotions and their hints on morality, rather than topics that are mathematically engaged. So if you are more of a fan of humanities than purely abstract concepts (such as those in metaphysics), I recommend reading it. It feels a bit like C.S. Lewis's "Mere Christianity", although Russell tends to speak of ethical topics from a more secular and rational viewpoint. (You can read it {%a href="https://russell-j.com/beginner/COH-TEXT.HTM"%}Here{%/a%})
+This is probably one of the easiest and most relaxed books ever written by Bertrand Russell. Unlike his other treatises, this one focuses on everyday human emotions and their hints on morality, rather than topics that are mathematically engaged. So if you are more of a fan of humanities than purely abstract concepts (such as those in metaphysics), I recommend reading it. It feels a bit like C.S. Lewis's "Mere Christianity", although Russell tends to speak of ethical topics from a more secular and rational viewpoint. (You can read it {%a target="_blank" href="https://russell-j.com/beginner/COH-TEXT.HTM"%}Here{%/a%})
 
 
 
@@ -187,7 +187,7 @@ This is probably one of the easiest and most relaxed books ever written by Bertr
 
 Let me introduce "PART 3, WHEN THE COGNITIVE VEHICLE OF NARRATIVE BACKFIRES", a narrative design article written by Katarina Gyllenbäck.
 
-@@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/cognitive-vehicle-narrative-backfire/">Here</a>.</h3>
+@@<h3>Read the full article <a target="_blank" href="https://katarinagyllenback.com/2017/04/06/cognitive-vehicle-narrative-backfire/">Here</a>.</h3>
 <007>
 @@<hr>
 @@<h3><b>Introduction:</b></h3>
@@ -245,7 +245,7 @@ and what runs a game is the same mechanism that runs society. The contrasts, tho
 
 Let me introduce "An Enquiry Concerning Human Understanding", a philosophical treatise written by David Hume.
 
-@@<h3>You can read it <a href="https://www.gutenberg.org/cache/epub/9662/pg9662-images.html">Here</a>.</h3>
+@@<h3>You can read it <a target="_blank" href="https://www.gutenberg.org/cache/epub/9662/pg9662-images.html">Here</a>.</h3>
 <008>
 @@<hr>
 @@<h3><b>Introduction:</b></h3>
@@ -292,12 +292,12 @@ And I must confess that this first section of the book really touched my heart -
 
 Let me introduce "PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS", a narrative design article written by Katarina Gyllenbäck.
 
-@@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/the-retrieval-of-the-consciousness/">Here</a>.</h3>
+@@<h3>Read the full article <a target="_blank" href="https://katarinagyllenback.com/2017/04/06/the-retrieval-of-the-consciousness/">Here</a>.</h3>
 <009>
 @@<hr>
 @@<h3><b>Introduction:</b></h3>
 
-Katarina Gyllenbäck is an educator, researcher, and innovator in the field of narrative design and cognitive science. Starting from the drama and film industry, she pioneered a number of novel techniques in the design of interactive media such as a custom narrative AI, the method of "Narrative Bridging" (Click {%a href="https://www.researchgate.net/publication/226504927_Narrative_Bridging"%}Here{%/a%} to view), and many others.
+Katarina Gyllenbäck is an educator, researcher, and innovator in the field of narrative design and cognitive science. Starting from the drama and film industry, she pioneered a number of novel techniques in the design of interactive media such as a custom narrative AI, the method of "Narrative Bridging" (Click {%a target="_blank" href="https://www.researchgate.net/publication/226504927_Narrative_Bridging"%}Here{%/a%} to view), and many others.
 
 "PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS" is one of her articles which highlights the significance of including an intrinsic goal in a narrative, especially when it comes to educating young children who desperately need natural motivation. Inspired by the American psychologist Jerome Bruner, she then investigates the potential causes of the prevanence of extrinsic (forced) goals in contemporary media, such as the exclusion of spontaneous personal feelings from the supposed goal.
 
@@ -362,7 +362,7 @@ In 1996 Bruner wrote in “The culture of education”:
 
 Let me introduce "Flatland: A Romance of Many Dimensions", a novel written by Edwin Abbott.
 
-@@<h3>You can read it <a href="https://www.gutenberg.org/cache/epub/201/pg201-images.html">Here</a>.</h3>
+@@<h3>You can read it <a target="_blank" href="https://www.gutenberg.org/cache/epub/201/pg201-images.html">Here</a>.</h3>
 <010>
 @@<hr>
 @@<h3><b>Introduction:</b></h3>
@@ -534,4 +534,4 @@ The thing is, I do wholeheartedly share the sentiment which Bernard Werber conve
 
 Yet, expressing such a sentiment in so explicit a manner in one's literary work is a somewhat different story. Drawing a hard division between "those who are enlightened" and "those who are too stupid to be enlightened" is indeed a powerful means of fueling the reader's ego, since it convinces him that he, who is able to read Bernard Werber's books and understand the words written in them, must certainly be the "chosen one" who is intellectually superior to those who do not necessarily agree with his opinions. But if this is pretty much the boundary of how far Bernard Werber's narrative manages to reach (aside from spiritual libertarianism), I will say that it is the reader's moral obligation to outgrow the scope of the author's philosophy at some point in life.
 
-@@<h3>Link: <a href="https://www.bernardwerber.com/">Official website of Bernard Werber</a></h3>
+@@<h3>Link: <a target="_blank" href="https://www.bernardwerber.com/">Official website of Bernard Werber</a></h3>

@@ -206,7 +206,7 @@ With this image-based map generation system, you can even manipulate the terrain
 
 This is a collection of mathematical concepts designed to express the nature of human mind in a rational manner.
 
-The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, visit {%a href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%}.
+The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, visit {%a target="_blank" href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%}.
 
 @@<hr>
 <006>
@@ -340,7 +340,7 @@ The back-and-forth interaction between these two forces creates a feedback syste
 
 This is a mathematical interpretation of David Hume's philosophy. It is mostly based upon my personal analysis, so please take it with a grain of salt.
 
-I drew most of my inspirations from his book, "An Enquiry Concerning Human Understanding". For more information, visit {%a href="https://thingspool.net/read-rec/page-6.html"%}Here{%/a%}.
+I drew most of my inspirations from his book, "An Enquiry Concerning Human Understanding". For more information, visit {%a target="_blank" href="https://thingspool.net/read-rec/page-6.html"%}Here{%/a%}.
 
 @@<hr>
 <011>
@@ -729,7 +729,7 @@ I think the most prominent advantage of modeling an event this way is that it al
 
 <051>
 
-As a side note, I would like to briefly introduce yet another mathematical interpretation of an event. In his paper on event structure and force dynamics (See Fig 11 of {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}), Gärdenfors explains Croft's alternative definition of causality. According to Croft, a cause-and-effect relation between forces can be explicated as the propagation of a "causal signal" across the dimension of causality. What's really interesting in this worldview is that it imagines "causality" as yet another dimension in spacetime, via which various worldly phenomena (i.e. events) establish causal links with one another.
+As a side note, I would like to briefly introduce yet another mathematical interpretation of an event. In his paper on event structure and force dynamics (See Fig 11 of {%a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}), Gärdenfors explains Croft's alternative definition of causality. According to Croft, a cause-and-effect relation between forces can be explicated as the propagation of a "causal signal" across the dimension of causality. What's really interesting in this worldview is that it imagines "causality" as yet another dimension in spacetime, via which various worldly phenomena (i.e. events) establish causal links with one another.
 
 This philosophically fascinating design, however, requires both the force vector and the result vector to reside in the same set of dimensions, thereby disallowing the result vector from identifying itself as part of its own hypothetical space which is of a different type from that of the force vector. This apparent lack of expressive freedom, I think, is one of the reasons why this unified spatial representation of causality is not so widely used.
 
@@ -738,7 +738,7 @@ This philosophically fascinating design, however, requires both the force vector
 
 <052>
 
-In {%a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{%/a%}, as well as the latter half of {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}, Gärdenfors suggests a possible usage of his two-vector event model as a device for explaining sentence structures in our language. An "event", according to him, can be expressed as an English sentence because it has its own subject (agent), verb (force), and object (patient).
+In {%a target="_blank" href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{%/a%}, as well as the latter half of {%a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}, Gärdenfors suggests a possible usage of his two-vector event model as a device for explaining sentence structures in our language. An "event", according to him, can be expressed as an English sentence because it has its own subject (agent), verb (force), and object (patient).
 
 Both the agent and patient can be described by nouns, yet adjectives and prepositions can also be leveraged as "filters" for specifying them more precisely. For example, in conceptual space (aka "feature space" in machine learning and artifical intelligence), a noun can be imagined as a voluminous region (which encloses a cluster of data points that are associated with that noun) and an adjective can be imagined as a thin plane which partially intersects such a region. A combination between a noun and an adjective (e.g. "black cat", "white rose", or "wooden jar"), therefore, indicates the intersection (i.e. a plane segment) between the noun's region and the adjective's plane.
 
@@ -765,7 +765,7 @@ Let me show you a simple gameplay scenario to explain why the concept shown so f
 
 <054>
 
-In the two-vector model, it is necessary to represent this simultaneous presence of attacking/healing effects as a combination of force vectors. Imagine that there is a hypothetical space called "force space" in which all the contributing forces of the event reside (The idea of representing the force/result vectors in their own conceptual spaces is illustrated in {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}). When an event kicks in, these contributing forces all add up to yield a single net force vector. This net force vector, then, gets mapped into its corresponding result vector. The result vector exists in another hypothetical space called "result space".
+In the two-vector model, it is necessary to represent this simultaneous presence of attacking/healing effects as a combination of force vectors. Imagine that there is a hypothetical space called "force space" in which all the contributing forces of the event reside (The idea of representing the force/result vectors in their own conceptual spaces is illustrated in {%a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}). When an event kicks in, these contributing forces all add up to yield a single net force vector. This net force vector, then, gets mapped into its corresponding result vector. The result vector exists in another hypothetical space called "result space".
 
 <055>
 
@@ -819,7 +819,7 @@ The main benefit of threshold-oriented gameplay scenarios (where you either CAN 
 
 <061>
 
-In his article on force dynamics (See {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}), Gärdenfors shows us that an event's force vector can be classified into one of the following categories under the presence of a goal - "Enable", "Help", "Prevent", and "Despite". The "Enable" force, when added to the patient's current force vector, allows him/her to achieve the desired result which was unachievable before. The "Help" force is similar to the "Enable" force, except that its presence is not absolutely necessary because the patient is already able to achieve the desired result (with just a bit of additional time and effort). The "Prevent" force is the opposite of the "Enable" force because it disables the patient from achieving the goal which would have been achievable otherwise, and the "Despite" force is the opposite of the "Help" force.
+In his article on force dynamics (See {%a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}"Event structure, force dynamics and verb semantics"{%/a%}), Gärdenfors shows us that an event's force vector can be classified into one of the following categories under the presence of a goal - "Enable", "Help", "Prevent", and "Despite". The "Enable" force, when added to the patient's current force vector, allows him/her to achieve the desired result which was unachievable before. The "Help" force is similar to the "Enable" force, except that its presence is not absolutely necessary because the patient is already able to achieve the desired result (with just a bit of additional time and effort). The "Prevent" force is the opposite of the "Enable" force because it disables the patient from achieving the goal which would have been achievable otherwise, and the "Despite" force is the opposite of the "Help" force.
 
 Such categorization of forces is definitely feasible in a threshold-based scenario, such as the problem of jumping to reach the top of the steep hill. For example, if the player's initial jump force is only 1 and there is a "booster" item in the inventory which he/she can consume in order to add an extra boost of 1 to the jump force (which will achieve enough level of force to reach the top of the hill), we will be able to tell that this item is the "enabler" of the player's hill-mounting event. This way, we are able to sort various items, abilities, spells, and other numerous in-game factors into the four major categories (i.e. Enable, Help, Prevent, and Despite) and implement them appropriately based on how their presence will affect the progression of the game in binary (i.e. threshold-driven) gameplay scenarios.
 
@@ -828,7 +828,7 @@ Such categorization of forces is definitely feasible in a threshold-based scenar
 
 Many of you who have implemented large-scale gameplay systems may have heard of the term, "data-driven". It is one of the most popular design philosophies in game development, in which the game's rules are specified in the form of declarative statements (e.g. data tables, English sentences, block diagrams, etc) instead of being hard-coded as part of the game's script itself.
 
-Gärdenfors' event model nicely fits the spirit of data-driven gameplay design, due to the fact that it allows us to fully describe an event and its causal relation in the form of a plain English sentence (i.e. a declarative statement), instead of a bunch of conditional and iterative statements which are intertwined with one another (See {%a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{%/a%}). Engineers who have studied a logic programming language (e.g. Prolog) will instantly grasp the beauty of this, as well as how neatly it is going to mitigate many of the design complexities which tend to arise in gameplay engineering.
+Gärdenfors' event model nicely fits the spirit of data-driven gameplay design, due to the fact that it allows us to fully describe an event and its causal relation in the form of a plain English sentence (i.e. a declarative statement), instead of a bunch of conditional and iterative statements which are intertwined with one another (See {%a target="_blank" href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"{%/a%}). Engineers who have studied a logic programming language (e.g. Prolog) will instantly grasp the beauty of this, as well as how neatly it is going to mitigate many of the design complexities which tend to arise in gameplay engineering.
 
 As long as we manage to express gameplay events as English sentences, we will be able to summarize all gameplay rules simply as a list of sentences and hardly anything else.
 
@@ -846,22 +846,22 @@ Designing a transfer function which maps a multidimensional force vector to a mu
 
 I would really like to thank Katarina Gyllenbäck for introducing the works of Professor Gärdenfors. I would have not had a chance to delve into his profound insights in the field of cognitive science, if she did not introduce his papers in her articles.
 
-Katarina Gyllenbäck, who is both a narrative designer and a researcher of interactive media, has shown me a narrative-driven interpretation of Gärdenfors' two-vector event model. It is most thoroughly illustrated in her description of conceptual space in the article, {%a href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/"%}"Part 11, The Meaning-Maker's Space"{%/a%}.
+Katarina Gyllenbäck, who is both a narrative designer and a researcher of interactive media, has shown me a narrative-driven interpretation of Gärdenfors' two-vector event model. It is most thoroughly illustrated in her description of conceptual space in the article, {%a target="_blank" href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/"%}"Part 11, The Meaning-Maker's Space"{%/a%}.
 
-To learn more about her areas of insight, please visit {%a href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%} to see my review of her writings on narrative design. Or, you may want to visit her website and read her vast collection of articles {%a href="https://katarinagyllenback.com"%}Here{%/a%}.
+To learn more about her areas of insight, please visit {%a target="_blank" href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%} to see my review of her writings on narrative design. Or, you may want to visit her website and read her vast collection of articles {%a target="_blank" href="https://katarinagyllenback.com"%}Here{%/a%}.
 
 @@<hr>
 @@<h3><b>Bibliography</b></h3>
 
-1. {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}Event structure, force dynamics and verb semantics{%/a%} by Peter Gärdenfors (This article most accurately summarizes the mathematical pattern behind the causal relations of the two-vector event model.)
+1. {%a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}Event structure, force dynamics and verb semantics{%/a%} by Peter Gärdenfors (This article most accurately summarizes the mathematical pattern behind the causal relations of the two-vector event model.)
 
-2. {%a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure{%/a%} by Peter Gärdenfors (This one most thoroughly describes the linguistic interpretation of the two-vector event model, explaining why an event can be considered a sentence and each element of the event can be considered a phrase such as a "noun phrase", "verb phrase", etc)
+2. {%a target="_blank" href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure"%}Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure{%/a%} by Peter Gärdenfors (This one most thoroughly describes the linguistic interpretation of the two-vector event model, explaining why an event can be considered a sentence and each element of the event can be considered a phrase such as a "noun phrase", "verb phrase", etc)
 
-3. {%a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.584017/full"%}Primary Cognitive Categories Are Determined by Their Invariances{%/a%} by Peter Gärdenfors (This is a great introductory text to the idea of "Conceptual Space" - a hypothetical space which expresses the qualitative attributes of an object as a point in geometry. It also explains how a set of invariances in our domain of cognition (i.e. a dense cluster of sense-data) eventually manifest themselves in the form of a discrete entity called "object". This is one of the most foundational ideas in the study of artificial intelligence and machine learning (often referred to as "pattern recognition").)
+3. {%a target="_blank" href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.584017/full"%}Primary Cognitive Categories Are Determined by Their Invariances{%/a%} by Peter Gärdenfors (This is a great introductory text to the idea of "Conceptual Space" - a hypothetical space which expresses the qualitative attributes of an object as a point in geometry. It also explains how a set of invariances in our domain of cognition (i.e. a dense cluster of sense-data) eventually manifest themselves in the form of a discrete entity called "object". This is one of the most foundational ideas in the study of artificial intelligence and machine learning (often referred to as "pattern recognition").)
 
-4. {%a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.00630/full"%}Events and Causal Mappings Modeled in Conceptual Spaces{%/a%} by Peter Gärdenfors (This is a general overview of how the force and result vectors are related to one another in an event. In this paper, Professor Gärdenfors tells us various subleties that are involved in the dynamics of causality, such as the capacity of the human mind to perform interpolation between two force vectors (which means that the total domain of forces which can be formed by a set of basis force vectors is their convex hull), etc.)
+4. {%a target="_blank" href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.00630/full"%}Events and Causal Mappings Modeled in Conceptual Spaces{%/a%} by Peter Gärdenfors (This is a general overview of how the force and result vectors are related to one another in an event. In this paper, Professor Gärdenfors tells us various subleties that are involved in the dynamics of causality, such as the capacity of the human mind to perform interpolation between two force vectors (which means that the total domain of forces which can be formed by a set of basis force vectors is their convex hull), etc.)
 
-5. {%a href="https://www.researchgate.net/publication/322314237_From_Sensations_to_Concepts_a_Proposal_for_Two_Learning_Processes"%}From Sensations to Concepts: a Proposal for Two Learning Processes{%/a%} by Peter Gärdenfors (This article introduces some of the experimental results which show us that, during early childhood development, young children do manage to learn how much an object (i.e. a cluster of data points) differs from another object (i.e. another cluster of data points), but not necessarily the direction (i.e. dimension) in which they differ. It is only later stages in life during which they acquire the ability to break down each object as a product of multiple dimensions and make comparisons based upon individual dimensions, not only in terms of the overall distance between two clusters of data).
+5. {%a target="_blank" href="https://www.researchgate.net/publication/322314237_From_Sensations_to_Concepts_a_Proposal_for_Two_Learning_Processes"%}From Sensations to Concepts: a Proposal for Two Learning Processes{%/a%} by Peter Gärdenfors (This article introduces some of the experimental results which show us that, during early childhood development, young children do manage to learn how much an object (i.e. a cluster of data points) differs from another object (i.e. another cluster of data points), but not necessarily the direction (i.e. dimension) in which they differ. It is only later stages in life during which they acquire the ability to break down each object as a product of multiple dimensions and make comparisons based upon individual dimensions, not only in terms of the overall distance between two clusters of data).
 
 
 
@@ -996,7 +996,7 @@ In the following sections, I will be illustrating a collection of Glenn Puchtel'
 6. {%a href="#bibliography_6"%}"Temporality"{%/a%}
 7. {%a href="#bibliography_7"%}"Bio-Cybernetic Patterns"{%/a%}
 
-These articles, however, are not the only ones he has written. If you want to read more of his works, please visit his LinkedIn newsletter: {%a href="https://www.linkedin.com/newsletters/cyborg-bio-cybernetics-6879770834110689280/"%}"Cyborg - (bio)cybernetics"{%/a%}.
+These articles, however, are not the only ones he has written. If you want to read more of his works, please visit his LinkedIn newsletter: {%a target="_blank" href="https://www.linkedin.com/newsletters/cyborg-bio-cybernetics-6879770834110689280/"%}"Cyborg - (bio)cybernetics"{%/a%}.
 
 @@<hr>
 @@<h3><b>1. Separation of State and Behavior</b></h3>
@@ -1104,7 +1104,7 @@ An indirect (i.e. external) feedback loop, on the other hand, requires a collabo
 
 <a5_3>
 
-The most obvious way of implementing indirect feedback loops is to first draw a CLD ({%a href="https://en.wikipedia.org/wiki/Causal_loop_diagram"%}Causal Loop Diagram{%/a%}) and then devise systematic components (e.g. stocks and flows) based on its graph structure. This approach, however, forces the overall architecture to be static (i.e. hard to modify) due to the way it tightly couples its individual subsystems with each other.
+The most obvious way of implementing indirect feedback loops is to first draw a CLD ({%a target="_blank" href="https://en.wikipedia.org/wiki/Causal_loop_diagram"%}Causal Loop Diagram{%/a%}) and then devise systematic components (e.g. stocks and flows) based on its graph structure. This approach, however, forces the overall architecture to be static (i.e. hard to modify) due to the way it tightly couples its individual subsystems with each other.
 
 Indirect communication offers a nice solution to this lack of structural flexibility. As long as the individual systems communicate only via their "shared pool of information" (i.e. medium), we will be free to either add an additional system to the pool or remove an existing system from the pool without invoking undesirable side effects. This allows systems to dynamically reproduce or destroy themselves as though they are part of a living organism, allowing the overall architecture to continuously modify its shape (which is indispensable for adaptive, self-regulatory behaviors).
 
@@ -1159,19 +1159,19 @@ The presence of a hierarchy of goals helps us design the hierarchy of systems be
 @@<hr>
 @@<h3><b>Bibliography</b></h3>
 
-1. {%a id="bibliography_1" href="https://www.linkedin.com/pulse/cybernetic-oriented-design-cyod-glenn-puchtel/"%}Cybernetic-Oriented Design (CyOD){%/a%} by Glenn Puchtel (This introductory article outlines pretty much all the main concepts in the design of emergent systems, including: (1) Separation of state and behavior (which enables polymorphism), (2) Hierarchical arrangement of individual subsystems (which is a neat way of breaking down a complex system into a collaborative network of simpler systems), (3) Back-and-forth interaction between state and behavior, which gives rise to feedback loops, and so on.)
+1. {%a id="bibliography_1" target="_blank" href="https://www.linkedin.com/pulse/cybernetic-oriented-design-cyod-glenn-puchtel/"%}Cybernetic-Oriented Design (CyOD){%/a%} by Glenn Puchtel (This introductory article outlines pretty much all the main concepts in the design of emergent systems, including: (1) Separation of state and behavior (which enables polymorphism), (2) Hierarchical arrangement of individual subsystems (which is a neat way of breaking down a complex system into a collaborative network of simpler systems), (3) Back-and-forth interaction between state and behavior, which gives rise to feedback loops, and so on.)
 
-2. {%a id="bibliography_2" href="https://www.linkedin.com/pulse/coordination-without-direct-communication-glenn-puchtel/"%}Coordination without (direct) Communication{%/a%} by Glenn Puchtel (Reading this article is crucial for understanding the nature of emergence and how its full potential might be leveraged. Here, the author suggests "indirect communication" (i.e. communication by means of a medium, rather than by means of a direct and instantaneous feeding of signals) as a method of letting individual subsystems collaborate with each other in an implicit manner, which eventually reveals highly emergent patterns such as those we can find in cellular automata.)
+2. {%a id="bibliography_2" target="_blank" href="https://www.linkedin.com/pulse/coordination-without-direct-communication-glenn-puchtel/"%}Coordination without (direct) Communication{%/a%} by Glenn Puchtel (Reading this article is crucial for understanding the nature of emergence and how its full potential might be leveraged. Here, the author suggests "indirect communication" (i.e. communication by means of a medium, rather than by means of a direct and instantaneous feeding of signals) as a method of letting individual subsystems collaborate with each other in an implicit manner, which eventually reveals highly emergent patterns such as those we can find in cellular automata.)
 
-3. {%a id="bibliography_3" href="https://www.linkedin.com/pulse/cybernetic-waves-glenn-puchtel/"%}Cybernetic Waves{%/a%} by Glenn Puchtel (This article suggests a chemistry-inspired method of designing a signal-transmitting medium in a cybernetic communication network. The author tell us that a "medium", a mixture of multiple chemical substances of varying saturations, along with several physical parameters such as temperature and pressure, can be placed in the environment, which in turn will emit waves (signals) to the surroundings for some limited duration.)
+3. {%a id="bibliography_3" target="_blank" href="https://www.linkedin.com/pulse/cybernetic-waves-glenn-puchtel/"%}Cybernetic Waves{%/a%} by Glenn Puchtel (This article suggests a chemistry-inspired method of designing a signal-transmitting medium in a cybernetic communication network. The author tell us that a "medium", a mixture of multiple chemical substances of varying saturations, along with several physical parameters such as temperature and pressure, can be placed in the environment, which in turn will emit waves (signals) to the surroundings for some limited duration.)
 
-4. {%a id="bibliography_4" href="https://www.linkedin.com/pulse/reaction-networks-glenn-puchtel/"%}Reaction Networks{%/a%} by Glenn Puchtel (Here, the author directly shows us how to define a chemical mixture in a software simulation and use it as a medium of communication between virtual biological modules. He also suggests specific ways of interpreting the content of such a mixture for the purpose of evaluating/modifying the surrounding environment (aka "conditions" and "cures"). Additionally, the very last diagram of the article deserves special attention, since it summarizes the grand cycle of information flow in a cybernetic-oriented system. In this diagram, "signals" is where an organism receives information, "rules" and "states" are where the organism evaluates and stores the received information, and "actions" is where the organism emits actions based on the result of evaluation. The "world" is the outside environment, which is governed by its own environmental factors such as chemical mixtures (media). These factors continuously emit waves, which the organism's receptors then receive as "signals".)
+4. {%a id="bibliography_4" target="_blank" href="https://www.linkedin.com/pulse/reaction-networks-glenn-puchtel/"%}Reaction Networks{%/a%} by Glenn Puchtel (Here, the author directly shows us how to define a chemical mixture in a software simulation and use it as a medium of communication between virtual biological modules. He also suggests specific ways of interpreting the content of such a mixture for the purpose of evaluating/modifying the surrounding environment (aka "conditions" and "cures"). Additionally, the very last diagram of the article deserves special attention, since it summarizes the grand cycle of information flow in a cybernetic-oriented system. In this diagram, "signals" is where an organism receives information, "rules" and "states" are where the organism evaluates and stores the received information, and "actions" is where the organism emits actions based on the result of evaluation. The "world" is the outside environment, which is governed by its own environmental factors such as chemical mixtures (media). These factors continuously emit waves, which the organism's receptors then receive as "signals".)
 
-5. {%a id="bibliography_5" href="https://www.linkedin.com/pulse/biological-models-reactionary-networks-glenn-puchtel/"%}Biological Models of Reactionary Networks{%/a%} by Glenn Puchtel (This one explains in detail the specific building blocks of the author's (bio)cybernetic systems architecture, including nodes, edges, pipes, rules, applicators, kits, and others. Nodes are basically the entry/exit points of signals, edges are transmitters of signals, and pipes/applicators are the ones which make decisions based on the received signals.)
+5. {%a id="bibliography_5" target="_blank" href="https://www.linkedin.com/pulse/biological-models-reactionary-networks-glenn-puchtel/"%}Biological Models of Reactionary Networks{%/a%} by Glenn Puchtel (This one explains in detail the specific building blocks of the author's (bio)cybernetic systems architecture, including nodes, edges, pipes, rules, applicators, kits, and others. Nodes are basically the entry/exit points of signals, edges are transmitters of signals, and pipes/applicators are the ones which make decisions based on the received signals.)
 
-6. {%a id="bibliography_6" href="https://www.linkedin.com/pulse/temporality-glenn-puchtel/"%}Temporality{%/a%} by Glenn Puchtel (This article illustrates the inner workings of time-related cybernetic components (e.g. temporals) using specific code examples. By doing this, the author proves us that these components are highly useful for simulating the ways in which signals vary their intensity levels as time passes by - an extremely crucial concept for implementing time delays in the system's feedback mechanism, as well as for implementing gradual memory decay.)
+6. {%a id="bibliography_6" target="_blank" href="https://www.linkedin.com/pulse/temporality-glenn-puchtel/"%}Temporality{%/a%} by Glenn Puchtel (This article illustrates the inner workings of time-related cybernetic components (e.g. temporals) using specific code examples. By doing this, the author proves us that these components are highly useful for simulating the ways in which signals vary their intensity levels as time passes by - an extremely crucial concept for implementing time delays in the system's feedback mechanism, as well as for implementing gradual memory decay.)
 
-7. {%a id="bibliography_7" href="https://www.linkedin.com/pulse/cybernetic-patterns-glenn-puchtel/"%}Bio-Cybernetic Patterns{%/a%} by Glenn Puchtel (This is the graphical summary of the major building blocks in cybernetic-oriented design. They resemble digital circuit components in some sense, yet are much more functionally abstract. Within this collection, "pipe" is probably the most notable component because it represents the very concept of "controlled transmission of signals" - an ever-recurring theme in the activity of neurons, protein receptors, and other biological signal-processors.)
+7. {%a id="bibliography_7" target="_blank" href="https://www.linkedin.com/pulse/cybernetic-patterns-glenn-puchtel/"%}Bio-Cybernetic Patterns{%/a%} by Glenn Puchtel (This is the graphical summary of the major building blocks in cybernetic-oriented design. They resemble digital circuit components in some sense, yet are much more functionally abstract. Within this collection, "pipe" is probably the most notable component because it represents the very concept of "controlled transmission of signals" - an ever-recurring theme in the activity of neurons, protein receptors, and other biological signal-processors.)
 
 
 
@@ -1221,11 +1221,11 @@ I drew inspirations for this model of gameplay from two people.
 
 @@<b>(1) Peter Gärdenfors</b>
 
-Professor Gärdenfors is a cognitive scientist and a philosopher at Lund University (Lund, Sweden), whose two-vector model of causality and the idea of "forces in conceptual space" helped me model gameplay events as instances of vector transformation. Please read {%a href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%} to learn more about the way his ideas contributed to the computational modeling of events and their causal relations.
+Professor Gärdenfors is a cognitive scientist and a philosopher at Lund University (Lund, Sweden), whose two-vector model of causality and the idea of "forces in conceptual space" helped me model gameplay events as instances of vector transformation. Please read {%a target="_blank" href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%} to learn more about the way his ideas contributed to the computational modeling of events and their causal relations.
 
 @@<b>(2) Glenn Puchtel</b>
 
-Glenn Puchtel is a principal software architect/engineer at GRUBBRR (Boca Raton, Florida), whose ideas in bio-inspired emergent systems (i.e. biocybernetics, wetware, etc) as well as their architectural implications inspired me to construct a network-based topology of the gameplay system. Please read {%a href="https://thingspool.net/morsels/page-6.html"%}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{%/a%} to learn more about the way his ideas contributed to the formation of the force-exchange network model.
+Glenn Puchtel is a principal software architect/engineer at GRUBBRR (Boca Raton, Florida), whose ideas in bio-inspired emergent systems (i.e. biocybernetics, wetware, etc) as well as their architectural implications inspired me to construct a network-based topology of the gameplay system. Please read {%a target="_blank" href="https://thingspool.net/morsels/page-6.html"%}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{%/a%} to learn more about the way his ideas contributed to the formation of the force-exchange network model.
 
 @@<hr>
 @@<h3><b>1. Events</b></h3>
@@ -1240,7 +1240,7 @@ When an actor receives a force from another actor, it applies that force to itse
 
 <b1_2>
 
-What is really important, though, is the inner workings of the event itself. In {%a href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%}, I have mentioned that an event can be interpreted as a process of transforming the incoming force vector to its corresponding result vector, as well as that such transformation can be achieved by means of a transfer function (i.e. a list of one-to-one mappings between scalar values).
+What is really important, though, is the inner workings of the event itself. In {%a target="_blank" href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%}, I have mentioned that an event can be interpreted as a process of transforming the incoming force vector to its corresponding result vector, as well as that such transformation can be achieved by means of a transfer function (i.e. a list of one-to-one mappings between scalar values).
 
 In addition, what is happening inside an actor as it undergoes an event should also be noted. An actor first receives an incoming force vector, transforms it into the result vector (via the transfer function), and accumulates that result vector in its own persistent vector called "state vector". This special vector represents the current state of the actor, and can be considered the cumulative sum of all the result vectors produced so far.
 
@@ -1358,7 +1358,7 @@ So, we have this thing called "Force" which is analogous to a letter in a mail d
 
 First of all, let us imagine that the game world consists of a number of places, where a "place" is a fixed region in space. Each place contains a number of actors in it, who are responsible for exchanging forces with one another.
 
-Spatially speaking, a place is an area which encloses its actors. From a communication point of view, though, a place is something more than that. Since an actor communicates with another actor "through space", we ought to imagine a place not as a static region, but as a "force router" which works as a medium of signal transmission (This concept is thoroughly explained in the "Indirect Communication" section of {%a href="https://thingspool.net/morsels/page-6.html"%}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{%/a%}).
+Spatially speaking, a place is an area which encloses its actors. From a communication point of view, though, a place is something more than that. Since an actor communicates with another actor "through space", we ought to imagine a place not as a static region, but as a "force router" which works as a medium of signal transmission (This concept is thoroughly explained in the "Indirect Communication" section of {%a target="_blank" href="https://thingspool.net/morsels/page-6.html"%}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{%/a%}).
 
 <b2_1>
 
@@ -1476,7 +1476,7 @@ public class MechanicalForceDisabledPlace : Place
 @@<hr>
 @@<h3><b>4. Status Conditions</b></h3>
 
-In {%a href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%}, I have mentioned that an actor's status condition (e.g. spell, upgrade, etc) can be implemented as a modification to the event's transfer function. The simplest approach is to model each status condition as a function which temporarily gets added to the event's original transfer function, thereby "warping" the way in which the event transforms the incoming force vector.
+In {%a target="_blank" href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%}, I have mentioned that an actor's status condition (e.g. spell, upgrade, etc) can be implemented as a modification to the event's transfer function. The simplest approach is to model each status condition as a function which temporarily gets added to the event's original transfer function, thereby "warping" the way in which the event transforms the incoming force vector.
 
 <058>
 
@@ -2160,7 +2160,7 @@ If X and Y were connected to the negative side, the pair of nodes would be a qua
 
 <d05>
 
-In the language of bidirected graphs, these two cases may be interpreted as an "introverted edge" and an "extraverted edge", respectively (See {%a href="https://en.wikipedia.org/wiki/Bidirected_graph"%}Bidirected Graph{%/a%}).
+In the language of bidirected graphs, these two cases may be interpreted as an "introverted edge" and an "extraverted edge", respectively (See {%a target="_blank" href="https://en.wikipedia.org/wiki/Bidirected_graph"%}Bidirected Graph{%/a%}).
 
 @@<hr>
 @@<h3><b>Symmetric Relations</b></h3>
@@ -2216,11 +2216,11 @@ This kind of implementation will be optimal for interpreting a logic programming
 @@<hr>
 @@<h3><b>Further Readings</b></h3>
 
-1. {%a href="https://thingspool.net/reality/page-4.html"%}The Origin of Reality - Volume 4{%/a%}
-2. {%a href="https://thingspool.net/reality/page-7.html"%}The Origin of Reality - Volume 7{%/a%}
-3. {%a href="https://thingspool.net/metaphysics/page-59.html"%}연결의 종류 (Korean){%/a%}
-4. {%a href="https://thingspool.net/metaphysics/page-61.html"%}이진법적 공간의 배열 (Korean){%/a%}
-5. {%a href="https://thingspool.net/metaphysics/page-62.html"%}공간의 근본적 형태들 (Korean){%/a%}
+1. {%a target="_blank" href="https://thingspool.net/reality/page-4.html"%}The Origin of Reality - Volume 4{%/a%}
+2. {%a target="_blank" href="https://thingspool.net/reality/page-7.html"%}The Origin of Reality - Volume 7{%/a%}
+3. {%a target="_blank" href="https://thingspool.net/metaphysics/page-59.html"%}연결의 종류 (Korean){%/a%}
+4. {%a target="_blank" href="https://thingspool.net/metaphysics/page-61.html"%}이진법적 공간의 배열 (Korean){%/a%}
+5. {%a target="_blank" href="https://thingspool.net/metaphysics/page-62.html"%}공간의 근본적 형태들 (Korean){%/a%}
 
 
 
@@ -2456,7 +2456,7 @@ Such a problem, however, can easily be mitigated by limiting the maximum duratio
 
 So, how do we implement such a declarative state transition mechanic in the language of Prolog?
 
-Let us first examine how the functional paradigm would approach this problem. In functional programming (e.g. LISP), the game's "Update" function simply needs to take the previous state of the game as the input, instantiate the new state based off of the given previous state, and return this new state as the output. The returned output will then be appended to the game's state history as the most recent state, and the game loop (which is another function which is responsible for calling the "Update" function) will call the "Update" function once again, and again, and again, and so on, thereby periodically updating the game (For more details, please read: {%a href="https://thingspool.net/software-development/page-21.html"%}Functional Programming for Game Development{%/a%}).
+Let us first examine how the functional paradigm would approach this problem. In functional programming (e.g. LISP), the game's "Update" function simply needs to take the previous state of the game as the input, instantiate the new state based off of the given previous state, and return this new state as the output. The returned output will then be appended to the game's state history as the most recent state, and the game loop (which is another function which is responsible for calling the "Update" function) will call the "Update" function once again, and again, and again, and so on, thereby periodically updating the game (For more details, please read: {%a target="_blank" href="https://thingspool.net/software-development/page-21.html"%}Functional Programming for Game Development{%/a%}).
 
 In logic programming (e.g. Prolog), on the other hand, we cannot use such a functional methodology because functions are not a thing here. Instead, we must specify relations between the current and previous states, in a manner which resembles that of the so-called "difference equations" in mathematics.
 
@@ -2875,7 +2875,7 @@ Of course, just as I have mentioned in the last article, this kind of subtlety (
 
 A more elegant solution is to introduce an interleaving mechanism to the game loop, forcing it to update only half of the world's 2D array of positions at every even-numbered time step, and the other half at every odd-numbered time step. Each half consists of positions which are guaranteed not to immediately influence each other during the current time step. A graphical depiction of this technique is shown below.
 
-(Side Note: I have previously suggested a similar idea in: {%a href="https://thingspool.net/software-development/page-4.html"%}Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata{%/a%})
+(Side Note: I have previously suggested a similar idea in: {%a target="_blank" href="https://thingspool.net/software-development/page-4.html"%}Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata{%/a%})
 
 <e38>
 
@@ -3119,7 +3119,7 @@ This is Part 6 of the series, "Game Programming in Prolog". In order to understa
 @@<hr>
 @@<h3><b>Time Allocation of Events</b></h3>
 
-In {%a href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%}, I mentioned that an event can be represented as a relation in the language of Prolog, as long as it belongs to a certain point in time. An event is usually a result of a set of preceding events (i.e. causes).
+In {%a target="_blank" href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%}, I mentioned that an event can be represented as a relation in the language of Prolog, as long as it belongs to a certain point in time. An event is usually a result of a set of preceding events (i.e. causes).
 
 The time-related notations I have been using, though, may not reflect this underlying concept with a sufficient degree of accuracy. The main reason why this is so is that I have been attaching time parameters to the individual arguments of an event, rather than the event itself.
 
@@ -5097,7 +5097,7 @@ RULES:
 
 For the sake of designing a gameplay system as opposed to a mere answer-finder, though, we need to have temporal relations (aka "events") - that is, relations which belong to certain points in time, instead of existing timelessly as though they are pure ideas such as mathematical theorems, laws of nature, etc.
 
-Just like I had mentioned during the early parts of the series (e.g. {%a href="https://thingspool.net/morsels/page-11.html"%}Part 2{%/a%} and {%a href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%}), time plays a crucial role in the design of video games. It is because the concept of time is indispensable in a system which is driven by a sequence of events.
+Just like I had mentioned during the early parts of the series (e.g. {%a target="_blank" href="https://thingspool.net/morsels/page-11.html"%}Part 2{%/a%} and {%a target="_blank" href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%}), time plays a crucial role in the design of video games. It is because the concept of time is indispensable in a system which is driven by a sequence of events.
 
 Many things happen inside a game, such as gunshots, explosions, births, deaths, and plenty of others. They can all be classified as "events", and events belong to certain points in time, as opposed to static facts which are considered "true" regardless of at which moment in time they are being asserted.
 
@@ -5465,7 +5465,7 @@ public class Fact : Relation<T> where T : Constant
 }
 #$
 
-The answer-finding procedure has not been fully specified here (They are left as: "..."), yet I believe that such details can be elaborated later on if necessary. Pieces of utility code which were introduced in {%a href="https://thingspool.net/morsels/page-15.html"%}Part 6{%/a%} will probably be of help here.
+The answer-finding procedure has not been fully specified here (They are left as: "..."), yet I believe that such details can be elaborated later on if necessary. Pieces of utility code which were introduced in {%a target="_blank" href="https://thingspool.net/morsels/page-15.html"%}Part 6{%/a%} will probably be of help here.
 
 Aside from the problem of figuring out all the valid bindings and converting them to facts, I would say that the overall goal of the "VirtualPrologMachine" class above is to serve as the central gameplay engine which is capable of evaluating the given set of rules and deriving new facts out of them whenever the "Tick()" method gets invoked.
 
@@ -5725,11 +5725,11 @@ From a purely conceptual point of view, the current state of our game world can 
 
 This is where most of the performance issues stem from. In order to apply facts to the rules, you must first search for facts which are applicable to those rules. And to achieve this, you need clever algorithms and data structures to help the system undertake this "searching" portion of the game loop as swiftly as possible. If you repeatedly iterate the entire list of facts without employing shortcuts (such as hashing), you will soon find yourself hitting the performance bottleneck.
 
-As I illustrated in the previous article ({%a href="https://thingspool.net/morsels/page-24.html"%}Part 15{%/a%}), storing facts inside hash tables (e.g. sets and dictionaries) and using keys to reference them is one of the most obvious ways of mitigating the performance issue. The main design problem with this has to do with the matter of choosing which arguments to use as keys.
+As I illustrated in the previous article ({%a target="_blank" href="https://thingspool.net/morsels/page-24.html"%}Part 15{%/a%}), storing facts inside hash tables (e.g. sets and dictionaries) and using keys to reference them is one of the most obvious ways of mitigating the performance issue. The main design problem with this has to do with the matter of choosing which arguments to use as keys.
 
 A fact often consists of multiple arguments, and we are obliged to treat at least one of them as the key for dictionary lookup. And the most optimal choice of the key really depends on the manner in which the fact is being regarded by the rules.
 
-Let me demonstrate what I mean by this. First of all, here is an example of why the overall performance of the system might vary drastically depending on the choice of keys (See the code below). It is just one of the rules from {%a href="https://thingspool.net/morsels/page-14.html"%}Part 5{%/a%}, which tells us that two actors must be "colliding" if their positions coincide.
+Let me demonstrate what I mean by this. First of all, here is an example of why the overall performance of the system might vary drastically depending on the choice of keys (See the code below). It is just one of the rules from {%a target="_blank" href="https://thingspool.net/morsels/page-14.html"%}Part 5{%/a%}, which tells us that two actors must be "colliding" if their positions coincide.
 
 #$
 collide[n](X, Y) :- position[n](X, P), position[n](Y, P).
@@ -6023,7 +6023,7 @@ The first step, which I will be describing shortly, is to write a C# class which
 
 The second step is to write the individual rules as custom C# classes, with custom methods for evaluating them in their own unique ways. The central engine of our Prolog system, then, will iterate the instances of these classes and run their evaluation methods during every game loop, thus simulating the real-time rule evaluation logic.
 
-Let me begin with the first step - the initialization of data structures which will be storing facts. The following code is our hypothetical result of transcompiling the "initial facts" section of the above Prolog script into an equivalent C# class. It is called "State", and its job is to store facts which belong to a certain point in time. This means that, if the game needs to remember the history of its own state for 3 consecutive time steps (e.g. from "n-2" to "n"), it will need to create 3 instances of the "State" class and update them in a cyclic manner (which will let us simulate the "window of remembrance" which shifts itself over time - see the last few paragraphs of the "Causality" section in {%a href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%} for details).
+Let me begin with the first step - the initialization of data structures which will be storing facts. The following code is our hypothetical result of transcompiling the "initial facts" section of the above Prolog script into an equivalent C# class. It is called "State", and its job is to store facts which belong to a certain point in time. This means that, if the game needs to remember the history of its own state for 3 consecutive time steps (e.g. from "n-2" to "n"), it will need to create 3 instances of the "State" class and update them in a cyclic manner (which will let us simulate the "window of remembrance" which shifts itself over time - see the last few paragraphs of the "Causality" section in {%a target="_blank" href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%} for details).
 
 #$
 public class State
@@ -6402,7 +6402,7 @@ The so-called "systems" in ECS can be interpreted as rules (i.e. horn clauses) i
 
 <f37>
 
-{%a href="https://github.com/architsch/hallway"%}Here{%/a%} is an example of what a purely ECS-based game engine would look like. It is a custom HTML5 game engine I wrote using Typescript and WebGL, and it supports both rudimentary 3D graphics and real-time physics. It does not fully leverage the multithreading capability of ECS, yet it does manage to render its structural elegance. In this repository, you will see many similarities between the engine's data-driven systems and the rules I have been writing in Prolog.
+{%a target="_blank" href="https://github.com/architsch/hallway"%}Here{%/a%} is an example of what a purely ECS-based game engine would look like. It is a custom HTML5 game engine I wrote using Typescript and WebGL, and it supports both rudimentary 3D graphics and real-time physics. It does not fully leverage the multithreading capability of ECS, yet it does manage to render its structural elegance. In this repository, you will see many similarities between the engine's data-driven systems and the rules I have been writing in Prolog.
 
 @@<hr>
 @@<h3><b>Input and Output</b></h3>
@@ -6413,7 +6413,7 @@ You know that Prolog, by default, is not a fitting language for general-purpose 
 
 Since what I am proposing in this article is a kind of "virtual Prolog machine" which is different from the standard Prolog environment, however, nothing really prevents us from attaching external I/O endpoints to it, thereby letting this quasi-Prolog system freely interact with the rest of the game engine.
 
-Let me start with user inputs. In {%a href="https://thingspool.net/morsels/page-13.html"%}Part 4{%/a%}, I supposed that there will eventually be some sort of "I/O utility" for the Prolog script to use, such as ones which let the system tell whether the user is currently pressing the given key on the keyboard, and so forth. With the aforementioned transcompilation approach (i.e. translation of the Prolog code into its C# equivalent), this kind of design won't be hard to implement at all. For example, if we decide to write the following code (shown below) to let the player character move to the left whenever the left arrow key is pressed,
+Let me start with user inputs. In {%a target="_blank" href="https://thingspool.net/morsels/page-13.html"%}Part 4{%/a%}, I supposed that there will eventually be some sort of "I/O utility" for the Prolog script to use, such as ones which let the system tell whether the user is currently pressing the given key on the keyboard, and so forth. With the aforementioned transcompilation approach (i.e. translation of the Prolog code into its C# equivalent), this kind of design won't be hard to implement at all. For example, if we decide to write the following code (shown below) to let the player character move to the left whenever the left arrow key is pressed,
 
 #$
 moveLeft[n](X) :- player[n](X), IO::keyPressed(IO::leftKey).
@@ -6690,7 +6690,7 @@ The problem with this kind of approach is that there are just too many things to
 
 This might not be too bad, as long as we manage to parallelize and/or pipeline these rules in an elegant manner. Will this strategy outperform a dedicated physics engine, though?
 
-As I had mentioned in the first section of {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%}, the aim of Prolog-based game programming in this series of articles is to figure out how to construct the core gameplay logic based upon the language of Prolog. The reason behind the presumption of such specialization is that a declarative language is not necessarily optimized for aspects of the game which are not so easy to model in terms of logical relations, such as physics, graphics, etc.
+As I had mentioned in the first section of {%a target="_blank" href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%}, the aim of Prolog-based game programming in this series of articles is to figure out how to construct the core gameplay logic based upon the language of Prolog. The reason behind the presumption of such specialization is that a declarative language is not necessarily optimized for aspects of the game which are not so easy to model in terms of logical relations, such as physics, graphics, etc.
 
 Besides, it is a bit of a wasted effort to try to reinvent the wheel which already works nicely. And we should also remind ourselves that such a wheel is highly modular in nature, that it is quite trivial to just grab and use it as a blackbox.
 
@@ -6751,6 +6751,6 @@ Knowing how to program a game using Prolog is indeed a valuable asset to have in
 
 <f39>
 
-There is another series of articles I wrote back in 2023, {%a href="https://thingspool.net/game-design/list.html"%}Universal Laws of Game Design{%/a%}, which expounds this interdisciplinary topic in detail. If you are interested in expanding the scope of your reading material beyond that of mere technical elaboration, please check this out.
+There is another series of articles I wrote back in 2023, {%a target="_blank" href="https://thingspool.net/game-design/list.html"%}Universal Laws of Game Design{%/a%}, which expounds this interdisciplinary topic in detail. If you are interested in expanding the scope of your reading material beyond that of mere technical elaboration, please check this out.
 
 (End of "Game Programming in Prolog")

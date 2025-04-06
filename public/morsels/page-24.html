@@ -152,7 +152,7 @@ public class Fact : Relation&lt;T&gt; where T : Constant
 {
     public int Time;
 }</code></pre></div>
-<p>The answer-finding procedure has not been fully specified here (They are left as: "..."), yet I believe that such details can be elaborated later on if necessary. Pieces of utility code which were introduced in <a href="https://thingspool.net/morsels/page-15.html">Part 6</a> will probably be of help here.</p>
+<p>The answer-finding procedure has not been fully specified here (They are left as: "..."), yet I believe that such details can be elaborated later on if necessary. Pieces of utility code which were introduced in <a target="_blank" href="https://thingspool.net/morsels/page-15.html">Part 6</a> will probably be of help here.</p>
 <p>Aside from the problem of figuring out all the valid bindings and converting them to facts, I would say that the overall goal of the "VirtualPrologMachine" class above is to serve as the central gameplay engine which is capable of evaluating the given set of rules and deriving new facts out of them whenever the "Tick()" method gets invoked.</p>
 <p>Each call of the "Tick()" method represents a clock cycle (i.e. game loop). Every time it runs, it goes through all the given rules, identifies all the relevant facts as well as their appropriate bindings, and instantiates new facts (if applicable) out of such bindings. And in the end, it removes all the obsolete facts (i.e. ones that are too old) and increments the time step by 1.</p>
 <hr>
