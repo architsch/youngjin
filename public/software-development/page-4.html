@@ -7,56 +7,64 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata"/>
-<meta property="og:url" content="http://localhost:3000/software-development/page-4.html"/>
+<meta property="og:url" content="https://thingspool.net/software-development/page-4.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="An article about GPU-based cellular automata."/>
-<meta property="og:image" content="http://localhost:3000/software-development/001_01.jpg"/>
+<meta property="og:image" content="https://thingspool.net/software-development/001_01.jpg"/>
 <meta property="og:image:alt" content="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</title>
-<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
-<link rel="stylesheet" href="http://localhost:3000/style.css">
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
-<link rel="canonical" href="http://localhost:3000/software-development/page-4.html">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/software-development/page-4.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="http://localhost:3000/software-development/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/software-development/list.html">Software Development (2022 - 2024)</a>/Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</div>
+<a class="inlineButton" href="https://thingspool.net/software-development/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/software-development/list.html">Software Development (2022 - 2024)</a>/Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</div>
 <div class="s_spacer"></div>
 
 <h1>Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</h1>
 <p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2022</p>
 <div class="m_spacer"></div>
 <p>The Cellular Automata (CA) model is useful for many applications, such as grid-based videogames, integrated circuit simulations, ecological simulations, particle simulations, and so on. One major limitation of a typical CA system, however, is that each cell is only allowed to modify its own state. This is not a problem when we are dealing with a simple mathematical thought experiment such as Conway's Game of Life, but can really turn out to be a serious bottleneck when we try to establish some form of "Conservation of Matter" in CA, in which an object simply transfers from one location to another instead of allowing itself to be created/destroyed.</p>
-<img class="figureImage" src="http://localhost:3000/software-development/001_01.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 1)">
+<img class="figureImage" src="https://thingspool.net/software-development/001_01.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 1)">
 <p>There are two possible methods of logic for a CA system, which are shown above. The first one is the standard CA logic that can easily be implemented as a shader (or any other equivalent parallel-processing) program, and the other one is a modified CA logic which allows each cell to modify the state of its neighbors, not just its own. This lets us simulate the movement of discrete objects, since a "movement" is nothing more than a simple data-swap between two adjacent cells.</p>
 <p>Allowing each cell to simultaneously modify its neighbors, of course, has its own drawbacks. If we allow two adjacent cells to concurrently update their own neighbors, we will be facing race conditions within these two cells. If we allow two cells that are separated by only one other cell to concurrently update their own neighbors, we will still be facing race conditions within this in-between cell.</p>
 <p>If we allow two cells that are separated by TWO other cells instead of just one, however, we won't experience any race conditions between them because there will be no way for them to modify the same cell at once.</p>
-<img class="figureImage" src="http://localhost:3000/software-development/001_02.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 2)">
+<img class="figureImage" src="https://thingspool.net/software-development/001_02.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 2)">
 <p>This means that, in order to let every cell modify its neighbors in a concurrent manner, we must slice the parallel update routine of the CA into 9 different modes, each of which contains one of 9 unique sets of cells that are separated by at least 2 other cells between them. This ensures that absolutely no race condition can happen during any of these 9 modes, since no pair of cells will have a chance to touch the same exact neighboring cell.</p>
-<img class="figureImage" src="http://localhost:3000/software-development/001_03.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 3)">
+<img class="figureImage" src="https://thingspool.net/software-development/001_03.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 3)">
 <p>Updating the entire CA grid, then, will require the program to execute all of these 9 modes in a sequential manner during each full update cycle. A simple design is to run these modes in a numerically ascending order, such as: [1 -&gt; 2 -&gt; 3 -&gt; 4 -&gt; 5 -&gt; 6 -&gt; 7 -&gt; 8 -&gt; 9]. However, such a fixed order may introduce "biases" to the system, causing side effects such as object movements always tending towards certain directions, etc. Therefore, it is much more desirable to shuffle the order of these 9 execution modes after each full update cycle of the CA, so as to "average out" such potential biases.</p>
-<img class="figureImage" src="http://localhost:3000/software-development/001_04.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 4)">
+<img class="figureImage" src="https://thingspool.net/software-development/001_04.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 4)">
 <p>The aforementioned method can be implemented as a shader program pretty easily. All we need is a pair of shaders, one for issuing "update-commands" based on the current state of the cell and its neighbors, and the other for interpreting these update-commands and applying the appropriate state changes to the cell as well as its neighbors. The CA cell's state can be encoded as a pixel value (32 bits for a standard RGBA texture), and each update-command's content (i.e. opcodes and their parameters), too, can be encoded as a pixel value (32 bits for a standard RGBA texture).</p>
-<img class="figureImage" src="http://localhost:3000/software-development/001_05.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 5)">
+<img class="figureImage" src="https://thingspool.net/software-development/001_05.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 5)">
 <p>For a more optimized implementation, we will need a piece of customized hardware which is designed like the one shown below. Here, the system enters the index of the parallel-execution mode as the input parameter, and the hardware uses that index to activate only 1 out of 9 groups of cells and their neighboring update-command ports. Each "cell module" has its own logic processor which determines the future state of itself and its neighbors, based upon the current state of itself and its neighbors.</p>
-<img class="figureImage" src="http://localhost:3000/software-development/001_06.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 6)">
-<img class="figureImage" src="http://localhost:3000/software-development/001_07.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 7)">
+<img class="figureImage" src="https://thingspool.net/software-development/001_06.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 6)">
+<img class="figureImage" src="https://thingspool.net/software-development/001_07.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 7)">
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

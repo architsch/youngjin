@@ -7,33 +7,41 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="A Layman&#39;s Bridge to Mathematics - Part 8"/>
-<meta property="og:url" content="http://localhost:3000/bridge-to-math/page-9.html"/>
+<meta property="og:url" content="https://thingspool.net/bridge-to-math/page-9.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="Functional Programming, List Processing, and the usage of polynomials and their algebraic operations for manipulating list data."/>
-<meta property="og:image" content="http://localhost:3000/bridge-to-math/092.jpg"/>
+<meta property="og:image" content="https://thingspool.net/bridge-to-math/092.jpg"/>
 <meta property="og:image:alt" content="A Layman&#39;s Bridge to Mathematics - Part 8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>A Layman&#39;s Bridge to Mathematics - Part 8</title>
-<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
-<link rel="stylesheet" href="http://localhost:3000/style.css">
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
-<link rel="canonical" href="http://localhost:3000/bridge-to-math/page-9.html">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/bridge-to-math/page-9.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="http://localhost:3000/bridge-to-math/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/bridge-to-math/list.html">A Layman's Bridge to Mathematics (2024)</a>/A Layman's Bridge to Mathematics - Part 8</div>
+<a class="inlineButton" href="https://thingspool.net/bridge-to-math/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/bridge-to-math/list.html">A Layman's Bridge to Mathematics (2024)</a>/A Layman's Bridge to Mathematics - Part 8</div>
 <div class="s_spacer"></div>
 
 <h1>A Layman's Bridge to Mathematics - Part 8</h1>
@@ -44,64 +52,64 @@
 <p>The belt does not have to be fully loaded with biscuits, however. It may as well have empty slots, as well as those that are occupied by other types of objects such as cookies, tarts, or homemade pot pies.</p>
 <p>Each slot carries its own identifier such as ID, ID², or ID³, and we have the right to assign anything to it, including emptiness itself (which is represented by 0). An example is shown below.</p>
 <p>conveyorBelt = biscuit ID² + dough ID³</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/092.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 1)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/092.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 1)">
 <p>This belt has a biscuit on the second slot (ID²) and a piece of dough on the third slot (ID³). The first slot (ID) is empty (= 0), so it does not even appear in the formula.</p>
 <p>For simplicity's sake, though, I will ignore the sheer variety of stuff with which the conveyor belt could be filled up for now and solely focus on its rudimentary mechanics. Suppose, for a moment, that we only have a biscuit on the second slot (ID²) and absolutely nothing else.</p>
 <p>conveyorBelt = biscuit ID²</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/093.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 2)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/093.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 2)">
 <p>What is going to happen if we multiply the formula by ID? Assuming you know how to multiply, I would say that the biscuit's identifier (ID²) will turn itself into ID³ because ID² x ID = ID³. This is the same thing as pushing the biscuit to the back by one slot.</p>
 <p>pushBack(biscuit ID²) = (biscuit ID²) ID = biscuit ID³</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/094.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 3)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/094.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 3)">
 <p>The inverse operation is also possible. You can push the biscuit to the front by dividing the formula by ID instead of multiplying.</p>
 <p>pushFront(biscuit ID²) = (biscuit ID²) / ID = biscuit ID</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/095.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 4)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/095.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 4)">
 <p>The ability to push things in both directions is not limited to the case of a single biscuit. If there are multiple objects on the conveyor belt, multiplication by ID will push all of them simultaneously to the back. Similarly, division by ID will push all of them simultaneously to the front.</p>
 <p>Let us revisit the previous two functions called "addBiscuit" and "subtractBiscuit". In these two functions, we were dealing with a bunch of biscuits and their distinct identifiers (e.g. ID, ID², ID³).</p>
 <p>In order to add a new biscuit to the belt, what should we do? If the frontmost slot (ID) is empty, we can simply add "biscuit ID" to the formula to fill it up with a biscuit. If the slot is not empty, however, adding "biscuit ID" to the formula without any prior action will basically "mix" the new biscuit with the existing object, subsequently generating a weird mixture.</p>
 <p>Therefore, we must first push everything to the back in order to make room for the new biscuit. Once we do that, we will be able to safely add "biscuit ID" to the conveyor belt without worrying about accidentally mixing things up.</p>
 <p>addBiscuit(conveyorBelt) = biscuit ID + conveyorBelt ID = biscuit ID + pushBack(conveyorBelt)</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/096.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 5)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/096.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 5)">
 <p>What about subtracting a biscuit? If we presume that the frontmost slot is already occupied by a biscuit, we will be able to tell that subtracting "biscuit ID" from the formula will neatly get rid of an existing biscuit from the conveyor belt. Then, since somebody might want to remove yet another biscuit later on, we should probably push everything to the front so as to enable subsequent acts of subtraction.</p>
 <p>subtractBiscuit(conveyorBelt) = (conveyorBelt - biscuit ID) / ID = pushFront(conveyorBelt - biscuit ID)</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/097.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 6)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/097.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 6)">
 <p>The notion that we ought to "push things to the front after removing the frontmost element" is not just something I contrived out of nowhere. When you grab a gun (semiautomatic pistol) and fire it once, what does it do? It first destroys the uppermost bullet by hitting its ass with a rigid rod, and then pushes the rest of the bullets upward to fill the gap. Think of the "subtractBiscuit" function as the act of firing a biscuit-gun.</p>
 <p>The real problem, though, resides in the fact that I am making a bold assumption here which may not always be the case.</p>
 <p>If the belt's frontmost slot were occupied by a biscuit, we would definitely be able to use the "subtractBiscuit" function without any trouble. If the slot were either empty or occupied by something else, however, we would be in trouble because applying the "subtractBiscuit" function to such a case is an equivalent of merging an anti-biscuit (i.e. "-biscuit") with whatever is sitting on the frontmost slot.</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/098.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 7)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/098.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 7)">
 <p>In order to prevent such a calamity, we must check the current status of the conveyor belt before fiddling with it. This "checking" part, when correctly implemented, will prevent us from facing undesired consequences.</p>
 <p>How shall we do that, in the case of the "subtractBiscuit" function? The first step is to decide which condition we ought to check, and the second step is to decide what to do when such a condition is either satisfied or dissatisfied.</p>
 <p>In other words, we need a conditional statement in our function.</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/099.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 8)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/099.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 8)">
 <p>A conditional statement allows us to choose which of the two pathways we must follow. If the given condition is satisfied, we will follow the "YES" path. If not, we will follow the "NO" path.</p>
 <p>In our "subtractBiscuit" function, the condition we want to check is whether the conveyor belt's frontmost slot has a biscuit or not. Algebraically, it is the same thing as saying whether the formula contains the "biscuit ID" term or not.</p>
 <p>If this condition is met, we will proceed to remove "biscuit ID" from the belt. This is our "YES" path.</p>
 <p>Otherwise, we must leave the belt as it is without changing anything. This is our "NO" path.</p>
 <p>CONDITION: Does conveyorBelt contain "biscuit ID"?<br>IF "YES": subtractBiscuit(conveyorBelt) = pushFront(conveyorBelt - biscuit ID)<br>IF "NO": subtractBiscuit(conveyorBelt) = conveyorBelt</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/100.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 9)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/100.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 9)">
 <p>What shall we do if the conveyor belt's frontmost slot is occupied by a cookie instead of a biscuit? The answer is pretty straightforward because we now know what the condition is. The formula does not have "biscuit ID" in it, so we will do nothing and simply return the original conveyor belt.</p>
 <p>conveyorBelt = cookie ID + biscuit ID²<br>subtractBiscuit(conveyorBelt) = conveyorBelt</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/101.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 10)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/101.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 10)">
 <p>What shall we do if the conveyor belt's frontmost slot is occupied by a biscuit? Since the formula does indeed have "biscuit ID" in it, we will continue on with our usual biscuit removal process.</p>
 <p>conveyorBelt = biscuit ID + cookie ID²<br>subtractBiscuit(conveyorBelt) = pushFront(conveyorBelt - biscuit ID)</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/102.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 11)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/102.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 11)">
 <p>So far, quite a number of things have been demonstrated. We now have a method of keeping multiple objects together in one place (i.e. conveyor belt), as well as a method of adding, removing, and modifying them in a selective fashion, with the help of conditional statements such as: "Is the fourth slot of this conveyor belt empty?".</p>
 <p>All these techniques, with a bit of additional insight, allow us to build any sophisticated system we may dare to imagine.</p>
 <p>In order to prove such a claim, let me suppose that our conveyor belt is infinite in length - that is, its number of slots is unbounded. In the middle, we have a slot which has "1" as its identifier (because it is the 0-th power of ID, which equals 1). On the right side, we have slots identified by positive powers of ID. On the left side, we have slots identified by negative powers of ID.</p>
 <p>conveyorBelt = ... + (?)ID⁻³ + (?)ID⁻² + (?)ID⁻¹ + (?) + (?)ID + (?)ID² + (?)ID³ + ...</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/103.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 12)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/103.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 12)">
 <p>And let me also suppose that there is a function called "addBiscuitAt" which adds a biscuit not necessarily at the frontmost slot of the conveyor belt, but at any given slot (i.e. the one whose identifier is "slotID").</p>
 <p>addBiscuitAt(conveyorBelt, slotID) = (biscuit + conveyorBelt / slotID) slotID</p>
 <p>The way this function operates may look a bit strange, but it is not too hard to comprehend. Think of it as a machine which sits at the center of the conveyor belt. Dividing the formula by "slotID" pushes all the slots in the way in which it will bring the designated slot to the center. The machine, then, adds a biscuit, and then multiplies the formula by "slotID" to push all the slots back to their original locations.</p>
 <p>This 3-step procedure, as a result, modifies only the given slot (i.e. the one whose position is "slotID") and leaves all other slots untouched.</p>
 <p>An example usage of this function is displayed below.</p>
 <p>conveyorBelt = biscuit ID + biscuit ID³<br>addBiscuitAt(conveyorBelt, ID²) = (biscuit + conveyorBelt / ID²) ID²</p>
-<img class="figureImage" src="http://localhost:3000/bridge-to-math/104.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 13)">
+<img class="figureImage" src="https://thingspool.net/bridge-to-math/104.jpg" alt="A Layman's Bridge to Mathematics - Part 8 (Figure 13)">
 <p>In addition, there may also be myriads of other functions which are designed to access and/or modify any arbitrary slots in this infinite conveyor belt, such as "subtractBiscuitAt(...)", "moveBiscuitTo(...)", and so on. With the help of such functions, we will be able to do anything a computer can do. Why? Because what I just portrayed here is essentially what people call "Turing Machine".</p>
 <p>The world of math is one vast imaginary computer. Our conveyor belt is the computer's memory, and our functions are its machine instructions (aka "programs").</p>
 <p>(Will be continued in Part 9)</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

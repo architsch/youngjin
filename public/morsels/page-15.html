@@ -7,33 +7,41 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Game Programming in Prolog - Part 6"/>
-<meta property="og:url" content="http://localhost:3000/morsels/page-15.html"/>
+<meta property="og:url" content="https://thingspool.net/morsels/page-15.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="This article explains how real-time gameplay systems can be created in the language of Prolog, based on a set of advanced concepts such as time-binding of relations, decomposition of discrete events, and compound symbols. This model of technical game design will be especially helpful for constructing highly emergent systems, such as ones which comprise the backbone of scientific simulation games (e.g. The Sims, SimCity, SimEarth, SimLife, etc)."/>
-<meta property="og:image" content="http://localhost:3000/morsels/e54.jpg"/>
+<meta property="og:image" content="https://thingspool.net/morsels/e54.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 6">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 6</title>
-<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
-<link rel="stylesheet" href="http://localhost:3000/style.css">
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
-<link rel="canonical" href="http://localhost:3000/morsels/page-15.html">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/morsels/page-15.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 6</div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 6</div>
 <div class="s_spacer"></div>
 
 <h1>Game Programming in Prolog - Part 6</h1>
@@ -48,21 +56,21 @@
 <p>The time-related notations I have been using, though, may not reflect this underlying concept with a sufficient degree of accuracy. The main reason why this is so is that I have been attaching time parameters to the individual arguments of an event, rather than the event itself.</p>
 <p>The example below is a simple instance of causation. In this case, the occurrence of "event1" during the previous time step (n-1) caused "event2" to happen during the current time step (n).</p>
 <div class="snippet"><pre><code>event2(X[n]) :- event1(X[n-1]).</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/e48.jpg" alt="Game Programming in Prolog - Part 6 (Figure 1)">
+<img class="figureImage" src="https://thingspool.net/morsels/e48.jpg" alt="Game Programming in Prolog - Part 6 (Figure 1)">
 <p>Here is another example. In this case, we can still see that "event1" caused "event2" to happen. The time steps involved here are a bit different, though. What we see in this scenario is that "event1" is based not only on the state of X one step back in time (n-1), but also on the state of X two steps back in time (n-2). In other words, "event2" is caused by what happened at two distinct points in the past (n-1 and n-2).</p>
 <div class="snippet"><pre><code>event2(X[n]) :- event1(X[n-1], X[n-2]).</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/e49.jpg" alt="Game Programming in Prolog - Part 6 (Figure 2)">
+<img class="figureImage" src="https://thingspool.net/morsels/e49.jpg" alt="Game Programming in Prolog - Part 6 (Figure 2)">
 <p>An event which belongs to multiple points in time, like the one shown above (i.e. "event1(X[n-1], X[n-2])"), is not logically absurd at all; such a kind of formulation makes perfect sense, both from pragmatic and theoretical points of view. However, it makes our representation of events a bit unnecessarily convoluted. And I say "unnecessarily" here because there really is no need for an event to stick itself to more than a single moment in time.</p>
 <p>Let me ask you a question. Have we ever seen so far, from the very first part of this series, any Prolog code which demonstrated a relation with more than one time samples, such as "event1(X[n-1], X[n-2])"? The truth is that we have never seen one, and the reason is that it often makes a lot more sense to just break it down into two or more simpler events, just like the ones shown below (i.e. "event1A" and "event1B"). Think of these two events as the result of decomposing "event1" into two components (A and B).</p>
 <div class="snippet"><pre><code>event2(X[n]) :- event1A(X[n-1]), event1B(X[n-2]).</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/e50.jpg" alt="Game Programming in Prolog - Part 6 (Figure 3)">
+<img class="figureImage" src="https://thingspool.net/morsels/e50.jpg" alt="Game Programming in Prolog - Part 6 (Figure 3)">
 <p>Let me show you a more specific example. Imagine that there is a guy (called "X") who is lost in the middle of wilderness. In order to notify his presence to the outside world, he decides to broadcast the word "SOS" using his telegraphic device, for the hope of being rescued by anyone who receives it.</p>
 <p>The telegraphic communication protocol, however, only allows him to send one letter at a time, so he must transmit "s" first, wait for a moment, transmit "o", wait for another moment, and then finally transmit "s" to finish transmitting the word "SOS".</p>
 <p>There are two alternative ways of implementing this.</p>
 <div class="snippet"><pre><code>rescue(X[n]) :- sendThreeLetters(X[n-1], s[n-1], X[n-2], o[n-2], X[n-3], s[n-3]).</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/e51.jpg" alt="Game Programming in Prolog - Part 6 (Figure 4)">
+<img class="figureImage" src="https://thingspool.net/morsels/e51.jpg" alt="Game Programming in Prolog - Part 6 (Figure 4)">
 <div class="snippet"><pre><code>rescue(X[n]) :- send(X[n-1], s[n-1]), send(X[n-2], o[n-2]), send(X[n-3], s[n-3]).</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/e52.jpg" alt="Game Programming in Prolog - Part 6 (Figure 5)">
+<img class="figureImage" src="https://thingspool.net/morsels/e52.jpg" alt="Game Programming in Prolog - Part 6 (Figure 5)">
 <p>In the first case, there is an event called "sendThreeLetters" which tells us that X has successfully sent the three letters (i.e. "s", "o", "s") during the last three time steps (i.e. n-1, n-2, n-3). When this event is detected, X gets rescued.</p>
 <p>In the second case, there are three different "send" events. Each of these events represents the transmission of one of the three letters of the word "SOS". When all of these three events are detected, X gets rescued.</p>
 <p>These two implementations are both valid, yet the second one is much more elegant because it ensures that each event is anchored to a single time step. This lets us associate each time parameter (such as "n-1") not with the event's individual arguments, but with the event itself. Thus, our horn clause can be re-written in a much simpler manner, like the one shown below:</p>
@@ -125,18 +133,18 @@ Vectors (Constants):
     &lt;3, 6.75&gt;,
     &lt;value3, y, z1&gt;,
     &lt;x, -95&gt;</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/e53.jpg" alt="Game Programming in Prolog - Part 6 (Figure 6)">
+<img class="figureImage" src="https://thingspool.net/morsels/e53.jpg" alt="Game Programming in Prolog - Part 6 (Figure 6)">
 <p>An argument whose name begins with an uppercase letter denotes a variable. A variable is basically a reference; it is an indicative entity which points itself to a constant value.</p>
 <p>An argument whose name does NOT begin with an uppercase letter, on the other hand, denotes a constant. It is a specific piece of information, stored somewhere in the computer's memory. The question is, "What kind of information?"</p>
 <p>If we were dealing with a "pure" version of Prolog, intended to be used solely for academic purposes, I would say that only the atomic ones (i.e. symbols) must qualify as part of the language's dictionary of build-in data types. A pristine system of logic, which is supposed to be devoid of any superfluous posture of complexity, would probably be obliged to exclude non-atomic data types (such as List, Set, Map, Graph, etc) from its ground-level semantics.</p>
 <p>For the sake of convenience and efficiency, however, it is sometimes necessary to break free from such a harsh constraint unless we are conducting a purely theoretical research (e.g. proving a theorem in mathematics, etc). Since the topic of this article is game programming, it will be helpful if we just "extend" the language of Prolog a bit to bypass a myriad of potential challenges.</p>
 <p>Now you may understand why I listed "Vector" as one of the built-in types. A vector is not necessarily an innate part of the original Prolog, but its addition nicely solves a great deal of trouble in the context of general-purpose computing.</p>
 <p>Being able to put an arbitrary number of things together (i.e. vector) is an indispensable feature to have in a programming language. Thus, why not just let us assume that we are using a special Prolog interpreter which is designed to support this by default?</p>
-<img class="figureImage" src="http://localhost:3000/morsels/e54.jpg" alt="Game Programming in Prolog - Part 6 (Figure 7)">
+<img class="figureImage" src="https://thingspool.net/morsels/e54.jpg" alt="Game Programming in Prolog - Part 6 (Figure 7)">
 <p>One might argue that introducing Vector as a built-in type should be considered a source of innumerable pitfalls, due to the possibility of forming weird nested structures such as a variable inside a vector, a vector inside a vector, and so forth.</p>
 <p>Such a concern, however, is not going to matter if we enforce the rule that a Prolog vector must only permit symbols (atomic constants) as its components. This means that, for the sake of simplicity, there should not be any inner variables or inner vectors inside a vector.</p>
 <p>The benefit of this constraint is that it allows vectors to be treated as literal values (similar to string literals), which then won't demand any special treatment at all. Each of them will simply be understood as a result of concatenating multiple symbols together in the form of an array. And whenever the Prolog application wants to bind a variable to a vector, all it needs to do is let that variable point to the vector's location in memory and regard it as a "compound symbol" - a symbol which is made out of more elementary (primitive) symbols, just like a molecule is made out of atoms.</p>
-<img class="figureImage" src="http://localhost:3000/morsels/e55.jpg" alt="Game Programming in Prolog - Part 6 (Figure 8)">
+<img class="figureImage" src="https://thingspool.net/morsels/e55.jpg" alt="Game Programming in Prolog - Part 6 (Figure 8)">
 <p>And whenever the program is to perform a pattern-match between two constants (to see if a predicate evaluates to TRUE), all it needs to do is apply one of the two different protocols depending on their type. If they both belong to the type "Symbol", a simple equality check (=) will suffice. If they both belong to the type "Vector", their equality check will be carried out in a pairwise manner (i.e. compare the first elements, compare the second elements, and so on).</p>
 <p>The code below is a rough draft of how the matching of relations and their arguments may be done in a C# implementation of Prolog, based on the data types I have mentioned so far.</p>
 <div class="snippet"><pre><code>public abstract class RelationArg
@@ -293,8 +301,8 @@ public static class RelationUtil
 }</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-16.html">Part 7</a>)</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

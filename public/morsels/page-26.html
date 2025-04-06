@@ -7,33 +7,41 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Game Programming in Prolog - Part 17"/>
-<meta property="og:url" content="http://localhost:3000/morsels/page-26.html"/>
+<meta property="og:url" content="https://thingspool.net/morsels/page-26.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="Prolog is widely known as a logic programming language, but it can also be used for developing a game. In this article, I will explain how the concept of transcompilation (from Prolog to a popular language such as C#) can be used to create a &amp;quot;virtual Prolog machine&amp;quot; which is optimized to run on personal computing devices."/>
-<meta property="og:image" content="http://localhost:3000/morsels/f32.jpg"/>
+<meta property="og:image" content="https://thingspool.net/morsels/f32.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 17">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 17</title>
-<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
-<link rel="stylesheet" href="http://localhost:3000/style.css">
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
-<link rel="canonical" href="http://localhost:3000/morsels/page-26.html">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/morsels/page-26.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 17</div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 17</div>
 <div class="s_spacer"></div>
 
 <h1>Game Programming in Prolog - Part 17</h1>
@@ -49,7 +57,7 @@
 <p>First of all, the underlying assumption is that a Prolog-based game is not necessarily built entirely out of Prolog's logic programming system alone. A game is inexplicably broad in scope when it comes to software architecture; its development strategy oftentimes demands the aid of multiple programming paradigms, including not just logic programming, but also functional programming, object-oriented programming, etc.</p>
 <p>Because of that, it is far more desirable to construct a specialized Prolog system inside the overall game project and make it be responsible for just the core gameplay logic and nothing else, rather than forcing ourselves to code the entire application in Prolog and letting the standard Prolog interpreter to run the whole thing. Such a methodology will be terribly inefficient, both performance and development-wise.</p>
 <p>This is the main reason why I have been showing C# code to explain the inner workings of our custom Prolog engine. Eventually, it is not going to be the Prolog script itself which will be executed directly by the program. There will be some kind of "Prolog transcompiler" which will translate our (pseudo) Prolog code into a more machine-friendly language, such as C/C++, C#, Java, etc, so that embedding it within the project's general programming environment (e.g. .NET, Unity, or whatever) will be as swift as putting chocolate syrup on top of chocolate ice cream.</p>
-<img class="figureImage" src="http://localhost:3000/morsels/f32.jpg" alt="Game Programming in Prolog - Part 17 (Figure 1)">
+<img class="figureImage" src="https://thingspool.net/morsels/f32.jpg" alt="Game Programming in Prolog - Part 17 (Figure 1)">
 <p>Code which is written in Prolog, by default, is not necessarily the most efficient thing to run for most computers (Most contemporary computing devices are optimized to run machine-level instructions, which are imperative in nature and thus show direct correspondence to Assembly, C, and other procedural programming languages). Therefore, it does not make much sense to execute a Prolog-based application on a PC and expect it to do its job well.</p>
 <p>A custom transcompiler can come to our rescue for this reason. When crafting the core gameplay logic, we can simply write most of the mechanics in Prolog in order to keep the code clean. And then, we should be able to feed this code into the transcompiler to convert it into its imperative equivalent (e.g. C#), so that the resulting source code will be easily compiled (along with the rest of the project's codebase) into a list of highly optimized binary instructions.</p>
 <p>Here's how it could be done. For the sake of demonstration, I will suppose that the goal is to translate Prolog into executable C# code.</p>
@@ -108,7 +116,7 @@ foo2[n](X) :- bar3[n-1](Y), bar1[n-1](X, [key]Y).</code></pre></div>
         foo2.Clear();
     }
 }</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/f33.jpg" alt="Game Programming in Prolog - Part 17 (Figure 2)">
+<img class="figureImage" src="https://thingspool.net/morsels/f33.jpg" alt="Game Programming in Prolog - Part 17 (Figure 2)">
 <p>As you can see, all current and future facts which have been mentioned in the Prolog code (i.e. bar1, bar2, bar3, foo1, and foo2) have their corresponding storage spaces in the form of either Dictionaries or HashSets. Adding and removing facts will be nothing more than adding and removing data entries to/from these custom structures, which are basically just hash tables from a computational point of view.</p>
 <p>The underlying assumption here is that our "Prolog transcompiler" will parse the developer's Prolog script, read all types of facts which have been mentioned inside the script, infer their arguments' data types from the way in which their literal values are being specified in the initial list of facts (e.g. "bar3" is a set of integer values because "bar3[0](72)" suggests that bar3's argument is supposed to indicate a numerical quantity, etc), and create the appropriate data storages for them.</p>
 <p>One noteworthy thing here is that any fact of type "bar1" must be stored in both "bar1_byX" and "bar1_byY" simultaneously, where the former one maps the first argument to the second, while the latter one maps the second argument to the first. The reason why the transcompiler is supposed to do this is that the "bar1" relation is required to be able to utilize both of its two arguments as keys.</p>
@@ -251,7 +259,7 @@ subtract(X, Y, Z)
 greaterThan(X, Y)
 lessThan(X, Y)</code></pre></div>
 <p>It is obviously impractical to try to find answers to such relations by referring to a lookup table and trying out all possible combinations of inputs to see which of them happens to match their desired output. Therefore, it makes much more sense to let the transcompiler override their default pattern-matching algorithm (i.e. dictionary lookups, etc) with functions which are built-in somewhere else in the C# codebase.</p>
-<img class="figureImage" src="http://localhost:3000/morsels/f34.jpg" alt="Game Programming in Prolog - Part 17 (Figure 3)">
+<img class="figureImage" src="https://thingspool.net/morsels/f34.jpg" alt="Game Programming in Prolog - Part 17 (Figure 3)">
 <p>So, for instance, we may consider classifying Prolog's utility relations into their appropriate categories, like the ones shown below.</p>
 <div class="snippet"><pre><code>MATH::add(X, Y, Z)
 MATH::subtract(X, Y, Z)
@@ -371,14 +379,14 @@ public static class LOGIC
         n++;
     }
 }</code></pre></div>
-<img class="figureImage" src="http://localhost:3000/morsels/f35.jpg" alt="Game Programming in Prolog - Part 17 (Figure 4)">
+<img class="figureImage" src="https://thingspool.net/morsels/f35.jpg" alt="Game Programming in Prolog - Part 17 (Figure 4)">
 <p>The "states" array represents the most recent history of the game's state, which covers the present moment and stretches all the way back to the most distant past which will ever be referenced by the game's rules. The "rules" array is just the list of all the rules (i.e. horn clauses) which were written in the original Prolog script, and "n" is the current time step.</p>
 <p>The "Update()" method is what runs the game. Whenever it is called, it: (1) erases facts that are too old, (2) evalutes all the given rules, (3) infers new facts out of them, and (4) increments the current time step.</p>
 <p>Calling this method over and over again, therefore, will basically repeat these steps in a cyclic fashion, thereby progressing the game forward by continuously generating new facts out of what happened during the recent past.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-27.html">Part 18</a>)</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>
