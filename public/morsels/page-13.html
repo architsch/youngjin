@@ -13,16 +13,14 @@
 <meta property="og:description" content="This article explains how to code in Prolog to make a game. By reading this, you will learn how the data-driven (declarative) grammar of Prolog will help developers create gameplay systems which are way more robust than their imperative counterparts, such as ones written in C++, C#, or Java."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e35.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 4">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 4</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-13.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 4</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 4</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: September 4, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: September 4, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 4 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Space</b></h3>
 <p>A playable game must have its own space and time. It is because space without time is a mere snapshot, and time without space is a mere point.</p>
 <p>In the last article, I explained the nature of time and how its progression could be conceptualized in the language of Prolog. However, I have not explained yet how to express the concept of space in Prolog. Since spatial reasoning is an indispensable part of almost all video games (except ones that are entirely text-based), being able to construct spatial elements and let them spatially interact with one another is crucial for the design of game mechanics.</p>
@@ -99,7 +75,6 @@ position(X[n], P) :- !move(X[n-1], _), position(X[n-1], P).</code></pre></div>
 <p>The second horn clause tells us that if X moved to P during the previous time step, its current position must be P. Here, the "move" relation is plays the role of a differential which gets accumulated (integrated) into X's position as time elapses. This horn clause, thus, can be thought of as an accumulator (integrator) which produces the cumulative sum of the input stream of moves.</p>
 <p>The third horn clause defines the "fallback" condition, which tells us that X's position should stay as it was before if X did not move at all. This, together with the second clause, ensures that X's position is always defined regardless of whether X has moved during the preceding time step or not. If X moved, the second clause would be activated. If X did NOT move, the third clause would be activated instead. This is Prolog's way of implementing the IF-ELSE logic.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Spatial Reasoning</b></h3>
 <p>This sounds reasonable so far. However, the rules above only tell us how to update an object's position based on its momentum. They do not tell us how the momentum itself shall be generated in the first place.</p>
 <p>What makes an object move? There really are innumerable forces which may contribute to its motion, so it is probably a bit too cumbersome to list them all here. Thus, I will first begin with one of the most common means of triggering a movement in a video game - a keyboard-based character control.</p>
@@ -152,7 +127,6 @@ move(X[n], NewPos) :- moveUp(X[n]), position(X[n], P), up(NewPos, P, 1), !positi
 move(X[n], NewPos) :- moveDown(X[n]), position(X[n], P), down(NewPos, P, 1), !positionBlocked(NewPos).</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/e36.jpg" alt="Game Programming in Prolog - Part 4 (Figure 7)">
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Spatial Race Conditions</b></h3>
 <p>There is something fishy in the solution I just illustrated, however. As you may have already noticed, a problem arises when the player and an obstacle happen to be moving to the same exact location at the same exact time, in which case they will overlap. This is clearly undesirable because the player is not supposed to be able to penetrate through an obstacle.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/e37.jpg" alt="Game Programming in Prolog - Part 4 (Figure 8)">
@@ -180,11 +154,10 @@ shouldUpdatePosition(P) :- mod(n, 2, 1), inOddTimeSlot(P).
 ...
 position(X[n], P) :- move(X[n-1], P), position(X[n-1], PrevPos), shouldUpdatePosition(PrevPos).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-14.html">Part 5</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

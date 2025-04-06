@@ -13,16 +13,14 @@
 <meta property="og:description" content="Here is how to make a Prolog game. Using the logical syntax of Prolog, we can construct systems which enforce a wide range of complex rules based upon a simple set of declarative statements (similar to how a few differential equations can be used to describe complex physical phenomena). In this article, I will be explaining how the concept of birth and death are able to be expressed in Prolog&#39;s logic programming environment."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e83.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 10">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 10</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-19.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 10</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 10</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 5, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 5, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 10 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Composition and Decomposition</b></h3>
 <p>So far, I have been demonstrating how an actor's transformations (i.e. state transitions) could be represented in logic programming syntax. An example I came up with, as you may remember from the last article, was a set of alternative ways of handling an egg.</p>
 <p>A perfectly normal egg, which has just been laid by a chicken, is able to be broken because it is being protected by a solid shell. Once you break it, it becomes a handful of liquid, thereby allowing you to either just pan-fry it directly (in which case it will be turned into a fried egg), or to first stir it an then pan-fry the result (in which case it will be turned into an omelet). This is a rudimentary example of an egg's tech tree.</p>
@@ -107,7 +83,6 @@ omurice[n](X) :- omurice[n-1](X), friedRice[n-1](X), below[n-1](X, Y), omelet[n-
 <p>But of course, this is just one of many examples of composition/decomposition. In some other examples, it might make more sense to come up with a brand new actor to represent the result of a combination. And if that happens to be the case, we better just spawn a new actor (i.e. generate a new unique ID) and use it as a reference.</p>
 <p>To be able to manage such a type of reference, however, we will need to utilize yet another concept called "parent-child relation" (Game developers are probably already familiar with this). Once we know how to leverage its full power, we will be able to construct a hierarchy of objects - a neat way of organizing a compound structure. The root node of such a hierarchy (aka "tree"), then, will represent a complex object which is made up of simpler objects.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Parent-Child Relation</b></h3>
 <p>Greetings, fellow game developers! I know that you guys are familiar with the so-called "scene hierarchy" or "object hierarchy" in game programming. The vast majority of game engines (such as Unity) include this as one of their core built-in features, due to the fact that it solves a myriad of potential organizational problems. Just like a computer keeps track of files inside a hierarchy of directories (i.e. folders), a game engine keeps track of in-game elements (such as game-objects, prefabs, UI components, etc) inside the project's internal hierarchy.</p>
 <p>Why keep things in the form of a hierarchy? The answer to this question is so obvious in most cases, that hardly anyone even feels the necessity of answering it.</p>
@@ -159,11 +134,10 @@ localPosition[n](X, LP) :- !addChild[n-1](_, X), !removeChild[n-1](_, X),
 removeChild[n](Parent, Child) :- parent[n](Parent, Child), !alive[n](Child).</code></pre></div>
 <p>The things I have mentioned so far are all the essential stuff we need to know to be able to play with parent-child relations. In the next article, I will explain how these building blocks can be used to represent an omurice as a standalone actor, rather than a mere extraneous identity which is superficially being attached to one of its components (i.e. fried rice).</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-20.html">Part 11</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

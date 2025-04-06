@@ -13,16 +13,14 @@
 <meta property="og:description" content="An article about software toys."/>
 <meta property="og:image" content="https://thingspool.net/software-development/003_02.jpg"/>
 <meta property="og:image:alt" content="Making Profit as a Game Developer">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Making Profit as a Game Developer</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,44 +29,24 @@
 <link rel="canonical" href="https://thingspool.net/software-development/page-20.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/software-development/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/software-development/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/software-development/list.html">Software Development (2022 - 2024)</a>/Making Profit as a Game Developer</div>
+<div class="s_spacer"></div>
+
 <h1>Making Profit as a Game Developer</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: 2023.01</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2023.01</p>
+<div class="m_spacer"></div>
 <p>The game industry is a pretty saturated niche in the world of business. Competition is tough because way too many people are aspiring to become game developers, and it seems to us that one can hardly create and sell a profitable game without an insane degree of marketing budget these days. The digital marketplace is being flooded with countless numbers of brand new games which continuously pour out of the hands of both indie and AAA game developers on a daily basis, and it appears that even "being creative" is not an economic choice that will save one from this neverending struggle because nearly everyone is "creative" in today's world. How many countless times have we seen all sorts of quirky, out-of-box ideas showcased by random indie developers we hadn't even heard of before? I cannot even count such occasions because there are plenty and they all scream in unison, "Look! Look at me! I am special! I am different from anyone else!"</p>
 <p>Because of such high competition, some game developers have chosen to abandon the idea of developing the actual end-product called "game" and shifted their attention to developing a game engine instead. Such people, most of them being hardcore engineers rather than either game development generalists or artists/designers, could be said to have circumvented many of their inherent difficulties by solely focusing on developing a kind of product which they are experts in developing (since a game engine does not necessarily require the talents of artists/designers due to its generic nature).</p>
 <p>Making profit out of a game engine, however, has its own set of difficulties that are probably even worse than those which belong to the case of selling an actual game. Whereas marketing a game suffers from the problem of over-supply (because too many people are creating/selling games), marketing a game engine suffers from the problem of under-demand. First of all, only a tiny fraction of the population are game developers, and this factor alone contributes to a drastic reduction of the consumer base. Within this tiny fraction, there are hardcore engineers who prefer to build nearly everything from scratch (aside from the usage of external graphics, sound, and physics libraries) and therefore do not require a game engine. The rest might choose to utilize a game engine, yet we must be aware that the majority of them are doing so for the highest level of efficiency and thus tend to choose the most popular game engines which convey the utmost degree of community support and cross-platform compatibility (such as Unity or Unreal) instead of engines that are being developed/maintained by relatively small groups of people.</p>
@@ -96,11 +74,10 @@
 <p>(3) Different types of AI agents which behave differently under the exact same circumstance. Type-1 agents may only move, type-2 agents may only attack, type-3 agents may move AND attack simultaneously, type-4 agents may heal others but only when they have enough energy, and so on.</p>
 <img class="figureImage" src="https://thingspool.net/software-development/003_04.jpg" alt="Making Profit as a Game Developer (Figure 3)">
 <p>A virtual world in which these elements exist from the very beginning of user experience, without assuming that the user will take time manually devising them out of nowhere, is a toy that is not necessarily a game (because the presence of such emergent elements do not necessarily present the user with narratives), yet not a game engine either because it is not the user who is inventing all the individual gameplay elements. A software toy, in this respect, could be defined as a "partial game engine" - an engine that lets us create and customize parts of the game while still preserving some of its core mechanics as the backbone of the system which cannot be modified. The coexistence between customizability and immutability is the heart of a software toy, which presents us with a fountain of endless goals by keeping its level of freedom neither too low nor too high. It is because too little freedom (as in a story-driven arcade game) limits the scope of motivation, while too much freedom (as in general-purpose editing programs such as Photoshop and Blender) hardly motivates the user to undertake any adventure at all.</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

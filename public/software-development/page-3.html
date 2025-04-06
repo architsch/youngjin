@@ -13,16 +13,14 @@
 <meta property="og:description" content="An article about developing procedural narratives in games."/>
 <meta property="og:image" content="https://thingspool.net/share.jpg"/>
 <meta property="og:image:alt" content="Procedural Narratives">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Procedural Narratives</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,44 +29,24 @@
 <link rel="canonical" href="https://thingspool.net/software-development/page-3.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/software-development/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/software-development/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/software-development/list.html">Software Development (2022 - 2024)</a>/Procedural Narratives</div>
+<div class="s_spacer"></div>
+
 <h1>Procedural Narratives</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: 2022</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2022</p>
+<div class="m_spacer"></div>
 <p>Let's say that we are creating a videogame using a procedural content generation algorithm. What shall we do to let the game's underlying software auto-generate a virtual world that is populated by meaningful contents?</p>
 <p>It is a pretty well known observation that, using a variety of stochastic and hash-based mechanisms, one can randomly generate all sorts of patterns in space fairly easily. For instance, anyone who is well-versed in computer science would have no trouble writing an algorithm which configures a random maze based on a simple graph-oriented technique (i.e. Just make a grid of vertices and keep connecting random pairs of them until all of them are connected).</p>
 <p>It is also fairly easy to introduce more advanced, abstract patterns to the cookbook of procedural generation. Lock-and-key mechanism, by which the maze is filled with not only corridors of obscure shapes but also with locked doors which can only be unlocked by certain types of keys, is also an option that is straightforward to implement because we can utilize graph-based logic for it (e.g. A "key node" inside the maze graph must precede its corresponding "door node" within at least 1 out of N paths that can be traversed by the player, and so on).</p>
@@ -257,11 +235,10 @@ PlayGame :- AvoidDeath, Survive
 <p>A brute-force solution to this is to design a gigantic goal-tree that is so large, that it will take an unreachable duration of time for the player to experience sufficiently many variations of it and recognize a sense of repetition. This, however, will pull us further and further away from a purely procedural approach because the goal-tree itself is manually designed.</p>
 <p>A subsequent conclusion, therefore, would be that the procedural algorithm somehow needs to be able to automatically construct the goal-tree itself in large scale (possibly infinite), in order to let us scale up the game's narrative space without putting massive amounts of design work. Achieving such level of automation will require the algorithm to be intelligent enough to be able to come up with brand new types of goals under minimal human intervention.</p>
 <p>This is an interdisciplinary area of research which needs collaboration of individuals who have ideas on how to quantitatively measure and reproduce narrative elements. And this, I think, can only be realized through deep understanding of human nature.</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

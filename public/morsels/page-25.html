@@ -13,16 +13,14 @@
 <meta property="og:description" content="How to design an efficient gameplay system in Prolog? Here is the answer. In this article, I will demonstrate some of the efficient search algorithms which can be leveraged to let us create a video game using Prolog&#39;s logic programming syntax."/>
 <meta property="og:image" content="https://thingspool.net/morsels/f28.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 16">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 16</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-25.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 16</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 16</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 19, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 19, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 16 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Search Optimization</b></h3>
 <p>Last time, I mentioned the problem of designing efficient data structures for Prolog's lookup process.</p>
 <p>The heart of our logic-oriented gameplay system lies on the evaluation of rules, which in turn requires the system to quickly search for relevant pieces of data without too much friction. And for the sake of fulfilling such a purpose, I introduced the idea of using sets and dictionaries (i.e. hash tables) to store parts of the game's state (aka "facts").</p>
@@ -173,7 +149,6 @@
 <p>This methodology definitely works, but we know that a nested for-loop will be a real performance killer unless we are looping over just a handful of elements.</p>
 <p>If there are 1000 actors inside the game world, for instance, the outer loop will have to run for 1000 times. This is already quite a load of work. And guess what? The inner loop will have to run for 1000 times for every iteration of the outer loop, meaning that the total number of loops is 1,000 x 1,000 = 1,000,000. A million! This is outrageous.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Explicit Key Specification</b></h3>
 <p>Here is the thing, though. Do we really need to use just a single dictionary to look up the entries? Can't we just create another dictionary which uses positions as the keys and actors as their corresponding values instead, so that searching for facts which match the pattern of "position[n](Y, P)" will be nearly instantaneous as long as P is known?</p>
 <p>Of course, having two dictionaries for the same relation called "position" will indeed require the system to allocate a lot more space in memory. If we can reduce the overall time complexity of our collision detection logic from O(N^2) to O(N) just by doing this, however, wouldn't it be worth the sacrifice?</p>
@@ -208,11 +183,10 @@ public Dictionary&lt;Vector2, HashSet&lt;string&gt;&gt; positionToActors;</code>
 <p>For such a purpose, we will need to come up with yet another notation - "[single]". Attaching this in front of an argument will imply that it only permits a single value for each key. The following code, for instance, makes sure that the type of our "actorToPosition" dictionary is "Dictionary&lt;string, Vector2&gt;" instead of "Dictionary&lt;string, HashSet&lt;Vector2&gt;&gt;".</p>
 <div class="snippet"><pre><code>collide[n](X, Y) :- position[n]([key]X, [single]P), position[n](Y, [key]P).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-26.html">Part 17</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

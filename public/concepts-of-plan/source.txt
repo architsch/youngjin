@@ -7,7 +7,6 @@
 This is a collection of my personal thoughts on the design of a software product.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <001>
 @@<h3><b>1. Where to Begin</b></h3>
 
@@ -24,7 +23,6 @@ First, we need to devise a list of meaningful pet-related experiences. In additi
 We can achieve this by defining our pet simulator not in terms of vague emotional descriptions, but in terms of numerical quantities.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <002>
 @@<h3><b>2. Quantification of Meaning</b></h3>
 
@@ -43,7 +41,6 @@ For prototyping purposes, then, it will be sensible to add a pair of buttons to 
 Here, we can see an example of a dilemma between two choices. While we are feeding the pet, it cannot be caressed. And while we are caressing the pet, it cannot be fed.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <003>
 @@<h3><b>3. The Geometry of Variables</b></h3>
 
@@ -61,7 +58,6 @@ The dynamics of pet simulation can be easily visualized. For example, we can tre
 Each action, then, will be interpreted as a force which pushes the particle in a specific direction.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <004>
 @@<h3><b>4. Multiple Agents</b></h3>
 
@@ -76,7 +72,6 @@ From a game design point of view, such a means of scaling introduces the notion 
 This is an indispensable feature to have, as it is necessary to ensure that the user won't run out of goals to pursue.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <005>
 @@<h3><b>5. Relations</b></h3>
 
@@ -93,7 +88,6 @@ The main benefit of this is that it introduces a wide variety of dynamic behavio
 Such a conflict of interests serves as an important factor in the design of subtle narratives. It urges the user to make choices carefully, since each choice may incur a catastrophic side effect.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <006>
 @@<h3><b>6. Partitioning</b></h3>
 
@@ -108,7 +102,6 @@ Such a mechanic allows us to create local environments, each of which is imbued 
 Another advantage is that it makes things more digestible. By splitting a large herd of pets into isolated groups, the user is now only required to pay attention to a handful of them at a time, rather than having to monitor the entire community of pets like an omniscient deity.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <007>
 @@<h3><b>7. Modes of Interaction</b></h3>
 
@@ -123,7 +116,6 @@ The exact layout of this sort of UI may vary, of course, depending on what kind 
 What is noteworthy, though, is the fact that it prevents confusion by neatly segmenting the system into specialized modules, each of which focuses on its own topic and nothing else.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <008>
 @@<h3><b>8. UI State VS System State</b></h3>
 
@@ -134,7 +126,6 @@ The UI state mirrors the way in which the user is currently interacting with the
 The System state, on the other hand, refers to the current state of the world itself. In our pet simulator, for example, the individual pets' positions and energy/affection levels should all be taken as parts of the application's System state because they all contribute to what is happening inside the world.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <009>
 @@<h3><b>9. State Hierarchy</b></h3>
 
@@ -162,25 +153,21 @@ The state of the UI which displays the current hunger level of a virtual pet, fo
 [Technical Memes] February 2, 2025 - February 14, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Four Quadrants of Sleep</b></h3>
 
 <t01>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Caffeine Crafting Rules</b></h3>
 
 <t02>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>English Breakfast</b></h3>
 
 <t03>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Five Phases of Game Development</b></h3>
 
 <t04>
@@ -202,7 +189,6 @@ The state of the UI which displays the current hunger level of a virtual pet, fo
 The following symbolic elements are some of the most popular archetypes of play, frequently recurring in various forms of entertainment such as video games, tabletop games, films, literature, and others.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a01>
 @@<h3><b>1. Doll</b></h3>
 
@@ -217,7 +203,6 @@ Shopping, therefore, could be imagined as a process of furnishing one's own inve
 (Keywords: #PsychicInterface #Identity #Icon #Idol #Simulacrum #Toy #Plaything)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a02>
 @@<h3><b>2. Treasure Box</b></h3>
 
@@ -232,7 +217,6 @@ In every one of the aforementioned scenarios, though, the essence of what consti
 (Keywords: #RandomReward #PleasantSurprise #Uncertainty #Probability #StochasticProcesses #ParallelUniverse)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a03>
 @@<h3><b>3. Portal</b></h3>
 
@@ -247,7 +231,6 @@ A portal opens up a door to a whole new space of possibilities and exploration. 
 (Keywords: #AnotherWorld #LandOfMysteries #Liberation #RoomForExploration #Adventure)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a04>
 @@<h3><b>4. Furnace</b></h3>
 
@@ -260,7 +243,6 @@ One of the key takeaways of such synthesis is the very notion of unexpectedness.
 (Keywords: #Crafting #Alchemy #Mixer #Combination #Relations #Interactions)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a05>
 @@<h3><b>5. Light</b></h3>
 
@@ -275,7 +257,6 @@ The very moment we turn on a source of light, this chamber of uncertainty dissol
 (Keywords: #Unveiling #OvercomingOfDarkness #Enlightenment #Knowledge #Discovery)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a06>
 @@<h3><b>6. Compass</b></h3>
 
@@ -290,7 +271,6 @@ It can also be understood that a compass only provides us with a fragmentary vie
 (Keywords: #Purpose #Pathway #Journey #Direction #Goal #Guidance #Mentor)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a07>
 @@<h3><b>7. Fountain</b></h3>
 
@@ -305,7 +285,6 @@ In a static, desert-like environment, we can easily imagine such a place of orig
 (Keywords: #NewLife #Spawner #Birth #NewPossibilities #Hope #NewLight)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a08>
 @@<h3><b>8. Building Blocks</b></h3>
 
@@ -318,7 +297,6 @@ In a way, therefore, building blocks serve as the core components of the world a
 (Keywords: #Assembly #Construction #Emergence #Modularity #CreativeFreedom #Reductionism)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a09>
 @@<h3><b>9. Cabinet of Curiosities</b></h3>
 
@@ -333,7 +311,6 @@ Popular media, as well as their myriad genres of entertainment, comprise a dense
 (Keywords: #CollectiveExperience #SharedUniverse #Library #Museum #ScientificInquiry #Taxonomy #CollectiveUnconscious)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a10>
 @@<h3><b>10. City</b></h3>
 
@@ -348,7 +325,6 @@ A hero in our modern life is no longer a muscular warrior who fights in a battle
 (Keywords: #Metropolis #Babylon #ModernLife #Hitchhiker #Globalism #Internet #Wired #Hyperconnectivity)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a11>
 @@<h3><b>11. Word</b></h3>
 
@@ -365,7 +341,6 @@ In popular forms of media such as video games, therefore, words are being used a
 (Keywords: #Word #Language #Linguistics #Communication #Informatics #Spirit #Ghost #Interface #Medium)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <a12>
 @@<h3><b>12. Phantom</b></h3>
 

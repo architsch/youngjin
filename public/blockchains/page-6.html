@@ -13,16 +13,14 @@
 <meta property="og:description" content="An article about the future of blockchains and distributed computing."/>
 <meta property="og:image" content="https://thingspool.net/share.jpg"/>
 <meta property="og:image:alt" content="On Legitimacy of Blockchains - 6">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>On Legitimacy of Blockchains - 6</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,54 +29,33 @@
 <link rel="canonical" href="https://thingspool.net/blockchains/page-6.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/blockchains/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/blockchains/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/blockchains/list.html">On Legitimacy of Blockchains (2022)</a>/On Legitimacy of Blockchains - 6</div>
+<div class="s_spacer"></div>
+
 <h1>On Legitimacy of Blockchains - 6</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: 2022.11</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2022.11</p>
+<div class="m_spacer"></div>
 <p>(On Legitimacy of Blockchains - 6)</p>
 <p>It is also important to mention that layer 2 (off-chain) solutions are often being presented as means of overcoming the blockchain's intrinsic limitations. Protocols such as Bitcoin's Lightning Network, Ethereum's ZK-Rollups, and Optimistic rollups, all strive to solve the intrinsic bandwidth/cost problems of the on-chain network by performing a huge number of off-chain transactions and only committing their end-result to the blockchain. A decent analogy would be that, when shopping at a grocery store, the customer doesn't make a separate payment for every individual product; the cashier just sums up the fees of all the purchased items and issues a single transaction based upon the sum.</p>
 <p>Such off-chain transactions are indeed pretty safe from a security point of view, since the combined usage of hash-code comparison and asymmetric cryptography allows the content of each off-chain transaction to be hidden from intermediaries, while also being tamper-proof. And the identities of all the intermediaries, senders, and recipients, can all be nicely hidden from the eye of the public (for the sake of not giving the society a chance to selectively exclude certain "unfavorable" individuals from engaging in financial activities), since each off-chain transaction can be issued through a complex network of anonymous agents, each of whom doesn't necessarily know about each other. This is a nice functional equivalent of onion routing. Hence, such a set of anonymous interactions can all take place inside the deep web (via Tor browser or so) in order to add yet another layer of security on top of the whole pool of interactions. How nice is this?</p>
 <p>The involvement of layer 2 solutions, however, raises a couple of concerns. Although the end-results of their off-chain processes are directly tied to the blockchain itself, layer 2 solutions introduce a bunch of "holes" through which various scammers can sneak in and fool the end users using all sorts of fabricated "facades" of services instead of the actual services themselves.</p>
 <p>When we are using only the blockchain's main (layer 1) protocol, all we need to do is simply install a single application which directly interacts with the blockchain's nodes (e.g. Bitcoin Wallet). As long as we make sure to hide our private keys and pass phrases, we do not have to worry about being scammed because this standalone program will handle everything related to transactions. When we are using layer 2 protocols, however, we are relying on centralized local services which may have chances of losing your line of transactions or stealing your confidential user info (unless you are well-versed in blockchain technology and have time to monitor the whole process of how exactly they are handling your data, etc).</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

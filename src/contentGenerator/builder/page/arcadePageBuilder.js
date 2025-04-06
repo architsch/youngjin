@@ -2,6 +2,7 @@ const envUtil = require("../../../server/util/envUtil.js");
 const ejsUtil = require("../../../server/util/ejsUtil.js");
 const TextFileBuilder = require("../textFileBuilder.js");
 const GamePageBuilder = require("./gamePageBuilder.js");
+const uiConfig = require("../../../shared/config/uiConfig.mjs").uiConfig;
 require("dotenv").config();
 
 function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -40,17 +41,19 @@ function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
     this.build = async () => {
         const builder = new TextFileBuilder();
 
-        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
-            pageName: "arcade",
-            title: "ThingsPool",
+        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+            menuName: "arcade",
             desc: "Games made by ThingsPool.",
             keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
-            relativePageURL: undefined,
-            ogImageURLOverride: undefined,
+            pagePathList: [
+                {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
+                {title: uiConfig.displayText.menuName["arcade"], relativeURL: undefined},
+            ],
+            backDestination_href: envUtil.getRootURL(),
         }));
-        builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
-        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/gameLinks.ejs"));
-        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
+        
+        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/info/gameLinks.ejs"));
+        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
 
         sitemapBuilder.addEntry("arcade.html", "2025-02-28");
 

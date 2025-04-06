@@ -13,16 +13,14 @@
 <meta property="og:description" content="Prolog comes in handy when designing emergent gameplay systems. In this article, I will be explaining how abstract objects and their mutual interactions can be implemented in the language of Prolog."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e95.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 11">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 11</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-20.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 11</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 11</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 7, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 7, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 11 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Compound Object</b></h3>
 <p>As I have demonstrated recently, parent-child relations come in handy whenever we are dealing with hierarchical structures. In most cases, it is convenient to assume that a child is a component (i.e. part) of its parent, and a parent is a compound object which is made up of one or more of such components.</p>
 <p>With this in mind, let us reimagine our omurice as a whole separate abstract entity which comprises two components (i.e. fried rice and omelet), rather than just an alternative interpretation of the fried rice we already have as an actor.</p>
@@ -109,7 +85,6 @@ despawn[n](Id) :- omurice[n-1](Id), !canBeOmurice[n](Id).</code></pre></div>
     parent[n-1](Id, Y), omelet[n-1](Y),
     below[n-1](X, Y).</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Hierarchical Data Structure</b></h3>
 <p>At this point, you may have realized that there are two major categories of objects - those which are made of single actors (aka "elements"), and those which are made of multiple actors (aka "compounds"). The former are reminiscent of individual atoms which cannot be broken down further, whereas the latter are reminiscent of molecules which can be separated into their atomic constituents.</p>
 <p>A compound is basically a hierarchy of actors, in which the root (i.e. topmost parent) represents the whole thing and its children represent its parts. Thus, we may imagine that each hierarchy is itself a compound object.</p>
@@ -160,7 +135,6 @@ despawn[n](Id) :- burger[n-1](Id), !canBeBurger[n](Id).</code></pre></div>
 <p>The last two rules, too, structurally resemble those of the omurice example. They are there to ensure that a burger will be safely disposed when it no longer qualifies as a burger.</p>
 <p>The rule in the middle is the most important part. The "canBeBurger" predicate basically tells us whether the given burger can still be considered a "burger" during the current time step (i.e. 'n') - that is, whether it still consists of a bottom bun, a patty, and a top bun. If so, this burger will maintain its status as a burger. If not, it will be wiped out of existence.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Complexity Under Control</b></h3>
 <p>The ability to define a piece of data as a hierarchy (i.e. tree), either before or after instantiating its components, is an invaluable feature to have in complex and emergent systems.</p>
 <p>Oftentimes, game developers feel the necessity to design in-game agents (aka "characters") which are equipped with their own stats, inventories, status effects, scheduled tasks, relationships with other agents, and other pieces of dependent data. In such cases, it is usually sensible to devise each agent as a root node (i.e. topmost parent) of its own subtree, within which all of its inner data entries are stored. The figure below is an illustration of it.</p>
@@ -194,11 +168,10 @@ setChild[n](Y2, Item) :- stealItem[n-1](Thief, Victim, Item),
     parent[n](Victim, Y1), inventory[n](Y1), parent[n](Y1, Item),
     parent[n](Thief, Y2), inventory[n](Y2).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-21.html">Part 12</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

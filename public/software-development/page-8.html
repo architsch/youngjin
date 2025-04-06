@@ -13,16 +13,14 @@
 <meta property="og:description" content="An article about abstraction in games."/>
 <meta property="og:image" content="https://thingspool.net/share.jpg"/>
 <meta property="og:image:alt" content="Degrees of Abstraction in Games">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Degrees of Abstraction in Games</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,53 +29,32 @@
 <link rel="canonical" href="https://thingspool.net/software-development/page-8.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/software-development/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/software-development/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/software-development/list.html">Software Development (2022 - 2024)</a>/Degrees of Abstraction in Games</div>
+<div class="s_spacer"></div>
+
 <h1>Degrees of Abstraction in Games</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: 2022.10</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2022.10</p>
+<div class="m_spacer"></div>
 <p>There is a major dilemma when it comes to making arts for videogames. When the game's art assets are too specific in terms of context (e.g. belongs to a narrow theme such as "17th century pirates", "Cyberpunk", "Gothic", etc), it gets quite challenging to collect assets that are sufficiently compatible with that context. For example, when developers predetermine their game's overall design to be an "RTS game where all characters incorporate ragdoll-physics and are dressed up in the early 1950s' vintage attire", they inevitably impose upon themselves a set of annoyingly tight design constraints.</p>
 <p>The reasoning behind this is obvious. As soon as they start forcing themselves to keep everything under the context of real-time interactions, ragdoll-physics, 1950s' aesthetics, and so forth, they begin to limit the scope of art assets they can potentially utilize.</p>
 <p>When the game's art assets are purely abstract in nature (e.g. checkerboard pieces, billiard balls, etc), on the other hand, a different problem arises. A bright side would be that, since everything is abstract, developers don't have to care how the general mood of their in-game assets will fit into their narrative elements. Every character or object inside the game can simply be expressed as 2D geometric figures, which can even be made by purely procedural means. However, making everything abstract also means that there will no longer be any solid contextual meaning to which the player can tie her attention.</p>
 <p>A pirate who is pointing a sword at the player's throat clearly implies that it is an enemy that must be defeated; anyone can instantly recognize this without any explanation. A purple circle who is pointing a green triangle at a yellow star, on the other hand, will hardly convince the player that it is supposed to be the enemy.</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

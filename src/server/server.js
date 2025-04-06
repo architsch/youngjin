@@ -6,6 +6,7 @@ const dbUtil = require("./util/dbUtil.js");
 const authUtil = require("./util/authUtil.js");
 const emailUtil = require("./util/emailUtil.js");
 const envUtil = require("./util/envUtil.js");
+const ejsUtil = require("./util/ejsUtil.js");
 const globalConfig = require("../shared/config/globalConfig.mjs").globalConfig;
 require("dotenv").config();
 
@@ -63,34 +64,18 @@ async function run()
             const users = (req.user == undefined) ? [undefined] : await dbUtil.users.selectByUserName(res, req.user.userName);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
-            
-            res.render("page/index", {
-                envUtil,
-                ejsChunkRootPath: "../chunk",
-                isStaticPage: false,
-                user: users[0],
-                loginDestination: "",
-            });
+            res.render("page/menu/index", ejsUtil.makeEJSParams(
+                {user: users[0], loginDestination: ""}));
         });
 
         app.get("/page/register.html", (req, res) => {
-            res.render("page/register", {
-                envUtil,
-                ejsChunkRootPath: "../chunk",
-                isStaticPage: false,
-                user: req.user,
-                registerDestination: "",
-            });
+            res.render("page/auth/register", ejsUtil.makeEJSParams(
+                {user: req.user, registerDestination: ""}));
         });
 
         app.get("/page/social.html", authUtil.authenticateTokenOptional, async (req, res) => {
-            res.render("page/social", {
-                envUtil,
-                ejsChunkRootPath: "../chunk",
-                isStaticPage: false,
-                user: req.user,
-                loginDestination: "page/social.html",
-            });
+            res.render("page/menu/social", ejsUtil.makeEJSParams(
+                {user: req.user, loginDestination: "page/social.html"}));
         });
     }
 

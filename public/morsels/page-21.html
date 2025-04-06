@@ -13,16 +13,14 @@
 <meta property="og:description" content="Programming in Prolog offers us a new way of designing video games. In this article, I will illustrate the beauty of representing various in-game elements using Prolog&#39;s dynamic relations and their procedurally generated semantic data structures."/>
 <meta property="og:image" content="https://thingspool.net/morsels/f01.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 12">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 12</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-21.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 12</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 12</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 8, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 8, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 12 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Emergent Identities</b></h3>
 <p>Let me go back to the omurice example and further elaborate upon its hidden intricacies. You may have noticed already, but there is one missing feature in the system I have been devising so far. It is the apparent lack of the system's ability to automatically recognize a specific pattern in the environment and conjure up an appropriately labeled actor for it.</p>
 <p>For instance, the code I showcased in the previous article only describes how to explicitly construct an omurice by selecting a pair of specific ingredients (i.e. fried rice and omelet) and making a stack out of them. The rule which executes this logic is reproduced below.</p>
@@ -137,7 +113,6 @@ below[7](patty, onion)
     ---&gt; below[7](patty, cheese), below[7](cheese, onion)</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/f04.jpg" alt="Game Programming in Prolog - Part 12 (Figure 4)">
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Procedural Tree of Abstraction</b></h3>
 <p>The ability to discover such indirect instances of the "below" relation comes in handy when we want the system to automatically detect certain types of abstract objects and give them unique identities.</p>
 <p>For example, let us say that a sandwich refers to any stack which consists of two buns and anything in between (i.e. It will be called a "ham sandwich" if there is a ham between the buns, an "egg sandwich" if there is an egg between the buns, a "bun sandwich" if there is yet another bun between the two outermost buns, or even an "empty sandwich" if there is nothing in between). We can let the system spontaneously find out such a type of stack and generate a "sandwich actor" off of it, by means of the rules shown below:</p>
@@ -249,7 +224,6 @@ despawn[n](Cheese) :-
 <div class="snippet"><pre><code>stack[n](X, Z) :- despawn[n](X), below[n](Y, X), below[n](X, Z).</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/f08.jpg" alt="Game Programming in Prolog - Part 12 (Figure 8)">
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Structural Minimalism</b></h3>
 <p>The things which have been demonstrated so far may look a bit too complicated, though. And indeed, it is a reasonable impression to have, especially when we consider the sheer amount of code we are compelled to write just to support the automatic creation and destruction of abstract entities.</p>
 <p>If representing compound objects as their own separate actors (such as "burger actor", "cheeseburger actor", etc) is not an absolute requirement, therefore, it may be a better idea to just allow the bottommost elements of their corresponding ingredient-stacks to serve as their representatives (similar to what we did in the first omurice example).</p>
@@ -264,11 +238,10 @@ cheeseburger[n](X) :- burger[n](X), cheeseSandwich[n](X).</code></pre></div>
     removeCheeseFromCheeseburger[n-1](X),
     cheeseburger[n](X), below[n](X, Cheese), cheese[n](Cheese).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-22.html">Part 13</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

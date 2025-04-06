@@ -13,16 +13,14 @@
 <meta property="og:description" content="This article explains how a game can be made in Prolog by leveraging the hidden power of logic programming. Inspired by the elegance of data-driven design and declarative programming paradigms, I will be explaining a new way of designing gameplay systems which is way more robust, concise, and error-free than traditional methods."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e12.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 2">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 2</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-11.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 2</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 2</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: August 29, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 29, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 2 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Numerical Attributes</b></h3>
 <p>So far, I have been demonstrating ways in which we can assign tags and relationships to each of the gameplay agents (aka "actors"). The key takeaway is to use predicates to specify them, as well as leverage the power of logical relations for letting the program automatically instantiate such predicates.</p>
 <p>By the same spirit, we are also able to assign a numerical attribute to an actor. Suppose that an actor called "actor3" is tagged "human", and that we would like to ensure that every human actor has an attribute named "numLegs" which indicates the person's number of legs (i.e. 2). The following horn clause, then, will fulfill this objective.</p>
@@ -96,7 +72,6 @@ loyalty(X, Y, 2) :- cat(X), human(Y).</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/e12.jpg" alt="Game Programming in Prolog - Part 2 (Figure 4)">
 <p>This sort of reasoning can be expanded indefinitely. For example, one may as well define a numerical attribute which carries not just a single number, but multiple numbers (i.e. vector quantity). One may also define a relationship which involves not just two actors, but three or more actors, such as: "This girl hates her boyfriend for showing too much affection to the other girl", etc.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>State and Time</b></h3>
 <p>Things have been looking good so far. We know how to create attributes and relationships, as well as how to assign them to our gameplay agents, and so forth. However, we cannot make a game out of these building blocks alone.</p>
 <p>What has been missing here is a sense of change over time. We want actors to move, interact, and make impacts upon the world as well as upon themselves. What we've got so far, instead, is a mere snapshot of how things are related to each other; there is no moving part at all.</p>
@@ -119,7 +94,6 @@ loyalty(X, Y, 2) :- cat(X), human(Y).</code></pre></div>
 <p>Such a problem, however, can easily be mitigated by limiting the maximum duration of time through which an event's effect is able to propagate. For example, if the game's current state is entirely determined by events which happened only up to N steps back in time, it will imply that the system only needs to retain the memory of N previous states (which corredpond to the N previous time steps) and nothing older than that. As you can see in the image below, this means that memory slots which are sufficiently old can simply be recycled for other purposes.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/e15.jpg" alt="Game Programming in Prolog - Part 2 (Figure 7)">
 <hr>
-<div class="l_spacer"></div>
 <h3><b>State Transition</b></h3>
 <p>So, how do we implement such a declarative state transition mechanic in the language of Prolog?</p>
 <p>Let us first examine how the functional paradigm would approach this problem. In functional programming (e.g. LISP), the game's "Update" function simply needs to take the previous state of the game as the input, instantiate the new state based off of the given previous state, and return this new state as the output. The returned output will then be appended to the game's state history as the most recent state, and the game loop (which is another function which is responsible for calling the "Update" function) will call the "Update" function once again, and again, and again, and so on, thereby periodically updating the game (For more details, please read: <a href="https://thingspool.net/software-development/page-21.html">Functional Programming for Game Development</a>).</p>
@@ -163,11 +137,10 @@ digestiveChangeInHunger(X[n], 0) :- hunger(X[n], _), !eat(X[n], Food[n]).</code>
 hunger(X[n], Curr) :- hunger(X[n-1], Prev), netChangeInHunger(X[n-1], NetChange), add(Prev, NetChange, Curr).</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/e19.jpg" alt="Game Programming in Prolog - Part 2 (Figure 11)">
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-12.html">Part 3</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

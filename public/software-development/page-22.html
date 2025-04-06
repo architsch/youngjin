@@ -13,16 +13,14 @@
 <meta property="og:description" content="An article about indie game prototyping."/>
 <meta property="og:image" content="https://thingspool.net/software-development/005_67.jpg"/>
 <meta property="og:image:alt" content="Elements of an Indie Game">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Elements of an Indie Game</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,44 +29,24 @@
 <link rel="canonical" href="https://thingspool.net/software-development/page-22.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/software-development/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/software-development/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/software-development/list.html">Software Development (2022 - 2024)</a>/Elements of an Indie Game</div>
+<div class="s_spacer"></div>
+
 <h1>Elements of an Indie Game</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 8, 2023</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 8, 2023</p>
+<div class="m_spacer"></div>
 <p>When designing an indie game as a solo developer or a member of an extremely small team (e.g. only 2 or 3 people), one often faces a major dilemma which can be described as a chicken-or-the-egg problem. It is a tricky riddle to solve, perhaps trickier than most of the technical problems we encounter every day due to the multidisciplinary nature of game development.</p>
 <p>The dilemma begins like this:</p>
 <p>Suppose that you are a solo game developer who is trying to design and implement an entire game from scratch. There are typically two different approaches you can take to pursue this mission, which I will show below.</p>
@@ -111,11 +89,10 @@
 <p>When it comes to scientific reasoning, any decent thinker can be assumed to be humble enough to acknowledge that we cannot expect ourselves to be able to instantly grasp the full picture of whichever subject is under our scope of research. Yes - a person's brain is complex; our economy is complex; a living organism is complex. So what? Does it mean that nobody should even dare to approach any of these subjects from a rational standpoint, and that we should just all smoke weed and chill?</p>
 <p>Of course we cannot comprehend everything in advance, and this is precisely the reason why scientists study the totality of our nature by investigating small fractions of it one at a time, based upon specific experiments that are performed under strictly controlled scenarios. This is what I would refer to as a "modern" approach to mysteries which surround us, as opposed to mere superstition which propels us to remain content with a mud pool of wishful thinking.</p>
 <p>Games are not so different from other sciences in this regard. Some people may claim that this statement is so blatantly close-minded because a game is a "creative endeavor" or an "art form" and has nothing to do with science, yet an independent thinker who is endowed with an interdisciplinary taste of reasoning is likely to agree that such wordplay is so frustratingly naive, that it is not even worth the effort to prove why it hardly means anything significant from a holistic point of view.</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

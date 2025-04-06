@@ -13,16 +13,14 @@
 <meta property="og:description" content="게임 속 컨트롤에 관하여."/>
 <meta property="og:image" content="https://thingspool.net/game-analysis/img_30_1.jpg"/>
 <meta property="og:image:alt" content="컨트롤은 어떻게 디자인 하는가?">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>컨트롤은 어떻게 디자인 하는가?</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,44 +29,24 @@
 <link rel="canonical" href="https://thingspool.net/game-analysis/page-30.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/game-analysis/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/game-analysis/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/game-analysis/list.html">게임분석 (2019)</a>/컨트롤은 어떻게 디자인 하는가?</div>
+<div class="s_spacer"></div>
+
 <h1>컨트롤은 어떻게 디자인 하는가?</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: 2019.09</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2019.09</p>
+<div class="m_spacer"></div>
 <p>개발자는 게임을 디자인할 때 한가지 딜레마를 느끼곤 한다. 그건 바로 게임 속 컨트롤의 정밀성과 편의성 중 어느 것을 더 중요시 할지에 관한 것이다.</p>
 <p>자세한 컨트롤은 다채로운 게임 플레이를 가능하게 하지만, 대신에 배워서 써먹기가 힘들다. 간단한 컨트롤은 배워서 써먹기는 쉽지만, 대신에 게임 플레이의 폭을 너무 좁게 만든다.</p>
 <p>따라서 컨트롤의 용이성을 극대화 하는 동시에, 유저에게 제공되는 선택의 폭 또한 최대한 넓게 유지할 수 있는 재주가 디자이너에게는 필요하다.</p>
@@ -87,11 +65,10 @@
 <p>(이미지 출처: Game Watcher: https://www.gamewatcher.com/games/bb-tanks/screens)</p>
 <p>(3) 턴 방식으로 플레이하기</p>
 <p>아예 게임을 턴 방식으로 만듦으로써, 컨트롤에 필요한 시간을 게이머에게 충분히 주는 것도 하나의 방법이다. 예컨대 시드 마이어의 '문명'(Civilization)은 복잡한 게임 속 시스템에도 불구하고 여유로운 턴 방식의 진행 덕분에 컨트롤 하기가 쉬우며, 2000년대 초반에 유행했던 '포트리스'(Fortress, 영어권에서는 BB Tanks)는 만약에 실시간으로 아무 때나 포를 쏘는 게임이었다면 굉장히 순발력을 많이 요구하는 어려운 스포츠가 되었겠지만, 다행히도 턴 방식을 채택했기 때문에 남녀노소 모두가 편하게 즐길 수 있는 국민게임으로 사랑받았다.</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

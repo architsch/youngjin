@@ -13,16 +13,14 @@
 <meta property="og:description" content="How to design and implement the most perfect sandwich we can ever imagine? This is a quick introduction to the study of Sandwich Engineering."/>
 <meta property="og:image" content="https://thingspool.net/sandwich/001.jpg"/>
 <meta property="og:image:alt" content="Sandwich Engineering - Chapter 1">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Sandwich Engineering - Chapter 1</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,53 +29,31 @@
 <link rel="canonical" href="https://thingspool.net/sandwich/page-1.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/sandwich/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/sandwich/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/sandwich/list.html">Sandwich Engineering (2025)</a>/Sandwich Engineering - Chapter 1</div>
+<div class="s_spacer"></div>
+
 <h1>Sandwich Engineering - Chapter 1</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: January 17, 2025</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: January 17, 2025</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Introduction</b></h3>
 <img class="figureImage" src="https://thingspool.net/sandwich/001.jpg" alt="Sandwich Engineering - Chapter 1 (Figure 1)">
 <p>Sandwich Engineering is one of the hottest research topics in today's world. Every tech influencer on social media has been talking about it, and it is now an indisputable fact that if you do not learn how to make a sandwich, your job will soon be replaced by the world's most professional sandwich makers.</p>
 <p>So, stay tuned and do not miss out this great opportunity. The future belongs to those who know how to leverage the full power of sandwiches; they are the ones who will dominate the tech industry within the next couple of years. Sandwich engineering is the future, and those who recognize its potential are the ones who will lead this new era of groundbreaking innovation.</p>
 <p>This series will present you with an overview of this brand new field of study called "Sandwich Engineering", and how it is going to revolutionize the industry, offer cutting-edge solutions to startups, help passionate individuals succeed, achieve world peace, save our planet, make everything diverse, fulfilling, mindful, sustainable, and... whatever.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Means of Combination</b></h3>
 <p>In order to understand the basics of sandwich engineering, one must first learn how a sandwich should be defined. A sandwich is the result of combining the following sequence of things and stacking them together:</p>
 <div class="snippet"><pre><code>(1) A piece of bread, and
@@ -93,7 +69,6 @@
 <img class="figureImage" src="https://thingspool.net/sandwich/004.jpg" alt="Sandwich Engineering - Chapter 1 (Figure 4)">
 <p>Here, we have two major constructs in our grammar - "AND" and "OR". Whenever we put multiple things together and let them coexist, we use the word "AND". Whenever we put only one among the multitude of things available, we use the word "OR".</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Means of Abstraction</b></h3>
 <p>The problem with the above illustration, though, is that it is now starting to look a bit messy. It contains far too many arrows and words, and thus it is quite difficult for us to grasp what is going on in the picture. Therefore, it is important for us to split each part of the sandwich and turn it into its own encapsulated definition. This is our first step toward abstraction.</p>
 <p>Let us revisit the definition of "meat sandwich". Instead of listing all the alternatives when describing the "meat" ingredient (such as ham, bacon, etc), we may as well simply put the word "meat" in the place where the chosen piece of meat will be inserted.</p>
@@ -114,7 +89,6 @@
 <img class="figureImage" src="https://thingspool.net/sandwich/011.jpg" alt="Sandwich Engineering - Chapter 1 (Figure 11)">
 <p>Here, "meat" is the abstraction of what goes inside a meat sandwich (in general), and "sausage" is the abstraction of what goes inside a meat sandwich as soon as we decided to put a sausage in it. These are two different levels of abstraction, and they unwrap themselves one by one, as we specify our choices of ingredients.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Extreme Forms of Abstraction</b></h3>
 <p>As we keep stretching this kind of reasoning, we will eventually find ourselves reaching the most extreme edge cases in which the idea of infinity is involved. There are two of them - one which represents the concept of "anything", and the other one which represents the concept of "everything".</p>
 <img class="figureImage" src="https://thingspool.net/sandwich/012.jpg" alt="Sandwich Engineering - Chapter 1 (Figure 12)">
@@ -126,7 +100,6 @@
 <img class="figureImage" src="https://thingspool.net/sandwich/014.jpg" alt="Sandwich Engineering - Chapter 1 (Figure 14)">
 <p>A sandwich is a sandwich as long as there is anything between two pieces of bread, and we do not care what it is; it could be a piece of meat, vegetable, mashed potato, glass, metal, antimatter, black hole, or whatever. There are infinitely many choices available, which makes "anything" the most general form of existence we are ever able to define.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Taxonomy of Sandwiches</b></h3>
 <p>What we can learn from the above example is the fact that abstraction comes in different degrees of generalization. Some forms of abstraction are either more general or more concrete than others.</p>
 <p>For example, "sandwich" is the most general kind of all sandwiches because its definition allows us to choose absolutely anything for its core ingredient. In other words, it covers the widest range of choices we can ever imagine.</p>
@@ -140,11 +113,10 @@
 <img class="figureImage" src="https://thingspool.net/sandwich/017.jpg" alt="Sandwich Engineering - Chapter 1 (Figure 17)">
 <p>As you get closer to the tree's root, you will encounter more and more general categories of sandwich. As you get closer to the tree's individual leaves, you will encounter more and more specific categories of sandwich.</p>
 <p>(Will be continued in <a href="https://thingspool.net/sandwich/page-2.html">Chapter 2</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

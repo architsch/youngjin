@@ -13,16 +13,14 @@
 <meta property="og:description" content="How to construct gameplay elements in Prolog? This article illustrates how a wide range of objects in a video game, such as actors and items, are able to be expressed in terms of logical relations."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e76.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 9">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 9</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-18.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 9</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 9</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: September 29, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: September 29, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 9 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Transformation</b></h3>
 <p>Last time, I talked about the things we can do at the moment of an actor's birth (or death). As soon as an actor comes into existence, for example, we are able to define its own set of characteristics which are promised to last as long as it lives. Each characteristic is basically a sequence of events which keeps growing, up until the point at which the actor dies.</p>
 <p>This time, I will be talking about things which may happen during an actor's course of life. Besides spawning and despawning, an actor must also be capable of "changing" itself in some way or another while it is alive, unless it is an idle being which never interacts with anything outside of itself.</p>
@@ -123,7 +99,6 @@ broken[n](X) :- broken[n-1](X), alive[n-1](X).</code></pre></div>
 <p>Instead of "brokenEgg", we now have an "egg" which can optionally be labeled as "broken" depending on whether it has been broken or not. The composition of the two words, "egg" and "broken", implies that the object is a broken egg. The absence of the latter implies that the egg has not been broken yet.</p>
 <p>As you can clearly see in the code above, the only type-specific rules (i.e. the ones which have to be repeated for different types of actors) are ones responsible for initializing the "breakable" tag for all object types which are considered initially breakable. The state of being breakable, then, will persist as long as the object to which it is bound is neither dead nor broken. The state of being broken, too, will persist in a similar manner.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>State Space</b></h3>
 <p>The overall idea is to use multiple tags to represent an actor, instead of just one. In other words, we may as well claim that the current state of an actor is the combination of all the tags it happens to possess right now.</p>
 <p>For the case of an egg, for instance, we could say that:</p>
@@ -161,11 +136,10 @@ stir[n](Y) :- stirrer[n-1](X), oscillating[n-1](X), stirrable[n-1](Y), collide[n
 <div class="snippet"><pre><code>omelet[n](X) :- egg[n](X), stirred[n](X), panFried[n](X).
 friedEgg[n](X) :- egg[n](X), !stirred[n](X), panFried[n](X).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-19.html">Part 10</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

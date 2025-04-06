@@ -13,16 +13,14 @@
 <meta property="og:description" content="How to express a relation in an undirected graph, without using hypergraphs or any other advanced concepts? This article explains a purely node-based method of representing any n-ary relations. This will be useful for implementing custom hardware for relational computing systems, such as an optimized Prolog interpreter."/>
 <meta property="og:image" content="https://thingspool.net/morsels/d01.jpg"/>
 <meta property="og:image:alt" content="On Nodal Representation of Relations">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>On Nodal Representation of Relations</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,46 +29,25 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-9.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/On Nodal Representation of Relations</div>
+<div class="s_spacer"></div>
+
 <h1>On Nodal Representation of Relations</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: August 22, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 22, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Introduction</b></h3>
 <p>Relations are everywhere - from discrete mathematics to computer science, from topology to data science, and innumerable other subjects. In popular areas of research such as ML (Machine Learning) and AI (Artificial Intelligence), too, relations serve as some of the most essential components of logic.</p>
 <p>One of the problems in the study of relations, though, is the matter of representing them in a visually intelligible way. While it is possible to express any n-ary relations (for any positive integer 'n') in the form of algebraic notations (such as "xRy", "R(x,y)") or relational data table entries (such as those in an SQL database), expressing them in terms of graphical elements has been a major challenge.</p>
@@ -80,7 +57,6 @@
 <p>Now, how about ternary relations, quaternary relations, and other n-ary relations, whose arities are higher than two? It is technically possible to use the language of hypergraph (instead of just plain old graph) in which we may be free to express a relation as a hyperedge (i.e. edge with more than two vertices), and so on. We may even be able to describe the asymmetry of such a relation using the idea of a directed hyperedge.</p>
 <p>However, a graphical representation of a hypergraph is visually too intimidating, as it no longer allows us to draw a relation simply as a line segment and instead forces us to draw colored regions, bundles of curved arrows, and a myriad of other complex visual elements. This will bloat the viewer's mind with too much abstract information.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Relation as a Composition of Atoms</b></h3>
 <p>In order to be able to draw n-ary relations in a simple, highly recognizable visual language, we must abstain from utilizing conceptual models which are way too abstruse for laymen to understand.</p>
 <p>A hypergraph is not something which a person whose area of expertise does not considerably intersect with the domain of pure mathematics is expected to grasp easily. A graph, on the other hand, is something pretty much anyone is able to comprehend at least on a superficial level.</p>
@@ -88,7 +64,6 @@
 <img class="figureImage" src="https://thingspool.net/morsels/d02.jpg" alt="On Nodal Representation of Relations (Figure 2)">
 <p>For the purpose of accomplishing the above goals, let me first introduce two basic building blocks - negative nodes and positive nodes (shown above). These two types of nodes, when combined, will be able to constitute the body of any n-ary relation. I will explain the underlying reason shortly.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Unary and Binary Relations in an Undirected Graph</b></h3>
 <p>The picture below is our first example of how negative and positive nodes can be used as building blocks of a relation. What you are seeing here is a binary asymmetric relation with two member variables: X and Y. If we were using a directed graph, we would only need a directed edge (i.e. arrow) to depict such a relation. Since we are trying to describe it using an undirected graph, however, we need at least two distinct types of connected nodes between X and Y to express the sense of directionality from X to Y (I am assuming here that the relation's "direction" goes from negative to positive).</p>
 <img class="figureImage" src="https://thingspool.net/morsels/d03.jpg" alt="On Nodal Representation of Relations (Figure 3)">
@@ -100,7 +75,6 @@
 <img class="figureImage" src="https://thingspool.net/morsels/d05.jpg" alt="On Nodal Representation of Relations (Figure 5)">
 <p>In the language of bidirected graphs, these two cases may be interpreted as an "introverted edge" and an "extraverted edge", respectively (See <a href="https://en.wikipedia.org/wiki/Bidirected_graph">Bidirected Graph</a>).</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Symmetric Relations</b></h3>
 <p>So far, I have only demonstrated relations which possess their own directions (i.e. asymmetry). It is, however, also feasible to construct a symmetric relation if we model it as though it is a pair of asymmetric relations pointing in two opposite directions. Its unary and binary examples are showcased below.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/d06.jpg" alt="On Nodal Representation of Relations (Figure 6)">
@@ -108,7 +82,6 @@
 <p>Suppose that X is the only member of the relation. If X is connected to both the negative and positive sides, we will be able to say that the relation points both toward and away from X. This means that it is an unary relation which associates itself with X without specifying any particular direction in regard to it.</p>
 <p>Suppose, on the other hand, that X and Y are both members of the relation. If X and Y are simultaneously connected to both the negative and positive sides, we will be able to say that the relation points both toward and away from X and Y. This means that it is a binary relation which associates itself with X and Y without specifying any particular direction between them.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>N-Ary Relations in an Undirected Graph</b></h3>
 <p>The main benefit of using dual (negative and positive) nodes as means of formulating relations can be found in the case of n-ary relations, where 'n' is an arbitrary integer which is greater than 2.</p>
 <p>Traditionally, it has been presumed that only binary relations can adequately be rendered in the standard graph notation (i.e. edges and vertices). What I would like to suggest in this article is that, by means of negative and positive nodes, it is possible to represent even an n-ary relation (where n &gt; 2) in a plain undirected graph (That is, by drawing only dots and lines on a sheet of paper, along with a bit of symbolic characters such as '-', '+', and alphanumerics).</p>
@@ -123,21 +96,18 @@
 <img class="figureImage" src="https://thingspool.net/morsels/d08.jpg" alt="On Nodal Representation of Relations (Figure 8)">
 <p>In general, it is definitely feasible to construct any arbitrary n-ary relation and selectively make parts of its list of members either symmetric or asymmetric, by means of dual (negative and positive) nodes connected in series. The number of connected negative (or positive) nodes will imply the number of members in a group whose order is strictly enforced (as though they are elements of a vector), and the number of parallel connections to each negative (or positive) node will imply the number of members in a group whose order does not matter (as though they are elements of a set).</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Practical Applications</b></h3>
 <p>Visualization is not the only advantage which can be gained by the aforementioned methodology. One of the upsides of modeling a concept in the form of a plain undirected graph (instead of something fancy such as hypergraph) is that it can easily be translated into a physical equivalent such as an electric circuit (which is useful for applications in science/engineering).</p>
 <p>A vertex or a connected set of vertices, for example, can be modeled as a circuit component (e.g. logic gate, amplifier, buffer, arithmetic module, memory module, etc), and an undirected edge can be modeled as a wire which establishes an electrical connection between a pair of circuit components.</p>
 <p>If engineers happen to desire to create a specialized computational system (such as a custom circuit) which uses relations as its basic unit of computation, therefore, they will find the nodal representation of n-ary relations to be a helpful means of devising a piece of hardware in which each relation is implemented not as a piece of abstract data inside a random-access array, but as a real physical device which occupies an area on the circuit board.</p>
 <p>This kind of implementation will be optimal for interpreting a logic programming language such as Prolog, which is based upon relations and their mappings (i.e. horn clauses).</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Further Readings</b></h3>
 <p>1. <a href="https://thingspool.net/reality/page-4.html">The Origin of Reality - Volume 4</a><br>2. <a href="https://thingspool.net/reality/page-7.html">The Origin of Reality - Volume 7</a><br>3. <a href="https://thingspool.net/metaphysics/page-59.html">연결의 종류 (Korean)</a><br>4. <a href="https://thingspool.net/metaphysics/page-61.html">이진법적 공간의 배열 (Korean)</a><br>5. <a href="https://thingspool.net/metaphysics/page-62.html">공간의 근본적 형태들 (Korean)</a></p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

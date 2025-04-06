@@ -13,16 +13,14 @@
 <meta property="og:description" content="This a new way of designing biology-inspired emergent systems, based upon Glenn Puchtel&#39;s biocybernetic theory. It encompasses the construction of artificial life, artificial mind, virtual ecosystems, wetware, and other nature-inspired phenomena, based on ideas such as Systems Thinking and Unconventional Computing."/>
 <meta property="og:image" content="https://thingspool.net/morsels/a0_1.jpg"/>
 <meta property="og:image:alt" content="Emergent Systems based on Glenn Puchtel&#39;s Biocybernetic Theory">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Emergent Systems based on Glenn Puchtel&#39;s Biocybernetic Theory</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,46 +29,25 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-6.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Emergent Systems based on Glenn Puchtel's Biocybernetic Theory</div>
+<div class="s_spacer"></div>
+
 <h1>Emergent Systems based on Glenn Puchtel's Biocybernetic Theory</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: August 2, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 2, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Introduction</b></h3>
 <p>If you are a software engineer, you will probably agree that designing a well-organized system is a necessary step in the development of an application. Not that many engineers, however, agree that the system must be "emergent" in order for us to maximize its robustness as well as resilience.</p>
 <p>It is probably true that emergence is not a necessary ingredient when it comes to creating a rather static, single-purpose program. When it comes to highly dynamic applications such as simulations and video games, though, we cannot help ourselves realizing that the sheer complexity of the system we are dealing with is not something which can be thoroughly grasped by the developer's intellect alone.</p>
@@ -83,7 +60,6 @@
 <p>1. <a href="#bibliography_1">"Cybernetic-Oriented Design (CyOD)"</a><br>2. <a href="#bibliography_2">"Coordination without (direct) Communication"</a><br>3. <a href="#bibliography_3">"Cybernetic Waves"</a><br>4. <a href="#bibliography_4">"Reaction Networks"</a><br>5. <a href="#bibliography_5">"Biological Models of Reactionary Networks"</a><br>6. <a href="#bibliography_6">"Temporality"</a><br>7. <a href="#bibliography_7">"Bio-Cybernetic Patterns"</a></p>
 <p>These articles, however, are not the only ones he has written. If you want to read more of his works, please visit his LinkedIn newsletter: <a href="https://www.linkedin.com/newsletters/cyborg-bio-cybernetics-6879770834110689280/">"Cyborg - (bio)cybernetics"</a>.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>1. Separation of State and Behavior</b></h3>
 <p>Glenn Puchtel begins his introduction to cybernetic-oriented design with the notion of "separation of state and behavior" <a href="#bibliography_1">[1]</a>. Programmers who have learned OOP (Object Oriented Programming) will remember that a system (i.e. "object") is practically a blockbox which encapsulates both a behavior and a state. This is quite syntactically apparent in a class declaration, where the member functions characterize its behavior and the member variables characterize its state.</p>
 <p>People who dislike OOP may insist that the very idea of wrapping both a behavior and a state inside the same container called "object" is a bad decision, since the mixture of these two drastically different elements is prone to spill nasty side effects such as race conditions and deadlocks.</p>
@@ -95,7 +71,6 @@
 <img class="figureImage" src="https://thingspool.net/morsels/a1_2.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 3)">
 <p>So, what's the solution? The key lies on Glenn Puchtel's concept of "coordination without direct communication" <a href="#bibliography_2">[2]</a>. I will explain it in detail throughout the upcoming sections.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>2. Indirect Communication</b></h3>
 <p>If you have looked at Glenn Puchtel's bio-inspired systems (i.e. biocybernetic systems) <a href="#bibliography_5">[5]</a>, you will be able to tell that they do not allow their biological subsystems (e.g. cells) to share information simply by directly invoking each other's member functions. Instead, these subsystems communicate via a "medium" - a chemical mixture which exists somewhere in space and decays over time. Such a medium continuously emits waves <a href="#bibliography_3">[3]</a>, which are signals waiting to be picked up by nearby systems (e.g. neighboring cells) and be processed according to their own behavioral logic (i.e. goal + rules).</p>
 <img class="figureImage" src="https://thingspool.net/morsels/a2_1.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 4)">
@@ -108,7 +83,6 @@
 <p>He says that it can be achieved by using a medium as the gateway of communication. As long as a medium occupies only a limited region in space and time, systems which communicate via such a medium will be guaranteed to receive information which is only relevant to the local region to which they belong.</p>
 <p>The importance of scoping eventually leads us to the conclusion that the application as a whole should comprise multiple layers of scope, which necessitates the notion of a "hierarchy".</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>3. Hierarchy of Systems</b></h3>
 <p>When developing a large-scale application, a hierarchical worldview oftentime helps. The reason behind this is not difficult to grasp; whenever the system we are required to implement is too complex, we feel the necessity to break it down to a collection of simpler subsystems, devise each of them separately, and then join them together to let them collaborate as a whole.</p>
 <p>For instance, a biological organism is a complex system which can be broken down to a number of major subsystems such as the digestive system, circulatory system, respiratory system, nervous system, immune system, and so on. Since these subsystems are still pretty complex, we still have to break them down to even simpler subsystems, etc, in a recursive (tree-like) manner. This means that a complex system should be hierarchical in structure.</p>
@@ -123,7 +97,6 @@
 <p>(1) First, the cell's chemical will be absorbed by the surrounding tissue.<br>(2) The tissue will release the chemical to the adjacent bloodstream.<br>(3) The chemical in the bloodstream will be picked up by the other tissue.<br>(4) And finally, the other cell's receptor will receive the chemical's signal.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/a3_3.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 8)">
 <hr>
-<div class="l_spacer"></div>
 <h3><b>4. Polymorphism</b></h3>
 <p>Glenn Puchtel's "separation of statics and dynamics" <a href="#bibliography_1">[1]</a> is an extremely useful concept not just for the sake of organization, but also for the sake of enabling polymorphism.</p>
 <p>The foundation of polymorphism lies on the idea of decoupling. Glenn Puchtel mentions in his article that individual systems which are decoupled by knowledge "need not know about the other; only that stimulus introduction affects the state" <a href="#bibliography_2">[2]</a>. What he means by this is that the stimulus (information) can simply reveal its presence in a shared medium, exposing itself to nearby systems and hardly doing anything else. The individual systems, then, can pick up the stimulus from the shared medium and respond to it based on their own decision-making processes.</p>
@@ -133,7 +106,6 @@
 <img class="figureImage" src="https://thingspool.net/morsels/a4_2.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 10)">
 <p>A great example of polymorphism can be found in the case of ants and their pheromone-based communication. Glenn Puchtel says in his article that: "Just as the same pheromone elicits different behavior, whereby a worker ant might respond differently from a soldier ant, messages trigger receptors' behavior depending on their role" <a href="#bibliography_2">[2]</a>. Here, a pheromone is a stimulus (input signal) which triggers two separate responses when received by two different recipients (i.e. worker ant and solider ant).</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>5. Feedback Loops</b></h3>
 <p>Another benefit of indirect (medium-based) communication is that it allows us to create indirect feedback loops - i.e. long, circular chains of causality which control the flow of the overall system based on not only short-term effects, but also long-term effects (aka "Circular Causality", as mentioned by Glenn Puchtel in his introduction to cybernetic-oriented design <a href="#bibliography_1">[1]</a>). Such a phenomenon is indispensable for the design of dynamics systems which involve multiple causal loops that are intertwined with one another, such as an ecosystem, a marketplace, an electrical grid, and many others which appear in the study of System Dynamics (aka "Systems Thinking").</p>
 <img class="figureImage" src="https://thingspool.net/morsels/a5_1.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 11)">
@@ -146,7 +118,6 @@
 <p>Besides, medium-based communication is far superior to predefined communication routes when it comes to the creation of indirect feedback loops, due to one simple reason; a shared medium allows its members to indirectly influence each other in any order/combination, as illustrated in the diagram below.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/a5_4.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 14)">
 <hr>
-<div class="l_spacer"></div>
 <h3><b>6. Divisibility means Resilience</b></h3>
 <p>Expressing the overall system as an assembly of numerous subsystems has yet another advantage to offer; it is the sense of resilience.</p>
 <p>In the "Weight [measure]" section of his article, "Coordination without (direct) Communication", Glenn Puchtel mentions that "emergent systems favor small, lightweight, almost negligible parts; losing any part does not adversely affect the whole" <a href="#bibliography_2">[2]</a>.</p>
@@ -155,7 +126,6 @@
 <p>In general, a divisible system is robust because it is composed of rearrangeable parts. Such a system can grow, shrink, and change its shape as needed, and is able to accept relatively minor risks (e.g. A lion hunts down a giraffe despite the risk of being injured, since it can regrow its damaged tissues).</p>
 <p>(Look at "Apoptosis" in Glenn Puchtel's "Coordination without (direct) Communication" <a href="#bibliography_2">[2]</a>.)</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>7. Goal</b></h3>
 <p>There is one major factor in systems design which I haven't mentioned yet. It is "goal" - a sense of purpose. A system needs a goal to serve its designated role; otherwise there is no point in designing a system, unless all we want is an engineering equivalent of "art for art's sake".</p>
 <img class="figureImage" src="https://thingspool.net/morsels/a7_1.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 16)">
@@ -171,7 +141,6 @@
 <img class="figureImage" src="https://thingspool.net/morsels/a7_3.jpg" alt="Emergent Systems based on Glenn Puchtel's Biocybernetic Theory (Figure 18)">
 <p>The presence of a hierarchy of goals helps us design the hierarchy of systems because these two have a direct one-to-one relationship (i.e. they are structurally identical). All we have to do is look at each of the goals and construct a system which fulfills that goal.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Bibliography</b></h3>
 <p>1. <a id="bibliography_1" href="https://www.linkedin.com/pulse/cybernetic-oriented-design-cyod-glenn-puchtel/">Cybernetic-Oriented Design (CyOD)</a> by Glenn Puchtel (This introductory article outlines pretty much all the main concepts in the design of emergent systems, including: (1) Separation of state and behavior (which enables polymorphism), (2) Hierarchical arrangement of individual subsystems (which is a neat way of breaking down a complex system into a collaborative network of simpler systems), (3) Back-and-forth interaction between state and behavior, which gives rise to feedback loops, and so on.)</p>
 <p>2. <a id="bibliography_2" href="https://www.linkedin.com/pulse/coordination-without-direct-communication-glenn-puchtel/">Coordination without (direct) Communication</a> by Glenn Puchtel (Reading this article is crucial for understanding the nature of emergence and how its full potential might be leveraged. Here, the author suggests "indirect communication" (i.e. communication by means of a medium, rather than by means of a direct and instantaneous feeding of signals) as a method of letting individual subsystems collaborate with each other in an implicit manner, which eventually reveals highly emergent patterns such as those we can find in cellular automata.)</p>
@@ -180,11 +149,10 @@
 <p>5. <a id="bibliography_5" href="https://www.linkedin.com/pulse/biological-models-reactionary-networks-glenn-puchtel/">Biological Models of Reactionary Networks</a> by Glenn Puchtel (This one explains in detail the specific building blocks of the author's (bio)cybernetic systems architecture, including nodes, edges, pipes, rules, applicators, kits, and others. Nodes are basically the entry/exit points of signals, edges are transmitters of signals, and pipes/applicators are the ones which make decisions based on the received signals.)</p>
 <p>6. <a id="bibliography_6" href="https://www.linkedin.com/pulse/temporality-glenn-puchtel/">Temporality</a> by Glenn Puchtel (This article illustrates the inner workings of time-related cybernetic components (e.g. temporals) using specific code examples. By doing this, the author proves us that these components are highly useful for simulating the ways in which signals vary their intensity levels as time passes by - an extremely crucial concept for implementing time delays in the system's feedback mechanism, as well as for implementing gradual memory decay.)</p>
 <p>7. <a id="bibliography_7" href="https://www.linkedin.com/pulse/cybernetic-patterns-glenn-puchtel/">Bio-Cybernetic Patterns</a> by Glenn Puchtel (This is the graphical summary of the major building blocks in cybernetic-oriented design. They resemble digital circuit components in some sense, yet are much more functionally abstract. Within this collection, "pipe" is probably the most notable component because it represents the very concept of "controlled transmission of signals" - an ever-recurring theme in the activity of neurons, protein receptors, and other biological signal-processors.)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

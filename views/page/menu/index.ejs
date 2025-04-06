@@ -1,0 +1,13 @@
+<%- include(`${ejsChunkRootPath}/common/header.ejs`, {
+    menuName: "index",
+}) %>
+
+<% if (isStaticPage) { %>
+    <%- include(`${ejsChunkRootPath}/info/portfolio.ejs`) %>
+<% } else if (user) { %>
+    <%- include(`${ejsChunkRootPath}/user/dashboard.ejs`) %>
+<% } else { %>
+    <%- include(`${ejsChunkRootPath}/auth/login.ejs`) %>
+<% } %>
+
+<%- include(`${ejsChunkRootPath}/common/footer.ejs`) %>

@@ -2,6 +2,7 @@ const envUtil = require("../../../server/util/envUtil.js");
 const ejsUtil = require("../../../server/util/ejsUtil.js");
 const TextFileBuilder = require("../textFileBuilder.js");
 const PostListPageBuilder = require("./postListPageBuilder.js");
+const uiConfig = require("../../../shared/config/uiConfig.mjs").uiConfig;
 require("dotenv").config();
 
 function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -45,16 +46,14 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
     this.build = async () => {
         const builder = new TextFileBuilder();
 
-        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
-            pageName: "library",
-            title: "ThingsPool",
-            desc: "ThingsPool is a developer of experimental software and tools.",
-            keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
-            relativePageURL: undefined,
-            ogImageURLOverride: undefined,
+        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+            menuName: "library",
+            pagePathList: [
+                {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
+                {title: uiConfig.displayText.menuName["library"], relativeURL: undefined},
+            ],
+            backDestination_href: envUtil.getRootURL(),
         }));
-
-        builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}">Back</a>`);
 
         addPostLinks(builder, "Nonfiction", nonfictionEntries);
         builder.addLine(`<div class="l_spacer"></div>`);
@@ -65,7 +64,7 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
         addPostLinks(builder, "Arts", artEntries);
         builder.addLine(`<div class="l_spacer"></div>`);
 
-        builder.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
+        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
 
         sitemapBuilder.addEntry("library.html", "2025-02-28");
 

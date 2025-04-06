@@ -2,13 +2,14 @@
 // Global Parameters
 //------------------------------------------------------------------------
 
-const extraDarkColor = "#000000";//"#202020";
-const darkColor = "#202020";//"#404040";
-const dimColor = "#707070";//"#707070";
-const mediumColor = "#a0a0a0";//"#909090";
-const lightColor = "#e0e0e0";//"#d0d0d0";
-const lightYellowColor = "#e0d0a0";
-const lightGreenColor = "#80d070";
+const extraDarkColor = "#101010";
+const darkColor = "#303030";
+const dimColor = "#707070";
+const mediumColor = "#a0a0a0";
+const lightColor = "#c0c0c0";
+const lightYellowColor = "#d0c090";
+const lightGreenColor = "#70c060";
+const mediumYellowColor = "#b0a070";
 
 const defaultTextAlign = "left";
 const fullscreenBarTextAlign = "center";
@@ -25,23 +26,57 @@ const featureLinkWidthPercent_portrait = 40;
 const playButtonWidthPercent_landscape = 20;
 const playButtonWidthPercent_portrait = 40;
 
+const scrollbar_size_percent = 1.5;
+
 //------------------------------------------------------------------------
 // Functions
 //------------------------------------------------------------------------
 
 // Areas
 
-const absoluteArea = (withRespectToWholeScreen, leftPercent, rightPercent, topPercent, bottomPercent, widthPercent, heightPercent) =>
-`position: ${withRespectToWholeScreen ? "fixed" : "absolute"};
+/*const fixedArea = (
+	leftPercent, rightPercent,
+	topPercent, bottomPercent,
+	widthPercent, heightPercent,
+	makeRoomForScrollbarY = false,
+	makeRoomForScrollbarX = false) => {
+const right = "";
+const bottom = "";
+const width = (makeRoomForScrollbarY ? `calc(${widthPercent}% - ${scrollbar_size_percent}${hu})` : `${widthPercent}${hu}`);
+const height = (makeRoomForScrollbarX ? `calc(${heightPercent}% - ${scrollbar_size_percent}${vu})` : `${heightPercent}${vu}`);
+return `position: ${withRespectToWholeScreen ? "fixed" : "absolute"};
 \tdisplay: block;
-\tmax-width: 100%;
-\tmax-height: 100%;
-\tleft: ${leftPercent}%;
-\tright: ${rightPercent}%;
-\ttop: ${topPercent}%;
-\tbottom: ${bottomPercent}%;
-\twidth: ${(widthPercent == 0) ? "max-content" : `${widthPercent}%`};
-\theight: ${(heightPercent == 0) ? "max-content" : `${heightPercent}%`};`;
+\tmax-width: 100vw;
+\tmax-height: 100vh;
+\tleft: ${leftPercent}vw;
+\tright: ${rightPercent}vw;
+\ttop: ${topPercent}vh;
+\tbottom: ${bottomPercent}vh;
+\twidth: ${width};
+\theight: ${height};`};*/
+
+const absoluteArea = (withRespectToWholeScreen,
+	leftPercent, rightPercent,
+	topPercent, bottomPercent,
+	widthPercent, heightPercent,
+	makeRoomForScrollbarY = false,
+	makeRoomForScrollbarX = false) => {
+const hu = withRespectToWholeScreen ? "vw" : "%";
+const vu = withRespectToWholeScreen ? "vh" : "%";
+//const right = "";
+//const bottom = "";
+const width = (makeRoomForScrollbarY ? `calc(${widthPercent}% - ${scrollbar_size_percent}vw)` : `${widthPercent}${hu}`);
+const height = (makeRoomForScrollbarX ? `calc(${heightPercent}% - ${scrollbar_size_percent}vh)` : `${heightPercent}${vu}`);
+return `position: ${withRespectToWholeScreen ? "fixed" : "absolute"};
+\tdisplay: block;
+\tmax-width: 100${hu};
+\tmax-height: 100${vu};
+\tleft: ${leftPercent}${hu};
+\tright: ${rightPercent}${hu};
+\ttop: ${topPercent}${vu};
+\tbottom: ${bottomPercent}${vu};
+\twidth: ${width};
+\theight: ${height};`};
 
 const relativeArea = (nextline, maxWidth) =>
 `position: relative;
@@ -91,8 +126,16 @@ roundedFrame(backgroundColor, foregroundColor) + "\n" +
 const fullscreen_whole_area = absoluteArea(true, 0, 0, 0, 0, 100, 100);
 const fullscreen_left_bar_area = absoluteArea(true, 0, 100 - fullscreenLeftBarWidthPercent, 0, 0, fullscreenLeftBarWidthPercent, 100);
 const fullscreen_top_bar_area = absoluteArea(true, 0, 0, 0, 100 - fullscreenTopBarHeightPercent, 100, fullscreenTopBarHeightPercent);
-const fullscreen_right_panel_area = absoluteArea(true, fullscreenLeftBarWidthPercent, 0, 0, 0, 100 - fullscreenLeftBarWidthPercent, 100);
-const fullscreen_bottom_panel_area = absoluteArea(true, 0, 0, fullscreenTopBarHeightPercent, 0, 100, 100 - fullscreenTopBarHeightPercent);
+const fullscreen_right_panel_area = absoluteArea(true,
+	fullscreenLeftBarWidthPercent, scrollbar_size_percent,
+	0, 0,
+	100 - scrollbar_size_percent - fullscreenLeftBarWidthPercent, 100,
+	true);
+const fullscreen_bottom_panel_area = absoluteArea(true,
+	0, scrollbar_size_percent,
+	fullscreenTopBarHeightPercent, 0,
+	100 - scrollbar_size_percent, 100 - fullscreenTopBarHeightPercent,
+	true);
 const fullscreen_left_bar_logo_area = absoluteArea(false, 0, 0, 0, 100 - fullscreenLeftBarLogoAreaHeightPercent, 100, fullscreenLeftBarLogoAreaHeightPercent);
 const fullscreen_left_bar_menu_area = absoluteArea(false, 0, 0, fullscreenLeftBarLogoAreaHeightPercent, 0, 100, 80);
 const fullscreen_top_bar_logo_area = absoluteArea(false, 0, 0, 0, 100 - fullscreenTopBarLogoAreaHeightPercent, 100, fullscreenTopBarLogoAreaHeightPercent);
@@ -118,17 +161,26 @@ const fifth_col_area = relativeArea(false, "15%");
 const tiny_col_area = relativeArea(false, "1%");
 const flexible_col_area = relativeAndFlexibleArea(false);
 
+const unitVerticalSpace = 0.75;
+const unitHorizontalSpace = 2.25;
+
 const zero_spacing = spacing("0", "0");
-const s_spacing = spacing("0.5vmin", "0.5vmin");
-const m_spacing = spacing("1.0vmin", "1.0vmin");
-const l_spacing = spacing("1.5vmin", "1.5vmin");
-const xl_spacing = spacing("2.0vmin", "2.0vmin");
-const s_spacing_paddingOnly = spacing("0.5vmin", "0.5vmin", true, false);
-const m_spacing_paddingOnly = spacing("1.0vmin", "1.0vmin", true, false);
-const l_spacing_paddingOnly = spacing("1.5vmin", "1.5vmin", true, false);
-const xl_spacing_paddingOnly = spacing("2.0vmin", "2.0vmin", true, false);
-const s_spacing_horizontallyWider = spacing("0.5vmin", "1.5vmin");
-const m_spacing_horizontallyWider = spacing("1.0vmin", "3.0vmin");
+const s_spacing = spacing(`${unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`);
+const m_spacing = spacing(`${2*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`);
+const l_spacing = spacing(`${3*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`);
+const xl_spacing = spacing(`${4*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`);
+
+const s_spacing_paddingOnly = spacing(`${unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, true, false);
+const s_spacing_marginOnly = spacing(`${unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, false, true);
+
+const m_spacing_paddingOnly = spacing(`${2*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, true, false);
+const m_spacing_marginOnly = spacing(`${2*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, false, true);
+
+const l_spacing_paddingOnly = spacing(`${3*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, true, false);
+const l_spacing_marginOnly = spacing(`${3*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, false, true);
+
+const xl_spacing_paddingOnly = spacing(`${4*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, true, false);
+const xl_spacing_marginOnly = spacing(`${4*unitVerticalSpace}vmin`, `${unitHorizontalSpace}vmin`, false, true);
 
 const fontScaleFactor_vmax = 0.7;
 const fontScaleFactor_px = 1.0;
@@ -145,21 +197,30 @@ const size_l_font = `min(${(vmax_minValue * fontScaleInc2 * fontScaleFactor_vmax
 const size_xl_font = `min(${(vmax_minValue * fontScaleInc3 * fontScaleFactor_vmax).toFixed(2)}vmax, ${(px_minValue * fontScaleInc3 * fontScaleFactor_px).toFixed(2)}px)`;
 const size_xxl_font = `min(${(vmax_minValue * fontScaleInc4 * fontScaleFactor_vmax).toFixed(2)}vmax, ${(px_minValue * fontScaleInc4 * fontScaleFactor_px).toFixed(2)}px)`;
 
-const s_font = font(size_s_font, false, 400);
-const s_italic_font = font(size_s_font, true, 400);
-const s_bold_font = font(size_s_font, false, 700);
-const m_font = font(size_m_font, true, 700);
-const l_font = font(size_l_font, true, 700);
-const xl_font = font(size_xl_font, true, 700);
-const xxl_font = font(size_xxl_font, true, 700);
+const regular_font_weight = 400;
+const bold_font_weight = 800;
+
+const s_font = font(size_s_font, false, regular_font_weight);
+const s_italic_font = font(size_s_font, true, regular_font_weight);
+const s_bold_font = font(size_s_font, false, bold_font_weight);
+const m_font = font(size_m_font, true, regular_font_weight);
+const m_bold_font = font(size_m_font, true, bold_font_weight);
+const l_font = font(size_l_font, true, regular_font_weight);
+const l_bold_font = font(size_l_font, true, bold_font_weight);
+const xl_font = font(size_xl_font, true, regular_font_weight);
+const xl_bold_font = font(size_xl_font, true, bold_font_weight);
+const xxl_font = font(size_xxl_font, true, regular_font_weight);
+const xxl_bold_font = font(size_xxl_font, true, bold_font_weight);
 
 const transparent_frame = `opacity: 0;`;
-const loading_screen_frame = simpleFrame("#000000", lightColor, 0.5);
+const loading_screen_background_frame = simpleFrame("#000000", lightColor, 0.5);
+const loading_screen_text_frame = borderedFrame(mediumColor, darkColor, dimColor, "1.25");
 const light_color_frame = simpleFrame(darkColor, lightColor);
 const medium_color_frame = simpleFrame(darkColor, mediumColor);
 const inverted_medium_color_frame = simpleFrame(mediumColor, darkColor);
 const dim_color_frame = simpleFrame(darkColor, dimColor);
 const lightYellow_color_frame = simpleFrame(darkColor, lightYellowColor);
+const mediumYellow_color_frame = simpleFrame(darkColor, mediumYellowColor);
 const banner_frame = roundedFrame(mediumColor, darkColor);
 const gameLinkImage_frame = borderedFrame(darkColor, mediumColor, mediumColor);
 const featureLinkImage_frame = borderedFrame(darkColor, mediumColor, mediumColor);
@@ -178,22 +239,23 @@ const stylesForOrientation = (landscape) =>
 `
 iframe {
 	${full_row_area}
-	${m_spacing}
-	${l_font}
+	${m_spacing_marginOnly}
+	${l_bold_font}
 	${medium_color_frame}
 }
 .fullscreenBar {
 	${landscape ? fullscreen_left_bar_area : fullscreen_top_bar_area}
 	${zero_spacing}
-	${m_font}
+	${m_bold_font}
 	${inverted_medium_color_frame}
 	text-align: ${fullscreenBarTextAlign};
 	z-index: 1;
+	overflow: hidden;
 }
 .fullscreenPanel {
 	${landscape ? fullscreen_right_panel_area : fullscreen_bottom_panel_area}
 	${xl_spacing_paddingOnly}
-	${l_font}
+	${l_bold_font}
 	${medium_color_frame}
 	overflow-y: scroll;
 }
@@ -235,38 +297,38 @@ iframe {
 }
 .logoImage {
 	${landscape ? half_row_area : near_full_row_area}
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${medium_color_frame}
 }
 .logoImageSmall {
 	${landscape ? quarter_row_area : half_row_area}
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${medium_color_frame}
 }
 .profileImage {
 	${landscape ? third_row_area : half_row_area}
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${img_frame}
 }
 .figureImage {
 	${landscape ? half_row_area : near_full_row_area}
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${img_frame}
 }
 .gameImage {
 	${landscape ? half_row_area : near_full_row_area}
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${img_frame}
 }
 .button {
 	${landscape ? half_row_area : full_row_area}
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${button_frame}
 }
 .gameLink {
@@ -274,8 +336,8 @@ iframe {
 	display: inline-block;
 	width: ${landscape ? `${gameLinkWidthPercent_landscape}vw` : `${gameLinkWidthPercent_portrait}vw`};
 	height: ${landscape ? `${(gameLinkWidthPercent_landscape * 0.305715).toFixed(4)}vw` : `${(gameLinkWidthPercent_portrait * 0.305715).toFixed(4)}vw`};
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${gameLinkImage_frame}
 }
 .gameLink:hover {
@@ -286,8 +348,8 @@ iframe {
 	display: inline-block;
 	width: ${landscape ? `${featureLinkWidthPercent_landscape}vw` : `${featureLinkWidthPercent_portrait}vw`};
 	height: ${landscape ? `${(featureLinkWidthPercent_landscape * 0.5714).toFixed(4)}vw` : `${(featureLinkWidthPercent_portrait * 0.5714).toFixed(4)}vw`};
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${featureLinkImage_frame}
 }
 .featureLink:hover {
@@ -297,12 +359,16 @@ iframe {
 	position: relative;
 	display: ${landscape ? "inline-block" : "block"};
 	width: ${landscape ? `${playButtonWidthPercent_landscape}vw` : `${playButtonWidthPercent_portrait}vw`};
-	${m_spacing}
-	${xl_font}
+	${m_spacing_marginOnly}
+	${xl_bold_font}
 	${medium_color_frame}
 }
 .noTextDeco {
 	text-decoration: none;
+}
+.pagePath {
+	${s_spacing_marginOnly}
+	${s_font}
 }
 .textInput {
 	${landscape ? third_col_area : near_full_row_area}
@@ -312,13 +378,13 @@ iframe {
 }
 .textInputLabel {
 	${landscape ? flexible_col_area : flexible_row_area}
-	${landscape ? s_spacing : m_spacing}
+	${landscape ? s_spacing_marginOnly : m_spacing_marginOnly}
 	${landscape ? s_font : m_font}
 	${medium_color_frame}
 }
 .inlineButton {
 	${flexible_col_area}
-	${landscape ? s_spacing_horizontallyWider : m_spacing_horizontallyWider}
+	${landscape ? s_spacing : m_spacing}
 	${landscape ? s_font : m_font}
 	${list_entry_frame}
 	text-decoration: none;
@@ -342,29 +408,48 @@ const css =
 	text-align: ${defaultTextAlign};
 	z-index: 0;
 }
+::-webkit-scrollbar {
+	width: 1.4vw;
+	height: 1.4vw;
+}
+::-webkit-scrollbar-track {
+	background: ${extraDarkColor};
+}
+::-webkit-scrollbar-thumb {
+	background: ${dimColor};
+	border-radius: 0.7vw;
+	border: 0.3vw solid ${extraDarkColor};
+}
+::-webkit-scrollbar-thumb:hover {
+	background: ${mediumColor};
+}
 p {
 	${full_row_area}
-	${l_spacing}
+	${xl_spacing_marginOnly}
 	${s_font}
 	${light_color_frame}
 }
 h3 {
 	${full_row_area}
-	${m_spacing}
-	${m_font}
-	${light_color_frame}
+	${xl_spacing_marginOnly}
+	${m_bold_font}
+	${mediumYellow_color_frame}
 }
 h2 {
 	${full_row_area}
-	${l_spacing}
-	${l_font}
-	${medium_color_frame}
+	${xl_spacing_marginOnly}
+	${l_bold_font}
+	${mediumYellow_color_frame}
 }
 h1 {
 	${full_row_area}
-	${l_spacing}
-	${xl_font}
+	${xl_spacing_marginOnly}
+	${xl_bold_font}
 	${lightYellow_color_frame}
+}
+hr {
+	${m_spacing_marginOnly}
+	${light_color_frame}
 }
 a:link {
   color: ${mediumColor};
@@ -378,21 +463,32 @@ a:hover {
 a:active {
   color: ${mediumColor};
 }
-footer {
-	${full_row_area}
-	${l_spacing}
-	${m_font}
-	${dim_color_frame}
-}
 
 .loadingScreen {
 	${fullscreen_whole_area}
 	${zero_spacing}
-	${xxl_font}
-	${loading_screen_frame}
-	text-align: center;
-	z-index: 999;
-	line-height: 100%;
+	z-index: 900;
+
+	.background {
+		${fullscreen_whole_area}
+		${zero_spacing}
+		${loading_screen_background_frame}
+	}
+	.text {
+		position: absolute;
+		min-width: 50%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		${xxl_bold_font}
+		${xl_spacing}
+		${loading_screen_text_frame}
+		text-align: center;
+		z-index: 901;
+	}
+}
+.dim {
+	${dim_color_frame}
 }
 .snippet {
 	position: relative;
@@ -412,6 +508,7 @@ footer {
 	${l_spacing}
 	${s_italic_font}
 	${excerpt_frame}
+	overflow: auto;
 	white-space: pre-wrap;
 	white-space: -moz-pre-wrap;
 	white-space: -pre-wrap;
@@ -421,7 +518,7 @@ footer {
 .banner {
 	${full_row_area}
 	${xl_spacing}
-	${l_font}
+	${l_bold_font}
 	${banner_frame}
 }
 .zero_spacer {
@@ -451,31 +548,14 @@ footer {
 }
 .listEntry {
 	${flexible_row_area}
-	${m_spacing_horizontallyWider}
+	${m_spacing}
 	${s_bold_font}
-	${list_entry_frame}
-	text-decoration: none;
-}
-.homeButton {
-	${flexible_row_area}
-	${m_spacing_horizontallyWider}
-	${m_font}
 	${list_entry_frame}
 	text-decoration: none;
 }
 
 @media (orientation: landscape) {
 	${stylesForOrientation(true)}
-	
-	::-webkit-scrollbar {
-		-webkit-appearance: none;
-		width: 10px;
-	}
-	::-webkit-scrollbar-thumb {
-		border-radius: 5px;
-		background-color: rgba(0,0,0,.5);
-		-webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
-	}
 }
 
 @media (orientation: portrait) {

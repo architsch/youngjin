@@ -2,6 +2,7 @@ const fileUtil = require("../../../server/util/fileUtil.js");
 const envUtil = require("../../../server/util/envUtil.js");
 const ejsUtil = require("../../../server/util/ejsUtil.js");
 const TextFileBuilder = require("../textFileBuilder.js");
+const uiConfig = require("../../../shared/config/uiConfig.mjs").uiConfig;
 require("dotenv").config();
 
 function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
@@ -43,19 +44,28 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
         };
 
         const buildPostPage = async (title, lastmod, desc, keywords) => {
+            const listRelativeURL = `${entry.dirName}/list.html`;
             const postRelativeURL = `${entry.dirName}/page-${pageNumber}.html`;
 
             const builder_wrapper = new TextFileBuilder();
-            builder_wrapper.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/header.ejs", {
-                pageName: "library",
+            builder_wrapper.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+                menuName: "library",
                 title: title,
                 desc: desc,
                 keywords: keywords,
                 relativePageURL: postRelativeURL,
                 ogImageURLOverride: customOGImagePath,
+                pagePathList: [
+                    {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
+                    {title: uiConfig.displayText.menuName["library"], relativeURL: "library.html"},
+                    {title: entry.title, relativeURL: listRelativeURL},
+                    {title: title, relativeURL: undefined},
+                ],
+                backDestination_href: `${envUtil.getRootURL()}/${listRelativeURL}`,
             }));
+
             builder_wrapper.addLine(builder.getText());
-            builder_wrapper.addLine(await ejsUtil.createHTMLStringFromEJS("chunk/footer.ejs"));
+            builder_wrapper.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
             await builder_wrapper.build(postRelativeURL);
             builder = new TextFileBuilder();
 
@@ -102,13 +112,9 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                 }
                 isFirstArticle = false;
 
-                builder.addLine(`<a class="homeButton" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">Back</a>`);
                 builder.addLine(`<h1>${title}</h1>`);
-
-                builder.addLine(`<h3 style="color:#707070">Author: Youngjin Kang</h3>`);
-                builder.addLine(`<h3 style="color:#707070">Date: ${date}</h3>`);
-
-                builder.addLine(`<div class="l_spacer"></div>`);
+                builder.addLine(`<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: ${date}</p>`);
+                builder.addLine(`<div class="m_spacer"></div>`);
             }
             else if (line.startsWith("<") && !snippetOn && !excerptOn) // image reference
             {

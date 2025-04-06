@@ -13,16 +13,14 @@
 <meta property="og:description" content="Developing a Prolog game engine is a challenge, but it is worth the effort. In this article, I will be illustrating subtle aspects of relational database design and how they constitute the core of Prolog&#39;s query-based game logic."/>
 <meta property="og:image" content="https://thingspool.net/morsels/f20.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 15">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 15</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-24.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 15</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 15</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 16, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 16, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 15 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Implementation of the Game Loop</b></h3>
 <p>In the last article, I spent quite a bit of time demonstrating our "hypothetical Prolog game engine" in action. If you have gone through my seemingly verbose step-by-step description of what is supposed to happen during the application's runtime, you would have recognized a common protocol via which the code is expected to be interpreted.</p>
 <p>Instead of just hopping from one example to another and making case-by-case analysis, I will try to write an actual piece of code which may reflect the underlying logic with a fair amount of accuracy. It may not be directly written in Prolog, since I am assuming here that Prolog itself could be treated as a scripting language which is embedded within a more general-purpose programming environment.</p>
@@ -180,7 +156,6 @@ public class Fact : Relation&lt;T&gt; where T : Constant
 <p>Aside from the problem of figuring out all the valid bindings and converting them to facts, I would say that the overall goal of the "VirtualPrologMachine" class above is to serve as the central gameplay engine which is capable of evaluating the given set of rules and deriving new facts out of them whenever the "Tick()" method gets invoked.</p>
 <p>Each call of the "Tick()" method represents a clock cycle (i.e. game loop). Every time it runs, it goes through all the given rules, identifies all the relevant facts as well as their appropriate bindings, and instantiates new facts (if applicable) out of such bindings. And in the end, it removes all the obsolete facts (i.e. ones that are too old) and increments the time step by 1.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Performance Issues</b></h3>
 <p>The main problem is that the process of exhaustively finding all possible solutions (i.e. sets of bindings) to a Prolog query is so computationally expensive.</p>
 <p>Each rule forces us to compare every one of its requisite conditions with every one of the applicable facts, which provides us with multiple alternative ways in which the condition's arguments could be bound. This means that the total number of pattern-matching steps involved in analyzing even a single rule can be quite colossal.</p>
@@ -188,7 +163,6 @@ public class Fact : Relation&lt;T&gt; where T : Constant
 <p>Fortunately, there are many ways in which a Prolog application could be optimized. One of the most obvious methods is to parallelize the means of rule evaluation. So, for example, if there are groups of rules in the system whose requisite relations (i.e. those on the right-hand side of the horn clause) do not depend on each other, we will be able to hand these groups over to separate threads and let them be handled concurrently. This way, we will be able to considerably reduce the amount of time being spent by the system to answer all the rules.</p>
 <p>Another way, which may as well be employed jointly with the aforementioned solution, is to exploit some of the algorithmic shortcuts while analyzing the rules. This approach will require us to come up with slightly more advanced data structures, yet doing so will definitely be worthwhile.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Structural Shortcuts</b></h3>
 <p>You might have realized that one of the most significant sources of inefficiency in the code I have shown above is the way in which the facts are being stored. What I did was, I simply used a HaseSet (i.e. a hash table) to store all the available facts, without any means of organization whatsoever. Each time the system evaluates a relation, therefore, it is forced to go through all the entries of the set to be able to select the matching ones.</p>
 <p>This is too wasteful, of course, and we should definitely introduce a bit of shortcuts to let the interpreter access the relevant entries more efficiently. For the sake of demonstration, I will begin with the simplest example.</p>
@@ -330,11 +304,10 @@ public class Fact : Relation&lt;T&gt; where T : Constant
 <p>When searching for facts of our interest, we want the lookup process to be as quick as possible. And in order to achieve this goal, we must try to minimize the number of dictionary lookups that the interpreter is required to perform when responding to a query.</p>
 <p>In the next article, I will be talking about this aspect of database design, and how taking care of it will help us greatly improve the performance of the underlying system.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-25.html">Part 16</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

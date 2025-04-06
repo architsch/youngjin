@@ -13,16 +13,14 @@
 <meta property="og:description" content="Prolog is a useful tool for developing a purely data-driven, ECS-like game engine. In this last volume, I will be illustrating the last remaining details of game development in Prolog, as well as how its design philosophy can help us shape the game into its own unified system of logic."/>
 <meta property="og:image" content="https://thingspool.net/morsels/f36.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 18">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 18</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-27.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 18</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 18</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 24, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 24, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 18 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Multithreading</b></h3>
 <p>Quite frankly, though, I should admit that running all the rules on a single thread may significantly hurt the performance of the system, especially if the total number of rules is not so small. A typical rule tends to involve nested for-loops. And, while these loops can be optimized pretty well under careful algorithmic choices, the cumulative sum of the work involved may be detrimental to the game's average framerate.</p>
 <p>Fortunately, we know that most of the rules are parallelizable; they are able to be evaluated concurrently without necessarily relying on each other's results. And even if they do, we can resolve such issues of dependency by running the same list of rules multiple times during each time step. This will hurt the performance a bit, of course, but the good news is that it enables us to save a lot more bandwidth in exchange by letting things run in parallel.</p>
@@ -82,14 +58,12 @@
 <p>Once the concurrent evaluation of the rules is over, the central system can then gather all the new facts which were generated by the rules, and put them all into the current state of the game before starting the next cycle of rule evaluation. That way, individual rules will be free to evaluate themselves in parallel without interfering with one another. The diagram below will show you in detail how this concept works.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/f36.jpg" alt="Game Programming in Prolog - Part 18 (Figure 1)">
 <hr>
-<div class="l_spacer"></div>
 <h3><b>ECS (Entity Component System)</b></h3>
 <p>This Prolog-based gameplay design technique, by the way, may feel already familiar to you. In my opinion, it shares the same spirit with that of the ECS (Entity Component System) framework which used to be (and perhaps still is) one of the hottest areas of research amongst the developers of Unity game engine (namely, Unity DOTS & Unity ECS).</p>
 <p>The so-called "systems" in ECS can be interpreted as rules (i.e. horn clauses) in the language of Prolog, since they are the ones responsible for updating the game's state by looking at existing entities and generating new ones based off of them. Entities and their components in ECS can be thought of as facts and their arguments in Prolog, respectively. Although ECS and Prolog may not necessarily be fully analogous to each other from a technical standpoint, they do share pretty much the same motivation in the sense that they both make the gameplay logic highly parallelizable and data-driven.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/f37.jpg" alt="Game Programming in Prolog - Part 18 (Figure 2)">
 <p><a href="https://github.com/architsch/hallway">Here</a> is an example of what a purely ECS-based game engine would look like. It is a custom HTML5 game engine I wrote using Typescript and WebGL, and it supports both rudimentary 3D graphics and real-time physics. It does not fully leverage the multithreading capability of ECS, yet it does manage to render its structural elegance. In this repository, you will see many similarities between the engine's data-driven systems and the rules I have been writing in Prolog.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Input and Output</b></h3>
 <p>Of course, the gameplay system will just be a silent blackbox unless it displays things on the screen, emits sound, and takes input from the user (via mouse, keyboard, etc).</p>
 <p>You know that Prolog, by default, is not a fitting language for general-purpose software development. And because of that, there has not been many popular input/output frameworks (e.g. GUI) designed to work nicely in a Prolog-based programming context.</p>
@@ -177,7 +151,6 @@ IO::playSound(GO, "eat") :- eatingPosition[n](X, [single]P), IO::getGameObject(X
 }</code></pre></div>
 <p>Labelling debug-related method calls with the word "LOG" comes with its own additional advantage, which is the ability for the transcompiler to exclude them when asked to produce the final production build. The process of logging itself incurs its own computational cost, which means that, once the development process is over, rules which are dedicated to logging should no longer be included for the sake of optimization.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Preventing Repetitive Evaluation</b></h3>
 <p>At this point, you might have noticed that some of the rules introduced so far (especially the ones which simply invoke external methods) are not supposed to be evaluated multiple times during the same exact time frame. Unfortunately, the possibility of mutual dependencies amongst the Prolog rules obliges us to keep evaluating them over and over until no more new facts can be drawn out of them.</p>
 <p>There is a simple fix for this, though. First of all, let us go back to the initial implementation of the virtual Prolog machine's "Update()" method (I will reproduce it below).</p>
@@ -287,7 +260,6 @@ IO::playSound(GO, "eat") :- eatingPosition[n](X, [single]P), IO::getGameObject(X
 }</code></pre></div>
 <p>(Side Note: Another way to solve the problem of repetitive evaluation is to simply force the game loop to evaluate its rules only once during each frame, after making sure that each rule only contains references to the past (n-1, n-2, etc) on its right-hand side relations. This will inevitably produce quite a bit of delay when generating a chain of facts (e.g. spawning a bread causes it to be labelled as "bread" after a delay of 1 time step, which in turn will subsequently cause it to be labelled as "edible" after yet another delay of 1 time step, and so on), but doing this will render repeated rule-evaluation totally unnecessary.)</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Physics, AI, and More</b></h3>
 <p>Besides those related to I/O, there are other gameplay subsystems such as physics, AI, etc. While it is not entirely impossible to implement such features in Prolog, the efficiency of the end result is more or less doubtful.</p>
 <p>The code shown above is an example of how you could simulate real-time collision between two circles in Prolog. Notice that there are so many things going on here, yet the overall idea is that the following set of rules will detect collision on a uniform voxel grid (where each voxel is treated as an actor) by checking a series of conditions.</p>
@@ -353,7 +325,6 @@ move[n](X, NextPos) :-
     position[n](X, [single]P), speed[n](X, [single]S),
     AI::getNextPosInPath(X, P, S, Path, NextPos).</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Painting the Bigger Picture</b></h3>
 <p>I believe that, at this point, I have gone over pretty much all major aspects of Prolog-based game development.</p>
 <p>First of all, I explained how some of the core game mechanics (e.g. births, deaths, interactions, semantic relations, hierarchies, etc) could be devised in the language of Prolog without too much difficulty.</p>
@@ -370,11 +341,10 @@ move[n](X, NextPos) :-
 <img class="figureImage" src="https://thingspool.net/morsels/f39.jpg" alt="Game Programming in Prolog - Part 18 (Figure 4)">
 <p>There is another series of articles I wrote back in 2023, <a href="https://thingspool.net/game-design/list.html">Universal Laws of Game Design</a>, which expounds this interdisciplinary topic in detail. If you are interested in expanding the scope of your reading material beyond that of mere technical elaboration, please check this out.</p>
 <p>(End of "Game Programming in Prolog")</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

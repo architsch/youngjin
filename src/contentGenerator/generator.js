@@ -1,6 +1,5 @@
 const fileUtil = require("../server/util/fileUtil.js");
 const ejsUtil = require("../server/util/ejsUtil.js");
-const envUtil = require("../server/util/envUtil.js");
 const TextFileBuilder = require("./builder/textFileBuilder.js");
 require("dotenv").config();
 
@@ -12,9 +11,7 @@ async function run()
     const atomFeedBuilder = new (require("./builder/atomFeedBuilder.js"))();
 
     let builder = new TextFileBuilder();
-    builder.addLine(await ejsUtil.createHTMLStringFromEJS("page/index.ejs", {
-        envUtil,
-        ejsChunkRootPath: `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/chunk`,
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/index.ejs", {
         isStaticPage: true,
         user: undefined,
         loginDestination: "",
@@ -22,14 +19,20 @@ async function run()
     await builder.build("index.html");
 
     builder = new TextFileBuilder();
-    builder.addLine(await ejsUtil.createHTMLStringFromEJS("page/social.ejs", {
-        envUtil,
-        ejsChunkRootPath: `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/chunk`,
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/social.ejs", {
         isStaticPage: true,
         user: undefined,
         loginDestination: "",
     }));
     await builder.build("social.html");
+
+    builder = new TextFileBuilder();
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/privacyPolicy.ejs", {}));
+    await builder.build("privacy-policy.html");
+
+    builder = new TextFileBuilder();
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/termsOfService.ejs", {}));
+    await builder.build("terms-of-service.html");
 
     await new (require("./builder/page/arcadePageBuilder.js"))(sitemapBuilder, atomFeedBuilder).build();
     await new (require("./builder/page/libraryPageBuilder.js"))(sitemapBuilder, atomFeedBuilder).build();

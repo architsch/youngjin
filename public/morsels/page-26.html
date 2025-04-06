@@ -13,16 +13,14 @@
 <meta property="og:description" content="Prolog is widely known as a logic programming language, but it can also be used for developing a game. In this article, I will explain how the concept of transcompilation (from Prolog to a popular language such as C#) can be used to create a &amp;quot;virtual Prolog machine&amp;quot; which is optimized to run on personal computing devices."/>
 <meta property="og:image" content="https://thingspool.net/morsels/f32.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 17">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 17</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-26.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 17</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 17</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 24, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 24, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 17 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Transcompiler</b></h3>
 <p>At this point, you might be wondering, "Okay, what's with all this talk about HashSets and Dictionaries? Aren't you trying to come up with a Prolog-based game development framework? Why are you using C# data structures to explain your Prolog code?"</p>
 <p>Let me tell you a reason why I have been taking such a route when illustrating the concepts.</p>
@@ -87,7 +63,6 @@
 <p>Here's how it could be done. For the sake of demonstration, I will suppose that the goal is to translate Prolog into executable C# code.</p>
 <p>The very first step of our hypothetical transcompiler is to take the Prolog script, read its lines one by one, and turn each of them into a piece of C# code which can be placed alongside other generated pieces (e.g. a class, a function, or an entry in a data structure). The question is, what kind of code would that be?</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Translation of Facts</b></h3>
 <p>As you may have realized, the C# examples I showcased in the previous few articles were more or less pseudo code. However, they still reflect the general spirit of cross-language development pretty well, and only demand a little bit of adjustment to make everything come together and fit nicely as a whole, like pieces of a jigsaw puzzle.</p>
 <p>The following Prolog script is just an arbitrary example I wrote from scratch. It consists of two sections - facts and rules. The former denotes a bunch of initial facts which will be given to the world by the time the game begins (You can tell it quite clearly, since they all belong to time 0). The latter, on the other hand, gives us ways of deriving new facts out of the given ones.</p>
@@ -147,7 +122,6 @@ foo2[n](X) :- bar3[n-1](Y), bar1[n-1](X, [key]Y).</code></pre></div>
 <p>One noteworthy thing here is that any fact of type "bar1" must be stored in both "bar1_byX" and "bar1_byY" simultaneously, where the former one maps the first argument to the second, while the latter one maps the second argument to the first. The reason why the transcompiler is supposed to do this is that the "bar1" relation is required to be able to utilize both of its two arguments as keys.</p>
 <p>In the first rule, the key specifier in "bar1[n]([key]X, Z)" orders the system to use bar1's first argument as the key when looking up the value of the second argument. In the second rule, in contrast, the key specifier in "bar1[n-1](X, [key]Y)" orders the system to use bar1's second argument as the key when looking up the value of the first argument. Therefore, the transcompiler must be able to recognize the bidirectionality of bar1's lookup pattern and come up with two different dictionaries for the sake of search efficiency.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Translation of Rules</b></h3>
 <p>After initializing the facts and their appropriate data structures, the transcompiler will then proceed to make custom C# classes for all the rules listed in the Prolog script.</p>
 <p>In our example, there are only two rules - the one for deriving facts of type "foo1", and the other one for deriving facts of type "foo2". Thus, it makes sense to imagine that the parsing algorithm will create two distinct rule classes (i.e. "Rule_foo1", "Rule_foo2") and provide them with their means of evaluation. The generated C# code will look something like the one shown below.</p>
@@ -277,7 +251,6 @@ public class Rule_foo2 : Rule
     }
 }</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Built-In Utilities</b></h3>
 <p>Prolog code is made up of rules, and each rule is made up of a series of relations which must be satisfied in order to infer a fact out of it. In the previous section, I treated all the relations as though they are based upon whichever facts that are currently available. This made the resulting C# code simply look up the fact-storing data structures (i.e. HashSets and Dictionaries) to evaluate these relations.</p>
 <p>There have also been, however, certain types of "utility relations" which were meant to perform mathematical operations such as simple arithmetics (e.g. addition, substraction, etc).</p>
@@ -354,7 +327,6 @@ public static class LOGIC
     }
 }</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Putting Things Together</b></h3>
 <p>Overall, the Prolog transcompiler does many things. It creates data structures for storing facts, as well as initially filling them up with facts which are initially given. It also creates custom Rule classes that are equipped with their own methods of evaluation, which involve either: (1) pattern-matching of relations with their relevant facts, or (2) direct invocation of utility functions.</p>
 <p>All these specialized modules, however, won't be of use unless there be a central place in which they can come together and collaborate as a whole. And that is exactly what our transcompiler should be writing in its final stage of script interpretation; eventually, it will produce a singleton class which will be responsible for executing the overall Prolog-based gameplay logic system (namely, "VirtualPrologMachine"). The implementation of such a class is displayed below.</p>
@@ -412,11 +384,10 @@ public static class LOGIC
 <p>The "Update()" method is what runs the game. Whenever it is called, it: (1) erases facts that are too old, (2) evalutes all the given rules, (3) infers new facts out of them, and (4) increments the current time step.</p>
 <p>Calling this method over and over again, therefore, will basically repeat these steps in a cyclic fashion, thereby progressing the game forward by continuously generating new facts out of what happened during the recent past.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-27.html">Part 18</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

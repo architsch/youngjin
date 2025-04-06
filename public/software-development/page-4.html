@@ -13,16 +13,14 @@
 <meta property="og:description" content="An article about GPU-based cellular automata."/>
 <meta property="og:image" content="https://thingspool.net/software-development/001_01.jpg"/>
 <meta property="og:image:alt" content="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,44 +29,24 @@
 <link rel="canonical" href="https://thingspool.net/software-development/page-4.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/software-development/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/software-development/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/software-development/list.html">Software Development (2022 - 2024)</a>/Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</div>
+<div class="s_spacer"></div>
+
 <h1>Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: 2022</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2022</p>
+<div class="m_spacer"></div>
 <p>The Cellular Automata (CA) model is useful for many applications, such as grid-based videogames, integrated circuit simulations, ecological simulations, particle simulations, and so on. One major limitation of a typical CA system, however, is that each cell is only allowed to modify its own state. This is not a problem when we are dealing with a simple mathematical thought experiment such as Conway's Game of Life, but can really turn out to be a serious bottleneck when we try to establish some form of "Conservation of Matter" in CA, in which an object simply transfers from one location to another instead of allowing itself to be created/destroyed.</p>
 <img class="figureImage" src="https://thingspool.net/software-development/001_01.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 1)">
 <p>There are two possible methods of logic for a CA system, which are shown above. The first one is the standard CA logic that can easily be implemented as a shader (or any other equivalent parallel-processing) program, and the other one is a modified CA logic which allows each cell to modify the state of its neighbors, not just its own. This lets us simulate the movement of discrete objects, since a "movement" is nothing more than a simple data-swap between two adjacent cells.</p>
@@ -84,11 +62,10 @@
 <p>For a more optimized implementation, we will need a piece of customized hardware which is designed like the one shown below. Here, the system enters the index of the parallel-execution mode as the input parameter, and the hardware uses that index to activate only 1 out of 9 groups of cells and their neighboring update-command ports. Each "cell module" has its own logic processor which determines the future state of itself and its neighbors, based upon the current state of itself and its neighbors.</p>
 <img class="figureImage" src="https://thingspool.net/software-development/001_06.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 6)">
 <img class="figureImage" src="https://thingspool.net/software-development/001_07.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 7)">
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

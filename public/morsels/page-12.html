@@ -13,16 +13,14 @@
 <meta property="og:description" content="This article explains how you can use the language of Prolog to develop a game. It leverages the built-in syntactic elegance of Prolog, as well as its data-driven and declarative design philosophy."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e29.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 3">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 3</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-12.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 3</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 3</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: September 2, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: September 2, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 3 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Causality</b></h3>
 <p>So far, I have shown how the parameterization of time steps can indeed be a powerful tool for triggering state transitions in the system. In order to better understand the reasoning behind this, however, we ought to take a step back and really try to see the overall picture of what is going on behind the formulas.</p>
 <p>Whenever we are dealing with the system's state and its means of transition, we are essentially thinking in terms of causes and their corresponding effects. A horn clause, for instance, is a rule which tells us what kind of effect can be generated based upon a given set of causes, just as illustrated below.</p>
@@ -114,7 +90,6 @@ oxygen(Z[n]) :- water(X[n-1], Y[n-1], Z[n-1]), split(X[n-1], Y[n-1], Z[n-1]).</c
 <p>Events which fall within this window are the ones which are being kept in the computer's memory. As old events get discarded (i.e. exit the window through the left edge), their corresponding memory slots get freed up. And as new events get created (i.e. enter the window through the right edge), they get stored in these freed up slots. Thus, the same array of memory slots get recycled over and over again, just like in any other dynamic memory allocation system. This proves that Prolog is a sound choice even from the perspective of memory optimization.</p>
 <p>(Note: If you force every event to occupy the same exact amount of space in memory, you will be able to simplify the allocation scheme even further because the system will only need to keep track of free slot indices, not how large those free slots are.)</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>On Theory of Relativity</b></h3>
 <p>Here is something I would like to point out before proceeding to the next chapter. The model of spacetime which I have explicated by far is a strictly Newtonian one, meaning that every "present event" is nicely aligned within the same exact time step (i.e. "n"). This is because all present events get generated by the gameplay system in a completely synchronous (aka "lockstep") manner. Here, time is an independent variable and we can easily tell which events are simultanous with each other and which ones are not. If two or more events belong to the same time step, they must be considered simultaneous.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/e27.jpg" alt="Game Programming in Prolog - Part 3 (Figure 8)">
@@ -126,7 +101,6 @@ oxygen(Z[n]) :- water(X[n-1], Y[n-1], Z[n-1]), split(X[n-1], Y[n-1], Z[n-1]).</c
 <p>In computer science, the aforementioned notion of concurrency is considered the main source of many time-related algorithmic errors such as race conditions, where the evil can be attributed to the misordering of operations (which is quite common in imperative programming) which may have been caused not only by the programmer's coding mistake, but also by the lack of certainty in the speed at which the result of operation gets broadcasted from thread to thread.</p>
 <p>In modern physics, concurrency of events and their apparent lack of ability to sync up instantly (due to the fact that their waves of influence cannot move faster than light) comprise one of the core pillars of Einstein's Theory of Relativity, where space and time can be "warped" based on the way in which events are causally connected.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Lockstep</b></h3>
 <p>In the case of a single-threaded gameplay system, though, we do not have to worry about any of the aforementioned perils of asynchronicity. As long as our Prolog program sticks its mode of operation to a single game loop, we will be safe from any of the bizarre relativistic effects such as time dilation, etc. This also means that we may imagine the game world as a simple Newtonian model of spacetime, in which the spatiotemporal location of every event can be specified in terms of Cartesian coordinates.</p>
 <p>The only potential source of error in a single-threaded Prolog application is the very logical ambiguity in the code itself, and nothing else. As long as the rules (i.e. horn clauses) are formulated in a manner which won't allow a loophole (such as unintended reliance on the order of operation), everything is going to be fine. An example of such an undesirable loophole is demonstrated below.</p>
@@ -139,11 +113,10 @@ rainy(City[n]) :- cloudy(City[n-1]).</code></pre></div>
 <p>(1) Forcing the Prolog interpreter to scan the list of rules twice instead of just once, so that the "carryUmbrella" predicate will be recognized and be activated during the second scan (because the "rainy" predicate would have been activated by the end of the first scan), or,<br>(2) Just writing the rules in the correct order.</p>
 <p>Both of these solutions will work, although they both involve their own tradeoffs. The first solution allows the two horn clauses to be written in any order, yet the necessity of scanning the whole code multiple times decreases the efficiency of the program. The second solution is great for efficiency, yet it requires extra care when writing the code.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-13.html">Part 4</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

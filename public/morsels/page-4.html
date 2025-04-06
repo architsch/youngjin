@@ -13,16 +13,14 @@
 <meta property="og:description" content="Possible usage of Peter Gärdenfors&#39; two-vector event model in the design of gameplay systems."/>
 <meta property="og:image" content="https://thingspool.net/morsels/049.jpg"/>
 <meta property="og:image:alt" content="Game Design using Gärdenfors&#39; Event Model">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Design using Gärdenfors&#39; Event Model</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,53 +29,31 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-4.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Design using Gärdenfors' Event Model</div>
+<div class="s_spacer"></div>
+
 <h1>Game Design using Gärdenfors' Event Model</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: July 28, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: July 28, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Introduction</b></h3>
 <p>When developing a game, one of the biggest challenges that the developer often encounters is the problem of implementing complex gameplay systems.</p>
 <p>A large-scale game project often involves various in-game events, such as instantaneous actions (e.g. malee attack), firing of projectiles, casting of spells (i.e. status conditions), area effects, upgrades, and many others. It is not so easy to make sure that all these events will coexist in harmony, due to undesired side effects which might be caused by factors such as: (1) Race condition, (2) Combination of multiple events, (3) Criteria for deciding whether an event should be applied or not, and so on.</p>
 <p>Professor Gärdenfors, who is both a cognitive scientist and a philosopher at the University of Lund (Sweden), has introduced a structurally elegant model of events and their internal causal relations. It is called the "Two-Vector Model", and it leverages vector quantities as means of specifying the cause and effect of an event. In other words, his model defines an event as an instance of vector transformation.</p>
 <p>What I have personally noticed is that his event model works beautifully in the context of game development. Many of the complexities which are prone to arise in gameplay systems can easily be mitigated (or even avoided) by applying the two-vector model, due to the fact that it lets us nicely encapsulate each gameplay event's causal relation as a simple algebraic operation.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>The Two-Vector Event Model</b></h3>
 <img class="figureImage" src="https://thingspool.net/morsels/049.jpg" alt="Game Design using Gärdenfors' Event Model (Figure 1)">
 <p>According to Professor Gärdenfors' definition of cause and effect, an event can be thought of as a vector function which takes a vector as the input and returns another vector as the output.</p>
@@ -88,13 +64,11 @@
 <p>Gärdenfors' event model differs from more traditional models of causation due to its nature of self-encapsulation. It has widely been presumed that the so-called "causation" is simply a relation between events, and that each event is more or less just a "snapshot" of how things look like at each moment. In Gärdenfors' model, on the other hand, each event contains its own cause-and-effect relation, defined in terms of agent, patient, force, and result. The agent and the force it emits can altogether be considered the "cause" of the event, while the patient and its result of receiving the emitted force can altogether be considered the "effect" of the event.</p>
 <p>I think the most prominent advantage of modeling an event this way is that it allows us to apply the notion of causation inside the event itself rather than in terms of its relation with other events. In computer science, such a form of conceptualization nicely fits the OOP (Object-Oriented Programming) paradigm, where each object defines its own behaviors within its own body. So for example, in a typical object-oriented programming language such as Java or C#, it is oftentimes convenient to define "Event" as a class, and assume that its force-to-result vector transformation procedure (i.e. causal relation) will be implemented as the class's member function.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>An Alternative Interpretation</b></h3>
 <img class="figureImage" src="https://thingspool.net/morsels/051.jpg" alt="Game Design using Gärdenfors' Event Model (Figure 3)">
 <p>As a side note, I would like to briefly introduce yet another mathematical interpretation of an event. In his paper on event structure and force dynamics (See Fig 11 of <a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X">"Event structure, force dynamics and verb semantics"</a>), Gärdenfors explains Croft's alternative definition of causality. According to Croft, a cause-and-effect relation between forces can be explicated as the propagation of a "causal signal" across the dimension of causality. What's really interesting in this worldview is that it imagines "causality" as yet another dimension in spacetime, via which various worldly phenomena (i.e. events) establish causal links with one another.</p>
 <p>This philosophically fascinating design, however, requires both the force vector and the result vector to reside in the same set of dimensions, thereby disallowing the result vector from identifying itself as part of its own hypothetical space which is of a different type from that of the force vector. This apparent lack of expressive freedom, I think, is one of the reasons why this unified spatial representation of causality is not so widely used.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>A Linguistic Interpretation</b></h3>
 <img class="figureImage" src="https://thingspool.net/morsels/052.jpg" alt="Game Design using Gärdenfors' Event Model (Figure 4)">
 <p>In <a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure">"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"</a>, as well as the latter half of <a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X">"Event structure, force dynamics and verb semantics"</a>, Gärdenfors suggests a possible usage of his two-vector event model as a device for explaining sentence structures in our language. An "event", according to him, can be expressed as an English sentence because it has its own subject (agent), verb (force), and object (patient).</p>
@@ -103,7 +77,6 @@
 <p>The force and result vectors are expressible in terms of verbs. Here, a verb (or a "verb phrase" in general) can be defined as a vector transformation which maps a region in space to another region in space. These regions are specified by the sentence's subject and object, respectively.</p>
 <p>Based upon these observations, Professor Gärdenfors suggests that we formulate our language in terms of events and their force-to-result (i.e. cause-and-effect) relations. In other words, our language is based on the way we cogitate causal relations.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Application in Game Development</b></h3>
 <p>A potential application of Peter Gärdenfors' event model can be found in the development of video games. When designing a gameplay system, a developer often finds it hard to construct the cause-and-effect relations of various in-game events (e.g. Attack, Heal, Stun, Knockback, Poison, Teleport, etc) without introducing too many layers of complexity. Gärdenfors' nicely encapsulated model of events solves this problem, and I am here to demonstrate why.</p>
 <p>First of all, we need to take a look at the generalized form of the two-vector model in order to be able to leverage it for game design purposes. It is illustrated below.</p>
@@ -122,7 +95,6 @@
 <p>But of course, one might be confused and say, "Dude, why do you overthink it? Just keep it simple. Simple is best. All you need to do is increase the player's health by 1 whenever a healer heals, and decrease it by 1 whenever an attacker attacks. You don't need such a fancy framework to do that!"</p>
 <p>I am pretty sure that this is the exact kind of response which will be asserted a thousand times by a group of parrots unless I come up with a slightly more advanced example to show you the complexity of the issue. So here is an additional example.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Status Conditions</b></h3>
 <img class="figureImage" src="https://thingspool.net/morsels/057.jpg" alt="Game Design using Gärdenfors' Event Model (Figure 9)">
 <p>Suppose that there is also a wizard who is casting a spell on the player. This spell is called "heal-blocker spell", and while it is affecting the player, it prevents him from being healed. How shall we implement this this?</p>
@@ -133,7 +105,6 @@
 <p>When the player is under the influence of the health-blocker spell, however, such a transfer function is no longer valid because the player shouldn't be healed when he receives a healing force. Therefore, we must zero out the right half of the transfer function to enforce such a condition. And how do we do that? There are multiple ways, but the easiest one is to "add" another function to the transfer function which, after the addition, will cancel out the healing behavior of the original transfer function.</p>
 <p>This additive approach is quite elegant because it is incredibly easy to undo the process of addition. Whenever we add the spell, we simply add the spell's modifier function to the player's current transfer function. Whenever we remove the spell, we simply remove (subtract) the spell's modifier function from the player's current transfer function. Since subtraction is the exact inverse of addition, no information will be lost and all the external factors (i.e. anything that is not part of the spell) will be preserved no matter how many times we add/remove the spell to/from the player.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Thresholding</b></h3>
 <img class="figureImage" src="https://thingspool.net/morsels/059.jpg" alt="Game Design using Gärdenfors' Event Model (Figure 11)">
 <p>Another application of the two-vector event model can be found in success-or-fail (aka "binary") scenarios, such as trying to let the character jump up a steep hill in order to proceed to the next stage. Imagine that there is a hill right in front of the player, and that the player is trying to reach the top of the hill by jumping. The player's current altitude is 0, and it will be shifted up to 1 once he successfully reaches the top.</p>
@@ -145,36 +116,31 @@
 <p>In his article on force dynamics (See <a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X">"Event structure, force dynamics and verb semantics"</a>), Gärdenfors shows us that an event's force vector can be classified into one of the following categories under the presence of a goal - "Enable", "Help", "Prevent", and "Despite". The "Enable" force, when added to the patient's current force vector, allows him/her to achieve the desired result which was unachievable before. The "Help" force is similar to the "Enable" force, except that its presence is not absolutely necessary because the patient is already able to achieve the desired result (with just a bit of additional time and effort). The "Prevent" force is the opposite of the "Enable" force because it disables the patient from achieving the goal which would have been achievable otherwise, and the "Despite" force is the opposite of the "Help" force.</p>
 <p>Such categorization of forces is definitely feasible in a threshold-based scenario, such as the problem of jumping to reach the top of the steep hill. For example, if the player's initial jump force is only 1 and there is a "booster" item in the inventory which he/she can consume in order to add an extra boost of 1 to the jump force (which will achieve enough level of force to reach the top of the hill), we will be able to tell that this item is the "enabler" of the player's hill-mounting event. This way, we are able to sort various items, abilities, spells, and other numerous in-game factors into the four major categories (i.e. Enable, Help, Prevent, and Despite) and implement them appropriately based on how their presence will affect the progression of the game in binary (i.e. threshold-driven) gameplay scenarios.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Data-Driven Design</b></h3>
 <p>Many of you who have implemented large-scale gameplay systems may have heard of the term, "data-driven". It is one of the most popular design philosophies in game development, in which the game's rules are specified in the form of declarative statements (e.g. data tables, English sentences, block diagrams, etc) instead of being hard-coded as part of the game's script itself.</p>
 <p>Gärdenfors' event model nicely fits the spirit of data-driven gameplay design, due to the fact that it allows us to fully describe an event and its causal relation in the form of a plain English sentence (i.e. a declarative statement), instead of a bunch of conditional and iterative statements which are intertwined with one another (See <a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure">"Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure"</a>). Engineers who have studied a logic programming language (e.g. Prolog) will instantly grasp the beauty of this, as well as how neatly it is going to mitigate many of the design complexities which tend to arise in gameplay engineering.</p>
 <p>As long as we manage to express gameplay events as English sentences, we will be able to summarize all gameplay rules simply as a list of sentences and hardly anything else.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Event as a List Processor</b></h3>
 <p>The examples I have shown so far are only one-dimensional - that is, each force space or result space is only a single number line, made up of a single variable (e.g. "change in health", "change in altitude", etc). However, this is just for the ease of visualization (because it is easier to draw 1D and 2D graphs than ones which are 3D, 4D, etc). In general, each force space or result space should be allowed to possess any number of dimensions, which may be spatial (x, y, z), temporal (t), or qualitative (e.g. color, temperature, health, mana, dexterity, experience, anger, happiness, attack strength, defense strength, and so forth).</p>
 <p>Designing a transfer function which maps a multidimensional force vector to a multidimensional result vector is indeed a difficult thing to do. If you consider each vector as just an array of numbers (e.g. "int[]"), however, you will be able to tell that the two-vector event model is nothing more than a "list-mapping process" - a generic system which takes a list of numbers as the input, and generates another list of numbers as the output. One of the easiest ways of designing such a system is to treat each element of the output list as a linear combination of the elements of the input list. This lets the system's transfer function be constructed as a simple matrix multiplication, which is something your graphics card (GPU) can do extremely well.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Special Thanks</b></h3>
 <img class="figureImage" src="https://thingspool.net/morsels/062.jpg" alt="Game Design using Gärdenfors' Event Model (Figure 14)">
 <p>I would really like to thank Katarina Gyllenbäck for introducing the works of Professor Gärdenfors. I would have not had a chance to delve into his profound insights in the field of cognitive science, if she did not introduce his papers in her articles.</p>
 <p>Katarina Gyllenbäck, who is both a narrative designer and a researcher of interactive media, has shown me a narrative-driven interpretation of Gärdenfors' two-vector event model. It is most thoroughly illustrated in her description of conceptual space in the article, <a href="https://katarinagyllenback.com/2023/03/16/part-11-the-meaning-makers-space/">"Part 11, The Meaning-Maker's Space"</a>.</p>
 <p>To learn more about her areas of insight, please visit <a href="https://thingspool.net/read-rec/page-2.html">Here</a> to see my review of her writings on narrative design. Or, you may want to visit her website and read her vast collection of articles <a href="https://katarinagyllenback.com">Here</a>.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Bibliography</b></h3>
 <p>1. <a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X">Event structure, force dynamics and verb semantics</a> by Peter Gärdenfors (This article most accurately summarizes the mathematical pattern behind the causal relations of the two-vector event model.)</p>
 <p>2. <a href="https://www.researchgate.net/publication/352868530_Causal_Reasoning_and_Event_Cognition_as_Evolutionary_Determinants_of_Language_Structure">Causal Reasoning and Event Cognition as Evolutionary Determinants of Language Structure</a> by Peter Gärdenfors (This one most thoroughly describes the linguistic interpretation of the two-vector event model, explaining why an event can be considered a sentence and each element of the event can be considered a phrase such as a "noun phrase", "verb phrase", etc)</p>
 <p>3. <a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.584017/full">Primary Cognitive Categories Are Determined by Their Invariances</a> by Peter Gärdenfors (This is a great introductory text to the idea of "Conceptual Space" - a hypothetical space which expresses the qualitative attributes of an object as a point in geometry. It also explains how a set of invariances in our domain of cognition (i.e. a dense cluster of sense-data) eventually manifest themselves in the form of a discrete entity called "object". This is one of the most foundational ideas in the study of artificial intelligence and machine learning (often referred to as "pattern recognition").)</p>
 <p>4. <a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.00630/full">Events and Causal Mappings Modeled in Conceptual Spaces</a> by Peter Gärdenfors (This is a general overview of how the force and result vectors are related to one another in an event. In this paper, Professor Gärdenfors tells us various subleties that are involved in the dynamics of causality, such as the capacity of the human mind to perform interpolation between two force vectors (which means that the total domain of forces which can be formed by a set of basis force vectors is their convex hull), etc.)</p>
 <p>5. <a href="https://www.researchgate.net/publication/322314237_From_Sensations_to_Concepts_a_Proposal_for_Two_Learning_Processes">From Sensations to Concepts: a Proposal for Two Learning Processes</a> by Peter Gärdenfors (This article introduces some of the experimental results which show us that, during early childhood development, young children do manage to learn how much an object (i.e. a cluster of data points) differs from another object (i.e. another cluster of data points), but not necessarily the direction (i.e. dimension) in which they differ. It is only later stages in life during which they acquire the ability to break down each object as a product of multiple dimensions and make comparisons based upon individual dimensions, not only in terms of the overall distance between two clusters of data).</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

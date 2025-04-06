@@ -13,16 +13,14 @@
 <meta property="og:description" content="Prolog offers us a new insight in the field of game programming. In this article, I will be explaining how some of the advanced gameplay features, such as status effects and passive abilities, can be designed in Prolog&#39;s beautiful symphony of logic."/>
 <meta property="og:image" content="https://thingspool.net/morsels/f16.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 13">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 13</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-22.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 13</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 13</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 12, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 12, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 13 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>A Brief Recap</b></h3>
 <p>In the previous few articles, I primarily spent time illustrating how abstract (compound) objects could be represented in terms of logical relations. This time, I will change the subject a bit and start talking about some of the advanced sorts of interactions which may occur among gameplay agents.</p>
 <p>Let me recapitulate the overall structure of the game world. First of all, we have this thing called "the world" which encompasses the entirety of what is happening in our Prolog environment. It is made up of facts (i.e. instances of logical relations), each of which may belong to a certain point in time. A fact which possesses such a time parameter can be referred to as an "event", since it is representative of what happened at the given moment in time.</p>
@@ -85,7 +61,6 @@
 <img class="figureImage" src="https://thingspool.net/morsels/f11.jpg" alt="Game Programming in Prolog - Part 13 (Figure 2)">
 <p>By modeling an actor as a hierarchical data structure (i.e. tree) instead of just a singleton with a bunch of keywords attached to it, we are able to manage a wide range of complex game mechanics without confusing ourselves too much. In this article, I will be demonstrating some of the hidden intricacies (as well as pitfalls) of such a hierarchy-oriented game design by outlining one of its most illustrative examples. It is what I would refer to as the "spell system".</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Spell System</b></h3>
 <p>The word "spell" is nothing more than an alternative terminology for "status effect"; I just chose this particular word because it happened to be more concise.</p>
 <p>A spell is basically an effect which, when applied to an actor, occupies its body and lives in it for some duration. While a spell is alive, it keeps influencing its host's state in some way or another. Here are some of its typical examples:</p>
@@ -134,7 +109,6 @@ despawn[n](Id) :- spawnTime[n](Id, T), lifespan[n](Id, Span), add(T, Span, EndTi
 
 despawn[n](X) :- health[n](X, H), lessThan(H, 1).</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Aggregate Effects</b></h3>
 <p>There is something fishy, though. The rule which updates the current health of the actor says that the new health is the result of subtracting the previous health by the incoming damage. But, what does this "incoming damage" mean, really? Is it just a single event, occurring just once at each moment in time? What if there are multiple sources of damage, then?</p>
 <img class="figureImage" src="https://thingspool.net/morsels/f16.jpg" alt="Game Programming in Prolog - Part 13 (Figure 7)">
@@ -199,11 +173,10 @@ damage[8](villain, [acc]3) :-
 
 FINAL RESULT ---&gt; damage[8](villain, [acc]3).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-23.html">Part 14</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

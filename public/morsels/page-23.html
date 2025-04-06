@@ -13,16 +13,14 @@
 <meta property="og:description" content="Here is a basic algorithm for building a Prolog game engine. By leveraging the elegance of logic programming, this engine will let game developers design a wide range of gameplay systems using Prolog&#39;s declarative syntax."/>
 <meta property="og:image" content="https://thingspool.net/morsels/f19.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 14">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 14</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,63 +29,39 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-23.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 14</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 14</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: October 14, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 14, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 14 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Pitfalls of Logic Programming</b></h3>
 <p>So far, I have demonstrated quite a variety of game mechanics and how they could be designed in the language of Prolog. I have not yet, however, carefully dealt with the matter of optimization in this subject.</p>
 <p>Those of you who have learned the basics of Prolog, or logic programming in general, would have realized that a program which is based upon logical relations does not necessarily run efficiently unless we take extra precautions on how it is being implemented. A standard Prolog application, for example, is not so computationally elegant in the sense that it is prone to perform exhaustive searching and pattern matching of relations in order to find the right answer to a query.</p>
 <p>A typical Prolog system, unless it is provided with clever algorithmic shortcuts, exhibits a tendency to solve problems by means of recursive tree search, which is reminiscent of initiating a tree of function calls but more "comprehensive" in the sense that it often needs to force itself to traverse all the alternative pathways via which a solution could be derived.</p>
 <p>Whereas a function only requires the system to apply the given parameters to the body of the expression and return the result of evaluation, a logical statement (such as a horn clause) requires the system to come up with every possible permutation of parameters which could manifest themselves to a valid answer. And the process of searching for all such possibilities can oftentimes waste a great deal of computational resources, both in terms of time and space.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Optimization via Specialization</b></h3>
 <p>In order to create a fairly efficient gameplay system based off of the language of Prolog, therefore, we better abandon the notion of simply letting Prolog take care of the given set of rules based upon its default mode of computation.</p>
 <p>Instead, we ought to reimagine the language from the ground up and curtail any of the overgeneralized parts of its core algorithm, so as to specialize the engine of logic to fit our needs. This will help us optimize the system, letting it update the in-game relations (e.g. actors, events, etc) without going on a roundabout of unnecessary searching steps.</p>
 <p>(Note: You may as well imagine this as a process of designing a zombie apocalypse game. Zombies do not require highly advanced pathfinding algorithms such as A-star, so we will end up wasting tons of computational power if we simply assume that every game character should be equipped its own A-star pathfinding behavior. This means that we can optimize our game by getting rid of such a superfluous form of intelligence. Likewise, we can optimize the way in which our Prolog system runs by getting rid of superfluous computational steps.)</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Derivation of Facts</b></h3>
 <p>So, let us start implementing the engine of Prolog from scratch, rather than simply grabbing its standard interpreter and using it for granted.</p>
 <p>First of all, we all know that this language comprises a list of rules (i.e. horn clauses), each of which in turn comprises a list of relations. Whenever the program tries to see if a rule holds, it attempts to figure out a set of arguments which satisfy all the relations on the right-hand side of the rule. For a quick demonstration, let me give you a couple of examples of how this may work.</p>
@@ -189,7 +163,6 @@ RULES:
 
 ------------------------------</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Conditional Facts</b></h3>
 <p>It's been pretty easy-going so far. You see, the Prolog environment only needs to keep track of two lists of data - one for the facts which have been identified so far, and the other one for rules which are to be scanned for the purpose of deriving new facts out of old ones.</p>
 <p>In general, we should expect the system to scan the entire list of rules during each time step (i.e. clock cycle) and add the acquired facts to the list of existing facts, while discarding ones that are considered obsolete. Our previous example did not involve the removal of any of the existing ones (because none of them could be considered obsolete at any given moment in time), yet we will see instances of such an action later on.</p>
@@ -251,7 +224,6 @@ RULES:
 
 ------------------------------</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Time-Bound Facts</b></h3>
 <p>For the sake of designing a gameplay system as opposed to a mere answer-finder, though, we need to have temporal relations (aka "events") - that is, relations which belong to certain points in time, instead of existing timelessly as though they are pure ideas such as mathematical theorems, laws of nature, etc.</p>
 <p>Just like I had mentioned during the early parts of the series (e.g. <a href="https://thingspool.net/morsels/page-11.html">Part 2</a> and <a href="https://thingspool.net/morsels/page-12.html">Part 3</a>), time plays a crucial role in the design of video games. It is because the concept of time is indispensable in a system which is driven by a sequence of events.</p>
@@ -420,11 +392,10 @@ RULES:
 <p>No more explanation will be necessary at this point. The interpreter will proceed to time step 4 and try to derive new facts, but fail once again. No existing fact will be thrown away either, since the only thing in the list is "near(seattle, bellevue)". This frozen state will stay as it is forever, no matter how much time passes by. This is the "heat death" of the system.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/f19.jpg" alt="Game Programming in Prolog - Part 14 (Figure 1)">
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-24.html">Part 15</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

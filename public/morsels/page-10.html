@@ -13,16 +13,14 @@
 <meta property="og:description" content="This article explains how a game can be made in Prolog by leveraging the hidden power of logic programming. Inspired by the elegance of data-driven design and declarative programming paradigms, I will be explaining a new way of designing game rules which can at the same time be used as the source code of the gameplay system itself."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e01.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 1">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 1</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,46 +29,25 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-10.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 1</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 1</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: August 25, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 25, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Introduction</b></h3>
 <p>As a fan of unconventional programming paradigms, I enjoy learning new programming languages which are drastically different from the typical object-oriented ones such as C#, Java, and the like. The most iconic of them are LISP (which is a powerful language for both functional programming as well as metalinguistic patterns in software development) and Prolog (which is one of the most popular languages in logic programming). Learning these languages is quite hard, compared to being acquainted with usual C-style imperative languages such as Ruby and Python, yet it has turned out to be one of the most effective ways of exercising one's brain.</p>
 <p>By the time I started learning LISP via MIT's 1986 lecture series called "SICP (Structure and Interpretation of Computer Programs)" back in 2018, I was already quite familiar with some of its core concepts (such as lambda expressions, higher-order functions, etc) because they were already integrated as some of the main features of C#, which was the language I was using all the time as a Unity game developer. Also, my academic background in electrical engineering (signal processing in particular) helped me easily grasp the idea of "stream processing" which appeared in the latter half of the lecture series. Thus, learning LISP and its functional design patterns was not as difficult as I imagined it to be.</p>
@@ -81,14 +58,12 @@
 <p>However, I believe that at least the core mechanics of a game can definitely be implemented using the language of Prolog, and that we will be able to solve a plethora of complex design problems by doing so. It is because a gameplay system which is structured in terms of a set of declarative statements will be far more robust, modular, and free of confusing edge cases (e.g. race conditions) than an imperative system.</p>
 <p>For this alternative methodology to be successful, one must start by designing the system in terms of logical relations/predicates only, and nothing else (That is, no functions, no structs, no classes, no interfaces, no state variables, etc). This will allow us to construct a gameplay system which is purely driven by the soul of Prolog.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>World and Actors</b></h3>
 <p>The core idea in Prolog-based game programming is to utilize relations as the most primitive building blocks of the system, just like basic circuit components (e.g. resistors, transistors, capacitors, inductors, etc) are the most primitive building blocks of an electric circuit. It is sensible, therefore, to start this journey by considering the most rudimentary relations (e.g. unary and binary) first, and see if these elements can serve as the most essential nuts and bolts of the game.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/e01.jpg" alt="Game Programming in Prolog - Part 1 (Figure 1)">
 <p>Suppose that we are designing a game, and that the game consists of two major parts - world and actors (see the image above). The world is a scene in which everything is supposed to happen, and actors are objects which belong to the world. Examples of actors include "players", "enemies", "obstacles", "items", and pretty much any discrete entities which have their own names and attributes. Actors are able to interact with each other (as well as with themselves), from which various events occur. What we refer to as "gameplay" is a chain of such events.</p>
 <p>We will begin formulating a gameplay system based off of this conceptual backbone. All you need to remember is that there is a world, and that the world contains a number of actors, each of which possesses its own state and behavior.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Tags</b></h3>
 <p>First of all, let us identify each individual actor with a unique name. If there are two actors in the world, for instance, we will simply assume that the name "actor1" and "actor2" will be used to indicate the first and second actors, respectively.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/e02.jpg" alt="Game Programming in Prolog - Part 1 (Figure 2)">
@@ -111,7 +86,6 @@ decomposable(X) :- bread(X).</code></pre></div>
 <img class="figureImage" src="https://thingspool.net/morsels/e06.jpg" alt="Game Programming in Prolog - Part 1 (Figure 6)">
 <p>The tags "flammable" and "decomposable" are characteristics of all pieces of bread, whereas the tag "enchanted" is a characteristic of only special pieces of bread which have been enchanted by a wizard.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Relationships</b></h3>
 <p>So far, we have been using tags for specifying the characteristics of each individual actor. In a gameplay system, however, we also need to specify relationships between actors, such as ways in which they interact, etc.</p>
 <p>In an ecosystem, predators chase preys and preys run from predators. In a dating simulator, a guy tries to flirt with girls and girls reject him. In a social simulator (such as The Sims), people are either friends or enemies of each other, or somewhere in between. In the game of chess, a bishop devours a rook diagonally and a rook devours a bishop orthogonally. These are all relationships out of which the game's dynamics emerge.</p>
@@ -127,11 +101,10 @@ canSpoil(X, Y) :- fungus(X), decomposable(Y).</code></pre></div>
 <p>There is something still missing here, though. While I have demonstrated that it is possible to assign characteristics to individual actors as well as their mutual connections (i.e. relationships), I have not shown yet how to make these characteristics change over time. They all have been static so far, and the declarative nature of Prolog does not seem to offer an easy solution to make things dynamic.</p>
 <p>If we want to create a game rather than a fixed landscape of how things are shaped permanently, we better let them move and interact as time goes by. In the next part of the series, I will explain how the game loop shall be conceptualized in Prolog.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-11.html">Part 2</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

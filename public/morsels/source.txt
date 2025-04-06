@@ -7,7 +7,6 @@
 This is a collection of game design concepts.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <001>
 @@<h3><b>1. Mechanical Narratives</b></h3>
 
@@ -30,7 +29,6 @@ If we start by laying out the game's narratives first, it will be difficult to d
 Such a dilemma can be bypassed by simply collecting a number of "mechanical narratives" and assembling them together.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <002>
 @@<h3><b>2. Sensors, Filters, and Motors</b></h3>
 
@@ -51,7 +49,6 @@ This is just a simple example. For more complex behaviors, you may as well equip
 Such a multitude of modules can then communicate with one another by means of series connections, parallel connections, or both.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <003>
 @@<h3><b>3. Psychological Force Field</b></h3>
 
@@ -70,7 +67,6 @@ The force that is to be applied to the observer can be computed by the function 
 A real life example of psychological force field is Feng Shui, where architectural patterns are believed to shape the field in which the residents of the house reside, thereby influencing the way they behave.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <004>
 @@<h3><b>4. Parallel-Attention Timeline</b></h3>
 
@@ -93,7 +89,6 @@ Whenever an "attention trigger" (i.e. any object which demands attention) tries 
 Each task possesses its own intrinsic attention priority (i.e. row) which cannot be modified.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <005>
 @@<h3><b>5. Partial Movement Constraints</b></h3>
 
@@ -114,7 +109,6 @@ This mixed approach has 3 main advantages:
 (3) It prevents extreme gameplay scenarios, such as letting the player be completely surrounded by a truckload of enemies because they always keep chasing the player without a pause. By limiting each enemy's maximum range of movement, we can spread out the distribution of enemies throughout the level and prevent them from concentrating too much in one place.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <022>
 @@<h3><b>6. Emotional State Machine</b></h3>
 
@@ -133,7 +127,6 @@ When happiness, excitement, and confidence are all low, the character is depress
 You can change the emotion's current state by applying a "psychological force" to it. The way you do it is to put the emotion's position under a psychological force field.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <023>
 @@<h3><b>7. Deities of the Game World</b></h3>
 
@@ -152,7 +145,6 @@ Inside a pantheistic game world, the game characters' feedback loops are not bei
 One of the main advantages of using either a monotheistic or polytheistic system is that it allows the gamemaster to occasionally override the game's default laws by means of admin privilege. In computer science, it is called "miracle".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <025>
 @@<h3><b>8. Modular Behavior Tree</b></h3>
 
@@ -165,7 +157,6 @@ For example, imagine that a game character has a behavior tree which involves a 
 Thus, it is oftentimes convenient to make behavior trees modular, so that a tree of tasks that is specific to the object of interaction can simply reside within the object, temporarily stick itself to the character's "eat" task during the interaction, and then depart once the interaction is over.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <026>
 @@<h3><b>9. Brand-Building</b></h3>
 
@@ -182,7 +173,6 @@ However, a brand also ought to preserve a decent amount of mystery in it. Even a
 In general, I believe that the most appealing brand must have its own purpose, logic, and mystery in equal measures. This corresponds to the center point of the circular diagram I have shown here (denoted by the Sun).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <043>
 @@<h3><b>10. Image as a Game Map</b></h3>
 
@@ -219,7 +209,6 @@ This is a collection of mathematical concepts designed to express the nature of 
 The ideas shown below are inspired by Katarina Gyllenbäck's articles. For more information, visit {%a href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%}.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <006>
 @@<h3><b>1. Physical Space and Conceptual Space</b></h3>
 
@@ -232,7 +221,6 @@ Conceptual space, on the other hand, is the space of qualitative features. For e
 Each object has its own position in physical space as well as a position in conceptual space. The former tells us where the object is, and the latter tells us what the object looks like.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <007>
 @@<h3><b>2. Particulars and Universals</b></h3>
 
@@ -247,7 +235,6 @@ In computer science, a class is a universal. It is purely spiritual because it l
 An instance of a class, which is dynamically allocated in memory, is a particular. It is a mortal being which gets created at some point in time and gets destroyed at some other point in time. It is never eternal because it does not span the entirety of the application's runtime.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <008>
 @@<h3><b>3. Contiguity and Resemblance</b></h3>
 
@@ -260,7 +247,6 @@ Conceptual proximity implies resemblance. When two things are very close to each
 Proximity can be measured by taking the reciprocal of the distance. Less distance means more proximity, and more distance means less proximity.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <009>
 @@<h3><b>4. Surprise</b></h3>
 
@@ -275,7 +261,6 @@ On the other hand, the amount of surprise between two objects is inversely propo
 Thus, we can measure the amount of surprise by measuring the conceptual distance and then dividing it by the physical distance.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <010>
 @@<h3><b>5. Curiosity Force</b></h3>
 
@@ -286,7 +271,6 @@ Suppose that there is an observer somewhere in physical space. We can first comp
 If you take the sum of all the surprise vectors which involve the observer and multiply the resulting "net surprise vector" by the amount of the observer's curiosity, you will obtain the "curiosity force vector" which is responsible for pushing the observer to venture into the unknown.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <016>
 @@<h3><b>6. How to Compute Curiosity</b></h3>
 
@@ -305,7 +289,6 @@ A halfway mixture between familiar and unfamiliar elements creates a "Goldilocks
 If everything is already uncovered, there will be no secret to uncover and so you won't feel the necessity to start an adventure. If everything is veiled in darkness, you will feel clueless and thus not even dare to start an adventure.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <046>
 @@<h3><b>7. Uniformity</b></h3>
 
@@ -320,7 +303,6 @@ Secondly, they must resemble each other (i.e. similar in characteristics). If th
 Therefore, the amount of uniformity can be computed by taking the inverse of the product between their physical and conceptual distances.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <047>
 @@<h3><b>8. Force of Adaptation</b></h3>
 
@@ -333,7 +315,6 @@ Take the sum of all uniformity vectors which originate from the observer, and yo
 Scale this net uniformity vector by the observer's adaptivity (which is a scalar value) and you will obtain the force vector which is currently pushing the observer's viewpoint in conceptual space. This force gradually "adapts" the observer to the surroundings, making them become more and more familiar as time passes by.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <048>
 @@<h3><b>9. Dynamics of Exploration</b></h3>
 
@@ -362,7 +343,6 @@ This is a mathematical interpretation of David Hume's philosophy. It is mostly b
 I drew most of my inspirations from his book, "An Enquiry Concerning Human Understanding". For more information, visit {%a href="https://thingspool.net/read-rec/page-6.html"%}Here{%/a%}.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <011>
 @@<h3><b>1. Introduction</b></h3>
 
@@ -381,7 +361,6 @@ Objects of reason can be subdivided into two categories - "relations of ideas" a
 A relation of ideas is a result of pure logic, such as a mathematical theorem which manages to prove itself based upon a set of ideas only, without relying on the presence of external stimuli. A matter of fact, on the other hand, requires a considerable amount of empirical data to validate itself (like the law of gravitation).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <012>
 @@<h3><b>2. Impressions and Ideas</b></h3>
 
@@ -394,7 +373,6 @@ Ideas, on the other hand, are byproducts of impressions. They linger in our mind
 In a way, therefore, ideas are Lego bricks which can fit one another nicely in our minds, whereas impressions are just raw plastic ingredients which are yet to be molded into such bricks.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <013>
 @@<h3><b>3. Generation of Ideas</b></h3>
 
@@ -405,7 +383,6 @@ However, he also mentions that the relation between impressions and their ideas 
 An impression of "light blue" and an impression of "dark blue", for example, may allow us to imagine an intermediate shade of blue (by mixing the qualities of light blue and dark blue) and remember it as a distinct idea. This lets us picture the full spectrum of blue without having to directly sense every single one of its variants via external stimuli.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <014>
 @@<h3><b>4. Relations between Ideas</b></h3>
 
@@ -418,7 +395,6 @@ Contiguity tells us how close two ideas are to each other in spacetime. This, to
 Causality, however, is not something we can identify in such a straightforward manner. We must derive it from the other two types of relations (i.e. resemblance and contiguity).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <015>
 @@<h3><b>5. Causal Relations</b></h3>
 
@@ -429,7 +405,6 @@ Also, since it is almost impossible for us to reproduce the same exact idea over
 This leads us to the conclusion that, if a set of mutually resembling ideas are contiguous with another set of mutually resembling ideas, we can say that these two sets are causally related to each other.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <017>
 @@<h3><b>6. Facts</b></h3>
 
@@ -444,7 +419,6 @@ Each cause works as a proof of the idea's truthfulness. The more causes there ar
 People who know how a blockchain works (such as Bitcoin or Ethereum) will easily come to the realization that ideas are reminiscent of blockchain transactions, and that a "fact" is basically a transaction which has been mined (verified) and is given credit by a long chain of preceding blocks.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <027>
 @@<h3><b>7. Simple and Complex Ideas</b></h3>
 
@@ -459,7 +433,6 @@ Examples of simple ideas include the primary color components (e.g. red, green, 
 A simple impression (i.e. external stimulus) gives birth to a simple idea. A multitude of simple ideas, then, give birth to complex ideas based on the way in which they are related to each other.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <028>
 @@<h3><b>8. Abstraction and Combination</b></h3>
 
@@ -474,7 +447,6 @@ When you see a group of slightly different shades of blue, you will recognize th
 When you see a lump of various colors, on the other hand, you will recognize that the individual colored spots do not necessarily resemble each other but are nevertheless very closely packed together in physical space. From this, you can conclude that they all belong to the same object. This is an example of combination.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <029>
 @@<h3><b>9. Relations between Complex Ideas</b></h3>
 
@@ -489,7 +461,6 @@ A class is a complex idea which is based off of a set of resembling ideas. When 
 A contiguity between two classes may also be referred to as "causality" (i.e. One of them is either the "cause" or "effect" of the other).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <030>
 @@<h3><b>10. Data Structure of an Idea</b></h3>
 
@@ -506,7 +477,6 @@ Therefore, I personally find that it is much more convenient to consider an impr
 When expressed in the language of computer science, both impressions and ideas are mere instances of the same data structure called "Idea", which contains 3 integers - Quality, Quantity, and Vivacity.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <031>
 @@<h3><b>11. Metaphor</b></h3>
 
@@ -523,7 +493,6 @@ Coldness and hotness do not resemble each other quantitatively, since their inte
 On the contrary, red and hotness do not resemble each other qualitatively because they belong to two drastically different categories of sensation. However, they resemble each other quantitatively because the high emotional intensity of red is similar in magnitude to the high temperature of hotness. This is what we call "a metaphor".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <032>
 @@<h3><b>12. Unity between Two Positions</b></h3>
 
@@ -536,7 +505,6 @@ Hume suggests that, in order for an idea to "exist", we must be able to perceive
 It may theoretically be insisted that it is also feasible to formulate "pure ideas" which belong to either physical space or conceptual space but not both. Such constructs, however, are not directly sensible and thus do not belong to the domain of cognition.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <033>
 @@<h3><b>13. Position of a Complex Idea</b></h3>
 
@@ -553,7 +521,6 @@ Meanwhile, the object's individual color spots "average out" when they are conde
 The "mass" of an idea is its vivacity.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <034>
 @@<h3><b>14. Word and Symbol</b></h3>
 
@@ -572,7 +539,6 @@ In this case, the icon is a symbol of fire, not because we have necessarily seen
 Therefore, a word is an idea which references another idea by means of proximity in physical space, whereas a symbol is an idea which references another idea by means of proximity in conceptual space.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <035>
 @@<h3><b>15. Rate of Change</b></h3>
 
@@ -591,7 +557,6 @@ Similarly, p1 and p2 belong to the same "quality" in conceptual space (because t
 The car's speed according to the two snapshots, then, is the ratio between Δt and Δp (i.e. ratio between the lengths of the vertical line segments in conceptual space which are associated with the two snapshots).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <036>
 @@<h3><b>16. Cause and Effect</b></h3>
 
@@ -606,7 +571,6 @@ If there is a relation of causality between X and Y, we say that X must be the c
 This endows the chain of events with a fixed direction of progress, flowing from the past to the future.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <037>
 @@<h3><b>17. Belief</b></h3>
 
@@ -621,7 +585,6 @@ Thus, the total amount of belief in an idea is the sum of vivacities of its prec
 An impression (i.e. external stimulus) is "real" because, although it is not preceded by a chain of causes, its own vivacity is so sufficiently high that it easily conjures up a strong sense of belief.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <038>
 @@<h3><b>18. Conditional Probability</b></h3>
 
@@ -636,7 +599,6 @@ The more frequently we observe an event, its vivacity increases. And the less fr
 Since the amount of belief in an event is the sum of the vivacities of its history, we can say that more observation yields higher probability and less observation yields lower probability.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <039>
 @@<h3><b>19. Attention</b></h3>
 
@@ -649,7 +611,6 @@ When an external stimulus enters the person's sensory organ, an impression gets 
 At the same time, the impression attracts the mind's attenion and induces it to point to the idea. The impression soon dies out (due to the cooling down of the stimulus), but the attention remains for a while, cogitating the idea to which it was summoned.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <040>
 @@<h3><b>20. Attention's Job</b></h3>
 
@@ -668,7 +629,6 @@ The more we pay attention to certain ideas, the more vivid they get. This, in tu
 Ceremonies and rituals are important in human society because citizens need to share a set of common beliefs. Such activities basically "recharge" the vivacity levels of a set of ideas, ensuring that their connections are firmly fixed in our minds.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <041>
 @@<h3><b>21. Attention Shift</b></h3>
 
@@ -683,7 +643,6 @@ When the attention encounters multiple alternative pathways through which it can
 Over time, this tendency forces only a few strongly believed ideas to survive and all the other ideas to die out. It is reminiscent of gas clouds in space gradually being condensed into a few dense balls of mass (i.e. planets).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <042>
 @@<h3><b>22. Thinning of the Cloud</b></h3>
 
@@ -694,7 +653,6 @@ The mind must pay attention to an idea at least occasionally in order to keep it
 Unfortunately, the mind can pay attention to only a small number of ideas at a time. So, even if the mind happens to have a vast cloud of ideas (due to a sudden appearance of a huge number of external stimuli, for instance), time will eventually do its job of "thinning out" such a cloud into a rigid skeleton of only a selected few ideas which are deemed way more important than others.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <044>
 @@<h3><b>23. Plenum and Vacuum</b></h3>
 
@@ -711,7 +669,6 @@ If a pair of ideas separated by the minimum distance are connected to each other
 If a pair of ideas separated by the minimum distance are disjoint from each other, we can define this interval as the most basic unit of "vacuum" (i.e. empty space).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <045>
 @@<h3><b>24. Idea Field</b></h3>
 
@@ -738,7 +695,6 @@ The vivified ideas attract the mind's attention. The attention, then, connects t
 [Game Design using Gärdenfors' Event Model] July 28, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction</b></h3>
 
 When developing a game, one of the biggest challenges that the developer often encounters is the problem of implementing complex gameplay systems.
@@ -750,7 +706,6 @@ Professor Gärdenfors, who is both a cognitive scientist and a philosopher at th
 What I have personally noticed is that his event model works beautifully in the context of game development. Many of the complexities which are prone to arise in gameplay systems can easily be mitigated (or even avoided) by applying the two-vector model, due to the fact that it lets us nicely encapsulate each gameplay event's causal relation as a simple algebraic operation.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>The Two-Vector Event Model</b></h3>
 
 <049>
@@ -770,7 +725,6 @@ Gärdenfors' event model differs from more traditional models of causation due t
 I think the most prominent advantage of modeling an event this way is that it allows us to apply the notion of causation inside the event itself rather than in terms of its relation with other events. In computer science, such a form of conceptualization nicely fits the OOP (Object-Oriented Programming) paradigm, where each object defines its own behaviors within its own body. So for example, in a typical object-oriented programming language such as Java or C#, it is oftentimes convenient to define "Event" as a class, and assume that its force-to-result vector transformation procedure (i.e. causal relation) will be implemented as the class's member function.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>An Alternative Interpretation</b></h3>
 
 <051>
@@ -780,7 +734,6 @@ As a side note, I would like to briefly introduce yet another mathematical inter
 This philosophically fascinating design, however, requires both the force vector and the result vector to reside in the same set of dimensions, thereby disallowing the result vector from identifying itself as part of its own hypothetical space which is of a different type from that of the force vector. This apparent lack of expressive freedom, I think, is one of the reasons why this unified spatial representation of causality is not so widely used.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>A Linguistic Interpretation</b></h3>
 
 <052>
@@ -796,7 +749,6 @@ The force and result vectors are expressible in terms of verbs. Here, a verb (or
 Based upon these observations, Professor Gärdenfors suggests that we formulate our language in terms of events and their force-to-result (i.e. cause-and-effect) relations. In other words, our language is based on the way we cogitate causal relations.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Application in Game Development</b></h3>
 
 A potential application of Peter Gärdenfors' event model can be found in the development of video games. When designing a gameplay system, a developer often finds it hard to construct the cause-and-effect relations of various in-game events (e.g. Attack, Heal, Stun, Knockback, Poison, Teleport, etc) without introducing too many layers of complexity. Gärdenfors' nicely encapsulated model of events solves this problem, and I am here to demonstrate why.
@@ -832,7 +784,6 @@ But of course, one might be confused and say, "Dude, why do you overthink it? Ju
 I am pretty sure that this is the exact kind of response which will be asserted a thousand times by a group of parrots unless I come up with a slightly more advanced example to show you the complexity of the issue. So here is an additional example.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Status Conditions</b></h3>
 
 <057>
@@ -852,7 +803,6 @@ When the player is under the influence of the health-blocker spell, however, suc
 This additive approach is quite elegant because it is incredibly easy to undo the process of addition. Whenever we add the spell, we simply add the spell's modifier function to the player's current transfer function. Whenever we remove the spell, we simply remove (subtract) the spell's modifier function from the player's current transfer function. Since subtraction is the exact inverse of addition, no information will be lost and all the external factors (i.e. anything that is not part of the spell) will be preserved no matter how many times we add/remove the spell to/from the player.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Thresholding</b></h3>
 
 <059>
@@ -874,7 +824,6 @@ In his article on force dynamics (See {%a href="https://www.sciencedirect.com/sc
 Such categorization of forces is definitely feasible in a threshold-based scenario, such as the problem of jumping to reach the top of the steep hill. For example, if the player's initial jump force is only 1 and there is a "booster" item in the inventory which he/she can consume in order to add an extra boost of 1 to the jump force (which will achieve enough level of force to reach the top of the hill), we will be able to tell that this item is the "enabler" of the player's hill-mounting event. This way, we are able to sort various items, abilities, spells, and other numerous in-game factors into the four major categories (i.e. Enable, Help, Prevent, and Despite) and implement them appropriately based on how their presence will affect the progression of the game in binary (i.e. threshold-driven) gameplay scenarios.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Data-Driven Design</b></h3>
 
 Many of you who have implemented large-scale gameplay systems may have heard of the term, "data-driven". It is one of the most popular design philosophies in game development, in which the game's rules are specified in the form of declarative statements (e.g. data tables, English sentences, block diagrams, etc) instead of being hard-coded as part of the game's script itself.
@@ -884,7 +833,6 @@ Gärdenfors' event model nicely fits the spirit of data-driven gameplay design, 
 As long as we manage to express gameplay events as English sentences, we will be able to summarize all gameplay rules simply as a list of sentences and hardly anything else.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Event as a List Processor</b></h3>
 
 The examples I have shown so far are only one-dimensional - that is, each force space or result space is only a single number line, made up of a single variable (e.g. "change in health", "change in altitude", etc). However, this is just for the ease of visualization (because it is easier to draw 1D and 2D graphs than ones which are 3D, 4D, etc). In general, each force space or result space should be allowed to possess any number of dimensions, which may be spatial (x, y, z), temporal (t), or qualitative (e.g. color, temperature, health, mana, dexterity, experience, anger, happiness, attack strength, defense strength, and so forth).
@@ -892,7 +840,6 @@ The examples I have shown so far are only one-dimensional - that is, each force 
 Designing a transfer function which maps a multidimensional force vector to a multidimensional result vector is indeed a difficult thing to do. If you consider each vector as just an array of numbers (e.g. "int[]"), however, you will be able to tell that the two-vector event model is nothing more than a "list-mapping process" - a generic system which takes a list of numbers as the input, and generates another list of numbers as the output. One of the easiest ways of designing such a system is to treat each element of the output list as a linear combination of the elements of the input list. This lets the system's transfer function be constructed as a simple matrix multiplication, which is something your graphics card (GPU) can do extremely well.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Special Thanks</b></h3>
 
 <062>
@@ -904,7 +851,6 @@ Katarina Gyllenbäck, who is both a narrative designer and a researcher of inter
 To learn more about her areas of insight, please visit {%a href="https://thingspool.net/read-rec/page-2.html"%}Here{%/a%} to see my review of her writings on narrative design. Or, you may want to visit her website and read her vast collection of articles {%a href="https://katarinagyllenback.com"%}Here{%/a%}.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Bibliography</b></h3>
 
 1. {%a href="https://www.sciencedirect.com/science/article/pii/S038800012300075X"%}Event structure, force dynamics and verb semantics{%/a%} by Peter Gärdenfors (This article most accurately summarizes the mathematical pattern behind the causal relations of the two-vector event model.)
@@ -931,7 +877,6 @@ To learn more about her areas of insight, please visit {%a href="https://thingsp
 This is a computational interpretation of Good and Evil, as well as how to model their dynamics using vector math. This is useful for technical systems design in the development of computer games.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <018>
 @@<h3><b>Heaven and Hell</b></h3>
 
@@ -952,7 +897,6 @@ The amount of good in the world is its distance from Hell, minus its distance fr
 The opposite scenario applies to the amount of evil in the world; it is the world's distance from Heaven, minus its distance from Hell.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <019>
 @@<h3><b>Goodness of Movement</b></h3>
 
@@ -971,7 +915,6 @@ Combine these two unit vectors together and you will get the best direction of m
 If you compute the dot product between this vector and the world's velocity vector, you will obtain the degree of how good the world's velocity is.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <020>
 @@<h3><b>Thermostat's World</b></h3>
 
@@ -986,7 +929,6 @@ In contrast, the upper edge indicates the highest temperature that the thermosta
 The center of Heaven is the thermostat's most ideal temperature (i.e. Temperature that the thermostat is ordered to reach).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <021>
 @@<h3><b>Force of Morality</b></h3>
 
@@ -999,7 +941,6 @@ The best velocity of the world is its most optimal direction of movement (That i
 Our best desire is the direction which guides the world's current velocity to its best velocity as quickly as possible. If you multiply it by the world's overall amount of morality, you will get the force of morality which is currently pushing the world.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <024>
 @@<h3><b>Multiple Eras</b></h3>
 
@@ -1029,7 +970,6 @@ As a side note, it is also feasible to connect the last era to the first era, th
 [Emergent Systems based on Glenn Puchtel's Biocybernetic Theory] August 2, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction</b></h3>
 
 If you are a software engineer, you will probably agree that designing a well-organized system is a necessary step in the development of an application. Not that many engineers, however, agree that the system must be "emergent" in order for us to maximize its robustness as well as resilience.
@@ -1059,7 +999,6 @@ In the following sections, I will be illustrating a collection of Glenn Puchtel'
 These articles, however, are not the only ones he has written. If you want to read more of his works, please visit his LinkedIn newsletter: {%a href="https://www.linkedin.com/newsletters/cyborg-bio-cybernetics-6879770834110689280/"%}"Cyborg - (bio)cybernetics"{%/a%}.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>1. Separation of State and Behavior</b></h3>
 
 Glenn Puchtel begins his introduction to cybernetic-oriented design with the notion of "separation of state and behavior" {%a href="#bibliography_1"%}[1]{%/a%}. Programmers who have learned OOP (Object Oriented Programming) will remember that a system (i.e. "object") is practically a blockbox which encapsulates both a behavior and a state. This is quite syntactically apparent in a class declaration, where the member functions characterize its behavior and the member variables characterize its state.
@@ -1081,7 +1020,6 @@ Tight coupling might be okay to have if we are dealing with just a few objects. 
 So, what's the solution? The key lies on Glenn Puchtel's concept of "coordination without direct communication" {%a href="#bibliography_2"%}[2]{%/a%}. I will explain it in detail throughout the upcoming sections.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>2. Indirect Communication</b></h3>
 
 If you have looked at Glenn Puchtel's bio-inspired systems (i.e. biocybernetic systems) {%a href="#bibliography_5"%}[5]{%/a%}, you will be able to tell that they do not allow their biological subsystems (e.g. cells) to share information simply by directly invoking each other's member functions. Instead, these subsystems communicate via a "medium" - a chemical mixture which exists somewhere in space and decays over time. Such a medium continuously emits waves {%a href="#bibliography_3"%}[3]{%/a%}, which are signals waiting to be picked up by nearby systems (e.g. neighboring cells) and be processed according to their own behavioral logic (i.e. goal + rules).
@@ -1105,7 +1043,6 @@ He says that it can be achieved by using a medium as the gateway of communicatio
 The importance of scoping eventually leads us to the conclusion that the application as a whole should comprise multiple layers of scope, which necessitates the notion of a "hierarchy".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>3. Hierarchy of Systems</b></h3>
 
 When developing a large-scale application, a hierarchical worldview oftentime helps. The reason behind this is not difficult to grasp; whenever the system we are required to implement is too complex, we feel the necessity to break it down to a collection of simpler subsystems, devise each of them separately, and then join them together to let them collaborate as a whole.
@@ -1136,7 +1073,6 @@ For example, suppose that we are modeling an animal's anatomy as a hierarchy of 
 <a3_3>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>4. Polymorphism</b></h3>
 
 Glenn Puchtel's "separation of statics and dynamics" {%a href="#bibliography_1"%}[1]{%/a%} is an extremely useful concept not just for the sake of organization, but also for the sake of enabling polymorphism.
@@ -1154,7 +1090,6 @@ Since a single type of stimulus is able to trigger different responses when dete
 A great example of polymorphism can be found in the case of ants and their pheromone-based communication. Glenn Puchtel says in his article that: "Just as the same pheromone elicits different behavior, whereby a worker ant might respond differently from a soldier ant, messages trigger receptors' behavior depending on their role" {%a href="#bibliography_2"%}[2]{%/a%}. Here, a pheromone is a stimulus (input signal) which triggers two separate responses when received by two different recipients (i.e. worker ant and solider ant).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>5. Feedback Loops</b></h3>
 
 Another benefit of indirect (medium-based) communication is that it allows us to create indirect feedback loops - i.e. long, circular chains of causality which control the flow of the overall system based on not only short-term effects, but also long-term effects (aka "Circular Causality", as mentioned by Glenn Puchtel in his introduction to cybernetic-oriented design {%a href="#bibliography_1"%}[1]{%/a%}). Such a phenomenon is indispensable for the design of dynamics systems which involve multiple causal loops that are intertwined with one another, such as an ecosystem, a marketplace, an electrical grid, and many others which appear in the study of System Dynamics (aka "Systems Thinking").
@@ -1178,7 +1113,6 @@ Besides, medium-based communication is far superior to predefined communication 
 <a5_4>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>6. Divisibility means Resilience</b></h3>
 
 Expressing the overall system as an assembly of numerous subsystems has yet another advantage to offer; it is the sense of resilience.
@@ -1194,7 +1128,6 @@ In general, a divisible system is robust because it is composed of rearrangeable
 (Look at "Apoptosis" in Glenn Puchtel's "Coordination without (direct) Communication" {%a href="#bibliography_2"%}[2]{%/a%}.)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>7. Goal</b></h3>
 
 There is one major factor in systems design which I haven't mentioned yet. It is "goal" - a sense of purpose. A system needs a goal to serve its designated role; otherwise there is no point in designing a system, unless all we want is an engineering equivalent of "art for art's sake".
@@ -1224,7 +1157,6 @@ The hierarchy of systems can be expected to mirror the hierarchy of goals. Since
 The presence of a hierarchy of goals helps us design the hierarchy of systems because these two have a direct one-to-one relationship (i.e. they are structurally identical). All we have to do is look at each of the goals and construct a system which fulfills that goal.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Bibliography</b></h3>
 
 1. {%a id="bibliography_1" href="https://www.linkedin.com/pulse/cybernetic-oriented-design-cyod-glenn-puchtel/"%}Cybernetic-Oriented Design (CyOD){%/a%} by Glenn Puchtel (This introductory article outlines pretty much all the main concepts in the design of emergent systems, including: (1) Separation of state and behavior (which enables polymorphism), (2) Hierarchical arrangement of individual subsystems (which is a neat way of breaking down a complex system into a collaborative network of simpler systems), (3) Back-and-forth interaction between state and behavior, which gives rise to feedback loops, and so on.)
@@ -1256,7 +1188,6 @@ The presence of a hierarchy of goals helps us design the hierarchy of systems be
 [Force-Exchange Network for Gameplay Systems] August 13, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction</b></h3>
 
 Designing a gameplay system is a fairly complicated job, due to the way in which game mechanics typically work. A game usually involves a variety of factors, which are intertwined with one another in all sorts of dynamic ways. Worse still, a game designer who is not well-versed in software engineering is prone to further compound this kind of complexity by making requests which compel the engineers to break the general rule of the game by introducing special cases, thus convoluting the codebase.
@@ -1284,7 +1215,6 @@ Some of the key benefits of this design can be outlined as the following:
 (2) Since events communicate their effects via a medium (i.e. force-exchange network), it is easy for the system to intervene with the game's cause-and-effect relations and modify them as needed. In a "peace zone", for example, the developer can simply turn off all damage-causing forces by letting the communication network simply dismiss them during the routing process.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Background Information</b></h3>
 
 I drew inspirations for this model of gameplay from two people.
@@ -1298,7 +1228,6 @@ Professor Gärdenfors is a cognitive scientist and a philosopher at Lund Univers
 Glenn Puchtel is a principal software architect/engineer at GRUBBRR (Boca Raton, Florida), whose ideas in bio-inspired emergent systems (i.e. biocybernetics, wetware, etc) as well as their architectural implications inspired me to construct a network-based topology of the gameplay system. Please read {%a href="https://thingspool.net/morsels/page-6.html"%}Emergent Systems based on Glenn Puchtel's Biocybernetic Theory{%/a%} to learn more about the way his ideas contributed to the formation of the force-exchange network model.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>1. Events</b></h3>
 
 The force-exchange network model of gameplay starts with a core concept called "events". Everything which happens in our game is an event, and events form chains of causality based upon their cause-and-effect relations.
@@ -1406,7 +1335,6 @@ public class TransferFunction
 After processing the events and adding their results to the state vector, the actor then runs its own behavioral logic and emits outgoing forces, which will then be received/processed by other actors. The other actors, then, may decide to send their own outgoing forces to the aforementioned actor, and so on. This back-and-forth transmission of forces allows the system to give birth to complex chains of causality, without requiring the architect to configure them manually. Such chains simply "emerge" out of where the actors are located and what the characteristics of their transfer functions are.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>2. Force Routers</b></h3>
 
 There is a reason why my proposed model of gameplay systems is called "Force-Exchange Network". It is because network-oriented communication is the heart of what makes this model work.
@@ -1502,7 +1430,6 @@ public abstract class Place
 The game world, as a whole, may as well be considered a graph which is made out of "Place" nodes. Such a world is fairly convenient to devise, both manually and procedurally, since each place can be thought of either a room or a hallway of a dungeon, etc. Besides, the center of each place may also serve as a pathfinding node, from which a set of more granular pathfinding nodes can branch out.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>3. Force Filters</b></h3>
 
 One may ask, "Why do we even need a network-based communication scheme for exchanging forces? Can't an actor just look up other actors and send forces directly to them?"
@@ -1547,7 +1474,6 @@ public class MechanicalForceDisabledPlace : Place
 "RegularPlace" is a place which does not intercept forces at all; it simply lets forces pass through the vacuum. "DamageDisabledPlace" is some kind of "peace zone" where none of the actors are able to hurt each other (because all negative (damaging) health forces are clamped to 0). "MechanicalForceDisabledPlace" is a chunk of space in which all mechanical interactions are disabled (e.g. collision, knockback, etc), which means that all actors can simply pass through one another like ghosts.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>4. Status Conditions</b></h3>
 
 In {%a href="https://thingspool.net/morsels/page-4.html"%}Game Design using Gärdenfors' Event Model{%/a%}, I have mentioned that an actor's status condition (e.g. spell, upgrade, etc) can be implemented as a modification to the event's transfer function. The simplest approach is to model each status condition as a function which temporarily gets added to the event's original transfer function, thereby "warping" the way in which the event transforms the incoming force vector.
@@ -1617,7 +1543,6 @@ public static class StatusConditionFactory
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>5. Anatomy of an Actor</b></h3>
 
 The diagram below illustrates the overall structure of an actor (i.e. gameplay agent). First, it receives all the incoming forces and adds them together, yielding the net incoming force vector. This single vector contains the composite effect of all the incoming forces which the actor happened to receive at that particular moment in time.
@@ -1757,7 +1682,6 @@ public class ForceEmitter
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>6. Future Implementation</b></h3>
 
 The schematics and code shown so far, of course, do not cover the full picture of the force-exchange network system. There are many more things which ought to be added to make it usable for gameplay purposes. Here are some of the future implementations which I think may be necessary:
@@ -1795,7 +1719,6 @@ While it is definitely possible to let actors directly perceive each other's pre
 [Technical Design using Multi-State Machines] August 18, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction</b></h3>
 
 There are many ways of conceptualizing a system. In computer science, it is typical to picture it as a state machine. One of the main downsides of this approach, however, is the ensuing complexity.
@@ -1815,7 +1738,6 @@ The question is, "What kind of communication"? There are innumerable ways of sha
 In this article, I will showcase a new method of communication between state machines which I consider as fairly optimized for a wide variety of applications in system design, such as video games, cellular automata, circuit simulators, and many others.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Multi-State Machine</b></h3>
 
 Since I am personally more familiar with game development than any other area of engineering, it is probably appropriate for me to start with an example which takes place in a video game.
@@ -1837,7 +1759,6 @@ What we are witnessing here is a pair of state machines - the door and the butto
 We may refer to such a network of state machines as a "multi-state machine", since the whole thing behaves as though it is a state machine with multiple concurrent states.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Logic without Logic Gates</b></h3>
 
 Let us take a look at a slightly more involved scenario. Suppose that there are two buttons called "button A" and "button B", and that there is a door which stays open only when both of these buttons are simultaneously being pressed (not just one of them, but both). This is an AND relation in boolean logic, and the image below shows an electric circuit analogy of such a logical operation. Here, the two buttons are analogous to two electrical switches which are connected in series. Only when both of them are pressed, the whole circuit becomes conductive and enables itself to activate (open) the door.
@@ -1867,7 +1788,6 @@ In this example alone, we are already seeing an advantage of designing mechanics
 Try making the requested adjustment by rearranging logic gates; it is fairly complicated to do so. If you configure things in terms of state machines, on the other hand, you will have an easier life because state machines are much more malleable than logic gates.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Rule Dictionary</b></h3>
 
 But of course, I can totally feel the sentiment that the above example somehow appears to "overcomplicate" a fairly simple piece of logic by not leveraging built-in logical operators. However, there is an enormous benefit in trying to formulate everything solely in terms of state machines; it is what I would call "structural uniformity".
@@ -1982,7 +1902,6 @@ While a nested dictionary is a pretty complicated and computationally inefficien
 This makes a nested dictionary a great choice for quick data access. A more optimal means of implementing this dictionary is to come up with a number of relational data tables (like in SQL) and chain them together by means of primary/secondary keys, etc.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Templates for Rules</b></h3>
 
 Syntactic redundancy, though, is going to ensue if we construct all the rules on a case-by-case manner. Imagine that there are 100 doors inside the game, each of which opens up only when a unique pair of buttons are simultaneously being pressed. There are numerous buttons (at least 50 or so), from which 100 such unique combinations are to be made for those doors. Indeed, we do not want to manually type all the rules for a hundred "ButtonSeq" objects. Fortunately, we know that we can abstract out the logic of "ButtonSeq" (i.e. AND operator) and turn it into a template which can be replicated as many times as we want.
@@ -2118,7 +2037,6 @@ const ruleDictionary = `{
 Such a dynamic rule-generation script, as those of you with expertise in embedded systems may have noticed, closely resembles a hardware description language such as Verilog, since it is composed of a set of declarative statements which tell us the input-output relations between modules.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Race Conditions</b></h3>
 
 One may question the feasibility of this multi-state design scheme by saying, "What if the system accidentally triggers an undesirable race condition? For instance, in your second example, I noticed that it is possible to cause a race condition when ButtonSeq's current state is 'None' and both button A and B are pressed at the same exact time. What should ButtonSeq's next state be - A, or B? This kind of ambiguity makes me question the legitimacy of what you are expounding here."
@@ -2128,7 +2046,6 @@ In a parallel or concurrent (e.g. multi-threaded) environment, such edge cases w
 If the system is simply running on a single-threaded environment, though, we have nothing to worry about. When the system's update loop runs the update procedure of one of the state machines, it will simply scan the rule dictionary from top to bottom and apply the first rule which happens to trigger the state to change. If the rule which makes ButtonSeq respond to button A is listed BEFORE the rule which makes ButtonSeq respond to button B, simultaneously pressing both button A and B will make ButtonSeq respond to button A only. No fatal error will arise, and no one but an over-enthusiastic QA will say anything about it.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Compression of Rule Data</b></h3>
 
 The JSON representation of the rule dictionary, which I have demonstrated above, is a bit too inefficient both in terms of memory and speed. Thus, it is desirable to format the dictionary in a more compact manner.
@@ -2146,7 +2063,6 @@ When the system updates a state machine whose current state is 0101, for instanc
 Such raw-data representation of rules helps us minimize the size of its storage space, minimize the frequency of cache-miss (because more compactness of data means more data can be packed into the cache), and prevent potential incompatibility between ways in which different computing envirionments (e.g. operating systems) tend to handle data (because raw binary data does not make assumptions on how the environment will interpret it; the "rules engine" will simply interpret the data based upon its own custom way, regardless of on which platform it is running).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Parallel Processing</b></h3>
 
 Versatility and compactness are not the only advantages of the multi-state model I have shown so far. Another major advantage of it is its ability to run on a parallel computing environment, given a custom hardware module.
@@ -2170,7 +2086,6 @@ Here, each green dot (AND logic gate) corresponds to a state transition rule; it
 Once the wiring process is done, all we need to do is set the initial state of the system by pre-configuring the bits of CurrState and then starting the clock to initiate the cyclic flow of signals between CurrState and NextState. This will let the system update all of its states in parallel, without requiring the CPU to visit every individual state machine and update it sequentially.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Race Conditions in Parallel Processing</b></h3>
 
 The aforementioned parallel implementation, though, is prone to introduce race conditions which may inadvertently make a state machine carry two or more concurrent states (which is inappropriate for a state machine). Therefore, we must add some kind of "postprocessing" stage to the end of the state transition cycle to resolve race conditions. For such a purpose, let me introduce yet another hypothetical module called "tie-breaker". It is an electronic component which takes a bit sequence as an input, leaves only a single "1" in it (if there are multiple of them), and returns the resulting sequence as the output.
@@ -2197,7 +2112,6 @@ This is how the system can prevent any potential race conditions; each tie-break
 [On Nodal Representation of Relations] August 22, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction</b></h3>
 
 Relations are everywhere - from discrete mathematics to computer science, from topology to data science, and innumerable other subjects. In popular areas of research such as ML (Machine Learning) and AI (Artificial Intelligence), too, relations serve as some of the most essential components of logic.
@@ -2215,7 +2129,6 @@ Now, how about ternary relations, quaternary relations, and other n-ary relation
 However, a graphical representation of a hypergraph is visually too intimidating, as it no longer allows us to draw a relation simply as a line segment and instead forces us to draw colored regions, bundles of curved arrows, and a myriad of other complex visual elements. This will bloat the viewer's mind with too much abstract information.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Relation as a Composition of Atoms</b></h3>
 
 In order to be able to draw n-ary relations in a simple, highly recognizable visual language, we must abstain from utilizing conceptual models which are way too abstruse for laymen to understand.
@@ -2229,7 +2142,6 @@ Therefore, it will be helpful for expressive purposes if we somehow figure out a
 For the purpose of accomplishing the above goals, let me first introduce two basic building blocks - negative nodes and positive nodes (shown above). These two types of nodes, when combined, will be able to constitute the body of any n-ary relation. I will explain the underlying reason shortly.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Unary and Binary Relations in an Undirected Graph</b></h3>
 
 The picture below is our first example of how negative and positive nodes can be used as building blocks of a relation. What you are seeing here is a binary asymmetric relation with two member variables: X and Y. If we were using a directed graph, we would only need a directed edge (i.e. arrow) to depict such a relation. Since we are trying to describe it using an undirected graph, however, we need at least two distinct types of connected nodes between X and Y to express the sense of directionality from X to Y (I am assuming here that the relation's "direction" goes from negative to positive).
@@ -2251,7 +2163,6 @@ If X and Y were connected to the negative side, the pair of nodes would be a qua
 In the language of bidirected graphs, these two cases may be interpreted as an "introverted edge" and an "extraverted edge", respectively (See {%a href="https://en.wikipedia.org/wiki/Bidirected_graph"%}Bidirected Graph{%/a%}).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Symmetric Relations</b></h3>
 
 So far, I have only demonstrated relations which possess their own directions (i.e. asymmetry). It is, however, also feasible to construct a symmetric relation if we model it as though it is a pair of asymmetric relations pointing in two opposite directions. Its unary and binary examples are showcased below.
@@ -2265,7 +2176,6 @@ Suppose that X is the only member of the relation. If X is connected to both the
 Suppose, on the other hand, that X and Y are both members of the relation. If X and Y are simultaneously connected to both the negative and positive sides, we will be able to say that the relation points both toward and away from X and Y. This means that it is a binary relation which associates itself with X and Y without specifying any particular direction between them.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>N-Ary Relations in an Undirected Graph</b></h3>
 
 The main benefit of using dual (negative and positive) nodes as means of formulating relations can be found in the case of n-ary relations, where 'n' is an arbitrary integer which is greater than 2.
@@ -2293,7 +2203,6 @@ The second case indicates an instance of "merge", yet the ingredients of the mer
 In general, it is definitely feasible to construct any arbitrary n-ary relation and selectively make parts of its list of members either symmetric or asymmetric, by means of dual (negative and positive) nodes connected in series. The number of connected negative (or positive) nodes will imply the number of members in a group whose order is strictly enforced (as though they are elements of a vector), and the number of parallel connections to each negative (or positive) node will imply the number of members in a group whose order does not matter (as though they are elements of a set).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Practical Applications</b></h3>
 
 Visualization is not the only advantage which can be gained by the aforementioned methodology. One of the upsides of modeling a concept in the form of a plain undirected graph (instead of something fancy such as hypergraph) is that it can easily be translated into a physical equivalent such as an electric circuit (which is useful for applications in science/engineering).
@@ -2305,7 +2214,6 @@ If engineers happen to desire to create a specialized computational system (such
 This kind of implementation will be optimal for interpreting a logic programming language such as Prolog, which is based upon relations and their mappings (i.e. horn clauses).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Further Readings</b></h3>
 
 1. {%a href="https://thingspool.net/reality/page-4.html"%}The Origin of Reality - Volume 4{%/a%}
@@ -2328,7 +2236,6 @@ This kind of implementation will be optimal for interpreting a logic programming
 [Game Programming in Prolog - Part 1] August 25, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction</b></h3>
 
 As a fan of unconventional programming paradigms, I enjoy learning new programming languages which are drastically different from the typical object-oriented ones such as C#, Java, and the like. The most iconic of them are LISP (which is a powerful language for both functional programming as well as metalinguistic patterns in software development) and Prolog (which is one of the most popular languages in logic programming). Learning these languages is quite hard, compared to being acquainted with usual C-style imperative languages such as Ruby and Python, yet it has turned out to be one of the most effective ways of exercising one's brain.
@@ -2348,7 +2255,6 @@ However, I believe that at least the core mechanics of a game can definitely be 
 For this alternative methodology to be successful, one must start by designing the system in terms of logical relations/predicates only, and nothing else (That is, no functions, no structs, no classes, no interfaces, no state variables, etc). This will allow us to construct a gameplay system which is purely driven by the soul of Prolog.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>World and Actors</b></h3>
 
 The core idea in Prolog-based game programming is to utilize relations as the most primitive building blocks of the system, just like basic circuit components (e.g. resistors, transistors, capacitors, inductors, etc) are the most primitive building blocks of an electric circuit. It is sensible, therefore, to start this journey by considering the most rudimentary relations (e.g. unary and binary) first, and see if these elements can serve as the most essential nuts and bolts of the game.
@@ -2360,7 +2266,6 @@ Suppose that we are designing a game, and that the game consists of two major pa
 We will begin formulating a gameplay system based off of this conceptual backbone. All you need to remember is that there is a world, and that the world contains a number of actors, each of which possesses its own state and behavior.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Tags</b></h3>
 
 First of all, let us identify each individual actor with a unique name. If there are two actors in the world, for instance, we will simply assume that the name "actor1" and "actor2" will be used to indicate the first and second actors, respectively.
@@ -2409,7 +2314,6 @@ enchanted(actor2).
 The tags "flammable" and "decomposable" are characteristics of all pieces of bread, whereas the tag "enchanted" is a characteristic of only special pieces of bread which have been enchanted by a wizard.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Relationships</b></h3>
 
 So far, we have been using tags for specifying the characteristics of each individual actor. In a gameplay system, however, we also need to specify relationships between actors, such as ways in which they interact, etc.
@@ -2457,13 +2361,11 @@ If we want to create a game rather than a fixed landscape of how things are shap
 [Game Programming in Prolog - Part 2] August 29, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 2 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Numerical Attributes</b></h3>
 
 So far, I have been demonstrating ways in which we can assign tags and relationships to each of the gameplay agents (aka "actors"). The key takeaway is to use predicates to specify them, as well as leverage the power of logical relations for letting the program automatically instantiate such predicates.
@@ -2508,7 +2410,6 @@ loyalty(X, Y, 2) :- cat(X), human(Y).
 This sort of reasoning can be expanded indefinitely. For example, one may as well define a numerical attribute which carries not just a single number, but multiple numbers (i.e. vector quantity). One may also define a relationship which involves not just two actors, but three or more actors, such as: "This girl hates her boyfriend for showing too much affection to the other girl", etc.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>State and Time</b></h3>
 
 Things have been looking good so far. We know how to create attributes and relationships, as well as how to assign them to our gameplay agents, and so forth. However, we cannot make a game out of these building blocks alone.
@@ -2551,7 +2452,6 @@ Such a problem, however, can easily be mitigated by limiting the maximum duratio
 <e15>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>State Transition</b></h3>
 
 So, how do we implement such a declarative state transition mechanic in the language of Prolog?
@@ -2650,13 +2550,11 @@ hunger(X[n], Curr) :- hunger(X[n-1], Prev), netChangeInHunger(X[n-1], NetChange)
 [Game Programming in Prolog - Part 3] September 2, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 3 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Causality</b></h3>
 
 So far, I have shown how the parameterization of time steps can indeed be a powerful tool for triggering state transitions in the system. In order to better understand the reasoning behind this, however, we ought to take a step back and really try to see the overall picture of what is going on behind the formulas.
@@ -2746,7 +2644,6 @@ Events which fall within this window are the ones which are being kept in the co
 (Note: If you force every event to occupy the same exact amount of space in memory, you will be able to simplify the allocation scheme even further because the system will only need to keep track of free slot indices, not how large those free slots are.)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>On Theory of Relativity</b></h3>
 
 Here is something I would like to point out before proceeding to the next chapter. The model of spacetime which I have explicated by far is a strictly Newtonian one, meaning that every "present event" is nicely aligned within the same exact time step (i.e. "n"). This is because all present events get generated by the gameplay system in a completely synchronous (aka "lockstep") manner. Here, time is an independent variable and we can easily tell which events are simultanous with each other and which ones are not. If two or more events belong to the same time step, they must be considered simultaneous.
@@ -2768,7 +2665,6 @@ In computer science, the aforementioned notion of concurrency is considered the 
 In modern physics, concurrency of events and their apparent lack of ability to sync up instantly (due to the fact that their waves of influence cannot move faster than light) comprise one of the core pillars of Einstein's Theory of Relativity, where space and time can be "warped" based on the way in which events are causally connected.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Lockstep</b></h3>
 
 In the case of a single-threaded gameplay system, though, we do not have to worry about any of the aforementioned perils of asynchronicity. As long as our Prolog program sticks its mode of operation to a single game loop, we will be safe from any of the bizarre relativistic effects such as time dilation, etc. This also means that we may imagine the game world as a simple Newtonian model of spacetime, in which the spatiotemporal location of every event can be specified in terms of Cartesian coordinates.
@@ -2811,13 +2707,11 @@ Both of these solutions will work, although they both involve their own tradeoff
 [Game Programming in Prolog - Part 4] September 4, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 4 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Space</b></h3>
 
 A playable game must have its own space and time. It is because space without time is a mere snapshot, and time without space is a mere point.
@@ -2862,7 +2756,6 @@ The second horn clause tells us that if X moved to P during the previous time st
 The third horn clause defines the "fallback" condition, which tells us that X's position should stay as it was before if X did not move at all. This, together with the second clause, ensures that X's position is always defined regardless of whether X has moved during the preceding time step or not. If X moved, the second clause would be activated. If X did NOT move, the third clause would be activated instead. This is Prolog's way of implementing the IF-ELSE logic.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Spatial Reasoning</b></h3>
 
 This sounds reasonable so far. However, the rules above only tell us how to update an object's position based on its momentum. They do not tell us how the momentum itself shall be generated in the first place.
@@ -2958,7 +2851,6 @@ move(X[n], NewPos) :- moveDown(X[n]), position(X[n], P), down(NewPos, P, 1), !po
 <e36>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Spatial Race Conditions</b></h3>
 
 There is something fishy in the solution I just illustrated, however. As you may have already noticed, a problem arises when the player and an obstacle happen to be moving to the same exact location at the same exact time, in which case they will overlap. This is clearly undesirable because the player is not supposed to be able to penetrate through an obstacle.
@@ -3016,13 +2908,11 @@ position(X[n], P) :- move(X[n-1], P), position(X[n-1], PrevPos), shouldUpdatePos
 [Game Programming in Prolog - Part 5] September 7, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 5 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Interactions</b></h3>
 
 So far, I have explained how the concept of space and time could be represented in the language of Prolog. These two are inarguably the most fundamental backbones of a gameplay sytem, for otherwise the range of things which the gamer is able to do would be extremely limited (Lack of time means absence of progression, and lack of space means absence of visual/physical elements).
@@ -3057,7 +2947,6 @@ eat(X[n], Y[n]) :- hungry(X[n-1]), canEat(X[n-1], Y[n-1]), collide(X[n-1], Y[n-1
 This will guarantee that, once you drop a food (i.e. anything which can be eaten) right at the spot at which a hungry creature is located, the creature will devour it.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Generic Interactions</b></h3>
 
 Here is another example, which more thoroughly demonstrates the notion of emergence in gameplay. Suppose that there are two actors named "actor1" and "actor2". The first actor represents fire, the second actor represents a piece of bread, and they were both spawned at the same exact time and place (see the code below).
@@ -3149,7 +3038,6 @@ eat(X[n], Y[n]) :- hungry(X[n-1]), canEat(X[n-1], Y[n-1]), collide(X[n-1], Y[n-1
 Adding more and more tags to our actors will exponentially increase the number of ways in which they may interact. This is the kind of emergence we want in video games, especially ones whose main source of entertainment originates from "mix and match" mechanics such as crafting rules, puzzles, etc.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Delayed Interactions</b></h3>
 
 Not all interactions are instantaneous, though. Sometimes, games involve interactions which take effect after some delay. Think of a war game in which the soldiers attack each other by shooting projectiles such as bullets, arrows, and rocks.
@@ -3224,13 +3112,11 @@ hit(Y[n], Projectile[n]) :- motionProgress(rock, Y[n], Projectile[n], 1.0).
 [Game Programming in Prolog - Part 6] September 19, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 6 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Time Allocation of Events</b></h3>
 
 In {%a href="https://thingspool.net/morsels/page-12.html"%}Part 3{%/a%}, I mentioned that an event can be represented as a relation in the language of Prolog, as long as it belongs to a certain point in time. An event is usually a result of a set of preceding events (i.e. causes).
@@ -3315,7 +3201,6 @@ r(X[n], n-1) ---> r[n](X, n-1)
 From now on, I will be using this new way of writing horn clauses.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Built-In Data Types</b></h3>
 
 There is another subtlety in Prolog-based game programming which I have not gone over yet; it is the problem of data types.
@@ -3547,13 +3432,11 @@ public static class RelationUtil
 [Game Programming in Prolog - Part 7] September 22, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 7 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Dynamic Allocation</b></h3>
 
 There is one major feature which has been missing so far. It is the ability to create brand new actors while the game is running.
@@ -3633,7 +3516,6 @@ One may wonder why I am so morbidly concerned with such details, while we could 
 Note, however, that multiple events may occur concurrently in our Prolog environment if they belong to the same time step. Enforcing a specific order of operation among them will unjustly limit the power of declarative programming, and invalidate the reason why one would even bother to code in Prolog in the first place. One of the main reasons why logic programming is so great is that its procedures are order-independent (which prevents all sorts of race conditions and enables a significant portion of the code to run in parallel); we've really got to preserve this aspect of the language we are using.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Context-Driven ID Generation</b></h3>
 
 Fortunately, there is a trick we can use to solve the problem of ID generation quite nicely. In order to demonstrate how this trick works, I will first come up with a scenario which involves a chicken and its eggs.
@@ -3749,13 +3631,11 @@ numCopies(Id, NumCopies) :- spawned[n](Id, Src, Cause, Pos), y(Cause, NumCopies)
 [Game Programming in Prolog - Part 8] September 24, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 8 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Constructor and Destructor</b></h3>
 
 In the last article, I demonstrated how to spawn brand new actors (objects) out of nowhere, with the help of a unique ID generation algorithm. I have not, however, yet explained how to initialize the properties of a dynamically spawned actor.
@@ -3869,7 +3749,6 @@ The succeeding clauses are a set of behavioral traits which are common to all eg
 Such a "chain-reaction of thought" is theoretically boundless. Nothing really prevents it from being extended indefinitely, as long as a sufficient degree of freedom is provided. We began with the word "egg" alone, yet this was enough to give birth to its own vast tree of meaning, furnished with all sorts of ways in which an egg could be treated and/or manipulated. We call this kind of phenomenon a "butterfly effect".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Lifecycle of an Actor</b></h3>
 
 Being able to spawn and despawn actors during runtime is such an indispensable feature for a gameplay system to have. It opens up a gateway to a plethora of opportunities in regard to the concept of life and death, as well as the cycle of nature in general (which encompasses the idea of reincarnation, karma, etc). It makes things far more dynamic than they would have been if they were statically declared as though they were parts of a stone sculpture.
@@ -3917,13 +3796,11 @@ Analogous scenarios may be found in agriculture (i.e. seeding followed by harves
 [Game Programming in Prolog - Part 9] September 29, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 9 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Transformation</b></h3>
 
 Last time, I talked about the things we can do at the moment of an actor's birth (or death). As soon as an actor comes into existence, for example, we are able to define its own set of characteristics which are promised to last as long as it lives. Each characteristic is basically a sequence of events which keeps growing, up until the point at which the actor dies.
@@ -4004,7 +3881,6 @@ Instead of "brokenEgg", we now have an "egg" which can optionally be labeled as 
 As you can clearly see in the code above, the only type-specific rules (i.e. the ones which have to be repeated for different types of actors) are ones responsible for initializing the "breakable" tag for all object types which are considered initially breakable. The state of being breakable, then, will persist as long as the object to which it is bound is neither dead nor broken. The state of being broken, too, will persist in a similar manner.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>State Space</b></h3>
 
 The overall idea is to use multiple tags to represent an actor, instead of just one. In other words, we may as well claim that the current state of an actor is the combination of all the tags it happens to possess right now.
@@ -4098,13 +3974,11 @@ friedEgg[n](X) :- egg[n](X), !stirred[n](X), panFried[n](X).
 [Game Programming in Prolog - Part 10] October 5, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 10 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Composition and Decomposition</b></h3>
 
 So far, I have been demonstrating how an actor's transformations (i.e. state transitions) could be represented in logic programming syntax. An example I came up with, as you may remember from the last article, was a set of alternative ways of handling an egg.
@@ -4172,7 +4046,6 @@ But of course, this is just one of many examples of composition/decomposition. I
 To be able to manage such a type of reference, however, we will need to utilize yet another concept called "parent-child relation" (Game developers are probably already familiar with this). Once we know how to leverage its full power, we will be able to construct a hierarchy of objects - a neat way of organizing a compound structure. The root node of such a hierarchy (aka "tree"), then, will represent a complex object which is made up of simpler objects.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Parent-Child Relation</b></h3>
 
 Greetings, fellow game developers! I know that you guys are familiar with the so-called "scene hierarchy" or "object hierarchy" in game programming. The vast majority of game engines (such as Unity) include this as one of their core built-in features, due to the fact that it solves a myriad of potential organizational problems. Just like a computer keeps track of files inside a hierarchy of directories (i.e. folders), a game engine keeps track of in-game elements (such as game-objects, prefabs, UI components, etc) inside the project's internal hierarchy.
@@ -4280,13 +4153,11 @@ The things I have mentioned so far are all the essential stuff we need to know t
 [Game Programming in Prolog - Part 11] October 7, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 11 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Compound Object</b></h3>
 
 As I have demonstrated recently, parent-child relations come in handy whenever we are dealing with hierarchical structures. In most cases, it is convenient to assume that a child is a component (i.e. part) of its parent, and a parent is a compound object which is made up of one or more of such components.
@@ -4351,7 +4222,6 @@ unstack[n](X, Y) :- omurice[n-1](Id), disassemble[n-1](Id),
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Hierarchical Data Structure</b></h3>
 
 At this point, you may have realized that there are two major categories of objects - those which are made of single actors (aka "elements"), and those which are made of multiple actors (aka "compounds"). The former are reminiscent of individual atoms which cannot be broken down further, whereas the latter are reminiscent of molecules which can be separated into their atomic constituents.
@@ -4423,7 +4293,6 @@ The last two rules, too, structurally resemble those of the omurice example. The
 The rule in the middle is the most important part. The "canBeBurger" predicate basically tells us whether the given burger can still be considered a "burger" during the current time step (i.e. 'n') - that is, whether it still consists of a bottom bun, a patty, and a top bun. If so, this burger will maintain its status as a burger. If not, it will be wiped out of existence.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Complexity Under Control</b></h3>
 
 The ability to define a piece of data as a hierarchy (i.e. tree), either before or after instantiating its components, is an invaluable feature to have in complex and emergent systems.
@@ -4493,13 +4362,11 @@ setChild[n](Y2, Item) :- stealItem[n-1](Thief, Victim, Item),
 [Game Programming in Prolog - Part 12] October 8, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 12 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Emergent Identities</b></h3>
 
 Let me go back to the omurice example and further elaborate upon its hidden intricacies. You may have noticed already, but there is one missing feature in the system I have been devising so far. It is the apparent lack of the system's ability to automatically recognize a specific pattern in the environment and conjure up an appropriately labeled actor for it.
@@ -4596,7 +4463,6 @@ below[7](patty, onion)
 <f04>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Procedural Tree of Abstraction</b></h3>
 
 The ability to discover such indirect instances of the "below" relation comes in handy when we want the system to automatically detect certain types of abstract objects and give them unique identities.
@@ -4727,7 +4593,6 @@ stack[n](X, Z) :- despawn[n](X), below[n](Y, X), below[n](X, Z).
 <f08>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Structural Minimalism</b></h3>
 
 The things which have been demonstrated so far may look a bit too complicated, though. And indeed, it is a reasonable impression to have, especially when we consider the sheer amount of code we are compelled to write just to support the automatic creation and destruction of abstract entities.
@@ -4771,13 +4636,11 @@ despawn[n](Cheese) :-
 [Game Programming in Prolog - Part 13] October 12, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 13 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>A Brief Recap</b></h3>
 
 In the previous few articles, I primarily spent time illustrating how abstract (compound) objects could be represented in terms of logical relations. This time, I will change the subject a bit and start talking about some of the advanced sorts of interactions which may occur among gameplay agents.
@@ -4797,7 +4660,6 @@ An effect which "sticks" to its target and lasts longer than the event from whic
 By modeling an actor as a hierarchical data structure (i.e. tree) instead of just a singleton with a bunch of keywords attached to it, we are able to manage a wide range of complex game mechanics without confusing ourselves too much. In this article, I will be demonstrating some of the hidden intricacies (as well as pitfalls) of such a hierarchy-oriented game design by outlining one of its most illustrative examples. It is what I would refer to as the "spell system".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Spell System</b></h3>
 
 The word "spell" is nothing more than an alternative terminology for "status effect"; I just chose this particular word because it happened to be more concise.
@@ -4881,7 +4743,6 @@ despawn[n](X) :- health[n](X, H), lessThan(H, 1).
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Aggregate Effects</b></h3>
 
 There is something fishy, though. The rule which updates the current health of the actor says that the new health is the result of subtracting the previous health by the incoming damage. But, what does this "incoming damage" mean, really? Is it just a single event, occurring just once at each moment in time? What if there are multiple sources of damage, then?
@@ -4989,13 +4850,11 @@ FINAL RESULT ---> damage[8](villain, [acc]3).
 [Game Programming in Prolog - Part 14] October 14, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 14 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Pitfalls of Logic Programming</b></h3>
 
 So far, I have demonstrated quite a variety of game mechanics and how they could be designed in the language of Prolog. I have not yet, however, carefully dealt with the matter of optimization in this subject.
@@ -5007,7 +4866,6 @@ A typical Prolog system, unless it is provided with clever algorithmic shortcuts
 Whereas a function only requires the system to apply the given parameters to the body of the expression and return the result of evaluation, a logical statement (such as a horn clause) requires the system to come up with every possible permutation of parameters which could manifest themselves to a valid answer. And the process of searching for all such possibilities can oftentimes waste a great deal of computational resources, both in terms of time and space.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Optimization via Specialization</b></h3>
 
 In order to create a fairly efficient gameplay system based off of the language of Prolog, therefore, we better abandon the notion of simply letting Prolog take care of the given set of rules based upon its default mode of computation.
@@ -5017,7 +4875,6 @@ Instead, we ought to reimagine the language from the ground up and curtail any o
 (Note: You may as well imagine this as a process of designing a zombie apocalypse game. Zombies do not require highly advanced pathfinding algorithms such as A-star, so we will end up wasting tons of computational power if we simply assume that every game character should be equipped its own A-star pathfinding behavior. This means that we can optimize our game by getting rid of such a superfluous form of intelligence. Likewise, we can optimize the way in which our Prolog system runs by getting rid of superfluous computational steps.)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Derivation of Facts</b></h3>
 
 So, let us start implementing the engine of Prolog from scratch, rather than simply grabbing its standard interpreter and using it for granted.
@@ -5142,7 +4999,6 @@ RULES:
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Conditional Facts</b></h3>
 
 It's been pretty easy-going so far. You see, the Prolog environment only needs to keep track of two lists of data - one for the facts which have been identified so far, and the other one for rules which are to be scanned for the purpose of deriving new facts out of old ones.
@@ -5237,7 +5093,6 @@ RULES:
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Time-Bound Facts</b></h3>
 
 For the sake of designing a gameplay system as opposed to a mere answer-finder, though, we need to have temporal relations (aka "events") - that is, relations which belong to certain points in time, instead of existing timelessly as though they are pure ideas such as mathematical theorems, laws of nature, etc.
@@ -5505,13 +5360,11 @@ No more explanation will be necessary at this point. The interpreter will procee
 [Game Programming in Prolog - Part 15] October 16, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 15 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Implementation of the Game Loop</b></h3>
 
 In the last article, I spent quite a bit of time demonstrating our "hypothetical Prolog game engine" in action. If you have gone through my seemingly verbose step-by-step description of what is supposed to happen during the application's runtime, you would have recognized a common protocol via which the code is expected to be interpreted.
@@ -5619,7 +5472,6 @@ Aside from the problem of figuring out all the valid bindings and converting the
 Each call of the "Tick()" method represents a clock cycle (i.e. game loop). Every time it runs, it goes through all the given rules, identifies all the relevant facts as well as their appropriate bindings, and instantiates new facts (if applicable) out of such bindings. And in the end, it removes all the obsolete facts (i.e. ones that are too old) and increments the time step by 1.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Performance Issues</b></h3>
 
 The main problem is that the process of exhaustively finding all possible solutions (i.e. sets of bindings) to a Prolog query is so computationally expensive.
@@ -5633,7 +5485,6 @@ Fortunately, there are many ways in which a Prolog application could be optimize
 Another way, which may as well be employed jointly with the aforementioned solution, is to exploit some of the algorithmic shortcuts while analyzing the rules. This approach will require us to come up with slightly more advanced data structures, yet doing so will definitely be worthwhile.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Structural Shortcuts</b></h3>
 
 You might have realized that one of the most significant sources of inefficiency in the code I have shown above is the way in which the facts are being stored. What I did was, I simply used a HaseSet (i.e. a hash table) to store all the available facts, without any means of organization whatsoever. Each time the system evaluates a relation, therefore, it is forced to go through all the entries of the set to be able to select the matching ones.
@@ -5859,13 +5710,11 @@ In the next article, I will be talking about this aspect of database design, and
 [Game Programming in Prolog - Part 16] October 19, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 16 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Search Optimization</b></h3>
 
 Last time, I mentioned the problem of designing efficient data structures for Prolog's lookup process.
@@ -6040,7 +5889,6 @@ This methodology definitely works, but we know that a nested for-loop will be a 
 If there are 1000 actors inside the game world, for instance, the outer loop will have to run for 1000 times. This is already quite a load of work. And guess what? The inner loop will have to run for 1000 times for every iteration of the outer loop, meaning that the total number of loops is 1,000 x 1,000 = 1,000,000. A million! This is outrageous.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Explicit Key Specification</b></h3>
 
 Here is the thing, though. Do we really need to use just a single dictionary to look up the entries? Can't we just create another dictionary which uses positions as the keys and actors as their corresponding values instead, so that searching for facts which match the pattern of "position[n](Y, P)" will be nearly instantaneous as long as P is known?
@@ -6122,13 +5970,11 @@ collide[n](X, Y) :- position[n]([key]X, [single]P), position[n](Y, [key]P).
 [Game Programming in Prolog - Part 17] October 24, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 17 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Transcompiler</b></h3>
 
 At this point, you might be wondering, "Okay, what's with all this talk about HashSets and Dictionaries? Aren't you trying to come up with a Prolog-based game development framework? Why are you using C# data structures to explain your Prolog code?"
@@ -6152,7 +5998,6 @@ Here's how it could be done. For the sake of demonstration, I will suppose that 
 The very first step of our hypothetical transcompiler is to take the Prolog script, read its lines one by one, and turn each of them into a piece of C# code which can be placed alongside other generated pieces (e.g. a class, a function, or an entry in a data structure). The question is, what kind of code would that be?
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Translation of Facts</b></h3>
 
 As you may have realized, the C# examples I showcased in the previous few articles were more or less pseudo code. However, they still reflect the general spirit of cross-language development pretty well, and only demand a little bit of adjustment to make everything come together and fit nicely as a whole, like pieces of a jigsaw puzzle.
@@ -6227,7 +6072,6 @@ One noteworthy thing here is that any fact of type "bar1" must be stored in both
 In the first rule, the key specifier in "bar1[n]([key]X, Z)" orders the system to use bar1's first argument as the key when looking up the value of the second argument. In the second rule, in contrast, the key specifier in "bar1[n-1](X, [key]Y)" orders the system to use bar1's second argument as the key when looking up the value of the first argument. Therefore, the transcompiler must be able to recognize the bidirectionality of bar1's lookup pattern and come up with two different dictionaries for the sake of search efficiency.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Translation of Rules</b></h3>
 
 After initializing the facts and their appropriate data structures, the transcompiler will then proceed to make custom C# classes for all the rules listed in the Prolog script.
@@ -6360,7 +6204,6 @@ public class Rule_foo3 : Rule
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Built-In Utilities</b></h3>
 
 Prolog code is made up of rules, and each rule is made up of a series of relations which must be satisfied in order to infer a fact out of it. In the previous section, I treated all the relations as though they are based upon whichever facts that are currently available. This made the resulting C# code simply look up the fact-storing data structures (i.e. HashSets and Dictionaries) to evaluate these relations.
@@ -6455,7 +6298,6 @@ public class Rule_foo4 : Rule
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Putting Things Together</b></h3>
 
 Overall, the Prolog transcompiler does many things. It creates data structures for storing facts, as well as initially filling them up with facts which are initially given. It also creates custom Rule classes that are equipped with their own methods of evaluation, which involve either: (1) pattern-matching of relations with their relevant facts, or (2) direct invocation of utility functions.
@@ -6534,13 +6376,11 @@ Calling this method over and over again, therefore, will basically repeat these 
 [Game Programming in Prolog - Part 18] October 24, 2024
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Before You Read...</b></h3>
 
 This is Part 18 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read {%a href="https://thingspool.net/morsels/page-10.html"%}Part 1{%/a%} first.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Multithreading</b></h3>
 
 Quite frankly, though, I should admit that running all the rules on a single thread may significantly hurt the performance of the system, especially if the total number of rules is not so small. A typical rule tends to involve nested for-loops. And, while these loops can be optimized pretty well under careful algorithmic choices, the cumulative sum of the work involved may be detrimental to the game's average framerate.
@@ -6554,7 +6394,6 @@ Once the concurrent evaluation of the rules is over, the central system can then
 <f36>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>ECS (Entity Component System)</b></h3>
 
 This Prolog-based gameplay design technique, by the way, may feel already familiar to you. In my opinion, it shares the same spirit with that of the ECS (Entity Component System) framework which used to be (and perhaps still is) one of the hottest areas of research amongst the developers of Unity game engine (namely, Unity DOTS & Unity ECS).
@@ -6566,7 +6405,6 @@ The so-called "systems" in ECS can be interpreted as rules (i.e. horn clauses) i
 {%a href="https://github.com/architsch/hallway"%}Here{%/a%} is an example of what a purely ECS-based game engine would look like. It is a custom HTML5 game engine I wrote using Typescript and WebGL, and it supports both rudimentary 3D graphics and real-time physics. It does not fully leverage the multithreading capability of ECS, yet it does manage to render its structural elegance. In this repository, you will see many similarities between the engine's data-driven systems and the rules I have been writing in Prolog.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Input and Output</b></h3>
 
 Of course, the gameplay system will just be a silent blackbox unless it displays things on the screen, emits sound, and takes input from the user (via mouse, keyboard, etc).
@@ -6689,7 +6527,6 @@ public static class LOG
 Labelling debug-related method calls with the word "LOG" comes with its own additional advantage, which is the ability for the transcompiler to exclude them when asked to produce the final production build. The process of logging itself incurs its own computational cost, which means that, once the development process is over, rules which are dedicated to logging should no longer be included for the sake of optimization.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Preventing Repetitive Evaluation</b></h3>
 
 At this point, you might have noticed that some of the rules introduced so far (especially the ones which simply invoke external methods) are not supposed to be evaluated multiple times during the same exact time frame. Unfortunately, the possibility of mutual dependencies amongst the Prolog rules obliges us to keep evaluating them over and over until no more new facts can be drawn out of them.
@@ -6809,7 +6646,6 @@ public class Rule_IO_renderMesh : Rule
 (Side Note: Another way to solve the problem of repetitive evaluation is to simply force the game loop to evaluate its rules only once during each frame, after making sure that each rule only contains references to the past (n-1, n-2, etc) on its right-hand side relations. This will inevitably produce quite a bit of delay when generating a chain of facts (e.g. spawning a bread causes it to be labelled as "bread" after a delay of 1 time step, which in turn will subsequently cause it to be labelled as "edible" after yet another delay of 1 time step, and so on), but doing this will render repeated rule-evaluation totally unnecessary.)
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Physics, AI, and More</b></h3>
 
 Besides those related to I/O, there are other gameplay subsystems such as physics, AI, etc. While it is not entirely impossible to implement such features in Prolog, the efficiency of the end result is more or less doubtful.
@@ -6887,7 +6723,6 @@ move[n](X, NextPos) :-
 #$
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Painting the Bigger Picture</b></h3>
 
 I believe that, at this point, I have gone over pretty much all major aspects of Prolog-based game development.

@@ -13,16 +13,14 @@
 <meta property="og:description" content="심즈의 역사에 관해."/>
 <meta property="og:image" content="https://thingspool.net/game-analysis/img_9_1.jpg"/>
 <meta property="og:image:alt" content="초창기 심즈에 관한 이야기 (심즈의 역사) - 2">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>초창기 심즈에 관한 이야기 (심즈의 역사) - 2</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,44 +29,24 @@
 <link rel="canonical" href="https://thingspool.net/game-analysis/page-9.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/game-analysis/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/game-analysis/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/game-analysis/list.html">게임분석 (2019)</a>/초창기 심즈에 관한 이야기 (심즈의 역사) - 2</div>
+<div class="s_spacer"></div>
+
 <h1>초창기 심즈에 관한 이야기 (심즈의 역사) - 2</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: 2019.09</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2019.09</p>
+<div class="m_spacer"></div>
 <p>심즈의 개발과정은 처음 5년 가량은 거의 윌라이트 혼자서 설계만 하는 수준에 머물러 있었고, 본격적으로 심즈의 디자인이 자체적인 프로그램으로 구현되기 시작한 건 1997년 즈음 부터였다. 물론 그때도 맥시스의 사정은 윌라이트의 심즈 프로젝트(초반에는 '인형의 집 프로젝트'(Project Dollhouse)라고 불렀다)에 다른 직원들을 대거 동참시킬 만큼 녹록하지는 못했다. 당시 맥시스는 심시티 이후 나온 후속작들, 예컨대 심어스(SimEarth), 심앤트(SimAnt), 심라이프(SimLife), 심팜(SimFarm), 심헬스(SimHealth)와 같은 깨알같은 작품들의 성적 부진으로 인해 재정난에 처해 있었고, 결국 1997년에는 회사가 통채로 EA에 팔려 자회사로 전락하고 말았다.</p>
 <img class="figureImage" src="https://thingspool.net/game-analysis/img_9_1.jpg" alt="초창기 심즈에 관한 이야기 (심즈의 역사) - 2 (Figure 1)">
 <p>(이미지 출처: Wikipedia: https://en.wikipedia.org/wiki/Maxis)</p>
@@ -80,11 +58,10 @@
 <p>(1) 집을 지었을 때, 집의 구조와 가구의 배치를 기반으로 집 전체에 '점수'를 매기는 알고리즘. 이는 그가 추천하는 책들 중 하나인 '패턴언어'(A Pattern Language, 패턴 랭귀지)에서 많은 영감을 받았다고 한다. 개인적으로는 동양의 풍수지리론에서도 어느 정도 영감을 받지 않았을까 추측해 본다.</p>
 <p>(2) 심들의 행동패턴 알고리즘. 쉽게 말하자면 여기저기 돌아다니며 주변 사물들 또는 다른 심들과 함께 상호작용을 하는 알고리즘이다. 보통 이런 걸 행위엔진(Behavioral Engine)이라고 부르는데, 윌라이트는 행위엔진을 완성시키는 데까지 최소 2년은 걸렸다고 한다.</p>
 <p>(3) 욕구 기반의 동기부여 알고리즘. 아마도 이게 심즈를 대표하는 알고리즘이라 해도 과언은 아닐 것이다. 정식 출시된 심즈를 보면 각각의 심이 총 8개의 욕구들(허기,재미,위생,용변,에너지,편안함,사교,공간)을 가지고 있는데, 심은 이 8가지 욕구들 중 가장 충족되지 못한 욕구를 가장 효율적으로 만족시켜 줄 아이템과 자발적으로 상호작용을 한다 (초창기 심즈 프로토타입에서는 스트레스 등을 포함해서 총 12가지의 욕구들이 기획되었었다). 돈 홉킨스(Don Hopkins)의 웹사이트에 '심즈의 영혼'(The Soul of The Sims)이라는 제목으로 초창기 심즈의 소스코드 일부가 공개된 적이 있었는데 ( https://www.donhopkins.com/home/images/Sims/ ), 이 소스코드를 보면 비교적 꽤 오래 전부터 윌라이트가 실시간으로 변화하는 욕구의 매커니즘을 디자인해 왔음을 알 수 있다.</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

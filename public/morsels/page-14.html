@@ -13,16 +13,14 @@
 <meta property="og:description" content="In this article, I will explain how a variety of game mechanics can be designed and implemented in Prolog. The reader will learn that logic programming is an inexplicably powerful paradigm when it comes to creating a dynamic and emergent network of interactions inside the game world."/>
 <meta property="og:image" content="https://thingspool.net/morsels/e45.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 5">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Game Programming in Prolog - Part 5</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,50 +29,28 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-14.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 5</div>
+<div class="s_spacer"></div>
+
 <h1>Game Programming in Prolog - Part 5</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: September 7, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: September 7, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 5 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Interactions</b></h3>
 <p>So far, I have explained how the concept of space and time could be represented in the language of Prolog. These two are inarguably the most fundamental backbones of a gameplay sytem, for otherwise the range of things which the gamer is able to do would be extremely limited (Lack of time means absence of progression, and lack of space means absence of visual/physical elements).</p>
 <p>The very presence of space and time, however, does not automatically give us toys to play with. A game is an interactive medium; it needs to have interactions between the player and the rest of the game world, as well as interactions within the world itself. A great game is a system which involves a rich network of such interactions.</p>
@@ -91,7 +67,6 @@ eat(X[n], Y[n]) :- hungry(X[n-1]), canEat(X[n-1], Y[n-1]), collide(X[n-1], Y[n-1
 <img class="figureImage" src="https://thingspool.net/morsels/e40.jpg" alt="Game Programming in Prolog - Part 5 (Figure 2)">
 <p>This will guarantee that, once you drop a food (i.e. anything which can be eaten) right at the spot at which a hungry creature is located, the creature will devour it.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Generic Interactions</b></h3>
 <p>Here is another example, which more thoroughly demonstrates the notion of emergence in gameplay. Suppose that there are two actors named "actor1" and "actor2". The first actor represents fire, the second actor represents a piece of bread, and they were both spawned at the same exact time and place (see the code below).</p>
 <div class="snippet"><pre><code>fire(actor1).
@@ -150,7 +125,6 @@ eat(X[n], Y[n]) :- hungry(X[n-1]), canEat(X[n-1], Y[n-1]), collide(X[n-1], Y[n-1
 <img class="figureImage" src="https://thingspool.net/morsels/e45.jpg" alt="Game Programming in Prolog - Part 5 (Figure 7)">
 <p>Adding more and more tags to our actors will exponentially increase the number of ways in which they may interact. This is the kind of emergence we want in video games, especially ones whose main source of entertainment originates from "mix and match" mechanics such as crafting rules, puzzles, etc.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Delayed Interactions</b></h3>
 <p>Not all interactions are instantaneous, though. Sometimes, games involve interactions which take effect after some delay. Think of a war game in which the soldiers attack each other by shooting projectiles such as bullets, arrows, and rocks.</p>
 <p>For the case of bullets, we may simply assume that there is no delay at all because a bullet is so fast that no one is able to feel any noticeable delay. It is not the case with much slower projectiles such as arrows and rocks. They take considerably more time to reach their targets, and we must take this into account when implementing games.</p>
@@ -183,11 +157,10 @@ motionProgress(rock, Y[n], Projectile[n], 0.8) :- !interrupt(Projectile[n-1]), m
 motionProgress(rock, Y[n], Projectile[n], 1.0) :- !interrupt(Projectile[n-1]), motionProgress(rock, Y[n-1], Projectile[n-1], 0.8).
 hit(Y[n], Projectile[n]) :- motionProgress(rock, Y[n], Projectile[n], 1.0).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-15.html">Part 6</a>)</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>

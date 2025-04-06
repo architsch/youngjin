@@ -7,10 +7,8 @@
 Let me introduce "Metaphysical Notes", written by Thomas Scarborough.
 
 @@<h3>You can read it <a href="https://www.thomas-scarborough.com/p/links.html">Here</a>.</h3>
-@@<div class="l_spacer"></div>
 <001>
 @@<hr>
-@@<div class="l_spacer"></div>
 
 @@<h3><b>Introduction:</b></h3>
 
@@ -43,7 +41,6 @@ Let me introduce a series of articles on Narrative Construction, written by Kata
 
 @@<h3>Read the whole series <a href="https://katarinagyllenback.com/">Here</a>.</h3>
 @@<hr>
-@@<div class="l_spacer"></div>
 
 @@<h3><b>Introduction:</b></h3>
 
@@ -54,11 +51,8 @@ She used to be a director and scriptwriter for the motion picture industry, but 
 Outside of academia, she worked as a design director & narrative designer of video games at a number of software development studios, including Bambino Games and Softbox AB.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 
 @@<h3><b>Recommended Articles:</b></h3>
-
-@@<div class="l_spacer"></div>
 
 <005>
 
@@ -96,10 +90,8 @@ This article explains how a narrative can be modeled inside a "conceptual space"
 Let me introduce "PART 2, THE BENEFIT AND DISADVANTAGE OF UNCONSCIOUSNESS", a narrative design article written by Katarina Gyllenbäck.
 
 @@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/benefit-disadvantage-of-unconsciousness/">Here</a>.</h3>
-@@<div class="s_spacer"></div>
 <002>
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction:</b></h3>
 
 Katarina Gyllenbäck is a researcher, educator, and writer in the field of narrative design. Her areas of expertise include storytelling, drama & theatre, and interactive media such as games. She is also known for her unique method of narrative construction called "Narrative Bridging".
@@ -107,7 +99,6 @@ Katarina Gyllenbäck is a researcher, educator, and writer in the field of narra
 "PART 2, THE BENEFIT AND DISADVANTAGE OF UNCONSCIOUSNESS" is one of her early blog articles which explains the role of the unconscious in the recognition of a goal in a narrative, as well as how a person's "fear of the unknown" becomes an implicit motive behind one's willingness to learn by means of exploration.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 1:</b></h3>
 
 When we are talking about a goal which is already meaningful to us, we often overlook the fact that other people do not necessarily share the same goal. This is because one's unconscious mind tends to process familiar pieces of information automatically behind the scene, without informing the conscious mind.
@@ -118,7 +109,6 @@ When we are talking about a goal which is already meaningful to us, we often ove
 (...) the cognitive psychologist Jerome Bruner says the reason why we find it hard to achieve consciousness about how we interpret (evaluate) information and create meaning is that we are “too expert” and we cannot see what we so easily do automatically. Bruner calls the condition the “unconsciousness of the automatic” (Bruner, 1996).
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 2:</b></h3>
 
 Therefore, aiming for humanity's common goal is oftentimes a fast and easy solution to resolve the problem of dissonance. This will effectively "sync up" our unconscious minds, letting us understand each other deeply (not just superficially).
@@ -129,7 +119,6 @@ Therefore, aiming for humanity's common goal is oftentimes a fast and easy solut
 So if one truly likes to engage people in a meaningful experience, the desired goal has to make sense to all.
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 3:</b></h3>
 
 A narrative, on the other hand, usually involves a conflict among multiple goals. However, such a conflict is desirable because it is fictional. The only requirement is that the constructor of a narrative must not be too emotionally attached to any one of the goals specifically; that is, the constructor must remain "value neutral" (lest his/her work be classified as a political propaganda).
@@ -140,7 +129,6 @@ A narrative, on the other hand, usually involves a conflict among multiple goals
 (...) for a narrative constructor, the most important is to at least make sure to be the last man standing when everyone else gives in to the “unconsciousness of the automatic” and want to cry.
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 4:</b></h3>
 
 Whenever we encounter something that is unfamiliar to us, we feel urged to make sense of it by means of observation and reasoning. The designer can create this kind of motivation by selectively hiding information from the viewer (e.g. 'Fog of War' in video games).
@@ -172,17 +160,14 @@ Bertrand Russell is one of my favorite philosophers. One interesting thing about
 
 @@<hr>
 
-@@<div class="l_spacer"></div>
 @@<h3><b>(1) The Problems of Philosophy</b></h3>
 
 This is perhaps the best primer to philosophy in general (maybe not for humanity-related areas such as ethics and aesthetics, but definitely for metaphysics, epistemology, and ontology). In this book, Russell introduces some of the most common questions in philosophy such as the conflict between idealism and realism (i.e. "Matter is a byproduct of mind" vs "Mind is a byproduct of matter"), the definition of "idea" in Plato's metaphysical worldview, and so on. Then he even proceeds to explain his endeavors to define the whole of reality itself, as well as ways in which we may induce it from our sense-data and their apparent relations. (You can read it {%a href="https://www.gutenberg.org/cache/epub/5827/pg5827-images.html"%}Here{%/a%})
 
-@@<div class="l_spacer"></div>
 @@<h3><b>(2) The Analysis of Mind</b></h3>
 
 This one is significantly more challenging to read than "The Problems of Philosophy". Nevertheless, I strongly recommend this book due to its interdisciplinary approaches to the study of psychology, cognitive science, and problems of epistemology in general. Although there aren't any diagrams in this book (which is unfortunate because I think it would have helped a lot), the reader will probably be able to realize that many of the concepts which Russell introduces here can be illustrated in terms of graph theory (i.e. where ideas are denoted by vertices, and associations between ideas are denoted by edges). For example, according to Russell's reasoning, the difference between a "vague" idea and an "abstract" idea is that the former is an idea which is closely associated with ideas that are not so closely associated with each other, whereas the latter is an idea which is closely associated with ideas that are also closely associated with each other. This is one example, but there are many more, and they can all be rendered graphically using points and lines on a sheet of paper. (You can read it {%a href="https://www.gutenberg.org/cache/epub/2529/pg2529-images.html"%}Here{%/a%})
 
-@@<div class="l_spacer"></div>
 @@<h3><b>(3) The Conquest of Happiness</b></h3>
 
 This is probably one of the easiest and most relaxed books ever written by Bertrand Russell. Unlike his other treatises, this one focuses on everyday human emotions and their hints on morality, rather than topics that are mathematically engaged. So if you are more of a fan of humanities than purely abstract concepts (such as those in metaphysics), I recommend reading it. It feels a bit like C.S. Lewis's "Mere Christianity", although Russell tends to speak of ethical topics from a more secular and rational viewpoint. (You can read it {%a href="https://russell-j.com/beginner/COH-TEXT.HTM"%}Here{%/a%})
@@ -203,10 +188,8 @@ This is probably one of the easiest and most relaxed books ever written by Bertr
 Let me introduce "PART 3, WHEN THE COGNITIVE VEHICLE OF NARRATIVE BACKFIRES", a narrative design article written by Katarina Gyllenbäck.
 
 @@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/cognitive-vehicle-narrative-backfire/">Here</a>.</h3>
-@@<div class="s_spacer"></div>
 <007>
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction:</b></h3>
 
 Katarina Gyllenbäck is a professional narrative researcher who is also an interdisciplinary educator in the field of interactive media. She is also the pioneer of the new method of designing narratives called "Narrative Bridging".
@@ -214,7 +197,6 @@ Katarina Gyllenbäck is a professional narrative researcher who is also an inter
 "PART 3, WHEN THE COGNITIVE VEHICLE OF NARRATIVE BACKFIRES" is one of her articles which outlines the significance of curiosity in the process of learning, as well as how the presence of a common (archetypal) goal helps us trigger such an emotion.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 1:</b></h3>
 
 People learn new things when they naturally become curious, not when they are forced to be curious. The source of spontaneous curiosity is any goal whose motives are easy to comprehend but requires additional knowledge to accomplish. (Example: "Oh, I really want to open this treasure chest, but it is locked. Therefore, I ought to learn where the key is!")
@@ -225,7 +207,6 @@ People learn new things when they naturally become curious, not when they are fo
 To stress the process of learning by saying “can´t you see it, can´t you see it?” would not make anyone learn better or faster. In worse cases, it might even increase anxiety. Increased anxiety can cause people to reject new information.
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 2:</b></h3>
 
 Curiosity-driven learning, which is a one of the core components of narrative design, turns out to be particularly beneficial in the field of education. One way of releasing its full potential is to teach children by letting them play educational games (aka "edutainment").
@@ -238,7 +219,6 @@ Basically, the same cognitive mechanism that I had experienced ten years earlier
 They who believed games were bad or a hinder to formal schoolwork did not see what the children that played actually did. From my cognitive perspective on learning, I could see how the children that played were involved in highly advanced cognitive activities by setting up strategies, reasoning, making decisions, making choices, and collaborating.
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 3:</b></h3>
 
 A school often fails to teach children effectively, due to the absense of easy-to-understand goals. Since the way a game works closely matches the way our society works (Simulation games such as "SimCity" and "Capitalism 2" are obvious examples), games can play a major role in education as long as they provide children with a set of clear goals as well as clues to achieve them.
@@ -266,10 +246,8 @@ and what runs a game is the same mechanism that runs society. The contrasts, tho
 Let me introduce "An Enquiry Concerning Human Understanding", a philosophical treatise written by David Hume.
 
 @@<h3>You can read it <a href="https://www.gutenberg.org/cache/epub/9662/pg9662-images.html">Here</a>.</h3>
-@@<div class="s_spacer"></div>
 <008>
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction:</b></h3>
 
 David Hume is one of the most prominent empiricist philosophers of the enlightenment era. Contemporary readers, who have seriously investigated his writings, will readily come to the conclusion that his reductionist and experience-oriented worldview vividly parallels that of today's natural sciences. As a result, it is not hard for us to feel the invaluable contribution of his philosophy to the development of the modern mind, as well as its emphasis on the usage of scientific methods in discovering the secrets of our universe.
@@ -277,7 +255,6 @@ David Hume is one of the most prominent empiricist philosophers of the enlighten
 "An Enquiry Concerning Human Understanding" is one of Hume's most popular treatises which expounds many aspects of his empirical worldview. It is not as widely known as his previous book called "A Treatise of Human Nature", but it is nevertheless a great primer for those who are interested in Hume's philosophy because it is written in a relatively concise manner (I have to say "relatively" because it is still pretty long).
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Taxonomy of Psychological Elements</b></h3>
 
 Hume begins his treatise by categorizing his elements of reason, such as "perceptions" (which can be subdivided into two classes called "impressions" and "ideas") and "objects of reason" (which can be subdivided into two classes called "relations of ideas" and "matters of fact"). The former refers to the basic building blocks (i.e. atoms) of our mental phenomena, and the latter refers to the ways in which these building blocks can combine with one another to form more complex meanings.
@@ -285,7 +262,6 @@ Hume begins his treatise by categorizing his elements of reason, such as "percep
 By means of categorization, Hume establishes a firm ground of terminologies which allows him to deliver his metaphysical concepts to the reader without causing too much confusion. One may claim that the way he draws artificial boundaries between seemingly intertwined concepts (e.g. between "impressions" and "ideas") is a bit too contrieved, yet I believe that it is a necessary evil which had to be maintained in order for Hume to give himself some solid pieces of intellectual toy to play with.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>On Causality</b></h3>
 
 One of Hume's most widely discussed topics in this treatise is the issue of causality. According to his empirical faculty of reasoning, we can never directly sense the force of "necessary connexion" between a cause and its effect. All we can say from our experiences is that one type of events tend to occur in close proximity with another type of events, and that a high frequency of such correlative occurrences is the only clue which suggests us that these two types of events are causally related to each other (i.e. one is the cause and the other is the effect).
@@ -293,7 +269,6 @@ One of Hume's most widely discussed topics in this treatise is the issue of caus
 Hence, the very notion of causality itself, according to Hume as well as other highly empirical thinkers such as Bertrand Russell, may as well just be a manmade concept and not a fundamental part of reality. For example, when we observe that event B always immediately follows event A, does it mean that event A must be "causing" event B to occur? Wouldn't it also be plausible to suppose that A and B are just two predetermined parts of one underlying event?
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Personal Remarks</b></h3>
 
 To be honest, most of the key lessons of this treatise are contained in the first four sections, which occupy roughly the first 25% of the volume. The rest of the book is, in my opinion, a bit verbose and spends rather too many words to explain the same old concept over and over again, and it feels more of Hume's personal rant against his philosophical opponents than an impersonal effort to unravel his line of logic. My impression is that he dedicated a huge portion of his book to express his own sentiments in regard to how his philosophy was unjustly dismissed and jeered at by backward thinkers.
@@ -318,17 +293,14 @@ And I must confess that this first section of the book really touched my heart -
 Let me introduce "PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS", a narrative design article written by Katarina Gyllenbäck.
 
 @@<h3>Read the full article <a href="https://katarinagyllenback.com/2017/04/06/the-retrieval-of-the-consciousness/">Here</a>.</h3>
-@@<div class="s_spacer"></div>
 <009>
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction:</b></h3>
 
 Katarina Gyllenbäck is an educator, researcher, and innovator in the field of narrative design and cognitive science. Starting from the drama and film industry, she pioneered a number of novel techniques in the design of interactive media such as a custom narrative AI, the method of "Narrative Bridging" (Click {%a href="https://www.researchgate.net/publication/226504927_Narrative_Bridging"%}Here{%/a%} to view), and many others.
 
 "PART 4, THE NEED FOR RETRIEVAL OF THE CONSCIOUSNESS" is one of her articles which highlights the significance of including an intrinsic goal in a narrative, especially when it comes to educating young children who desperately need natural motivation. Inspired by the American psychologist Jerome Bruner, she then investigates the potential causes of the prevanence of extrinsic (forced) goals in contemporary media, such as the exclusion of spontaneous personal feelings from the supposed goal.
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 1:</b></h3>
 
 Our intrinsic form of motivation is oftentimes superceded by "forced motivation" - one which is driven by external reward and punishment rather than genuine curiosity. This makes the goal "extrinsic", as opposed to "intrinsic". A meaningful experience should be triggered by an intrinsic goal.
@@ -339,7 +311,6 @@ Our intrinsic form of motivation is oftentimes superceded by "forced motivation"
 (...) one excluded the motivating engine by how we like to do the “2 + 2” and where we don´t want to know that we are working for our meal but where conditions of rewards or punishments moved intrinsic motives to become extrinsic and where people got the “4” and had to act upon the risk to be punished for their behaviors.
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 2:</b></h3>
 
 Trying to define our reality based upon a set of metaphysical assumptions is perhaps the most common bigotry in Western philosophy. It plagues intellectuals with meaningless word play, making them draw artificial boundaries between ideas which aren't even clearly defined and therefore not strictly distinguishable (e.g. "mind vs body", "subject vs object", "nature vs nurture", "good vs evil", "something vs nothing", etc). We are discouraged from pointing out such logical absurdity, however, due to the fact that such an attempt is very likely to be dismissed as "postmodern nonsense".
@@ -354,7 +325,6 @@ All versus I had experienced through the years as narrative vs gameplay, narrati
 And if Jerome Bruner, who reached a respectable age of 100 years, and many with him, found it hard to change how science regarded thoughts, beliefs, intentions, and dreams, others than being illusionary, how could I?
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 3:</b></h3>
 
 The main problem of an unconsciously inspired goal is that we cannot be sure of its universality. An extremely religious man, for example, has his religious belief so deeply ingrained in his unconscious mind, that he automatically assumes that others will instantly share his creed as soon as he reads off a few inspirational quotes from his holy manuscript.
@@ -367,7 +337,6 @@ A goal which is universal, therefore, must be able to express itself in a consci
 When making my claim to the academic to rethink narrative as to retrieve a consciousness I knew it was unlikely that they would embrace the idea since what I did was to suggest a paradigm shift.
 #"
 
-@@<div class="l_spacer"></div>
 @@<h3><b>Key Note 4:</b></h3>
 
 Academics often reject the notion that a story can be part of our objective reality. Such an attitude, however, is misleading because a story accurately portrays how we, as observers, map the sequence of events in nature and the way in which they are causally related to one another. This is a core component of empirical reasoning.
@@ -394,10 +363,8 @@ In 1996 Bruner wrote in “The culture of education”:
 Let me introduce "Flatland: A Romance of Many Dimensions", a novel written by Edwin Abbott.
 
 @@<h3>You can read it <a href="https://www.gutenberg.org/cache/epub/201/pg201-images.html">Here</a>.</h3>
-@@<div class="s_spacer"></div>
 <010>
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction:</b></h3>
 
 There are many novels which can easily be classified as science fiction. On the other hand, it seems to me that there are only a handful of novels which could be classified as "math fiction".
@@ -409,7 +376,6 @@ While science does possess its own share of profound, esoteric concepts (especia
 For this reason, it is a genuine surprise to see that the 19th century novel, "Flatland: A Romance of Many Dimensions", successfully presents us with its own fictional world which is made of purely mathematical ideas yet still manages to entertain us. Starting with the very concept of "dimension" in Euclidean space, the author (Edwin Abbott) invites the reader to his wondrous universe of two-dimensional beings, whose bodies are flat geometric shapes (such as circles, squares, triangles, etc) instead of three-dimensional forms.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Metaphorical Representations</b></h3>
 
 The most intricate aspect of this novel is that its fictional universe (aka "Flatland") thrives not only upon the author's imaginative freedom alone, but also upon the way in which the author correlates geometric properties with humanitarian ideas, such as the ones listed below:
@@ -423,7 +389,6 @@ The most intricate aspect of this novel is that its fictional universe (aka "Fla
 In a way, therefore, Flatland can be interpreted as a social commentary, a satire, and a metaphor of human nature in general, allegorically conveyed via the language of mathematics. It is truly a multidisciplinary piece of literature, especially if you consider the time period during which it was written.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Criticism</b></h3>
 
 One piece of criticism against this novel though, which I guess is valid to some extent, is that its narratives tend to be a bit "shallow" compared to those of other famous literary works.
@@ -433,7 +398,6 @@ The story of Flatland is primarily centered around the lamentations of the prota
 Such an "oppressed hero" archetype is indeed a powerful means of reinforcing the reader's ego, since it basically whispers to our ears, "Nobody understands you, but I do! You are the only one who knows the truth, and the rest of the world is to blame!". However, this dichotomous breed of worldview significantly undermines the objectiveness (i.e. value-neutrality) of the overall narrative, thereby giving off cheap impressions which even look a bit embarrassingly juvenile at times.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Conclusion</b></h3>
 
 Nevertheless, Flatland is still an iconic work of classic when it comes to the experimental spirit of the Victorian era. The way in which Edwin Abbott integrated an area of pure academic knowledge into his own narrative world is such a subtle kind of intellectual gem which can hardly be found elsewhere. And I definitely recommend everyone to partake in their journey to Flatland and use it as a fountain of multifaceted inspirations.
@@ -457,10 +421,8 @@ Nevertheless, Flatland is still an iconic work of classic when it comes to the e
 Let me introduce Korea's most popular French science fiction writer, Bernard Werber (베르나르 베르베르). The following sections will show my personal analysis of his popularity, as well as a general review of his literary works.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <011>
-@@<font color="#707070">Image Source: https://en.wikipedia.org/wiki/Empire_of_the_Ants_(novel)</font>
-@@<div class="l_spacer"></div>
+@@<p class="dim">Image Source: https://en.wikipedia.org/wiki/Empire_of_the_Ants_(novel)</p>
 @@<h3><b>Introduction</b></h3>
 
 When I was an elementary/middle school student in Korea, I used to be an avid reader of Bernard Werber's novels.
@@ -480,10 +442,8 @@ The exact genre of his writings is hard to pinpoint because they are mostly a mi
 ... and so forth. The ideas present in his stories are so intriguingly multidisciplinary and open-ended, that they oftentimes feel as though they can be used as perpetual fountains of inspirations.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <012>
-@@<font color="#707070">Image Source: https://ko.wikipedia.org/wiki/파라다이스_(소설)</font>
-@@<div class="l_spacer"></div>
+@@<p class="dim">Image Source: https://ko.wikipedia.org/wiki/파라다이스_(소설)</p>
 @@<h3><b>Popularity in Korea</b></h3>
 
 One of the interesting facts is that Bernard Werber has acquired far more fame in my country than in his home country (France). He has not been quite as successful in the United States either, which I can tell because only a small fraction of his novels have officially been translated into English.
@@ -505,10 +465,8 @@ Some observations can be made in regard to the major differences between Bernard
 Other observations may as well be made, regarding the time period during which he became popular in my country. As far as I am able to recall, Bernard Werber's fame in Korea peaked during the mid 2000s. In order to understand the underlying implication of this timing, we must first take a look at the brief history of what happened in my country during that passage in history.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 <013>
-@@<font color="#707070">Image Source: https://www.fmkorea.com/753993544</font>
-@@<div class="l_spacer"></div>
+@@<p class="dim">Image Source: https://www.fmkorea.com/753993544</p>
 @@<h3><b>Foundation of His Success in Korea</b></h3>
 
 Let us rewind the clock a bit. In 1997, a horrible economic crisis struck Korea, putting it on the verge of national backruptcy. This disaster was mostly mitigated within a fairly short period of time, yet its legacy involved massive unemployment and layoffs (... which explains why the "PC bang" businesses and the 1998 game "Starcraft" became so successful during that time; unemployed young adults just needed somewhere to spend time on and distract themselves from the dark reality).
@@ -542,7 +500,6 @@ One of the major selling points in his books was their direct appeal to "somethi
 Bernard Werber's sparkling suggestion of a better future, reinforced by his subtle innuendos borrowed from New Age spiritualism, brought a fresh air of vivid imaginations to the readers, and helped them believe that they, too, will some day be able to claim their own territory in the infinite space of phantasmagoria. This, I believe, is one of the main factors which contributed to Bernard Werber's insane popularity in the mid 2000s.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Interesting Aspects</b></h3>
 
 Aside from the historical & cultural circumstances, I believe that Bernard Werber's books definitely possess their own unique values, regardless of in which country he happened to acquire the highest degree of recognition. Here are some of the remarkable differences in his writings as opposed to those of others:
@@ -554,7 +511,6 @@ Aside from the historical & cultural circumstances, I believe that Bernard Werbe
 (3) Quite frequently, either directly or indirectly, he emphasizes the significance of viewing a widely known piece of information (e.g. scientific knowledge) from an unusual perspective, such as: "The appearance of cancer cells could be interpreted as a signal which is being sent by unknown beings as an attempt to communicate with us", and so forth. This kind of inner thought experiment encourages the reader to observe small, ordinary things in our everyday lives with fresh new eyes.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>In Retrospect...</b></h3>
 
 I spent my childhood in the 2000s. And, as a result, I was hugely influenced by Bernard Werber's books. I recall reading his "The Tree of Possibles" (L'Arbre des possibles), "The Encyclopedia of Relative and Absolute Knowledge" (L'Encyclopédie du savoir relatif et absolu), "The Ants" (Les Fourmis) series, "The Butterfly of the Stars" (Le papillon des étoiles), and many others. These books were my absolute favorite, especially because I was a fan of philosophical science fiction back when I was a kid (I still am, kind of, although my definition of "philosophical science fiction" changed a bit over time).
@@ -568,7 +524,6 @@ Bernard Werber is indeed an effective writer when it comes to quickly raising th
 From a narrative point of view, though, I could not help myself questioning the moral depth of his writings as I grew up. When I was an elementary/middle school student, I avidly consumed his novels as though they were the most profound philosophical treatises. As time passed by and I got acquainted with many masterpieces in the realm of classical literature, I began to realize that his fictional worldview is embarrassingly shallow.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Criticism</b></h3>
 
 One of the commonly recurring themes in Bernard Werber's fiction is that of the "struggle of a few intellectuals against the stupidity of the mass". Typically, in his story, a highly sophisticated and creative protagonist constantly gets persecuted by others who are far intellectually inferior to him. This "lonely genius", who gradually becomes tired of the sheer prevalence of idiots who never understand (or even try to understand) his unique philosophical perspective, eventually partakes in an adventure and finds solace in his own outworldly journey, where he finds friendship in a tiny circle of likeminded geniuses who are ready to acknowledge how smart he is.
@@ -579,5 +534,4 @@ The thing is, I do wholeheartedly share the sentiment which Bernard Werber conve
 
 Yet, expressing such a sentiment in so explicit a manner in one's literary work is a somewhat different story. Drawing a hard division between "those who are enlightened" and "those who are too stupid to be enlightened" is indeed a powerful means of fueling the reader's ego, since it convinces him that he, who is able to read Bernard Werber's books and understand the words written in them, must certainly be the "chosen one" who is intellectually superior to those who do not necessarily agree with his opinions. But if this is pretty much the boundary of how far Bernard Werber's narrative manages to reach (aside from spiritual libertarianism), I will say that it is the reader's moral obligation to outgrow the scope of the author's philosophy at some point in life.
 
-@@<div class="l_spacer"></div>
 @@<h3>Link: <a href="https://www.bernardwerber.com/">Official website of Bernard Werber</a></h3>

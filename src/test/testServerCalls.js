@@ -4,19 +4,22 @@ require("dotenv").config();
 let tokenByUserName = {};
 
 const cacheTokenFromRes = (userName, res) => {
-    const setCookie = res.headers["Set-Cookie"];
+    //console.log("<<< HEADERS >>> ::\n" + JSON.stringify(res.headers));
+    const setCookie = res.headers["set-cookie"];
     if (setCookie)
     {
-        for (const kvp of setCookie.split(";").map(x => x.trim().split("=")))
+        let tokenFound = false;
+        for (const kvp of setCookie.join(";").split(";").map(x => x.trim().split("=")))
         {
             if (kvp[0] == "thingspool_token")
             {
                 tokenByUserName[userName] = kvp[1];
-                console.log(`Token (${userName}) :: ${tokenByUserName[userName]}`);
+                //console.log(`Token (${userName}) :: ${tokenByUserName[userName]}`);
+                tokenFound = true;
             }
-            else
-                console.error("Token not found.");
         }
+        if (!tokenFound)
+            console.error("Token not found.");
     }
     else
         console.error("Cookie not found.");

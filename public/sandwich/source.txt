@@ -5,7 +5,6 @@
 [Sandwich Engineering - Chapter 1] January 17, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Introduction</b></h3>
 
 <001>
@@ -17,7 +16,6 @@ So, stay tuned and do not miss out this great opportunity. The future belongs to
 This series will present you with an overview of this brand new field of study called "Sandwich Engineering", and how it is going to revolutionize the industry, offer cutting-edge solutions to startups, help passionate individuals succeed, achieve world peace, save our planet, make everything diverse, fulfilling, mindful, sustainable, and... whatever.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Means of Combination</b></h3>
 
 In order to understand the basics of sandwich engineering, one must first learn how a sandwich should be defined. A sandwich is the result of combining the following sequence of things and stacking them together:
@@ -47,7 +45,6 @@ What about a broader type of sandwich, such as "meat sandwich"? Its definition i
 Here, we have two major constructs in our grammar - "AND" and "OR". Whenever we put multiple things together and let them coexist, we use the word "AND". Whenever we put only one among the multitude of things available, we use the word "OR".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Means of Abstraction</b></h3>
 
 The problem with the above illustration, though, is that it is now starting to look a bit messy. It contains far too many arrows and words, and thus it is quite difficult for us to grasp what is going on in the picture. Therefore, it is important for us to split each part of the sandwich and turn it into its own encapsulated definition. This is our first step toward abstraction.
@@ -87,7 +84,6 @@ This will let us replace the "sausage" part of the definition of meat with the l
 Here, "meat" is the abstraction of what goes inside a meat sandwich (in general), and "sausage" is the abstraction of what goes inside a meat sandwich as soon as we decided to put a sausage in it. These are two different levels of abstraction, and they unwrap themselves one by one, as we specify our choices of ingredients.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Extreme Forms of Abstraction</b></h3>
 
 As we keep stretching this kind of reasoning, we will eventually find ourselves reaching the most extreme edge cases in which the idea of infinity is involved. There are two of them - one which represents the concept of "anything", and the other one which represents the concept of "everything".
@@ -109,7 +105,6 @@ And of course, this "anything" is an abstract entity which defines itself as an 
 A sandwich is a sandwich as long as there is anything between two pieces of bread, and we do not care what it is; it could be a piece of meat, vegetable, mashed potato, glass, metal, antimatter, black hole, or whatever. There are infinitely many choices available, which makes "anything" the most general form of existence we are ever able to define.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Taxonomy of Sandwiches</b></h3>
 
 What we can learn from the above example is the fact that abstraction comes in different degrees of generalization. Some forms of abstraction are either more general or more concrete than others.
@@ -149,7 +144,6 @@ As you get closer to the tree's root, you will encounter more and more general c
 [Sandwich Engineering - Chapter 2] January 19, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Composition</b></h3>
 
 What makes a good sandwich?
@@ -165,7 +159,6 @@ A sandwich comes into existence the very moment we compose its ingredients in th
 And the secret of designing a great sandwich belongs to the way in which the individual elements of the stack are being chosen.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Composition from a Taxonomical Viewpoint</b></h3>
 
 In order to understand what are good sandwiches (as opposed to bad sandwiches), we must first clarify the ways in which they can be categorized. As you have seen in the last article, a taxonomy (i.e. family tree) of sandwiches comes in handy whenever we are attempting to classify them in a hierarchical order.
@@ -223,7 +216,6 @@ The "AND" equivalent of this phenomenon can be depicted in a similar fashion. He
 <026>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Sandwich Abstraction Layers</b></h3>
 
 The mix-and-match sort of combination can happen across multiple layers of abstraction as well. For example, nothing prohibits us from stacking "any type of meat" upon a slice of ham, putting this semi-generic pair of ingredients between a pair of bread pieces, and referring to the whole thing as a "ham & meat sandwich".
@@ -257,7 +249,6 @@ As a result, what we are seeing is a vast, intertwined fabric of sandwiches. Som
 For example, it is not hard to expect that a "bacon cheese sandwich" is much more appetizing than, say, a "steamed beans and mashed potato sandwich".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Edges of the Fabric</b></h3>
 
 There are edge cases beyond which the fabric is no longer capable of extending itself, though.
@@ -291,7 +282,6 @@ The "anything sandwich" is the ancestor of all sandwiches; it is the ultimate bi
 [Sandwich Engineering - Chapter 3] January 23, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Evaluation of a Sandwich</b></h3>
 
 How to measure the quality of a sandwich?
@@ -310,7 +300,6 @@ A truly appetizing sandwich must obey the following two principles:
 The word "tasty" may sound a bit too subjective, and indeed it is. However, it will appear to be far more sensible if you just interpret it as "generally tasty" or, in other words, "considered tasty by the average eater".
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Taste Scores</b></h3>
 
 Let us begin with the first principle.
@@ -368,7 +357,6 @@ If we compute the "avg" part, we will get this:
 <044>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Pitfalls of Summation</b></h3>
 
 Okay, you might have noticed that there is something fishy in here. It is the fact that, if we are to stick to the above methodology and refuse further elaboration on how scores are to be derived, we will soon be forced to reach the conclusion that a sandwich with more ingredients should score higher than those with fewer ingredients.
@@ -396,7 +384,6 @@ What if we put 4 slices of cheese instead of 3? What about 5, 6, 7, or even 100 
 Therefore, a mere summation of the individual ingredient scores does not accurately reflect the sandwich's overall score.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Relational Taste Scores</b></h3>
 
 So, what's the solution? First off, we definitely need a better way to tell how good a sandwich is. Let us revisit the previous cheese sandwich example.
@@ -449,7 +436,6 @@ Nevertheless, what is shown above is an improvement over the previous methodolog
 [Sandwich Engineering - Chapter 4] January 26, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Manufacturing of a Sandwich</b></h3>
 
 <050>
@@ -459,7 +445,6 @@ So far, I have only been explaining what a sandwich "is", not how it can be prod
 "How to make a sandwich?" is an indispensable question, and we must be able to answer it in order to be able to enjoy a sandwich as our lunch menu.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Sandwich Transformation</b></h3>
 
 If we want to understand the way in which a sandwich is being made, we should first learn how one type of sandwich can be transformed into another. Let us revisit our cheese sandwich example to see what I mean by this.
@@ -503,7 +488,6 @@ The diagram below is a more comprehensive illustration of what can happen betwee
 <057>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Reversible VS Irreversible</b></h3>
 
 There are processes, however, which cannot be reverted. Imagine that we are trying to turn a cheese sandwich into a "cheese & hot sauce sandwich" - that is, a sandwich made up of a slice of cheese and a bit of hot sauce spread upon it. The following image shows the steps required to carry out this job.
@@ -527,7 +511,6 @@ It is "reversible" when it comes with a pair of arrows (creating a two-way road)
 <060>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Building a Sandwich from Scratch</b></h3>
 
 Let us push these minor details aside, and focus on what is of utmost importance - making a sandwich from scratch.
@@ -559,7 +542,6 @@ First, we started from nothing. We added a piece of bread on top of this "nothin
 Note that these 3 processes are all reversible because each of them has its own opposite action which reverts its effect.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Tech Tree of Sandwiches</b></h3>
 
 If we just keep stacking pieces of bread and nothing else, we will eventually end up producing just a bunch of boring sandwiches, such as "double-bread sandwich", "triple-bread sandwich", and so on. We need something other than bread in our sandwich.
@@ -595,7 +577,6 @@ What you are seeing above is an example of a tree involving multiple variants of
 [Sandwich Engineering - Chapter 5] January 30, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Sandwich Uncertainty Principle</b></h3>
 
 When building a sandwich from scratch, however, we often face moments of ambiguity which could be a bit annoying. And if you really want to become a master of sandwich engineering, you should understand the nature of such moments as well as how to treat them properly.
@@ -633,7 +614,6 @@ But the problem is that the cheese itself is something ambiguous; the word "chee
 This sandwich is abstract (i.e. not tangible) because we have not fully specified its ingredients yet. As long as there is room for ambiguity, it cannot exist in real life.
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Schrödinger's Cheese</b></h3>
 
 It is only after we make specific choices to resolve all the ambiguities, that the sandwich will finally become tangible. In the example below, I chose to put a slice of Provolone cheese on top of the bread. This cleared out every bit of indeterminacy from the sandwich and turned it into something solid (i.e. non-abstract).
@@ -651,7 +631,6 @@ And of course, these two steps are both reversible, meaning that I am able to re
 <077>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Sandwich Production Line</b></h3>
 
 A sense of confusion may arise here, though. What do we mean when we say that we "decided" to put a slice of cheese?
@@ -721,7 +700,6 @@ The horizon of possibilities is endless.
 [Sandwich Engineering - Chapter 6] February 4, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Multiple Pathways</b></h3>
 
 Suppose that we are running a sandwich factory. We are trying to manufacture sandwiches here.
@@ -787,7 +765,6 @@ The result is the following sequences of sandwiches:
 <096>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Package Processing</b></h3>
 
 Imagine, though, that our factory's goal is to manufacture not just sandwiches, but lunch boxes with multiple sandwiches in them. Let's say that each of our lunch boxes is expected to have 2 sandwiches in it - a cheese sandwich and a ham sandwich. What shall we do to mass-produce it?
@@ -855,7 +832,6 @@ First, we started from nothing (i.e. an empty conveyor belt). Next, we laid down
 [Sandwich Engineering - Chapter 7] February 6, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Toasting a Sandwich</b></h3>
 
 So far, I have explained several ways of manufacturing sandwiches.
@@ -907,7 +883,6 @@ So, it is reasonable to state that if there is a slice of cheese between two pie
 <114>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Pattern Matching and Aliasing</b></h3>
 
 There are somewhat trickier scenarios, though. What if we put a slice of toasted cheese between two pieces of (regular) bread? Or, in contrast, what if we put a slice of toasted cheese between two pieces of toast?
@@ -938,7 +913,6 @@ And, when you look at the definition of "grilled cheese" in the form of a diagra
 <117>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Topology of Sandwich Recipes</b></h3>
 
 Now that we are clearly aware of what "grilled cheese" is supposed to mean, let us come back to its manufacturing process.
@@ -999,7 +973,6 @@ These four steps are the "ingredients" of the recipe; they exist as a stack not 
 [Sandwich Engineering - Chapter 8] February 8, 2025
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Generation and Consumption</b></h3>
 
 Sandwich Engineering is a truly multifaceted area of study. It contains its own grammar, semantics, and procedures, as well as real-life examples (such as the factory analogy we have seen recently).
@@ -1071,7 +1044,6 @@ One of the major benefits of having such a "middleman" is that it swiftly handle
 <137>
 
 @@<hr>
-@@<div class="l_spacer"></div>
 @@<h3><b>Universal Sandwich Machine</b></h3>
 
 The presence of such a network of systems, however, is complex enough to annoy people who are not so fond of systematic thinking. Just take a look at the diagrams above; although I have only been dealing with a couple of simple cases, you can already tell that they are being bloated with a bunch of arrows, boxes, and other technical pieces.

@@ -13,16 +13,14 @@
 <meta property="og:description" content="A new way of designing gameplay systems, based on a force-exchange network and functional force-vector transformation logic. This was inspired by the two-vector event model of Peter Gärdenfors (Professor at Lund University), as well as the emergent system architecture concepts invented by Glenn Puchtel (Principal software architect at GRUBBRR)."/>
 <meta property="og:image" content="https://thingspool.net/morsels/b0_1.jpg"/>
 <meta property="og:image:alt" content="Force-Exchange Network for Gameplay Systems">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-JL7KHR7HK8');
-    </script>
-
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
 <title>Force-Exchange Network for Gameplay Systems</title>
 <link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
 <link rel="stylesheet" href="https://thingspool.net/style.css">
@@ -31,46 +29,25 @@
 <link rel="canonical" href="https://thingspool.net/morsels/page-7.html">
 </head>
 <body>
-<script src="https://code.jquery.com/jquery.min.js"></script>
-<div id="loadingScreen" class="loadingScreen" style="display: none;">Loading...</div>
-<script>
-    let process_pending = false;
-
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
-        $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
-        $("#loadingScreen").css("display", "none");
-    }
-</script>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
 <img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
 <a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/social.html">Forum</a>
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="m_spacer"></div>
-<a class="homeButton" href="https://thingspool.net/morsels/list.html">Back</a>
+<div class="s_spacer"></div>
+<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Force-Exchange Network for Gameplay Systems</div>
+<div class="s_spacer"></div>
+
 <h1>Force-Exchange Network for Gameplay Systems</h1>
-<h3 style="color:#707070">Author: Youngjin Kang</h3>
-<h3 style="color:#707070">Date: August 13, 2024</h3>
-<div class="l_spacer"></div>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 13, 2024</p>
+<div class="m_spacer"></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Introduction</b></h3>
 <p>Designing a gameplay system is a fairly complicated job, due to the way in which game mechanics typically work. A game usually involves a variety of factors, which are intertwined with one another in all sorts of dynamic ways. Worse still, a game designer who is not well-versed in software engineering is prone to further compound this kind of complexity by making requests which compel the engineers to break the general rule of the game by introducing special cases, thus convoluting the codebase.</p>
 <p>If engineers ever happen to decide that a large portion of the codebase must be refactored in order to meet the designer's unexpected request, they are likely to be accused of "not willing to deliver the product on time". Eventually, those who are deemed "productive" are ones who duct-tape their way around the designer's irrational expectations and shove the accuring tech debt under the rug.</p>
@@ -85,7 +62,6 @@
 <p>(1) The componentization of events in the form of vector quantities (e.g. force vectors, result vectors) helps us specify game rules as vector transformation functions (aka "transfer functions") instead of a complicated set of conditional statements.</p>
 <p>(2) Since events communicate their effects via a medium (i.e. force-exchange network), it is easy for the system to intervene with the game's cause-and-effect relations and modify them as needed. In a "peace zone", for example, the developer can simply turn off all damage-causing forces by letting the communication network simply dismiss them during the routing process.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>Background Information</b></h3>
 <p>I drew inspirations for this model of gameplay from two people.</p>
 <b>(1) Peter Gärdenfors</b>
@@ -93,7 +69,6 @@
 <b>(2) Glenn Puchtel</b>
 <p>Glenn Puchtel is a principal software architect/engineer at GRUBBRR (Boca Raton, Florida), whose ideas in bio-inspired emergent systems (i.e. biocybernetics, wetware, etc) as well as their architectural implications inspired me to construct a network-based topology of the gameplay system. Please read <a href="https://thingspool.net/morsels/page-6.html">Emergent Systems based on Glenn Puchtel's Biocybernetic Theory</a> to learn more about the way his ideas contributed to the formation of the force-exchange network model.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>1. Events</b></h3>
 <p>The force-exchange network model of gameplay starts with a core concept called "events". Everything which happens in our game is an event, and events form chains of causality based upon their cause-and-effect relations.</p>
 <p>Suppose that there are actors (i.e. gameplay agents) in the game world. Actors experience events, yet these events are causally bound to one another in terms of forces and their results. A force triggers an event, the event applies the force to the actor (thereby generating a result), and the result, in turn, emits a force which triggers yet another event, and so on.</p>
@@ -192,7 +167,6 @@ public class StateVector : IAbstractVector { ... }</code></pre></div>
 }</code></pre></div>
 <p>After processing the events and adding their results to the state vector, the actor then runs its own behavioral logic and emits outgoing forces, which will then be received/processed by other actors. The other actors, then, may decide to send their own outgoing forces to the aforementioned actor, and so on. This back-and-forth transmission of forces allows the system to give birth to complex chains of causality, without requiring the architect to configure them manually. Such chains simply "emerge" out of where the actors are located and what the characteristics of their transfer functions are.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>2. Force Routers</b></h3>
 <p>There is a reason why my proposed model of gameplay systems is called "Force-Exchange Network". It is because network-oriented communication is the heart of what makes this model work.</p>
 <p>When an actor emits a force vector, how shall we make sure that it will be received by the intended recipients? Unless every actor is sending force to everyone else all the time, we must attach some metadata to the force vector for the purpose of guiding it to its proper destination, such as the target location, places it has already visited so far (so as not to visit the same place over and over again), etc.</p>
@@ -274,7 +248,6 @@ public class StateVector : IAbstractVector { ... }</code></pre></div>
 }</code></pre></div>
 <p>The game world, as a whole, may as well be considered a graph which is made out of "Place" nodes. Such a world is fairly convenient to devise, both manually and procedurally, since each place can be thought of either a room or a hallway of a dungeon, etc. Besides, the center of each place may also serve as a pathfinding node, from which a set of more granular pathfinding nodes can branch out.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>3. Force Filters</b></h3>
 <p>One may ask, "Why do we even need a network-based communication scheme for exchanging forces? Can't an actor just look up other actors and send forces directly to them?"</p>
 <p>And indeed, it is a feasible option. However, there are reasons why I insist that transmitting forces via a network of routers (i.e. places) is a much better idea from an architectural standpoint than direct actor-to-actor force transmission.</p>
@@ -310,7 +283,6 @@ public class MechanicalForceDisabledPlace : Place
 }</code></pre></div>
 <p>"RegularPlace" is a place which does not intercept forces at all; it simply lets forces pass through the vacuum. "DamageDisabledPlace" is some kind of "peace zone" where none of the actors are able to hurt each other (because all negative (damaging) health forces are clamped to 0). "MechanicalForceDisabledPlace" is a chunk of space in which all mechanical interactions are disabled (e.g. collision, knockback, etc), which means that all actors can simply pass through one another like ghosts.</p>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>4. Status Conditions</b></h3>
 <p>In <a href="https://thingspool.net/morsels/page-4.html">Game Design using Gärdenfors' Event Model</a>, I have mentioned that an actor's status condition (e.g. spell, upgrade, etc) can be implemented as a modification to the event's transfer function. The simplest approach is to model each status condition as a function which temporarily gets added to the event's original transfer function, thereby "warping" the way in which the event transforms the incoming force vector.</p>
 <img class="figureImage" src="https://thingspool.net/morsels/058.jpg" alt="Force-Exchange Network for Gameplay Systems (Figure 9)">
@@ -365,7 +337,6 @@ public static class StatusConditionFactory
     };
 }</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>5. Anatomy of an Actor</b></h3>
 <p>The diagram below illustrates the overall structure of an actor (i.e. gameplay agent). First, it receives all the incoming forces and adds them together, yielding the net incoming force vector. This single vector contains the composite effect of all the incoming forces which the actor happened to receive at that particular moment in time.</p>
 <p>This net vector, then, undergoes two different processes. First, some of its components which are related to the addition/removal of status conditions will trigger the system to add/subtract the appropriate "modifier functions" to/from the transfer functions whose dimension types match, as well as setting timers to handle their expiration. Secondly, the rest of the vector components will be applied to the (possibly modified) transfer functions, yield their corresponding result vectors.</p>
@@ -511,7 +482,6 @@ public class ForceEmitter
     }
 }</code></pre></div>
 <hr>
-<div class="l_spacer"></div>
 <h3><b>6. Future Implementation</b></h3>
 <p>The schematics and code shown so far, of course, do not cover the full picture of the force-exchange network system. There are many more things which ought to be added to make it usable for gameplay purposes. Here are some of the future implementations which I think may be necessary:</p>
 <b>(1) Force with delay (e.g. projectile)</b>
@@ -522,11 +492,10 @@ public class ForceEmitter
 <p>Just like actors are capable of emitting forces, places may need to be able to emit forces as well. A sauna, for example, is a place which constantly emits "heat force" to all the actors in it. Also, this kind of logic lets us devise places with their own "force fields" (e.g. gravity), as opposed to places which act like complete vaccum in outer space.</p>
 <b>(4) Observation by means of "notification forces"</b>
 <p>While it is definitely possible to let actors directly perceive each other's presence based on references (i.e. reference to the current place + reference to neighboring places + reference to each place's constituent actors, etc), such direct dependency is not so desirable from an architectural point of view. Also, it makes it hard to implement visibility-warping gameplay features such as stealth-mode, and so on. Thus, it may be better to let each actor emit not only state-changing forces such as "knockback", "heal", "damage", etc, but also "notification forces" which notify the actor's presence. This lets the process of observing other actors be passive (i.e. You just wait to receive notification forces instead of actively searching for other actors on your own).</p>
-<footer>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-&copy 2019-2025 ThingsPool. All rights reserved.
 <div class="l_spacer"></div>
-</footer>
+<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="m_spacer"></div>
 </div>
 </body>
 </html>
