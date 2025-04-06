@@ -7,41 +7,33 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Game Programming in Prolog - Part 10"/>
-<meta property="og:url" content="https://thingspool.net/morsels/page-19.html"/>
+<meta property="og:url" content="http://localhost:3000/morsels/page-19.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="Here is how to make a Prolog game. Using the logical syntax of Prolog, we can construct systems which enforce a wide range of complex rules based upon a simple set of declarative statements (similar to how a few differential equations can be used to describe complex physical phenomena). In this article, I will be explaining how the concept of birth and death are able to be expressed in Prolog&#39;s logic programming environment."/>
-<meta property="og:image" content="https://thingspool.net/morsels/e83.jpg"/>
+<meta property="og:image" content="http://localhost:3000/morsels/e83.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 10">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-JL7KHR7HK8');
-</script>
 <title>Game Programming in Prolog - Part 10</title>
-<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
-<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
+<link rel="stylesheet" href="http://localhost:3000/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
-<link rel="canonical" href="https://thingspool.net/morsels/page-19.html">
+<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
+<link rel="canonical" href="http://localhost:3000/morsels/page-19.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 10</div>
+<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 10</div>
 <div class="s_spacer"></div>
 
 <h1>Game Programming in Prolog - Part 10</h1>
@@ -56,7 +48,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>A perfectly normal egg, which has just been laid by a chicken, is able to be broken because it is being protected by a solid shell. Once you break it, it becomes a handful of liquid, thereby allowing you to either just pan-fry it directly (in which case it will be turned into a fried egg), or to first stir it an then pan-fry the result (in which case it will be turned into an omelet). This is a rudimentary example of an egg's tech tree.</p>
 <p>There is yet another aspect of transformations which I have not explained yet - the concept of merging and splitting. Sometimes, multiple objects combine into a single unit to form a compound structure (like atoms bonding with each other to form a molecule), or sometimes a compound structure gets broken down to multiple smaller units.</p>
 <p>This means that transformation (i.e. state transition) is not all about a single line of progression in spacetime. In some cases, multiple lines (objects) merge into a single line, signifying an event where multiple things combine into one thing. In some other cases, a single line (object) splits into multiple lines, signifying an event where one thing decomposes itself into multiple things.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e83.jpg" alt="Game Programming in Prolog - Part 10 (Figure 1)">
+<img class="figureImage" src="http://localhost:3000/morsels/e83.jpg" alt="Game Programming in Prolog - Part 10 (Figure 1)">
 <p>In fact, we have already seen an instance of combination before (in Part 8). Remember when I mentioned that you can make omurice by stacking an omelet on top of fried rice? This is clearly a scenario in which multiple objects come together to form a single compound. When they (i.e. omelet and fried rice) were hanging out individually, they were merely two separate entities, having nothing to do with each other. Once they get stacked up, however, they suddenly become parts of one shared object called "omurice". I will restate the formula below for a reminder.</p>
 <div class="snippet"><pre><code>omurice[n](Z) :- friedRice[n-1](X), omelet[n-1](Y), stack[n-1](X, Y, Z).</code></pre></div>
 <p>There is something missing in this recipe, though. How shall we figure out the name (id) of this new actor called "Z"? Apparently, Z is supposed to indicate the omurice which has just been made by the act of stacking up an omelet on top of fried rice. But where does this come from?</p>
@@ -64,7 +56,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>The first method is to simply assume that the omurice is represented not by a brand new actor, but by one of the existing actors. Before jumping directly into demonstration, I first ought to redefine the "stack" relation; its revised definition is shown in the following snippet, along with a new relation called "below":</p>
 <div class="snippet"><pre><code>below[n](X, Y) :- stack[n-1](X, Y).
 below[n](X, Y) :- below[n-1](X, Y), alive[n-1](X), alive[n-1](Y), !unstack[n-1](X, Y).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e84.jpg" alt="Game Programming in Prolog - Part 10 (Figure 2)">
+<img class="figureImage" src="http://localhost:3000/morsels/e84.jpg" alt="Game Programming in Prolog - Part 10 (Figure 2)">
 <p>Here, the "stack" relation no longer takes 3 arguments (where the third one was meant to indicate the result of stacking two things). Instead, it now only takes 2 arguments, where the first one (X) represents what is below the other argument (Y). In other words, "stack[n](X, Y)" means, "Y has just been stacked on top of X at time n".</p>
 <p>Once we finish stacking Y on top of X, X will of course be "below" Y (because if Y is above X, X must be below Y, right?). And this relation (i.e. "below") will continue to hold, up until the point at which the stack gets destroyed either by the process of "unstacking" or by the destruction of either one of its parts (X or Y).</p>
 <p>With this new definition, we are now able to come up with a more concrete depiction of what an omurice is. First of all, let me remind you that we can make an omurice by stacking an omelet on top of fried rice. This process can be carried out by raising the event "stack[n](X, Y)", where X is the fried rice and Y is the omelet.</p>
@@ -76,10 +68,10 @@ below[n](X, Y) :- below[n-1](X, Y), alive[n-1](X), alive[n-1](Y), !unstack[n-1](
 <p>The same philosophy applies to the case of omurice. A plate of fried rice with an omelet added on top of it is still a plate of fried rice; it just happens to be carrying an additional constituent in it (i.e. omelet). Therefore, it is perfectly fine to say that this "augmented" fried rice should also be identified as an omurice. The following code demonstrates how this line of reason works.</p>
 <div class="snippet"><pre><code>omurice[n](X) :- friedRice[n-1](X), omelet[n-1](Y), stack[n-1](X, Y).
 omurice[n](X) :- omurice[n-1](X), friedRice[n-1](X), below[n-1](X, Y), omelet[n-1](Y).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e85.jpg" alt="Game Programming in Prolog - Part 10 (Figure 3)">
+<img class="figureImage" src="http://localhost:3000/morsels/e85.jpg" alt="Game Programming in Prolog - Part 10 (Figure 3)">
 <p>What is happening in the two rules above is quite straightforward. The first rule says that a plate of fried rice will also qualify as an omurice as soon as we put an omelet on top of it. The second rule says that such a resulting omurice will continue being an omurice as long as it is a plate of fried rice sitting below an omelet.</p>
 <p>Here, the actor which represents the fried rice also simultaneously represents the omurice, thereby letting us keep track of a new conceptual entity without spawning any brand new actor. This is reminiscent of how a set is often being modeled in computer science, where one of the set's elements plays the role of its representative (Just like how the Eiffel Tower is often used to represent Paris).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e86.jpg" alt="Game Programming in Prolog - Part 10 (Figure 4)">
+<img class="figureImage" src="http://localhost:3000/morsels/e86.jpg" alt="Game Programming in Prolog - Part 10 (Figure 4)">
 <p>But of course, this is just one of many examples of composition/decomposition. In some other examples, it might make more sense to come up with a brand new actor to represent the result of a combination. And if that happens to be the case, we better just spawn a new actor (i.e. generate a new unique ID) and use it as a reference.</p>
 <p>To be able to manage such a type of reference, however, we will need to utilize yet another concept called "parent-child relation" (Game developers are probably already familiar with this). Once we know how to leverage its full power, we will be able to construct a hierarchy of objects - a neat way of organizing a compound structure. The root node of such a hierarchy (aka "tree"), then, will represent a complex object which is made up of simpler objects.</p>
 <hr>
@@ -88,9 +80,9 @@ omurice[n](X) :- omurice[n-1](X), friedRice[n-1](X), below[n-1](X, Y), omelet[n-
 <p>Why keep things in the form of a hierarchy? The answer to this question is so obvious in most cases, that hardly anyone even feels the necessity of answering it.</p>
 <p>We know that a game, as a whole, is one gigantic system which is fairly complex. And because it is complex, we feel that we will be having an easier time developing it if we break it down into a group of somewhat simpler systems, such as "graphics", "physics", "UI", "gameplay", "networking", "config", and so on. Each one of these subsystems, however, is still too complex to handle, so we tend to realize that it will be even better if we break each of them into even simpler components.</p>
 <p>This kind of reasoning eventually leads to a hierarchical breakdown of systems (i.e. tree), where each parent node represents the ensemble of its child nodes.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e87.jpg" alt="Game Programming in Prolog - Part 10 (Figure 5)">
+<img class="figureImage" src="http://localhost:3000/morsels/e87.jpg" alt="Game Programming in Prolog - Part 10 (Figure 5)">
 <p>The example I just described is a general overview of how a large-scale project might be managed, yet the same exact idea may as well be applied to pretty much any instance of composition. As we have seen before, multiple ingredients can be joined together to form a single compound. In this case, the ingredients are the "children" of their compound (i.e. parent).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e88.jpg" alt="Game Programming in Prolog - Part 10 (Figure 6)">
+<img class="figureImage" src="http://localhost:3000/morsels/e88.jpg" alt="Game Programming in Prolog - Part 10 (Figure 6)">
 <p>In the hierarchical worldview, an "omurice" is a parent with at least two children - fried rice and omelet. A "cheeseburger" is a parent who has at least four children - two buns (top and bottom), a patty, and a slice of cheese. Pretty much any object is the parent of its constituent parts.</p>
 <p>The definition of the parent-child relation is shown below. First of all, the "addChild" event makes its first argument the parent of its second argument. This relation persists as long as we do not terminate it by raising the "removeChild" event.</p>
 <div class="snippet"><pre><code>parent[n](Parent, Child) :- addChild[n-1](Parent, Child).
@@ -102,13 +94,13 @@ addChild[n](NewParent, Child) :- setChild[n](NewParent, Child), isNotNull(NewPar
 <div class="snippet"><pre><code>setChild[0](actor1, actor2).
 setChild[0](actor1, actor3).
 setChild[0](actor3, actor4).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e89.jpg" alt="Game Programming in Prolog - Part 10 (Figure 7)">
+<img class="figureImage" src="http://localhost:3000/morsels/e89.jpg" alt="Game Programming in Prolog - Part 10 (Figure 7)">
 <p>There is one thing I would like to point out, though, in regard to the positioning of child nodes. If you are a game developer, you are probably aware of the fact that there is some kind of "motion synchronization" going on in each parent-child relationship; that is, when a parent moves, its child usually follows its movement by the same exact distance and direction, whereas the converse is not usually true (unless they are part of a rigid body or something).</p>
 <p>Such a mechanic can be implemented by first defining the (global) position of a child as the sum of its local position and its parent's global position (See the code below). The local position indicates the child's offset from the center of its parent. If an actor has no locatable parent (in which case only the negation of the "parentPosition" relation will be applicable), its global position will be identical to its local position.</p>
 <div class="snippet"><pre><code>parentPosition[n](Child, PP) :- parent[n](Parent, Child), position[n](Parent, PP).
 position[n](X, P) :- parentPosition[n](X, PP), localPosition[n](X, LP), add(PP, LP, P).
 position[n](X, LP) :- !parentPosition[n](X, PP), localPosition[n](X, LP).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e90.jpg" alt="Game Programming in Prolog - Part 10 (Figure 8)">
+<img class="figureImage" src="http://localhost:3000/morsels/e90.jpg" alt="Game Programming in Prolog - Part 10 (Figure 8)">
 <p>And the way we initialize an actor's local position follows a similar logic. When an actor spawns (i.e. before it acquires any parent), its spawn-position becomes its local position. When it acquires a parent, its global offset from the parent becomes its local position. When it loses its current parent, its global position becomes its local position.</p>
 <div class="snippet"><pre><code>localPosition[n](X, P) :- spawnTime[n](X, n), spawnPosition[n](X, P).
 
@@ -135,8 +127,8 @@ removeChild[n](Parent, Child) :- parent[n](Parent, Child), !alive[n](Child).</co
 <p>The things I have mentioned so far are all the essential stuff we need to know to be able to play with parent-child relations. In the next article, I will explain how these building blocks can be used to represent an omurice as a standalone actor, rather than a mere extraneous identity which is superficially being attached to one of its components (i.e. fried rice).</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-20.html">Part 11</a>)</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

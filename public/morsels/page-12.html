@@ -7,41 +7,33 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Game Programming in Prolog - Part 3"/>
-<meta property="og:url" content="https://thingspool.net/morsels/page-12.html"/>
+<meta property="og:url" content="http://localhost:3000/morsels/page-12.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="This article explains how you can use the language of Prolog to develop a game. It leverages the built-in syntactic elegance of Prolog, as well as its data-driven and declarative design philosophy."/>
-<meta property="og:image" content="https://thingspool.net/morsels/e29.jpg"/>
+<meta property="og:image" content="http://localhost:3000/morsels/e29.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 3">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-JL7KHR7HK8');
-</script>
 <title>Game Programming in Prolog - Part 3</title>
-<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
-<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
+<link rel="stylesheet" href="http://localhost:3000/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
-<link rel="canonical" href="https://thingspool.net/morsels/page-12.html">
+<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
+<link rel="canonical" href="http://localhost:3000/morsels/page-12.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 3</div>
+<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 3</div>
 <div class="s_spacer"></div>
 
 <h1>Game Programming in Prolog - Part 3</h1>
@@ -55,46 +47,46 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>So far, I have shown how the parameterization of time steps can indeed be a powerful tool for triggering state transitions in the system. In order to better understand the reasoning behind this, however, we ought to take a step back and really try to see the overall picture of what is going on behind the formulas.</p>
 <p>Whenever we are dealing with the system's state and its means of transition, we are essentially thinking in terms of causes and their corresponding effects. A horn clause, for instance, is a rule which tells us what kind of effect can be generated based upon a given set of causes, just as illustrated below.</p>
 <div class="snippet"><pre><code>effect(...) :- cause1(...), cause2(...), cause3(...).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e20.jpg" alt="Game Programming in Prolog - Part 3 (Figure 1)">
+<img class="figureImage" src="http://localhost:3000/morsels/e20.jpg" alt="Game Programming in Prolog - Part 3 (Figure 1)">
 <p>A nice way of visualizing such a causal phenomenon is to imagine each of the predicates (i.e. either a cause or effect) as a point in spacetime.</p>
 <p>Spacetime is simply a dimensional representation of the game's history; it consists of spatial axes as well as a time axis. When you throw a rock in the upward direction, for example, you will be able to plot its trajectory in spacetime as a parabola (because it will rise, stop, and fall).</p>
 <p>Here is the catch, though. An effect is a product of causes, yet such an effect itself may as well be a cause of another effect. Thus, it does not quite make sense to try to establish a strict distinction between causes and effects. Depending on how our causal chains are interwoven, an effect could as well be identified as a cause and vice versa.</p>
 <p>A unifying terminology between cause and effect is "event". Our spacetime is filled with events; each point in spacetime is an event, and an directed line segment (i.e. arrow) between two points in spacetime is a causal connection which leads one event to another. The code below is an example of a horn clause which defines "event3" as a product of two such connections (one between "event1" and "event3", and the other one between "event2" and "event3"). Here, "event1" and "event2" are the causes of "event3", and "event3" is the effect of "event1" and "event2".</p>
 <div class="snippet"><pre><code>event3(...[n]) :- event1(...[n-1]), event2(...[n-2]).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e21.jpg" alt="Game Programming in Prolog - Part 3 (Figure 2)">
+<img class="figureImage" src="http://localhost:3000/morsels/e21.jpg" alt="Game Programming in Prolog - Part 3 (Figure 2)">
 <p>In general, our gameplay system can be thought of as a collection of causal rules, each of which specifies a type of event which can be generated out of a set of preceding events. These rules, as they get applied to the game loop over and over as time elapses (in a periodic manner), gradually map out the fabric of causal connections in spacetime, revealing us the full picture of which events are related to which. This implies that the full history of the gameplay itself can be modeled as an "event graph" - an instance of a DAG (Directed Acyclic Graph), which is reminiscent of the so-called "blockchain", "hashgraph", and other event sourcing protocols.</p>
 <p>"But," someone might say, "But! Don't you think that not all predicates represent events? If a horn clause happens to contain a relation called 'bread(X)', for instance, it must be obvious that this particular relation simply serves as a tag which declares that X is a piece of bread. It is by no means an event; it is just an indicator, and nothing more than that."</p>
 <p>Such a line of thought definitely makes sense from a layman's point of view. An indicative relation such as "bread(X)", as it comprises a simple noun, is indeed something which feels hardly anything more than a mere semantic reference. From a strictly spacetime-oriented perspective, however, one must be able to consider every logical predicate as an event, even if it happens to serve as an identifier.</p>
 <p>Let me show you an example. Suppose that there is an arbitrary hydrogen atom called "X". The identity of such an atom can be described by the code below:</p>
 <div class="snippet"><pre><code>hydrogen(X).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e22.jpg" alt="Game Programming in Prolog - Part 3 (Figure 3)">
+<img class="figureImage" src="http://localhost:3000/morsels/e22.jpg" alt="Game Programming in Prolog - Part 3 (Figure 3)">
 <p>What this relation really means, though, is: "There is an atom called 'X' which can be identified as 'hydrogen' at every moment of its existence". Thus, a more comprehensive means of expressing this relation would be the one shown below:</p>
 <div class="snippet"><pre><code>hydrogen(X[n]) :- spawnTime(X, n).
 hydrogen(X[n]) :- hydrogen(X[n-1]).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e23.jpg" alt="Game Programming in Prolog - Part 3 (Figure 4)">
+<img class="figureImage" src="http://localhost:3000/morsels/e23.jpg" alt="Game Programming in Prolog - Part 3 (Figure 4)">
 <p>The true meaning of "hydrogen(X)" is that there is a chain of events in spacetime which consistently keep telling us that there has been a hydrogen atom called "X", whose line of existence began at X's moment of birth (aka "spawnTime") and has henceforth been growing itself through the passage in time. The first horn clause establishes the base case (i.e. first occurrence of the "hydrogen" event), and the second horn clause establishes the recursive case which generates the succeeding chain of "hydrogen" events.</p>
 <p>In a way, therefore, a simple name tag such as "hydrogen(X)" can be interpreted as a connected sequence of points (events) in spacetime. The key takeaway here is that the very concept of "object" (i.e. a distinct body of existence) itself should be understood as a line in the hyperdimensional geometry of our universe, similiar to what physicists refer to as a "world line" - a four-dimensional path of an object in spacetime.</p>
 <p>And of course, when individual atoms bond with one another, they form a molecule. Such a molecule, too, can be considered a discrete object with its own line of existence in spacetime.</p>
 <p>An example case is demonstrated below. When two hydrogen atoms (X, Y) and an oxygen atom (Z) bond, they altogether form a water molecule. In this case, the birth of the water molecule (which is an event) may as well be considered an effect which was produced by the four causes listed below:</p>
 <p>(1) The existence of the first hydrogen atom X at time n-1.<br>(2) The existence of the second hydrogen atom Y at time n-1.<br>(3) The existence of the oxygen atom Z at time n-1.<br>(4) The bonding of the aforementioned three atoms at time n-1.</p>
 <div class="snippet"><pre><code>water(X[n], Y[n], Z[n]) :- hydrogen(X[n-1]), hydrogen(Y[n-1]), oxygen(Z[n-1]), bond(X[n-1], Y[n-1], Z[n-1]).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e24.jpg" alt="Game Programming in Prolog - Part 3 (Figure 5)">
+<img class="figureImage" src="http://localhost:3000/morsels/e24.jpg" alt="Game Programming in Prolog - Part 3 (Figure 5)">
 <p>The inverse scenario of the bonding process is the act of split, which in this case can be depicted as the splitting of the water molecule into its individual component atoms (2 hydrogens and 1 oxygen). This, too, should be able to be rendered as a set of causal connections between events, just as shown below.</p>
 <div class="snippet"><pre><code>hydrogen(X[n]) :- water(X[n-1], Y[n-1], Z[n-1]), split(X[n-1], Y[n-1], Z[n-1]).
 hydrogen(Y[n]) :- water(X[n-1], Y[n-1], Z[n-1]), split(X[n-1], Y[n-1], Z[n-1]).
 oxygen(Z[n]) :- water(X[n-1], Y[n-1], Z[n-1]), split(X[n-1], Y[n-1], Z[n-1]).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e25.jpg" alt="Game Programming in Prolog - Part 3 (Figure 6)">
+<img class="figureImage" src="http://localhost:3000/morsels/e25.jpg" alt="Game Programming in Prolog - Part 3 (Figure 6)">
 <p>A Prolog-based gameplay system is extremely straightforward in nature, if you think about it for a second. In this virtual universe, everything is an event and events are causally related to each other via horn clauses (aka "rules").</p>
 <p>As time passes by, events which are sufficiently old (i.e. so old that they no longer influence any of the future events) get discarded because they are obsolete. Meanwhile, the game loop keeps ticking its clock, generating new events in spacetime (i.e. those which belong to time 'n'). These new events get registered to the memory, while the oldest ones get thrown away. This means that there is a "window of remembrance" in spacetime which covers events that are fairly recent (see the image below).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e26.jpg" alt="Game Programming in Prolog - Part 3 (Figure 7)">
+<img class="figureImage" src="http://localhost:3000/morsels/e26.jpg" alt="Game Programming in Prolog - Part 3 (Figure 7)">
 <p>Events which fall within this window are the ones which are being kept in the computer's memory. As old events get discarded (i.e. exit the window through the left edge), their corresponding memory slots get freed up. And as new events get created (i.e. enter the window through the right edge), they get stored in these freed up slots. Thus, the same array of memory slots get recycled over and over again, just like in any other dynamic memory allocation system. This proves that Prolog is a sound choice even from the perspective of memory optimization.</p>
 <p>(Note: If you force every event to occupy the same exact amount of space in memory, you will be able to simplify the allocation scheme even further because the system will only need to keep track of free slot indices, not how large those free slots are.)</p>
 <hr>
 <h3><b>On Theory of Relativity</b></h3>
 <p>Here is something I would like to point out before proceeding to the next chapter. The model of spacetime which I have explicated by far is a strictly Newtonian one, meaning that every "present event" is nicely aligned within the same exact time step (i.e. "n"). This is because all present events get generated by the gameplay system in a completely synchronous (aka "lockstep") manner. Here, time is an independent variable and we can easily tell which events are simultanous with each other and which ones are not. If two or more events belong to the same time step, they must be considered simultaneous.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e27.jpg" alt="Game Programming in Prolog - Part 3 (Figure 8)">
+<img class="figureImage" src="http://localhost:3000/morsels/e27.jpg" alt="Game Programming in Prolog - Part 3 (Figure 8)">
 <p>When a multitude of game loops (i.e. threads) are running concurrently, however, we can no longer easily tell which events are simultaneous with which. Besides, the presence of multiple game loops implies the presence of multiple clocks running independently, suggesting that we cannot even be sure which events belong to the "present moment" and which ones do not (because there would be more than a single frame of reference in time).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e28.jpg" alt="Game Programming in Prolog - Part 3 (Figure 9)">
+<img class="figureImage" src="http://localhost:3000/morsels/e28.jpg" alt="Game Programming in Prolog - Part 3 (Figure 9)">
 <p>Furthermore, depending on the order in which the game loops update themselves and which clusters of events they happen to be updating at each clock cycle, there is likely to be some kind of "propagation delay" among the events' forces of influence (due to the limit in the speed of light - the maximum rate at which information travels in space).</p>
 <p>Such lack of simultaneity in events and their causal connections inevitably forces us to reimagine space as a fabric of causal relations (i.e. event graph), rather than a fixed coordinate system (i.e. Euclidean space) in which the notion of time can simply be expressed as an independent dimension.</p>
 <p>This apparent lack of absolute synchronicity among events, introduced by the coexistence of multiple concurrent event-generating processes of the universe, reminds us of two analogous topics in academia, one of which belongs to computer science and the other one of which belongs to modern physics.</p>
@@ -106,7 +98,7 @@ oxygen(Z[n]) :- water(X[n-1], Y[n-1], Z[n-1]), split(X[n-1], Y[n-1], Z[n-1]).</c
 <p>The only potential source of error in a single-threaded Prolog application is the very logical ambiguity in the code itself, and nothing else. As long as the rules (i.e. horn clauses) are formulated in a manner which won't allow a loophole (such as unintended reliance on the order of operation), everything is going to be fine. An example of such an undesirable loophole is demonstrated below.</p>
 <div class="snippet"><pre><code>carryUmbrella(Person[n]) :- rainy(City[n]), resident(Person[n], City[n]).
 rainy(City[n]) :- cloudy(City[n-1]).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e29.jpg" alt="Game Programming in Prolog - Part 3 (Figure 10)">
+<img class="figureImage" src="http://localhost:3000/morsels/e29.jpg" alt="Game Programming in Prolog - Part 3 (Figure 10)">
 <p>This scenario tells us that, whenever a city gets cloudy, it must be rainy at the next time step. This is fine so far.</p>
 <p>It also tells us that a rainy city must instantly make its residents carry umbrellas without any time delay. But alas! The rule which enforces the carrying of umbrellas is written BEFORE the rule which updates the "rainy" status of the city, which means that, by the time the city gets tagged as "rainy", the "carryUmbrella" rule would have already been examined and ignored.</p>
 <p>This is the kind of race condition which may occur if we do not take sufficient care when ordering horn clauses whose lefthand and righthand sides both reference the same time step (i.e. "n"). There are multiple ways of preventing this kind of error, such as:</p>
@@ -114,8 +106,8 @@ rainy(City[n]) :- cloudy(City[n-1]).</code></pre></div>
 <p>Both of these solutions will work, although they both involve their own tradeoffs. The first solution allows the two horn clauses to be written in any order, yet the necessity of scanning the whole code multiple times decreases the efficiency of the program. The second solution is great for efficiency, yet it requires extra care when writing the code.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-13.html">Part 4</a>)</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

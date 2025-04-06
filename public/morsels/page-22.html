@@ -7,41 +7,33 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Game Programming in Prolog - Part 13"/>
-<meta property="og:url" content="https://thingspool.net/morsels/page-22.html"/>
+<meta property="og:url" content="http://localhost:3000/morsels/page-22.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="Prolog offers us a new insight in the field of game programming. In this article, I will be explaining how some of the advanced gameplay features, such as status effects and passive abilities, can be designed in Prolog&#39;s beautiful symphony of logic."/>
-<meta property="og:image" content="https://thingspool.net/morsels/f16.jpg"/>
+<meta property="og:image" content="http://localhost:3000/morsels/f16.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 13">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-JL7KHR7HK8');
-</script>
 <title>Game Programming in Prolog - Part 13</title>
-<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
-<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
+<link rel="stylesheet" href="http://localhost:3000/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
-<link rel="canonical" href="https://thingspool.net/morsels/page-22.html">
+<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
+<link rel="canonical" href="http://localhost:3000/morsels/page-22.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 13</div>
+<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 13</div>
 <div class="s_spacer"></div>
 
 <h1>Game Programming in Prolog - Part 13</h1>
@@ -55,10 +47,10 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>In the previous few articles, I primarily spent time illustrating how abstract (compound) objects could be represented in terms of logical relations. This time, I will change the subject a bit and start talking about some of the advanced sorts of interactions which may occur among gameplay agents.</p>
 <p>Let me recapitulate the overall structure of the game world. First of all, we have this thing called "the world" which encompasses the entirety of what is happening in our Prolog environment. It is made up of facts (i.e. instances of logical relations), each of which may belong to a certain point in time. A fact which possesses such a time parameter can be referred to as an "event", since it is representative of what happened at the given moment in time.</p>
 <p>Symbols which make up the arguments of each fact, on the other hand, usually represent actors. An actor is an in-game object which may contain its own set of states as well as behaviors (Think of an actor as a state machine). In general, game mechanics can be defined in terms of ways in which certain types of actors interact with one another.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/f10.jpg" alt="Game Programming in Prolog - Part 13 (Figure 1)">
+<img class="figureImage" src="http://localhost:3000/morsels/f10.jpg" alt="Game Programming in Prolog - Part 13 (Figure 1)">
 <p>Actors interact in many ways. Sometimes they do when they touch each other (i.e. collide), or sometimes they do when they see each other from a distance. In some occasions, interactions appear in passive forms (e.g. An egg boiling because there is fire nearby, etc). Sometimes, they may even introduce effects which persist after their initial sources disappear.</p>
 <p>An effect which "sticks" to its target and lasts longer than the event from which it originated, is often called a "status effect" (aka "status condition"). And we often find that it is quite convenient to keep track of such a parasitic entity as a child node of a tree, where the root is the actor (e.g. player) to which the effect is being applied.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/f11.jpg" alt="Game Programming in Prolog - Part 13 (Figure 2)">
+<img class="figureImage" src="http://localhost:3000/morsels/f11.jpg" alt="Game Programming in Prolog - Part 13 (Figure 2)">
 <p>By modeling an actor as a hierarchical data structure (i.e. tree) instead of just a singleton with a bunch of keywords attached to it, we are able to manage a wide range of complex game mechanics without confusing ourselves too much. In this article, I will be demonstrating some of the hidden intricacies (as well as pitfalls) of such a hierarchy-oriented game design by outlining one of its most illustrative examples. It is what I would refer to as the "spell system".</p>
 <hr>
 <h3><b>Spell System</b></h3>
@@ -67,10 +59,10 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>(1) A damage-spell decrements the actor's health each time the clock ticks.<br>(2) A heal-spell increments the actor's health each time the clock ticks.<br>(3) A stun-spell blocks the actor's movement.<br>(4) A booster-spell amplifies the actor's movement speed.</p>
 <p>... and so on.</p>
 <p>Let me begin explaining how spells could be implemented in our Prolog-based gameplay system. Since an actor may contain a fairly huge number of ongoing spells, it will be sensible for us to assume that each spell is a child node of one of the actor's intermediary nodes called "spells". Just like "inventory" is the container of items, "spells" can be thought of as the container of spells.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/f12.jpg" alt="Game Programming in Prolog - Part 13 (Figure 3)">
+<img class="figureImage" src="http://localhost:3000/morsels/f12.jpg" alt="Game Programming in Prolog - Part 13 (Figure 3)">
 <p>Imagine that there is an event called "addDamageSpell" which adds a new damage-spell to the target actor. Let's say that there are two actors, called "wizard" and "villain", and that the wizard decided to cast a damage-spell to the villain by calling this event. The following rule will then instantiate a damage-spell.</p>
 <div class="snippet"><pre><code>spawn[n](&lt;Caster, Target&gt;, addDamageSpell, null) :- addDamageSpell[n](Caster, Target).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/f13.jpg" alt="Game Programming in Prolog - Part 13 (Figure 4)">
+<img class="figureImage" src="http://localhost:3000/morsels/f13.jpg" alt="Game Programming in Prolog - Part 13 (Figure 4)">
 <p>If we suppose that the wizard cast the damage-spell at time 5, the spell's spawning process will be carried out by the three steps shown below. Notice that the casting of the spell at time 5 (i.e. "addDamageSpell[5](...)") instantly raised the "spawn" event which, after the delay of a single time step, completed the birth of the spell by generating a new unique ID (i.e. "6_wizard&villain_addDamageSpell").</p>
 <div class="snippet"><pre><code>(STEP 1):
 addDamageSpell[5](wizard, villain)
@@ -90,7 +82,7 @@ damageSpell[n](Id) :- damageSpell[n-1](Id), alive[n-1](Id).
 setChild[n](S, Id) :-
     spawned[n](Id, Src, addDamageSpell, Pos),
     y(Src, Target), parent[n](Target, S), spells[n](S).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/f14.jpg" alt="Game Programming in Prolog - Part 13 (Figure 5)">
+<img class="figureImage" src="http://localhost:3000/morsels/f14.jpg" alt="Game Programming in Prolog - Part 13 (Figure 5)">
 <p>How about removing the spell? You know, when we add a new spell, we better plan to get rid of it later on as well, for otherwise there will soon be truckloads of spells piling up over time.</p>
 <p>First of all, a couple of the parent-child rules I had introduced in Part 10 will ensure that a spell will die out as soon as its parent dies out (i.e. When a parent despawns, all of its children are expected to despawn too). This means that, when the villain gets killed, its "spells" node (i.e. spell container) will despawn, which in turn will make all of its ongoing spells despawn automatically.</p>
 <p>However, we do not want all spells to simply stick to their host up until the moment of its death. Therefore, we ought to include additional rules to allow other means of removing a spell (See the code below). The first rule simply enables us to delete a damage-spell by invoking an event called "removeSpell", and the other two rules ensure that each damage-spell will "expire" (become obsolete and die out) exactly 10 time steps after its birth.</p>
@@ -101,7 +93,7 @@ lifespan[n](Id, 10) :- damageSpell[n](Id).
 despawn[n](Id) :- spawnTime[n](Id, T), lifespan[n](Id, Span), add(T, Span, EndTime), equal(n, EndTime).</code></pre></div>
 <p>Now, let us suppose that the villain contains one active damage-spell in it. The job of a damage-spell, as you might have guessed, is to damage its host on a regular basis (i.e. during each time step). The rule listed below is what impels each damage-spell to apply a damage of magnitude "1" to its current host.</p>
 <div class="snippet"><pre><code>damage[n](Target, 1) :- damageSpell[n](Id), parent[n](S, Id), parent[n](Target, S).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/f15.jpg" alt="Game Programming in Prolog - Part 13 (Figure 6)">
+<img class="figureImage" src="http://localhost:3000/morsels/f15.jpg" alt="Game Programming in Prolog - Part 13 (Figure 6)">
 <p>Changing the villain's health based upon the currently imposed damage is pretty straightforward. Imagine that the villain has a numerical attribute called "health", which is expressible as a relation such as "health[n](X, H)" where X is the ID of the villain and H is its health at time 'n'.</p>
 <p>It will then make sense to update the current health of the villain by subtracting it by the amount of damage applied. When the resulting health is less than or equal to zero, the villain will die. The following code is the implementation of these mechanics.</p>
 <div class="snippet"><pre><code>health[n](X, H2) :- health[n-1](X, H), damage[n](X, D), subtract(H, D, H2).
@@ -111,7 +103,7 @@ despawn[n](X) :- health[n](X, H), lessThan(H, 1).</code></pre></div>
 <hr>
 <h3><b>Aggregate Effects</b></h3>
 <p>There is something fishy, though. The rule which updates the current health of the actor says that the new health is the result of subtracting the previous health by the incoming damage. But, what does this "incoming damage" mean, really? Is it just a single event, occurring just once at each moment in time? What if there are multiple sources of damage, then?</p>
-<img class="figureImage" src="https://thingspool.net/morsels/f16.jpg" alt="Game Programming in Prolog - Part 13 (Figure 7)">
+<img class="figureImage" src="http://localhost:3000/morsels/f16.jpg" alt="Game Programming in Prolog - Part 13 (Figure 7)">
 <p>This is where the trouble begins. The wizard's damage-spell, which was cast at time 5, is not necessarily the only source of damage which the villain is going to receive. There might be other ongoing damage-spells inside the villain's body, or there might be other adversaries who have been actively attacking the villain. The idea is that there could be multiple causes of damage; if they are targeted against the same actor (i.e. villain), they ought to all add up.</p>
 <p>The code below is a brute-force solution to handle this situation. Suppose that there are 4 separate sources of damage (e.g. damage-spells, melee attacks, explosions, etc), all contributing to the reduction in the target actor's health at time 'n'. It will then be technically possible to let these 4 sources independently activate 4 separate damage-events (called "subDamage_0", "subDamage_1", etc), and then make a rule which sums up their damage numbers and applies the resulting sum to the target.</p>
 <div class="snippet"><pre><code>damage[n](Target, Sum) :-
@@ -124,9 +116,9 @@ despawn[n](X) :- health[n](X, H), lessThan(H, 1).</code></pre></div>
 <p>If there is a knight and a dwarf attacking the villain at the same time, should the knight's attack be mapped into the "subDamage_0" event and the dwarf's attack be mapped into the "subDamage_1" event? Or the other way around? Or something totally different such as "subDamage_2" and "subDamage_3"? How shall we even guarantee that there will never be two or more attackers who happen to be invoking the same exact "subDamage" event? If that happens to be the case, won't only one of their attacks be taken as part of the incoming damage and the rest be ignored?</p>
 <p>Due to such concerns, we are not really able to come up with a rule which specifies exactly how the individual damages should be added together. We do not khow how many of them there will be, as well as which ones will be mapped into which "subDamage" events, and so on, at any arbitrary moment in time.</p>
 <p>Here is a problem scenario which I will be attempting to solve. Let's say that the wizard decided to apply 3 damage-spells to the villain throughout the span of 3 consecutive time steps - from time 5 to time 7.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/f17.jpg" alt="Game Programming in Prolog - Part 13 (Figure 8)">
+<img class="figureImage" src="http://localhost:3000/morsels/f17.jpg" alt="Game Programming in Prolog - Part 13 (Figure 8)">
 <p>At time 8, then, the villain will be equipped with 3 damage-spells. We know that these spells will all be simultaneously imposing damage upon their common host (i.e. villain), each of them contributing a damage of size 1. So our expectation is that the villain must be receiving 3 damage points at each time step.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/f18.jpg" alt="Game Programming in Prolog - Part 13 (Figure 9)">
+<img class="figureImage" src="http://localhost:3000/morsels/f18.jpg" alt="Game Programming in Prolog - Part 13 (Figure 9)">
 <p>This, however, turns out to be not the case. As you can see from the snippet below, these 3 spells all invoke the same exact event called "damage[8](villain, 1)" at time 8 because they are all targeting the same host (i.e. villain) and have the damage strength of 1. In the end, the total damage of 1 will be applied to the villain at time 8 because "damage[8](villain, 1)" was the only event which was being triggered at time 8. The fact that it was triggered multiple times via multiple sources does not make any difference from Prolog's point of view.</p>
 <div class="snippet"><pre><code>damage[8](villain, 1) :-
     damageSpell[8](6_wizard&villain_addDamageSpell),
@@ -174,8 +166,8 @@ damage[8](villain, [acc]3) :-
 FINAL RESULT ---&gt; damage[8](villain, [acc]3).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-23.html">Part 14</a>)</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

@@ -438,13 +438,13 @@ h3 {
 h2 {
 	${full_row_area}
 	${xl_spacing_marginOnly}
-	${l_bold_font}
-	${mediumYellow_color_frame}
+	${xl_bold_font}
+	${dim_color_frame}
 }
 h1 {
 	${full_row_area}
 	${xl_spacing_marginOnly}
-	${xl_bold_font}
+	${xxl_bold_font}
 	${lightYellow_color_frame}
 }
 hr {

@@ -7,41 +7,33 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="On Nodal Representation of Relations"/>
-<meta property="og:url" content="https://thingspool.net/morsels/page-9.html"/>
+<meta property="og:url" content="http://localhost:3000/morsels/page-9.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="How to express a relation in an undirected graph, without using hypergraphs or any other advanced concepts? This article explains a purely node-based method of representing any n-ary relations. This will be useful for implementing custom hardware for relational computing systems, such as an optimized Prolog interpreter."/>
-<meta property="og:image" content="https://thingspool.net/morsels/d01.jpg"/>
+<meta property="og:image" content="http://localhost:3000/morsels/d01.jpg"/>
 <meta property="og:image:alt" content="On Nodal Representation of Relations">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-JL7KHR7HK8');
-</script>
 <title>On Nodal Representation of Relations</title>
-<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
-<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
+<link rel="stylesheet" href="http://localhost:3000/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
-<link rel="canonical" href="https://thingspool.net/morsels/page-9.html">
+<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
+<link rel="canonical" href="http://localhost:3000/morsels/page-9.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/On Nodal Representation of Relations</div>
+<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/On Nodal Representation of Relations</div>
 <div class="s_spacer"></div>
 
 <h1>On Nodal Representation of Relations</h1>
@@ -53,7 +45,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>One of the problems in the study of relations, though, is the matter of representing them in a visually intelligible way. While it is possible to express any n-ary relations (for any positive integer 'n') in the form of algebraic notations (such as "xRy", "R(x,y)") or relational data table entries (such as those in an SQL database), expressing them in terms of graphical elements has been a major challenge.</p>
 <p>When it comes to graphically depicting unary and binary relations, graph theory comes in handy. As long as we suppose that a relation is an edge and a member of a relation is a vertex, it can simply be assumed that a binary relation is an edge which connects its two members. If the relation is symmetric, it will be a undirected edge (because direction won't matter). if the relation is asymmetric, it will be a directed edge.</p>
 <p>Similarly, an unary relation could be rendered as though it is a special case of a binary relation - that is, an edge which connects its sole member to an entity which symbolizes the absence of the other member (i.e. null).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d01.jpg" alt="On Nodal Representation of Relations (Figure 1)">
+<img class="figureImage" src="http://localhost:3000/morsels/d01.jpg" alt="On Nodal Representation of Relations (Figure 1)">
 <p>Now, how about ternary relations, quaternary relations, and other n-ary relations, whose arities are higher than two? It is technically possible to use the language of hypergraph (instead of just plain old graph) in which we may be free to express a relation as a hyperedge (i.e. edge with more than two vertices), and so on. We may even be able to describe the asymmetry of such a relation using the idea of a directed hyperedge.</p>
 <p>However, a graphical representation of a hypergraph is visually too intimidating, as it no longer allows us to draw a relation simply as a line segment and instead forces us to draw colored regions, bundles of curved arrows, and a myriad of other complex visual elements. This will bloat the viewer's mind with too much abstract information.</p>
 <hr>
@@ -61,23 +53,23 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>In order to be able to draw n-ary relations in a simple, highly recognizable visual language, we must abstain from utilizing conceptual models which are way too abstruse for laymen to understand.</p>
 <p>A hypergraph is not something which a person whose area of expertise does not considerably intersect with the domain of pure mathematics is expected to grasp easily. A graph, on the other hand, is something pretty much anyone is able to comprehend at least on a superficial level.</p>
 <p>Therefore, it will be helpful for expressive purposes if we somehow figure out a way to represent any arbitrary n-ary relations using the rudimentary graph elements only (i.e. edges and vertices), without leveraging additional layers of abstraction. Also, it will be even more desirable to avoid directed edges and only employ undirected edges (i.e. line segments with no arrow signs whatsoever) so as to ensure utmost structural simplicity.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d02.jpg" alt="On Nodal Representation of Relations (Figure 2)">
+<img class="figureImage" src="http://localhost:3000/morsels/d02.jpg" alt="On Nodal Representation of Relations (Figure 2)">
 <p>For the purpose of accomplishing the above goals, let me first introduce two basic building blocks - negative nodes and positive nodes (shown above). These two types of nodes, when combined, will be able to constitute the body of any n-ary relation. I will explain the underlying reason shortly.</p>
 <hr>
 <h3><b>Unary and Binary Relations in an Undirected Graph</b></h3>
 <p>The picture below is our first example of how negative and positive nodes can be used as building blocks of a relation. What you are seeing here is a binary asymmetric relation with two member variables: X and Y. If we were using a directed graph, we would only need a directed edge (i.e. arrow) to depict such a relation. Since we are trying to describe it using an undirected graph, however, we need at least two distinct types of connected nodes between X and Y to express the sense of directionality from X to Y (I am assuming here that the relation's "direction" goes from negative to positive).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d03.jpg" alt="On Nodal Representation of Relations (Figure 3)">
+<img class="figureImage" src="http://localhost:3000/morsels/d03.jpg" alt="On Nodal Representation of Relations (Figure 3)">
 <p>What if there is no Y, and we are only left with X? There may be two opposing scenarios (demonstrated in the image below).</p>
 <p>If X were connected to the negative side, the pair of nodes would be a quasi-unary relation which "points away from" X (i.e. points from X to nowhere). If X were connected to the positive side, the pair of nodes would be a quasi-unary relation which "points toward" X (i.e. points from nowhere to X). In both cases, the pair of nodes characterizes an unary relation whose sole member is X. Its "direction" in regard to X is a highly nuanced feature whose usage depends on the application.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d04.jpg" alt="On Nodal Representation of Relations (Figure 4)">
+<img class="figureImage" src="http://localhost:3000/morsels/d04.jpg" alt="On Nodal Representation of Relations (Figure 4)">
 <p>What if we do have both X and Y as members of the relation, yet both of them are attached to only one of the relation's pair of nodes? The image below illustrates two possible scenarios.</p>
 <p>If X and Y were connected to the negative side, the pair of nodes would be a quasi-binary relation which "points away from" both X and Y (i.e. points from X,Y to nowhere). If X and Y were connected to the positive side, the pair of nodes would be a quasi-binary relation which "points toward" both X and Y (i.e. points from nowhere to X,Y). In both cases, the pair of nodes characterizes a binary symmetric relation whose members are X and Y (It is symmetric because there is nothing which enforces an order between X and Y). Just like in the previous case, its "direction" in regard to X and Y is a highly nuanced feature whose usage depends on the application.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d05.jpg" alt="On Nodal Representation of Relations (Figure 5)">
+<img class="figureImage" src="http://localhost:3000/morsels/d05.jpg" alt="On Nodal Representation of Relations (Figure 5)">
 <p>In the language of bidirected graphs, these two cases may be interpreted as an "introverted edge" and an "extraverted edge", respectively (See <a href="https://en.wikipedia.org/wiki/Bidirected_graph">Bidirected Graph</a>).</p>
 <hr>
 <h3><b>Symmetric Relations</b></h3>
 <p>So far, I have only demonstrated relations which possess their own directions (i.e. asymmetry). It is, however, also feasible to construct a symmetric relation if we model it as though it is a pair of asymmetric relations pointing in two opposite directions. Its unary and binary examples are showcased below.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d06.jpg" alt="On Nodal Representation of Relations (Figure 6)">
+<img class="figureImage" src="http://localhost:3000/morsels/d06.jpg" alt="On Nodal Representation of Relations (Figure 6)">
 <p>Just like before, we are presuming here that each relation is a connected pair of dual particles (i.e. negative node and positive node). Recall the previous examples, and see how the new ones differ from them.</p>
 <p>Suppose that X is the only member of the relation. If X is connected to both the negative and positive sides, we will be able to say that the relation points both toward and away from X. This means that it is an unary relation which associates itself with X without specifying any particular direction in regard to it.</p>
 <p>Suppose, on the other hand, that X and Y are both members of the relation. If X and Y are simultaneously connected to both the negative and positive sides, we will be able to say that the relation points both toward and away from X and Y. This means that it is a binary relation which associates itself with X and Y without specifying any particular direction between them.</p>
@@ -89,11 +81,11 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>The first case depicts an instance of "merge" - i.e. a scenario in which two separate things (X1,X2) merge into one thing (Y). The order of the things which are being merged does not matter, so this relation is symmetric with respect to X1 and X2.</p>
 <p>The second case depicts an instance of "split" - i.e. a scenario in which one thing (X) splits into two things (Y1,Y2). The order of the things which are being produced by the split does not matter, so this relation is symmetric with respect to Y1 and Y2.</p>
 <p>The third case depicts an instance of "exchange" - i.e. a scenario in which two things (X1,X2) interact with each other, exchange resources, and end up turning themselves into a pair of things (Y1,Y2) which are somewhat different from the previous two. Since this particular act of exchange does not imply a sense of directionality from one thing to the other, this relation is symmetric with respect to both the former pair (X1,X2) and the latter pair (Y1,Y2).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d07.jpg" alt="On Nodal Representation of Relations (Figure 7)">
+<img class="figureImage" src="http://localhost:3000/morsels/d07.jpg" alt="On Nodal Representation of Relations (Figure 7)">
 <p>What about n-ary relations which require a fixed order between its members? The image below illustrates ways in which such a strict sense of asymmetry can be achieved.</p>
 <p>The first case indicates an instance of "split", yet the outcome of the split is a vector of two components (Y1,Y2) instead of a set. Here, the order between Y1 and Y2 is being enforced by the order in which the two positive nodes are connected with respect to the negative node.</p>
 <p>The second case indicates an instance of "merge", yet the ingredients of the merging process is a vector of two components (X1,X2) instead of a set. Here, the order between X1 and X2 is being enforced by the order in which the two negative nodes are connected with respect to the positive node.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/d08.jpg" alt="On Nodal Representation of Relations (Figure 8)">
+<img class="figureImage" src="http://localhost:3000/morsels/d08.jpg" alt="On Nodal Representation of Relations (Figure 8)">
 <p>In general, it is definitely feasible to construct any arbitrary n-ary relation and selectively make parts of its list of members either symmetric or asymmetric, by means of dual (negative and positive) nodes connected in series. The number of connected negative (or positive) nodes will imply the number of members in a group whose order is strictly enforced (as though they are elements of a vector), and the number of parallel connections to each negative (or positive) node will imply the number of members in a group whose order does not matter (as though they are elements of a set).</p>
 <hr>
 <h3><b>Practical Applications</b></h3>
@@ -105,8 +97,8 @@ gtag('config', 'G-JL7KHR7HK8');
 <h3><b>Further Readings</b></h3>
 <p>1. <a href="https://thingspool.net/reality/page-4.html">The Origin of Reality - Volume 4</a><br>2. <a href="https://thingspool.net/reality/page-7.html">The Origin of Reality - Volume 7</a><br>3. <a href="https://thingspool.net/metaphysics/page-59.html">연결의 종류 (Korean)</a><br>4. <a href="https://thingspool.net/metaphysics/page-61.html">이진법적 공간의 배열 (Korean)</a><br>5. <a href="https://thingspool.net/metaphysics/page-62.html">공간의 근본적 형태들 (Korean)</a></p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

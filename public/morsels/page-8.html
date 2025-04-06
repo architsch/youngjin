@@ -7,41 +7,33 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Technical Design using Multi-State Machines"/>
-<meta property="og:url" content="https://thingspool.net/morsels/page-8.html"/>
+<meta property="og:url" content="http://localhost:3000/morsels/page-8.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="How to use state machine networks (multi-state machines) to design dynamics systems, including gameplay systems, industrial simulations, scientific applications, cellular automata, and many others."/>
-<meta property="og:image" content="https://thingspool.net/morsels/c00.jpg"/>
+<meta property="og:image" content="http://localhost:3000/morsels/c00.jpg"/>
 <meta property="og:image:alt" content="Technical Design using Multi-State Machines">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-JL7KHR7HK8');
-</script>
 <title>Technical Design using Multi-State Machines</title>
-<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
-<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
+<link rel="stylesheet" href="http://localhost:3000/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
-<link rel="canonical" href="https://thingspool.net/morsels/page-8.html">
+<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
+<link rel="canonical" href="http://localhost:3000/morsels/page-8.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Technical Design using Multi-State Machines</div>
+<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/Technical Design using Multi-State Machines</div>
 <div class="s_spacer"></div>
 
 <h1>Technical Design using Multi-State Machines</h1>
@@ -54,7 +46,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>A system with an enormous number of states, on the other hand, is not something which we are able to design in terms of a single state machine without pulling our hair off out of sheer confusion. While it is technically possible to formultae even an extremely complex system (such as a whole computer) as an FSM (Finite State Machine) in which the current state of the system is represented as one of the nodes in a graph, such a way of modeling the system is prohibitively convoluted.</p>
 <p>Therefore, it usually makes more sense to imagine a complex (non-trivial) system not as a single state machine, but as a collection of multiple state machines (i.e. modules), each of which keeps track of its own state. This design philosophy also aligns itself with the OOP (Object Oriented Programming) paradigm, where each object is a state machine with its own set of states (i.e. all possible permutations of the member variables) and state transitions (i.e. all possible ways in which the member variables can change their values).</p>
 <p>Such a multitude of state machines, though, can operate as parts of one underlying system only if they are able to influence each other - that is, they must be able to communicate. If not, they will be a mere juxtaposition of completely isolated systems.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c00.jpg" alt="Technical Design using Multi-State Machines (Figure 1)">
+<img class="figureImage" src="http://localhost:3000/morsels/c00.jpg" alt="Technical Design using Multi-State Machines (Figure 1)">
 <p>The question is, "What kind of communication"? There are innumerable ways of sharing information with one another, yet some of them are far more efficient than others. Thus, a wise designer of a system should be able to choose an optimal (or at least a nearly optimal) means of letting state machines affect each other's state.</p>
 <p>In this article, I will showcase a new method of communication between state machines which I consider as fairly optimized for a wide variety of applications in system design, such as video games, cellular automata, circuit simulators, and many others.</p>
 <hr>
@@ -62,22 +54,22 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>Since I am personally more familiar with game development than any other area of engineering, it is probably appropriate for me to start with an example which takes place in a video game.</p>
 <p>Suppose that there is a top-down game in which the player is going on an adventure in a maze-like world. There are walls preventing him from moving freely, so he is forced to use doors. Unfortunately, some of the doors are locked, which means that the player must figure out how to unlock them in order to get to the other side of the wall.</p>
 <p>The image below is an example of a locked door. This door stays open only when the nearby button is being pressed, and immediately closes itself as soon as the button is released. So the only way for our player to cross the door is to first place a box right in front of the button to press it. Unless somebody moves it away, the box will continue pressing the button, and the player will be free to cross the door.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c01.jpg" alt="Technical Design using Multi-State Machines (Figure 2)">
+<img class="figureImage" src="http://localhost:3000/morsels/c01.jpg" alt="Technical Design using Multi-State Machines (Figure 2)">
 <p>How shall we implement such a game mechanic? One of the most intuitive ways, obviously, is to model each individual object as a state machine. For instance, the door is a state machine with two states called "Closed" and "Open", and the button is a state machine with two states called "Released" and "Pressed".</p>
 <p>The diagram below shows how the button "talks" to the door, so as to make the aforementioned rule work. Whenever the door is closed and the button is pressed, the button tells the door to open up. And whenever the door is open and the button is released, the button tells the door to close.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c02.jpg" alt="Technical Design using Multi-State Machines (Figure 3)">
+<img class="figureImage" src="http://localhost:3000/morsels/c02.jpg" alt="Technical Design using Multi-State Machines (Figure 3)">
 <p>What we are witnessing here is a pair of state machines - the door and the button. Both of them have their own states and state transitions, and they run concurrently (i.e. both the door's state and button's state are active at the same time). Yet they are not disjoint from each other; the button's state influences the door's state, thereby forming a cause-and-effect relation.</p>
 <p>We may refer to such a network of state machines as a "multi-state machine", since the whole thing behaves as though it is a state machine with multiple concurrent states.</p>
 <hr>
 <h3><b>Logic without Logic Gates</b></h3>
 <p>Let us take a look at a slightly more involved scenario. Suppose that there are two buttons called "button A" and "button B", and that there is a door which stays open only when both of these buttons are simultaneously being pressed (not just one of them, but both). This is an AND relation in boolean logic, and the image below shows an electric circuit analogy of such a logical operation. Here, the two buttons are analogous to two electrical switches which are connected in series. Only when both of them are pressed, the whole circuit becomes conductive and enables itself to activate (open) the door.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c03.jpg" alt="Technical Design using Multi-State Machines (Figure 4)">
+<img class="figureImage" src="http://localhost:3000/morsels/c03.jpg" alt="Technical Design using Multi-State Machines (Figure 4)">
 <p>An engineer might be tempted to implement this using a logic gate (i.e. AND gate), which is a sound approach in a general computing environment in which binary logic operators (such as &&, ||) are some of the most primitive building blocks of expressions. The temptation gets even larger when the engineer is developing a game which is meant to be executed not on a personal computing device (e.g. PC or mobile), but on a piece of programmable hardware, such as FPGA (Field-Programmable Gate Array), wherein logic is being configured by establishing connections upon a vast 2D array of pre-embedded logic gates.</p>
 <p>Outside of the realm of digital design, however, logic gates may not be the most appropriate elements to use. A video game, for example, is often filled with a myriad of wild mechanics which are not so easily explicable in terms of binary logic operators, such as dialogues, spatial reasoning (e.g. rush hour puzzles), various causal chains, and many others.</p>
 <p>In order to encompass most (if not all) of all these non-boolean mechanics in our design protocol, therefore, we must come up with a framework which is more versatile than a mere assembly of binary logic elements. In my opinion, such a framework can easily be discovered when we stop thinking in terms of logic gates (e.g. AND, OR, NOT, etc) and begin to design the whole system using state machines and their transition rules only.</p>
 <p>The diagram shown below is an example of how the aforementioend "AND" logic can be implementated by introducing an intermediatry state machine called "ButtonSeq" (i.e. "Button Sequence"), whose current state indicates the most recently ongoing sequence of button-presses. For instance,</p>
 <p>(1) "None" means that neither button A nor button B is being pressed.<br>(2) "A" means that only button A is being pressed.<br>(3) "AB" means that button A was pressed first, button B was pressed second, and that they both have been being pressed since then.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c04.jpg" alt="Technical Design using Multi-State Machines (Figure 5)">
+<img class="figureImage" src="http://localhost:3000/morsels/c04.jpg" alt="Technical Design using Multi-State Machines (Figure 5)">
 <p>What you can see here is that both the "AB" and "BA" states trigger the door's transition from "Closed" to "Open". This means that, whenever button A and button B are both being pressed (regardless of the order in which they were initially pressed), the door is forced to be open.</p>
 <p>In this example alone, we are already seeing an advantage of designing mechanics in terms of state machines instead of logic gates. Logical operators such as "AND", since they are commutative (i.e. they don't care about the order of the input parameters), are insufficient for handling cases in which the order of pressing these two buttons matters, and so forth. Imagine that, inside a game studio, the game designer comes over to the engineering team, gets mad, and says,</p>
 <p>"Hey, the way you implemented my design was wrong. When I said that pressing button A and button B should open up the door, what I meant was that pressing button A AND THEN pressing button B should open up the door. I never said that pressing them the other way around should give the same result. What you guys made is clearly a bug. The entire level won't make any sense at all if you do not fix this immediately!"</p>
@@ -86,9 +78,9 @@ gtag('config', 'G-JL7KHR7HK8');
 <h3><b>Rule Dictionary</b></h3>
 <p>But of course, I can totally feel the sentiment that the above example somehow appears to "overcomplicate" a fairly simple piece of logic by not leveraging built-in logical operators. However, there is an enormous benefit in trying to formulate everything solely in terms of state machines; it is what I would call "structural uniformity".</p>
 <p>In the model we have been seeing so far, there has really been only a single type of semantic building blocks - state transition rules. Every one of these rules, without an exception, can be interpreted as a mapping of two states (i.e. "current state" and "trigger state") into another state (i.e. "next state"). In case of the state "AB" triggering the door to open, for instance, we can say that it is due to a rule in which "current state" is "Closed", "trigger state" is "AB" (because "AB" is the thing that triggers the door to open), and "next state" is "Open".</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c05.jpg" alt="Technical Design using Multi-State Machines (Figure 6)">
+<img class="figureImage" src="http://localhost:3000/morsels/c05.jpg" alt="Technical Design using Multi-State Machines (Figure 6)">
 <p>And if we gather all such rules in one place called "rule dictionary", we may claim that this dictionary alone fully describes the behavior of the whole system. This kind of simplicity is extremely helpful especially if we are aiming to implement it as a custom electronic module (in the form of an ASIC (Application-Specific Integrated Circuit), etc); less variety in the data structure means less complexity in the hardware.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c06.jpg" alt="Technical Design using Multi-State Machines (Figure 7)">
+<img class="figureImage" src="http://localhost:3000/morsels/c06.jpg" alt="Technical Design using Multi-State Machines (Figure 7)">
 <p>The most challenging part is the implementation of the rules. It really depends on the hardware, but let us begin with the assumption that we are developing an application for a general-purpose computer (e.g. PC or mobile). The most brute-force approach is to execute the rules as a bunch of conditional statements, like the ones displayed below.</p>
 <div class="snippet"><pre><code>if (ButtonSeq.CurrState == "None" && ButtonA.CurrState == "Pressed")
     ButtonSeq.NextState = "A";
@@ -177,7 +169,7 @@ if (ButtonSeq.CurrState == "B" && Door.CurrState == "Open")
 <h3><b>Templates for Rules</b></h3>
 <p>Syntactic redundancy, though, is going to ensue if we construct all the rules on a case-by-case manner. Imagine that there are 100 doors inside the game, each of which opens up only when a unique pair of buttons are simultaneously being pressed. There are numerous buttons (at least 50 or so), from which 100 such unique combinations are to be made for those doors. Indeed, we do not want to manually type all the rules for a hundred "ButtonSeq" objects. Fortunately, we know that we can abstract out the logic of "ButtonSeq" (i.e. AND operator) and turn it into a template which can be replicated as many times as we want.</p>
 <p>In order for this to happen, we must first turn all the relevant states and their transitions into generic, parameterizable entities, like the ones shown below.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c07.jpg" alt="Technical Design using Multi-State Machines (Figure 8)">
+<img class="figureImage" src="http://localhost:3000/morsels/c07.jpg" alt="Technical Design using Multi-State Machines (Figure 8)">
 <p>The idea is that, once they are all parameterized, we will be able to write a function which automatically creates a set of rules based on the given parameters. Such a function works as a template for generating rules, and is demonstrated in the Javascript code below:</p>
 <div class="snippet"><pre><code>const buttonA = {
     name: "buttonA",
@@ -260,7 +252,7 @@ function AND(output, input0, input1)
 const rule_door = AND(door, buttonA, buttonB);</code></pre></div>
 <p>Here, the code just genereated the two-button rule (i.e. "Both button A and B must be pressed in order to open the door") by calling the "AND" function, which took the door as the operator's output parameter and the two buttons (A and B) as the operator's two input parameters.</p>
 <p>Leveraging this function-based rule instantiator, the developer is able to quickly come up with a wide spectrum of complex rules simply by calling functions. For example, take a look at the scenario below, expressed in the form of an electric circuit. It tells us that there are two doors (A and B) and three buttons (A, B, and C); door A opens up only when button A and B are both being pressed, whereas door B opens up only when button B and C are both being pressed.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c08.jpg" alt="Technical Design using Multi-State Machines (Figure 9)">
+<img class="figureImage" src="http://localhost:3000/morsels/c08.jpg" alt="Technical Design using Multi-State Machines (Figure 9)">
 <p>By calling the "AND" function twice, each time with a unique combination of arguments, one can easily create two sets of rules which are different yet share the same type of logic (i.e. AND operator). These two sets of rules, when combined as a whole, will fully depict the above scenario. The following code shows us how to do it.</p>
 <div class="snippet"><pre><code>const rules_doorA = AND(doorA, buttonA, buttonB);
 const rules_doorB = AND(doorB, buttonB, buttonC);
@@ -271,7 +263,7 @@ const ruleDictionary = `{
     ${rules_doorB}
 }`;</code></pre></div>
 <p>Here is a slightly trickier example. What if there is a door which opens up only when all 3 of the buttons are being pressed, not just 2? This may baffle the designer a bit because the AND function only takes two inputs. This problem, though, is not hard to solve. All we need is an intermediary object (i.e. "wire") whose state is the result of applying the AND function to the first two buttons (A and B). This intermediary object, then, can be fed as an input parameter to another AND function along with the third button (C). The result of this AND function will be equivalent to the result of applying the AND operator to all three buttons (A, B, and C).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c09.jpg" alt="Technical Design using Multi-State Machines (Figure 10)">
+<img class="figureImage" src="http://localhost:3000/morsels/c09.jpg" alt="Technical Design using Multi-State Machines (Figure 10)">
 <p>And the snippet below is the code implementation of what I just mentioned.</p>
 <div class="snippet"><pre><code>const wire = {
     name: "wire",
@@ -300,7 +292,7 @@ const ruleDictionary = `{
 <h3><b>Compression of Rule Data</b></h3>
 <p>The JSON representation of the rule dictionary, which I have demonstrated above, is a bit too inefficient both in terms of memory and speed. Thus, it is desirable to format the dictionary in a more compact manner.</p>
 <p>There are a number of things we ought to do to make it happen. First, we should reference each individual state with a binary code instead of a string of characters (as shown in the table below). This greatly reduces the amount of data needed for referencing the states. Furthermore, it helps us significantly speed up the dictionary's lookup process because a numerical value can directly be used as an index in the hash table (whereas a string requires the application to compute its hash code first).</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c10.jpg" alt="Technical Design using Multi-State Machines (Figure 11)">
+<img class="figureImage" src="http://localhost:3000/morsels/c10.jpg" alt="Technical Design using Multi-State Machines (Figure 11)">
 <p>Secondly, we can even get rid of the nested dictionary data structure altogether if we express all the rules using two binary sequences (illustrated in the picture above), which may be referred to as "Rule Ranges" and "Rules", respectively.</p>
 <p>The "Rule Ranges" sequence lists all the states of the system and their corresponding ranges in the "Rules" sequence (specified in terms of memory addresses). The "Rules" sequence lists all the rules which correspond to the given CurrState, each of which is denoted by the (TriggerState, NextState) pair.</p>
 <p>When the system updates a state machine whose current state is 0101, for instance, it first looks up the range which corresponds to the entry 0101 in the "Rule Ranges" sequence (which corresponds to the range [start1, end1]). It then jumps into the "Rules" sequence, scans the entries in the range [start1, end1], and checks to see if the state 0010 or 0100 is currently active (Note: A state is "active" if it is the current state of one of the state machines). If 0010 is active, the program will change the current state of the machine from 0101 to 0110. If 0100 is active instead, the program will change the current state of the machine from 0101 to 0111.</p>
@@ -309,24 +301,24 @@ const ruleDictionary = `{
 <h3><b>Parallel Processing</b></h3>
 <p>Versatility and compactness are not the only advantages of the multi-state model I have shown so far. Another major advantage of it is its ability to run on a parallel computing environment, given a custom hardware module.</p>
 <p>In order to explain what sort of hardware it is, I must first introduce a hypothetical electronic component called "state activation indicator". It is a 1-bit memory storage (similar to a D Flip-Flop) which tells us whether each state is active or not. So, for example, if there is a state activation indicator which indicates the activation status of the door's "Closed" state, we say that the door's current state is "Closed" if and only if the indicator's output bit is currently 1.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c11.jpg" alt="Technical Design using Multi-State Machines (Figure 12)">
+<img class="figureImage" src="http://localhost:3000/morsels/c11.jpg" alt="Technical Design using Multi-State Machines (Figure 12)">
 <p>This means that the "current state" of the whole system, which is really the ensemble of all the current states of its constituent state machines, is a binary string of length N containing M number of 1s (where 'N' is the total number of all possible states of all the state machines, and 'M' is the number of the state machines themselves). The figure below demonstrates how this data representation works.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c12.jpg" alt="Technical Design using Multi-State Machines (Figure 13)">
+<img class="figureImage" src="http://localhost:3000/morsels/c12.jpg" alt="Technical Design using Multi-State Machines (Figure 13)">
 <p>The system's current state can be characterized by an array of state activation indicators. Similarly, the system's next state (i.e. pending future state which is to be assigned back to the current state by the end of the application's clock cycle), too, can be characterized by an array of state activation indicators.</p>
 <p>The image below is the hardware implementation that is necessary for the parallel multi-state machine to work. Between the two bit arrays which respectively represent the system's current state and next state, there is a two-dimensional grid of wire intersections, formed by both horizontally and vertically oriented electrical wires (i.e. conductors) which are placed at regular intervals. Each black dot denotes connection between the two intersecting wires (which means that if the value of one of the wires is 1, the value of the other wire will be 1 as well), and each green dot refers to the presence of an AND logic gate between the two intersecting wires. The result of this logic gate gets communicated through the green line.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c13.jpg" alt="Technical Design using Multi-State Machines (Figure 14)">
+<img class="figureImage" src="http://localhost:3000/morsels/c13.jpg" alt="Technical Design using Multi-State Machines (Figure 14)">
 <p>Here, each green dot (AND logic gate) corresponds to a state transition rule; it takes a "current state" and a "trigger state" as a pair of inputs, and yields the next state as the output. Imagine the green parts of the image above as the ones which are dynamically configured on a programmable hardware module (by means of tri-state buffers, transisters, etc), while the black parts are static and cannot be modified. Installing a rule dictionary, thus, is the same thing as establishing a bunch of green wirings between the grid's intersection points and their corresponding next-state memory input ports.</p>
 <p>Once the wiring process is done, all we need to do is set the initial state of the system by pre-configuring the bits of CurrState and then starting the clock to initiate the cyclic flow of signals between CurrState and NextState. This will let the system update all of its states in parallel, without requiring the CPU to visit every individual state machine and update it sequentially.</p>
 <hr>
 <h3><b>Race Conditions in Parallel Processing</b></h3>
 <p>The aforementioned parallel implementation, though, is prone to introduce race conditions which may inadvertently make a state machine carry two or more concurrent states (which is inappropriate for a state machine). Therefore, we must add some kind of "postprocessing" stage to the end of the state transition cycle to resolve race conditions. For such a purpose, let me introduce yet another hypothetical module called "tie-breaker". It is an electronic component which takes a bit sequence as an input, leaves only a single "1" in it (if there are multiple of them), and returns the resulting sequence as the output.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c14.jpg" alt="Technical Design using Multi-State Machines (Figure 15)">
+<img class="figureImage" src="http://localhost:3000/morsels/c14.jpg" alt="Technical Design using Multi-State Machines (Figure 15)">
 <p>Then, when the system's clock cycle (update loop) ends and its NextState is to be transferred back to CurrState, the system will need to feed each group of states in NextState (corresponding to each individual state machine) to a tie-breaker and assign its result to the respective group in CurrState, instead of simply copying the bits from NextState to CurrState directly. It is demonstrated in the image below.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/c15.jpg" alt="Technical Design using Multi-State Machines (Figure 16)">
+<img class="figureImage" src="http://localhost:3000/morsels/c15.jpg" alt="Technical Design using Multi-State Machines (Figure 16)">
 <p>This is how the system can prevent any potential race conditions; each tie-breaker ensures that each state machine contains only ONE current state.</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

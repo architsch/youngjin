@@ -7,41 +7,33 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="Game Programming in Prolog - Part 16"/>
-<meta property="og:url" content="https://thingspool.net/morsels/page-25.html"/>
+<meta property="og:url" content="http://localhost:3000/morsels/page-25.html"/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="How to design an efficient gameplay system in Prolog? Here is the answer. In this article, I will demonstrate some of the efficient search algorithms which can be leveraged to let us create a video game using Prolog&#39;s logic programming syntax."/>
-<meta property="og:image" content="https://thingspool.net/morsels/f28.jpg"/>
+<meta property="og:image" content="http://localhost:3000/morsels/f28.jpg"/>
 <meta property="og:image:alt" content="Game Programming in Prolog - Part 16">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-JL7KHR7HK8');
-</script>
 <title>Game Programming in Prolog - Part 16</title>
-<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
-<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="shortcut icon" href="http://localhost:3000/favicon.ico">
+<link rel="stylesheet" href="http://localhost:3000/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
-<link rel="canonical" href="https://thingspool.net/morsels/page-25.html">
+<link rel="alternate" type="application/atom+xml" href="http://localhost:3000/feed.atom" title="Atom Feed">
+<link rel="canonical" href="http://localhost:3000/morsels/page-25.html">
 </head>
 <body>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="http://localhost:3000/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="noTextDeco fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="noTextDeco fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+<a class="noTextDeco fullscreenBarMenuButton idle" href="http://localhost:3000">Home</a>
+<a class="noTextDeco fullscreenBarMenuButton selected" href="http://localhost:3000/library.html">Blog</a>
 </div>
 </div>
 <div class="fullscreenPanel">
 <div class="s_spacer"></div>
-<a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
-<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 16</div>
+<a class="inlineButton" href="http://localhost:3000/morsels/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="http://localhost:3000/">Home</a>/<a href="http://localhost:3000/library.html">Blog</a>/<a href="http://localhost:3000/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 16</div>
 <div class="s_spacer"></div>
 
 <h1>Game Programming in Prolog - Part 16</h1>
@@ -75,7 +67,7 @@ gtag('config', 'G-JL7KHR7HK8');
     collide[0](actor1, actor2).
     collide[0](actor1, actor3).
     collide[0](actor2, actor3).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/f28.jpg" alt="Game Programming in Prolog - Part 16 (Figure 1)">
+<img class="figureImage" src="http://localhost:3000/morsels/f28.jpg" alt="Game Programming in Prolog - Part 16 (Figure 1)">
 <p>We will have to store these facts as actor-to-actor mappings, like the ones displayed below:</p>
 <div class="snippet"><pre><code>public class Facts
 {
@@ -94,7 +86,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>At this point, though, you may be wondering, "Okay, what if I want to know which actors are colliding with 'actor3'? This dictionary only has 'actor1' and 'actor2' as its keys, so it only directly answers questions regarding which actors are colliding with one of these two actors, and not 'actor3'!"</p>
 <p>This is a totally valid concern, and it definitely means that we need to rectify our logic a bit to take into account the symmetric nature of collision. The way we solve this is not that complicated; all we need is just an extra rule in our Prolog code, which is shown here:</p>
 <div class="snippet"><pre><code>collide[n](Y, X) :- collide[n](X, Y).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/f29.jpg" alt="Game Programming in Prolog - Part 16 (Figure 2)">
+<img class="figureImage" src="http://localhost:3000/morsels/f29.jpg" alt="Game Programming in Prolog - Part 16 (Figure 2)">
 <p>This rule is the declaration that collision is a commutative relation (i.e. a relation which still holds even if you change the order of its arguments). It basically says that, if X is colliding with Y, then Y must be colliding with X as well. The presence of such a rule will ensure that facts regarding collision will always come in pairs, where both of the colliding agents are guaranteed to be included as keys in the dictionary.</p>
 <div class="snippet"><pre><code>FACTS:
     collide[0](actor1, actor2).
@@ -103,7 +95,7 @@ gtag('config', 'G-JL7KHR7HK8');
     collide[0](actor3, actor1).
     collide[0](actor2, actor3).
     collide[0](actor3, actor2).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/f30.jpg" alt="Game Programming in Prolog - Part 16 (Figure 3)">
+<img class="figureImage" src="http://localhost:3000/morsels/f30.jpg" alt="Game Programming in Prolog - Part 16 (Figure 3)">
 <p>So, under this new rule, the system will be able to discover the fact that "actor1" and "actor2" are colliding with each other either by looking up the dictionary with the key "actor1", or by looking up the dictionary with the key "actor2". Either approach will work equally well.</p>
 <p>(Side Note: This additional rule, "collide[n](X, Y) :- collide[n](Y, X)", won't even be necessary as long as the collision detection rule manages to infer both "collide[n](X, Y)" and "collide[n](Y, X)" from every colliding pair of actors X and Y. Therefore, it should be taken as a mere demonstration of the concept.)</p>
 <p>This pretty much sums up the nature of the "collide" relation, and how it should be represented in a dictionary. How about the "position" relation - the one which is being used to derive facts regarding the status of collision between two objects?</p>
@@ -155,7 +147,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>Let me show you how this works. Suppose that, instead of just a single dictionary called "position", we now have two dictionaries called "actorToPosition" and "positionToActors". The first one maps actors to positions, and the second one maps positions to actors.</p>
 <div class="snippet"><pre><code>public Dictionary&lt;string, Vector2&gt; actorToPosition;
 public Dictionary&lt;Vector2, HashSet&lt;string&gt;&gt; positionToActors;</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/f31.jpg" alt="Game Programming in Prolog - Part 16 (Figure 4)">
+<img class="figureImage" src="http://localhost:3000/morsels/f31.jpg" alt="Game Programming in Prolog - Part 16 (Figure 4)">
 <p>Since each actor is allowed to have only one position at a time (unless it's a quantum particle or something), it will be sensible to map each actor to a single vector quantity in "actorToPosition". In contrast, we are assuming here that multiple actors are capable of sharing the same exact position. Thus, it will be sensible to map each position to a set of associated actors (not just one actor) in "positionToActors".</p>
 <p>Here is the idea. We have been dealing with both the outer loop and the inner loop, right? Let us make the outer loop visit all the entries in "actorToPosition" because each entry in this dictionary will tell us the position of each unique actor (It is not our desire to visit the same actor multiple times, hence the reason why we are preferring "actorToPosition" over "positionToActors" here).</p>
 <p>Inside the outer loop, let us create an inner loop which goes through the entries of not the entire dictionary of actors and their respective positions, but only the set of actors which are located at the currently identified position (i.e. P). The following code illustrates the way it will be done.</p>
@@ -184,8 +176,8 @@ public Dictionary&lt;Vector2, HashSet&lt;string&gt;&gt; positionToActors;</code>
 <div class="snippet"><pre><code>collide[n](X, Y) :- position[n]([key]X, [single]P), position[n](Y, [key]P).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-26.html">Part 17</a>)</p>
 <div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
-<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<img class="logoImageSmall" src="http://localhost:3000/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="http://localhost:3000/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="http://localhost:3000/terms-of-service.html">Terms of Service</a></p>
 <div class="m_spacer"></div>
 </div>
 </body>

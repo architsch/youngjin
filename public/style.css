@@ -67,12 +67,12 @@ h2 {
 	max-width: 95%;
 	padding: 0 0;
 	margin: 3vmin 2.25vmin;
-	font-size: min(2.62vmax, 23.04px);
+	font-size: min(3.14vmax, 27.65px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
-	color: #b0a070;
+	color: #707070;
 }
 h1 {
 	position: relative;
@@ -80,7 +80,7 @@ h1 {
 	max-width: 95%;
 	padding: 0 0;
 	margin: 3vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
+	font-size: min(3.77vmax, 33.18px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
