@@ -27,6 +27,10 @@ async function run()
     await builder.build("social.html");
 
     builder = new TextFileBuilder();
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/portfolio.ejs", {}));
+    await builder.build("portfolio.html");
+
+    builder = new TextFileBuilder();
     builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/privacyPolicy.ejs", {}));
     await builder.build("privacy-policy.html");
 
