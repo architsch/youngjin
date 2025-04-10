@@ -39,14 +39,13 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="s_spacer"></div>
+<div class="s_row"></div>
 <a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
 <div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 11</div>
-<div class="s_spacer"></div>
+<div class="s_row"></div>
 
 <h1>Game Programming in Prolog - Part 11</h1>
 <p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 7, 2024</p>
-<div class="m_spacer"></div>
 <hr>
 <h3><b>Before You Read...</b></h3>
 <p>This is Part 11 of the series, "Game Programming in Prolog". In order to understand what is going on in this article, please read <a href="https://thingspool.net/morsels/page-10.html">Part 1</a> first.</p>
@@ -65,7 +64,7 @@ omurice[n](Id) :- omurice[n-1](Id), alive[n-1](Id).</code></pre></div>
 <p>The remaining task, then, is to make the omurice the parent of the given fried rice and omelet. The code implementation of this logic is displayed below.</p>
 <div class="snippet"><pre><code>setChild[n](Id, X) :- spawned[n](Id, Src, makeOmurice, Pos), x(Src, X).
 setChild[n](Id, Y) :- spawned[n](Id, Src, makeOmurice, Pos), y(Src, Y).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e91.jpg" alt="Game Programming in Prolog - Part 11 (Figure 1)">
+<img class="m_image" src="https://thingspool.net/morsels/e91.jpg" alt="Game Programming in Prolog - Part 11 (Figure 1)">
 <p>There we have it. Since the omurice is now the parent of an actor named "fried rice" and another actor named "omelet", the system is able to tell that this particular actor (i.e. omurice) is a compound object which is made out of its two components called "fried rice" and "omelet".</p>
 <p>However, it is also important for us to ensure that this omurice will continue to exist as an omurice only as long as its internal structure qualifies itself as an omurice.</p>
 <p>Let me give you a few examples. If I get rid of the omelet from the omurice, there will no longer be any "omurice" there because only the fried rice will be left. If I get rid of the fried rice from the omurice, there will no longer be any "omurice" there because only the omelet will be left. If I replace the existing omelet with another omelet, on the other hand, there will sill be an "omurice" there, although the question of whether this specific omurice is "the same thing" as the one which was there before is a bit tricky to answer (which reminds us of the Ship of Theseus).</p>
@@ -78,7 +77,7 @@ setChild[n](Id, Y) :- spawned[n](Id, Src, makeOmurice, Pos), y(Src, Y).</code></
 
 removeChild[n](Id, X) :- omurice[n-1](Id), !canBeOmurice[n](Id), parent[n](Id, X).
 despawn[n](Id) :- omurice[n-1](Id), !canBeOmurice[n](Id).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e92.jpg" alt="Game Programming in Prolog - Part 11 (Figure 2)">
+<img class="m_image" src="https://thingspool.net/morsels/e92.jpg" alt="Game Programming in Prolog - Part 11 (Figure 2)">
 <p>And if we ever wish to manually dismiss an omurice by pulling its components apart, we may fancy that there is a special event called "disassemble" which, when invoked, detects the omurice's two core building blocks (i.e. fried rice and omelet) and unstacks them (Recall that the "unstack" event removes the stacking relation between the two given objects). Once unstacked, the fried rice will no longer be sitting "below" the omelet, which means that the omurice will no longer qualify as an omurice (i.e. The "canBeOmurice" predicate will be FALSE) and thus shall be despawned.</p>
 <div class="snippet"><pre><code>unstack[n](X, Y) :- omurice[n-1](Id), disassemble[n-1](Id),
     parent[n-1](Id, X), friedRice[n-1](X),
@@ -113,7 +112,7 @@ setChild[n](Src, Id) :- spawned[n](Id, Src, makeBurger_patty, Pos).
 topBun[n](Id) :- spawned[n](Id, Src, makeBurger_topBun, Pos).
 topBun[n](Id) :- topBun[n-1](Id), alive[n-1](Id).
 setChild[n](Src, Id) :- spawned[n](Id, Src, makeBurger_topBun, Pos).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e93.jpg" alt="Game Programming in Prolog - Part 11 (Figure 3)">
+<img class="m_image" src="https://thingspool.net/morsels/e93.jpg" alt="Game Programming in Prolog - Part 11 (Figure 3)">
 <p>This completes the automatic initialization of the burger's internal hierarchy. All we had to do was spawn a burger; the rest of the processes were simply being handled by the predefined rules above.</p>
 <p>There is one more thing we ought to do, though - the maintenance and disposal of the burger's identity. Just like an omurice is allowed to stay being an omurice only as long as it is made out of a stack of fried rice and omelet, a burger, too, must satisfy its own list of criteria in order to ensure its continued existence.</p>
 <p>A burger is a compound which is made up of three children - the bottom bun, the patty, and the top bun. There might be additional children, but the presence of such extraneous ingredients do not really matter when it comes to the burger's identity as a generic "burger" (Because, you know, a "double-cheese bacon burger" is still a "burger"; it just happens to be a richer variant). If any of these three children turns out to be missing, the parent will no longer be considered a burger and thus will have to be exterminated.</p>
@@ -130,7 +129,7 @@ canBeBurger[n](Id) :-
 
 removeChild[n](Id, X) :- burger[n-1](Id), !canBeBurger[n](Id), parent[n](Id, X).
 despawn[n](Id) :- burger[n-1](Id), !canBeBurger[n](Id).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e94.jpg" alt="Game Programming in Prolog - Part 11 (Figure 4)">
+<img class="m_image" src="https://thingspool.net/morsels/e94.jpg" alt="Game Programming in Prolog - Part 11 (Figure 4)">
 <p>The first two rules simply state that an actor which has just been spawned by the "makeBurger" event will initially be considered a "burger", and will continue being so as long as it stays alive. This part is structurally identical to that of the omurice example we saw before.</p>
 <p>The last two rules, too, structurally resemble those of the omurice example. They are there to ensure that a burger will be safely disposed when it no longer qualifies as a burger.</p>
 <p>The rule in the middle is the most important part. The "canBeBurger" predicate basically tells us whether the given burger can still be considered a "burger" during the current time step (i.e. 'n') - that is, whether it still consists of a bottom bun, a patty, and a top bun. If so, this burger will maintain its status as a burger. If not, it will be wiped out of existence.</p>
@@ -138,7 +137,7 @@ despawn[n](Id) :- burger[n-1](Id), !canBeBurger[n](Id).</code></pre></div>
 <h3><b>Complexity Under Control</b></h3>
 <p>The ability to define a piece of data as a hierarchy (i.e. tree), either before or after instantiating its components, is an invaluable feature to have in complex and emergent systems.</p>
 <p>Oftentimes, game developers feel the necessity to design in-game agents (aka "characters") which are equipped with their own stats, inventories, status effects, scheduled tasks, relationships with other agents, and other pieces of dependent data. In such cases, it is usually sensible to devise each agent as a root node (i.e. topmost parent) of its own subtree, within which all of its inner data entries are stored. The figure below is an illustration of it.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e95.jpg" alt="Game Programming in Prolog - Part 11 (Figure 5)">
+<img class="m_image" src="https://thingspool.net/morsels/e95.jpg" alt="Game Programming in Prolog - Part 11 (Figure 5)">
 <p>The main benefit of this conceptual model is that it is extremely scalable. Do you want to implement new gameplay features? No problem! Just add more children the actor to support such additional features. If you wish that every NPC had its own inventory of items, for instance, all you need to do is add a chunk of code which creates an "inventory actor" and attaches it to every freshly spawned NPC actor, like the one shown here:</p>
 <div class="snippet"><pre><code>spawn[n](Id, makeInventory, Pos) :- spawned[n](Id, Src, makeNPC, Pos).
 
@@ -151,12 +150,12 @@ setChild[n](Src, Id) :- spawned[n](Id, Src, makeInventory, Pos).</code></pre></d
 <p>Once an NPC gets equipped with its own inventory, we are able to let this NPC either pick up an item (by means of the "pickupItem" event) or drop an item (by means of the "dropItem" event).</p>
 <div class="snippet"><pre><code>setChild[n](Y, Item) :- pickupItem[n-1](X, Item), parent[n](X, Y), inventory[n](Y).
 removeChild[n](Y, Item) :- dropItem[n-1](X, Item), parent[n](X, Y), inventory[n](Y).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e96.jpg" alt="Game Programming in Prolog - Part 11 (Figure 6)">
+<img class="m_image" src="https://thingspool.net/morsels/e96.jpg" alt="Game Programming in Prolog - Part 11 (Figure 6)">
 <p>We may as well choose to design a rather interesting game mechanic, such as letting an actor steal an item from another actor. Such a feature could be implemented by using the following rule:</p>
 <div class="snippet"><pre><code>setChild[n](Y2, Item) :- stealItem[n-1](Thief, Victim, Item),
     parent[n](Victim, Y1), inventory[n](Y1), parent[n](Y1, Item),
     parent[n](Thief, Y2), inventory[n](Y2).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e97.jpg" alt="Game Programming in Prolog - Part 11 (Figure 7)">
+<img class="m_image" src="https://thingspool.net/morsels/e97.jpg" alt="Game Programming in Prolog - Part 11 (Figure 7)">
 <p>A special exception to such a general rule, too, can be contrived by writing a few additional lines of code. Suppose that we want an NPC to be able to prevent its items from being stolen as long as it possesses an item called "stealShield". A steal-shield is an item which protects all other items in the inventory from thieves. The following code implements this steal-protection ability.</p>
 <div class="snippet"><pre><code>hasStealShield[n](X) :-
     parent[n](X, Y), inventory[n](Y),
@@ -168,10 +167,10 @@ setChild[n](Y2, Item) :- stealItem[n-1](Thief, Victim, Item),
     parent[n](Victim, Y1), inventory[n](Y1), parent[n](Y1, Item),
     parent[n](Thief, Y2), inventory[n](Y2).</code></pre></div>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-21.html">Part 12</a>)</p>
-<div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<div class="l_row"></div>
+<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
-<div class="m_spacer"></div>
+<div class="xl_row"></div>
 </div>
 </body>
 </html>

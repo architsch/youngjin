@@ -29,7 +29,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
 
         builder = new TextFileBuilder();
         builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
-            menuName: "arcade",
+            menuName: "index",
             title: "ThingsPool - " + entry.title,
             desc: description,
             keywords: keywords,
@@ -45,8 +45,9 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
         builder.addLine(`<h1>${entry.title}</h1>`);
 
         builder.addLine(`<a class="noTextDeco" href="${entry.playLinkURL}">`);
-        builder.addLine(`<img class="playButton" src="${envUtil.getRootURL()}/play.png" alt="Play">`);
+        builder.addLine(`<img class="xs_image" src="${envUtil.getRootURL()}/play.png" alt="Play">`);
         builder.addLine(`</a>`);
+        builder.addLine(`<div class="zero_row"></div>`);
 
         let imageIndex = 1;
         const paragraphLinesPending = [];
@@ -84,7 +85,7 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
                 if (imgName.length > 0)
                 {
                     const imgPath = `${envUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
-                    builder.addLine(`<img class="gameImage" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
+                    builder.addLine(`<img class="m_image" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
                 }
             }
             else // plain text
@@ -96,7 +97,6 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
         endParagraph();
         if (entry.videoTag != null && entry.videoTag != undefined)
         {
-            builder.addLine(`<div class="l_spacer"></div>`);
             builder.addLine(entry.videoTag);
         }
 

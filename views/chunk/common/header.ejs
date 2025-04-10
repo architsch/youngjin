@@ -73,7 +73,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="s_spacer"></div>
+<div class="s_row"></div>
 <%_ if (v_backDestination_href != undefined) { _%>
 <a class="inlineButton" href="<%= v_backDestination_href %>">Back</a><%- (v_pagePathList != undefined) ? "&nbsp;&nbsp;" : "" %>
 <%_ } _%>
@@ -81,5 +81,5 @@ gtag('config', 'G-JL7KHR7HK8');
 <div class="pagePath"><%- v_pagePathList.map(x => (x.relativeURL != undefined) ? `<a href="${envUtil.getRootURL()}/${x.relativeURL}">${x.title}</a>` : x.title).join("/") %></div>
 <%_ } _%>
 <%_ if (v_pagePathList != undefined || v_backDestination_href != undefined) { _%>
-<div class="s_spacer"></div>
+<div class="s_row"></div>
 <%_ } _%>

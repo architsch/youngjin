@@ -8,10 +8,10 @@
 }) %>
 
 <% if (isStaticPage) { %>
-    <div class="m_spacer"></div>
+    <div class="m_row"></div>
     <h3>This page is currently under construction.</h3>
 <% } else if (user) { %>
-    <div class="m_spacer"></div>
+    <div class="m_row"></div>
     <h3>This page is currently under construction.</h3>
 <% } else { %>
     <%- include(`${ejsChunkRootPath}/auth/login.ejs`) %>

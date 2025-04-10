@@ -114,7 +114,6 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
 
                 builder.addLine(`<h1>${title}</h1>`);
                 builder.addLine(`<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: ${date}</p>`);
-                builder.addLine(`<div class="m_spacer"></div>`);
             }
             else if (line.startsWith("<") && !snippetOn && !excerptOn) // image reference
             {
@@ -125,7 +124,7 @@ function PostPageBuilder(sitemapBuilder, atomFeedBuilder)
                     const imgPath = `${envUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
                     if (customOGImagePath == undefined || line.endsWith("*"))
                         customOGImagePath = imgPath;
-                    builder.addLine(`<img class="figureImage" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);
+                    builder.addLine(`<img class="m_image" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);
                 }
             }
             else if (line.startsWith("@@")) // Custom HTML tag

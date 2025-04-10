@@ -34,6 +34,7 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
     ];
 
     const addPostLinks = (builder, title, entries) => {
+        builder.addLine(`<hr>`);
         builder.addLine(`<h1>${title}</h1>`);
 
         for (let i = entries.length - 1; i >= 0; --i)
@@ -56,13 +57,10 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
         }));
 
         addPostLinks(builder, "Nonfiction", nonfictionEntries);
-        builder.addLine(`<div class="l_spacer"></div>`);
 
         addPostLinks(builder, "Fiction", fictionEntries);
-        builder.addLine(`<div class="l_spacer"></div>`);
 
         addPostLinks(builder, "Arts", artEntries);
-        builder.addLine(`<div class="l_spacer"></div>`);
 
         builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
 

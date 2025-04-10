@@ -98,7 +98,12 @@ async function run()
                 section("rooms") + toSafeStr(await dbUtil.debug.rooms()) +
                 section("user_rooms") + toSafeStr(await dbUtil.debug.user_rooms()) +
                 section("emailVerifications") + toSafeStr(await dbUtil.debug.emailVerifications());
-            res.render("page/console", { content });
+            res.render("page/misc/console", { content });
+        });
+
+        app.get("/debug/ui", async (req, res) => {
+            res.render("page/misc/uiTest", ejsUtil.makeEJSParams(
+                {user: undefined, loginDestination: "", registerDestination: ""}));
         });
     }
 

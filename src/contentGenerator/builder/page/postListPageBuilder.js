@@ -30,7 +30,6 @@ function PostListPageBuilder(sitemapBuilder, atomFeedBuilder)
             }));
 
             builder.addLine(`<h1>${entry.title}</h1>`);
-            builder.addLine(`<div class="m_spacer"></div>`);
 
             for (let i = postInfoList.length-1; i >= 0; --i)
             {

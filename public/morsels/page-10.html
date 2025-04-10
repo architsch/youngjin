@@ -39,14 +39,13 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 </div>
 <div class="fullscreenPanel">
-<div class="s_spacer"></div>
+<div class="s_row"></div>
 <a class="inlineButton" href="https://thingspool.net/morsels/list.html">Back</a>&nbsp;&nbsp;
 <div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/morsels/list.html">Morsels of Thought (2024)</a>/Game Programming in Prolog - Part 1</div>
-<div class="s_spacer"></div>
+<div class="s_row"></div>
 
 <h1>Game Programming in Prolog - Part 1</h1>
 <p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 25, 2024</p>
-<div class="m_spacer"></div>
 <hr>
 <h3><b>Introduction</b></h3>
 <p>As a fan of unconventional programming paradigms, I enjoy learning new programming languages which are drastically different from the typical object-oriented ones such as C#, Java, and the like. The most iconic of them are LISP (which is a powerful language for both functional programming as well as metalinguistic patterns in software development) and Prolog (which is one of the most popular languages in logic programming). Learning these languages is quite hard, compared to being acquainted with usual C-style imperative languages such as Ruby and Python, yet it has turned out to be one of the most effective ways of exercising one's brain.</p>
@@ -60,30 +59,30 @@ gtag('config', 'G-JL7KHR7HK8');
 <hr>
 <h3><b>World and Actors</b></h3>
 <p>The core idea in Prolog-based game programming is to utilize relations as the most primitive building blocks of the system, just like basic circuit components (e.g. resistors, transistors, capacitors, inductors, etc) are the most primitive building blocks of an electric circuit. It is sensible, therefore, to start this journey by considering the most rudimentary relations (e.g. unary and binary) first, and see if these elements can serve as the most essential nuts and bolts of the game.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e01.jpg" alt="Game Programming in Prolog - Part 1 (Figure 1)">
+<img class="m_image" src="https://thingspool.net/morsels/e01.jpg" alt="Game Programming in Prolog - Part 1 (Figure 1)">
 <p>Suppose that we are designing a game, and that the game consists of two major parts - world and actors (see the image above). The world is a scene in which everything is supposed to happen, and actors are objects which belong to the world. Examples of actors include "players", "enemies", "obstacles", "items", and pretty much any discrete entities which have their own names and attributes. Actors are able to interact with each other (as well as with themselves), from which various events occur. What we refer to as "gameplay" is a chain of such events.</p>
 <p>We will begin formulating a gameplay system based off of this conceptual backbone. All you need to remember is that there is a world, and that the world contains a number of actors, each of which possesses its own state and behavior.</p>
 <hr>
 <h3><b>Tags</b></h3>
 <p>First of all, let us identify each individual actor with a unique name. If there are two actors in the world, for instance, we will simply assume that the name "actor1" and "actor2" will be used to indicate the first and second actors, respectively.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e02.jpg" alt="Game Programming in Prolog - Part 1 (Figure 2)">
+<img class="m_image" src="https://thingspool.net/morsels/e02.jpg" alt="Game Programming in Prolog - Part 1 (Figure 2)">
 <p>The first piece of logic I will illustrate is the idea of tags. A tag is a keyword which, when attached to an actor, describes what the actor stands for. When an actor has the tag "bread" attached to it, for example, we should be able to tell that the actor is a piece of bread.</p>
 <p>The Prolog code below assigns the tag "bread" to both actor1 and actor2, in the form of unary predicates (The tag "bread" itself is an unary relation, and "bread(actor1)" & "bread(actor2)" are two separate instances of it). This implies that both actor1 and actor2 are pieces of bread.</p>
 <div class="snippet"><pre><code>bread(actor1).
 bread(actor2).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e03.jpg" alt="Game Programming in Prolog - Part 1 (Figure 3)">
+<img class="m_image" src="https://thingspool.net/morsels/e03.jpg" alt="Game Programming in Prolog - Part 1 (Figure 3)">
 <p>An actor can have multiple tags as well. However, one may feel that it is a bit too tedious to manually assign a bunch of tags to each individual actor. For example, let us say that every piece of bread must also be labeled as flammable and decomposable. This means that, whenever an actor is associated with the tag "bread", we are obliged to always ensure that it is also associated with the tag "flammable" and "decomposable". Manually attaching these two additional tags to every "bread" actor is way too cumbersome and error-prone. Fortunately, the following pair of horn clauses neatly solve this problem. They enforce the following two rules:</p>
 <p>(1) Whenever tag "bread" is assigned to actor X, tag "flammable" will automatically be assigned to actor X.<br>(2) Whenever tag "bread" is assigned to actor X, tag "decomposable" will automatically be assigned to actor X.</p>
 <div class="snippet"><pre><code>flammable(X) :- bread(X).
 decomposable(X) :- bread(X).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e04.jpg" alt="Game Programming in Prolog - Part 1 (Figure 4)">
+<img class="m_image" src="https://thingspool.net/morsels/e04.jpg" alt="Game Programming in Prolog - Part 1 (Figure 4)">
 <p>These horn clauses, therefore, serve as part of the game's "config data" - a list of data entries in the game's technical design document (like the ones you would see on a spreadsheet) telling us the characteristics of each individual character type, skill type, mission type, and so forth. The tags called "flammable" and "decomposable" in our case, for instance, are characteristics which belong to the type-specifier called "bread", meaning that any actor which can be identified as "bread" is a composition of two properties called "flammable" and "decomposable".</p>
 <p>A decent analogy can be found in Unity game engine, where we may create a prefab called "Bread" with two components in it - "Flammable" and "Decomposable". Or, in a general object-oriented programming environment, "Bread" may stand for the name of a class which implements two interfaces called "IFlammable" and "IDecomposable".</p>
 <p>In a way, therefore, horn clauses in Prolog play the role of data type definitions.</p>
-<img class="figureImage" src="https://thingspool.net/morsels/e05.jpg" alt="Game Programming in Prolog - Part 1 (Figure 5)">
+<img class="m_image" src="https://thingspool.net/morsels/e05.jpg" alt="Game Programming in Prolog - Part 1 (Figure 5)">
 <p>Aside from these pre-configured tags (which all rely on the presence of the tag "bread"), one may as well attach a custom tag to an actor as needed. For example, imagine that a wizard happened to enchant actor2 (i.e. the second piece of bread). This means that, unlike actor1 which is an ordinary piece of bread, actor2 must be an "enchanted" piece of bread which is required to have the tag "enchanted" attached to it for the purpose of showing us that it has been enchanted. The code below ensures that this is the case.</p>
 <div class="snippet"><pre><code>enchanted(actor2).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e06.jpg" alt="Game Programming in Prolog - Part 1 (Figure 6)">
+<img class="m_image" src="https://thingspool.net/morsels/e06.jpg" alt="Game Programming in Prolog - Part 1 (Figure 6)">
 <p>The tags "flammable" and "decomposable" are characteristics of all pieces of bread, whereas the tag "enchanted" is a characteristic of only special pieces of bread which have been enchanted by a wizard.</p>
 <hr>
 <h3><b>Relationships</b></h3>
@@ -93,18 +92,18 @@ decomposable(X) :- bread(X).</code></pre></div>
 <p>The following code is an example of a relationship. Suppose that there is a third actor called "actor3", and that we have declared it as a human (by attaching the tag "human" to it). Since a human is able to eat a piece of bread, we can confidently assert that "X can eat Y if X is a human and Y is a piece of bread". Here, "X can eat Y" is a relationship which holds whenever X is associated with tag "human" and Y is associated with tag "bread".</p>
 <div class="snippet"><pre><code>human(actor3).
 canEat(X, Y) :- human(X), bread(Y).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e07.jpg" alt="Game Programming in Prolog - Part 1 (Figure 7)">
+<img class="m_image" src="https://thingspool.net/morsels/e07.jpg" alt="Game Programming in Prolog - Part 1 (Figure 7)">
 <p>Here is another example. Since a piece of bread is decomposable (because anything which is identified as "bread" must also be identified as "decomposable"), we know that microbes such as fungi are capable of spoiling it. If there is an actor with the tag "fungus" attached to it, therefore, we will be able to tell that it must be able to spoil any other actor which is "decomposable". This is yet another case of a relationship between two types of actors; it is a relationship which says, "X can spoil Y if X is a fungus and Y is decomposable". The following code shows its definition.</p>
 <div class="snippet"><pre><code>fungus(actor4).
 canSpoil(X, Y) :- fungus(X), decomposable(Y).</code></pre></div>
-<img class="figureImage" src="https://thingspool.net/morsels/e08.jpg" alt="Game Programming in Prolog - Part 1 (Figure 8)">
+<img class="m_image" src="https://thingspool.net/morsels/e08.jpg" alt="Game Programming in Prolog - Part 1 (Figure 8)">
 <p>There is something still missing here, though. While I have demonstrated that it is possible to assign characteristics to individual actors as well as their mutual connections (i.e. relationships), I have not shown yet how to make these characteristics change over time. They all have been static so far, and the declarative nature of Prolog does not seem to offer an easy solution to make things dynamic.</p>
 <p>If we want to create a game rather than a fixed landscape of how things are shaped permanently, we better let them move and interact as time goes by. In the next part of the series, I will explain how the game loop shall be conceptualized in Prolog.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-11.html">Part 2</a>)</p>
-<div class="l_spacer"></div>
-<img class="logoImageSmall" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<div class="l_row"></div>
+<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
-<div class="m_spacer"></div>
+<div class="xl_row"></div>
 </div>
 </body>
 </html>

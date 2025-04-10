@@ -1,16 +1,17 @@
+* {
+	overflow: hidden;
+	vertical-align: middle;
+}
 body {
-	position: fixed;
+	position: absolute;
 	display: block;
-	max-width: 100vw;
-	max-height: 100vh;
-	left: 0vw;
-	right: 0vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: 100vw;
-	height: 100vh;
-	padding: 0 0;
-	margin: 0 0;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
@@ -19,79 +20,6 @@ body {
 	color: #c0c0c0;
 	text-align: left;
 	z-index: 0;
-}
-::-webkit-scrollbar {
-	width: 1.4vw;
-	height: 1.4vw;
-}
-::-webkit-scrollbar-track {
-	background: #101010;
-}
-::-webkit-scrollbar-thumb {
-	background: #707070;
-	border-radius: 0.7vw;
-	border: 0.3vw solid #101010;
-}
-::-webkit-scrollbar-thumb:hover {
-	background: #a0a0a0;
-}
-p {
-	position: relative;
-	display: block;
-	max-width: 95%;
-	padding: 0 0;
-	margin: 3vmin 2.25vmin;
-	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: normal;
-	font-weight: 400;
-	background-color: #303030;
-	color: #c0c0c0;
-}
-h3 {
-	position: relative;
-	display: block;
-	max-width: 95%;
-	padding: 0 0;
-	margin: 3vmin 2.25vmin;
-	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #b0a070;
-}
-h2 {
-	position: relative;
-	display: block;
-	max-width: 95%;
-	padding: 0 0;
-	margin: 3vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #707070;
-}
-h1 {
-	position: relative;
-	display: block;
-	max-width: 95%;
-	padding: 0 0;
-	margin: 3vmin 2.25vmin;
-	font-size: min(3.77vmax, 33.18px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #d0c090;
-}
-hr {
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	background-color: #303030;
-	color: #c0c0c0;
 }
 a:link {
   color: #a0a0a0;
@@ -105,183 +33,43 @@ a:hover {
 a:active {
   color: #a0a0a0;
 }
-
-.loadingScreen {
-	position: fixed;
-	display: block;
-	max-width: 100vw;
-	max-height: 100vh;
-	left: 0vw;
-	right: 0vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: 100vw;
-	height: 100vh;
-	padding: 0 0;
-	margin: 0 0;
-	z-index: 900;
-
-	.background {
-		position: fixed;
-	display: block;
-	max-width: 100vw;
-	max-height: 100vh;
-	left: 0vw;
-	right: 0vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: 100vw;
-	height: 100vh;
-		padding: 0 0;
-	margin: 0 0;
-		background-color: #000000;
-	color: #c0c0c0;
-	opacity: 0.5;
-	}
-	.text {
-		position: absolute;
-		min-width: 50%;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		font-size: min(3.77vmax, 33.18px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-		padding: 3vmin 2.25vmin;
-	margin: 3vmin 2.25vmin;
-		background-color: #a0a0a0;
-	color: #303030;
-	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #707070 solid;
-	border-right: 1.25vmin #707070 solid;
-		text-align: center;
-		z-index: 901;
-	}
-}
 .dim {
 	background-color: #303030;
 	color: #707070;
 }
-.snippet {
-	position: relative;
-	display: inline-block;
-	width: 90vw;
-	width: auto;
-	padding: 3vmin 2.25vmin;
-	margin: 3vmin 2.25vmin;
-	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: normal;
-	font-weight: 800;
-	background-color: #101010;
-	color: #70c060;
-	border-radius: 4.5vmin;
-	overflow: auto;
-	white-space: nowrap;
-}
-.excerpt {
-	position: relative;
-	display: inline-block;
-	width: 90vw;
-	padding: 2.25vmin 2.25vmin;
-	margin: 2.25vmin 2.25vmin;
-	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 400;
-	background-color: #101010;
-	color: #70c060;
-	border-radius: 4.5vmin;
-	overflow: auto;
-	white-space: pre-wrap;
-	white-space: -moz-pre-wrap;
-	white-space: -pre-wrap;
-	white-space: -o-pre-wrap;
-	word-wrap: break-word;
-}
-.banner {
-	position: relative;
-	display: block;
-	max-width: 95%;
-	padding: 3vmin 2.25vmin;
-	margin: 3vmin 2.25vmin;
-	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #a0a0a0;
-	color: #303030;
-	border-radius: 4.5vmin;
-}
-.zero_spacer {
-	position: relative;
-	display: block;
-	max-width: 1%;
-	padding: 0 0;
-	margin: 0 0;
-	opacity: 0;
-}
-.s_spacer {
-	position: relative;
-	display: block;
-	max-width: 1%;
-	padding: 0.75vmin 2.25vmin;
-	margin: 0.75vmin 2.25vmin;
-	opacity: 0;
-}
-.m_spacer {
-	position: relative;
-	display: block;
-	max-width: 1%;
-	padding: 1.5vmin 2.25vmin;
-	margin: 1.5vmin 2.25vmin;
-	opacity: 0;
-}
-.l_spacer {
-	position: relative;
-	display: block;
-	max-width: 1%;
-	padding: 2.25vmin 2.25vmin;
-	margin: 2.25vmin 2.25vmin;
-	opacity: 0;
-}
-.xl_spacer {
-	position: relative;
-	display: block;
-	max-width: 1%;
-	padding: 3vmin 2.25vmin;
-	margin: 3vmin 2.25vmin;
-	opacity: 0;
-}
-.listEntry {
-	position: relative;
-	display: block;
-	max-width: none;
-	width: fit-content;
-	block-size: fit-content;
-	padding: 1.5vmin 2.25vmin;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: normal;
-	font-weight: 800;
-	background-color: #101010;
-	color: #a0a0a0;
-	border-radius: 4.5vmin;
-	border-bottom: 0.5vmin #707070 solid;
-	border-right: 0.5vmin #707070 solid;
+.noTextDeco {
 	text-decoration: none;
 }
 
 @media (orientation: landscape) {
 	
+@supports(-moz-appearance:none) {
+	* {
+		scrollbar-width: auto;
+		scrollbar-color: #707070 #101010;
+	}
+}
+::-webkit-scrollbar {
+	width: 17px;
+	height: 17px;
+}
+::-webkit-scrollbar-track {
+	background: #101010;
+}
+::-webkit-scrollbar-thumb {
+	background: #707070;
+	border-radius: 8px;
+	border: 4px solid #101010;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: #a0a0a0;
+}
 iframe {
 	position: relative;
 	display: block;
-	max-width: 95%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 1.20% 1.00% 1.20% 0;
 	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -289,19 +77,77 @@ iframe {
 	background-color: #303030;
 	color: #a0a0a0;
 }
-.fullscreenBar {
-	position: fixed;
+p {
+	position: relative;
 	display: block;
-	max-width: 100vw;
-	max-height: 100vh;
-	left: 0vw;
-	right: 86vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: 14vw;
-	height: 100vh;
-	padding: 0 0;
-	margin: 0 0;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.40% 1.00% 2.40% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #303030;
+	color: #c0c0c0;
+}
+h3 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.40% 1.00% 2.40% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #b0a070;
+}
+h2 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.40% 1.00% 2.40% 0;
+	font-size: min(3.14vmax, 27.65px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #707070;
+}
+h1 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.40% 1.00% 2.40% 0;
+	font-size: min(3.77vmax, 33.18px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #d0c090;
+}
+hr {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 1.20% 1.00% 1.20% 0;
+	background-color: #303030;
+	color: #c0c0c0;
+}
+.fullscreenBar {
+	position: absolute;
+	display: block;
+	left: 0%;
+	right: 86%;
+	top: 0%;
+	bottom: 0%;
+	width: 14%;
+	height: 100%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
 	font-size: min(2.18vmax, 19.20px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -313,18 +159,16 @@ iframe {
 	overflow: hidden;
 }
 .fullscreenPanel {
-	position: fixed;
+	position: absolute;
 	display: block;
-	max-width: 100vw;
-	max-height: 100vh;
-	left: 14vw;
-	right: 1.5vw;
-	top: 0vh;
-	bottom: 0vh;
-	width: calc(84.5% - 1.5vw);
-	height: 100vh;
-	padding: 3vmin 2.25vmin;
-	margin: 0 0;
+	left: 14%;
+	right: 5%;
+	top: 0%;
+	bottom: 0%;
+	width: 81%;
+	height: 100%;
+	margin: 0 0 0 0;
+	padding: 0 2.5% 0 2.5%;
 	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -332,12 +176,11 @@ iframe {
 	background-color: #303030;
 	color: #a0a0a0;
 	overflow-y: scroll;
+	overflow-x: auto;
 }
 .fullscreenBarLogo {
 	position: absolute;
 	display: block;
-	max-width: 100%;
-	max-height: 100%;
 	left: 0%;
 	right: 0%;
 	top: 0%;
@@ -358,8 +201,6 @@ iframe {
 .fullscreenBarMenu {
 	position: absolute;
 	display: block;
-	max-width: 100%;
-	max-height: 100%;
 	left: 0%;
 	right: 0%;
 	top: 14%;
@@ -372,8 +213,8 @@ iframe {
 	display: block;
 	width: 100%;
 	max-height: 100%;
-	padding: 1.5vmin 2.25vmin;
-	margin: 0 0;
+	padding: 2.40% 1.00% 2.40% 1.00%;
+	margin: 0 0 0 0;
 	box-sizing: border-box;
 }
 .fullscreenBarMenuButton.idle {
@@ -390,98 +231,101 @@ iframe {
 .fullscreenBarMenuButton.selected:hover {
 	color: #d0c090;
 }
-.logoImage {
-	position: relative;
+.loadingScreen {
+	position: absolute;
 	display: block;
-	max-width: 45%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #a0a0a0;
-}
-.logoImageSmall {
-	position: relative;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
+	z-index: 900;
+
+	.background {
+		position: absolute;
 	display: block;
-	max-width: 20%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #a0a0a0;
-}
-.profileImage {
-	position: relative;
-	display: block;
-	max-width: 29%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+		padding: 0 0 0 0; margin: 0 0 0 0;
+		background-color: #000000;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
-}
-.figureImage {
-	position: relative;
-	display: block;
-	max-width: 45%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
+	opacity: 0.5;
+	}
+	.text {
+		position: absolute;
+		min-width: 50%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		font-size: min(3.77vmax, 33.18px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
-	background-color: #303030;
-	color: #c0c0c0;
+		padding: 2.40% 1.00% 2.40% 1.00%;
+	margin: 2.40% 1.00% 2.40% 0;
+		background-color: #a0a0a0;
+	color: #303030;
 	border-radius: 4.5vmin;
+	border-bottom: 1.25vmin #707070 solid;
+	border-right: 1.25vmin #707070 solid;
+		text-align: center;
+		z-index: 901;
+	}
 }
-.gameImage {
-	position: relative;
-	display: block;
-	max-width: 45%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #c0c0c0;
-	border-radius: 4.5vmin;
-}
-.button {
-	position: relative;
-	display: block;
-	max-width: 45%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #a0a0a0;
-	color: #c0c0c0;
-	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #d0c090 solid;
-	border-right: 1.25vmin #d0c090 solid;
-}
-.gameLink {
+.xs_image {
 	position: relative;
 	display: inline-block;
-	width: 20vw;
-	height: 6.1143vw;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
+	max-width: 23.00%;
+	padding: 0 0 0 0;
+	margin: 1.20% 1.00% 1.20% 0;
+	font-size: min(2.62vmax, 23.04px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #a0a0a0;
+}
+.s_image {
+	position: relative;
+	display: inline-block;
+	max-width: 31.00%;
+	padding: 0 0 0 0;
+	margin: 1.20% 1.00% 1.20% 0;
+	font-size: min(2.62vmax, 23.04px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+}
+.m_image {
+	position: relative;
+	display: inline-block;
+	max-width: 64.00%;
+	padding: 0 0 0 0;
+	margin: 1.20% 1.00% 1.20% 0;
+	font-size: min(2.62vmax, 23.04px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+}
+.m_linkImage {
+	position: relative;
+	display: inline-block;
+	max-width: 48.00%;
+	padding: 0 0 0 0;
+	margin: 1.20% 1.00% 1.20% 0;
+	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
@@ -491,48 +335,31 @@ iframe {
 	border-bottom: 1.25vmin #a0a0a0 solid;
 	border-right: 1.25vmin #a0a0a0 solid;
 }
-.gameLink:hover {
+.m_linkImage:hover {
 	border-color: #d0c090;
 }
-.featureLink {
+.listEntry {
 	position: relative;
-	display: inline-block;
-	width: 15vw;
-	height: 8.5710vw;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
+	display: block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
+	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
+	font-style: normal;
 	font-weight: 800;
-	background-color: #303030;
+	background-color: #101010;
 	color: #a0a0a0;
 	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #a0a0a0 solid;
-	border-right: 1.25vmin #a0a0a0 solid;
-}
-.featureLink:hover {
-	border-color: #d0c090;
-}
-.playButton {
-	position: relative;
-	display: inline-block;
-	width: 20vw;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #a0a0a0;
-}
-.noTextDeco {
+	border-bottom: 0.5vmin #707070 solid;
+	border-right: 0.5vmin #707070 solid;
 	text-decoration: none;
 }
 .pagePath {
-	padding: 0 0;
-	margin: 0.75vmin 2.25vmin;
+	padding: 0 0 0 0;
+	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
@@ -541,9 +368,11 @@ iframe {
 .textInput {
 	position: relative;
 	display: inline-block;
-	max-width: 29%;
-	padding: 0.75vmin 2.25vmin;
-	margin: 0.75vmin 2.25vmin;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
@@ -560,8 +389,8 @@ iframe {
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 0 0;
-	margin: 0.75vmin 2.25vmin;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
@@ -575,8 +404,8 @@ iframe {
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 0.75vmin 2.25vmin;
-	margin: 0.75vmin 2.25vmin;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
@@ -592,17 +421,121 @@ iframe {
 	color: #d0c090;
 	cursor: pointer;
 }
+.snippet {
+	position: relative;
+	display: block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.20% 1.00% 1.20% 1.00%;
+	margin: 1.20% 1.00% 1.20% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 800;
+	background-color: #101010;
+	color: #70c060;
+	border-radius: 4.5vmin;
+	white-space: nowrap;
+}
+.excerpt {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 1.20% 1.00% 1.20% 1.00%;
+	margin: 1.20% 1.00% 1.20% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 400;
+	background-color: #101010;
+	color: #70c060;
+	border-radius: 4.5vmin;
+	white-space: pre-wrap;
+	white-space: -moz-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: -o-pre-wrap;
+	word-wrap: break-word;
+}
+.zero_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
+	opacity: 0;
+}
+.xs_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 0.30% 1.00% 0.30% 1.00%;
+	margin: 0.30% 1.00% 0.30% 0;
+	opacity: 0;
+}
+.s_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
+	opacity: 0;
+}
+.m_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 1.20% 1.00% 1.20% 1.00%;
+	margin: 1.20% 1.00% 1.20% 0;
+	opacity: 0;
+}
+.l_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 1.80% 1.00% 1.80% 1.00%;
+	margin: 1.80% 1.00% 1.80% 0;
+	opacity: 0;
+}
+.xl_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 2.40% 1.00% 2.40% 1.00%;
+	margin: 2.40% 1.00% 2.40% 0;
+	opacity: 0;
+}
 
 }
 
 @media (orientation: portrait) {
 	
+@supports(-moz-appearance:none) {
+	* {
+		scrollbar-width: none;
+		scrollbar-color: #707070 #101010;
+	}
+}
+::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+}
+::-webkit-scrollbar-track {
+	background: #101010;
+}
+::-webkit-scrollbar-thumb {
+	background: #707070;
+	border-radius: 8px;
+	border: 4px solid #101010;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: #a0a0a0;
+}
 iframe {
 	position: relative;
 	display: block;
-	max-width: 95%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.00% 2.50% 2.00% 0;
 	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -610,19 +543,77 @@ iframe {
 	background-color: #303030;
 	color: #a0a0a0;
 }
-.fullscreenBar {
-	position: fixed;
+p {
+	position: relative;
 	display: block;
-	max-width: 100vw;
-	max-height: 100vh;
-	left: 0vw;
-	right: 0vw;
-	top: 0vh;
-	bottom: 88vh;
-	width: 100vw;
-	height: 12vh;
-	padding: 0 0;
-	margin: 0 0;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 4.00% 2.50% 4.00% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #303030;
+	color: #c0c0c0;
+}
+h3 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 4.00% 2.50% 4.00% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #b0a070;
+}
+h2 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 4.00% 2.50% 4.00% 0;
+	font-size: min(3.14vmax, 27.65px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #707070;
+}
+h1 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 4.00% 2.50% 4.00% 0;
+	font-size: min(3.77vmax, 33.18px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #d0c090;
+}
+hr {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.00% 2.50% 2.00% 0;
+	background-color: #303030;
+	color: #c0c0c0;
+}
+.fullscreenBar {
+	position: absolute;
+	display: block;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 88%;
+	width: 100%;
+	height: 12%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
 	font-size: min(2.18vmax, 19.20px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -634,18 +625,16 @@ iframe {
 	overflow: hidden;
 }
 .fullscreenPanel {
-	position: fixed;
+	position: absolute;
 	display: block;
-	max-width: 100vw;
-	max-height: 100vh;
-	left: 0vw;
-	right: 1.5vw;
-	top: 12vh;
-	bottom: 0vh;
-	width: calc(98.5% - 1.5vw);
-	height: 88vh;
-	padding: 3vmin 2.25vmin;
-	margin: 0 0;
+	left: 0%;
+	right: 2.5%;
+	top: 12%;
+	bottom: 0%;
+	width: 95%;
+	height: 88%;
+	margin: 0 0 0 0;
+	padding: 0 2.5% 0 2.5%;
 	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -653,12 +642,11 @@ iframe {
 	background-color: #303030;
 	color: #a0a0a0;
 	overflow-y: scroll;
+	overflow-x: auto;
 }
 .fullscreenBarLogo {
 	position: absolute;
 	display: block;
-	max-width: 100%;
-	max-height: 100%;
 	left: 0%;
 	right: 0%;
 	top: 0%;
@@ -679,8 +667,6 @@ iframe {
 .fullscreenBarMenu {
 	position: absolute;
 	display: block;
-	max-width: 100%;
-	max-height: 100%;
 	left: 0%;
 	right: 0%;
 	top: 65%;
@@ -693,8 +679,8 @@ iframe {
 	display: inline-block;
 	top: 100%; -ms-transform: translateY(-100%); transform: translateY(-100%);
 	max-height: 100%;
-	padding: 1.5vmin 2.25vmin;
-	margin: 0 0;
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 0 0 0 0;
 	box-sizing: border-box;
 }
 .fullscreenBarMenuButton.idle {
@@ -711,98 +697,101 @@ iframe {
 .fullscreenBarMenuButton.selected:hover {
 	color: #d0c090;
 }
-.logoImage {
-	position: relative;
+.loadingScreen {
+	position: absolute;
 	display: block;
-	max-width: 85%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #a0a0a0;
-}
-.logoImageSmall {
-	position: relative;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
+	z-index: 900;
+
+	.background {
+		position: absolute;
 	display: block;
-	max-width: 45%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #a0a0a0;
-}
-.profileImage {
-	position: relative;
-	display: block;
-	max-width: 45%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+		padding: 0 0 0 0; margin: 0 0 0 0;
+		background-color: #000000;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
-}
-.figureImage {
-	position: relative;
-	display: block;
-	max-width: 85%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
+	opacity: 0.5;
+	}
+	.text {
+		position: absolute;
+		min-width: 50%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		font-size: min(3.77vmax, 33.18px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
-	background-color: #303030;
-	color: #c0c0c0;
+		padding: 4.00% 2.50% 4.00% 2.50%;
+	margin: 4.00% 2.50% 4.00% 0;
+		background-color: #a0a0a0;
+	color: #303030;
 	border-radius: 4.5vmin;
+	border-bottom: 1.25vmin #707070 solid;
+	border-right: 1.25vmin #707070 solid;
+		text-align: center;
+		z-index: 901;
+	}
 }
-.gameImage {
-	position: relative;
-	display: block;
-	max-width: 85%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #c0c0c0;
-	border-radius: 4.5vmin;
-}
-.button {
-	position: relative;
-	display: block;
-	max-width: 95%;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #a0a0a0;
-	color: #c0c0c0;
-	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #d0c090 solid;
-	border-right: 1.25vmin #d0c090 solid;
-}
-.gameLink {
+.xs_image {
 	position: relative;
 	display: inline-block;
-	width: 80vw;
-	height: 24.4572vw;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
+	max-width: 45.00%;
+	padding: 0 0 0 0;
+	margin: 2.00% 2.50% 2.00% 0;
+	font-size: min(2.62vmax, 23.04px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #a0a0a0;
+}
+.s_image {
+	position: relative;
+	display: inline-block;
+	max-width: 61.00%;
+	padding: 0 0 0 0;
+	margin: 2.00% 2.50% 2.00% 0;
+	font-size: min(2.62vmax, 23.04px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+}
+.m_image {
+	position: relative;
+	display: inline-block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.00% 2.50% 2.00% 0;
+	font-size: min(2.62vmax, 23.04px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+}
+.m_linkImage {
+	position: relative;
+	display: inline-block;
+	max-width: 98.00%;
+	padding: 0 0 0 0;
+	margin: 2.00% 2.50% 2.00% 0;
+	font-size: min(2.62vmax, 23.04px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
@@ -812,48 +801,31 @@ iframe {
 	border-bottom: 1.25vmin #a0a0a0 solid;
 	border-right: 1.25vmin #a0a0a0 solid;
 }
-.gameLink:hover {
+.m_linkImage:hover {
 	border-color: #d0c090;
 }
-.featureLink {
-	position: relative;
-	display: inline-block;
-	width: 40vw;
-	height: 22.8560vw;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
-	color: #a0a0a0;
-	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #a0a0a0 solid;
-	border-right: 1.25vmin #a0a0a0 solid;
-}
-.featureLink:hover {
-	border-color: #d0c090;
-}
-.playButton {
+.listEntry {
 	position: relative;
 	display: block;
-	width: 40vw;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(3.14vmax, 27.65px);
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
+	font-style: normal;
 	font-weight: 800;
-	background-color: #303030;
+	background-color: #101010;
 	color: #a0a0a0;
-}
-.noTextDeco {
+	border-radius: 4.5vmin;
+	border-bottom: 0.5vmin #707070 solid;
+	border-right: 0.5vmin #707070 solid;
 	text-decoration: none;
 }
 .pagePath {
-	padding: 0 0;
-	margin: 0.75vmin 2.25vmin;
+	padding: 0 0 0 0;
+	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
@@ -862,12 +834,14 @@ iframe {
 .textInput {
 	position: relative;
 	display: block;
-	max-width: 85%;
-	padding: 1.5vmin 2.25vmin;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(2.18vmax, 19.20px);
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
+	font-style: normal;
 	font-weight: 400;
 	background-color: #707070;
 	color: #c0c0c0;
@@ -877,15 +851,15 @@ iframe {
 }
 .textInputLabel {
 	position: relative;
-	display: block;
+	display: inline-block;
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 0 0;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(2.18vmax, 19.20px);
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
+	font-style: normal;
 	font-weight: 400;
 	background-color: #303030;
 	color: #a0a0a0;
@@ -896,11 +870,11 @@ iframe {
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 1.5vmin 2.25vmin;
-	margin: 1.5vmin 2.25vmin;
-	font-size: min(2.18vmax, 19.20px);
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
+	font-style: normal;
 	font-weight: 400;
 	background-color: #101010;
 	color: #a0a0a0;
@@ -912,6 +886,89 @@ iframe {
 .inlineButton:hover {
 	color: #d0c090;
 	cursor: pointer;
+}
+.snippet {
+	position: relative;
+	display: block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 2.00% 2.50% 2.00% 2.50%;
+	margin: 2.00% 2.50% 2.00% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 800;
+	background-color: #101010;
+	color: #70c060;
+	border-radius: 4.5vmin;
+	white-space: nowrap;
+}
+.excerpt {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 2.00% 2.50% 2.00% 2.50%;
+	margin: 2.00% 2.50% 2.00% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 400;
+	background-color: #101010;
+	color: #70c060;
+	border-radius: 4.5vmin;
+	white-space: pre-wrap;
+	white-space: -moz-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: -o-pre-wrap;
+	word-wrap: break-word;
+}
+.zero_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
+	opacity: 0;
+}
+.xs_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 0.50% 2.50% 0.50% 2.50%;
+	margin: 0.50% 2.50% 0.50% 0;
+	opacity: 0;
+}
+.s_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	opacity: 0;
+}
+.m_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 2.00% 2.50% 2.00% 2.50%;
+	margin: 2.00% 2.50% 2.00% 0;
+	opacity: 0;
+}
+.l_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 3.00% 2.50% 3.00% 2.50%;
+	margin: 3.00% 2.50% 3.00% 0;
+	opacity: 0;
+}
+.xl_row {
+	position: relative;
+	display: block;
+	max-width: 1%;
+	padding: 4.00% 2.50% 4.00% 2.50%;
+	margin: 4.00% 2.50% 4.00% 0;
+	opacity: 0;
 }
 
 }

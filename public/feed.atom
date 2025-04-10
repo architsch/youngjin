@@ -3,7 +3,7 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2025-04-03T00:00:00.000Z</updated>
+<updated>2025-04-10T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
@@ -805,6 +805,13 @@
   <id>https://thingspool.net/novels/page-1.html</id>
   <updated>2023-09-10T00:00:00.000Z</updated>
   <summary>도시에 관한 소설.</summary>
+</entry>
+<entry>
+  <title>To Every Lonely Artist</title>
+  <link href="https://thingspool.net/concepts-of-plan/page-6.html"/>
+  <id>https://thingspool.net/concepts-of-plan/page-6.html</id>
+  <updated>2025-04-10T00:00:00.000Z</updated>
+  <summary>What makes true art? I will try to answer this question in the following article.</summary>
 </entry>
 <entry>
   <title>Caffeine, Sugar, and Fasting</title>
