@@ -29,17 +29,17 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
 
         builder = new TextFileBuilder();
         builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
-            menuName: "index",
+            menuName: "arcade",
             title: "ThingsPool - " + entry.title,
             desc: description,
             keywords: keywords,
             relativePageURL: relativeURL,
             pagePathList: [
                 {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
-                //{title: uiConfig.displayText.menuName["arcade"], relativeURL: "arcade.html"},
+                {title: uiConfig.displayText.menuName["arcade"], relativeURL: "arcade.html"},
                 {title: entry.title, relativeURL: undefined},
             ],
-            backDestination_href: envUtil.getRootURL(),//`${envUtil.getRootURL()}/arcade.html`,
+            backDestination_href: `${envUtil.getRootURL()}/arcade.html`,
         }));
 
         builder.addLine(`<h1>${entry.title}</h1>`);

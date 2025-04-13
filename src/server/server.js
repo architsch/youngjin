@@ -7,6 +7,7 @@ const authUtil = require("./util/authUtil.js");
 const emailUtil = require("./util/emailUtil.js");
 const envUtil = require("./util/envUtil.js");
 const ejsUtil = require("./util/ejsUtil.js");
+const textUtil = require("../shared/util/textUtil.mjs").textUtil;
 const globalConfig = require("../shared/config/globalConfig.mjs").globalConfig;
 require("dotenv").config();
 
@@ -33,16 +34,21 @@ async function run()
     // API Routes
     //-----------------------------------------------------------------
 
+    // auth
+
+    // req.body = {userName, password, email}
     app.post("/api/register", async (req, res) => {
         await authUtil.register(req, res);
         if (res.statusCode >= 200 && res.statusCode <= 299)
             res.end();
     });
+    // req.body = {email}
     app.post("/api/vemail", async (req, res) => {
         await emailUtil.startEmailVerification(req, res);
         if (res.statusCode >= 200 && res.statusCode <= 299)
             res.end();
     });
+    // req.body = {userName, password}
     app.post("/api/login", async (req, res) => {
         await authUtil.login(req, res);
         if (res.statusCode >= 200 && res.statusCode <= 299)
@@ -52,7 +58,28 @@ async function run()
         authUtil.clearToken(res);
         if (res.statusCode >= 200 && res.statusCode <= 299)
             res.end();
-    })
+    });
+
+    // social
+
+    // req.body = {tableName, orderBy, asc, limit, start}
+    app.get("/api/search", authUtil.authenticateToken, async (req, res) => {
+        await socialUtil.search(req, res);
+        if (res.statusCode >= 200 && res.statusCode <= 299)
+            res.end();
+    });
+    // req.body = {roomName}
+    app.post("/api/room/create", authUtil.authenticateToken, async (req, res) => {
+        await socialUtil.room.create(req, res);
+        if (res.statusCode >= 200 && res.statusCode <= 299)
+            res.end();
+    });
+    // req.body = {roomID}
+    app.delete("/api/room/leave", authUtil.authenticateToken, async (req, res) => {
+        await socialUtil.room.leave(req, res);
+        if (res.statusCode >= 200 && res.statusCode <= 299)
+            res.end();
+    });
 
     //-----------------------------------------------------------------
     // Dynamic Page Routes
@@ -60,6 +87,8 @@ async function run()
 
     if (!globalConfig.page.bypassDynamicPages)
     {
+        // menus
+
         app.get("/", authUtil.authenticateTokenOptional, async (req, res) => {
             const users = (req.user == undefined) ? [undefined] : await dbUtil.users.selectByUserName(res, req.user.userName);
             if (res.statusCode < 200 || res.statusCode >= 300)
@@ -67,16 +96,23 @@ async function run()
             res.render("page/menu/index", ejsUtil.makeEJSParams(
                 {user: users[0], loginDestination: ""}));
         });
+        app.get("/page/users.html", authUtil.authenticateTokenOptional, async (req, res) => {
+            res.render("page/menu/users", ejsUtil.makeEJSParams(
+                {user: req.user, loginDestination: "page/users.html"}));
+        });
+        app.get("/page/rooms.html", authUtil.authenticateTokenOptional, async (req, res) => {
+            res.render("page/menu/rooms", ejsUtil.makeEJSParams(
+                {user: req.user, loginDestination: "page/rooms.html"}));
+        });
+
+        // auth
 
         app.get("/page/register.html", (req, res) => {
             res.render("page/auth/register", ejsUtil.makeEJSParams(
                 {user: req.user, registerDestination: ""}));
         });
 
-        app.get("/page/social.html", authUtil.authenticateTokenOptional, async (req, res) => {
-            res.render("page/menu/social", ejsUtil.makeEJSParams(
-                {user: req.user, loginDestination: "page/social.html"}));
-        });
+        
     }
 
     //-----------------------------------------------------------------
@@ -87,12 +123,7 @@ async function run()
     {
         app.get("/debug/db", async (req, res) => {
             const section = (text) => `\n\n<h1>${text}</h1>\n`;
-            const toSafeStr = (obj) => JSON.stringify(obj, null, 4)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            const toSafeStr = (obj) => textUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
             const content =
                 section("users") + toSafeStr(await dbUtil.debug.users()) +
                 section("rooms") + toSafeStr(await dbUtil.debug.rooms()) +

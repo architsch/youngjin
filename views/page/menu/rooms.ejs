@@ -1,20 +1,18 @@
 <%- include(`${ejsChunkRootPath}/common/header.ejs`, {
-    menuName: "social",
+    menuName: "rooms",
     pagePathList: [
         {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
-        {title: uiConfig.displayText.menuName["social"], relativeURL: undefined},
+        {title: uiConfig.displayText.menuName["rooms"], relativeURL: undefined},
     ],
     backDestination_href: envUtil.getRootURL(),
 }) %>
 
 <% if (isStaticPage) { %>
-    <div class="m_row"></div>
-    <h3>This page is currently under construction.</h3>
+<h1>Coming Soon</h1>
 <% } else if (user) { %>
-    <div class="m_row"></div>
-    <h3>This page is currently under construction.</h3>
+<%- include(`${ejsChunkRootPath}/social/rooms.ejs`) %>
 <% } else { %>
-    <%- include(`${ejsChunkRootPath}/auth/login.ejs`) %>
+<%- include(`${ejsChunkRootPath}/auth/login.ejs`) %>
 <% } %>
 
 <%- include(`${ejsChunkRootPath}/common/footer.ejs`) %>

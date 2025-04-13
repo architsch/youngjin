@@ -84,10 +84,29 @@ const dbUtil =
         {
             return await query(res, "SELECT * FROM users WHERE email = ?;", [email]);
         },
+        selectList: async (res, orderby, asc, limit, start) =>
+        {
+            return await query(res, `SELECT * FROM users ORDER BY ${orderby} ${asc ? "ASC" : "DESC"} LIMIT ${limit}, ${start};`);
+        },
         insert: async (res, userName, passwordHash, email) =>
         {
             return await query(res, "INSERT INTO users (userName, passwordHash, email) VALUES (?, ?, ?);",
                 [userName, passwordHash, email]);
+        },
+    },
+    rooms: {
+        selectByRoomName: async (res, roomName) =>
+        {
+            return await query(res, "SELECT * FROM rooms WHERE roomName = ?;", [roomName]);
+        },
+        selectList: async (res, orderby, asc, limit, start) =>
+        {
+            return await query(res, `SELECT * FROM rooms ORDER BY ${orderby} ${asc ? "ASC" : "DESC"} LIMIT ${limit}, ${start};`);
+        },
+        insert: async (res, roomName, adminUserID) =>
+        {
+            return await query(res, "INSERT INTO rooms (roomName, adminUserID) VALUES (?, ?);",
+                [roomName, adminUserID]);
         },
     },
     emailVerifications: {

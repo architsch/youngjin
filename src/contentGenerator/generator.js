@@ -19,16 +19,28 @@ async function run()
     await builder.build("index.html");
 
     builder = new TextFileBuilder();
-    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/social.ejs", {
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/users.ejs", {
         isStaticPage: true,
         user: undefined,
         loginDestination: "",
     }));
-    await builder.build("social.html");
+    await builder.build("users.html");
+
+    builder = new TextFileBuilder();
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/rooms.ejs", {
+        isStaticPage: true,
+        user: undefined,
+        loginDestination: "",
+    }));
+    await builder.build("rooms.html");
 
     builder = new TextFileBuilder();
     builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/portfolio.ejs", {}));
     await builder.build("portfolio.html");
+
+    builder = new TextFileBuilder();
+    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/portfolio_minimal.ejs", {}));
+    await builder.build("portfolio_minimal.html");
 
     builder = new TextFileBuilder();
     builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/privacyPolicy.ejs", {}));

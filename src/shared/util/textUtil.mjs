@@ -1,5 +1,19 @@
 export const textUtil =
 {
+    // html
+
+    escapeHTMLChars: (text) =>
+    {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    },
+
+    // auth
+
     findErrorInUserName: (text) =>
     {
         if (text.length < 4)
@@ -29,12 +43,14 @@ export const textUtil =
             return "Please enter a valid email address."
         return null;
     },
-    sanitizeUserName: (text) => {
+    sanitizeUserName: (text) =>
+    {
         if (text.length > 16)
             text = text.substring(0, 16);
         return text.replace(/[^a-zA-Z0-9_]/g, "");
     },
-    sanitizePassword: (text) => {
+    sanitizePassword: (text) =>
+    {
         if (text.length > 24)
             text = text.substring(0, 24);
         return text.replace(/[^a-zA-Z0-9~`!@#\$%\^&\*\(\)-_\+=\{\[\}\]\|\\:;"'<,>\.\?\/]/g, "");

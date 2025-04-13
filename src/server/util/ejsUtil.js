@@ -1,17 +1,20 @@
 const envUtil = require("./envUtil.js");
 const fileUtil = require("./fileUtil.js");
 const uiConfig = require("../../shared/config/uiConfig.mjs").uiConfig;
+const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
 const ejs = require("ejs");
 require("dotenv").config();
 
 const baseStaticPageEJSParams = {
     envUtil: envUtil,
+    textUtil: textUtil,
     uiConfig: uiConfig,
     ejsChunkRootPath: `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/chunk`,
     isStaticPage: true,
 };
 const baseDynamicPageEJSParams = {
     envUtil: envUtil,
+    textUtil: textUtil,
     uiConfig: uiConfig,
     ejsChunkRootPath: `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/chunk`,
     isStaticPage: false,

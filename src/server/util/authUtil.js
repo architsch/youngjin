@@ -49,7 +49,7 @@ const authUtil =
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
     
-            return authUtil.addToken(req.body.userName, res);
+            authUtil.addToken(req.body.userName, res);
         }
         catch (err)
         {
@@ -79,7 +79,7 @@ const authUtil =
             if (!validPassword)
                 return res.status(401).send("Wrong password.");
 
-            return authUtil.addToken(req.body.userName, res);
+            authUtil.addToken(req.body.userName, res);
         }
         catch (err)
         {

@@ -51,6 +51,9 @@ function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
             ],
             backDestination_href: envUtil.getRootURL(),
         }));
+
+        builder.addLine(`<hr>`);
+        builder.addLine(`<h1>Games</h1>`);
         
         builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/info/gameLinks.ejs"));
         builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));

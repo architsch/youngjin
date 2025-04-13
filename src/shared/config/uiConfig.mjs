@@ -3,7 +3,7 @@ export const uiConfig =
     displayText: {
         menuName: {
             "index": "Home",
-            "social": "Forum",
+            "rooms": "Rooms",
             "arcade": "Games",
             "library": "Blog",
         },
