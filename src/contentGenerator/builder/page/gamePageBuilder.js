@@ -14,6 +14,8 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
         const rawText = await fileUtil.read(`${entry.dirName}/source.txt`);
         const lines = rawText.split(/\r?\n/);
 
+        const playLinkImagePath = (entry.playLinkImagePathOverride == undefined) ? "play.png" : entry.playLinkImagePathOverride;
+
         let description = "";
         let keywords = "";
 
@@ -44,8 +46,8 @@ function GamePageBuilder(sitemapBuilder, atomFeedBuilder)
 
         builder.addLine(`<h1>${entry.title}</h1>`);
 
-        builder.addLine(`<a class="noTextDeco" href="${entry.playLinkURL}">`);
-        builder.addLine(`<img class="xs_image" src="${envUtil.getRootURL()}/play.png" alt="Play">`);
+        builder.addLine(`<a class="noTextDeco" target="_blank" href="${entry.playLinkURL}">`);
+        builder.addLine(`<img class="xs_image" src="${envUtil.getRootURL()}/${playLinkImagePath}" alt="Play">`);
         builder.addLine(`</a>`);
         builder.addLine(`<div class="zero_row"></div>`);
 

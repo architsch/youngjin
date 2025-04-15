@@ -1,0 +1,27 @@
+:d:ArtRaider is a free web game which includes stealth action, first-person control, and online art exhibition. It also comes with a custom level editor, which lets you design your own virtual art exhibition rooms.
+:k:Free Game, Art Game, Art Simulator, Museum Simulator, Level Editor, Virtual Museum, Virtual Art Museum, Stealth Game, Art Exhibition
+[(This game is for Android only)]
+
+<1>
+
+<2>
+
+[Virtual Art Museum]
+
+ArtRaider is an art museum simulator. Your goal is to steal artworks from virtual exhibition rooms.
+
+<3>
+
+<4>
+
+[Be an Art Smuggler]
+
+Collect money from stolen masterpieces. Be careful, however, not to get caught by the security officers!
+
+<5>
+
+<6>
+
+[Custom Map Editor]
+
+You can also design your own art museum, save it as an image file, and share it with other people!

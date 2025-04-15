@@ -2,18 +2,26 @@
 :k:Free Game, WebGL Game, RTS, Browser-Game, Isometric, Management Game, Strategy Game, Construction Game, Sci-Fi, Cosmic
 <1>
 
+<2>
+
 [A Clicker RTS]
 
 SpaceTown is an incremental tower defense game in which you must fight against continuous waves of alien creatures.
 
-<2>
+<3>
+
+<4>
 
 [A Galactic Battle Simulator]
 
 Gather resources, upgrade your weapons, and conduct researches to enhance your space force.
 
-<3>
+<5>
+
+<6>
 
 [Construct your own Space Colony]
 
 Various level-ups and hidden rewards are awaiting you.
+
+<7>

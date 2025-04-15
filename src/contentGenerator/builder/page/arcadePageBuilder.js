@@ -9,6 +9,14 @@ function ArcadePageBuilder(sitemapBuilder, atomFeedBuilder)
 {
     const gameEntries = [
         {
+            dirName: "ArtRaider",
+            title: "ArtRaider",
+            playLinkImagePathOverride: "badge_onestore.png",
+            playLinkURL: "https://onesto.re/0001000383",
+            videoTag: `<iframe width="560" height="315" src="https://www.youtube.com/embed/RuLgOJrNtKA?si=Ts_Yu_jdpB1qmNiT" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`,
+            lastmod: "2025-04-15",
+        },
+        {
             dirName: "Water-vs-Fire",
             title: "Water vs Fire",
             playLinkURL: "https://www.gamearter.com/game/water-vs-fire",

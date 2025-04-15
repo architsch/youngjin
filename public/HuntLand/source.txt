@@ -4,18 +4,26 @@
 
 <1>
 
+<2>
+
 [An HTML5 First-Person Shooter]
 
 HuntLand is a casual FPS action game in which you employ various tools to fight against your robotic enemies.
 
-<2>
+<3>
+
+<4>
 
 [Emergent Mechanics]
 
 Make your way through bouncy projectiles, explosives, force fields, and other interactive wonders.
 
-<3>
+<5>
+
+<6>
 
 [Roguelike Gameplay]
 
 Collect loot from the footsteps of your enemies, in order to level up and unlock your door to the next stage.
+
+<7>
