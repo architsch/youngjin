@@ -6,4 +6,7 @@ export const globalConfig =
     auth: {
         bypassEmailVerification: false,
     },
+    search: {
+        searchLimitPerPage: 10,
+    },
 }

@@ -55,18 +55,18 @@ const testServerCalls =
     },
     register: async (userName, password, email, verificationCode) =>
     {
-        const callResult = await post("/api/register", {userName, password, email, verificationCode});
+        const callResult = await post("/api/auth/register", {userName, password, email, verificationCode});
         cacheTokenFromRes(userName, callResult.res);
         return callResult;
     },
     vemail: async (email) =>
     {
-        const callResult = await post("/api/vemail", {email});
+        const callResult = await post("/api/auth/vemail", {email});
         return callResult;
     },
     login: async (userName, password) =>
     {
-        const callResult = await post("/api/login", {userName, password});
+        const callResult = await post("/api/auth/login", {userName, password});
         cacheTokenFromRes(userName, callResult.res);
         return callResult;
     },

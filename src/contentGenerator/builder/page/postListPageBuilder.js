@@ -34,7 +34,7 @@ function PostListPageBuilder(sitemapBuilder, atomFeedBuilder)
             for (let i = postInfoList.length-1; i >= 0; --i)
             {
                 const postInfo = postInfoList[i];
-                builder.addLine(`<a class="listEntry" href="${envUtil.getRootURL()}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
+                builder.addLine(`<a class="postEntryButton" href="${envUtil.getRootURL()}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
             }
             
             builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));

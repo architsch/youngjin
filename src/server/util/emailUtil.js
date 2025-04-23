@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-const dbUtil = require("./dbUtil.js");
+const dbEmail = require("../db/dbEmail.js");
 const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
 const globalConfig = require("../../shared/config/globalConfig.mjs").globalConfig;
 require("dotenv").config();
@@ -17,7 +17,7 @@ const emailUtil =
             if (emailError != null)
                 return res.status(400).send(emailError);
 
-            const existingV = await dbUtil.emailVerifications.selectByEmail(res, req.body.email);
+            const existingV = await dbEmail.verifications.selectByEmail(res, req.body.email);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
             if (existingV && existingV.length > 0)
@@ -28,7 +28,7 @@ const emailUtil =
                 .map(() => codeChars.charAt(crypto.randomInt(codeChars.length)))
                 .join("");
 
-            await dbUtil.emailVerifications.insert(res,
+            await dbEmail.verifications.insert(res,
                 req.body.email,
                 verificationCode,
                 Math.floor(Date.now() * 0.001) + 600 // expires after 10 minutes
@@ -75,7 +75,7 @@ const emailUtil =
                 }
                 else
                 {
-                    await dbUtil.emailVerifications.updateExpirationTime(res,
+                    await dbEmail.verifications.updateExpirationTime(res,
                         req.body.email,
                         Math.floor(Date.now() * 0.001) + 120 // block retry for 2 minutes (to prevent spamming)
                     );
@@ -99,7 +99,7 @@ const emailUtil =
         
         const verificationCode = req.body.verificationCode;
 
-        const existingV = await dbUtil.emailVerifications.selectByEmail(res, req.body.email);
+        const existingV = await dbEmail.verifications.selectByEmail(res, req.body.email);
         if (res.statusCode < 200 || res.statusCode >= 300)
             return;
         if (!existingV || existingV.length == 0)
@@ -113,7 +113,7 @@ const emailUtil =
 
 // Handle auto-expiration
 setInterval(async function() {
-    await dbUtil.emailVerifications.deleteExpired(null, Math.floor(Date.now() * 0.001));
-}, 10000);
+    await dbEmail.verifications.deleteExpired(null, Math.floor(Date.now() * 0.001));
+}, 180000);
 
 module.exports = emailUtil;

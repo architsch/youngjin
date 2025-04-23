@@ -40,7 +40,7 @@ function LibraryPageBuilder(sitemapBuilder, atomFeedBuilder)
         for (let i = entries.length - 1; i >= 0; --i)
         {
             const entry = entries[i];
-            builder.addLine(`<a class="listEntry" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">${entry.title}</a>`);
+            builder.addLine(`<a class="postEntryButton" href="${envUtil.getRootURL()}/${entry.dirName}/list.html">${entry.title}</a>`);
         }
     };
 

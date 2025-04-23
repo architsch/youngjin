@@ -1,0 +1,38 @@
+<script src="https://code.jquery.com/jquery.min.js"></script>
+<div id="loadingScreen" class="loadingScreen" style="display: none;">
+    <div class="background"></div>
+    <div class="content">Loading...</div>
+</div>
+<div id="popupScreen" class="popupScreen" style="display: none;">
+    <div class="background"></div>
+    <div id="popupContent" class="content"></div>
+</div>
+<script>
+    let process_pending = false;
+
+    function process_pending_on()
+    {
+        if (process_pending)
+            alert("Error: Process is already pending.");
+        process_pending = true;
+        $("#loadingScreen").css("display", "block");
+    }
+    function process_pending_off()
+    {
+        if (!process_pending)
+            alert("Error: Process is inactive.");
+        process_pending = false;
+        $("#loadingScreen").css("display", "none");
+    }
+
+    function popup_on(htmlContent)
+    {
+        $("#popupContent").html(htmlContent);
+        $("#popupScreen").css("display", "block");
+    }
+    function popup_off()
+    {
+        $("#popupContent").html("");
+        $("#popupScreen").css("display", "none");
+    }
+</script>

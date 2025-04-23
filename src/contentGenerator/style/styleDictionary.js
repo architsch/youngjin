@@ -76,6 +76,12 @@ const relativeAndFlexibleArea = (nextline) =>
 \twidth: fit-content;
 \tblock-size: fit-content;`;
 
+const relativeFixedSizeArea = (nextline, width, height) =>
+`position: relative;
+\tdisplay: ${nextline ? "block" : "inline-block"};
+\twidth: ${width};
+\theight: ${height};`;
+
 // Spacing
 
 const spacing = (landscape, verticalScale, horizontalScale, suppressMargin = false, suppressPadding = false) => {
@@ -105,13 +111,21 @@ const simpleFrame = (backgroundColor, foregroundColor, opacity = 1) =>
 \tcolor: ${foregroundColor};${(opacity < 1) ? `\n\topacity: ${opacity};` : ""}`;
 
 const roundedFrame = (backgroundColor, foregroundColor, opacity = 1) =>
-simpleFrame(backgroundColor, foregroundColor) + "\n" +
-`\tborder-radius: 4.5vmin;${(opacity < 1) ? `\n\topacity: ${opacity};` : ""}`;
+simpleFrame(backgroundColor, foregroundColor, opacity) + "\n" +
+`\tborder-radius: 4.5vmin;`;
 
-const borderedFrame = (backgroundColor, foregroundColor, borderColor, borderThickness = "1.25", opacity = 1) =>
-roundedFrame(backgroundColor, foregroundColor) + "\n" +
+const elevatedFrame = (backgroundColor, foregroundColor, borderColor, borderThickness = "1.25", opacity = 1) =>
+roundedFrame(backgroundColor, foregroundColor, opacity) + "\n" +
 `\tborder-bottom: ${borderThickness}vmin ${borderColor} solid;` + "\n" +
-`\tborder-right: ${borderThickness}vmin ${borderColor} solid;${(opacity < 1) ? `\n\topacity: ${opacity};` : ""}`;
+`\tborder-right: ${borderThickness}vmin ${borderColor} solid;`;
+
+const outlinedFrame = (backgroundColor, foregroundColor, borderColor, borderThickness = "1.25", opacity = 1) =>
+roundedFrame(backgroundColor, foregroundColor, opacity) + "\n" +
+`\tborder: ${borderThickness}vmin ${borderColor} solid;`;
+
+const underlinedFrame = (backgroundColor, foregroundColor, underlineColor, underlineThickness = "1.25", opacity = 1) =>
+simpleFrame(backgroundColor, foregroundColor, opacity) + "\n" +
+`\tborder-bottom: ${underlineThickness}vmin ${underlineColor} solid;`;
 
 //------------------------------------------------------------------------
 // Elementary Styles
@@ -152,6 +166,8 @@ const fullscreen_top_bar_logo_area = absoluteArea(
 const fullscreen_top_bar_menu_area = absoluteArea(
 	0, 0, fullscreenTopBarLogoAreaHeightPercent, 0,
 	100, 100 - fullscreenTopBarLogoAreaHeightPercent);
+
+const list_scroll_panel_area = _ => relativeFixedSizeArea(true, `${(100).toFixed(2)}%`, `${(70).toFixed(2)}%`);
 
 const getGraceWidthPercent = (landscape) =>
 	2 * space.unit[landscape ? "landscape" : "portrait"].horizontal;
@@ -218,19 +234,24 @@ const xxl_bold_font = font(size_xxl_font, true, bold_font_weight);
 
 const transparent_frame = `opacity: 0;`;
 const loading_screen_background_frame = simpleFrame("#000000", lightColor, 0.5);
-const loading_screen_text_frame = borderedFrame(mediumColor, darkColor, dimColor, "1.25");
+const loading_screen_content_frame = elevatedFrame(lightYellowColor, darkColor, mediumYellowColor, "1.25");
+const popup_screen_background_frame = simpleFrame("#000000", lightColor, 0.5);
+const popup_screen_content_frame = elevatedFrame(mediumColor, darkColor, dimColor, "1.25");
 const light_color_frame = simpleFrame(darkColor, lightColor);
+const underlined_light_color_frame = underlinedFrame(darkColor, lightColor);
 const medium_color_frame = simpleFrame(darkColor, mediumColor);
 const inverted_medium_color_frame = simpleFrame(mediumColor, darkColor);
 const dim_color_frame = simpleFrame(darkColor, dimColor);
 const lightYellow_color_frame = simpleFrame(darkColor, lightYellowColor);
 const mediumYellow_color_frame = simpleFrame(darkColor, mediumYellowColor);
-const linkImage_frame = borderedFrame(darkColor, mediumColor, mediumColor);
+const linkImage_frame = elevatedFrame(darkColor, mediumColor, mediumColor);
 const img_frame = roundedFrame(darkColor, lightColor);
 const snippet_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const excerpt_frame = roundedFrame(extraDarkColor, lightGreenColor);
-const list_entry_frame = borderedFrame(extraDarkColor, mediumColor, dimColor, "0.5");
-const text_input_frame = borderedFrame(dimColor, lightColor, mediumColor, "0.25");
+const button_frame = elevatedFrame(extraDarkColor, mediumColor, dimColor, "0.5");
+const text_input_frame = elevatedFrame(dimColor, lightColor, mediumColor, "0.25");
+const list_scroll_panel_frame = outlinedFrame(darkColor, lightColor, dimColor, "0.1");
+const list_item_frame = outlinedFrame(mediumColor, lightColor, lightColor, "0.1");
 
 //------------------------------------------------------------------------
 // Orientation-Dependent Styles
@@ -335,6 +356,7 @@ hr {
 	max-height: 100%;
 	${landscape ? xl_spacing_paddingOnly(landscape) : s_spacing_paddingOnly(landscape)}
 	box-sizing: border-box;
+	text-decoration: none;
 }
 .fullscreenBarMenuButton.idle {
 	${inverted_medium_color_frame}
@@ -358,7 +380,7 @@ hr {
 		${zero_spacing(landscape)}
 		${loading_screen_background_frame}
 	}
-	.text {
+	.content {
 		position: absolute;
 		min-width: 50%;
 		top: 50%;
@@ -366,9 +388,33 @@ hr {
 		transform: translate(-50%, -50%);
 		${xxl_bold_font}
 		${xl_spacing(landscape)}
-		${loading_screen_text_frame}
+		${loading_screen_content_frame}
 		text-align: center;
 		z-index: 901;
+	}
+}
+.popupScreen {
+	${fullscreen_whole_area}
+	${zero_spacing(landscape)}
+	z-index: 500;
+
+	.background {
+		${fullscreen_whole_area}
+		${zero_spacing(landscape)}
+		${popup_screen_background_frame}
+	}
+	.content {
+		position: absolute;
+		width: 80%;
+		width: 80%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		${s_font}
+		${m_spacing(landscape)}
+		${popup_screen_content_frame}
+		overflow-y: scroll;
+		z-index: 501;
 	}
 }
 .xs_image {
@@ -398,24 +444,37 @@ hr {
 .m_linkImage:hover {
 	border-color: ${lightYellowColor};
 }
-.listEntry {
+.postEntryButton {
 	${flexible_row_area(landscape)}
 	${s_spacing(landscape)}
 	${s_bold_font}
-	${list_entry_frame}
+	${button_frame}
 	text-decoration: none;
 }
 .pagePath {
 	${s_spacing_marginOnly(landscape)}
 	${s_font}
 }
-.textInput {
+.listScrollPanel {
+	${list_scroll_panel_area(landscape)}
+	${s_spacing(landscape)}
+	${list_scroll_panel_frame}
+	overflow: auto;
+}
+.listItem {
+	${flexible_row_area(landscape)}
+	${s_spacing(landscape)}
+	${s_font}
+	${list_item_frame}
+	text-decoration: none;
+}
+.inlineTextInput {
 	${landscape ? flexible_col_area(landscape) : flexible_row_area(landscape)}
 	${landscape ? s_spacing(landscape) : s_spacing(landscape)}
 	${s_font}
 	${text_input_frame}
 }
-.textInputLabel {
+.inlineLabel {
 	${flexible_col_area(landscape)}
 	${s_spacing(landscape)}
 	${s_font}
@@ -425,12 +484,34 @@ hr {
 	${flexible_col_area(landscape)}
 	${s_spacing(landscape)}
 	${s_font}
-	${list_entry_frame}
+	${button_frame}
 	text-decoration: none;
 }
 .inlineButton:hover {
 	color: ${lightYellowColor};
 	cursor: pointer;
+}
+.inlineButton:disabled {
+	opacity: 0.25;
+	cursor: not-allowed;
+}
+.inlineTabButton {
+	${flexible_col_area(landscape)}
+	${s_spacing(landscape)}
+	${s_font}
+	text-decoration: none;
+}
+.inlineTabButton.idle {
+	${light_color_frame}
+}
+.inlineTabButton.selected {
+	${underlined_light_color_frame}
+}
+.inlineTabButton.idle:hover {
+	color: ${lightYellowColor};
+}
+.inlineTabButton.selected:hover {
+	color: ${lightYellowColor};
 }
 .snippet {
 	${flexible_row_area(landscape)}

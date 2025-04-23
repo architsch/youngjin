@@ -7,5 +7,13 @@ export const uiConfig =
             "arcade": "Games",
             "library": "Blog",
         },
+        tabName: {
+            "rooms/owned": "My",
+            "rooms/joined": "Joined",
+            "rooms/pending": "Pending",
+            "rooms/others": "Others",
+            "roomMembers/associated": "Members",
+            "roomMembers/others": "Invite Others",
+        },
     },
 }

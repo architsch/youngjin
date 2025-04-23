@@ -1,9 +1,9 @@
 <h1>Log In:</h1>
 
-<div class="textInputLabel">Username:</div><input type="text" class="textInput" id="userName_input">
+<div class="inlineLabel">Username:</div><input type="text" class="inlineTextInput" id="userName_input">
 <div class="zero_row"></div>
 
-<div class="textInputLabel">Password:</div><input type="password" class="textInput" id="password_input">
+<div class="inlineLabel">Password:</div><input type="password" class="inlineTextInput" id="password_input">
 <div class="xs_row"></div>
 
 <div class="inlineButton" id="login_button">Log In</div><div class="inlineButton" id="register_button">Create Account</div>
@@ -43,7 +43,7 @@
         }
 
         $.ajax({
-            url: "<%= envUtil.getRootURL() %>/api/login",
+            url: "<%= envUtil.getRootURL() %>/api/auth/login",
             method: "POST",
             data: { userName, password },
             success: function(result) {
@@ -59,7 +59,6 @@
     $("#register_button").click(function() {
         if (process_pending)
             return;
-
-        window.location.href = "<%= envUtil.getRootURL() %>/page/register.html";
+        window.location.href = "<%= envUtil.getRootURL() %>/register";
     });
 </script>

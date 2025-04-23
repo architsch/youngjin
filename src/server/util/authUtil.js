@@ -2,7 +2,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const envUtil = require("./envUtil.js");
 const emailUtil = require("./emailUtil.js");
-const dbUtil = require("./dbUtil.js");
+const dbSearch = require("../db/dbSearch.js");
+const dbAuth = require("../db/dbAuth.js");
 const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
 require("dotenv").config();
 
@@ -24,13 +25,13 @@ const authUtil =
             if (emailError != null)
                 return res.status(400).send(emailError);
 
-            let existingUsers = await dbUtil.users.selectByUserName(res, req.body.userName);
+            let existingUsers = await dbSearch.users.withUserName(res, req.body.userName);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
             if (existingUsers && existingUsers.length > 0)
                 return res.status(403).send(`User "${req.body.userName}" already exists.`);
 
-            existingUsers = await dbUtil.users.selectByEmail(res, req.body.email);
+            existingUsers = await dbSearch.users.withEmail(res, req.body.email);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
             if (existingUsers && existingUsers.length > 0)
@@ -45,10 +46,10 @@ const authUtil =
     
             const passwordHash = await bcrypt.hash(req.body.password, 10);
     
-            await dbUtil.users.insert(res, req.body.userName, passwordHash, req.body.email);
+            await dbAuth.registerNewUser(res, req.body.userName, passwordHash, req.body.email);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
-    
+
             authUtil.addToken(req.body.userName, res);
         }
         catch (err)
@@ -68,13 +69,11 @@ const authUtil =
             if (passwordError != null)
                 return res.status(400).send(passwordError);
 
-            let existingUsers = await dbUtil.users.selectByUserName(res, req.body.userName);
-            if (res.statusCode < 200 || res.statusCode >= 300)
+            const user = await authUtil.findExistingUser(req.body.userName, res);
+            if (!user)
                 return;
-            if (!existingUsers || existingUsers.length == 0)
-                return res.status(404).send(`There is no account with userName "${req.body.userName}".`);
 
-            const validPassword = await bcrypt.compare(req.body.password, existingUsers[0].passwordHash);
+            const validPassword = await bcrypt.compare(req.body.password, user.passwordHash);
 
             if (!validPassword)
                 return res.status(401).send("Wrong password.");
@@ -86,13 +85,20 @@ const authUtil =
             res.status(500).send(`ERROR: Failed to login (${err}).`);
         }
     },
+    findExistingUser: async (userName, res) => {
+        let existingUsers = await dbSearch.users.withUserName(res, userName);
+        if (res.statusCode < 200 || res.statusCode >= 300)
+            return;
+        if (!existingUsers || existingUsers.length == 0)
+            return res.status(404).send(`There is no account with userName "${userName}".`);
+        return existingUsers[0];
+    },
     addToken: (userName, res) => {
         const token = jwt.sign(
             { userName: userName },
             process.env.JWT_SECRET_KEY,
             { expiresIn: "60m" }
         );
-
         res.cookie("thingspool_token", token, {
             secure: envUtil.isDevMode() ? false : true,
             httpOnly: true,
@@ -102,15 +108,15 @@ const authUtil =
     clearToken: (res) => {
         res.clearCookie("thingspool_token").status(204);
     },
-    authenticateToken: (req, res, next) =>
+    authenticateToken: async (req, res, next) =>
     {
-        authUtil.authenticateToken_internal(req, res, next, false);
+        await authUtil.authenticateToken_internal(req, res, next, false);
     },
-    authenticateTokenOptional: (req, res, next) =>
+    authenticateTokenOptional: async (req, res, next) =>
     {
-        authUtil.authenticateToken_internal(req, res, next, true);
+        await authUtil.authenticateToken_internal(req, res, next, true);
     },
-    authenticateToken_internal: (req, res, next, optional) =>
+    authenticateToken_internal: async (req, res, next, optional) =>
     {
         const token = req.cookies["thingspool_token"];
 
@@ -128,26 +134,27 @@ const authUtil =
         }
         else
         {
-            jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
-                if (err)
+            try {
+                const payload = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+                const user = await authUtil.findExistingUser(payload.userName, res);
+                if (!user)
+                    return;
+                req.user = user;
+                authUtil.addToken(user.userName, res); // refresh the token
+                next();
+            }
+            catch (err) {
+                if (optional)
                 {
-                    if (optional)
-                    {
-                        req.user = undefined;
-                        next();
-                    }
-                    else
-                    {
-                        res.status(403).send("Invalid token.");
-                    }
+                    req.user = undefined;
+                    next();
                 }
                 else
                 {
-                    req.user = user;
-                    authUtil.addToken(user.userName, res); // refresh the token
-                    next();
+                    res.status(401).send("Invalid token.");
                 }
-            });
+            }
         }
     }
 }

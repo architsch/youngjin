@@ -1,24 +1,31 @@
 <h1>Create Account:</h1>
 
-<div class="textInputLabel">Username:</div><input type="text" class="textInput" id="userName_input">
+<div class="inlineLabel">Username:</div><input type="text" class="inlineTextInput" id="userName_input">
 <div class="zero_row"></div>
 
-<div class="textInputLabel">Password:</div><input type="password" class="textInput" id="password_input">
+<div class="inlineLabel">Password:</div><input type="password" class="inlineTextInput" id="password_input">
 <div class="zero_row"></div>
 
-<div class="textInputLabel">Confirm Password:</div><input type="password" class="textInput" id="confirm_password_input">
+<div class="inlineLabel">Confirm Password:</div><input type="password" class="inlineTextInput" id="confirm_password_input">
 <div class="zero_row"></div>
 
-<div class="textInputLabel">Email:</div><input type="email" class="textInput" id="email_input">
+<div class="inlineLabel">Email:</div><input type="email" class="inlineTextInput" id="email_input">
 <div class="inlineButton" id="verify_button" style="color: #b0b020; background-color: #105010;">Send Verification Code</div>
 <div class="zero_row"></div>
 <p id="code_sent_indicator" style="display: none; color: #60b060;">We sent a verification code to your email. Please enter it below.</p>
 
-<div class="textInputLabel">Email Verification Code:</div><input type="number" class="textInput" id="verify_input">
+<div class="inlineLabel">Email Verification Code:</div><input type="number" class="inlineTextInput" id="verify_input">
 <div class="xs_row"></div>
 
 <div class="inlineButton" id="register_button">Create Account</div>
 <div class="m_row"></div>
+
+<h3>Notes</h3>
+<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.userName.length) %></p>
+<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.userName.chars) %></p>
+<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.password.length) %></p>
+<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.password.chars) %></p>
+<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.email.length) %></p>
 
 <script type="module">
     import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
@@ -70,7 +77,7 @@
         verification_mode_on(email);
 
         $.ajax({
-            url: "<%= envUtil.getRootURL() %>/api/vemail",
+            url: "<%= envUtil.getRootURL() %>/api/auth/vemail",
             method: "POST",
             data: { email: cached_email },
             success: function(result) {
@@ -124,7 +131,7 @@
         }
 
         $.ajax({
-            url: "<%= envUtil.getRootURL() %>/api/register",
+            url: "<%= envUtil.getRootURL() %>/api/auth/register",
             method: "POST",
             data: { userName, password, email: cached_email, verificationCode },
             success: function(result) {

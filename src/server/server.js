@@ -2,9 +2,7 @@ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const dbUtil = require("./util/dbUtil.js");
-const authUtil = require("./util/authUtil.js");
-const emailUtil = require("./util/emailUtil.js");
+const db = require("./db/db.js");
 const envUtil = require("./util/envUtil.js");
 const ejsUtil = require("./util/ejsUtil.js");
 const textUtil = require("../shared/util/textUtil.mjs").textUtil;
@@ -31,89 +29,19 @@ async function run()
     app.use(cookieParser());
 
     //-----------------------------------------------------------------
-    // API Routes
-    //-----------------------------------------------------------------
-
-    // auth
-
-    // req.body = {userName, password, email}
-    app.post("/api/register", async (req, res) => {
-        await authUtil.register(req, res);
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-            res.end();
-    });
-    // req.body = {email}
-    app.post("/api/vemail", async (req, res) => {
-        await emailUtil.startEmailVerification(req, res);
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-            res.end();
-    });
-    // req.body = {userName, password}
-    app.post("/api/login", async (req, res) => {
-        await authUtil.login(req, res);
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-            res.end();
-    });
-    app.delete("/api/logout", (req, res) => {
-        authUtil.clearToken(res);
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-            res.end();
-    });
-
-    // social
-
-    // req.body = {tableName, orderBy, asc, limit, start}
-    app.get("/api/search", authUtil.authenticateToken, async (req, res) => {
-        await socialUtil.search(req, res);
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-            res.end();
-    });
-    // req.body = {roomName}
-    app.post("/api/room/create", authUtil.authenticateToken, async (req, res) => {
-        await socialUtil.room.create(req, res);
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-            res.end();
-    });
-    // req.body = {roomID}
-    app.delete("/api/room/leave", authUtil.authenticateToken, async (req, res) => {
-        await socialUtil.room.leave(req, res);
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-            res.end();
-    });
-
-    //-----------------------------------------------------------------
-    // Dynamic Page Routes
+    // Page Routes
     //-----------------------------------------------------------------
 
     if (!globalConfig.page.bypassDynamicPages)
-    {
-        // menus
+        app.use("/", require("./routers/pageRouter.js"));
 
-        app.get("/", authUtil.authenticateTokenOptional, async (req, res) => {
-            const users = (req.user == undefined) ? [undefined] : await dbUtil.users.selectByUserName(res, req.user.userName);
-            if (res.statusCode < 200 || res.statusCode >= 300)
-                return;
-            res.render("page/menu/index", ejsUtil.makeEJSParams(
-                {user: users[0], loginDestination: ""}));
-        });
-        app.get("/page/users.html", authUtil.authenticateTokenOptional, async (req, res) => {
-            res.render("page/menu/users", ejsUtil.makeEJSParams(
-                {user: req.user, loginDestination: "page/users.html"}));
-        });
-        app.get("/page/rooms.html", authUtil.authenticateTokenOptional, async (req, res) => {
-            res.render("page/menu/rooms", ejsUtil.makeEJSParams(
-                {user: req.user, loginDestination: "page/rooms.html"}));
-        });
+    //-----------------------------------------------------------------
+    // API Routes
+    //-----------------------------------------------------------------
 
-        // auth
-
-        app.get("/page/register.html", (req, res) => {
-            res.render("page/auth/register", ejsUtil.makeEJSParams(
-                {user: req.user, registerDestination: ""}));
-        });
-
-        
-    }
+    app.use("/api/auth", require("./routers/authRouter.js"));
+    app.use("/api/search", require("./routers/searchRouter.js"));
+    app.use("/api/room", require("./routers/roomRouter.js"));
 
     //-----------------------------------------------------------------
     // Debug Routes
@@ -125,10 +53,10 @@ async function run()
             const section = (text) => `\n\n<h1>${text}</h1>\n`;
             const toSafeStr = (obj) => textUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
             const content =
-                section("users") + toSafeStr(await dbUtil.debug.users()) +
-                section("rooms") + toSafeStr(await dbUtil.debug.rooms()) +
-                section("user_rooms") + toSafeStr(await dbUtil.debug.user_rooms()) +
-                section("emailVerifications") + toSafeStr(await dbUtil.debug.emailVerifications());
+                section("users") + toSafeStr(await db.debug.users()) +
+                section("rooms") + toSafeStr(await db.debug.rooms()) +
+                section("user_rooms") + toSafeStr(await db.debug.user_rooms()) +
+                section("emailVerifications") + toSafeStr(await db.debug.emailVerifications());
             res.render("page/misc/console", { content });
         });
 
@@ -159,6 +87,12 @@ async function run()
     app.use(express.static(path.join(process.env.PWD, process.env.STATIC_PAGE_ROOT_DIR)));
     app.use("/src_client", express.static(path.join(process.env.PWD, "src/client")));
     app.use("/src_shared", express.static(path.join(process.env.PWD, "src/shared")));
+
+    //-----------------------------------------------------------------
+    // Popup Routes
+    //-----------------------------------------------------------------
+
+    app.use("/popup", require("./routers/popupRouter.js"));
 
     //-----------------------------------------------------------------
     // Start

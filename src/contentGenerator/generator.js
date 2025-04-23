@@ -19,14 +19,6 @@ async function run()
     await builder.build("index.html");
 
     builder = new TextFileBuilder();
-    builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/users.ejs", {
-        isStaticPage: true,
-        user: undefined,
-        loginDestination: "",
-    }));
-    await builder.build("users.html");
-
-    builder = new TextFileBuilder();
     builder.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/rooms.ejs", {
         isStaticPage: true,
         user: undefined,

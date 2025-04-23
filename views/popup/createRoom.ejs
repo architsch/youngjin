@@ -1,0 +1,50 @@
+<div class="inlineButton" onclick="popup_off()">X</div>
+<h2>Create Room</h2>
+
+<div class="inlineLabel">Room Name:</div><input type="text" class="inlineTextInput" id="roomName_input">
+<div class="zero_row"></div>
+
+<div class="inlineButton" id="create_button">Create Room</div>
+<div class="m_row"></div>
+
+<h3>Notes</h3>
+<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.roomName.length) %></p>
+<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.roomName.chars) %></p>
+
+<script type="module">
+    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
+
+    $("#roomName_input").on("input", function() {
+        this.value = textUtil.sanitizeUserName(this.value);
+    });
+
+    $("#create_button").click(function() {
+        if (process_pending)
+            return;
+        process_pending_on();
+
+        const roomName = $("#roomName_input").val();
+        const roomNameError = textUtil.findErrorInRoomName(roomName);
+        if (roomNameError != null)
+        {
+            alert(roomNameError);
+            process_pending_off();
+            return;
+        }
+        
+        $.ajax({
+            url: `<%= envUtil.getRootURL() %>/api/room/create`,
+            method: "POST",
+            data: { roomName },
+            success: function(result) {
+                popup_off();
+                process_pending_off();
+                window.thingspool_module_exports.rooms.reloadCurrPage();
+            },
+            error: function(xhr) {
+                alert(xhr.responseText);
+                process_pending_off();
+            }
+        });
+    });
+</script>

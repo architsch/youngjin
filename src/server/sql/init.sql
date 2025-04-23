@@ -6,14 +6,16 @@ CREATE TABLE IF NOT EXISTS users(
     userName VARCHAR(16) NOT NULL,
     passwordHash VARCHAR(72) NOT NULL,
     email VARCHAR(64) NOT NULL,
+    ownedRoomCount INT NOT NULL DEFAULT 0,
+    ownedRoomCountMax INT NOT NULL DEFAULT 5,
     PRIMARY KEY (userID),
     UNIQUE KEY (userName, email)
 );
 
 CREATE TABLE IF NOT EXISTS rooms(
     roomID INT NOT NULL AUTO_INCREMENT,
-    roomName VARCHAR(32) NOT NULL,
-    adminUserID INT NOT NULL,
+    roomName VARCHAR(64) NOT NULL,
+    ownerUserName VARCHAR(16) NOT NULL,
     PRIMARY KEY (roomID),
     UNIQUE KEY (roomName)
 );

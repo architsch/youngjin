@@ -1,0 +1,150 @@
+<div class="inlineButton" onclick="popup_off()">X</div>
+
+<a class="inlineTabButton <%= (tabName == "associated") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/popup/room-members?tabname=associated"><%= uiConfig.displayText.tabName["roomMembers/associated"] %></a>
+<a class="inlineTabButton <%= (tabName == "others") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/popup/room-members?tabname=others"><%= uiConfig.displayText.tabName["roomMembers/others"] %></a>
+
+<div class="listScrollPanel" id="user_list"></div>
+
+<div class="inlineButton" id="prev_page_button">Prev</div><div class="inlineLabel" id="page_label">Page 0</div><div class="inlineButton" id="next_page_button">Next</div>
+<div class="zero_row"></div>
+
+<script type="module">
+    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
+
+    let currPage = 0;
+    let loadedItemsCount = 0;
+    const searchLimitPerPage = parseInt("<%= searchLimitPerPage %>");
+    const $list = $("#user_list");
+    const tabName = "<%= tabName %>";
+
+    $("#prev_page_button").click(function() { queryPage(-1); });
+    $("#next_page_button").click(function() { queryPage(1); });
+
+    function updatePageButtons()
+    {
+        $("#prev_page_button").prop("disabled", currPage <= 0);
+        $("#next_page_button").prop("disabled", loadedItemsCount < searchLimitPerPage);
+        $("#page_label").html(`Page ${currPage}`);
+    }
+
+    function queryPage(pageChange)
+    {
+        if (process_pending)
+            return;
+        process_pending_on();
+        const newPage = Math.max(0, currPage + pageChange);
+
+        $.ajax({
+            url: `<%= envUtil.getRootURL() %>/api/search/users/<%= tabName %>?roomid=<%= roomID %>&page=${newPage}`,
+            method: "GET",
+            success: function(data) {
+                $list.empty();
+                currPage = newPage;
+                loadedItemsCount = 0;
+
+                for (const d of data)
+                {
+                    const userID = d.userID;
+                    const userName = d.userName;
+                    const userStatus = d.userStatus;
+
+                    const ownedOrJoined = (userStatus == "owner" || userStatus == "member");
+                    const invited = (userStatus == "invited");
+                    const requested = (userStatus == "requested");
+
+                    const btn_invite = (!ownedOrJoined && !invited) ?
+                        `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'invite', 'POST')">Invite</div>` : "";
+                    const btn_cancel_invite = (!ownedOrJoined && invited) ?
+                        `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'cancel_invite', 'DELETE')">Cancel</div>` : "";
+                    const btn_accept_request = (!ownedOrJoined && !invited) ?
+                        `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'accept_request', 'PUT')">Accept</div>` : "";
+                    const btn_ignore_request = (!ownedOrJoined && invited) ?
+                        `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'ignore_request', 'DELETE')">Ignore</div>` : "";
+
+                    $(`<div class="listItem">
+                        Name: ${userName}<br>
+                        ID: ${userID}<br>
+                        ${(userStatus == "owner") ? "<i>Owner</i><br>" : ""}
+                        ${(userStatus == "member") ? "<i>Member</i><br>" : ""}
+                        ${invited ? "<i>Invitation Sent</i><br>" : ""}
+                        ${requested ? "<i>Requested to Join</i><br>" : ""}
+                        ${btn_invite}${btn_cancel_invite}${btn_accept_request}${btn_ignore_request}
+                    </div>`).appendTo($list);
+
+                    loadedItemsCount++;
+                }
+
+                updatePageButtons();
+                process_pending_off();
+            },
+            error: function(xhr) {
+                alert(xhr.responseText);
+                process_pending_off();
+            }
+        });
+    }
+
+    function reloadCurrPage()
+    {
+        queryPage(currPage);
+    }
+
+    updatePageButtons();
+    makePageQuery(0);
+
+    if (window.thingspool_module_exports == undefined)
+        window.thingspool_module_exports = {};
+    window.thingspool_module_exports.roomMembers = { reloadCurrPage };
+</script>
+
+<script>
+    // requestType = {"invite" or "cancel_invite" or "accept_request" or "ignore_request"}
+    function makeRoomMembersAPICall(roomID, userID, requestType, method)
+    {
+        if (process_pending)
+            return;
+        process_pending_on();
+        
+        $.ajax({
+            url: `<%= envUtil.getRootURL() %>/api/room/${requestType}`,
+            method: method,
+            data: { roomID, userID },
+            success: function(result) {
+                popup_off();
+                process_pending_off();
+                window.thingspool_module_exports.rooms.reloadCurrPage();
+            },
+            error: function(xhr) {
+                alert(xhr.responseText);
+                process_pending_off();
+            }
+        });
+    }
+
+    function cancel_invite(roomID, userID)
+    {
+        if (process_pending)
+            return;
+        process_pending_on();
+        
+        // TODO: Implement the API call
+    }
+
+    function accept_request(roomID, userID)
+    {
+        if (process_pending)
+            return;
+        process_pending_on();
+        
+        // TODO: Implement the API call
+    }
+
+    function ignore_request(roomID, userID)
+    {
+        if (process_pending)
+            return;
+        process_pending_on();
+        
+        // TODO: Implement the API call
+    }
+</script>

@@ -1,6 +1,6 @@
 export const textUtil =
 {
-    // html
+    // character escape
 
     escapeHTMLChars: (text) =>
     {
@@ -12,37 +12,42 @@ export const textUtil =
             .replace(/'/g, "&#039;");
     },
 
-    // auth
+    // input validation
 
     findErrorInUserName: (text) =>
     {
-        if (text.length < 4)
-            return "UserName must be at least 4 characters long.";
-        if (text.length > 16)
-            return "UserName cannot be longer than 16 characters.";
+        if (text.length < 4 || text.length > 16)
+            return textUtil.inputRule.userName.length;
         if (text != textUtil.sanitizeUserName(text))
-            return "UserName can only contain alphabets, numbers and underbar(_).";
+            return textUtil.inputRule.userName.chars;
         return null;
     },
     findErrorInPassword: (text) =>
     {
-        if (text.length < 6)
-            return "Password must be at least 6 characters long.";
-        if (text.length > 24)
-            return "Password cannot be longer than 24 characters.";
+        if (text.length < 6 || text.length > 24)
+            return textUtil.inputRule.password.length;
         if (text != textUtil.sanitizePassword(text))
-            return "Password can only contain alphabets, numbers, and the following special characters:\n~`!@#$%^&*()-_+={}[]|\\:;\"'<>,.?/";
+            return textUtil.inputRule.password.chars;
         return null;
     },
     findErrorInEmailAddress: (text) =>
     {
         if (text.length > 64)
-            return "Email address is too long. It must be less than 64 characters.";
+            return textUtil.inputRule.email.length;
         const regex = /^[^\s@]+@[^\s@]+.[^\s@]+$/;
         if (!regex.test(text))
             return "Please enter a valid email address."
         return null;
     },
+    findErrorInRoomName: (text) =>
+    {
+        if (text.length < 4 || text.length > 64)
+            return textUtil.inputRule.roomName.length;
+        if (text != textUtil.sanitizeRoomName(text))
+            return textUtil.inputRule.roomName.chars;
+        return null;
+    },
+    
     sanitizeUserName: (text) =>
     {
         if (text.length > 16)
@@ -53,6 +58,34 @@ export const textUtil =
     {
         if (text.length > 24)
             text = text.substring(0, 24);
-        return text.replace(/[^a-zA-Z0-9~`!@#\$%\^&\*\(\)-_\+=\{\[\}\]\|\\:;"'<,>\.\?\/]/g, "");
+        return text.replace(/[^a-zA-Z0-9~`!@#\$%\^&\*\(\)-_\+=\{\[\}\]\|\\:;"'<>,\.\?\/]/g, "");
+    },
+    sanitizeRoomName: (text) =>
+    {
+        if (text.length > 64)
+            text = text.substring(0, 64);
+        return text.replace(/[^a-zA-Z0-9~`!@#\$%\^&\*\(\)-_\+=\{\[\}\]\|\\:;"'<>,\.\?\/]/g, "")
+            .replace(/\s+/g, " ") // replace multiple consecutive spaces with a single space.
+            .trim();
+    },
+
+    // input rules
+
+    inputRule: {
+        userName: {
+            length: "Username must be between 4 and 16 characters long.",
+            chars: "Username can only contain alphabets, numbers, and underbar(_).",
+        },
+        password: {
+            length: "Password must be between 6 and 24 characters long.",
+            chars: "Password can only contain alphabets, numbers, and the following special characters: ~`!@#$%^&*()-_+={}[]|\\:;\"'<>,.?/",
+        },
+        email: {
+            length: "Email cannot contain more than 64 characters."
+        },
+        roomName: {
+            length: "Room name must be between 4 and 64 characters long.",
+            chars: "Room name can only contain alphabets, numbers, spaces, and the following special characters: ~`!@#$%^&*()-_+={}[]|\\:;\"'<>,.?/",
+        },
     },
 }

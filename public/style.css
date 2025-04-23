@@ -216,6 +216,7 @@ hr {
 	padding: 2.40% 1.00% 2.40% 1.00%;
 	margin: 0 0 0 0;
 	box-sizing: border-box;
+	text-decoration: none;
 }
 .fullscreenBarMenuButton.idle {
 	background-color: #a0a0a0;
@@ -257,7 +258,7 @@ hr {
 	color: #c0c0c0;
 	opacity: 0.5;
 	}
-	.text {
+	.content {
 		position: absolute;
 		min-width: 50%;
 		top: 50%;
@@ -269,13 +270,61 @@ hr {
 	font-weight: 800;
 		padding: 2.40% 1.00% 2.40% 1.00%;
 	margin: 2.40% 1.00% 2.40% 0;
+		background-color: #d0c090;
+	color: #303030;
+	border-radius: 4.5vmin;
+	border-bottom: 1.25vmin #b0a070 solid;
+	border-right: 1.25vmin #b0a070 solid;
+		text-align: center;
+		z-index: 901;
+	}
+}
+.popupScreen {
+	position: absolute;
+	display: block;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
+	z-index: 500;
+
+	.background {
+		position: absolute;
+	display: block;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+		padding: 0 0 0 0; margin: 0 0 0 0;
+		background-color: #000000;
+	color: #c0c0c0;
+	opacity: 0.5;
+	}
+	.content {
+		position: absolute;
+		width: 80%;
+		width: 80%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+		padding: 1.20% 1.00% 1.20% 1.00%;
+	margin: 1.20% 1.00% 1.20% 0;
 		background-color: #a0a0a0;
 	color: #303030;
 	border-radius: 4.5vmin;
 	border-bottom: 1.25vmin #707070 solid;
 	border-right: 1.25vmin #707070 solid;
-		text-align: center;
-		z-index: 901;
+		overflow-y: scroll;
+		z-index: 501;
 	}
 }
 .xs_image {
@@ -338,7 +387,7 @@ hr {
 .m_linkImage:hover {
 	border-color: #d0c090;
 }
-.listEntry {
+.postEntryButton {
 	position: relative;
 	display: block;
 	max-width: none;
@@ -365,7 +414,38 @@ hr {
 	font-style: normal;
 	font-weight: 400;
 }
-.textInput {
+.listScrollPanel {
+	position: relative;
+	display: block;
+	width: 100.00%;
+	height: 70.00%;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
+	background-color: #303030;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+	border: 0.1vmin #707070 solid;
+	overflow: auto;
+}
+.listItem {
+	position: relative;
+	display: block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #a0a0a0;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+	border: 0.1vmin #c0c0c0 solid;
+	text-decoration: none;
+}
+.inlineTextInput {
 	position: relative;
 	display: inline-block;
 	max-width: none;
@@ -383,7 +463,7 @@ hr {
 	border-bottom: 0.25vmin #a0a0a0 solid;
 	border-right: 0.25vmin #a0a0a0 solid;
 }
-.textInputLabel {
+.inlineLabel {
 	position: relative;
 	display: inline-block;
 	max-width: none;
@@ -420,6 +500,39 @@ hr {
 .inlineButton:hover {
 	color: #d0c090;
 	cursor: pointer;
+}
+.inlineButton:disabled {
+	opacity: 0.25;
+	cursor: not-allowed;
+}
+.inlineTabButton {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 0.60% 1.00% 0.60% 1.00%;
+	margin: 0.60% 1.00% 0.60% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	text-decoration: none;
+}
+.inlineTabButton.idle {
+	background-color: #303030;
+	color: #c0c0c0;
+}
+.inlineTabButton.selected {
+	background-color: #303030;
+	color: #c0c0c0;
+	border-bottom: 1.25vmin undefined solid;
+}
+.inlineTabButton.idle:hover {
+	color: #d0c090;
+}
+.inlineTabButton.selected:hover {
+	color: #d0c090;
 }
 .snippet {
 	position: relative;
@@ -682,6 +795,7 @@ hr {
 	padding: 1.00% 2.50% 1.00% 2.50%;
 	margin: 0 0 0 0;
 	box-sizing: border-box;
+	text-decoration: none;
 }
 .fullscreenBarMenuButton.idle {
 	background-color: #a0a0a0;
@@ -723,7 +837,7 @@ hr {
 	color: #c0c0c0;
 	opacity: 0.5;
 	}
-	.text {
+	.content {
 		position: absolute;
 		min-width: 50%;
 		top: 50%;
@@ -735,13 +849,61 @@ hr {
 	font-weight: 800;
 		padding: 4.00% 2.50% 4.00% 2.50%;
 	margin: 4.00% 2.50% 4.00% 0;
+		background-color: #d0c090;
+	color: #303030;
+	border-radius: 4.5vmin;
+	border-bottom: 1.25vmin #b0a070 solid;
+	border-right: 1.25vmin #b0a070 solid;
+		text-align: center;
+		z-index: 901;
+	}
+}
+.popupScreen {
+	position: absolute;
+	display: block;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+	padding: 0 0 0 0; margin: 0 0 0 0;
+	z-index: 500;
+
+	.background {
+		position: absolute;
+	display: block;
+	left: 0%;
+	right: 0%;
+	top: 0%;
+	bottom: 0%;
+	width: 100%;
+	height: 100%;
+		padding: 0 0 0 0; margin: 0 0 0 0;
+		background-color: #000000;
+	color: #c0c0c0;
+	opacity: 0.5;
+	}
+	.content {
+		position: absolute;
+		width: 80%;
+		width: 80%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+		padding: 2.00% 2.50% 2.00% 2.50%;
+	margin: 2.00% 2.50% 2.00% 0;
 		background-color: #a0a0a0;
 	color: #303030;
 	border-radius: 4.5vmin;
 	border-bottom: 1.25vmin #707070 solid;
 	border-right: 1.25vmin #707070 solid;
-		text-align: center;
-		z-index: 901;
+		overflow-y: scroll;
+		z-index: 501;
 	}
 }
 .xs_image {
@@ -804,7 +966,7 @@ hr {
 .m_linkImage:hover {
 	border-color: #d0c090;
 }
-.listEntry {
+.postEntryButton {
 	position: relative;
 	display: block;
 	max-width: none;
@@ -831,7 +993,38 @@ hr {
 	font-style: normal;
 	font-weight: 400;
 }
-.textInput {
+.listScrollPanel {
+	position: relative;
+	display: block;
+	width: 100.00%;
+	height: 70.00%;
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	background-color: #303030;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+	border: 0.1vmin #707070 solid;
+	overflow: auto;
+}
+.listItem {
+	position: relative;
+	display: block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	background-color: #a0a0a0;
+	color: #c0c0c0;
+	border-radius: 4.5vmin;
+	border: 0.1vmin #c0c0c0 solid;
+	text-decoration: none;
+}
+.inlineTextInput {
 	position: relative;
 	display: block;
 	max-width: none;
@@ -849,7 +1042,7 @@ hr {
 	border-bottom: 0.25vmin #a0a0a0 solid;
 	border-right: 0.25vmin #a0a0a0 solid;
 }
-.textInputLabel {
+.inlineLabel {
 	position: relative;
 	display: inline-block;
 	max-width: none;
@@ -886,6 +1079,39 @@ hr {
 .inlineButton:hover {
 	color: #d0c090;
 	cursor: pointer;
+}
+.inlineButton:disabled {
+	opacity: 0.25;
+	cursor: not-allowed;
+}
+.inlineTabButton {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.00% 2.50% 1.00% 2.50%;
+	margin: 1.00% 2.50% 1.00% 0;
+	font-size: min(1.82vmax, 16.00px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: normal;
+	font-weight: 400;
+	text-decoration: none;
+}
+.inlineTabButton.idle {
+	background-color: #303030;
+	color: #c0c0c0;
+}
+.inlineTabButton.selected {
+	background-color: #303030;
+	color: #c0c0c0;
+	border-bottom: 1.25vmin undefined solid;
+}
+.inlineTabButton.idle:hover {
+	color: #d0c090;
+}
+.inlineTabButton.selected:hover {
+	color: #d0c090;
 }
 .snippet {
 	position: relative;

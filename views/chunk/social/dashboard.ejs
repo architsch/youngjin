@@ -9,7 +9,7 @@
         process_pending_on();
 
         $.ajax({
-            url: "<%= envUtil.getRootURL() %>/api/logout",
+            url: "<%= envUtil.getRootURL() %>/api/auth/logout",
             method: "DELETE",
             success: function(result) {
                 window.location.href = "<%= envUtil.getRootURL() %>";

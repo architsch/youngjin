@@ -1,5 +1,5 @@
 const envUtil = require("../server/util/envUtil.js");
-const dbUtil = require("../server/util/dbUtil.js");
+const db = require("../server/db/db.js");
 const globalConfig = require("../shared/config/globalConfig.mjs").globalConfig;
 const testServerCalls = require("./testServerCalls.js");
 const testConfigs = require("./testConfigs.js");
@@ -32,8 +32,8 @@ async function test(testname)
     testServerCalls._reset();
     const bypassEmailVerification_prev = globalConfig.auth.bypassEmailVerification;
     globalConfig.auth.bypassEmailVerification = true;
-    await dbUtil.runSQLFile("clear.sql");
-    await dbUtil.runSQLFile("init.sql");
+    await db.runSQLFile("clear.sql");
+    await db.runSQLFile("init.sql");
 
     const testConfig = testConfigs[testname]();
     for (const step of testConfig.steps)
