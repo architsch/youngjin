@@ -9,7 +9,9 @@ export const textUtil =
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+            .replace(/'/g, "&#039;")
+            .replaceAll("\n", "<br>")
+            .replaceAll(" ", "&nbsp;");
     },
 
     // input validation
@@ -81,7 +83,7 @@ export const textUtil =
             chars: "Password can only contain alphabets, numbers, and the following special characters: ~`!@#$%^&*()-_+={}[]|\\:;\"'<>,.?/",
         },
         email: {
-            length: "Email cannot contain more than 64 characters."
+            length: "Email address must not contain more than 64 characters."
         },
         roomName: {
             length: "Room name must be between 4 and 64 characters long.",

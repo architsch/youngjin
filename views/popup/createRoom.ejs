@@ -5,11 +5,11 @@
 <div class="zero_row"></div>
 
 <div class="inlineButton" id="create_button">Create Room</div>
-<div class="m_row"></div>
+<div class="xs_row"></div>
 
 <h3>Notes</h3>
-<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.roomName.length) %></p>
-<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.roomName.chars) %></p>
+<p>- <%= textUtil.inputRule.roomName.length %></p>
+<p>- <%= textUtil.inputRule.roomName.chars %></p>
 
 <script type="module">
     import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";

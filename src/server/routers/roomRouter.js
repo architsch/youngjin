@@ -19,6 +19,11 @@ router.delete("/delete", authUtil.authenticateToken, async (req, res) => {
     await dbRoom.deleteRoom(res, req.body.roomID, req.user.userName);
     networkUtil.onRouteResponse(res);
 });
+// req.body = {roomID}
+router.delete("/leave", authUtil.authenticateToken, async (req, res) => {
+    await dbRoom.leaveRoom(res, req.body.roomID, req.user.userName);
+    networkUtil.onRouteResponse(res);
+});
 
 //------------------------------------------------------------------------------------
 // API for rooms.ejs
@@ -67,6 +72,11 @@ router.put("/accept-request", authUtil.authenticateToken, async (req, res) => {
 // req.body = {roomID, userID}
 router.delete("/ignore-request", authUtil.authenticateToken, async (req, res) => {
     await dbRoom.ignoreRequest(res, req.body.roomID, req.user.userName, req.body.userID);
+    networkUtil.onRouteResponse(res);
+});
+// req.body = {roomID, userID}
+router.delete("/kickout", authUtil.authenticateToken, async (req, res) => {
+    await dbRoom.kickout(res, req.body.roomID, req.user.userName, req.body.userID);
     networkUtil.onRouteResponse(res);
 });
 

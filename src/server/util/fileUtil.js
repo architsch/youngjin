@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs/promises');
+const debugUtil = require('../../shared/util/debugUtil.mjs').debugUtil;
 require("dotenv").config();
 
 const fileUtil =
@@ -13,7 +14,7 @@ const fileUtil =
             return data;
         }
         catch (err) {
-            console.error(`fileUtil.js :: Failed to read file (relativeFilePath = "${relativeFilePath}") :: ${err}`);
+            debugUtil.log("Failed to read file", {relativeFilePath, err});
             return "";
         }
     },
@@ -25,7 +26,7 @@ const fileUtil =
             await fs.writeFile(absoluteFilePath, content);
         }
         catch (err) {
-            console.error(`fileUtil.js :: Failed to write file (relativeFilePath = "${relativeFilePath}") :: ${err}`);
+            debugUtil.log("Failed to write file", {relativeFilePath, err});
         }
     },
 }

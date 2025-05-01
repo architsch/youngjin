@@ -51,6 +51,7 @@
                     const ownedOrJoined = (userStatus == "owner" || userStatus == "member");
                     const invited = (userStatus == "invited");
                     const requested = (userStatus == "requested");
+                    const joined = (userStatus == "member");
 
                     const btn_invite = (!ownedOrJoined && !invited) ?
                         `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'invite', 'POST')">Invite</div>` : "";
@@ -60,6 +61,8 @@
                         `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'accept_request', 'PUT')">Accept</div>` : "";
                     const btn_ignore_request = (!ownedOrJoined && invited) ?
                         `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'ignore_request', 'DELETE')">Ignore</div>` : "";
+                    const btn_kickout = joined ?
+                        `<div class="inlineButton" onclick="makeRoomMembersAPICall(${roomID}, ${userID}, 'kickout', 'DELETE')">Kick Out</div>` : "";
 
                     $(`<div class="listItem">
                         Name: ${userName}<br>
@@ -98,11 +101,16 @@
 </script>
 
 <script>
-    // requestType = {"invite" or "cancel_invite" or "accept_request" or "ignore_request"}
+    // requestType = {"invite" or "cancel_invite" or "accept_request" or "ignore_request" or "kickout"}
     function makeRoomMembersAPICall(roomID, userID, requestType, method)
     {
         if (process_pending)
             return;
+        if (requestType == "kickout")
+        {
+            if (!confirm("Do you really want to kick this member out of your room?"))
+                return;
+        }
         process_pending_on();
         
         $.ajax({
@@ -119,32 +127,5 @@
                 process_pending_off();
             }
         });
-    }
-
-    function cancel_invite(roomID, userID)
-    {
-        if (process_pending)
-            return;
-        process_pending_on();
-        
-        // TODO: Implement the API call
-    }
-
-    function accept_request(roomID, userID)
-    {
-        if (process_pending)
-            return;
-        process_pending_on();
-        
-        // TODO: Implement the API call
-    }
-
-    function ignore_request(roomID, userID)
-    {
-        if (process_pending)
-            return;
-        process_pending_on();
-        
-        // TODO: Implement the API call
     }
 </script>

@@ -1,9 +1,9 @@
 const envUtil = require("../server/util/envUtil.js");
 const db = require("../server/db/db.js");
 const globalConfig = require("../shared/config/globalConfig.mjs").globalConfig;
-const testServerCalls = require("./testServerCalls.js");
-const testConfigs = require("./testConfigs.js");
-const testSteps = require("./testSteps.js");
+const testHTTP = require("./testHTTP.js");
+const testRoutines = require("./testRoutines.js");
+const testDB = require("./testDB.js");
 require("dotenv").config();
 
 let testRunning = false;
@@ -29,19 +29,14 @@ async function test(testname)
     console.log(" ");
 
     testRunning = true;
-    testServerCalls._reset();
+    testHTTP._reset();
+    testDB._reset();
     const bypassEmailVerification_prev = globalConfig.auth.bypassEmailVerification;
     globalConfig.auth.bypassEmailVerification = true;
     await db.runSQLFile("clear.sql");
     await db.runSQLFile("init.sql");
 
-    const testConfig = testConfigs[testname]();
-    for (const step of testConfig.steps)
-    {
-        const resultType = await testSteps[step.name](step.args);
-        if (resultType == "failed")
-            break;
-    }
+    await testRoutines[testname]();
 
     globalConfig.auth.bypassEmailVerification = bypassEmailVerification_prev;
     testRunning = false;

@@ -5,8 +5,9 @@ const cookieParser = require("cookie-parser");
 const db = require("./db/db.js");
 const envUtil = require("./util/envUtil.js");
 const ejsUtil = require("./util/ejsUtil.js");
-const textUtil = require("../shared/util/textUtil.mjs").textUtil;
 const globalConfig = require("../shared/config/globalConfig.mjs").globalConfig;
+const test = require("../test/test.js");
+const testDB = require("../test/testDB.js");
 require("dotenv").config();
 
 async function run()
@@ -36,6 +37,12 @@ async function run()
         app.use("/", require("./routers/pageRouter.js"));
 
     //-----------------------------------------------------------------
+    // Popup Routes
+    //-----------------------------------------------------------------
+
+    app.use("/popup", require("./routers/popupRouter.js"));
+
+    //-----------------------------------------------------------------
     // API Routes
     //-----------------------------------------------------------------
 
@@ -44,39 +51,28 @@ async function run()
     app.use("/api/room", require("./routers/roomRouter.js"));
 
     //-----------------------------------------------------------------
-    // Debug Routes
-    //-----------------------------------------------------------------
-
-    if (dev)
-    {
-        app.get("/debug/db", async (req, res) => {
-            const section = (text) => `\n\n<h1>${text}</h1>\n`;
-            const toSafeStr = (obj) => textUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
-            const content =
-                section("users") + toSafeStr(await db.debug.users()) +
-                section("rooms") + toSafeStr(await db.debug.rooms()) +
-                section("user_rooms") + toSafeStr(await db.debug.user_rooms()) +
-                section("emailVerifications") + toSafeStr(await db.debug.emailVerifications());
-            res.render("page/misc/console", { content });
-        });
-
-        app.get("/debug/ui", async (req, res) => {
-            res.render("page/misc/uiTest", ejsUtil.makeEJSParams(
-                {user: undefined, loginDestination: "", registerDestination: ""}));
-        });
-    }
-
-    //-----------------------------------------------------------------
     // Test Routes
     //-----------------------------------------------------------------
 
     if (dev)
     {
-        const test = require("../test/test.js");
-
-        app.get("/test/:testname", (req, res) => {
-            test(req.params.testname);
-            res.status(200).send(`Test Triggered :: ${req.params.testname}`);
+        app.get("/test/ui", async (req, res) => {
+            res.render("page/misc/uiTest", ejsUtil.makeEJSParams(
+                {user: undefined, loginDestination: "", registerDestination: ""}));
+        });
+        
+        app.get("/test/:testname", async (req, res) => {
+            await test(req.params.testname);
+            const content_realDB = await db.toHTMLString();
+            const content_testDB = testDB.toHTMLString();
+            res.render("page/misc/console", { content: `
+                <div style="margin:0 0 0 0; padding:1% 1% 1% 1%; overflow:scroll; width:50%; height:100%; left:0; right:50%; top:0; bottom:0;">
+                    ${content_realDB}
+                </div>
+                <div style="margin:0 0 0 0; padding:1% 1% 1% 1%; overflow:scroll; width:50%; height:100%; left:50%; right:0; top:0; bottom:0;">
+                    ${content_testDB}
+                </div>
+            `.replace(/\s+/g, " ")});
         });
     }
     
@@ -87,12 +83,6 @@ async function run()
     app.use(express.static(path.join(process.env.PWD, process.env.STATIC_PAGE_ROOT_DIR)));
     app.use("/src_client", express.static(path.join(process.env.PWD, "src/client")));
     app.use("/src_shared", express.static(path.join(process.env.PWD, "src/shared")));
-
-    //-----------------------------------------------------------------
-    // Popup Routes
-    //-----------------------------------------------------------------
-
-    app.use("/popup", require("./routers/popupRouter.js"));
 
     //-----------------------------------------------------------------
     // Start

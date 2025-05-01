@@ -18,14 +18,14 @@
 <div class="xs_row"></div>
 
 <div class="inlineButton" id="register_button">Create Account</div>
-<div class="m_row"></div>
+<div class="xs_row"></div>
 
 <h3>Notes</h3>
-<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.userName.length) %></p>
-<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.userName.chars) %></p>
-<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.password.length) %></p>
-<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.password.chars) %></p>
-<p>- <%= textUtil.escapeHTMLChars(textUtil.inputRule.email.length) %></p>
+<p>- <%= textUtil.inputRule.userName.length %></p>
+<p>- <%= textUtil.inputRule.userName.chars %></p>
+<p>- <%= textUtil.inputRule.password.length %></p>
+<p>- <%= textUtil.inputRule.password.chars %></p>
+<p>- <%= textUtil.inputRule.email.length %></p>
 
 <script type="module">
     import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";

@@ -5,7 +5,7 @@ const networkUtil = require("../util/networkUtil.js");
 const express = require("express");
 const router = express.Router();
 
-// req.body = {userName, password, email}
+// req.body = {userName, password, email, verificationCode}
 router.post("/register", async (req, res) => {
     await authUtil.register(req, res);
     networkUtil.onRouteResponse(res);

@@ -7,19 +7,19 @@ const dbEmail =
     verifications: {
         selectByEmail: async (res, email) => {
             return await new db.query(
-                "SELECT * FROM emailVerifications WHERE email = '?';",
+                "SELECT * FROM emailVerifications WHERE email = ?;",
                 [email]
             ).run(res);
         },
         insert: async (res, email, verificationCode, expirationTime) => {
             return await new db.query(
-                "INSERT INTO emailVerifications (email, verificationCode, expirationTime) VALUES ('?', '?', ?);",
+                "INSERT INTO emailVerifications (email, verificationCode, expirationTime) VALUES (?, ?, ?);",
                 [email, verificationCode, expirationTime]
             ).run(res);
         },
         updateExpirationTime: async (res, email, newExpirationTime) => {
             return await new db.query(
-                "UPDATE emailVerifications SET expirationTime = ? WHERE email = '?';",
+                "UPDATE emailVerifications SET expirationTime = ? WHERE email = ?;",
                 [newExpirationTime, email]
             ).run(res);
         },

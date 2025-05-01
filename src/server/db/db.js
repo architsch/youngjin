@@ -1,10 +1,10 @@
 const mysql = require("mysql2/promise");
 const envUtil = require("../util/envUtil.js");
 const fileUtil = require("../util/fileUtil.js");
+const debugUtil = require("../../shared/util/debugUtil.mjs").debugUtil;
 require("dotenv").config();
 
 const dev = envUtil.isDevMode();
-const enableLog = dev;
 
 const pool = mysql.createPool({
     host: dev ? process.env.SQL_HOST_DEV : process.env.SQL_HOST_PROD,
@@ -26,19 +26,18 @@ const db =
         this.queryParams = queryParams;
 
         this.run = async (res) => {
+            debugUtil.log("SQL Query Began", {queryStr, queryParams});
             let conn;
             try {
                 conn = await pool.getConnection();
-                if (enableLog)
-                    console.log(`[SQL Query Sent] :: ${queryStr}`);
                 const [results, fields] = await conn.query(queryStr, queryParams);
+                debugUtil.log("SQL Query Succeeded", {queryStr, queryParams});
                 return results;
             }
             catch (err) {
+                debugUtil.log("SQL Query Error", {err});
                 if (res)
-                    res.status(500).send(`[SQL QUERY ERROR] :: ${err}`);
-                else
-                    console.error(`[SQL QUERY ERROR] :: ${err}`);
+                    res.status(500).send(err);
             }
             finally {
                 conn?.release();
@@ -49,24 +48,22 @@ const db =
     transaction: function (queries)
     {
         this.run = async (res) => {
+            debugUtil.log("SQL Transaction Began", {queries});
             let conn;
             let success = false;
             try {
                 conn = await pool.getConnection();
                 await conn.beginTransaction();
-                if (enableLog)
-                    console.log(`[SQL Transaction Began]`);
 
                 let resultsGroup = [];
                 for (const query of queries)
                 {
-                    if (enableLog)
-                        console.log(`[SQL Transaction Query Sent] :: ${query.queryStr}`);
+                    debugUtil.log("SQL Transaction Query", {query});
                     const [results, fields] = await conn.query(query.queryStr, query.queryParams);
                     if (results.affectedRows == 0)
                     {
                         await conn.rollback();
-                        console.log(`[SQL Transaction Rolled Back] - because no rows were affected.`);
+                        debugUtil.log("SQL Transaction Rolled Back - because no rows were affected.", {queries});
                         res?.status(403);
                         return;
                     }
@@ -74,17 +71,15 @@ const db =
                 }
 
                 await conn.commit();
-                if (enableLog)
-                    console.log(`[SQL Transaction Committed]`);
+                debugUtil.log("SQL Transaction Committed", {queries});
                 success = true;
                 return resultsGroup;
             }
             catch (err) {
+                debugUtil.log("SQL Transaction Error", {err});
                 await conn.rollback();
                 if (res)
-                    res.status(500).send(`[SQL TRANSACTION ERROR] :: ${err}`);
-                else
-                    console.error(`[SQL TRANSACTION ERROR] :: ${err}`);
+                    res.status(500).send(err);
             }
             finally {
                 conn?.release();
@@ -94,8 +89,7 @@ const db =
         };
     },
     runSQLFile: async (fileName) => {
-        if (enableLog)
-            console.log(`[Opening SQL File] :: ${fileName}`);
+        debugUtil.log("Opening SQL File", {fileName});
         const sql = await fileUtil.read(fileName, "src/server/sql");
         const sqlStatements = sql.split(";").map(x => x.trim() + ";").filter(x => x.length > 1);
         let conn;
@@ -111,22 +105,24 @@ const db =
             for (const sqlStatement of sqlStatements)
             {
                 const [results, fields] = await conn.query(sqlStatement);
-                //console.log("#############################################");
-                //console.log(`[${sqlStatement}] ::\n\n${JSON.stringify(results, null, 4)}\n\n`);
             }
         }
         catch (err) {
-            console.error(err);
+            debugUtil.log("SQL File Execution Error", {err});
         }
         finally {
             conn?.end();
         }
     },
-    debug: {
-        users: async (res) => await query(res, "SELECT * FROM users;"),
-        rooms: async (res) => await query(res, "SELECT * FROM rooms;"),
-        user_rooms: async (res) => await query(res, "SELECT * FROM user_rooms;"),
-        emailVerifications: async (res) => await query(res, "SELECT * FROM emailVerifications;"),
+    toHTMLString: async () => {
+        const section = (text) => `\n\n<h1>${text}</h1>\n`;
+        const toSafeStr = (obj) => textUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
+        const content =
+            section("users") + toSafeStr(await query(res, "SELECT * FROM users;")) +
+            section("rooms") + toSafeStr(await query(res, "SELECT * FROM rooms;")) +
+            section("user_rooms") + toSafeStr(await query(res, "SELECT * FROM user_rooms;")) +
+            section("emailVerifications") + toSafeStr(await query(res, "SELECT * FROM emailVerifications;"));
+        return content;
     },
 }
 

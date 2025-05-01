@@ -5,6 +5,7 @@ export const globalConfig =
     },
     auth: {
         bypassEmailVerification: false,
+        emailVerificationTimeoutInSeconds: 600,
     },
     search: {
         searchLimitPerPage: 10,
