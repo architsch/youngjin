@@ -4,6 +4,7 @@ const globalConfig = require("../shared/config/globalConfig.mjs").globalConfig;
 const testHTTP = require("./testHTTP.js");
 const testRoutines = require("./testRoutines.js");
 const testDB = require("./testDB.js");
+const debugUtil = require("../server/util/debugUtil.js");
 require("dotenv").config();
 
 let testRunning = false;
@@ -12,21 +13,16 @@ async function test(testname)
 {
     if (!envUtil.isDevMode())
     {
-        console.error(`TEST REJECTED (${testname}) :: You are not allowed to run tests on a non-dev mode.`);
+        debugUtil.logRaw(`TEST REJECTED (${testname}) - You are not allowed to run tests on a non-dev mode.`);
         return;
     }
     if (testRunning)
     {
-        console.error(`TEST REJECTED (${testname}) :: There is another test running.`);
+        debugUtil.logRaw(`TEST REJECTED (${testname}) - There is another test running.`);
         return;
     }
 
-    for (let i = 0; i < 5; ++i)
-        console.log(" ");
-    console.log("==================================================");
-    console.log(`TEST STARTED (${testname})`);
-    console.log("==================================================");
-    console.log(" ");
+    debugUtil.logRaw(`TEST STARTED (${testname})`);
 
     testRunning = true;
     testHTTP._reset();
@@ -41,11 +37,7 @@ async function test(testname)
     globalConfig.auth.bypassEmailVerification = bypassEmailVerification_prev;
     testRunning = false;
 
-    console.log(" ");
-    console.log("==================================================");
-    console.log(`TEST ENDED (${testname})`);
-    console.log("==================================================");
-    console.log(" ");
+    debugUtil.logRaw(`TEST ENDED (${testname})`);
 }
 
 module.exports = test;

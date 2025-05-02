@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const dbEmail = require("../db/dbEmail.js");
 const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
-const debugUtil = require("../../shared/util/debugUtil.mjs").debugUtil;
+const debugUtil = require("./debugUtil.js");
 const globalConfig = require("../../shared/config/globalConfig.mjs").globalConfig;
 require("dotenv").config();
 

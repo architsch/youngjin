@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs/promises');
-const debugUtil = require('../../shared/util/debugUtil.mjs').debugUtil;
+const debugUtil = require('./debugUtil.js');
 require("dotenv").config();
 
 const fileUtil =

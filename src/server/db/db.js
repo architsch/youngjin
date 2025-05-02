@@ -1,7 +1,7 @@
 const mysql = require("mysql2/promise");
 const envUtil = require("../util/envUtil.js");
 const fileUtil = require("../util/fileUtil.js");
-const debugUtil = require("../../shared/util/debugUtil.mjs").debugUtil;
+const debugUtil = require("../util/debugUtil.js");
 require("dotenv").config();
 
 const dev = envUtil.isDevMode();
@@ -90,7 +90,7 @@ const db =
     },
     runSQLFile: async (fileName) => {
         debugUtil.log("Opening SQL File", {fileName});
-        const sql = await fileUtil.read(fileName, "src/server/sql");
+        const sql = await fileUtil.read(fileName, "src/server/db/sql");
         const sqlStatements = sql.split(";").map(x => x.trim() + ";").filter(x => x.length > 1);
         let conn;
 

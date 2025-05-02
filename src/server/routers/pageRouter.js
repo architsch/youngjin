@@ -1,10 +1,13 @@
 const dbRoom = require("../db/dbRoom.js");
 const authUtil = require("../util/authUtil.js");
 const ejsUtil = require("../util/ejsUtil.js");
+const envUtil = require("../util/envUtil.js");
 const globalConfig = require("../../shared/config/globalConfig.mjs").globalConfig;
 
 const express = require("express");
 const router = express.Router();
+
+const dev = envUtil.isDevMode();
 
 //------------------------------------------------------------------------------------
 // menu pages
@@ -52,5 +55,22 @@ router.get("/room", authUtil.authenticateToken, async (req, res) => {
         keywords: undefined,
     }));
 });
+
+//------------------------------------------------------------------------------------
+// misc pages
+//------------------------------------------------------------------------------------
+
+if (dev)
+{
+    router.get("/console", (req, res) => {
+        res.render("page/misc/console", ejsUtil.makeEJSParams(
+            {}));
+    });
+
+    router.get("/ui-test", (req, res) => {
+        res.render("page/misc/uiTest", ejsUtil.makeEJSParams(
+            {user: undefined, loginDestination: "", registerDestination: ""}));
+    });
+}
 
 module.exports = router;

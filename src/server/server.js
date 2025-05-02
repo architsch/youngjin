@@ -2,12 +2,8 @@ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const db = require("./db/db.js");
 const envUtil = require("./util/envUtil.js");
-const ejsUtil = require("./util/ejsUtil.js");
 const globalConfig = require("../shared/config/globalConfig.mjs").globalConfig;
-const test = require("../test/test.js");
-const testDB = require("../test/testDB.js");
 require("dotenv").config();
 
 async function run()
@@ -18,13 +14,12 @@ async function run()
         await require("../contentGenerator/generator.js").run();
 
     const app = express();
+    const server = (dev ? require("http") : require("https")).createServer(app);
 
     // config
-
     app.set("view engine", "ejs");
 
     // middleware
-
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser());
@@ -49,32 +44,6 @@ async function run()
     app.use("/api/auth", require("./routers/authRouter.js"));
     app.use("/api/search", require("./routers/searchRouter.js"));
     app.use("/api/room", require("./routers/roomRouter.js"));
-
-    //-----------------------------------------------------------------
-    // Test Routes
-    //-----------------------------------------------------------------
-
-    if (dev)
-    {
-        app.get("/test/ui", async (req, res) => {
-            res.render("page/misc/uiTest", ejsUtil.makeEJSParams(
-                {user: undefined, loginDestination: "", registerDestination: ""}));
-        });
-        
-        app.get("/test/:testname", async (req, res) => {
-            await test(req.params.testname);
-            const content_realDB = await db.toHTMLString();
-            const content_testDB = testDB.toHTMLString();
-            res.render("page/misc/console", { content: `
-                <div style="margin:0 0 0 0; padding:1% 1% 1% 1%; overflow:scroll; width:50%; height:100%; left:0; right:50%; top:0; bottom:0;">
-                    ${content_realDB}
-                </div>
-                <div style="margin:0 0 0 0; padding:1% 1% 1% 1%; overflow:scroll; width:50%; height:100%; left:50%; right:0; top:0; bottom:0;">
-                    ${content_testDB}
-                </div>
-            `.replace(/\s+/g, " ")});
-        });
-    }
     
     //-----------------------------------------------------------------
     // Static Content Routes
@@ -85,12 +54,14 @@ async function run()
     app.use("/src_shared", express.static(path.join(process.env.PWD, "src/shared")));
 
     //-----------------------------------------------------------------
-    // Start
+    // Start Server
     //-----------------------------------------------------------------
 
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
+        console.log("---------------------------------------------");
         console.log(`Listening to port ${process.env.PORT}.`);
     });
+    require("./socket/sockets.js").init(server);
 }
 
 module.exports.run = run;

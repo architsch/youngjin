@@ -5,7 +5,7 @@ const emailUtil = require("./emailUtil.js");
 const dbSearch = require("../db/dbSearch.js");
 const dbAuth = require("../db/dbAuth.js");
 const textUtil = require("../../shared/util/textUtil.mjs").textUtil;
-const debugUtil = require("../../shared/util/debugUtil.mjs").debugUtil;
+const debugUtil = require("./debugUtil.js");
 require("dotenv").config();
 
 const dev = envUtil.isDevMode();

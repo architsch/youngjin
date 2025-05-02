@@ -3,7 +3,81 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Console</title>
-    <body style="margin: 0 0 0 0; padding: 0 0 0 0; font-family: monospace;">
-        <div style="padding: 2% 2% 2% 2%; width: 96%; height: 96%;"><%- content %></div>
+    <style>
+        body {
+            font-family: monospace;
+            color: #f0f0f0;
+            background-color: #000000;
+            overflow: auto;
+        }
+        table {
+            white-space: nowrap;
+            border-collapse: collapse;
+        }
+        label, input, button {
+            display: inline-block;
+        }
+        .row {
+            border-top: 2px solid #808080;
+        }
+        .col {
+            padding: 2px 2px;
+            width: fit-content;
+            min-width: 20vw;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .col1 {
+            color: #e0e020;
+            background-color: #202090;
+        }
+        .col2 {
+            color: #20e020;
+            background-color: #101010;
+        }
+        .col3 {
+            color: #303030;
+            background-color: #c0c0c0;
+        }
+    </style>
+    <body>
+        <label>Command: </label>
+        <input id="command_input" type="text">
+        <button id="send_command_button">Run</button>
+        <br>
+        <table id="logList"></table>
+
+        <script src="https://code.jquery.com/jquery.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io("/console");
+
+            socket.on("log", (message) => {
+                $("#logList").append($("<tr>").addClass("row").html(message));
+            });
+
+            $("#send_command_button").click(runCommand);
+
+            addEventListener("keydown", (event) => {
+                if (event.key == "Enter")
+                {
+                    event.preventDefault();
+                    if ($("#command_input").val().trim().length > 0)
+                        runCommand();
+                }
+            });
+
+            function runCommand()
+            {
+                const command = $("#command_input").val().trim();
+
+                if (command == "clear")
+                    $("#logList").empty();
+                else
+                    socket.emit("command", command);
+                
+                $("#command_input").val("");
+            }
+        </script>
     </body>
 </html>

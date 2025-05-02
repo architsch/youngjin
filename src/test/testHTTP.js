@@ -1,5 +1,5 @@
 const http = require("http");
-const debugUtil = require("../shared/util/debugUtil.mjs").debugUtil;
+const debugUtil = require("../server/util/debugUtil.js");
 require("dotenv").config();
 
 let tokenByUserName = {};
