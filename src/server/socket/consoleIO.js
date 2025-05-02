@@ -43,7 +43,7 @@ const consoleIO =
     {
         if (dev)
             console.log(`(CONSOLE) --- ${message} --- ${origin} --- ${details}`);
-        handle.emit("log", `<td class="col col1">${message}</td><td class="col col2">${origin}</td><td class="col col3">${details}</td>`);
+        handle?.emit("log", `<td class="col col1">${message}</td><td class="col col2">${origin}</td><td class="col col3">${details}</td>`);
     },
 };
 
