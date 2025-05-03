@@ -14,7 +14,7 @@ async function run()
         await require("../contentGenerator/generator.js").run();
 
     const app = express();
-    const server = (dev ? require("http") : require("https")).createServer(app);
+    const server = require("http").createServer(app);
 
     // config
     app.set("view engine", "ejs");
