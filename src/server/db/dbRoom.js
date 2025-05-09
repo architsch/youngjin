@@ -21,10 +21,11 @@ const dbRoom =
         return await new db.transaction([
             new db.query(`INSERT INTO rooms (roomName, ownerUserName) VALUES (?, ?);`,
                 [roomName, ownerUserName]),
-            new db.query(`INSERT INTO user_rooms (roomID, userID, userStatus) VALUES (LAST_INSERT_ID(), ?, 'owner');`,
+            new db.query(`INSERT INTO user_rooms (roomID, userID, userStatus)
+                VALUES (LAST_INSERT_ID(), (SELECT userID FROM users WHERE userName = ?), 'owner');`,
                 [ownerUserName]),
             new db.query(`UPDATE users SET ownedRoomCount = ownedRoomCount + 1
-                WHERE userID = ? AND ownedRoomCount < ownedRoomCountMax;`,
+                WHERE userName = ? AND ownedRoomCount < ownedRoomCountMax;`,
                 [ownerUserName])
         ]).run(res);
     },

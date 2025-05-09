@@ -1,17 +1,22 @@
 const dbSearch = require("../../server/db/dbSearch");
+const debugUtil = require("../../server/util/debugUtil");
 const testDB = require("../testDB");
 const testHTTP = require("../testHTTP");
 
 const routePath = "/api/room/";
 
 const actionOnExistingRoom = async (method, routeName, room, sourceUser, targetUser = undefined) => {
-    testHTTP.switchUser(sourceUser.userName);
+    const roomsFound = await dbSearch.rooms.withRoomName(undefined, room.roomName);
+    const usersFound = targetUser ? await dbSearch.users.withUserName(undefined, targetUser.userName) : undefined;
 
-    const body = {roomID: await dbSearch.rooms.withRoomName(undefined, room.roomName)[0].roomID};
-    if (targetUser != undefined)
-        body.userID = await dbSearch.users.withUserName(undefined, targetUser.userName)[0].userID;
+    const roomID = (!roomsFound || roomsFound.length == 0) ?
+        Math.floor(Math.random() * 1000) : roomsFound[0].roomID;
+    const userID = (!usersFound || usersFound.length == 0) ?
+        Math.floor(Math.random() * 1000) : usersFound[0].userID;
 
-    await testHTTP[method](`${routePath}${routeName}`, body);
+    const body = {roomID, userID};
+
+    await testHTTP.makeRequest(sourceUser.userName, method, `${routePath}${routeName}`, body);
 };
 
 const testActions_room =
@@ -21,17 +26,22 @@ const testActions_room =
     //------------------------------------------------------------------------------------
 
     create: async (room, user) => {
-        testHTTP.switchUser(user.userName);
-        await testHTTP.post(`${routePath}create`, {roomName: room.roomName});
-        testDB.insertRoom(room);
+        if (!testDB.insertRoom(room, user))
+            return;
+        debugUtil.log("testActions_room.create", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
+        await testHTTP.makeRequest(user.userName, "POST", `${routePath}create`, {roomName: room.roomName});
     },
     delete: async (room, user) => {
-        await actionOnExistingRoom("delete", room, user);
-        testDB.deleteRoom(room);
+        if (!testDB.deleteRoom(room, user))
+            return;
+        debugUtil.log("testActions_room.delete", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("DELETE", "delete", room, user);
     },
     leave: async (room, user) => {
-        await actionOnExistingRoom("leave", room, user);
-        testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"});
+        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"}, user))
+            return;
+        debugUtil.log("testActions_room.leave", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("DELETE", "leave", room, user);
     },
 
     //------------------------------------------------------------------------------------
@@ -39,20 +49,28 @@ const testActions_room =
     //------------------------------------------------------------------------------------
 
     acceptInvitation: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("put", "accept-invitation", room, user);
-        testDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner);
+        if (!testDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.acceptInvitation", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("PUT", "accept-invitation", room, user);
     },
     ignoreInvitation: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("delete", "ignore-invitation", room, user);
-        testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner);
+        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.ignoreInvitation", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("DELETE", "ignore-invitation", room, user);
     },
     requestToJoin: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("post", "request-to-join", room, user);
-        testDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner);
+        if (!testDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.requestToJoin", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("POST", "request-to-join", room, user);
     },
     cancelRequest: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("delete", "cancel-request", room, user);
-        testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner);
+        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.cancelRequest", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("DELETE", "cancel-request", room, user);
     },
 
     //------------------------------------------------------------------------------------
@@ -60,24 +78,34 @@ const testActions_room =
     //------------------------------------------------------------------------------------
 
     invite: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("post", "invite", room, roomOwner, user);
-        testDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner);
+        if (!testDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.invite", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("POST", "invite", room, roomOwner, user);
     },
     cancelInvite: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("delete", "cancel-invite", room, roomOwner, user);
-        testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"});
+        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.cancelInvite", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("DELETE", "cancel-invite", room, roomOwner, user);
     },
     acceptRequest: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("put", "accept-request", room, roomOwner, user);
-        testDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner);
+        if (!testDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.acceptRequest", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("PUT", "accept-request", room, roomOwner, user);
     },
     ignoreRequest: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("delete", "ignore-request", room, roomOwner, user);
-        testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"});
+        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.ignoreRequest", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("DELETE", "ignore-request", room, roomOwner, user);
     },
     kickout: async (room, roomOwner, user) => {
-        await actionOnExistingRoom("delete", "kickout", room, roomOwner, user);
-        testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"});
+        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
+            return;
+        debugUtil.log("testActions_room.kickout", {roomName: room.roomName, roomOwnerName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        await actionOnExistingRoom("DELETE", "kickout", room, roomOwner, user);
     },
 }
 

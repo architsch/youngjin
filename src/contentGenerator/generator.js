@@ -5,6 +5,8 @@ require("dotenv").config();
 
 async function run()
 {
+    console.log("Generator START");
+
     // Generate pages
 
     const sitemapBuilder = new (require("./builder/sitemapBuilder.js"))();
@@ -51,6 +53,8 @@ async function run()
     // Generate CSS
 
     await fileUtil.write("style.css", require('./style/styleDictionary.js'));
+
+    console.log("Generator END");
 }
 
 module.exports.run = run;

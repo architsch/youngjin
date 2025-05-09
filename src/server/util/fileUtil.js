@@ -14,7 +14,7 @@ const fileUtil =
             return data;
         }
         catch (err) {
-            debugUtil.log("Failed to read file", {relativeFilePath, err});
+            debugUtil.log("Failed to read file", {relativeFilePath, err}, "high");
             return "";
         }
     },
@@ -26,7 +26,7 @@ const fileUtil =
             await fs.writeFile(absoluteFilePath, content);
         }
         catch (err) {
-            debugUtil.log("Failed to write file", {relativeFilePath, err});
+            debugUtil.log("Failed to write file", {relativeFilePath, err}, "high");
         }
     },
 }

@@ -11,33 +11,33 @@
             overflow: auto;
         }
         table {
-            white-space: nowrap;
-            border-collapse: collapse;
+            table-layout: fixed;
+            border-collapse: separate;
+            width: 100%;
+        }
+        thead {
+            position: sticky;
+            top: 0;
+            text-align: left;
+            color: #000000;
+            background-color: #b0b0f0;
         }
         label, input, button {
             display: inline-block;
         }
-        .row {
-            border-top: 2px solid #808080;
+        th {
+            padding: 6px 6px;
+            overflow: auto;
+            resize: horizontal;
+            border: 2px solid black;
         }
-        .col {
+        td {
             padding: 2px 2px;
-            width: fit-content;
-            min-width: 20vw;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-        .col1 {
-            color: #e0e020;
-            background-color: #202090;
-        }
-        .col2 {
-            color: #20e020;
-            background-color: #101010;
-        }
-        .col3 {
-            color: #303030;
-            background-color: #c0c0c0;
+            word-break: break-all;
+            overflow: auto;
+            border-top: 2px solid #808080;
+            border-left: 2px solid black;
+            border-right: 2px solid black;
         }
     </style>
     <body>
@@ -45,7 +45,13 @@
         <input id="command_input" type="text">
         <button id="send_command_button">Run</button>
         <br>
-        <table id="logList"></table>
+        <table>
+            <thead>
+                <tr><th>Message</th><th>Origin</th><th style="overflow:hidden; resize:none;">Details</th></tr>
+            </thead>
+            <tbody id="logList">
+            </tbody>
+        </table>
 
         <script src="https://code.jquery.com/jquery.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
@@ -53,7 +59,7 @@
             const socket = io("/console");
 
             socket.on("log", (message) => {
-                $("#logList").append($("<tr>").addClass("row").html(message));
+                $("#logList").append($("<tr>").html(message));
             });
 
             $("#send_command_button").click(runCommand);

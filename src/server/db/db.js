@@ -26,16 +26,15 @@ const db =
         this.queryParams = queryParams;
 
         this.run = async (res) => {
-            debugUtil.log("SQL Query Began", {queryStr, queryParams});
             let conn;
             try {
                 conn = await pool.getConnection();
                 const [results, fields] = await conn.query(queryStr, queryParams);
-                debugUtil.log("SQL Query Succeeded", {queryStr, queryParams});
+                debugUtil.log("SQL Query Succeeded", {queryStr, queryParams}, "medium");
                 return results;
             }
             catch (err) {
-                debugUtil.log("SQL Query Error", {err});
+                debugUtil.log("SQL Query Error", {err}, "high");
                 if (res)
                     res.status(500).send(err);
             }
@@ -48,9 +47,10 @@ const db =
     transaction: function (queries)
     {
         this.run = async (res) => {
-            debugUtil.log("SQL Transaction Began", {queries});
+            debugUtil.log("SQL Transaction Began", {numQueries: queries.length}, "low");
             let conn;
             let success = false;
+            let count = 0;
             try {
                 conn = await pool.getConnection();
                 await conn.beginTransaction();
@@ -58,25 +58,26 @@ const db =
                 let resultsGroup = [];
                 for (const query of queries)
                 {
-                    debugUtil.log("SQL Transaction Query", {query});
+                    count++;
                     const [results, fields] = await conn.query(query.queryStr, query.queryParams);
                     if (results.affectedRows == 0)
                     {
                         await conn.rollback();
-                        debugUtil.log("SQL Transaction Rolled Back - because no rows were affected.", {queries});
+                        debugUtil.log("SQL Transaction Query Made No Change", {progress: `${count}/${queries.length}`, query}, "high");
                         res?.status(403);
                         return;
                     }
+                    debugUtil.log("SQL Transaction Query Succeeded", {progress: `${count}/${queries.length}`, query}, "low");
                     resultsGroup.push(results);
                 }
 
                 await conn.commit();
-                debugUtil.log("SQL Transaction Committed", {queries});
+                debugUtil.logRaw("SQL Transaction Committed", "medium");
                 success = true;
                 return resultsGroup;
             }
             catch (err) {
-                debugUtil.log("SQL Transaction Error", {err});
+                debugUtil.log("SQL Transaction Error", {progress: `${count}/${queries.length}`, err}, "high", "pink");
                 await conn.rollback();
                 if (res)
                     res.status(500).send(err);
@@ -89,7 +90,7 @@ const db =
         };
     },
     runSQLFile: async (fileName) => {
-        debugUtil.log("Opening SQL File", {fileName});
+        debugUtil.log("Opening SQL File", {fileName}, "high");
         const sql = await fileUtil.read(fileName, "src/server/db/sql");
         const sqlStatements = sql.split(";").map(x => x.trim() + ";").filter(x => x.length > 1);
         let conn;
@@ -108,7 +109,7 @@ const db =
             }
         }
         catch (err) {
-            debugUtil.log("SQL File Execution Error", {err});
+            debugUtil.log("SQL File Execution Error", {err}, "high");
         }
         finally {
             conn?.end();

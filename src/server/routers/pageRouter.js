@@ -14,14 +14,14 @@ const dev = envUtil.isDevMode();
 //------------------------------------------------------------------------------------
 
 router.get("/", authUtil.authenticateTokenOptional, async (req, res) => {
-    res.render("page/menu/index", ejsUtil.makeEJSParams(
-        {user: req.user, loginDestination: ""}));
+    res.render("page/menu/index", ejsUtil.makeEJSParams(req, true,
+        {loginDestination: ""}));
 });
 
 // query strings = {tabname(optional)}
 router.get("/rooms.html", authUtil.authenticateTokenOptional, async (req, res) => {
-    res.render("page/menu/rooms", ejsUtil.makeEJSParams({
-        user: req.user,
+    res.render("page/menu/rooms", ejsUtil.makeEJSParams(req, false,
+    {
         loginDestination: "rooms.html",
         tabName: req.query.tabname ? req.query.tabname : "owned",
         searchLimitPerPage: globalConfig.search.searchLimitPerPage,
@@ -33,8 +33,8 @@ router.get("/rooms.html", authUtil.authenticateTokenOptional, async (req, res) =
 //------------------------------------------------------------------------------------
 
 router.get("/register", (req, res) => {
-    res.render("page/form/register", ejsUtil.makeEJSParams(
-        {user: req.user, registerDestination: ""}));
+    res.render("page/form/register", ejsUtil.makeEJSParams(req, true,
+        {registerDestination: ""}));
 });
 
 //------------------------------------------------------------------------------------
@@ -43,11 +43,12 @@ router.get("/register", (req, res) => {
 
 // query strings = {roomid}
 router.get("/room", authUtil.authenticateToken, async (req, res) => {
-    const roomContent = await dbRoom.getRoomContent(res, req.query.roomid, req.user.userID);
+    const user = authUtil.getUserFromReqToken(req);
+    const roomContent = await dbRoom.getRoomContent(res, req.query.roomid, user.userID);
     if (res.statusCode < 200 || res.statusCode >= 300)
         return;
-    res.render("page/private/room", ejsUtil.makeEJSParams({
-        user: req.user,
+    res.render("page/private/room", ejsUtil.makeEJSParams(req, false,
+    {
         roomID: req.query.roomid,
         roomContent: roomContent,
         title: roomContent.roomName,
@@ -63,13 +64,12 @@ router.get("/room", authUtil.authenticateToken, async (req, res) => {
 if (dev)
 {
     router.get("/console", (req, res) => {
-        res.render("page/misc/console", ejsUtil.makeEJSParams(
-            {}));
+        res.render("page/misc/console", ejsUtil.makeEJSParams(req, true, {}));
     });
 
     router.get("/ui-test", (req, res) => {
-        res.render("page/misc/uiTest", ejsUtil.makeEJSParams(
-            {user: undefined, loginDestination: "", registerDestination: ""}));
+        res.render("page/misc/uiTest", ejsUtil.makeEJSParams(req, true,
+            {loginDestination: "", registerDestination: ""}));
     });
 }
 

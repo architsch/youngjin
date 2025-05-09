@@ -11,43 +11,43 @@ const router = express.Router();
 
 // query strings: {page}
 router.get("/rooms/owned", authUtil.authenticateToken, async (req, res) => {
-    const results = await dbSearch.rooms.whichIOwn(res, req.user.userID, req.query.page);
+    const results = await dbSearch.rooms.whichIOwn(res, authUtil.getUserFromReqToken(req).userID, req.query.page);
     networkUtil.onRouteResponse(res, results);
 });
 
 // query strings: {page}
 router.get("/rooms/joined", authUtil.authenticateToken, async (req, res) => {
-    const results = await dbSearch.rooms.whichIJoined(res, req.user.userID, req.query.page);
+    const results = await dbSearch.rooms.whichIJoined(res, authUtil.getUserFromReqToken(req).userID, req.query.page);
     networkUtil.onRouteResponse(res, results);
 });
 
 // query strings: {page}
 router.get("/rooms/invited", authUtil.authenticateToken, async (req, res) => {
-    const results = await dbSearch.rooms.whichInvitedMe(res, req.user.userID, req.query.page);
+    const results = await dbSearch.rooms.whichInvitedMe(res, authUtil.getUserFromReqToken(req).userID, req.query.page);
     networkUtil.onRouteResponse(res, results);
 });
 
 // query strings: {page}
 router.get("/rooms/requested", authUtil.authenticateToken, async (req, res) => {
-    const results = await dbSearch.rooms.whichIRequestedToJoin(res, req.user.userID, req.query.page);
+    const results = await dbSearch.rooms.whichIRequestedToJoin(res, authUtil.getUserFromReqToken(req).userID, req.query.page);
     networkUtil.onRouteResponse(res, results);
 });
 
 // query strings: {page}
 router.get("/rooms/pending", authUtil.authenticateToken, async (req, res) => {
-    const results = await dbSearch.rooms.whichIAmPendingToJoin(res, req.user.userID, req.query.page);
+    const results = await dbSearch.rooms.whichIAmPendingToJoin(res, authUtil.getUserFromReqToken(req).userID, req.query.page);
     networkUtil.onRouteResponse(res, results);
 });
 
 // query strings: {page}
 router.get("/rooms/associated", authUtil.authenticateToken, async (req, res) => {
-    const results = await dbSearch.rooms.whichIAmAssociatedWith(res, req.user.userID, req.query.page);
+    const results = await dbSearch.rooms.whichIAmAssociatedWith(res, authUtil.getUserFromReqToken(req).userID, req.query.page);
     networkUtil.onRouteResponse(res, results);
 });
 
 // query strings: {page}
 router.get("/rooms/others", authUtil.authenticateToken, async (req, res) => {
-    const results = await dbSearch.rooms.others(res, req.user.userID, req.query.page);
+    const results = await dbSearch.rooms.others(res, authUtil.getUserFromReqToken(req).userID, req.query.page);
     networkUtil.onRouteResponse(res, results);
 });
 

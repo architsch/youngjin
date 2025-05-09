@@ -1,7 +1,13 @@
 const envUtil = require("../util/envUtil.js");
 
 const dev = envUtil.isDevMode();
-let handle;
+let handle = undefined;
+
+const col1 = `<td style="color: #e0e020; background-color: #202090;">`;
+const col2 = `<td style="color: #20e020; background-color: #101010;">`;
+const col3 = `<td style="color: #303030; background-color: #c0c0c0;">`;
+const end = `</td>`;
+const row = (txt1, txt2, txt3) => `${col1}${txt1}${end}${col2}${txt2}${end}${col3}${txt3}${end}`;
 
 const consoleIO =
 {
@@ -17,19 +23,21 @@ const consoleIO =
                 {
                     case "test":
                         words.shift();
-                        const testname = (words.length == 0) ? "default" : words[0];
-                        require("../../test/test")(testname);
+                        if (words.length == 0)
+                            alert("Please provide the name of the test.");
+                        else
+                            require("../../test/test")(words[0], (words.length == 1) ? "low" : words[1]);
                         break;
                     case "print":
                         words.shift();
-                        handle.emit("log", `<td class="col col1" style="color:black; background-color:yellow;">${(words.length == 0) ? "-" : words.join(" ")}</td><td class="col col2" style="color:black; background-color:yellow;"></td><td class="col col3" style="color:black; background-color:yellow;"></td>`);
+                        handle.emit("log", row((words.length == 0) ? "-" : words.join(" "), "-", "-"));
                         break;
                     case "reboot":
-                        handle.emit("log", `<td class="col col1" style="color:black; background-color:#ffffff;">Rebooting...</td><td class="col col2" style="color:black; background-color:#ffffff;"></td><td class="col col3" style="color:black; background-color:#ffffff;"></td>`);
+                        handle.emit("log", row("Rebooting...", "-", "-"));
                         process.exit(0);
                         break;
                     default:
-                        handle.emit("log", `<td class="col col1" style="background-color:#900000;">ERROR: Unknown Command</td><td class="col col2" style="background-color:#900000;"></td><td class="col col3" style="background-color:#900000;"></td>`);
+                        handle.emit("log", row("ERROR: Unknown Command", "-", "-"));
                         break;
                 }
             });
@@ -41,9 +49,10 @@ const consoleIO =
     },
     log: (message, origin, details) =>
     {
-        if (dev)
-            console.log(`(CONSOLE) --- ${message} --- ${origin} --- ${details}`);
-        handle?.emit("log", `<td class="col col1">${message}</td><td class="col col2">${origin}</td><td class="col col3">${details}</td>`);
+        if (handle)
+            handle.emit("log", row(message, origin, details));
+        else
+            console.log(`${message}\n(ORIGIN: ${origin})\n(DETAILS: ${details})`);
     },
 };
 

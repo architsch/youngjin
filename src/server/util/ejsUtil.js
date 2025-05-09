@@ -1,3 +1,5 @@
+const authUtil = require("./authUtil.js");
+const debugUtil = require("./debugUtil.js");
 const envUtil = require("./envUtil.js");
 const fileUtil = require("./fileUtil.js");
 const uiConfig = require("../../shared/config/uiConfig.mjs").uiConfig;
@@ -24,9 +26,19 @@ const cachedEJSStrings = {}; // [key]: relativeEJSFilePath, [value]: ejsString
 
 const ejsUtil =
 {
-    makeEJSParams: (customEJSParams, isStaticPage = false) => {
+    makeEJSParams: (req, userIsOptional, customEJSParams) => {
         const mergedEJSParams = {};
-        Object.assign(mergedEJSParams, isStaticPage ? baseStaticPageEJSParams : baseDynamicPageEJSParams);
+        Object.assign(mergedEJSParams, baseDynamicPageEJSParams);
+        Object.assign(mergedEJSParams, customEJSParams);
+
+        if (mergedEJSParams.user)
+            debugUtil.log("'user' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
+        mergedEJSParams.user = authUtil.getUserFromReqToken(req, userIsOptional);
+        return mergedEJSParams;
+    },
+    makeEJSParamsStatic: (customEJSParams) => {
+        const mergedEJSParams = {};
+        Object.assign(mergedEJSParams, baseStaticPageEJSParams);
         Object.assign(mergedEJSParams, customEJSParams);
         return mergedEJSParams;
     },
@@ -40,7 +52,7 @@ const ejsUtil =
         }
 
         const template = ejs.compile(ejsString);
-        const htmlString = template(ejsUtil.makeEJSParams(customEJSParams, true));
+        const htmlString = template(ejsUtil.makeEJSParamsStatic(customEJSParams));
         return htmlString;
     },
 }

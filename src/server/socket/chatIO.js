@@ -7,10 +7,10 @@ const chatIO =
     init: (io) =>
     {
         handle = io.of("/chat").on("connection", (socket) => {
-            debugUtil.log("Chat Client Connected", {socket});
+            debugUtil.log("Chat Client Connected", {socket}, "medium");
     
             socket.on("chat message", (data) => { // data = {name, room, message}
-                debugUtil.log("Chat Message Received", {data});
+                debugUtil.log("Chat Message Received", {data}, "low");
     
                 const name = socket.name = data.name;
                 const room = socket.room = data.room;
@@ -21,7 +21,7 @@ const chatIO =
             });
     
             socket.on("disconnect", () => {
-                debugUtil.log("Chat Client Disconnected", {socket});
+                debugUtil.log("Chat Client Disconnected", {socket}, "medium");
             });
         });
     },

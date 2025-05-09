@@ -2,17 +2,41 @@ const consoleIO = require("../socket/consoleIO");
 
 const debugUtil =
 {
-    log: (eventTitle, eventDescObj = undefined) =>
+    thresholdLogLevel: 0, // 0 = low importance, 1 = medium importance, 2 = high importance
+    setThresholdLogLevel: (logLevelOrName) =>
+    {
+        debugUtil.thresholdLogLevel = isNaN(logLevelOrName) ?
+            debugUtil.getLogLevelFromName(logLevelOrName) : logLevelOrName;
+    },
+    getThresholdLogLevel: () =>
+    {
+        return debugUtil.thresholdLogLevel;
+    },
+    getLogLevelFromName: (logLevelName) => // "low" for 0, "medium" for 1, "high" for 2
+    {
+        switch (logLevelName)
+        {
+            case "low": return 0;
+            case "medium": return 1;
+            case "high": return 2;
+            default: console.error(`ERROR: Unknown log level name ("${logLevelName}")`);
+        }
+        return 0;
+    },
+    log: (eventTitle, eventDescObj = undefined, logLevelName = "high", highlightColor = undefined) =>
     {
         let details = "";
         if (eventDescObj != undefined)
             details = JSON.stringify(eventDescObj);
         const origin = debugUtil.getFuncCallPath(5, 2);
-        consoleIO.log(eventTitle, origin, details);
+
+        const logLevel = debugUtil.getLogLevelFromName(logLevelName);
+        if (logLevel >= debugUtil.thresholdLogLevel)
+            consoleIO.log((highlightColor ? `<b style="color:${highlightColor}">` : "") + eventTitle + (highlightColor ? "</b>" : ""), origin, details);
     },
-    logRaw: (message) =>
+    logRaw: (message, logLevelName = "high", highlightColor = undefined) =>
     {
-        consoleIO.log(message, "", "");
+        debugUtil.log(message, undefined, logLevelName, highlightColor);
     },
     getFuncCallPath: (pathLengthLimit = 1, numClosestFuncCallsToSkip = 1) =>
     {

@@ -22,7 +22,7 @@ const authUtil =
             const emailError = textUtil.findErrorInEmailAddress(req.body.email);
             if (emailError != null)
             {
-                debugUtil.log("Email Input Error", {email: req.body.email, emailError});
+                debugUtil.log("Email Input Error", {email: req.body.email, emailError}, "high");
                 return res.status(400).send(emailError);
             }
 
@@ -31,7 +31,7 @@ const authUtil =
                 return;
             if (existingUsers && existingUsers.length > 0)
             {
-                debugUtil.log("UserName already exists", {userName: req.body.userName, existingUser: existingUsers[0]});
+                debugUtil.log("UserName already exists", {userName: req.body.userName, existingUser: existingUsers[0]}, "high");
                 return res.status(403).send(`User "${req.body.userName}" already exists.`);
             }
 
@@ -40,7 +40,7 @@ const authUtil =
                 return;
             if (existingUsers && existingUsers.length > 0)
             {
-                debugUtil.log("There is already an account with the same email", {email: req.body.email, existingUser: existingUsers[0]});
+                debugUtil.log("There is already an account with the same email", {email: req.body.email, existingUser: existingUsers[0]}, "high");
                 return res.status(403).send(`There is already an account with the email "${req.body.email}".`);
             }
     
@@ -54,11 +54,11 @@ const authUtil =
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
 
-            authUtil.addToken(req.body.userName, res);
+            await authUtil.addToken(req.body.userName, res);
         }
         catch (err)
         {
-            debugUtil.log("User Registration Error", {err});
+            debugUtil.log("User Registration Error", {err}, "high");
             res.status(500).send(`ERROR: Failed to register the user (${err}).`);
         }
     },
@@ -77,15 +77,15 @@ const authUtil =
 
             if (!validPassword)
             {
-                debugUtil.log("Wrong password", {passwordEntered: (dev ? req.body.password : "(HIDDEN)"), passwordHash: user.passwordHash});
+                debugUtil.log("Wrong password", {passwordEntered: (dev ? req.body.password : "(HIDDEN)"), passwordHash: user.passwordHash}, "high");
                 return res.status(401).send("Wrong password.");
             }
 
-            authUtil.addToken(req.body.userName, res);
+            await authUtil.addToken(req.body.userName, res);
         }
         catch (err)
         {
-            debugUtil.log("Login Error", {err});
+            debugUtil.log("Login Error", {err}, "high");
             res.status(500).send(`ERROR: Failed to login (${err}).`);
         }
     },
@@ -93,14 +93,14 @@ const authUtil =
         const userNameError = textUtil.findErrorInUserName(req.body.userName);
         if (userNameError != null)
         {
-            debugUtil.log("UserName Input Error", {userName: req.body.userName, userNameError});
+            debugUtil.log("UserName Input Error", {userName: req.body.userName, userNameError}, "high");
             res.status(400).send(userNameError);
             return false;
         }
         const passwordError = textUtil.findErrorInPassword(req.body.password);
         if (passwordError != null)
         {
-            debugUtil.log("Password Input Error", {password: (dev ? req.body.password : "(HIDDEN)"), passwordError});
+            debugUtil.log("Password Input Error", {password: (dev ? req.body.password : "(HIDDEN)"), passwordError}, "high");
             res.status(400).send(passwordError);
             return false;
         }
@@ -112,17 +112,44 @@ const authUtil =
             return;
         if (!existingUsers || existingUsers.length == 0)
         {
-            debugUtil.log("User Not Found", {userName});
+            debugUtil.log("User Not Found", {userName}, "high");
             return res.status(404).send(`There is no account with userName "${userName}".`);
         }
         return existingUsers[0];
     },
-    addToken: (userName, res) => {
+    getUserFromReqToken: (req, optional = false) => {
+        const token = req.cookies["thingspool_token"];
+        if (!token)
+        {
+            if (!optional)
+                debugUtil.log("Token Not Found in Request", {}, "high");
+            return null;
+        }
+        return authUtil.getUserFromToken(token);
+    },
+    getUserFromToken: (token) => {
+        const user = jwt.verify(token, process.env.JWT_SECRET_KEY);
+        if (!user)
+        {
+            debugUtil.log("User Not Found In Token", {token}, "high");
+            return null;
+        }
+        return user;
+    },
+    addToken: async (userName, res) => {
+        const user = await authUtil.findExistingUserByUserName(userName, res); // Re-fetch the user object (because it could've been modified)
+        if (!user)
+        {
+            debugUtil.log("AddToken Tried, User Not Found", {userName, token}, "high");
+            return res.status(404).send(`Tried to add token, but there is no account with userName "${userName}".`);
+        }
+
         const token = jwt.sign(
-            { userName },
+            user,
             process.env.JWT_SECRET_KEY,
             { expiresIn: "60m" }
         );
+
         res.cookie("thingspool_token", token, {
             secure: envUtil.isDevMode() ? false : true,
             httpOnly: true,
@@ -142,43 +169,34 @@ const authUtil =
     },
     authenticateToken_internal: async (req, res, next, optional) =>
     {
-        const token = req.cookies["thingspool_token"];
-
-        if (!token)
+        const user = authUtil.getUserFromReqToken(req);
+        if (!user)
         {
             if (optional)
             {
-                req.user = undefined;
                 next();
             }
             else
             {
-                debugUtil.log("Token Not Provided");
-                res.status(401).send("Token not provided.");
+                debugUtil.logRaw("Token-Authentication Failed", "high");
+                res.status(401).send("Token-Authentication Failed (User Not Found)");
             }
         }
         else
         {
             try {
-                const payload = jwt.verify(token, process.env.JWT_SECRET_KEY);
-
-                const user = await authUtil.findExistingUserByUserName(payload.userName, res);
-                if (!user)
-                    return;
-                req.user = user;
-                authUtil.addToken(user.userName, res); // refresh the token
+                await authUtil.addToken(user.userName, res); // refresh the token
                 next();
             }
             catch (err) {
                 if (optional)
                 {
-                    req.user = undefined;
                     next();
                 }
                 else
                 {
-                    debugUtil.log("Invalid Token", {err});
-                    res.status(401).send(`Invalid token (error: ${err})`);
+                    debugUtil.log("Failed to add token", {err}, "high");
+                    res.status(401).send(`Failed to add token (error: ${err})`);
                 }
             }
         }
