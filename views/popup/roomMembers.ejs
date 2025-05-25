@@ -8,9 +8,9 @@
 <div class="inlineButton" id="prev_page_button">Prev</div><div class="inlineLabel" id="page_label">Page 0</div><div class="inlineButton" id="next_page_button">Next</div>
 <div class="zero_row"></div>
 
-<script type="module">
-    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
-
+<script>
+pageModule.roomMembers = new function()
+{
     let currPage = 0;
     let loadedItemsCount = 0;
     const searchLimitPerPage = parseInt("<%= searchLimitPerPage %>");
@@ -19,6 +19,22 @@
 
     $("#prev_page_button").click(function() { queryPage(-1); });
     $("#next_page_button").click(function() { queryPage(1); });
+
+    updatePageButtons();
+    queryPage(0);
+
+    //----------------------------------------------------------------------
+    // Public Functions
+    //----------------------------------------------------------------------
+
+    this.reloadCurrPage = () =>
+    {
+        queryPage(currPage);
+    }
+
+    //----------------------------------------------------------------------
+    // Private Functions
+    //----------------------------------------------------------------------
 
     function updatePageButtons()
     {
@@ -87,20 +103,6 @@
         });
     }
 
-    function reloadCurrPage()
-    {
-        queryPage(currPage);
-    }
-
-    updatePageButtons();
-    makePageQuery(0);
-
-    if (window.thingspool_module_exports == undefined)
-        window.thingspool_module_exports = {};
-    window.thingspool_module_exports.roomMembers = { reloadCurrPage };
-</script>
-
-<script>
     // requestType = {"invite" or "cancel_invite" or "accept_request" or "ignore_request" or "kickout"}
     function makeRoomMembersAPICall(roomID, userID, requestType, method)
     {
@@ -120,7 +122,7 @@
             success: function(result) {
                 popup_off();
                 process_pending_off();
-                window.thingspool_module_exports.rooms.reloadCurrPage();
+                pageModule.roomMembers.reloadCurrPage();
             },
             error: function(xhr) {
                 alert(xhr.responseText);
@@ -128,4 +130,5 @@
             }
         });
     }
+}
 </script>

@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "outDir": "./dist/",
+        "allowJs": true,
+        "noImplicitAny": true,
+        "sourceMap": true,
+        "module": "es6",
+        "target": "es5",
+        "jsx": "react",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports" : true,
+        "esModuleInterop" : true,
+        "lib": [
+          "ES2021.String"
+        ]
+    },
+    "include": ["src/**/*"]
+}

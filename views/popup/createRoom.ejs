@@ -8,12 +8,11 @@
 <div class="xs_row"></div>
 
 <h3>Notes</h3>
+<p>- You currently have <%= user.ownedRoomCount %> rooms. You can create up to <%= user.ownedRoomCountMax %> rooms.</div>
 <p>- <%= textUtil.inputRule.roomName.length %></p>
 <p>- <%= textUtil.inputRule.roomName.chars %></p>
 
-<script type="module">
-    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
-
+<script>
     $("#roomName_input").on("input", function() {
         this.value = textUtil.sanitizeUserName(this.value);
     });
@@ -39,7 +38,7 @@
             success: function(result) {
                 popup_off();
                 process_pending_off();
-                window.thingspool_module_exports.rooms.reloadCurrPage();
+                pageModule.rooms.reloadCurrPage();
             },
             error: function(xhr) {
                 alert(xhr.responseText);

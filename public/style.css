@@ -256,7 +256,7 @@ hr {
 		padding: 0 0 0 0; margin: 0 0 0 0;
 		background-color: #000000;
 	color: #c0c0c0;
-	opacity: 0.5;
+	opacity: 0.7;
 	}
 	.content {
 		position: absolute;
@@ -303,7 +303,7 @@ hr {
 		padding: 0 0 0 0; margin: 0 0 0 0;
 		background-color: #000000;
 	color: #c0c0c0;
-	opacity: 0.5;
+	opacity: 0.7;
 	}
 	.content {
 		position: absolute;
@@ -318,11 +318,11 @@ hr {
 	font-weight: 400;
 		padding: 1.20% 1.00% 1.20% 1.00%;
 	margin: 1.20% 1.00% 1.20% 0;
-		background-color: #a0a0a0;
-	color: #303030;
+		background-color: #303030;
+	color: #a0a0a0;
 	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #707070 solid;
-	border-right: 1.25vmin #707070 solid;
+	border-bottom: 1.25vmin #c0c0c0 solid;
+	border-right: 1.25vmin #c0c0c0 solid;
 		overflow-y: scroll;
 		z-index: 501;
 	}
@@ -526,7 +526,7 @@ hr {
 .inlineTabButton.selected {
 	background-color: #303030;
 	color: #c0c0c0;
-	border-bottom: 1.25vmin undefined solid;
+	border-bottom: 1.25vmin #c0c0c0 solid;
 }
 .inlineTabButton.idle:hover {
 	color: #d0c090;
@@ -835,7 +835,7 @@ hr {
 		padding: 0 0 0 0; margin: 0 0 0 0;
 		background-color: #000000;
 	color: #c0c0c0;
-	opacity: 0.5;
+	opacity: 0.7;
 	}
 	.content {
 		position: absolute;
@@ -882,7 +882,7 @@ hr {
 		padding: 0 0 0 0; margin: 0 0 0 0;
 		background-color: #000000;
 	color: #c0c0c0;
-	opacity: 0.5;
+	opacity: 0.7;
 	}
 	.content {
 		position: absolute;
@@ -897,11 +897,11 @@ hr {
 	font-weight: 400;
 		padding: 2.00% 2.50% 2.00% 2.50%;
 	margin: 2.00% 2.50% 2.00% 0;
-		background-color: #a0a0a0;
-	color: #303030;
+		background-color: #303030;
+	color: #a0a0a0;
 	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #707070 solid;
-	border-right: 1.25vmin #707070 solid;
+	border-bottom: 1.25vmin #c0c0c0 solid;
+	border-right: 1.25vmin #c0c0c0 solid;
 		overflow-y: scroll;
 		z-index: 501;
 	}
@@ -1105,7 +1105,7 @@ hr {
 .inlineTabButton.selected {
 	background-color: #303030;
 	color: #c0c0c0;
-	border-bottom: 1.25vmin undefined solid;
+	border-bottom: 1.25vmin #c0c0c0 solid;
 }
 .inlineTabButton.idle:hover {
 	color: #d0c090;

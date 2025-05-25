@@ -37,12 +37,12 @@ jobs:
         echo "ROOT_URL=${{ secrets.ROOT_URL }}" >> ./.env
         echo "STATIC_PAGE_ROOT_DIR=public" >> ./.env
         echo "VIEWS_ROOT_DIR=views" >> ./.env
+        echo "SRC_ROOT_DIR=src" >> ./.env
         echo "GLOBAL_LAST_MOD=2023-09-10" >> ./.env
         echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> ./.env
         echo "EMAIL_SENDER_PASS=${{ secrets.EMAIL_SENDER_PASS }}" >> ./.env
         echo "SQL_HOST_PROD=${{ secrets.SQL_HOST_PROD }}" >> ./.env
         echo "SQL_USER_PROD=${{ secrets.SQL_USER_PROD }}" >> ./.env
         echo "SQL_PASS_PROD=${{ secrets.SQL_PASS_PROD }}" >> ./.env
-    - run: npm run genprod
-    - run: npm run dbprod
+    - run: npm run db_init_prod
     - run: pm2 restart admin

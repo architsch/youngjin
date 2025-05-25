@@ -27,9 +27,7 @@
 <p>- <%= textUtil.inputRule.password.chars %></p>
 <p>- <%= textUtil.inputRule.email.length %></p>
 
-<script type="module">
-    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
-
+<script>
     let cached_email = null;
 
     function verification_mode_on(email)

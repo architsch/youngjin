@@ -9,9 +9,7 @@
 <div class="inlineButton" id="login_button">Log In</div><div class="inlineButton" id="register_button">Create Account</div>
 <div class="m_row"></div>
 
-<script type="module">
-    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
-
+<script>
     $("#userName_input").on("input", function() {
         this.value = textUtil.sanitizeUserName(this.value);
     });

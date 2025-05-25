@@ -13,6 +13,8 @@
 <%_ } _%>
 
 <script>
+pageModule.room = new function()
+{
     const roomID = parseInt("<%= roomID %>");
     const youAreOwner = ("<%= roomContent.ownerUserName %>" == "<%= user.userName %>");
 
@@ -59,6 +61,7 @@
             }
         });
     });
+}
 </script>
 
 <%- include(`${ejsChunkRootPath}/common/footer_min.ejs`) %>

@@ -5,16 +5,15 @@
 
 <%_ if (tabName == "owned") { _%>
     <div class="inlineButton" id="create_room_button" <%= (user.ownedRoomCount >= user.ownedRoomCountMax) ? "disabled" : "" %>>Create Room</div>
-    <div class="inlineLabel"><%= user.ownedRoomCount %>/<%= user.ownedRoomCountMax %></div>
 <%_ } _%>
 <div class="listScrollPanel" id="room_list"></div>
 
 <div class="inlineButton" id="prev_page_button">Prev</div><div class="inlineLabel" id="page_label">Page 0</div><div class="inlineButton" id="next_page_button">Next</div>
 <div class="zero_row"></div>
 
-<script type="module">
-    import { textUtil } from "<%= envUtil.getRootURL() %>/src_shared/util/textUtil.mjs";
-
+<script>
+pageModule.rooms = new function()
+{
     let currPage = 0;
     let loadedItemsCount = 0;
     const searchLimitPerPage = parseInt("<%= searchLimitPerPage %>");
@@ -45,6 +44,22 @@
             });
         });
     }
+
+    updatePageButtons();
+    queryPage(0);
+
+    //----------------------------------------------------------------------
+    // Public Functions
+    //----------------------------------------------------------------------
+
+    this.reloadCurrPage = () =>
+    {
+        queryPage(currPage);
+    }
+
+    //----------------------------------------------------------------------
+    // Private Functions
+    //----------------------------------------------------------------------
 
     function updatePageButtons()
     {
@@ -112,20 +127,6 @@
         });
     }
 
-    function reloadCurrPage()
-    {
-        queryPage(currPage);
-    }
-
-    updatePageButtons();
-    makePageQuery(0);
-
-    if (window.thingspool_module_exports == undefined)
-        window.thingspool_module_exports = {};
-    window.thingspool_module_exports.rooms = { reloadCurrPage };
-</script>
-
-<script>
     // requestType = {"accept-invitation" or "ignore-invitation" or "request-to-join" or "cancel-request"}
     function makeRoomsAPICall(roomID, requestType, method)
     {
@@ -140,7 +141,7 @@
             success: function(result) {
                 popup_off();
                 process_pending_off();
-                window.thingspool_module_exports.rooms.reloadCurrPage();
+                pageModule.rooms.reloadCurrPage();
             },
             error: function(xhr) {
                 alert(xhr.responseText);
@@ -148,4 +149,5 @@
             }
         });
     }
+}
 </script>

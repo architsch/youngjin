@@ -1,0 +1,5 @@
+<%_ if (locals.embeddedScripts) { _%>
+<%_ for (const embeddedScript of locals.embeddedScripts) { _%>
+<%- include(`${ejsEmbeddedScriptRootPath}/${embeddedScript}`) %>
+<%_ } _%>
+<%_ } _%>

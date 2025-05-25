@@ -77,11 +77,18 @@
             {
                 const command = $("#command_input").val().trim();
 
-                if (command == "clear")
-                    $("#logList").empty();
-                else
-                    socket.emit("command", command);
-                
+                switch (command)
+                {
+                    case "clear":
+                        $("#logList").empty();
+                        break;
+                    case "socket-chat":
+                        io("/console");
+                        break;
+                    default:
+                        socket.emit("command", command);
+                        break;
+                }
                 $("#command_input").val("");
             }
         </script>

@@ -1,15 +1,12 @@
 {
 	"name": "youngjin",
-	"main": "src/server/app.js",
-	"type": "commonjs",
 	"scripts": {
-		"gendev": "MODE=dev node -e \"require('./src/contentGenerator/generator.js').run()\"",
-		"genprod": "MODE=prod node -e \"require('./src/contentGenerator/generator.js').run()\"",
-		"dbdev": "MODE=dev node -e \"require('./src/server/db/db.js').runSQLFile('init.sql')\"",
-		"dbdevclear": "MODE=dev node -e \"require('./src/server/db/db.js').runSQLFile('clear.sql')\"",
-		"dbprod": "MODE=prod node -e \"require('./src/server/db/db.js').runSQLFile('init.sql')\"",
-		"dev": "MODE=dev pm2 start src/server/app.js --no-daemon --watch --ignore-watch=\"public .git\"",
-		"start": "MODE=prod pm2 start src/server/app.js --name=admin",
+		"db_clear_dev": "MODE=dev TYPE=db_clear node dist/server.bundle.js",
+		"db_init_dev": "MODE=dev TYPE=db_init node dist/server.bundle.js",
+		"db_init_prod": "MODE=prod TYPE=db_init node dist/server.bundle.js",
+		"dev": "MODE=dev pm2 start ./devRunner.js --no-daemon --watch --ignore-watch=\"dist public .git views/embeddedScript\"",
+		"build": "webpack && MODE=prod TYPE=ssg node dist/server.bundle.js",
+		"start": "MODE=prod TYPE=website pm2 start dist/server.bundle.js --name=admin",
 		"stop": "pm2 stop all && pm2 delete all"
 	},
 	"dependencies": {
@@ -23,5 +20,19 @@
 		"mysql2": "^3.14.0",
 		"nodemailer": "^6.10.0",
 		"socket.io": "^4.8.1"
+	},
+	"devDependencies": {
+		"@types/bcrypt": "^5.0.2",
+		"@types/cookie-parser": "^1.4.8",
+		"@types/ejs": "^3.1.5",
+		"@types/express": "^5.0.1",
+		"@types/jsonwebtoken": "^9.0.9",
+		"@types/node": "^22.15.17",
+		"@types/nodemailer": "^6.4.17",
+		"ts-loader": "^9.5.2",
+		"typescript": "^5.8.3",
+		"webpack": "^5.99.8",
+		"webpack-cli": "^6.0.1",
+		"webpack-node-externals": "^3.0.0"
 	}
 }
