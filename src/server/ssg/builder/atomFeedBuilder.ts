@@ -1,9 +1,9 @@
-import fileUtil from "../../util/fileUtil";
-import envUtil from "../../util/envUtil";
+import FileUtil from "../../Util/FileUtil";
+import EnvUtil from "../../Util/EnvUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
-export default class atomFeedBuilder
+export default class AtomFeedBuilder
 {
     private lines = [`</feed>`];
     private globalLatestUpdate = new Date(process.env.GLOBAL_LAST_MOD as string);
@@ -30,12 +30,12 @@ export default class atomFeedBuilder
         this.lines.push(`  <name>Youngjin Kang</name>`);
         this.lines.push(`<author>`);
         this.lines.push(`<updated>${this.globalLatestUpdate.toISOString()}</updated>`);
-        this.lines.push(`<link href="${envUtil.getRootURL()}"/>`);
-        this.lines.push(`<link rel="self" type="application/atom+xml" href="${envUtil.getRootURL()}/feed.atom"/>`);
+        this.lines.push(`<link href="${EnvUtil.getRootURL()}"/>`);
+        this.lines.push(`<link rel="self" type="application/atom+xml" href="${EnvUtil.getRootURL()}/feed.atom"/>`);
         this.lines.push(`<title>ThingsPool</title>`);
         this.lines.push(`<feed xmlns="http://www.w3.org/2005/Atom">`);
         this.lines.push(`<?xml version="1.0" encoding="utf-8"?>`);
         this.lines.reverse();
-        await fileUtil.write(`feed.atom`, this.lines.join("\n"));
+        await FileUtil.write(`feed.atom`, this.lines.join("\n"));
     }
 }

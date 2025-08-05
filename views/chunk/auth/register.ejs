@@ -21,11 +21,11 @@
 <div class="xs_row"></div>
 
 <h3>Notes</h3>
-<p>- <%= textUtil.inputRule.userName.length %></p>
-<p>- <%= textUtil.inputRule.userName.chars %></p>
-<p>- <%= textUtil.inputRule.password.length %></p>
-<p>- <%= textUtil.inputRule.password.chars %></p>
-<p>- <%= textUtil.inputRule.email.length %></p>
+<p>- <%= UIConfig.displayText.message["rule/userName/length"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/userName/chars"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/password/length"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/password/chars"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/email/length"] %></p>
 
 <script>
     let cached_email = null;
@@ -49,13 +49,13 @@
     verification_mode_off();
 
     $("#userName_input").on("input", function() {
-        this.value = textUtil.sanitizeUserName(this.value);
+        this.value = TextUtil.sanitizeUserName(this.value);
     });
     $("#password_input").on("input", function() {
-        this.value = textUtil.sanitizePassword(this.value);
+        this.value = TextUtil.sanitizePassword(this.value);
     });
     $("#confirm_password_input").on("input", function() {
-        this.value = textUtil.sanitizePassword(this.value);
+        this.value = TextUtil.sanitizePassword(this.value);
     });
 
     $("#verify_button").click(function() {
@@ -64,10 +64,10 @@
         process_pending_on();
 
         const email = $("#email_input").val();
-        const emailError = textUtil.findErrorInEmailAddress(email);
+        const emailError = TextUtil.findErrorInEmailAddress(email);
         if (emailError != null)
         {
-            alert(emailError);
+            alert(UIConfig.displayText.message[emailError]);
             process_pending_off();
             return;
         }
@@ -75,7 +75,7 @@
         verification_mode_on(email);
 
         $.ajax({
-            url: "<%= envUtil.getRootURL() %>/api/auth/vemail",
+            url: "<%= EnvUtil.getRootURL() %>/api/auth/vemail",
             method: "POST",
             data: { email: cached_email },
             success: function(result) {
@@ -96,19 +96,19 @@
         process_pending_on();
 
         const userName = $("#userName_input").val();
-        const userNameError = textUtil.findErrorInUserName(userName);
+        const userNameError = TextUtil.findErrorInUserName(userName);
         if (userNameError != null)
         {
-            alert(userNameError);
+            alert(UIConfig.displayText.message[userNameError]);
             process_pending_off();
             return;
         }
 
         const password = $("#password_input").val();
-        const passwordError = textUtil.findErrorInPassword(password);
+        const passwordError = TextUtil.findErrorInPassword(password);
         if (passwordError != null)
         {
-            alert(passwordError);
+            alert(UIConfig.displayText.message[passwordError]);
             process_pending_off();
             return;
         }
@@ -129,11 +129,11 @@
         }
 
         $.ajax({
-            url: "<%= envUtil.getRootURL() %>/api/auth/register",
+            url: "<%= EnvUtil.getRootURL() %>/api/auth/register",
             method: "POST",
             data: { userName, password, email: cached_email, verificationCode },
             success: function(result) {
-                window.location.href = "<%= envUtil.getRootURL() %>/<%= registerDestination %>";
+                window.location.href = "<%= EnvUtil.getRootURL() %>/<%= registerDestination %>";
             },
             error: function(xhr) {
                 verification_mode_off();

@@ -1,7 +1,7 @@
 import http from "http";
-import debugUtil from "../util/debugUtil";
-import authUtil from "../util/authUtil";
-import objUtil from "../../shared/util/objUtil";
+import DebugUtil from "../Util/DebugUtil";
+import AuthUtil from "../Util/AuthUtil";
+import ObjUtil from "../../Shared/Util/ObjUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -10,7 +10,7 @@ let tokenByUserName: {[userName: string]: string} = {};
 const printErrorAndReject = (reject: (reason?: any) => void,
     eventTitle: string, eventDescObj: any = undefined): void =>
 {
-    debugUtil.log(eventTitle, eventDescObj, "high", "pink");
+    DebugUtil.log(eventTitle, eventDescObj, "high", "pink");
 
     let eventDesc = "";
     if (eventDescObj != undefined)
@@ -23,27 +23,27 @@ const cacheTokenFromRes = (req: http.ClientRequest, res: http.IncomingMessage) =
     if (setCookie)
     {
         let tokenFound = false;
-        for (const kvp of setCookie/*.join(";").split(";")*/.map(x => x.trim().split("=")))
+        for (const kvp of setCookie.join(";").split(";").map(x => x.trim().split("=")))
         {
             if (kvp[0] == "thingspool_token")
             {
                 const token = kvp[1];
-                const user = authUtil.getUserFromToken(token);
+                const user = AuthUtil.getUserFromToken(token);
                 if (!user)
                     return;
                 const userName = user.userName;
                 tokenByUserName[userName] = token;
                 const tokenAbbreviated = token.substring(0, 20);
-                debugUtil.log(`Token Cached (${userName})`, {token: (tokenAbbreviated.length < token.length) ? (tokenAbbreviated + "...") : token}, "low");
+                DebugUtil.log(`Token Cached (${userName})`, {token: (tokenAbbreviated.length < token.length) ? (tokenAbbreviated + "...") : token}, "low");
                 tokenFound = true;
             }
         }
         if (!tokenFound)
-            debugUtil.log(`Token Cache Failed`, {setCookie}, "high", "pink");
+            DebugUtil.log(`Token Cache Failed`, {setCookie}, "high", "pink");
     }
 };
 
-const testHTTP =
+const TestHTTP =
 {
     _reset: () =>
     {
@@ -73,31 +73,31 @@ const testHTTP =
         };
 
         const req: http.ClientRequest = http.request(options, (res: http.IncomingMessage) => {
-            if (!testHTTP.resOk(res))
+            if (!TestHTTP.resOk(res))
             {
                 printErrorAndReject(reject, `Res Callback ERROR (${path})`, {statusCode: res.statusCode});
                 return;
             }
-            debugUtil.log(`Res Callback (${path})`, {statusCode: res.statusCode}, "low");
+            DebugUtil.log(`Res Callback (${path})`, {statusCode: res.statusCode}, "low");
             let data = "";
             res.setEncoding("utf8");
 
             res.on("data", (chunk) => {
-                if (!testHTTP.resOk(res))
+                if (!TestHTTP.resOk(res))
                 {
                     printErrorAndReject(reject, `Res Data ERROR (${path})`, {statusCode: res.statusCode, chunk});
                     return;
                 }
-                debugUtil.log(`Res Data (${path})`, {statusCode: res.statusCode, chunk}, "low");
+                DebugUtil.log(`Res Data (${path})`, {statusCode: res.statusCode, chunk}, "low");
                 data += chunk;
             });
             res.on("end", () => {
-                if (!testHTTP.resOk(res))
+                if (!TestHTTP.resOk(res))
                 {
                     printErrorAndReject(reject, `Res End ERROR (${path})`, {statusCode: res.statusCode, data});
                     return;
                 }
-                debugUtil.log(`Res End (${path})`, {statusCode: res.statusCode, data}, "low");
+                DebugUtil.log(`Res End (${path})`, {statusCode: res.statusCode, data}, "low");
                 if (receiveCookie)
                     cacheTokenFromRes(req, res);
                 resolve({res, data});
@@ -109,15 +109,15 @@ const testHTTP =
         if (body)
             req.write(JSON.stringify(body));
         req.end();
-        debugUtil.log(`Req Sent (${path})`, {options: objUtil.limitPropValueTextSize(options, "Cookie", 40), body}, "high");
+        DebugUtil.log(`Req Sent (${path})`, {options: ObjUtil.limitPropValueTextSize(options, "Cookie", 40), body}, "high");
     }),
     resOk: (res: http.IncomingMessage) =>
     {
         if (res.statusCode)
             return res.statusCode >= 200 && res.statusCode < 300;
-        debugUtil.log(`Res statusCode is undefined.`, {}, "high", "pink");
+        DebugUtil.log(`Res statusCode is undefined.`, {}, "high", "pink");
         return false;
     },
 }
 
-export default testHTTP;
+export default TestHTTP;

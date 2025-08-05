@@ -1,4 +1,4 @@
-interface testUser
+interface TestUser
 {
     userName: string;
     password: string;

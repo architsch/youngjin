@@ -1,45 +1,45 @@
-import envUtil from "../../../util/envUtil";
-import ejsUtil from "../../../util/ejsUtil";
-import textFileBuilder from "../textFileBuilder";
-import postPageBuilder from "./postPageBuilder";
-import uiConfig from "../../../config/uiConfig";
+import EnvUtil from "../../../Util/EnvUtil";
+import EJSUtil from "../../../Util/EJSUtil";
+import TextFileBuilder from "../TextFileBuilder";
+import PostPageBuilder from "./PostPageBuilder";
+import UIConfig from "../../../../Shared/Config/UIConfig";
 import dotenv from "dotenv";
-import sitemapBuilder from "../sitemapBuilder";
-import atomFeedBuilder from "../atomFeedBuilder";
+import SitemapBuilder from "../SitemapBuilder";
+import AtomFeedBuilder from "../AtomFeedBuilder";
 dotenv.config();
 
-export default class postListPageBuilder
+export default class PostListPageBuilder
 {
-    private sitemapBuilder: sitemapBuilder;
-    private atomFeedBuilder: atomFeedBuilder;
+    private sitemapBuilder: SitemapBuilder;
+    private atomFeedBuilder: AtomFeedBuilder;
 
-    constructor(sitemapBuilder: sitemapBuilder, atomFeedBuilder: atomFeedBuilder)
+    constructor(sitemapBuilder: SitemapBuilder, atomFeedBuilder: AtomFeedBuilder)
     {
         this.sitemapBuilder = sitemapBuilder;
         this.atomFeedBuilder = atomFeedBuilder;
     }
     
-    async build(entries: postEntry[]): Promise<void>
+    async build(entries: PostEntry[]): Promise<void>
     {
         for (const entry of entries)
         {
-            const postInfoList = await new postPageBuilder(this.sitemapBuilder, this.atomFeedBuilder).build(entry);
+            const postInfoList = await new PostPageBuilder(this.sitemapBuilder, this.atomFeedBuilder).build(entry);
             const listRelativeURL = `${entry.dirName}/list.html`;
 
-            const builder = new textFileBuilder();
+            const builder = new TextFileBuilder();
 
-            builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+            builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
                 menuName: "library",
                 title: "ThingsPool - " + entry.title,
                 desc: entry.title,
                 keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
                 relativePageURL: listRelativeURL,
                 pagePathList: [
-                    {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
-                    {title: uiConfig.displayText.menuName["library"], relativeURL: "library.html"},
+                    {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
+                    {title: UIConfig.displayText.menuName["library"], relativeURL: "library.html"},
                     {title: entry.title, relativeURL: undefined},
                 ],
-                backDestination_href: `${envUtil.getRootURL()}/library.html`,
+                backDestination_href: `${EnvUtil.getRootURL()}/library.html`,
             }));
 
             builder.addLine(`<h1>${entry.title}</h1>`);
@@ -47,10 +47,10 @@ export default class postListPageBuilder
             for (let i = postInfoList.length-1; i >= 0; --i)
             {
                 const postInfo = postInfoList[i];
-                builder.addLine(`<a class="postEntryButton" href="${envUtil.getRootURL()}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
+                builder.addLine(`<a class="postEntryButton" href="${EnvUtil.getRootURL()}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
             }
             
-            builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
+            builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
             
             await builder.build(listRelativeURL);
             

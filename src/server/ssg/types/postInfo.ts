@@ -1,4 +1,4 @@
-interface postInfo
+interface PostInfo
 {
     pageNumber: number;
     title: string;

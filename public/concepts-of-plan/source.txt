@@ -510,3 +510,137 @@ What, then, shall comprise a graceful work of art, which is endowed with its own
 In my honest opinion, the best way to solve this is to endeavor to strike a fine balance among ethos, pathos, and logos.
 
 Casual arcade games are sugarcoated with ethos, but they often lack both pathos and logos. Soap operas are rich in pathos, yet they are poor in logos. Minimalist arts and their intricate geometric patterns are filled with logos, but they fall short of ethos and pathos. It is only when we bring ethos, pathos, and logos together on a single line of narrative, that we will be able to formulate a universal kind of art whose voice resonates in everyone's ear. For at the focal point of their intersection, there is divinity.
+
+
+
+
+
+
+
+
+
+
+:d:This article explains how to use linear algebra when designing and implementing a video game.
+:k:Linear Algebra, Matrix Algebra, Game Development, Game Design, Gameplay Systems, Game Engine, Technical Design, Numerical Methods, Scientific Computing, Gameplay Engineering
+:l:2025-08-05
+
+[Linear Algebra for Game Development - Part 1] August 5, 2025
+
+@@<hr>
+@@<h3><b>Prerequisite</b></h3>
+
+This article assumes that the reader already understands the basic concepts in linear algebra, such as matrix multiplication and vector arithmetic.
+
+@@<hr>
+@@<h3><b>Introduction</b></h3>
+
+Let's say that you are trying to create a game, perhaps as an indie developer. What would you do to fulfill this objective?
+
+There indeed are many viable approaches to such a problem. Some people may start by devising concept arts, while others may start by building their own fictional game worlds by means of writing and character design.
+
+As someone with an engineering background, however, I am a bit biased in favor of system-based design methodology. While it is not the ultimate panacea for all aspects of game development, I do believe that it is a pretty sound means of handling innumerable complexities which may arise along the way.
+
+A game comprises a variety of systems (e.g. UI system, physics system, graphics system, audio system, networking system, etc), yet I will solely focus on the gameplay system for now, for it is what makes up the conceptual backbone of a game.
+
+@@<hr>
+@@<h3><b>Inventory</b></h3>
+
+First of all, let me suppose that you are designing a role-playing game (RPG). In this game, what you will need is the main character, as well as an inventory which lets the player store a number of items in it and carry them around. What is shown below is an inventory which contains 3 items - a frog, a diamond, and an apple.
+
+<b001>
+
+@@<hr>
+@@<h3><b>Selecting an Item</b></h3>
+
+Let us now use our common sense, instead of delving into endless rigmaroles of wild imagination. Here is the question of foremost significance: "What is the most essential functionality that we need to be able to use this inventory?"
+
+There are more than one possible answers, but we can all agree on the fact that the player must at least be able to "select" an item in the inventory instead of just looking at it. The reason is straightforward; if you are unable to select an item in your own inventory, you won't be able to do anything with it.
+
+Let's say that the player wants to select the first item in the inventory (i.e. frog). What shall we do to make that happen?
+
+<b002>
+
+Here is a solution which may sound unpleasantly esoteric (for those who are not familiar with linear algebra), but nevertheless reveals itself to be quite elegant when it comes to computation. Imagine that the inventory we just saw is a column vector (i.e. a vertical list of items) which consists of 3 rows and 1 column.
+
+The way you select the inventory's first item, then, is to multiply this column vector by a row vector (i.e. a horizontal list of items) which has 1 in its first entry and 0 elsewhere.
+
+<b003>
+
+The underlying logic is not hard to grasp. Multiplying the aforementioned row vector and a column vector has the same effect as taking 1 copy of the frog, 0 copy of the diamond, 0 copy of the apple, and then simply adding them up. The result is just 1 copy of the frog, which is exactly the same thing as the original frog which has been sitting in the inventory.
+
+<b004>
+
+Here is another question. What shall we do, if we want to select the second item (i.e. diamond)?
+
+<b005>
+
+The answer is pretty much the same as the previous one, except that now the row vector contains its "1" in the second entry instead of the first entry. This will select the second item in the inventory instead of the first, thereby returning the diamond.
+
+<b006>
+
+@@<hr>
+@@<h3><b>Selecting Multiple Items</b></h3>
+
+What if the player wants to select multiple items at once? Such a scenario will be necessary if the gameplay involves special skills which can be activated only when two or more items are combined. A wizard, for example, will need to grab both a "mana" item and a "fire" item at the same time to be able to cast a "fire spell" (as opposed to a "null spell"), and so on.
+
+Let me suppose that we are trying to select both the frog and the diamond in the inventory. What should we do to make this happen?
+
+<b007>
+
+The best way to answer this kind of question, is to look back at the previous answers and try to find out a way to combine them to be able to solve a bigger problem.
+
+It has been shown that selecting the first item (frog) can be achieved by multiplying the inventory by the row vector: [1 0 0]. Similarly, it has also been shown that selecting the second item (diamond) can be achieved by multiplying the inventory by the row vector: [0 1 0].
+
+In linear algebra, it is also possible to execute both of these two actions in parallel by stacking the aforementioned row vectors (i.e. [1 0 0] and [0 1 0]) together to form a 2x3 matrix, and then simply multiplying the inventory by that matrix.
+
+<b008>
+
+This has the effect of carrying out two different multiplications at once - (1) multiplication by the first row vector, and (2) multiplication by the second row vector.
+
+The first multiplication, carried out by the first row of the matrix, gives us the first inventory item (frog). The second multiplication, carried out by the second row of the matrix, gives us the second inventory item (diamond).
+
+We can extend this parallel operation by attaching the third row to the matrix which selects the third inventory item (i.e. [0 0 1]). The resulting 3x3 matrix will let us select ALL three items in the inventory, which is the same thing as selecting the entire inventory as a whole, as it is, without excluding anything.
+
+<b009>
+
+This is why this 3x3 matrix is called an "identity matrix". The resulting selection is identical to the original inventory.
+
+@@<hr>
+@@<h3><b>Rearranging Things</b></h3>
+
+So far, we have only been selecting items in the inventory without doing anything with them. In order to add some interactivity to the game, we better let the player apply some changes to the inventory, instead of just looking at a portion of it.
+
+Gameplay is made up of actions, each of which could be triggered either by the player or some other in-game agent. The simplest action we can think of is the act of moving something from one place to another.
+
+Here is a question. Assume that I wish to swap the positions of the frog and diamond in the inventory. What shall I do?
+
+<b010>
+
+Let's revisit our previous observations. Do you remember, that it is possible to select the second item (diamond) by multiplying a row vector, whose second entry is 1 and everything else is 0?
+
+<b006>
+
+Likewise, you may recall that it is possible to select the first item (frog) by multiplying a row vector, whose first entry is 1 and everything else is 0.
+
+<b003>
+
+If we first select the second item (diamond), then select the first item (frog), and then put these two operations in parallel, what do we get?
+
+<b011>
+
+In this case, we are still "selecting" a frog and a diamond, but in the opposite order. In the original inventory, the frog was first and the diamond was second. In our new selection, however, the diamond is first and the frog is second.
+
+So, we just succeeded in reversing the order between the frog and the diamond, but a problem still remains. The apple in the original inventory is missing here!
+
+When swapping two items in the inventory, what we really want is not a subset of the inventory, but the full inventory in which the desired change has been applied. Therefore, we ought to reconstruct the whole inventory by selecting EVERY item.
+
+This can be done by making sure to select the last item (apple) as well, besides the frog and diamond.
+
+<b012>
+
+@@<hr>
+@@<h3><b>Movement</b></h3>
+
+This kind of reasoning also applies to the problem of making simple movements. If we imagine that the frog is the only item in the inventory and the rest of the slots are empty, the matrix I have just shown can be used to "move" the frog from the first slot to the second slot, since moving something from one place to another is the same thing as swapping the origin with the destination.
+
+<b013>

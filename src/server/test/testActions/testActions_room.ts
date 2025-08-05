@@ -1,15 +1,15 @@
-import dbSearch from "../../db/dbSearch";
-import debugUtil from "../../util/debugUtil";
-import testDB from "../testDB";
-import testHTTP from "../testHTTP";
+import SearchDB from "../../DB/SearchDB";
+import DebugUtil from "../../Util/DebugUtil";
+import TestDB from "../TestDB";
+import TestHTTP from "../TestHTTP";
 
 const routePath = "/api/room/";
 
-const actionOnExistingRoom = async (method: string, routeName: string, room: testRoom,
-    sourceUser: testUser, targetUser?: testUser): Promise<void> =>
+const actionOnExistingRoom = async (method: string, routeName: string, room: TestRoom,
+    sourceUser: TestUser, targetUser?: TestUser): Promise<void> =>
 {
-    const roomsFound = await dbSearch.rooms.withRoomName(room.roomName);
-    const usersFound = targetUser ? await dbSearch.users.withUserName(targetUser.userName) : undefined;
+    const roomsFound = await SearchDB.rooms.withRoomName(room.roomName);
+    const usersFound = targetUser ? await SearchDB.users.withUserName(targetUser.userName) : undefined;
 
     const roomID = (!roomsFound || roomsFound.length == 0) ?
         Math.floor(Math.random() * 1000) : roomsFound[0].roomID;
@@ -18,31 +18,31 @@ const actionOnExistingRoom = async (method: string, routeName: string, room: tes
 
     const body = {roomID, userID};
 
-    await testHTTP.makeRequest(sourceUser.userName, method, `${routePath}${routeName}`, body);
+    await TestHTTP.makeRequest(sourceUser.userName, method, `${routePath}${routeName}`, body);
 };
 
-const testActions_room =
+const TestActions_Room =
 {
     //------------------------------------------------------------------------------------
     // Core
     //------------------------------------------------------------------------------------
 
-    create: async (room: testRoom, user: testUser): Promise<void> => {
-        if (!testDB.insertRoom(room, user))
+    create: async (room: TestRoom, user: TestUser): Promise<void> => {
+        if (!TestDB.insertRoom(room, user))
             return;
-        debugUtil.log("testActions_room.create", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
-        await testHTTP.makeRequest(user.userName, "POST", `${routePath}create`, {roomName: room.roomName});
+        DebugUtil.log("testActions_room.create", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
+        await TestHTTP.makeRequest(user.userName, "POST", `${routePath}create`, {roomName: room.roomName});
     },
-    delete: async (room: testRoom, user: testUser): Promise<void> => {
-        if (!testDB.deleteRoom(room, user))
+    delete: async (room: TestRoom, user: TestUser): Promise<void> => {
+        if (!TestDB.deleteRoom(room, user))
             return;
-        debugUtil.log("testActions_room.delete", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.delete", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("DELETE", "delete", room, user);
     },
-    leave: async (room: testRoom, user: testUser): Promise<void> => {
-        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"}, user))
+    leave: async (room: TestRoom, user: TestUser): Promise<void> => {
+        if (!TestDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"}, user))
             return;
-        debugUtil.log("testActions_room.leave", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.leave", {roomName: room.roomName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("DELETE", "leave", room, user);
     },
 
@@ -50,28 +50,28 @@ const testActions_room =
     // API for rooms.ejs
     //------------------------------------------------------------------------------------
 
-    acceptInvitation: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
+    acceptInvitation: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.acceptInvitation", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.acceptInvitation", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("PUT", "accept-invitation", room, user);
     },
-    ignoreInvitation: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
+    ignoreInvitation: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.ignoreInvitation", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.ignoreInvitation", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("DELETE", "ignore-invitation", room, user);
     },
-    requestToJoin: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
+    requestToJoin: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.requestToJoin", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.requestToJoin", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("POST", "request-to-join", room, user);
     },
-    cancelRequest: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
+    cancelRequest: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.cancelRequest", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.cancelRequest", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("DELETE", "cancel-request", room, user);
     },
 
@@ -79,36 +79,36 @@ const testActions_room =
     // API for roomMembers.ejs
     //------------------------------------------------------------------------------------
 
-    invite: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
+    invite: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.invite", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.invite", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("POST", "invite", room, roomOwner, user);
     },
-    cancelInvite: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
+    cancelInvite: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.cancelInvite", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.cancelInvite", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("DELETE", "cancel-invite", room, roomOwner, user);
     },
-    acceptRequest: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
+    acceptRequest: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.updateUserRoomStatus({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.acceptRequest", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.acceptRequest", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("PUT", "accept-request", room, roomOwner, user);
     },
-    ignoreRequest: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
+    ignoreRequest: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.ignoreRequest", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.ignoreRequest", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("DELETE", "ignore-request", room, roomOwner, user);
     },
-    kickout: async (room: testRoom, roomOwner: testUser, user: testUser): Promise<void> => {
-        if (!testDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
+    kickout: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
+        if (!TestDB.deleteUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "member"}, roomOwner))
             return;
-        debugUtil.log("testActions_room.kickout", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_room.kickout", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("DELETE", "kickout", room, roomOwner, user);
     },
 }
 
-export default testActions_room;
+export default TestActions_Room;

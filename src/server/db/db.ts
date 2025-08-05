@@ -1,40 +1,56 @@
 import mysql from "mysql2/promise";
-import envUtil from "../util/envUtil";
-import fileUtil from "../util/fileUtil";
-import debugUtil from "../util/debugUtil";
-import textUtil from "../../shared/util/textUtil";
+import EnvUtil from "../Util/EnvUtil";
+import FileUtil from "../Util/FileUtil";
+import DebugUtil from "../Util/DebugUtil";
+import TextUtil from "../../Shared/Util/TextUtil";
 import dotenv from "dotenv";
-import Query from "./types/query";
-import transaction from "./types/transaction";
+import Query from "./Types/Query";
+import Transaction from "./Types/Transaction";
 dotenv.config();
 
-const dev = envUtil.isDevMode();
-const pool = mysql.createPool({
-    host: dev ? process.env.SQL_HOST_DEV : process.env.SQL_HOST_PROD,
-    user: dev ? process.env.SQL_USER_DEV : process.env.SQL_USER_PROD,
-    password: dev ? process.env.SQL_PASS_DEV : process.env.SQL_PASS_PROD,
-    database: "main",
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 0,
-});
+const dev = EnvUtil.isDevMode();
+let pool: mysql.Pool | undefined = undefined;
 
-const db =
+const DB =
 {
+    createPool: (): void =>
+    {
+        if (pool)
+        {
+            DebugUtil.logRaw("DB connection pool is already created.", "high", "pink");
+            return;
+        }
+        pool = mysql.createPool({
+            host: dev ? process.env.SQL_HOST_DEV : process.env.SQL_HOST_PROD,
+            user: dev ? process.env.SQL_USER_DEV : process.env.SQL_USER_PROD,
+            password: dev ? process.env.SQL_PASS_DEV : process.env.SQL_PASS_PROD,
+            database: "main",
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0,
+            enableKeepAlive: true,
+            keepAliveInitialDelay: 0,
+        });
+        if (!pool)
+        {
+            DebugUtil.logRaw("Failed to create a DB connection pool.", "high", "pink");
+            return;
+        }
+    },
     makeQuery: <ReturnType>(queryStr: string, queryParams?: string[]): Query<ReturnType> =>
     {
-        return new Query<ReturnType>(pool, queryStr, queryParams);
+        if (!pool)
+            DB.createPool();
+        return new Query<ReturnType>(pool!, queryStr, queryParams);
     },
-    makeTransaction: (queries: Query<void>[]): transaction =>
+    makeTransaction: (queries: Query<void>[]): Transaction =>
     {
-        return new transaction(pool, queries);
+        return new Transaction(pool!, queries);
     },
     runSQLFile: async (fileName: string): Promise<void> =>
     {
-        debugUtil.log("Opening SQL File", {fileName}, "high");
-        const sql = await fileUtil.read(fileName, "sql");
+        DebugUtil.log("Opening SQL File", {fileName}, "high");
+        const sql = await FileUtil.read(fileName, "sql");
         const sqlStatements = sql.split(";").map(x => x.trim() + ";").filter(x => x.length > 1);
         let conn: mysql.Connection | undefined = undefined;
 
@@ -49,7 +65,7 @@ const db =
                 await conn?.query(sqlStatement);
         }
         catch (err) {
-            debugUtil.log("SQL File Execution Error", {err}, "high", "pink");
+            DebugUtil.log("SQL File Execution Error", {err}, "high", "pink");
         }
         finally {
             conn?.end();
@@ -58,14 +74,14 @@ const db =
     toHTMLString: async (): Promise<string> =>
     {
         const section = (text: string) => `\n\n<h1>${text}</h1>\n`;
-        const toSafeStr = (obj: {[key: string]: any}) => textUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
+        const toSafeStr = (obj: {[key: string]: any}) => TextUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
         const content =
-            section("users") + toSafeStr(await (db.makeQuery("SELECT * FROM users;").run())) +
-            section("rooms") + toSafeStr(await (db.makeQuery("SELECT * FROM rooms;").run())) +
-            section("user_rooms") + toSafeStr(await (db.makeQuery("SELECT * FROM user_rooms;").run())) +
-            section("emailVerifications") + toSafeStr(await (db.makeQuery("SELECT * FROM emailVerifications;").run()));
+            section("users") + toSafeStr(await (DB.makeQuery("SELECT * FROM users;").run())) +
+            section("rooms") + toSafeStr(await (DB.makeQuery("SELECT * FROM rooms;").run())) +
+            section("user_rooms") + toSafeStr(await (DB.makeQuery("SELECT * FROM user_rooms;").run())) +
+            section("emailVerifications") + toSafeStr(await (DB.makeQuery("SELECT * FROM emailVerifications;").run()));
         return content;
     },
 }
 
-export default db;
+export default DB;

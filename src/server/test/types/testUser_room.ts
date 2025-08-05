@@ -1,4 +1,4 @@
-interface testUser_room
+interface TestUser_Room
 {
     roomName: string;
     userName: string;

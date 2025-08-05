@@ -1,6 +1,6 @@
 import { Response } from "express";
 
-const networkUtil =
+const NetworkUtil =
 {
     onRouteResponse: (res: Response, resJSON: {[key: string]: any} | undefined = undefined): void => {
         if (res.statusCode >= 200 && res.statusCode <= 299)
@@ -14,4 +14,4 @@ const networkUtil =
     },
 }
 
-export default networkUtil;
+export default NetworkUtil;

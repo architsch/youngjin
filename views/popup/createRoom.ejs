@@ -9,12 +9,12 @@
 
 <h3>Notes</h3>
 <p>- You currently have <%= user.ownedRoomCount %> rooms. You can create up to <%= user.ownedRoomCountMax %> rooms.</div>
-<p>- <%= textUtil.inputRule.roomName.length %></p>
-<p>- <%= textUtil.inputRule.roomName.chars %></p>
+<p>- <%= UIConfig.displayText.message["rule/roomName/length"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/roomName/chars"] %></p>
 
 <script>
     $("#roomName_input").on("input", function() {
-        this.value = textUtil.sanitizeUserName(this.value);
+        this.value = TextUtil.sanitizeRoomNameWithoutTrimming(this.value);
     });
 
     $("#create_button").click(function() {
@@ -22,17 +22,17 @@
             return;
         process_pending_on();
 
-        const roomName = $("#roomName_input").val();
-        const roomNameError = textUtil.findErrorInRoomName(roomName);
+        const roomName = TextUtil.sanitizeRoomName($("#roomName_input").val());
+        const roomNameError = TextUtil.findErrorInRoomName(roomName);
         if (roomNameError != null)
         {
-            alert(roomNameError);
+            alert(UIConfig.displayText.message[roomNameError]);
             process_pending_off();
             return;
         }
         
         $.ajax({
-            url: `<%= envUtil.getRootURL() %>/api/room/create`,
+            url: `<%= EnvUtil.getRootURL() %>/api/room/create`,
             method: "POST",
             data: { roomName },
             success: function(result) {

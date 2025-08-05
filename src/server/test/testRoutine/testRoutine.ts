@@ -1,8 +1,8 @@
-import room from "./testRoutine_room";
+import room from "./TestRoutine_Room";
 
-const testRoutine: {[testname: string]: () => Promise<void>} =
+const TestRoutine: {[testname: string]: () => Promise<void>} =
 {
     room,
 }
 
-export default testRoutine;
+export default TestRoutine;

@@ -1,31 +1,31 @@
-import globalConfig from "../../config/globalConfig";
-import debugUtil from "../../util/debugUtil";
-import testDB from "../testDB";
-import testHTTP from "../testHTTP";
+import GlobalConfig from "../../../Shared/Config/GlobalConfig";
+import DebugUtil from "../../Util/DebugUtil";
+import TestDB from "../TestDB";
+import TestHTTP from "../TestHTTP";
 
 const routePath = "/api/auth/";
 
 const startEmailVerification = async (email: string): Promise<string> => {
-    const vemailResult = await testHTTP.makeRequest(null, "POST", `${routePath}vemail`, {email}, false);
+    const vemailResult = await TestHTTP.makeRequest(null, "POST", `${routePath}vemail`, {email}, false);
     const verificationCode = vemailResult.data;
-    testDB.insertEmailVerification({
+    TestDB.insertEmailVerification({
         email,
         verificationCode,
-        expirationTime: Math.floor(Date.now() * 0.001) + globalConfig.auth.emailVerificationTimeoutInSeconds,
+        expirationTime: Math.floor(Date.now() * 0.001) + GlobalConfig.auth.emailVerificationTimeoutInSeconds,
     });
     return verificationCode;
 };
 
-const testActions_auth =
+const TestActions_Auth =
 {
-    initUser: async (user: testUser): Promise<void> => {
-        if (!testDB.insertUser(user))
+    initUser: async (user: TestUser): Promise<void> => {
+        if (!TestDB.insertUser(user))
             return;
-        debugUtil.log("testActions_auth.initUser", {userName: user.userName}, "high", "cyan");
+        DebugUtil.log("testActions_auth.initUser", {userName: user.userName}, "high", "cyan");
         const verificationCode = await startEmailVerification(user.email);
-        debugUtil.logRaw(`Verification Code = ${verificationCode}`, "low");
+        DebugUtil.logRaw(`Verification Code = ${verificationCode}`, "low");
 
-        await testHTTP.makeRequest(null, "POST", `${routePath}register`, {
+        await TestHTTP.makeRequest(null, "POST", `${routePath}register`, {
             userName: user.userName,
             password: user.password,
             email: user.email,
@@ -34,4 +34,4 @@ const testActions_auth =
     },
 }
 
-export default testActions_auth;
+export default TestActions_Auth;

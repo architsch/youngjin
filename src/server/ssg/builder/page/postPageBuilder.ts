@@ -1,25 +1,25 @@
-import fileUtil from "../../../util/fileUtil";
-import envUtil from "../../../util/envUtil";
-import ejsUtil from "../../../util/ejsUtil";
-import textFileBuilder from "../textFileBuilder";
-import uiConfig from "../../../config/uiConfig";
+import FileUtil from "../../../Util/FileUtil";
+import EnvUtil from "../../../Util/EnvUtil";
+import EJSUtil from "../../../Util/EJSUtil";
+import TextFileBuilder from "../TextFileBuilder";
+import UIConfig from "../../../../Shared/Config/UIConfig";
 import dotenv from "dotenv";
-import sitemapBuilder from "../sitemapBuilder";
-import atomFeedBuilder from "../atomFeedBuilder";
+import SitemapBuilder from "../SitemapBuilder";
+import AtomFeedBuilder from "../AtomFeedBuilder";
 dotenv.config();
 
-export default class postPageBuilder
+export default class PostPageBuilder
 {
-    private sitemapBuilder: sitemapBuilder;
-    private atomFeedBuilder: atomFeedBuilder;
+    private sitemapBuilder: SitemapBuilder;
+    private atomFeedBuilder: AtomFeedBuilder;
 
-    constructor(sitemapBuilder: sitemapBuilder, atomFeedBuilder: atomFeedBuilder)
+    constructor(sitemapBuilder: SitemapBuilder, atomFeedBuilder: AtomFeedBuilder)
     {
         this.sitemapBuilder = sitemapBuilder;
         this.atomFeedBuilder = atomFeedBuilder;
     }
 
-    async build(entry: any): Promise<postInfo[]>
+    async build(entry: any): Promise<PostInfo[]>
     {
         let isFirstArticle = true;
         let title = "???";
@@ -30,9 +30,9 @@ export default class postPageBuilder
         let excerptOn = false;
         const paragraphLinesPending: string[] = [];
 
-        const postInfoList: postInfo[] = [];
+        const postInfoList: PostInfo[] = [];
         
-        let builder = new textFileBuilder();
+        let builder = new TextFileBuilder();
 
         let desc = "A writing by ThingsPool.";
         let keywords = "thingspool, software, engineering, philosophy";
@@ -60,8 +60,8 @@ export default class postPageBuilder
             const listRelativeURL = `${entry.dirName}/list.html`;
             const postRelativeURL = `${entry.dirName}/page-${pageNumber}.html`;
 
-            const builder_wrapper = new textFileBuilder();
-            builder_wrapper.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+            const builder_wrapper = new TextFileBuilder();
+            builder_wrapper.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
                 menuName: "library",
                 title: title,
                 desc: desc,
@@ -69,21 +69,21 @@ export default class postPageBuilder
                 relativePageURL: postRelativeURL,
                 ogImageURLOverride: customOGImagePath,
                 pagePathList: [
-                    {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
-                    {title: uiConfig.displayText.menuName["library"], relativeURL: "library.html"},
+                    {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
+                    {title: UIConfig.displayText.menuName["library"], relativeURL: "library.html"},
                     {title: entry.title, relativeURL: listRelativeURL},
                     {title: title, relativeURL: undefined},
                 ],
-                backDestination_href: `${envUtil.getRootURL()}/${listRelativeURL}`,
+                backDestination_href: `${EnvUtil.getRootURL()}/${listRelativeURL}`,
             }));
 
             builder_wrapper.addLine(builder.getText());
-            builder_wrapper.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
+            builder_wrapper.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
             await builder_wrapper.build(postRelativeURL);
-            builder = new textFileBuilder();
+            builder = new TextFileBuilder();
 
             this.sitemapBuilder.addEntry(postRelativeURL, lastmod);
-            this.atomFeedBuilder.addEntry(`${envUtil.getRootURL()}/${postRelativeURL}`, title, lastmod, desc);
+            this.atomFeedBuilder.addEntry(`${EnvUtil.getRootURL()}/${postRelativeURL}`, title, lastmod, desc);
 
             postInfoList.push({ pageNumber, title, lastmod, desc, keywords, customOGImagePath });
             pageNumber++;
@@ -91,7 +91,7 @@ export default class postPageBuilder
             customOGImagePath = undefined;
         };
 
-        const rawText = await fileUtil.read(`${entry.dirName}/source.txt`);
+        const rawText = await FileUtil.read(`${entry.dirName}/source.txt`);
         const lines = rawText.split(/\r?\n/);
 
         for (let i = 0; i < lines.length; ++i)
@@ -134,7 +134,7 @@ export default class postPageBuilder
                 const imgName = (line.match(/<(.*?)>/) as string[])[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${envUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${EnvUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
                     if (customOGImagePath == undefined || line.endsWith("*"))
                         customOGImagePath = imgPath;
                     builder.addLine(`<img class="m_image" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);

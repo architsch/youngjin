@@ -1,10 +1,10 @@
-import auth from "./testActions_auth";
-import room from "./testActions_room";
+import auth from "./TestActions_Auth";
+import room from "./TestActions_Room";
 
-const testActions:
+const TestActions:
     {[categoryName: string]: {[actionName: string]: (...args: any[]) => Promise<void>}} =
 {
     auth, room,
 }
 
-export default testActions;
+export default TestActions;

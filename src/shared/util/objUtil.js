@@ -1,9 +1,9 @@
-const objUtil =
+const ObjUtil =
 {
     limitPropValueTextSize: (obj, propName, propValueTextSizeLimit) =>
     {
-        const objCopy = objUtil.deepCopyObj(obj);
-        objUtil.limitPropValueTextSize_internal(objCopy, propName, propValueTextSizeLimit);
+        const objCopy = ObjUtil.deepCopyObj(obj);
+        ObjUtil.limitPropValueTextSize_internal(objCopy, propName, propValueTextSizeLimit);
         return objCopy;
     },
     limitPropValueTextSize_internal: (obj, propName, propValueTextSizeLimit) =>
@@ -21,7 +21,7 @@ const objUtil =
     
             if (value.constructor == Object)
             {
-                objUtil.limitPropValueTextSize_internal(value, propName, propValueTextSizeLimit);
+                ObjUtil.limitPropValueTextSize_internal(value, propName, propValueTextSizeLimit);
             }
         }
     },
@@ -39,7 +39,7 @@ const objUtil =
             }
             else if (value.constructor == Object) // object (i.e. key-value pairs)
             {
-                objCopy[key] = objUtil.deepCopyObj(value);
+                objCopy[key] = ObjUtil.deepCopyObj(value);
             }
             else // number, bool, string, etc.
             {
@@ -50,4 +50,4 @@ const objUtil =
     },
 }
 
-export default objUtil;
+export default ObjUtil;

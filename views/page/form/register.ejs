@@ -1,10 +1,10 @@
 <%- include(`${ejsChunkRootPath}/common/header.ejs`, {
     menuName: "index",
     pagePathList: [
-        {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
+        {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
         {title: "Register", relativeURL: undefined},
     ],
-    backDestination_href: envUtil.getRootURL(),
+    backDestination_href: EnvUtil.getRootURL(),
 }) %>
 
 <%- include(`${ejsChunkRootPath}/auth/register.ejs`) %>

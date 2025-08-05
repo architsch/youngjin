@@ -44,5 +44,5 @@ jobs:
         echo "SQL_HOST_PROD=${{ secrets.SQL_HOST_PROD }}" >> ./.env
         echo "SQL_USER_PROD=${{ secrets.SQL_USER_PROD }}" >> ./.env
         echo "SQL_PASS_PROD=${{ secrets.SQL_PASS_PROD }}" >> ./.env
-    - run: npm run db_init_prod
-    - run: pm2 restart admin
+    - run: npm run stop
+    - run: npm run start_prod

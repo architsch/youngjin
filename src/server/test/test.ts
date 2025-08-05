@@ -1,56 +1,57 @@
-import envUtil from "../util/envUtil";
-import db from "../db/db";
-import globalConfig from "../config/globalConfig";
-import testHTTP from "./testHTTP";
-import testRoutine from "./testRoutine/testRoutine";
-import testDB from "./testDB";
-import debugUtil from "../util/debugUtil";
-import dependencyInjector from "../dependencyInjector";
+import EnvUtil from "../Util/EnvUtil";
+import DB from "../DB/DB";
+import GlobalConfig from "../../Shared/Config/GlobalConfig";
+import TestHTTP from "./TestHTTP";
+import TestRoutine from "./TestRoutine/TestRoutine";
+import TestDB from "./TestDB";
+import DebugUtil from "../Util/DebugUtil";
+import ServiceLocatorUtil from "../Util/ServiceLocatorUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
 let testRunning = false;
 
-async function test(testname: string, thresholdLogLevelName: string): Promise<void>
+async function Test(testname: string, thresholdLogLevelName: string): Promise<void>
 {
-    if (!envUtil.isDevMode())
+    if (!EnvUtil.isDevMode())
     {
-        debugUtil.logRaw(`TEST REJECTED (${testname}) - You are not allowed to run tests on a non-dev mode.`, "high", "pink");
+        DebugUtil.logRaw(`TEST REJECTED (${testname}) - You are not allowed to run tests on a non-dev mode.`, "high", "pink");
         return;
     }
     if (testRunning)
     {
-        debugUtil.logRaw(`TEST REJECTED (${testname}) - There is another test running.`, "high", "pink");
+        DebugUtil.logRaw(`TEST REJECTED (${testname}) - There is another test running.`, "high", "pink");
         return;
     }
 
-    debugUtil.logRaw(`TEST STARTED (${testname})`, "high");
+    DebugUtil.logRaw(`TEST STARTED (${testname})`, "high");
 
     testRunning = true;
-    testHTTP._reset();
-    testDB._reset();
-    const bypassEmailVerification_prev = globalConfig.auth.bypassEmailVerification;
-    globalConfig.auth.bypassEmailVerification = true;
-    const thresholdLogLevel_prev = debugUtil.getThresholdLogLevel();
-    debugUtil.setThresholdLogLevel(thresholdLogLevelName);
+    TestHTTP._reset();
+    TestDB._reset();
+    const bypassEmailVerification_prev = GlobalConfig.auth.bypassEmailVerification;
+    GlobalConfig.auth.bypassEmailVerification = true;
+    const thresholdLogLevel_prev = DebugUtil.getThresholdLogLevel();
+    DebugUtil.setThresholdLogLevel(thresholdLogLevelName);
     
-    await db.runSQLFile("clear.sql");
-    await db.runSQLFile("init.sql");
+    await DB.runSQLFile("clear.sql");
+    await DB.runSQLFile("init.sql");
 
-    const routine = testRoutine[testname];
+    const routine = TestRoutine[testname];
     if (!routine)
     {
-        debugUtil.logRaw(`Test routine "${testname}" not found.`, "high", "pink");
+        DebugUtil.logRaw(`Test routine "${testname}" not found.`, "high", "pink");
+        testRunning = false;
         return;
     }
     await routine();
 
-    debugUtil.setThresholdLogLevel(thresholdLogLevel_prev);
-    globalConfig.auth.bypassEmailVerification = bypassEmailVerification_prev;
+    DebugUtil.setThresholdLogLevel(thresholdLogLevel_prev);
+    GlobalConfig.auth.bypassEmailVerification = bypassEmailVerification_prev;
     testRunning = false;
 
-    debugUtil.logRaw(`TEST ENDED (${testname})`, "high");
+    DebugUtil.logRaw(`TEST ENDED (${testname})`, "high");
 }
 
-export default test;
-dependencyInjector.test = test;
+export default Test;
+ServiceLocatorUtil.add("test", Test);

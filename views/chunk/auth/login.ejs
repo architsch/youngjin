@@ -11,10 +11,10 @@
 
 <script>
     $("#userName_input").on("input", function() {
-        this.value = textUtil.sanitizeUserName(this.value);
+        this.value = TextUtil.sanitizeUserName(this.value);
     });
     $("#password_input").on("input", function() {
-        this.value = textUtil.sanitizePassword(this.value);
+        this.value = TextUtil.sanitizePassword(this.value);
     });
 
     $("#login_button").click(function() {
@@ -23,29 +23,29 @@
         process_pending_on();
 
         const userName = $("#userName_input").val();
-        const userNameError = textUtil.findErrorInUserName(userName);
+        const userNameError = TextUtil.findErrorInUserName(userName);
         if (userNameError != null)
         {
-            alert(userNameError);
+            alert(UIConfig.displayText.message[userNameError]);
             process_pending_off();
             return;
         }
 
         const password = $("#password_input").val();
-        const passwordError = textUtil.findErrorInPassword(password);
+        const passwordError = TextUtil.findErrorInPassword(password);
         if (passwordError != null)
         {
-            alert(passwordError);
+            alert(UIConfig.displayText.message[passwordError]);
             process_pending_off();
             return;
         }
 
         $.ajax({
-            url: "<%= envUtil.getRootURL() %>/api/auth/login",
+            url: "<%= EnvUtil.getRootURL() %>/api/auth/login",
             method: "POST",
             data: { userName, password },
             success: function(result) {
-                window.location.href = "<%= envUtil.getRootURL() %>/<%= loginDestination %>";
+                window.location.href = "<%= EnvUtil.getRootURL() %>/<%= loginDestination %>";
             },
             error: function(xhr) {
                 alert(xhr.responseText);
@@ -57,6 +57,6 @@
     $("#register_button").click(function() {
         if (process_pending)
             return;
-        window.location.href = "<%= envUtil.getRootURL() %>/register";
+        window.location.href = "<%= EnvUtil.getRootURL() %>/register";
     });
 </script>

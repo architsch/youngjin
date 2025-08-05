@@ -1,4 +1,4 @@
-interface testEmailVerification
+interface TestEmailVerification
 {
     email: string;
     verificationCode: string;

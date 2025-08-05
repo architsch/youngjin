@@ -1,7 +1,7 @@
 <div class="inlineButton" onclick="popup_off()">X</div>
 
-<a class="inlineTabButton <%= (tabName == "associated") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/popup/room-members?tabname=associated"><%= uiConfig.displayText.tabName["roomMembers/associated"] %></a>
-<a class="inlineTabButton <%= (tabName == "others") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/popup/room-members?tabname=others"><%= uiConfig.displayText.tabName["roomMembers/others"] %></a>
+<a class="inlineTabButton <%= (tabName == "associated") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/popup/room-members?tabname=associated"><%= UIConfig.displayText.tabName["roomMembers/associated"] %></a>
+<a class="inlineTabButton <%= (tabName == "others") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/popup/room-members?tabname=others"><%= UIConfig.displayText.tabName["roomMembers/others"] %></a>
 
 <div class="listScrollPanel" id="user_list"></div>
 
@@ -13,7 +13,7 @@ pageModule.roomMembers = new function()
 {
     let currPage = 0;
     let loadedItemsCount = 0;
-    const searchLimitPerPage = parseInt("<%= searchLimitPerPage %>");
+    const searchLimitPerPage = parseInt("<%= UIConfig.search.searchLimitPerPage %>");
     const $list = $("#user_list");
     const tabName = "<%= tabName %>";
 
@@ -51,7 +51,7 @@ pageModule.roomMembers = new function()
         const newPage = Math.max(0, currPage + pageChange);
 
         $.ajax({
-            url: `<%= envUtil.getRootURL() %>/api/search/users/<%= tabName %>?roomid=<%= roomID %>&page=${newPage}`,
+            url: `<%= EnvUtil.getRootURL() %>/api/search/users/<%= tabName %>?roomid=<%= roomID %>&page=${newPage}`,
             method: "GET",
             success: function(data) {
                 $list.empty();
@@ -116,7 +116,7 @@ pageModule.roomMembers = new function()
         process_pending_on();
         
         $.ajax({
-            url: `<%= envUtil.getRootURL() %>/api/room/${requestType}`,
+            url: `<%= EnvUtil.getRootURL() %>/api/room/${requestType}`,
             method: method,
             data: { roomID, userID },
             success: function(result) {

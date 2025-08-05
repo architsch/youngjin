@@ -1,14 +1,14 @@
-import debugUtil from "../util/debugUtil";
-import textUtil from "../../shared/util/textUtil";
+import DebugUtil from "../Util/DebugUtil";
+import TextUtil from "../../Shared/Util/TextUtil";
 
-let users: {[userName: string]: testUser} = {};
-let rooms: {[roomName: string]: testRoom} = {};
-let user_rooms: {[roomAndUserNames: string]: testUser_room} = {};
-let emailVerifications: {[email: string]: testEmailVerification} = {};
+let users: {[userName: string]: TestUser} = {};
+let rooms: {[roomName: string]: TestRoom} = {};
+let user_rooms: {[roomAndUserNames: string]: TestUser_Room} = {};
+let emailVerifications: {[email: string]: TestEmailVerification} = {};
 
-const isRoomOwner = (room: testRoom, user: testUser) => room.ownerUserName == user.userName;
+const isRoomOwner = (room: TestRoom, user: TestUser) => room.ownerUserName == user.userName;
 
-const testDB =
+const TestDB =
 {
     _reset: (): void =>
     {
@@ -23,7 +23,7 @@ const testDB =
     },
     toHTMLString: (): string => {
         const section = (text: string) => `\n\n<h1>${text}</h1>\n`;
-        const toSafeStr = (obj: {[key: string]: any}) => textUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
+        const toSafeStr = (obj: {[key: string]: any}) => TextUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
         const content =
             section("users") + toSafeStr(users) +
             section("rooms") + toSafeStr(rooms) +
@@ -31,7 +31,7 @@ const testDB =
             section("emailVerifications") + toSafeStr(emailVerifications);
         return content;
     },
-    insertUser: (user: testUser): boolean =>
+    insertUser: (user: TestUser): boolean =>
     {
         if (users[user.userName] == undefined) // user doesn't exist yet
         {
@@ -40,7 +40,7 @@ const testDB =
         }
         return false;
     },
-    deleteUser: (user: testUser): boolean =>
+    deleteUser: (user: TestUser): boolean =>
     {
         if (users[user.userName] != undefined) // user exists
         {
@@ -49,7 +49,7 @@ const testDB =
         }
         return false;
     },
-    insertEmailVerification: (emailVerification: testEmailVerification): boolean =>
+    insertEmailVerification: (emailVerification: TestEmailVerification): boolean =>
     {
         if (emailVerifications[emailVerification.email] == undefined) // emailVerification doesn't exist yet
         {
@@ -58,7 +58,7 @@ const testDB =
         }
         return false;
     },
-    deleteEmailVerification: (emailVerification: testEmailVerification): boolean =>
+    deleteEmailVerification: (emailVerification: TestEmailVerification): boolean =>
     {
         if (emailVerifications[emailVerification.email] != undefined) // emailVerification exists
         {
@@ -67,16 +67,16 @@ const testDB =
         }
         return false;
     },
-    insertRoom: (room: testRoom, roomOwner: testUser): boolean =>
+    insertRoom: (room: TestRoom, roomOwner: TestUser): boolean =>
     {
         if (users[roomOwner.userName] != undefined && // roomOwner exists
             rooms[room.roomName] == undefined) // room doesn't exist yet
         {
             room.ownerUserName = roomOwner.userName;
             rooms[room.roomName] = room;
-            if (!testDB.insertUserRoom({roomName: room.roomName, userName: roomOwner.userName, userStatus: "owner"}, roomOwner))
+            if (!TestDB.insertUserRoom({roomName: room.roomName, userName: roomOwner.userName, userStatus: "owner"}, roomOwner))
             {
-                debugUtil.log(`Error: insertRoom succeeded but insertUserRoom failed.`, {room, roomOwner}, "high", "pink");
+                DebugUtil.log(`Error: insertRoom succeeded but insertUserRoom failed.`, {room, roomOwner}, "high", "pink");
                 room.ownerUserName = ""; // revert change
                 delete rooms[room.roomName]; // revert change
                 return false;
@@ -85,7 +85,7 @@ const testDB =
         }
         return false;
     },
-    deleteRoom: (room: testRoom, roomOwner: testUser): boolean =>
+    deleteRoom: (room: TestRoom, roomOwner: TestUser): boolean =>
     {
         if (users[roomOwner.userName] != undefined && // roomOwner exists
             rooms[room.roomName] != undefined && // room exists
@@ -105,7 +105,7 @@ const testDB =
         }
         return false;
     },
-    insertUserRoom: (user_room: testUser_room, roomOwner: testUser): boolean =>
+    insertUserRoom: (user_room: TestUser_Room, roomOwner: TestUser): boolean =>
     {
         const key = `${user_room.roomName} :: ${user_room.userName}`;
         if (users[roomOwner.userName] != undefined && // roomOwner exists
@@ -121,7 +121,7 @@ const testDB =
         }
         return false;
     },
-    updateUserRoomStatus: (user_room: testUser_room, roomOwner: testUser): boolean =>
+    updateUserRoomStatus: (user_room: TestUser_Room, roomOwner: TestUser): boolean =>
     {
         const key = `${user_room.roomName} :: ${user_room.userName}`;
         if (users[roomOwner.userName] != undefined && // roomOwner exists
@@ -136,7 +136,7 @@ const testDB =
         }
         return false;
     },
-    deleteUserRoom: (user_room: testUser_room, roomOwner: testUser): boolean =>
+    deleteUserRoom: (user_room: TestUser_Room, roomOwner: TestUser): boolean =>
     {
         const key = `${user_room.roomName} :: ${user_room.userName}`;
         if (users[roomOwner.userName] != undefined && // roomOwner exists
@@ -152,4 +152,4 @@ const testDB =
     },
 }
 
-export default testDB;
+export default TestDB;

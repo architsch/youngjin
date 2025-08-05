@@ -1,69 +1,69 @@
-import fileUtil from "../util/fileUtil";
-import ejsUtil from "../util/ejsUtil";
-import sitemapBuilder from "./builder/sitemapBuilder";
-import atomFeedBuilder from "./builder/atomFeedBuilder";
-import arcadePageBuilder from "./builder/page/arcadePageBuilder";
-import libraryPageBuilder from "./builder/page/libraryPageBuilder";
-import textFileBuilder from "./builder/textFileBuilder";
-import embeddedScriptBuilder from "./builder/embeddedScriptBuilder";
-import styleDictionary from "./style/styleDictionary";
+import FileUtil from "../Util/FileUtil";
+import EJSUtil from "../Util/EJSUtil";
+import SitemapBuilder from "./Builder/SitemapBuilder";
+import AtomFeedBuilder from "./Builder/AtomFeedBuilder";
+import ArcadePageBuilder from "./Builder/Page/ArcadePageBuilder";
+import LibraryPageBuilder from "./Builder/Page/LibraryPageBuilder";
+import TextFileBuilder from "./Builder/TextFileBuilder";
+import EmbeddedScriptBuilder from "./Builder/EmbeddedScriptBuilder";
+import styleDictionary from "./Style/StyleDictionary";
 import dotenv from "dotenv";
 dotenv.config();
 
-export default async function ssg(): Promise<void>
+export default async function SSG(): Promise<void>
 {
     console.log("SSG START");
 
     // Generate pages
 
-    const sitemapB = new sitemapBuilder();
-    const atomFeedB = new atomFeedBuilder();
+    const sitemapB = new SitemapBuilder();
+    const atomFeedB = new AtomFeedBuilder();
 
-    let tb = new textFileBuilder();
-    tb.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/index.ejs", {
+    let tb = new TextFileBuilder();
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/menu/index.ejs", {
         isStaticPage: true,
         user: undefined,
         loginDestination: "",
     }));
     await tb.build("index.html");
 
-    tb = new textFileBuilder();
-    tb.addLine(await ejsUtil.createStaticHTMLFromEJS("page/menu/rooms.ejs", {
+    tb = new TextFileBuilder();
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/menu/rooms.ejs", {
         isStaticPage: true,
         user: undefined,
         loginDestination: "",
     }));
     await tb.build("rooms.html");
 
-    tb = new textFileBuilder();
-    tb.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/portfolio.ejs", {}));
+    tb = new TextFileBuilder();
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/portfolio.ejs", {}));
     await tb.build("portfolio.html");
 
-    tb = new textFileBuilder();
-    tb.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/portfolio_minimal.ejs", {}));
+    tb = new TextFileBuilder();
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/portfolio_minimal.ejs", {}));
     await tb.build("portfolio_minimal.html");
 
-    tb = new textFileBuilder();
-    tb.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/privacyPolicy.ejs", {}));
+    tb = new TextFileBuilder();
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/privacyPolicy.ejs", {}));
     await tb.build("privacy-policy.html");
 
-    tb = new textFileBuilder();
-    tb.addLine(await ejsUtil.createStaticHTMLFromEJS("page/misc/termsOfService.ejs", {}));
+    tb = new TextFileBuilder();
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/termsOfService.ejs", {}));
     await tb.build("terms-of-service.html");
 
-    await new arcadePageBuilder(sitemapB, atomFeedB).build();
-    await new libraryPageBuilder(sitemapB, atomFeedB).build();
+    await new ArcadePageBuilder(sitemapB, atomFeedB).build();
+    await new LibraryPageBuilder(sitemapB, atomFeedB).build();
 
     await sitemapB.build();
     await atomFeedB.build();
 
     // Generate CSS
 
-    await fileUtil.write("style.css", styleDictionary);
+    await FileUtil.write("style.css", styleDictionary);
 
     // Generate embedded scripts
 
-    await new embeddedScriptBuilder().build();
+    await new EmbeddedScriptBuilder().build();
 
     console.log("SSG END");
 }

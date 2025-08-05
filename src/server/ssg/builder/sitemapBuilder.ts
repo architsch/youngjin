@@ -1,9 +1,9 @@
-import fileUtil from "../../util/fileUtil";
-import envUtil from "../../util/envUtil";
+import FileUtil from "../../Util/FileUtil";
+import EnvUtil from "../../Util/EnvUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
-export default class sitemapBuilder
+export default class SitemapBuilder
 {
     private lines = [`</urlset>`];
 
@@ -11,7 +11,7 @@ export default class sitemapBuilder
     {
         this.lines.push(`</url>`);
         this.lines.push(`  <lastmod>${lastmod}</lastmod>`);
-        this.lines.push(`  <loc>${envUtil.getRootURL()}/${relativeURL}</loc>`);
+        this.lines.push(`  <loc>${EnvUtil.getRootURL()}/${relativeURL}</loc>`);
         this.lines.push(`<url>`);
     }
 
@@ -20,6 +20,6 @@ export default class sitemapBuilder
         this.lines.push(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`);
         this.lines.push(`<?xml version="1.0" encoding="UTF-8"?>`);
         this.lines.reverse();
-        await fileUtil.write(`sitemap.xml`, this.lines.join("\n"));
+        await FileUtil.write(`sitemap.xml`, this.lines.join("\n"));
     }
 }

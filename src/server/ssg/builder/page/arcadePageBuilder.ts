@@ -1,16 +1,16 @@
-import envUtil from "../../../util/envUtil";
-import ejsUtil from "../../../util/ejsUtil";
-import textFileBuilder from "../textFileBuilder";
-import gamePageBuilder from "./gamePageBuilder";
-import uiConfig from "../../../config/uiConfig";
+import EnvUtil from "../../../Util/EnvUtil";
+import EJSUtil from "../../../Util/EJSUtil";
+import TextFileBuilder from "../TextFileBuilder";
+import GamePageBuilder from "./GamePageBuilder";
+import UIConfig from "../../../../Shared/Config/UIConfig";
 import dotenv from "dotenv";
-import sitemapBuilder from "../sitemapBuilder";
-import atomFeedBuilder from "../atomFeedBuilder";
+import SitemapBuilder from "../SitemapBuilder";
+import AtomFeedBuilder from "../AtomFeedBuilder";
 dotenv.config();
 
-export default class arcadePageBuilder
+export default class ArcadePageBuilder
 {
-    private gameEntries: gameEntry[] = [
+    private gameEntries: GameEntry[] = [
         {
             dirName: "ArtRaider",
             title: "ArtRaider",
@@ -48,10 +48,10 @@ export default class arcadePageBuilder
             lastmod: "2023-09-20",
         },
     ];
-    private sitemapBuilder: sitemapBuilder;
-    private atomFeedBuilder: atomFeedBuilder;
+    private sitemapBuilder: SitemapBuilder;
+    private atomFeedBuilder: AtomFeedBuilder;
 
-    constructor(sitemapBuilder: sitemapBuilder, atomFeedBuilder: atomFeedBuilder)
+    constructor(sitemapBuilder: SitemapBuilder, atomFeedBuilder: AtomFeedBuilder)
     {
         this.sitemapBuilder = sitemapBuilder;
         this.atomFeedBuilder = atomFeedBuilder;
@@ -59,30 +59,30 @@ export default class arcadePageBuilder
     
     async build(): Promise<void>
     {
-        const builder = new textFileBuilder();
+        const builder = new TextFileBuilder();
 
-        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
             menuName: "arcade",
             desc: "Games made by ThingsPool.",
             keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
             pagePathList: [
-                {title: uiConfig.displayText.menuName["index"], relativeURL: ""},
-                {title: uiConfig.displayText.menuName["arcade"], relativeURL: undefined},
+                {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
+                {title: UIConfig.displayText.menuName["arcade"], relativeURL: undefined},
             ],
-            backDestination_href: envUtil.getRootURL(),
+            backDestination_href: EnvUtil.getRootURL(),
         }));
 
         builder.addLine(`<hr>`);
         builder.addLine(`<h1>Games</h1>`);
         
-        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/info/gameLinks.ejs"));
-        builder.addLine(await ejsUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
+        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/info/gameLinks.ejs"));
+        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
 
         this.sitemapBuilder.addEntry("arcade.html", "2025-02-28");
 
         await builder.build("arcade.html");
 
         for (const entry of this.gameEntries)
-            await new gamePageBuilder(this.sitemapBuilder, this.atomFeedBuilder).build(entry);
+            await new GamePageBuilder(this.sitemapBuilder, this.atomFeedBuilder).build(entry);
     }
 }

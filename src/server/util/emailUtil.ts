@@ -1,39 +1,40 @@
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import dbEmail from "../db/dbEmail";
-import textUtil from "../../shared/util/textUtil";
-import debugUtil from "./debugUtil";
-import globalConfig from "../config/globalConfig";
+import EmailDB from "../DB/EmailDB";
+import TextUtil from "../../Shared/Util/TextUtil";
+import DebugUtil from "./DebugUtil";
+import GlobalConfig from "../../Shared/Config/GlobalConfig";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
+import UIConfig from "../../Shared/Config/UIConfig";
 dotenv.config();
 
 const codeChars = "0123456789";
 
-const emailUtil =
+const EmailUtil =
 {
     startEmailVerification: async (req: Request, res: Response): Promise<void> =>
     {
         try
         {
-            await dbEmail.verifications.deleteExpired(Math.floor(Date.now() * 0.001), res);
+            await EmailDB.verifications.deleteExpired(Math.floor(Date.now() * 0.001), res);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
 
-            const emailError = textUtil.findErrorInEmailAddress(req.body.email);
+            const emailError = TextUtil.findErrorInEmailAddress(req.body.email);
             if (emailError != null)
             {
-                debugUtil.log("Email Input Error", {email: req.body.email, emailError}, "high", "pink");
-                res.status(400).send(emailError);
+                DebugUtil.log("Email Input Error", {email: req.body.email, emailError}, "high", "pink");
+                res.status(400).send(UIConfig.displayText.message[emailError]);
                 return;
             }
 
-            const existingV = await dbEmail.verifications.selectByEmail(req.body.email, res);
+            const existingV = await EmailDB.verifications.selectByEmail(req.body.email, res);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
             if (existingV && existingV.length > 0)
             {
-                debugUtil.log("Email is already undergoing verification", {email: req.body.email}, "high", "pink");
+                DebugUtil.log("Email is already undergoing verification", {email: req.body.email}, "high", "pink");
                 res.status(403).send(`Email "${req.body.email}" is already undergoing verification.`);
                 return;
             }
@@ -43,18 +44,18 @@ const emailUtil =
                 .map(() => codeChars.charAt(crypto.randomInt(codeChars.length)))
                 .join("");
 
-            await dbEmail.verifications.insert(
+            await EmailDB.verifications.insert(
                 req.body.email,
                 verificationCode,
-                Math.floor(Date.now() * 0.001) + globalConfig.auth.emailVerificationTimeoutInSeconds,
+                Math.floor(Date.now() * 0.001) + GlobalConfig.auth.emailVerificationTimeoutInSeconds,
                 res
             );
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
 
-            if (globalConfig.auth.bypassEmailVerification)
+            if (GlobalConfig.auth.bypassEmailVerification)
             {
-                debugUtil.log("Email transmission bypassed", {email: req.body.email}, "low");
+                DebugUtil.log("Email transmission bypassed", {email: req.body.email}, "low");
                 res.status(201).send(verificationCode);
             }
             else
@@ -62,15 +63,9 @@ const emailUtil =
                 const transporter = nodemailer.createTransport({
                     service: "naver",
                     host: "smtp.naver.com",
-                    port: 587,
-                    secure: false,
-                    requireTLS: true,
                     auth: {
                         user: "pinkroom77@naver.com",
                         pass: process.env.EMAIL_SENDER_PASS,
-                    },
-                    tls: {
-                        rejectUnauthorized: false,
                     },
                 });
 
@@ -86,13 +81,13 @@ const emailUtil =
 
                 if (sendResult.accepted)
                 {
-                    debugUtil.log("Email sent", {email: req.body.email}, "low");
+                    DebugUtil.log("Email sent", {email: req.body.email}, "low");
                     res.sendStatus(201);
                 }
                 else
                 {
-                    debugUtil.log("Email failed to be sent", {email: req.body.email}, "high", "pink");
-                    await dbEmail.verifications.updateExpirationTime(
+                    DebugUtil.log("Email failed to be sent", {email: req.body.email}, "high", "pink");
+                    await EmailDB.verifications.updateExpirationTime(
                         req.body.email,
                         Math.floor(Date.now() * 0.001) + 120, // block retry for 2 minutes (to prevent spamming)
                         res
@@ -106,34 +101,34 @@ const emailUtil =
         }
         catch (err)
         {
-            debugUtil.log("Email Verification Start Error", {err}, "high", "pink");
+            DebugUtil.log("Email Verification Start Error", {err}, "high", "pink");
             res.status(500).send(`ERROR: Failed to start email verification (${err}).`);
         }
     },
     endEmailVerification: async (req: Request, res: Response): Promise<void> =>
     {
-        const emailError = textUtil.findErrorInEmailAddress(req.body.email);
+        const emailError = TextUtil.findErrorInEmailAddress(req.body.email);
         if (emailError != null)
         {
-            debugUtil.log("Email Input Error", {email: req.body.email, emailError}, "high", "pink");
-            res.status(400).send(emailError);
+            DebugUtil.log("Email Input Error", {email: req.body.email, emailError}, "high", "pink");
+            res.status(400).send(UIConfig.displayText.message[emailError]);
             return;
         }
         
         const verificationCode = req.body.verificationCode as string;
 
-        const existingV = await dbEmail.verifications.selectByEmail(req.body.email, res);
+        const existingV = await EmailDB.verifications.selectByEmail(req.body.email, res);
         if (res.statusCode < 200 || res.statusCode >= 300)
             return;
         if (!existingV || existingV.length == 0)
         {
-            debugUtil.log("No pending email verification found", {email: req.body.email}, "high", "pink");
+            DebugUtil.log("No pending email verification found", {email: req.body.email}, "high", "pink");
             res.status(404).send(`No pending verification found for email "${req.body.email}".`);
             return;
         }
         if (existingV[0].verificationCode != verificationCode)
         {
-            debugUtil.log(`Verification Code Mismatch (code entered = '${verificationCode}')`,
+            DebugUtil.log(`Verification Code Mismatch (code entered = '${verificationCode}')`,
                 {email: req.body.email, actualCode: existingV[0].verificationCode, enteredCode: verificationCode}, "high", "pink");
             res.status(403).send(`Wrong verification code for email "${req.body.email}".`);
             return;
@@ -143,4 +138,4 @@ const emailUtil =
     },
 }
 
-export default emailUtil;
+export default EmailUtil;

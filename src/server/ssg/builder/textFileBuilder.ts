@@ -1,8 +1,8 @@
-import fileUtil from "../../util/fileUtil";
+import FileUtil from "../../Util/FileUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
-export default class textFileBuilder
+export default class TextFileBuilder
 {
     private lines: string[] = [];
 
@@ -20,6 +20,6 @@ export default class textFileBuilder
     {
         if (rootDir == undefined)
             rootDir = process.env.STATIC_PAGE_ROOT_DIR;
-        await fileUtil.write(relativeFilePath, this.lines.join("\n"), rootDir);
+        await FileUtil.write(relativeFilePath, this.lines.join("\n"), rootDir);
     }
 }

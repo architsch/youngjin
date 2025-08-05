@@ -1,4 +1,4 @@
-interface gameEntry
+interface GameEntry
 {
     dirName: string;
     title: string;

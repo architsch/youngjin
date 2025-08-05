@@ -1,4 +1,4 @@
-interface postEntry
+interface PostEntry
 {
     dirName: string;
     title: string;

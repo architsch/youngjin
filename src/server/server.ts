@@ -1,15 +1,57 @@
-import website from "./website";
-import ssg from "./ssg/ssg";
-import db from "./db/db";
+import express from "express";
+import http from "http";
+import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
+import SSG from "./SSG/SSG";
+import DB from "./DB/DB";
+import Router from "./Router/Router";
+import Sockets from "./Sockets/Sockets";
+import EnvUtil from "./Util/EnvUtil";
+import dotenv from "dotenv";
+dotenv.config();
 
-require("./dependencyInjector");
-require("./test/test");
+require("./Util/ServiceLocatorUtil");
+require("./Test/Test");
 
-switch (process.env.TYPE)
+async function Server(): Promise<void>
 {
-    case "website": website(); break;
-    case "ssg": ssg(); break; // Static Site Generator
-    case "db_clear": db.runSQLFile("clear.sql"); break; // Run the SQL script which clears out the DB.
-    case "db_init": db.runSQLFile("init.sql"); break; // Run the SQL script which initializes the DB.
-    default: throw new Error(`Unknown TYPE :: ${process.env.TYPE}`);
+    // SSG = "Static Site Generator"
+    if (EnvUtil.isDevMode()) // If you are in dev mode, rebuild the static pages on restart.
+    {
+        await SSG();
+    }
+    else if (EnvUtil.isSSGMode()) // If you are in ssg mode, just rebuild the static pages and quit immediately.
+    {
+        await SSG();
+        return;
+    }
+
+    // database initialization
+    DB.runSQLFile("init.sql");
+
+    // express app
+    const app = express();
+    const server = http.createServer(app);
+
+    // config
+    app.set("view engine", "ejs");
+
+    // middleware
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(cookieParser());
+
+    // router
+    Router(app);
+
+    // server connection
+    server.listen(process.env.PORT, () => {
+        console.log("---------------------------------------------");
+        console.log(`Listening to port ${process.env.PORT}.`);
+    });
+
+    // socket connection
+    Sockets(server);
 }
+
+Server();

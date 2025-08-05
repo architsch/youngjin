@@ -1,16 +1,18 @@
-import consoleIO from "../sockets/consoleIO";
+import ConsoleSockets from "../Sockets/ConsoleSockets";
 
-const debugUtil =
+const stackTrace: string[] = [];
+
+const DebugUtil =
 {
     thresholdLogLevel: 0, // 0 = low importance, 1 = medium importance, 2 = high importance
     setThresholdLogLevel: (logLevelOrName: number | string): void =>
     {
-        debugUtil.thresholdLogLevel = isNaN(logLevelOrName as number) ?
-            debugUtil.getLogLevelFromName(logLevelOrName as string) : (logLevelOrName as number);
+        DebugUtil.thresholdLogLevel = isNaN(logLevelOrName as number) ?
+            DebugUtil.getLogLevelFromName(logLevelOrName as string) : (logLevelOrName as number);
     },
     getThresholdLogLevel: (): number =>
     {
-        return debugUtil.thresholdLogLevel;
+        return DebugUtil.thresholdLogLevel;
     },
     getLogLevelFromName: (logLevelName: string): number => // "low" for 0, "medium" for 1, "high" for 2
     {
@@ -28,32 +30,43 @@ const debugUtil =
         let details = "";
         if (eventDescObj != undefined)
             details = JSON.stringify(eventDescObj);
-        const origin = debugUtil.getFuncCallPath(5, 2);
+        const origin = DebugUtil.getStackTrace();
 
-        const logLevel = debugUtil.getLogLevelFromName(logLevelName);
-        if (logLevel >= debugUtil.thresholdLogLevel)
-            consoleIO.log((highlightColor ? `<b style="color:${highlightColor}">` : "") + eventTitle + (highlightColor ? "</b>" : ""), origin, details);
+        const logLevel = DebugUtil.getLogLevelFromName(logLevelName);
+        if (logLevel >= DebugUtil.thresholdLogLevel)
+            ConsoleSockets.log((highlightColor ? `<b style="color:${highlightColor}">` : "") + eventTitle + (highlightColor ? "</b>" : ""), origin, details);
     },
     logRaw: (message: string, logLevelName: string = "high", highlightColor?: string): void =>
     {
-        debugUtil.log(message, undefined, logLevelName, highlightColor);
+        DebugUtil.log(message, undefined, logLevelName, highlightColor);
     },
-    getFuncCallPath: (pathLengthLimit: number = 1, numClosestFuncCallsToSkip: number = 1): string =>
+    getStackTrace: (): string =>
     {
-        const stackTrace: any = {};
-        Error.captureStackTrace(stackTrace);
-        const stack = stackTrace.stack;
-
-        const callingFunctionNames = stack
-            .match(/((at Object\.)|(at async Object\.))[\w]+\s/g)
-            .map((x: any) => x.replace(/(at Object\.)|(at async Object\.)/g, "").trim());
-        
-        for (let i = 0; i < numClosestFuncCallsToSkip; ++i)
-            callingFunctionNames.shift();
-        while (callingFunctionNames.length > pathLengthLimit)
-            callingFunctionNames.pop();
-        return callingFunctionNames.join(" <- ");
-    }
+        const arr: string[] = [];
+        for (let i = stackTrace.length-1; i >= 0; --i)
+            arr.push(stackTrace[i]);
+        return arr.join(" <- ");
+    },
+    pushStackTrace: (traceName: string): void =>
+    {
+        stackTrace.push(traceName);
+        DebugUtil.logRaw(`pushStackTrace: ${traceName}`, "high", "gray");
+    },
+    popStackTrace: (traceName: string): void =>
+    {
+        if (stackTrace.length == 0)
+        {
+            DebugUtil.logRaw(`No name to pop in stackTrace :: (traceName = ${traceName})`, "high", "pink");
+            return;
+        }
+        const expectedTraceName = stackTrace.pop();
+        if (expectedTraceName != traceName)
+        {
+            DebugUtil.logRaw(`Name mismatch in stackTrace :: (traceName = ${traceName}, expectedTraceName = ${expectedTraceName})`, "high", "pink");
+            return;
+        }
+        DebugUtil.logRaw(`popStackTrace: ${traceName}`, "high", "gray");
+    },
 }
 
-export default debugUtil;
+export default DebugUtil;

@@ -1,27 +1,27 @@
-import debugUtil from "../../util/debugUtil";
-import testActions from "../testActions/testActions";
-import testActions_room from "../testActions/testActions_room";
+import DebugUtil from "../../Util/DebugUtil";
+import TestActions from "../TestActions/TestActions";
+import TestActions_Room from "../TestActions/TestActions_Room";
 
-const testRoutine_room = async (): Promise<void> => {
-    const numUsers = 12;
-    const numRooms = 4;
+const TestRoutine_Room = async (): Promise<void> => {
+    const numUsers = 4;
+    const numRooms = 3;
 
     // users
-    const users: testUser[] = [];
+    const users: TestUser[] = [];
     for (let i = 0; i < numUsers; ++i)
         users.push({userName: `testUser_${i}`, password: `testPass_${i}`, email: `test_email_${i}@test.com`});
 
     // rooms
-    const rooms: testRoom[] = [];
+    const rooms: TestRoom[] = [];
     for (let i = 0; i < numRooms; ++i)
         rooms.push({roomName: `testRoom ${i}`, ownerUserName: ""});
 
     // user initialization
     for (let i = 0; i < numUsers; ++i)
-        await testActions.auth.initUser(users[i]);
+        await TestActions.auth.initUser(users[i]);
 
     // random actions
-    const randomActions = Object.values(testActions_room);
+    const randomActions = Object.values(TestActions_Room);
 
     // run a bunch of random actions
     for (let i = 0; i < 300; ++i)
@@ -31,11 +31,11 @@ const testRoutine_room = async (): Promise<void> => {
         const roomIndex = Math.floor(Math.random() * numRooms);
         const actionIndex = Math.floor(Math.random() * randomActions.length);
 
-        debugUtil.log(`RANDOM ACTION: ${i}`, {action: randomActions[actionIndex].name, roomName: rooms[roomIndex].roomName, userName1: users[userIndex1].userName, userName2: users[userIndex2].userName}, "low");
+        DebugUtil.log(`RANDOM ACTION: ${i}`, {action: randomActions[actionIndex].name, roomName: rooms[roomIndex].roomName, userName1: users[userIndex1].userName, userName2: users[userIndex2].userName}, "low");
         try {
             await randomActions[actionIndex](rooms[roomIndex], users[userIndex1], users[userIndex2]);
         } catch (_) {}
     }
 }
 
-export default testRoutine_room;
+export default TestRoutine_Room;

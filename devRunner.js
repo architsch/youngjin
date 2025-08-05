@@ -2,43 +2,48 @@ const path = require("path");
 const nodeExternals = require('webpack-node-externals');
 const webpack = require("webpack");
 
-const webpackConfig = {
-    entry: `./src/server/server.ts`,
-    target: 'node',
-    mode: 'development',
-    devtool: 'inline-source-map',
-    module: {
-        rules: [
-            {
-                test: /\.tsx?$/,
-                use: 'ts-loader',
-                exclude: /node_modules/,
-            },
-        ],
-    },
-    resolve: {
-        extensions: ['.tsx', '.ts', '.js'],
-    },
-    output: {
-        filename: `server.bundle.js`,
-        path: path.resolve(__dirname, 'dist'),
-    },
-    externals: [nodeExternals()],
-};
+if (process.env.MODE == "dev")
+{
+    const webpackConfig = {
+        entry: `./src/Server/Server.ts`,
+        target: 'node',
+        mode: 'development',
+        devtool: 'inline-source-map',
+        module: {
+            rules: [
+                {
+                    test: /\.tsx?$/,
+                    use: 'ts-loader',
+                    exclude: /node_modules/,
+                },
+            ],
+        },
+        resolve: {
+            extensions: ['.tsx', '.ts', '.js'],
+        },
+        output: {
+            filename: `bundle.js`,
+            path: path.resolve(__dirname, 'dist/server'),
+        },
+        externals: [nodeExternals()],
+    };
 
-const compiler = webpack(webpackConfig, (err, stats) => {
-    if (err || stats.hasErrors())
-    {
-        throw new Error(stats.toString());
-    }
-    else
-    {
-        console.log(`Webpack compiler loaded`);
-        compiler.run((callback) => {
-            console.log(`Webpack compiler run complete`);
-
-            process.env.TYPE = "website";
-            require("./dist/server.bundle.js");
-        });
-    }
-});
+    const compiler = webpack(webpackConfig, (err, stats) => {
+        if (err || stats.hasErrors())
+        {
+            throw new Error(stats.toString());
+        }
+        else
+        {
+            console.log(`Webpack compiler loaded`);
+            compiler.run((callback) => {
+                console.log(`Webpack compiler run complete`);
+                require("./dist/server/bundle.js");
+            });
+        }
+    });
+}
+else
+{
+    console.error("devRunner.js is not supposed to run on a non-dev mode.");
+}

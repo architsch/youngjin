@@ -14,13 +14,13 @@
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:title" content="<%= v_title %>"/>
-<meta property="og:url" content="<%= envUtil.getRootURL() %>/<%= (v_relativePageURL != undefined) ? v_relativePageURL : '' %>"/>
+<meta property="og:url" content="<%= EnvUtil.getRootURL() %>/<%= (v_relativePageURL != undefined) ? v_relativePageURL : '' %>"/>
 <meta property="og:type" content="<%= (v_relativePageURL != undefined) ? 'article' : 'website' %>"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="<%= v_desc %>"/>
-<meta property="og:image" content="<%= (v_ogImageURLOverride != undefined) ? v_ogImageURLOverride : `${envUtil.getRootURL()}/share.jpg` %>"/>
+<meta property="og:image" content="<%= (v_ogImageURLOverride != undefined) ? v_ogImageURLOverride : `${EnvUtil.getRootURL()}/share.jpg` %>"/>
 <meta property="og:image:alt" content="<%= v_title %>">
-<%_ if (!envUtil.isDevMode()) { _%>
+<%_ if (!EnvUtil.isDevMode()) { _%>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
 <script>
@@ -31,11 +31,11 @@ gtag('config', 'G-JL7KHR7HK8');
 </script>
 <%_ } _%>
 <title><%= v_title %></title>
-<link rel="shortcut icon" href="<%= envUtil.getRootURL() %>/favicon.ico">
-<link rel="stylesheet" href="<%= envUtil.getRootURL() %>/style.css">
+<link rel="shortcut icon" href="<%= EnvUtil.getRootURL() %>/favicon.ico">
+<link rel="stylesheet" href="<%= EnvUtil.getRootURL() %>/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="<%= envUtil.getRootURL() %>/feed.atom" title="Atom Feed">
-<link rel="canonical" href="<%= (v_relativePageURL != undefined) ? `${envUtil.getRootURL()}/${v_relativePageURL}` : envUtil.getRootURL() %>">
+<link rel="alternate" type="application/atom+xml" href="<%= EnvUtil.getRootURL() %>/feed.atom" title="Atom Feed">
+<link rel="canonical" href="<%= (v_relativePageURL != undefined) ? `${EnvUtil.getRootURL()}/${v_relativePageURL}` : EnvUtil.getRootURL() %>">
 </head>
 <body>
 <%_ if (!isStaticPage) { _%>
@@ -44,13 +44,13 @@ gtag('config', 'G-JL7KHR7HK8');
 <%- include(`${ejsChunkRootPath}/common/embeddedScripts.ejs`) _%>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="<%= envUtil.getRootURL() %>/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="<%= EnvUtil.getRootURL() %>/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="fullscreenBarMenuButton <%= (menuName == "index") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>"><%= uiConfig.displayText.menuName["index"] %></a>
-<a class="fullscreenBarMenuButton <%= (menuName == "rooms") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/rooms.html"><%= uiConfig.displayText.menuName["rooms"] %></a>
-<a class="fullscreenBarMenuButton <%= (menuName == "arcade") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/arcade.html"><%= uiConfig.displayText.menuName["arcade"] %></a>
-<a class="fullscreenBarMenuButton <%= (menuName == "library") ? "selected" : "idle" %>" href="<%= envUtil.getRootURL() %>/library.html"><%= uiConfig.displayText.menuName["library"] %></a>
+<a class="fullscreenBarMenuButton <%= (menuName == "index") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>"><%= UIConfig.displayText.menuName["index"] %></a>
+<a class="fullscreenBarMenuButton <%= (menuName == "rooms") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/rooms.html"><%= UIConfig.displayText.menuName["rooms"] %></a>
+<a class="fullscreenBarMenuButton <%= (menuName == "arcade") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/arcade.html"><%= UIConfig.displayText.menuName["arcade"] %></a>
+<a class="fullscreenBarMenuButton <%= (menuName == "library") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/library.html"><%= UIConfig.displayText.menuName["library"] %></a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -59,7 +59,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <a class="inlineButton" href="<%= v_backDestination_href %>">Back</a><%- (v_pagePathList != undefined) ? "&nbsp;&nbsp;" : "" %>
 <%_ } _%>
 <%_ if (v_pagePathList != undefined) { _%>
-<div class="pagePath"><%- v_pagePathList.map(x => (x.relativeURL != undefined) ? `<a href="${envUtil.getRootURL()}/${x.relativeURL}">${x.title}</a>` : x.title).join("/") %></div>
+<div class="pagePath"><%- v_pagePathList.map(x => (x.relativeURL != undefined) ? `<a href="${EnvUtil.getRootURL()}/${x.relativeURL}">${x.title}</a>` : x.title).join("/") %></div>
 <%_ } _%>
 <%_ if (v_pagePathList != undefined || v_backDestination_href != undefined) { _%>
 <div class="s_row"></div>

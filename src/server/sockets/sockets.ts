@@ -1,15 +1,15 @@
 import http from "http";
 import socketIO from "socket.io";
-import consoleIO from "./consoleIO";
-import chatIO from "./chatIO";
+import ConsoleSockets from "./ConsoleSockets";
+import ChatSockets from "./ChatSockets";
 import dotenv from "dotenv";
 dotenv.config();
 
-export default function sockets(server: http.Server)
+export default function Sockets(server: http.Server)
 {
     const io = new socketIO.Server(server);
     io.listen(8080);
 
-    consoleIO.init(io);
-    chatIO.init(io);
+    ConsoleSockets.init(io);
+    ChatSockets.init(io);
 }
