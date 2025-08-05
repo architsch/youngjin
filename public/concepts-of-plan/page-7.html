@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra when designing and implementing a video game.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Linear Algebra for Game Development - Part 1"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-7.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra when designing and implementing a video game."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b001.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 1">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<title>Linear Algebra for Game Development - Part 1</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-7.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/rooms.html">Rooms</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Games</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 1</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 1</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 5, 2025</p>
+<hr>
+<h3><b>Prerequisite</b></h3>
+<p>This article assumes that the reader already understands the basic concepts in linear algebra, such as matrix multiplication and vector arithmetic.</p>
+<hr>
+<h3><b>Introduction</b></h3>
+<p>Let's say that you are trying to create a game, perhaps as an indie developer. What would you do to fulfill this objective?</p>
+<p>There indeed are many viable approaches to such a problem. Some people may start by devising concept arts, while others may start by building their own fictional game worlds by means of writing and character design.</p>
+<p>As someone with an engineering background, however, I am a bit biased in favor of system-based design methodology. While it is not the ultimate panacea for all aspects of game development, I do believe that it is a pretty sound means of handling innumerable complexities which may arise along the way.</p>
+<p>A game comprises a variety of systems (e.g. UI system, physics system, graphics system, audio system, networking system, etc), yet I will solely focus on the gameplay system for now, for it is what makes up the conceptual backbone of a game.</p>
+<hr>
+<h3><b>Inventory</b></h3>
+<p>First of all, let me suppose that you are designing a role-playing game (RPG). In this game, what you will need is the main character, as well as an inventory which lets the player store a number of items in it and carry them around. What is shown below is an inventory which contains 3 items - a frog, a diamond, and an apple.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b001.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 1)">
+<hr>
+<h3><b>Selecting an Item</b></h3>
+<p>Let us now use our common sense, instead of delving into endless rigmaroles of wild imagination. Here is the question of foremost significance: "What is the most essential functionality that we need to be able to use this inventory?"</p>
+<p>There are more than one possible answers, but we can all agree on the fact that the player must at least be able to "select" an item in the inventory instead of just looking at it. The reason is straightforward; if you are unable to select an item in your own inventory, you won't be able to do anything with it.</p>
+<p>Let's say that the player wants to select the first item in the inventory (i.e. frog). What shall we do to make that happen?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b002.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 2)">
+<p>Here is a solution which may sound unpleasantly esoteric (for those who are not familiar with linear algebra), but nevertheless reveals itself to be quite elegant when it comes to computation. Imagine that the inventory we just saw is a column vector (i.e. a vertical list of items) which consists of 3 rows and 1 column.</p>
+<p>The way you select the inventory's first item, then, is to multiply this column vector by a row vector (i.e. a horizontal list of items) which has 1 in its first entry and 0 elsewhere.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b003.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 3)">
+<p>The underlying logic is not hard to grasp. Multiplying the aforementioned row vector and a column vector has the same effect as taking 1 copy of the frog, 0 copy of the diamond, 0 copy of the apple, and then simply adding them up. The result is just 1 copy of the frog, which is exactly the same thing as the original frog which has been sitting in the inventory.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b004.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 4)">
+<p>Here is another question. What shall we do, if we want to select the second item (i.e. diamond)?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b005.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 5)">
+<p>The answer is pretty much the same as the previous one, except that now the row vector contains its "1" in the second entry instead of the first entry. This will select the second item in the inventory instead of the first, thereby returning the diamond.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b006.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 6)">
+<hr>
+<h3><b>Selecting Multiple Items</b></h3>
+<p>What if the player wants to select multiple items at once? Such a scenario will be necessary if the gameplay involves special skills which can be activated only when two or more items are combined. A wizard, for example, will need to grab both a "mana" item and a "fire" item at the same time to be able to cast a "fire spell" (as opposed to a "null spell"), and so on.</p>
+<p>Let me suppose that we are trying to select both the frog and the diamond in the inventory. What should we do to make this happen?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b007.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 7)">
+<p>The best way to answer this kind of question, is to look back at the previous answers and try to find out a way to combine them to be able to solve a bigger problem.</p>
+<p>It has been shown that selecting the first item (frog) can be achieved by multiplying the inventory by the row vector: [1 0 0]. Similarly, it has also been shown that selecting the second item (diamond) can be achieved by multiplying the inventory by the row vector: [0 1 0].</p>
+<p>In linear algebra, it is also possible to execute both of these two actions in parallel by stacking the aforementioned row vectors (i.e. [1 0 0] and [0 1 0]) together to form a 2x3 matrix, and then simply multiplying the inventory by that matrix.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b008.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 8)">
+<p>This has the effect of carrying out two different multiplications at once - (1) multiplication by the first row vector, and (2) multiplication by the second row vector.</p>
+<p>The first multiplication, carried out by the first row of the matrix, gives us the first inventory item (frog). The second multiplication, carried out by the second row of the matrix, gives us the second inventory item (diamond).</p>
+<p>We can extend this parallel operation by attaching the third row to the matrix which selects the third inventory item (i.e. [0 0 1]). The resulting 3x3 matrix will let us select ALL three items in the inventory, which is the same thing as selecting the entire inventory as a whole, as it is, without excluding anything.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b009.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 9)">
+<p>This is why this 3x3 matrix is called an "identity matrix". The resulting selection is identical to the original inventory.</p>
+<hr>
+<h3><b>Rearranging Things</b></h3>
+<p>So far, we have only been selecting items in the inventory without doing anything with them. In order to add some interactivity to the game, we better let the player apply some changes to the inventory, instead of just looking at a portion of it.</p>
+<p>Gameplay is made up of actions, each of which could be triggered either by the player or some other in-game agent. The simplest action we can think of is the act of moving something from one place to another.</p>
+<p>Here is a question. Assume that I wish to swap the positions of the frog and diamond in the inventory. What shall I do?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b010.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 10)">
+<p>Let's revisit our previous observations. Do you remember, that it is possible to select the second item (diamond) by multiplying a row vector, whose second entry is 1 and everything else is 0?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b006.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 11)">
+<p>Likewise, you may recall that it is possible to select the first item (frog) by multiplying a row vector, whose first entry is 1 and everything else is 0.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b003.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 12)">
+<p>If we first select the second item (diamond), then select the first item (frog), and then put these two operations in parallel, what do we get?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b011.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 13)">
+<p>In this case, we are still "selecting" a frog and a diamond, but in the opposite order. In the original inventory, the frog was first and the diamond was second. In our new selection, however, the diamond is first and the frog is second.</p>
+<p>So, we just succeeded in reversing the order between the frog and the diamond, but a problem still remains. The apple in the original inventory is missing here!</p>
+<p>When swapping two items in the inventory, what we really want is not a subset of the inventory, but the full inventory in which the desired change has been applied. Therefore, we ought to reconstruct the whole inventory by selecting EVERY item.</p>
+<p>This can be done by making sure to select the last item (apple) as well, besides the frog and diamond.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b012.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 14)">
+<hr>
+<h3><b>Movement</b></h3>
+<p>This kind of reasoning also applies to the problem of making simple movements. If we imagine that the frog is the only item in the inventory and the rest of the slots are empty, the matrix I have just shown can be used to "move" the frog from the first slot to the second slot, since moving something from one place to another is the same thing as swapping the origin with the destination.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b013.jpg" alt="Linear Algebra for Game Development - Part 1 (Figure 15)">
+<div class="l_row"></div>
+<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</div>
+</body>
+</html>
