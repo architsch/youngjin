@@ -644,3 +644,125 @@ This can be done by making sure to select the last item (apple) as well, besides
 This kind of reasoning also applies to the problem of making simple movements. If we imagine that the frog is the only item in the inventory and the rest of the slots are empty, the matrix I have just shown can be used to "move" the frog from the first slot to the second slot, since moving something from one place to another is the same thing as swapping the origin with the destination.
 
 <b013>
+
+
+
+
+
+
+
+
+
+
+:d:This article explains how to use linear algebra in the design and implementation of video games.
+:k:Linear Algebra, Matrix Algebra, Game Development, Game Design, Gameplay Systems, Game Engine, Technical Design, Numerical Methods, Scientific Computing, Gameplay Engineering
+:l:2025-08-09
+
+[Linear Algebra for Game Development - Part 2] August 9, 2025
+
+@@<hr>
+@@<h3><b>Before You Read</b></h3>
+
+This article is Part 2 of the series, "Linear Algebra for Game Development". If you haven't, please read {%a href="https://thingspool.net/concepts-of-plan/page-7.html"%}Part 1{%/a%} first.
+
+@@<hr>
+@@<h3><b>Successive Movements</b></h3>
+
+In the last article, I demonstrated the way in which we could move an item from one location in the inventory to another. Moving the frog from the first entry to the second entry, for example, could be done by swapping the first entry with the second entry.
+
+<b013>
+
+If I apply the exact same type of movement once again, however, the frog will go back to its original location.
+
+<b014>
+
+The reason behind this is that swapping the same pair of entries twice has the same effect as keeping everything the same as before.
+
+<b015>
+
+In order to prevent the frog from going back to where it was, we need to make sure to apply a different kind of motion to the frog once it reaches the second entry; that is, we will have to swap the second entry with the third entry if our goal is to push the frog to the third entry.
+
+<b016>
+
+A sequence of movements, then, can be carried out by a sequence of swaps. First we swap the 1st with the 2nd, and then we swap the 2nd with the 3rd, and so forth. This will successively move the 1st to the 2nd, the 2nd to the 3rd, etc. This can be done by successive matrix multiplications, like the ones illustrated below.
+
+<b017>
+
+For the sake of convenience, it is also desirable to combine these two matrix multiplications by multiplying them together, which will then produce another matrix. This resulting matrix, when applied to our inventory of items, will perform two successive swaps at once.
+
+<b018>
+
+This is an example of what we would refer to as a "transaction". When we multiply the inventory by this composite matrix, it always makes sure that two events must happen at the same time - (1) A swap between the first and second items, and (2) A swap between the second and third items.
+
+<b019>
+
+At this point, you may have realized the overall effect of performing two successive swaps in our inventory of three items. What it does is, it moves (shifts) every item by one entry. When an item gets pushed off the edge, it cycles back to the other end of the inventory. This is a circular shift.
+
+<b020>
+
+@@<hr>
+@@<h3><b>How to Resize the Inventory</b></h3>
+
+So far, we have only been looking at an inventory of three items. In most video games, however, the player will probably wish to hold more than three items in one's inventory. Three is just not enough!
+
+On the other hand, though, it also makes sense to initially only provide a newbie with a small inventory, and then let him/her "upgrade" its size as the game's narrative unfolds. One reason is that it lets the player feel a sense of progression while playing. Another reason is that it gives the developer an opportunity to make money by forcing the player to make an in-app purchase in exchange for adding more slots to the inventory.
+
+Here is an example scenario which demonstrates the concept. Suppose that you are developing a construction simulator, in which the player needs to grab as many bricks as possible and carry them to the construction site to make a brick wall. The player is initially only able to carry 3 bricks at a time because his/her bag is too tiny. After an in-app purchase of, say, 5 dollars or so, the size of the bag doubles up which will let the player carry up to 6 bricks instead. Will the player pay 5 dollars to afford it? The answer will be "yes" if the game proves itself to be sufficiently engaging.
+
+But anyways, we can all agree that being able to increment the size of the player's inventory is a pretty good feature to have. So, why not implement it now, and investigate more of its use cases later on?
+
+Let us go back to the beginning, and take a look at our initial inventory which could only hold up to 3 items.
+
+<b001>
+
+For a newbie player, this is probably more than enough. After all, we cannot expect a beginner to possess the ability to handle more than 3 items at once (We will be lucky to have the player learn how to use the inventory in the first place).
+
+Suppose that, at some point during the gameplay, the player needs to increase the size of the inventory to 4 slots, so as to be able to carry up to 4 items instead of 3.
+
+<b021>
+
+What shall we do to achieve this goal? Here is a little reminder. Do you recall that, by taking a product between a row vector and the inventory, we are able to "select" one of the entries within the inventory?
+
+<b003>
+
+If the row vector is [1 0 0], we will get the first item. If the row vector is [0 1 0], we will get the second item. And if the row vector is [0 0 1], we will get the third item.
+
+We should also remember that putting these row vectors together as a matrix of multiple rows will allow us to select multiple items simultaneously. The matrix shown below, for instance, lets us select the entire inventory.
+
+<b009>
+
+Note that it is also possible to select nothing at all by means of a row vector whose numbers are all 0. Such a vector, when applied to the inventory, returns an empty slot.
+
+<b022>
+
+If we attach this "empty selection" to the list of all possible item selections, what do we get?
+
+<b023>
+
+The result is a list of four selections instead of three. The first three selections are the three items in the original inventory (i.e. frog, diamond, and apple). The fourth selection is an extra slot which is now attached to the end of the inventory. This extra slot is empty because we selected "nothing" from the original inventory.
+
+@@<hr>
+@@<h3><b>Dimension Shift</b></h3>
+
+One interesting thing we can observe here, is that the matrix we just used to change the size of the inventory from 3 to 4 is of size 4x3 (i.e. 4 rows and 3 columns). Do you see the pattern here?
+
+<b024>
+
+The number of columns represents the size of the original inventory. The inventory could hold up to 3 items, so each selection required us to specify 3 distinct numbers to be able to select each one of its slots.
+
+The number of rows, on the other hand, represents the size of the resulting inventory. Since we made 4 selections by multiplying 4 row vectors in parallel, we ended up producing a list of 4 slots.
+
+A 4x3 matrix, therefore, can be imagined as some kind of "expander" which converts a list of 3 items into a list of 4 items.
+
+Similarly, it should also make sense that a 2x3 matrix is some kind of "compressor" which converts a list of 3 items into a list of 2 items. In the example below, we are doing this by simply selecting a subset of the original inventory (i.e. by only selecting the first two items and discarding the last).
+
+<b025>
+
+@@<hr>
+@@<h3><b>List Operations</b></h3>
+
+At this point, you might have realized (especially if you are a programmer) that the so-called "inventory" in our examples may as well be regarded as what is commonly known as a "list" in computer science, since it is just a sequence of items.
+
+Our inventory is just a list, which is one of the most pivotal data structures when it comes to computational reasoning. What's good about linear algebra is that it allows us to express each of the core list operations as a simple matrix multiplication.
+
+<b026>
