@@ -766,3 +766,112 @@ At this point, you might have realized (especially if you are a programmer) that
 Our inventory is just a list, which is one of the most pivotal data structures when it comes to computational reasoning. What's good about linear algebra is that it allows us to express each of the core list operations as a simple matrix multiplication.
 
 <b026>
+
+
+
+
+
+
+
+
+
+
+:d:This article explains how to use linear algebra in the design and implementation of video games.
+:k:Linear Algebra, Matrix Algebra, Game Development, Game Design, Gameplay Systems, Game Engine, Technical Design, Numerical Methods, Scientific Computing, Gameplay Engineering
+:l:2025-08-13
+
+[Linear Algebra for Game Development - Part 3] August 13, 2025
+
+@@<hr>
+@@<h3><b>Before You Read</b></h3>
+
+This article is Part 3 of the series, "Linear Algebra for Game Development". If you haven't, please read {%a href="https://thingspool.net/concepts-of-plan/page-7.html"%}Part 1{%/a%} first.
+
+@@<hr>
+@@<h3><b>The World and the Inventory</b></h3>
+
+So far, I have been talking about ways of representing the player's inventory, accessing its items, changing their positions, and so on. However, I haven't yet tried "using" any of those items for gameplay purposes.
+
+If I were playing a video game and found out that my main character was starving, I would expect myself to be able to grab a piece of bread from the character's inventory and feed it to replenish its stamina. If the bread cannot be used for such a purpose, what's the point of having it in the inventory in the first place?
+
+This means that we need some way of allowing the player's inventory and the game world to interact with each other. That is, we ought to be able to pull an item out of the inventory and apply it to one of the characters in the world, or to pick up an item in the world and put it in the inventory, and so forth.
+
+<b027>
+
+It seems to suggest, then, that it is necessary for us to model our gameplay in terms of two separate spaces - the world and the inventory. This kind of conclusion, however, does not solve the problem of implementing their mutual interactions within the context of linear algebra.
+
+I have previously illustrated that it is nice to represent the player's inventory as a column vector, and any modification to the inventory as a matrix multiplication. In the same vein, we might also entertain the notion that we could represent the gameplay world as a column vector as well, where each element of the vector corresponds to a position in physical space.
+
+<b028>
+
+This still does not tell us how we will ever manage to describe interactions between the two domains, though. In order for an interaction to take place, for instance, we must make sure that it is possible to transfer things (e.g. items) from the world to the inventory and vice versa. How do we model such events in terms of vectors and matrices?
+
+The answer is, we can't (Or, even if we can, it is way too complicated). Fortunately, there is a clean way to bypass this difficulty. Why not just assume that both the world and the inventory are parts of the same space, represented by a single column vector? After all, there is no compelling reason why we are supposed to consider these two as separate entities.
+
+<b029>
+
+Everything is part of the game. The world is part of the game, and the inventory is part of the game. Therefore, it is not too absurd for us to imagine the entire gameplay universe as one monolithic sequence of items (i.e. a single column vector), partition it into sections, and give each of them a distinct role.
+
+@@<hr>
+@@<h3><b>Joining the Two Realms</b></h3>
+
+Okay, so here is the idea. Let us assume that the game is made up of a list of 6 entries, each of which may either indicate a position in the game world or an item in the inventory. The upper half of the list is the world, and the lower half of the list is the inventory.
+
+We can select the whole world by selecting the top 3 entries of the list.
+
+<b030>
+
+Alternatively, we may select the whole inventory by selecting the bottom 3 entries of the list.
+
+<b031>
+
+What if we want to select the apple in the player's inventory? Oh, it is not hard to guess at all. Since the inventory is the last 3 items of the list and the apple is the last of them, we can expect to obtain the apple when we select the last item of the whole list.
+
+<b032>
+
+But of course, what we really need here is interaction. We are not playing a game if we are not interacting. And just like I have mentioned before, the way we achieve it is by being able to transfer things between the world and the inventory.
+
+First, though, let us begin with the most basic choice that the player should be able to make during the game. It is when the player decides to stay idle, leading to absolutely no change in the game's environment during the current time step. Whenever this happens, everything must stay the same. And the way we do this is by selecting everything in the list, including both the world and the inventory.
+
+<b033>
+
+Again, what we are seeing here is an identity matrix; it lets us create an identical copy of the original list, by selecting everything in it in the same order as before (i.e. by selecting the 1st item, then the 2nd item, then the 3rd item, and so on).
+
+Imagine, now, that the player wants to eat an apple in the inventory, which is located at the 6th entry of the list. The player's current position is the 2nd entry, so let us move the apple right in front of him (which corresponds to the 3rd entry of the list), so as to let him have direct access to it. We can carry out this action by selecting everything in the list, but with the 3rd and 6th entries swapped.
+
+<b034>
+
+Once he grabs the apple in front of him and eats it, it must disappear. This can be carried out by simply NOT selecting the apple's location (i.e. 3rd entry) while selecting everything else.
+
+<b035>
+
+All right. What we just saw is a series of steps which allowed us to pull the apple out of the inventory, put it right in front of the player, and then delete it once it is eaten.
+
+@@<hr>
+@@<h3><b>Exchange</b></h3>
+
+This, however, does not explain what happens to the player himself when he eats the apple. An apple should not simply disappear when it is eaten without affecting anything else in the world.
+
+What we need is an exchange. When the player eats an apple, he expects to gain energy from it in exchange for the act of sacrificing one of his items. Otherwise, it would mean that he just dumped an item for nothing.
+
+<b036>
+
+Such a degree of nuance, though, requires us to represent the game in terms of not just items, but also numerical properties. And such properties should exist as part of things (i.e. objects) which are populating the game world.
+
+<b037>
+
+The player, for instance, may have one or more numbers associated with him such as his energy (which he consumes whenever he makes a move - aka "action points"), his health (which must be kept above 0 to prevent him from dying), and so forth.
+
+It will be nice if we can treat such details in a highly scalable manner, so as to be able to handle them without complicating things too much. And in order to achieve this kind of goal, we must strive to model everything in terms of the constructs of linear algebra (e.g. vectors and matrices).
+
+Here is a recap of how I have been representing the gameplay universe. From a computational point of view, our game comprises a list of entries, each of which is capable of being occupied by a single object. Each entry indicates either a position in the world, or a "slot" in the player's inventory.
+
+<b038>
+
+As you may have already realized, this system is quite limited in the sense that it only allows each entry to have a single object in it, with no room for additional details. When an inventory slot is occupied by an apple, for instance, all we can ever know is that there is an apple. Nothing tells us how ripe it is, whether it has been washed, or whether it has been partially eaten. All we've got is just an atomic entity called "apple".
+
+For more nuanced description of what is going on inside the game, we need to extend our column vector into some kind of "data table" - that is, a spreadsheet-like table which consists of both rows and columns.
+
+<b039>
+
+Each row corresponds to a location, and each column corresponds to a property (such as "energy", "health", etc) that a location can have.

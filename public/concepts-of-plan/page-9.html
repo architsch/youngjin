@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="Linear Algebra for Game Development - Part 3"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-9.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b027.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 3">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<title>Linear Algebra for Game Development - Part 3</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-9.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/rooms.html">Rooms</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Games</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 3</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 3</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: August 13, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 3 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>The World and the Inventory</b></h3>
+<p>So far, I have been talking about ways of representing the player's inventory, accessing its items, changing their positions, and so on. However, I haven't yet tried "using" any of those items for gameplay purposes.</p>
+<p>If I were playing a video game and found out that my main character was starving, I would expect myself to be able to grab a piece of bread from the character's inventory and feed it to replenish its stamina. If the bread cannot be used for such a purpose, what's the point of having it in the inventory in the first place?</p>
+<p>This means that we need some way of allowing the player's inventory and the game world to interact with each other. That is, we ought to be able to pull an item out of the inventory and apply it to one of the characters in the world, or to pick up an item in the world and put it in the inventory, and so forth.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b027.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 1)">
+<p>It seems to suggest, then, that it is necessary for us to model our gameplay in terms of two separate spaces - the world and the inventory. This kind of conclusion, however, does not solve the problem of implementing their mutual interactions within the context of linear algebra.</p>
+<p>I have previously illustrated that it is nice to represent the player's inventory as a column vector, and any modification to the inventory as a matrix multiplication. In the same vein, we might also entertain the notion that we could represent the gameplay world as a column vector as well, where each element of the vector corresponds to a position in physical space.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b028.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 2)">
+<p>This still does not tell us how we will ever manage to describe interactions between the two domains, though. In order for an interaction to take place, for instance, we must make sure that it is possible to transfer things (e.g. items) from the world to the inventory and vice versa. How do we model such events in terms of vectors and matrices?</p>
+<p>The answer is, we can't (Or, even if we can, it is way too complicated). Fortunately, there is a clean way to bypass this difficulty. Why not just assume that both the world and the inventory are parts of the same space, represented by a single column vector? After all, there is no compelling reason why we are supposed to consider these two as separate entities.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b029.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 3)">
+<p>Everything is part of the game. The world is part of the game, and the inventory is part of the game. Therefore, it is not too absurd for us to imagine the entire gameplay universe as one monolithic sequence of items (i.e. a single column vector), partition it into sections, and give each of them a distinct role.</p>
+<hr>
+<h3><b>Joining the Two Realms</b></h3>
+<p>Okay, so here is the idea. Let us assume that the game is made up of a list of 6 entries, each of which may either indicate a position in the game world or an item in the inventory. The upper half of the list is the world, and the lower half of the list is the inventory.</p>
+<p>We can select the whole world by selecting the top 3 entries of the list.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b030.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 4)">
+<p>Alternatively, we may select the whole inventory by selecting the bottom 3 entries of the list.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b031.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 5)">
+<p>What if we want to select the apple in the player's inventory? Oh, it is not hard to guess at all. Since the inventory is the last 3 items of the list and the apple is the last of them, we can expect to obtain the apple when we select the last item of the whole list.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b032.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 6)">
+<p>But of course, what we really need here is interaction. We are not playing a game if we are not interacting. And just like I have mentioned before, the way we achieve it is by being able to transfer things between the world and the inventory.</p>
+<p>First, though, let us begin with the most basic choice that the player should be able to make during the game. It is when the player decides to stay idle, leading to absolutely no change in the game's environment during the current time step. Whenever this happens, everything must stay the same. And the way we do this is by selecting everything in the list, including both the world and the inventory.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b033.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 7)">
+<p>Again, what we are seeing here is an identity matrix; it lets us create an identical copy of the original list, by selecting everything in it in the same order as before (i.e. by selecting the 1st item, then the 2nd item, then the 3rd item, and so on).</p>
+<p>Imagine, now, that the player wants to eat an apple in the inventory, which is located at the 6th entry of the list. The player's current position is the 2nd entry, so let us move the apple right in front of him (which corresponds to the 3rd entry of the list), so as to let him have direct access to it. We can carry out this action by selecting everything in the list, but with the 3rd and 6th entries swapped.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b034.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 8)">
+<p>Once he grabs the apple in front of him and eats it, it must disappear. This can be carried out by simply NOT selecting the apple's location (i.e. 3rd entry) while selecting everything else.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b035.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 9)">
+<p>All right. What we just saw is a series of steps which allowed us to pull the apple out of the inventory, put it right in front of the player, and then delete it once it is eaten.</p>
+<hr>
+<h3><b>Exchange</b></h3>
+<p>This, however, does not explain what happens to the player himself when he eats the apple. An apple should not simply disappear when it is eaten without affecting anything else in the world.</p>
+<p>What we need is an exchange. When the player eats an apple, he expects to gain energy from it in exchange for the act of sacrificing one of his items. Otherwise, it would mean that he just dumped an item for nothing.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b036.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 10)">
+<p>Such a degree of nuance, though, requires us to represent the game in terms of not just items, but also numerical properties. And such properties should exist as part of things (i.e. objects) which are populating the game world.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b037.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 11)">
+<p>The player, for instance, may have one or more numbers associated with him such as his energy (which he consumes whenever he makes a move - aka "action points"), his health (which must be kept above 0 to prevent him from dying), and so forth.</p>
+<p>It will be nice if we can treat such details in a highly scalable manner, so as to be able to handle them without complicating things too much. And in order to achieve this kind of goal, we must strive to model everything in terms of the constructs of linear algebra (e.g. vectors and matrices).</p>
+<p>Here is a recap of how I have been representing the gameplay universe. From a computational point of view, our game comprises a list of entries, each of which is capable of being occupied by a single object. Each entry indicates either a position in the world, or a "slot" in the player's inventory.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b038.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 12)">
+<p>As you may have already realized, this system is quite limited in the sense that it only allows each entry to have a single object in it, with no room for additional details. When an inventory slot is occupied by an apple, for instance, all we can ever know is that there is an apple. Nothing tells us how ripe it is, whether it has been washed, or whether it has been partially eaten. All we've got is just an atomic entity called "apple".</p>
+<p>For more nuanced description of what is going on inside the game, we need to extend our column vector into some kind of "data table" - that is, a spreadsheet-like table which consists of both rows and columns.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b039.jpg" alt="Linear Algebra for Game Development - Part 3 (Figure 13)">
+<p>Each row corresponds to a location, and each column corresponds to a property (such as "energy", "health", etc) that a location can have.</p>
+<div class="l_row"></div>
+<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</div>
+</body>
+</html>
