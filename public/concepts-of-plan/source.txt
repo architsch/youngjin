@@ -645,6 +645,7 @@ This kind of reasoning also applies to the problem of making simple movements. I
 
 <b013>
 
+(Continues to {%a href="https://thingspool.net/concepts-of-plan/page-8.html"%}Part 2{%/a%})
 
 
 
@@ -767,7 +768,7 @@ Our inventory is just a list, which is one of the most pivotal data structures w
 
 <b026>
 
-
+(Continues to {%a href="https://thingspool.net/concepts-of-plan/page-9.html"%}Part 3{%/a%})
 
 
 
@@ -875,3 +876,127 @@ For more nuanced description of what is going on inside the game, we need to ext
 <b039>
 
 Each row corresponds to a location, and each column corresponds to a property (such as "energy", "health", etc) that a location can have.
+
+(Continues to {%a href="https://thingspool.net/concepts-of-plan/page-10.html"%}Part 4{%/a%})
+
+
+
+
+
+
+
+
+:d:This article explains how to use linear algebra in the design and implementation of video games.
+:k:Linear Algebra, Matrix Algebra, Game Development, Game Design, Gameplay Systems, Game Engine, Technical Design, Numerical Methods, Scientific Computing, Gameplay Engineering
+:l:2025-08-17
+
+[Linear Algebra for Game Development - Part 4] August 17, 2025
+
+@@<hr>
+@@<h3><b>Before You Read</b></h3>
+
+This article is Part 4 of the series, "Linear Algebra for Game Development". If you haven't, please read {%a href="https://thingspool.net/concepts-of-plan/page-7.html"%}Part 1{%/a%} first.
+
+@@<hr>
+@@<h3><b>Compound Data</b></h3>
+
+In the previous section, I introduced the idea of modeling our gameplay universe not as a single list (i.e. column vector) of items, but as a data table which consists of rows and columns. Each row refers to a location, and each column refers to a property.
+
+<b039>
+
+To clarify the meaning of what I just said, I will come up with a couple of examples. First of all, if we select the second row and first column of the table shown above and take a look at their intersection, what do we see?
+
+<b040>
+
+What we are seeing here is the player. The content of this specific data cell (i.e. human figure) tells us that the identity (ID) of the player is associated with position 2 (i.e. that the player's current location is position 2).
+
+Here is another example. If we again select the table's second row, but this time choose to select the second column instead of the first column, what do we see in their intersection?
+
+<b041>
+
+Here, we are seeing a number instead of the player himself. The column's label suggests that it is the energy associated with position 2. Whose energy? The player's energy! It is because this number shares the same location with the player.
+
+The so-called "player", in the context of this data table, can be considered as an object with its own internal properties. In our example, the player is an object with its own ID (which is a human figure) and the amount of energy he has (which is 3). And since both of these properties belong to the same row which corresponds to position 2, we can say that the player is located at position 2.
+
+<b042>
+
+@@<hr>
+@@<h3><b>The World as a Table</b></h3>
+
+In general, it is convenient to imagine each row of the data table as a distinct "thing" which exists within the game world, and its list of column values as the properties describing what it is.
+
+<b043>
+
+This implies that each intsection (cross) between a row and a column describes an association between a thing and its related property.
+
+<b044>
+
+The size of the data table tells us a lot about the scale and complexity of the world. The number of rows, for example, is the maximum number of things which can populate the game world (It is the world's "volume"). The number of columns, on the other hand, indicates the maximum number of properties that each thing is able to possess.
+
+<b045>
+
+We can select each "thing" by selecting each row of the table. The image below, for instance, shows how to select the player as a whole, including all of his associated properties.
+
+<b046>
+
+And of course, simultaneously selecting all the rows lets us obtain an identical copy of the entire game world.
+
+<b047>
+
+@@<hr>
+@@<h3><b>Transaction</b></h3>
+
+This is all good so far, but what we really need is gameplay. Previously, I had mentioned the difficulty of carrying out an exchange between the act of consuming one of the items in the inventory (e.g. apple) and the advantage of doing so.
+
+When we eat something, we expect to acquire energy (calories) from it. Likewise, the player should expect to gain energy from the apple when he eats it.
+
+How to model this piece of logic as a gameplay mechanic? First, let us suppose that the amount of energy stored within the player is 3 and that the amount of energy stored within the apple is 1 (just as illustrated in the data tables above). When the player eats the apple, we can obviously expect the apple to disappear. At the same time, though, we should also expect the player to "absorb" the apple's energy by adding it to his own energy storage (That is, add 1 to 3, which results in the total energy of 4).
+
+<b048>
+
+In the context of rows and columns, this kind of exchange can be modeled as a set of changes in the data cells. The disappearance of the apple is equivalent to the deletion of the data in its row, and the process of transferring the apple's energy to the player is equivalent to the addition of the apple's energy to the player's energy.
+
+<b049>
+
+How to achieve these goals using the mathematical operations we've been looking at so far (e.g. matrix multiplications, etc)? A rather straightforward attempt would be to directly translate the aforementioned goals into their corresponding row operations.
+
+First, let us add the 6th row to the 2nd row because the 6th row is where the apple's energy is located and the 2nd row is where the player's energy is located.
+
+Meanwhile, let us also erase the 6th row because that's where the apple and all of its properties are located. We ought to wipe the apple out of its existence when the player eats it.
+
+<b050>
+
+Both of these actions can be executed simultaneously, by means of a single matrix multiplication. And for the most part, it seems to be yielding a pretty sound result. The apple got erased, and the player absorbed the apple's energy.
+
+Unfortunately, there is one fishy thing going on here. Do you see what just happened to the player himself (i.e. the human figure), in the 2nd row and 1st column?
+
+<b051>
+
+Adding the 6th row to the 2nd row added up not just the energy levels, but also the identities (IDs) of the two objects - the player and the apple. As a result, what we are now seeing in the 2nd row is no longer the original player, but a strange hybrid between a human and an apple.
+
+@@<hr>
+@@<h3><b>Separating out the Columns</b></h3>
+
+Here is what we need to do instead. Rather than adding the entire row (which resulted in adding not just the energy numbers but also the IDs), we want only a particular data cell within the row to be added (i.e. the energy). And in order to do this, we must split the table by columns.
+
+<b052>
+
+This will produce two subtables - one which only contains the IDs, and the other one which only contains the energy numbers.
+
+In our subtable of IDs, there is only one thing which needs to happen. We want the apple to disappear, and that's all.
+
+<b053>
+
+In our subtable of energy numbers, on the other hand, there are two things which need to happen. First, the number in the 6th row must be added to the number in the 2nd row. Furthermore, the number in the 6th row must be erased because the owner of the energy (i.e. the apple) is now gone.
+
+<b054>
+
+Once all these changes have taken place, we can then recombine these two subtables to yield the final result, in which the player has eaten the apple and digested it successfully without accidentally transforming himself into an apple-flavored mutant.
+
+<b055>
+
+Okay, this makes sense. But we still have to know how to split the two columns (i.e. IDs and energy numbers) from each other and then merge them afterwards. We haven't seen these kinds of operations before, so I will try to explain how they can be implemented.
+
+So far, we have been playing with individual rows, but not with individual columns. We have only been able to treat each row as an atomic (indivisible) entity, rather than something which could be broken down to smaller pieces.
+
+This limitation, however, is due to the fact that we have only been placing our table on the right hand side of the matrix multiplication. With this insight in mind, I will come up with a solution to the aforementioned problem in the next article.

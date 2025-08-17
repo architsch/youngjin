@@ -8,12 +8,12 @@
 <p><a target="_blank" href="https://www.linkedin.com/company/thingspool">LinkedIn</a>&nbsp;&nbsp;<a target="_blank" href="https://www.youtube.com/channel/UCkAh1dXv7WSssuldF5InKQg">YouTube</a></p>
 <div class="s_row"></div>
 <hr>
-<h2>Games</h2>
-<%- include(`${ejsChunkRootPath}/info/gameLinks.ejs`) %>
-<div class="s_row"></div>
-<hr>
 <h2>Featured Articles</h2>
 <%- include(`${ejsChunkRootPath}/info/featureLinks.ejs`) %>
+<div class="s_row"></div>
+<hr>
+<h2>Games</h2>
+<%- include(`${ejsChunkRootPath}/info/gameLinks.ejs`) %>
 <% } else if (user) { %>
 <%- include(`${ejsChunkRootPath}/social/dashboard.ejs`) %>
 <% } else { %>
