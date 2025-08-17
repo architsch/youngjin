@@ -54,9 +54,13 @@
         </table>
 
         <script src="https://code.jquery.com/jquery.min.js"></script>
-        <script src="/socket.io/socket.io.js"></script>
+        <script src="<%= EnvUtil.getRootURL() %>/socket.io/socket.io.min.js"></script>
         <script>
-            const socket = io("/console");
+            const socket = io("<%= EnvUtil.getRootURL() %>/sockets_console");
+
+            socket.on("connect_error", (err) => {
+                $("#logList").append($("<tr>").html(err.message));
+            });
 
             socket.on("log", (message) => {
                 $("#logList").append($("<tr>").html(message));
@@ -81,9 +85,6 @@
                 {
                     case "clear":
                         $("#logList").empty();
-                        break;
-                    case "socket-chat":
-                        io("/console");
                         break;
                     default:
                         socket.emit("command", command);
