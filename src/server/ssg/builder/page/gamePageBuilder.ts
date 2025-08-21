@@ -1,11 +1,11 @@
-import FileUtil from "../../../Util/FileUtil";
-import EnvUtil from "../../../Util/EnvUtil";
-import EJSUtil from "../../../Util/EJSUtil";
-import TextFileBuilder from "../TextFileBuilder";
-import UIConfig from "../../../../Shared/Config/UIConfig";
+import FileUtil from "../../../util/fileUtil";
+import EnvUtil from "../../../util/envUtil";
+import EJSUtil from "../../../util/ejsUtil";
+import TextFileBuilder from "../textFileBuilder";
+import UIConfig from "../../../../shared/config/uiConfig";
 import dotenv from "dotenv";
-import SitemapBuilder from "../SitemapBuilder";
-import AtomFeedBuilder from "../AtomFeedBuilder";
+import SitemapBuilder from "../sitemapBuilder";
+import AtomFeedBuilder from "../atomFeedBuilder";
 dotenv.config();
 
 export default class GamePageBuilder
@@ -43,7 +43,7 @@ export default class GamePageBuilder
             console.error(":k: is missing in -> " + entry.title);
 
         builder = new TextFileBuilder();
-        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/header.ejs", {
             menuName: "arcade",
             title: "ThingsPool - " + entry.title,
             desc: description,
@@ -115,7 +115,7 @@ export default class GamePageBuilder
             builder.addLine(entry.videoTag);
         }
 
-        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
+        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));
 
         this.sitemapBuilder.addEntry(relativeURL, entry.lastmod);
         this.atomFeedBuilder.addEntry(`${EnvUtil.getRootURL()}/${relativeURL}`, entry.title, entry.lastmod, entry.title);

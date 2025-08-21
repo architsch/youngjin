@@ -1,11 +1,11 @@
 import mysql from "mysql2/promise";
-import EnvUtil from "../Util/EnvUtil";
-import FileUtil from "../Util/FileUtil";
-import DebugUtil from "../Util/DebugUtil";
-import TextUtil from "../../Shared/Util/TextUtil";
+import EnvUtil from "../util/envUtil";
+import FileUtil from "../util/fileUtil";
+import DebugUtil from "../util/debugUtil";
+import TextUtil from "../../shared/util/textUtil";
 import dotenv from "dotenv";
-import Query from "./Types/Query";
-import Transaction from "./Types/Transaction";
+import Query from "./types/query";
+import Transaction from "./types/transaction";
 dotenv.config();
 
 const dev = EnvUtil.isDevMode();
@@ -78,7 +78,7 @@ const DB =
         const content =
             section("users") + toSafeStr(await (DB.makeQuery("SELECT * FROM users;").run())) +
             section("rooms") + toSafeStr(await (DB.makeQuery("SELECT * FROM rooms;").run())) +
-            section("user_rooms") + toSafeStr(await (DB.makeQuery("SELECT * FROM user_rooms;").run())) +
+            section("roomMemberships") + toSafeStr(await (DB.makeQuery("SELECT * FROM roomMemberships;").run())) +
             section("emailVerifications") + toSafeStr(await (DB.makeQuery("SELECT * FROM emailVerifications;").run()));
         return content;
     },

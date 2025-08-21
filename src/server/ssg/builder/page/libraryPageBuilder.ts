@@ -1,11 +1,11 @@
-import EnvUtil from "../../../Util/EnvUtil";
-import EJSUtil from "../../../Util/EJSUtil";
-import TextFileBuilder from "../TextFileBuilder";
-import PostListPageBuilder from "./PostListPageBuilder";
-import UIConfig from "../../../../Shared/Config/UIConfig";
+import EnvUtil from "../../../util/envUtil";
+import EJSUtil from "../../../util/ejsUtil";
+import TextFileBuilder from "../textFileBuilder";
+import PostListPageBuilder from "./postListPageBuilder";
+import UIConfig from "../../../../shared/config/uiConfig";
 import dotenv from "dotenv";
-import SitemapBuilder from "../SitemapBuilder";
-import AtomFeedBuilder from "../AtomFeedBuilder";
+import SitemapBuilder from "../sitemapBuilder";
+import AtomFeedBuilder from "../atomFeedBuilder";
 dotenv.config();
 
 export default class LibraryPageBuilder
@@ -61,7 +61,7 @@ export default class LibraryPageBuilder
     {
         const builder = new TextFileBuilder();
 
-        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/header.ejs", {
             menuName: "library",
             pagePathList: [
                 {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
@@ -74,7 +74,7 @@ export default class LibraryPageBuilder
         this.addPostLinks(builder, "Fiction", this.fictionEntries);
         this.addPostLinks(builder, "Arts", this.artEntries);
 
-        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
+        builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));
 
         this.sitemapBuilder.addEntry("library.html", "2025-02-28");
 

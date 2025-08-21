@@ -5,7 +5,7 @@ const webpack = require("webpack");
 if (process.env.MODE == "dev")
 {
     const webpackConfig = {
-        entry: `./src/Server/Server.ts`,
+        entry: `./src/server/server.ts`,
         target: 'node',
         mode: 'development',
         devtool: 'inline-source-map',

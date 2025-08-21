@@ -1,7 +1,7 @@
-import SearchDB from "../../DB/SearchDB";
-import DebugUtil from "../../Util/DebugUtil";
-import TestDB from "../TestDB";
-import TestHTTP from "../TestHTTP";
+import SearchDB from "../../db/searchDB";
+import DebugUtil from "../../util/debugUtil";
+import TestDB from "../testDB";
+import TestHTTP from "../testHTTP";
 
 const routePath = "/api/room/";
 
@@ -63,7 +63,7 @@ const TestActions_Room =
         await actionOnExistingRoom("DELETE", "ignore-invitation", room, user);
     },
     requestToJoin: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
-        if (!TestDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
+        if (!TestDB.insertRoomMembership({roomName: room.roomName, userName: user.userName, userStatus: "requested"}, roomOwner))
             return;
         DebugUtil.log("testActions_room.requestToJoin", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("POST", "request-to-join", room, user);
@@ -80,7 +80,7 @@ const TestActions_Room =
     //------------------------------------------------------------------------------------
 
     invite: async (room: TestRoom, roomOwner: TestUser, user: TestUser): Promise<void> => {
-        if (!TestDB.insertUserRoom({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
+        if (!TestDB.insertRoomMembership({roomName: room.roomName, userName: user.userName, userStatus: "invited"}, roomOwner))
             return;
         DebugUtil.log("testActions_room.invite", {roomName: room.roomName, ownerUserName: roomOwner.userName, userName: user.userName}, "high", "cyan");
         await actionOnExistingRoom("POST", "invite", room, roomOwner, user);

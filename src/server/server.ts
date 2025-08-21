@@ -2,11 +2,11 @@ import express from "express";
 import http from "http";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
-import SSG from "./SSG/SSG";
-import DB from "./DB/DB";
-import Router from "./Router/Router";
-import Sockets from "./Sockets/Sockets";
-import EnvUtil from "./Util/EnvUtil";
+import SSG from "./ssg/ssg";
+import DB from "./db/db";
+import Router from "./router/router";
+import Sockets from "./sockets/sockets";
+import EnvUtil from "./util/envUtil";
 import dotenv from "dotenv";
 dotenv.config();
 

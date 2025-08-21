@@ -1,11 +1,11 @@
-import EnvUtil from "../Util/EnvUtil";
-import DB from "../DB/DB";
-import GlobalConfig from "../../Shared/Config/GlobalConfig";
-import TestHTTP from "./TestHTTP";
-import TestRoutine from "./TestRoutine/TestRoutine";
-import TestDB from "./TestDB";
-import DebugUtil from "../Util/DebugUtil";
-import ServiceLocatorUtil from "../Util/ServiceLocatorUtil";
+import EnvUtil from "../util/envUtil";
+import DB from "../db/db";
+import GlobalConfig from "../../shared/config/globalConfig";
+import TestHTTP from "./testHTTP";
+import TestRoutine from "./testRoutine/testRoutine";
+import TestDB from "./testDB";
+import DebugUtil from "../util/debugUtil";
+import ServiceLocatorUtil from "../util/serviceLocatorUtil";
 import dotenv from "dotenv";
 dotenv.config();
 

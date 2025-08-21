@@ -1,4 +1,4 @@
-<%- include(`${ejsChunkRootPath}/common/header.ejs`, {
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
     menuName: "index",
     pagePathList: [
         {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
@@ -7,6 +7,6 @@
     backDestination_href: EnvUtil.getRootURL(),
 }) %>
 
-<%- include(`${ejsChunkRootPath}/auth/register.ejs`) %>
+<%- include(`${ejsPartialRootPath}/auth/register.ejs`) %>
 
-<%- include(`${ejsChunkRootPath}/common/footer.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

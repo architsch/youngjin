@@ -1,5 +1,5 @@
-import FileUtil from "../../Util/FileUtil";
-import EnvUtil from "../../Util/EnvUtil";
+import FileUtil from "../../util/fileUtil";
+import EnvUtil from "../../util/envUtil";
 import dotenv from "dotenv";
 dotenv.config();
 

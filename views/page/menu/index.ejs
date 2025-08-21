@@ -1,4 +1,4 @@
-<%- include(`${ejsChunkRootPath}/common/header.ejs`, {
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
     menuName: "index",
 }) %>
 
@@ -9,15 +9,15 @@
 <div class="s_row"></div>
 <hr>
 <h2>Featured Articles</h2>
-<%- include(`${ejsChunkRootPath}/info/featureLinks.ejs`) %>
+<%- include(`${ejsPartialRootPath}/info/featureLinks.ejs`) %>
 <div class="s_row"></div>
 <hr>
 <h2>Games</h2>
-<%- include(`${ejsChunkRootPath}/info/gameLinks.ejs`) %>
+<%- include(`${ejsPartialRootPath}/info/gameLinks.ejs`) %>
 <% } else if (user) { %>
-<%- include(`${ejsChunkRootPath}/social/dashboard.ejs`) %>
+<%- include(`${ejsPartialRootPath}/social/dashboard.ejs`) %>
 <% } else { %>
-<%- include(`${ejsChunkRootPath}/auth/login.ejs`) %>
+<%- include(`${ejsPartialRootPath}/auth/login.ejs`) %>
 <% } %>
 
-<%- include(`${ejsChunkRootPath}/common/footer.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

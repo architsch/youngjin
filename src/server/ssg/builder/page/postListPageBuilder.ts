@@ -1,11 +1,11 @@
-import EnvUtil from "../../../Util/EnvUtil";
-import EJSUtil from "../../../Util/EJSUtil";
-import TextFileBuilder from "../TextFileBuilder";
-import PostPageBuilder from "./PostPageBuilder";
-import UIConfig from "../../../../Shared/Config/UIConfig";
+import EnvUtil from "../../../util/envUtil";
+import EJSUtil from "../../../util/ejsUtil";
+import TextFileBuilder from "../textFileBuilder";
+import PostPageBuilder from "./postPageBuilder";
+import UIConfig from "../../../../shared/config/uiConfig";
 import dotenv from "dotenv";
-import SitemapBuilder from "../SitemapBuilder";
-import AtomFeedBuilder from "../AtomFeedBuilder";
+import SitemapBuilder from "../sitemapBuilder";
+import AtomFeedBuilder from "../atomFeedBuilder";
 dotenv.config();
 
 export default class PostListPageBuilder
@@ -28,7 +28,7 @@ export default class PostListPageBuilder
 
             const builder = new TextFileBuilder();
 
-            builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+            builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/header.ejs", {
                 menuName: "library",
                 title: "ThingsPool - " + entry.title,
                 desc: entry.title,
@@ -50,7 +50,7 @@ export default class PostListPageBuilder
                 builder.addLine(`<a class="postEntryButton" href="${EnvUtil.getRootURL()}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
             }
             
-            builder.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
+            builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));
             
             await builder.build(listRelativeURL);
             

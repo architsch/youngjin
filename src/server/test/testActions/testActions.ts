@@ -1,5 +1,5 @@
-import auth from "./TestActions_Auth";
-import room from "./TestActions_Room";
+import auth from "./testActions_auth";
+import room from "./testActions_room";
 
 const TestActions:
     {[categoryName: string]: {[actionName: string]: (...args: any[]) => Promise<void>}} =

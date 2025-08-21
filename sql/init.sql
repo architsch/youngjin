@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS rooms(
     UNIQUE KEY (roomName)
 );
 
-CREATE TABLE IF NOT EXISTS user_rooms(
+CREATE TABLE IF NOT EXISTS roomMemberships(
     roomID INT NOT NULL,
     userID INT NOT NULL,
     userStatus VARCHAR(16) NOT NULL,

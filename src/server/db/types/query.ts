@@ -1,6 +1,6 @@
 import mysql from "mysql2/promise";
 import { Response } from "express";
-import DebugUtil from "../../Util/DebugUtil";
+import DebugUtil from "../../util/debugUtil";
 
 export default class Query<ReturnType>
 {

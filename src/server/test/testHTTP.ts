@@ -1,7 +1,7 @@
 import http from "http";
-import DebugUtil from "../Util/DebugUtil";
-import AuthUtil from "../Util/AuthUtil";
-import ObjUtil from "../../Shared/Util/ObjUtil";
+import DebugUtil from "../util/debugUtil";
+import AuthUtil from "../util/authUtil";
+import ObjUtil from "../../shared/util/objUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -82,14 +82,14 @@ const TestHTTP =
             let data = "";
             res.setEncoding("utf8");
 
-            res.on("data", (chunk) => {
+            res.on("data", (partial) => {
                 if (!TestHTTP.resOk(res))
                 {
-                    printErrorAndReject(reject, `Res Data ERROR (${path})`, {statusCode: res.statusCode, chunk});
+                    printErrorAndReject(reject, `Res Data ERROR (${path})`, {statusCode: res.statusCode, partial});
                     return;
                 }
-                DebugUtil.log(`Res Data (${path})`, {statusCode: res.statusCode, chunk}, "low");
-                data += chunk;
+                DebugUtil.log(`Res Data (${path})`, {statusCode: res.statusCode, partial}, "low");
+                data += partial;
             });
             res.on("end", () => {
                 if (!TestHTTP.resOk(res))

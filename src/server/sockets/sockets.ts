@@ -1,7 +1,7 @@
 import http from "http";
 import socketIO from "socket.io";
-import ConsoleSockets from "./ConsoleSockets";
-import ChatSockets from "./ChatSockets";
+import ConsoleSockets from "./consoleSockets";
+import ChatSockets from "./chatSockets";
 import dotenv from "dotenv";
 dotenv.config();
 

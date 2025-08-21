@@ -1,4 +1,4 @@
-import room from "./TestRoutine_Room";
+import room from "./testRoutine_room";
 
 const TestRoutine: {[testname: string]: () => Promise<void>} =
 {

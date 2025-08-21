@@ -1,11 +1,11 @@
-import FileUtil from "../../../Util/FileUtil";
-import EnvUtil from "../../../Util/EnvUtil";
-import EJSUtil from "../../../Util/EJSUtil";
-import TextFileBuilder from "../TextFileBuilder";
-import UIConfig from "../../../../Shared/Config/UIConfig";
+import FileUtil from "../../../util/fileUtil";
+import EnvUtil from "../../../util/envUtil";
+import EJSUtil from "../../../util/ejsUtil";
+import TextFileBuilder from "../textFileBuilder";
+import UIConfig from "../../../../shared/config/uiConfig";
 import dotenv from "dotenv";
-import SitemapBuilder from "../SitemapBuilder";
-import AtomFeedBuilder from "../AtomFeedBuilder";
+import SitemapBuilder from "../sitemapBuilder";
+import AtomFeedBuilder from "../atomFeedBuilder";
 dotenv.config();
 
 export default class PostPageBuilder
@@ -61,7 +61,7 @@ export default class PostPageBuilder
             const postRelativeURL = `${entry.dirName}/page-${pageNumber}.html`;
 
             const builder_wrapper = new TextFileBuilder();
-            builder_wrapper.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/header.ejs", {
+            builder_wrapper.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/header.ejs", {
                 menuName: "library",
                 title: title,
                 desc: desc,
@@ -78,7 +78,7 @@ export default class PostPageBuilder
             }));
 
             builder_wrapper.addLine(builder.getText());
-            builder_wrapper.addLine(await EJSUtil.createStaticHTMLFromEJS("chunk/common/footer.ejs"));
+            builder_wrapper.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));
             await builder_wrapper.build(postRelativeURL);
             builder = new TextFileBuilder();
 

@@ -1,4 +1,4 @@
-import ConsoleSockets from "../Sockets/ConsoleSockets";
+import ConsoleSockets from "../sockets/consoleSockets";
 
 const stackTrace: string[] = [];
 

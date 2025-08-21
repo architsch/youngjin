@@ -1,7 +1,7 @@
 import mysql from "mysql2/promise";
 import { Response } from "express";
-import Query from "./Query";
-import DebugUtil from "../../Util/DebugUtil";
+import Query from "./query";
+import DebugUtil from "../../util/debugUtil";
 
 export default class Transaction
 {

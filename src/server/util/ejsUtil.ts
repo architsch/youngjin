@@ -1,29 +1,25 @@
-import AuthUtil from "./AuthUtil";
-import DebugUtil from "./DebugUtil";
-import EnvUtil from "./EnvUtil";
-import FileUtil from "./FileUtil";
-import UIConfig from "../../Shared/Config/UIConfig";
-import TextUtil from "../../Shared/Util/TextUtil";
+import AuthUtil from "./authUtil";
+import DebugUtil from "./debugUtil";
+import EnvUtil from "./envUtil";
+import FileUtil from "./fileUtil";
+import UIConfig from "../../shared/config/uiConfig";
+import TextUtil from "../../shared/util/textUtil";
 import ejs from "ejs";
 import dotenv from "dotenv";
 import { Request } from "express";
 dotenv.config();
 
-const ejsChunkRootPath = `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/chunk`;
-const ejsEmbeddedScriptRootPath = `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/embeddedScript`;
+const ejsPartialRootPath = `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/partial`;
 
 const baseStaticPageEJSParams = {
     EnvUtil, TextUtil, UIConfig,
-    ejsChunkRootPath,
-    ejsEmbeddedScriptRootPath,
+    ejsPartialRootPath,
     isStaticPage: true,
 };
 const baseDynamicPageEJSParams = {
     EnvUtil, TextUtil, UIConfig,
-    ejsChunkRootPath,
-    ejsEmbeddedScriptRootPath,
+    ejsPartialRootPath,
     isStaticPage: false,
-    embeddedScripts: ["Util/TextUtil.ejs", "Config/UIConfig.ejs"],
 };
 
 const cachedEJSStrings: {[relativeEJSFilePath: string]: string} = {};

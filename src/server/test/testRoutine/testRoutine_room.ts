@@ -1,6 +1,6 @@
-import DebugUtil from "../../Util/DebugUtil";
-import TestActions from "../TestActions/TestActions";
-import TestActions_Room from "../TestActions/TestActions_Room";
+import DebugUtil from "../../util/debugUtil";
+import TestActions from "../testActions/testActions";
+import TestActions_Room from "../testActions/testActions_room";
 
 const TestRoutine_Room = async (): Promise<void> => {
     const numUsers = 4;

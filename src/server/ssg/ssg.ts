@@ -1,12 +1,12 @@
-import FileUtil from "../Util/FileUtil";
-import EJSUtil from "../Util/EJSUtil";
-import SitemapBuilder from "./Builder/SitemapBuilder";
-import AtomFeedBuilder from "./Builder/AtomFeedBuilder";
-import ArcadePageBuilder from "./Builder/Page/ArcadePageBuilder";
-import LibraryPageBuilder from "./Builder/Page/LibraryPageBuilder";
-import TextFileBuilder from "./Builder/TextFileBuilder";
-import EmbeddedScriptBuilder from "./Builder/EmbeddedScriptBuilder";
-import styleDictionary from "./Style/StyleDictionary";
+import FileUtil from "../util/fileUtil";
+import EJSUtil from "../util/ejsUtil";
+import SitemapBuilder from "./builder/sitemapBuilder";
+import AtomFeedBuilder from "./builder/atomFeedBuilder";
+import ArcadePageBuilder from "./builder/page/arcadePageBuilder";
+import LibraryPageBuilder from "./builder/page/libraryPageBuilder";
+import TextFileBuilder from "./builder/textFileBuilder";
+import EmbeddedScriptBuilder from "./builder/embeddedScriptBuilder";
+import styleDictionary from "./style/styleDictionary";
 import dotenv from "dotenv";
 dotenv.config();
 

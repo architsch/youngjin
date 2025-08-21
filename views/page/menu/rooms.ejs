@@ -1,4 +1,4 @@
-<%- include(`${ejsChunkRootPath}/common/header.ejs`, {
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
     menuName: "rooms",
     pagePathList: [
         {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
@@ -10,9 +10,9 @@
 <% if (isStaticPage) { %>
 <h1>Coming Soon</h1>
 <% } else if (user) { %>
-<%- include(`${ejsChunkRootPath}/social/rooms.ejs`) %>
+<%- include(`${ejsPartialRootPath}/social/rooms.ejs`) %>
 <% } else { %>
-<%- include(`${ejsChunkRootPath}/auth/login.ejs`) %>
+<%- include(`${ejsPartialRootPath}/auth/login.ejs`) %>
 <% } %>
 
-<%- include(`${ejsChunkRootPath}/common/footer.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

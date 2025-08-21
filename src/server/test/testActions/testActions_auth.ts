@@ -1,7 +1,7 @@
-import GlobalConfig from "../../../Shared/Config/GlobalConfig";
-import DebugUtil from "../../Util/DebugUtil";
-import TestDB from "../TestDB";
-import TestHTTP from "../TestHTTP";
+import GlobalConfig from "../../../shared/config/globalConfig";
+import DebugUtil from "../../util/debugUtil";
+import TestDB from "../testDB";
+import TestHTTP from "../testHTTP";
 
 const routePath = "/api/auth/";
 

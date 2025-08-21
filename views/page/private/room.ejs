@@ -1,4 +1,4 @@
-<%- include(`${ejsChunkRootPath}/common/header_min.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/header_min.ejs`) %>
 
 <h1>Room Page</h1>
 <p>Content: <%= TextUtil.escapeHTMLChars(JSON.stringify(roomContent)) %></p>
@@ -64,4 +64,4 @@ pageModule.room = new function()
 }
 </script>
 
-<%- include(`${ejsChunkRootPath}/common/footer_min.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer_min.ejs`) %>

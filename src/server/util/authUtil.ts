@@ -1,14 +1,14 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import EnvUtil from "./EnvUtil";
-import EmailUtil from "./EmailUtil";
-import SearchDB from "../DB/SearchDB";
-import AuthDB from "../DB/AuthDB";
-import TextUtil from "../../Shared/Util/TextUtil";
-import DebugUtil from "./DebugUtil";
+import EnvUtil from "./envUtil";
+import EmailUtil from "./emailUtil";
+import SearchDB from "../db/searchDB";
+import AuthDB from "../db/authDB";
+import TextUtil from "../../shared/util/textUtil";
+import DebugUtil from "./debugUtil";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
-import UIConfig from "../../Shared/Config/UIConfig";
+import UIConfig from "../../shared/config/uiConfig";
 dotenv.config();
 
 const dev = EnvUtil.isDevMode();

@@ -1,4 +1,4 @@
-import FileUtil from "../../Util/FileUtil";
+import FileUtil from "../../util/fileUtil";
 import dotenv from "dotenv";
 dotenv.config();
 

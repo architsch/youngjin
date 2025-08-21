@@ -12,6 +12,9 @@
 <p>- <%= UIConfig.displayText.message["rule/roomName/length"] %></p>
 <p>- <%= UIConfig.displayText.message["rule/roomName/chars"] %></p>
 
+<%- include(`${ejsPartialRootPath}/embeddedScript/config/uiConfig.ejs`) %>
+<%- include(`${ejsPartialRootPath}/embeddedScript/util/textUtil.ejs`) %>
+
 <script>
     $("#roomName_input").on("input", function() {
         this.value = TextUtil.sanitizeRoomNameWithoutTrimming(this.value);

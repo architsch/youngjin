@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
-import DebugUtil from "./DebugUtil";
+import DebugUtil from "./debugUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
