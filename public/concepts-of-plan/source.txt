@@ -1001,6 +1001,7 @@ So far, we have been playing with individual rows, but not with individual colum
 
 This limitation, however, is due to the fact that we have only been placing our table on the right hand side of the matrix multiplication. With this insight in mind, I will come up with a solution to the aforementioned problem in the next article.
 
+(Continues to {%a href="https://thingspool.net/concepts-of-plan/page-11.html"%}Part 5{%/a%})
 
 
 
