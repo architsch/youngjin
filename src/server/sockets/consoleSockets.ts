@@ -1,8 +1,9 @@
-import ServiceLocatorUtil from "../util/serviceLocatorUtil";
 import socketIO from "socket.io";
+import { SocketMiddleware } from "./types/socketMiddleware";
 import DebugUtil from "../util/debugUtil";
 import EnvUtil from "../util/envUtil"
 import DB from "../db/db";
+import ServiceLocatorUtil from "../util/serviceLocatorUtil";
 
 let nsp: socketIO.Namespace;
 
@@ -15,13 +16,16 @@ const row = (txt1: string, txt2: string, txt3: string) =>
 
 const ConsoleSockets =
 {
-    init: (io: socketIO.Server): void =>
+    init: (io: socketIO.Server, authMiddleware: SocketMiddleware): void =>
     {
-        nsp = io.of("/console").on("connection", (socket: socketIO.Socket) => {
-            console.log("(consoleIO) Client connected");
+        nsp = io.of("/sockets_console");
+        nsp.use(authMiddleware);
+    
+        nsp.on("connection", (socket: socketIO.Socket) => {
+            console.log(`(ConsoleSockets) Client connected :: ${JSON.stringify(socket.handshake.auth.user)}`);
 
             socket.on("command", (command) => {
-                console.log(`(consoleIO) Command received: [${command}]`);
+                console.log(`(ConsoleSockets) Command received :: [${command}] - sent by :: ${JSON.stringify(socket.handshake.auth.user)}`);
                 const words = command.split(" ");
                 switch (words[0])
                 {
@@ -56,7 +60,7 @@ const ConsoleSockets =
             });
 
             socket.on("disconnect", () => {
-                console.log("(consoleIO) Client disconnected");
+                console.log(`(ConsoleSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth.user)}`);
             });
         });
     },

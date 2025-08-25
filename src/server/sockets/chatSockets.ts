@@ -1,34 +1,26 @@
-import AuthUtil from "../util/authUtil";
-import DebugUtil from "../util/debugUtil";
 import socketIO from "socket.io";
-import { Request } from "express";
+import { SocketMiddleware } from "./types/socketMiddleware";
+import DebugUtil from "../util/debugUtil";
 
-//let nsp: socketIO.Namespace;
+let nsp: socketIO.Namespace;
 
 const ChatSockets =
 {
-    init: (io: socketIO.Server) =>
+    init: (io: socketIO.Server, authMiddleware: SocketMiddleware): void =>
     {
-        const nsp = io.of("/chat");
-
-        nsp.use(async (socket: socketIO.Socket,
-            next: (err?: socketIO.ExtendedError) => void): Promise<void> =>
-        {
-            const req = socket.request as Request;
-            const res = req.res;
-            const success = await AuthUtil.authenticateToken_internal(next, false, req, res);
-            if (!success)
-                DebugUtil.logRaw("Socket Auth Failure", "high", "pink");
-        });
+        nsp = io.of("/sockets_chat");
+        nsp.use(authMiddleware);
 
         nsp.on("connection", socket => {
-            socket.on("join chat", async (roomID) => {
+            console.log(`(ChatSockets) Client connected :: ${JSON.stringify(socket.handshake.auth.user)}`);
+
+            /*socket.on("join", async (roomID) => {
                 await socket.join(roomID);
             });
-            socket.on("leave chat", async (roomID) => {
+            socket.on("leave", async (roomID) => {
                 await socket.leave(roomID);
             });
-            socket.on("chat message", (data) => { // data = {name, room, message}
+            socket.on("message", (data) => { // data = {name, room, message}
                 DebugUtil.log("Chat Message Received", {data}, "low");
     
                 const name = socket.data.name = data.name;
@@ -37,28 +29,12 @@ const ChatSockets =
     
                 socket.join(room);
                 nsp.to(room).emit("chat message", `<b>${name}:</b> ${message}`);
+            });*/
+
+            socket.on("disconnect", () => {
+                console.log(`(ChatSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth.user)}`);
             });
         });
-
-
-        /*nsp = io.of("/chat").on("connection", (socket: socketIO.Socket) => {
-            debugUtil.log("Chat Client Connected", {socket}, "medium");
-    
-            socket.on("chat message", (data) => { // data = {name, room, message}
-                debugUtil.log("Chat Message Received", {data}, "low");
-    
-                const name = socket.name = data.name;
-                const room = socket.room = data.room;
-                const message = data.message;
-    
-                socket.join(room);
-                chatIO.to(room).emit("chat message", `<b>${name}:</b> ${message}`);
-            });
-    
-            socket.on("disconnect", () => {
-                debugUtil.log("Chat Client Disconnected", {socket}, "medium");
-            });
-        });*/
     },
 };
 

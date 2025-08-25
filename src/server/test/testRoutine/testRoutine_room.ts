@@ -9,7 +9,7 @@ const TestRoutine_Room = async (): Promise<void> => {
     // users
     const users: TestUser[] = [];
     for (let i = 0; i < numUsers; ++i)
-        users.push({userName: `testUser_${i}`, password: `testPass_${i}`, email: `test_email_${i}@test.com`});
+        users.push({userName: `testUser_${i}`, userType: "member", password: `testPass_${i}`, email: `test_email_${i}@test.com`});
 
     // rooms
     const rooms: TestRoom[] = [];

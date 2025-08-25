@@ -9,8 +9,8 @@ const AuthDB =
         passwordHash: string, email: string, res?: Response): Promise<User[]> =>
     {
         return await DB.makeQuery<User>(
-            "INSERT INTO users (userName, passwordHash, email) VALUES (?, ?, ?);",
-            [userName, passwordHash, email]
+            "INSERT INTO users (userName, userType, passwordHash, email) VALUES (?, ?, ?, ?);",
+            [userName, "member", passwordHash, email]
         ).run(res, "AuthDB.registerNewUser");
     },
 }

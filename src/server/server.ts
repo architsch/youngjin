@@ -10,8 +10,8 @@ import EnvUtil from "./util/envUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
-require("./Util/ServiceLocatorUtil");
-require("./Test/Test");
+require("./util/serviceLocatorUtil");
+require("./test/test");
 
 async function Server(): Promise<void>
 {
@@ -27,7 +27,8 @@ async function Server(): Promise<void>
     }
 
     // database initialization
-    DB.runSQLFile("init.sql");
+    await DB.runSQLFile("clear.sql"); // <--- TODO: Remove this once the data migration system gets implemented.
+    await DB.runSQLFile("init.sql");
 
     // express app
     const app = express();

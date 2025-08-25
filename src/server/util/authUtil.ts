@@ -120,7 +120,9 @@ const AuthUtil =
         if (!existingUsers || existingUsers.length == 0)
         {
             DebugUtil.log("User Not Found", {userName}, "high", "pink");
-            res?.status(404).send(`There is no account with userName "${userName}".`);
+            res?.clearCookie("thingspool_token")
+                .status(404)
+                .send(`There is no account with userName "${userName}".`);
             return null;
         }
         return existingUsers[0];

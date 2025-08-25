@@ -36,6 +36,11 @@ const EJSUtil =
         if (mergedEJSParams.user)
             DebugUtil.log("'user' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
         mergedEJSParams.user = AuthUtil.getUserFromReqToken(req, userIsOptional);
+
+        if (mergedEJSParams.globalDictionary)
+            DebugUtil.log("'globalDictionary' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
+        mergedEJSParams.globalDictionary = {};
+        
         return mergedEJSParams;
     },
     makeEJSParamsStatic: (customEJSParams: {[key: string]: any}): {[key: string]: any} =>
