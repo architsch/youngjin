@@ -1267,6 +1267,7 @@ Then, we can simply add up the results of such augmentations to acquire the fina
 
 <b086>
 
+(Continues to {%a href="https://thingspool.net/concepts-of-plan/page-13.html"%}Part 7{%/a%})
 
 
 
