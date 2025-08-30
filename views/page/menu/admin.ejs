@@ -1,0 +1,20 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    menuName: "admin",
+    pagePathList: [
+        {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
+        {title: UIConfig.displayText.menuName["admin"], relativeURL: undefined},
+    ],
+    backDestination_href: process.env.ROOT_URL,
+}) %>
+
+<% if (isStaticPage) { %>
+<h3>Unavailable in static page mode.</h3>
+<% } else if (user && user.userType == "admin") { %>
+<%- include(`${ejsPartialRootPath}/admin/overview.ejs`) %>
+<%- include(`${ejsPartialRootPath}/admin/routes.ejs`) %>
+<%- include(`${ejsPartialRootPath}/admin/db.ejs`) %>
+<% } else { %>
+<h3>Only the admin can access this page.</h3>
+<% } %>
+
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

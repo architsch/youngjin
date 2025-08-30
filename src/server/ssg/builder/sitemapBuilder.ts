@@ -1,5 +1,4 @@
 import FileUtil from "../../util/fileUtil";
-import EnvUtil from "../../util/envUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -11,7 +10,7 @@ export default class SitemapBuilder
     {
         this.lines.push(`</url>`);
         this.lines.push(`  <lastmod>${lastmod}</lastmod>`);
-        this.lines.push(`  <loc>${EnvUtil.getRootURL()}/${relativeURL}</loc>`);
+        this.lines.push(`  <loc>${process.env.ROOT_URL}/${relativeURL}</loc>`);
         this.lines.push(`<url>`);
     }
 

@@ -10,7 +10,7 @@ import UIConfig from "../../../shared/config/uiConfig";
 const RoomRouter = express.Router();
 
 const validateUser = (req: Request, res: Response): User | null => {
-    const user = AuthUtil.getUserFromReqToken(req);
+    const user = (req as any).user;
     if (!user)
     {
         res.status(404).send("User not found.");

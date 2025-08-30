@@ -1,5 +1,4 @@
 import mysql from "mysql2/promise";
-import EnvUtil from "../util/envUtil";
 import FileUtil from "../util/fileUtil";
 import DebugUtil from "../util/debugUtil";
 import TextUtil from "../../shared/util/textUtil";
@@ -8,7 +7,7 @@ import Query from "./types/query";
 import Transaction from "./types/transaction";
 dotenv.config();
 
-const dev = EnvUtil.isDevMode();
+const dev = process.env.MODE == "dev";
 let pool: mysql.Pool | undefined = undefined;
 
 const DB =

@@ -6,6 +6,7 @@ const UIConfig =
             "rooms": "Rooms",
             "arcade": "Games",
             "library": "Blog",
+            "admin": "Admin",
         },
         tabName: {
             "rooms/owned": "My",

@@ -9,10 +9,10 @@
         process_pending_on();
 
         $.ajax({
-            url: "<%= EnvUtil.getRootURL() %>/api/auth/logout",
+            url: "<%= process.env.ROOT_URL %>/api/auth/logout",
             method: "DELETE",
             success: function(result) {
-                window.location.href = "<%= EnvUtil.getRootURL() %>";
+                window.location.href = "<%= process.env.ROOT_URL %>";
             },
             error: function(xhr) {
                 alert(xhr.responseText);

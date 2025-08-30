@@ -6,16 +6,18 @@
 <meta name="keywords" content="Youngjin, Portfolio, ThingsPool, Game Development, Web Development, Software Engineering">
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
 <meta property="og:title" content="Youngjin's Portfolio"/>
 <meta property="og:url" content="https://architsch.github.io/portfolio"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Youngjin's Portfolio"/>
 <meta property="og:description" content="This is Youngjin'a Portfolio."/>
-<meta property="og:image" content="<%= EnvUtil.getRootURL() %>/share.jpg"/>
+<meta property="og:image" content="<%= process.env.ROOT_URL %>/share.jpg"/>
 <meta property="og:image:alt" content="ThingsPool Logo">
+<!-- PROD_CODE_END -->
 <title>Portfolio</title>
-<link rel="shortcut icon" href="<%= EnvUtil.getRootURL() %>/favicon.ico">
-<link rel="stylesheet" href="<%= EnvUtil.getRootURL() %>/style.css">
+<link rel="shortcut icon" href="<%= process.env.ROOT_URL %>/favicon.ico">
+<link rel="stylesheet" href="<%= process.env.ROOT_URL %>/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
 </head>
 <body>

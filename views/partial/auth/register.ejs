@@ -78,7 +78,7 @@
         verification_mode_on(email);
 
         $.ajax({
-            url: "<%= EnvUtil.getRootURL() %>/api/auth/vemail",
+            url: "<%= process.env.ROOT_URL %>/api/auth/vemail",
             method: "POST",
             data: { email: cached_email },
             success: function(result) {
@@ -132,11 +132,11 @@
         }
 
         $.ajax({
-            url: "<%= EnvUtil.getRootURL() %>/api/auth/register",
+            url: "<%= process.env.ROOT_URL %>/api/auth/register",
             method: "POST",
             data: { userName, password, email: cached_email, verificationCode },
             success: function(result) {
-                window.location.href = "<%= EnvUtil.getRootURL() %>/<%= registerDestination %>";
+                window.location.href = "<%= process.env.ROOT_URL %>/<%= registerDestination %>";
             },
             error: function(xhr) {
                 verification_mode_off();

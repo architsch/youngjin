@@ -9,8 +9,8 @@
 <meta name="keywords" content="<%= v_keywords %>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= v_title %></title>
-<link rel="shortcut icon" href="<%= EnvUtil.getRootURL() %>/favicon.ico">
-<link rel="stylesheet" href="<%= EnvUtil.getRootURL() %>/style.css">
+<link rel="shortcut icon" href="<%= process.env.ROOT_URL %>/favicon.ico">
+<link rel="stylesheet" href="<%= process.env.ROOT_URL %>/style.css">
 </head>
 <body>
 <%_ if (!isStaticPage) { _%>

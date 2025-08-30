@@ -4,7 +4,7 @@
         {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
         {title: UIConfig.displayText.menuName["rooms"], relativeURL: undefined},
     ],
-    backDestination_href: EnvUtil.getRootURL(),
+    backDestination_href: process.env.ROOT_URL,
 }) %>
 
 <% if (isStaticPage) { %>

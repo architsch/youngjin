@@ -1,23 +1,21 @@
-import AuthUtil from "./authUtil";
 import DebugUtil from "./debugUtil";
-import EnvUtil from "./envUtil";
 import FileUtil from "./fileUtil";
 import UIConfig from "../../shared/config/uiConfig";
 import TextUtil from "../../shared/util/textUtil";
 import ejs from "ejs";
 import dotenv from "dotenv";
-import { Request } from "express";
+import { Request, Response } from "express";
 dotenv.config();
 
 const ejsPartialRootPath = `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/partial`;
 
 const baseStaticPageEJSParams = {
-    EnvUtil, TextUtil, UIConfig,
+    TextUtil, UIConfig,
     ejsPartialRootPath,
     isStaticPage: true,
 };
 const baseDynamicPageEJSParams = {
-    EnvUtil, TextUtil, UIConfig,
+    TextUtil, UIConfig,
     ejsPartialRootPath,
     isStaticPage: false,
 };
@@ -26,8 +24,37 @@ const cachedEJSStrings: {[relativeEJSFilePath: string]: string} = {};
 
 const EJSUtil =
 {
-    makeEJSParams: (req: Request, userIsOptional: boolean,
-        customEJSParams: {[key: string]: any}): {[key: string]: any} =>
+    render: (req: Request, res: Response, ejsViewPath: string,
+        customEJSParams: {[key: string]: any}): void =>
+    {
+        res.render(ejsViewPath, EJSUtil.makeEJSParams(req, customEJSParams), (err: Error, html: string) => {
+            if (err)
+            {
+                res.status(500).send(err.message);
+            }
+            else
+            {
+                html = EJSUtil.postProcessHTML(html);
+                res.status(200).setHeader("content-type", "text/html").send(html);
+            }
+        });
+    },
+    postProcessHTML: (html: string): string => {
+        if (process.env.MODE == "dev")
+        {
+            html = html
+                .replaceAll("\n", "!*NEW_LINE*!")
+                .replace(/(PROD_CODE_BEGIN).*?(PROD_CODE_END)/g, "REMOVED_PROD_CODE")
+                .replaceAll("!*NEW_LINE*!", "\n")
+                .replaceAll(process.env.ROOT_URL as string, `http://localhost:${process.env.PORT}`);
+            return html;
+        }
+        else
+        {
+            return html;
+        }
+    },
+    makeEJSParams: (req: Request, customEJSParams: {[key: string]: any}): {[key: string]: any} =>
     {
         const mergedEJSParams: {[key: string]: any} = {};
         Object.assign(mergedEJSParams, baseDynamicPageEJSParams);
@@ -35,7 +62,7 @@ const EJSUtil =
 
         if (mergedEJSParams.user)
             DebugUtil.log("'user' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
-        mergedEJSParams.user = AuthUtil.getUserFromReqToken(req, userIsOptional);
+        mergedEJSParams.user = (req as any).user;
 
         if (mergedEJSParams.globalDictionary)
             DebugUtil.log("'globalDictionary' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");

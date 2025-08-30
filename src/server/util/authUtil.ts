@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import EnvUtil from "./envUtil";
 import EmailUtil from "./emailUtil";
 import SearchDB from "../db/searchDB";
 import AuthDB from "../db/authDB";
@@ -11,7 +10,7 @@ import { Request, Response } from "express";
 import UIConfig from "../../shared/config/uiConfig";
 dotenv.config();
 
-const dev = EnvUtil.isDevMode();
+const dev = process.env.MODE == "dev";
 
 const AuthUtil =
 {
@@ -168,7 +167,7 @@ const AuthUtil =
         );
 
         res?.cookie("thingspool_token", token, {
-            secure: EnvUtil.isDevMode() ? false : true,
+            secure: dev ? false : true,
             httpOnly: true,
             sameSite: "strict",
         }).status(201);
@@ -208,6 +207,7 @@ const AuthUtil =
         {
             try {
                 await AuthUtil.addToken(user.userName, res); // refresh the token
+                (req as any).user = user;
                 next();
                 return true;
             }

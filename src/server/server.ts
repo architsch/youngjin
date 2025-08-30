@@ -2,11 +2,11 @@ import express from "express";
 import http from "http";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
+import hpp from "hpp";
 import SSG from "./ssg/ssg";
 import DB from "./db/db";
 import Router from "./router/router";
 import Sockets from "./sockets/sockets";
-import EnvUtil from "./util/envUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -16,11 +16,11 @@ require("./test/test");
 async function Server(): Promise<void>
 {
     // SSG = "Static Site Generator"
-    if (EnvUtil.isDevMode()) // If you are in dev mode, rebuild the static pages on restart.
+    if (process.env.MODE == "dev") // If you are in dev mode, rebuild the static pages on restart.
     {
         await SSG();
     }
-    else if (EnvUtil.isSSGMode()) // If you are in ssg mode, just rebuild the static pages and quit immediately.
+    else if (process.env.MODE == "ssg") // If you are in ssg mode, just rebuild the static pages and quit immediately.
     {
         await SSG();
         return;
@@ -41,6 +41,7 @@ async function Server(): Promise<void>
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser());
+    app.use(hpp()); // for HTTP parameter pollution prevention
 
     // router
     Router(app);

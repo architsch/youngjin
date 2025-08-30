@@ -1,5 +1,4 @@
 import FileUtil from "../../../util/fileUtil";
-import EnvUtil from "../../../util/envUtil";
 import EJSUtil from "../../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import UIConfig from "../../../../shared/config/uiConfig";
@@ -54,13 +53,13 @@ export default class GamePageBuilder
                 {title: UIConfig.displayText.menuName["arcade"], relativeURL: "arcade.html"},
                 {title: entry.title, relativeURL: undefined},
             ],
-            backDestination_href: `${EnvUtil.getRootURL()}/arcade.html`,
+            backDestination_href: `${process.env.ROOT_URL}/arcade.html`,
         }));
 
         builder.addLine(`<h1>${entry.title}</h1>`);
 
         builder.addLine(`<a class="noTextDeco" target="_blank" href="${entry.playLinkURL}">`);
-        builder.addLine(`<img class="xs_image" src="${EnvUtil.getRootURL()}/${playLinkImagePath}" alt="Play">`);
+        builder.addLine(`<img class="xs_image" src="${process.env.ROOT_URL}/${playLinkImagePath}" alt="Play">`);
         builder.addLine(`</a>`);
         builder.addLine(`<div class="zero_row"></div>`);
 
@@ -99,7 +98,7 @@ export default class GamePageBuilder
                 const imgName = (line.match(/<(.*?)>/) as string[])[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${EnvUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${process.env.ROOT_URL}/${entry.dirName}/${imgName}.jpg`;
                     builder.addLine(`<img class="m_image" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
                 }
             }
@@ -118,7 +117,7 @@ export default class GamePageBuilder
         builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));
 
         this.sitemapBuilder.addEntry(relativeURL, entry.lastmod);
-        this.atomFeedBuilder.addEntry(`${EnvUtil.getRootURL()}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
+        this.atomFeedBuilder.addEntry(`${process.env.ROOT_URL}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
 
         await builder.build(relativeURL);
     };

@@ -1,8 +1,5 @@
 const GlobalConfig =
 {
-    page: {
-        bypassDynamicPages: false,
-    },
     auth: {
         bypassEmailVerification: false,
         emailVerificationTimeoutInSeconds: 600,

@@ -44,11 +44,11 @@
         }
 
         $.ajax({
-            url: "<%= EnvUtil.getRootURL() %>/api/auth/login",
+            url: "<%= process.env.ROOT_URL %>/api/auth/login",
             method: "POST",
             data: { userName, password },
             success: function(result) {
-                window.location.href = "<%= EnvUtil.getRootURL() %>/<%= loginDestination %>";
+                window.location.href = "<%= process.env.ROOT_URL %>/<%= loginDestination %>";
             },
             error: function(xhr) {
                 alert(xhr.responseText);
@@ -60,6 +60,6 @@
     $("#register_button").click(function() {
         if (process_pending)
             return;
-        window.location.href = "<%= EnvUtil.getRootURL() %>/register";
+        window.location.href = "<%= process.env.ROOT_URL %>/register";
     });
 </script>

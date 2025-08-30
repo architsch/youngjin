@@ -1,4 +1,3 @@
-import EnvUtil from "../util/envUtil";
 import DB from "../db/db";
 import GlobalConfig from "../../shared/config/globalConfig";
 import TestHTTP from "./testHTTP";
@@ -13,11 +12,6 @@ let testRunning = false;
 
 async function Test(testname: string, thresholdLogLevelName: string): Promise<void>
 {
-    if (!EnvUtil.isDevMode())
-    {
-        DebugUtil.logRaw(`TEST REJECTED (${testname}) - You are not allowed to run tests on a non-dev mode.`, "high", "pink");
-        return;
-    }
     if (testRunning)
     {
         DebugUtil.logRaw(`TEST REJECTED (${testname}) - There is another test running.`, "high", "pink");

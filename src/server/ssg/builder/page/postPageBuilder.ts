@@ -1,5 +1,4 @@
 import FileUtil from "../../../util/fileUtil";
-import EnvUtil from "../../../util/envUtil";
 import EJSUtil from "../../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import UIConfig from "../../../../shared/config/uiConfig";
@@ -74,7 +73,7 @@ export default class PostPageBuilder
                     {title: entry.title, relativeURL: listRelativeURL},
                     {title: title, relativeURL: undefined},
                 ],
-                backDestination_href: `${EnvUtil.getRootURL()}/${listRelativeURL}`,
+                backDestination_href: `${process.env.ROOT_URL}/${listRelativeURL}`,
             }));
 
             builder_wrapper.addLine(builder.getText());
@@ -83,7 +82,7 @@ export default class PostPageBuilder
             builder = new TextFileBuilder();
 
             this.sitemapBuilder.addEntry(postRelativeURL, lastmod);
-            this.atomFeedBuilder.addEntry(`${EnvUtil.getRootURL()}/${postRelativeURL}`, title, lastmod, desc);
+            this.atomFeedBuilder.addEntry(`${process.env.ROOT_URL}/${postRelativeURL}`, title, lastmod, desc);
 
             postInfoList.push({ pageNumber, title, lastmod, desc, keywords, customOGImagePath });
             pageNumber++;
@@ -134,7 +133,7 @@ export default class PostPageBuilder
                 const imgName = (line.match(/<(.*?)>/) as string[])[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${EnvUtil.getRootURL()}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${process.env.ROOT_URL}/${entry.dirName}/${imgName}.jpg`;
                     if (customOGImagePath == undefined || line.endsWith("*"))
                         customOGImagePath = imgPath;
                     builder.addLine(`<img class="m_image" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);

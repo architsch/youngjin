@@ -13,7 +13,7 @@ export default function Sockets(server: http.Server)
     const io = new socketIO.Server(server);
 
     ConsoleSockets.init(io,
-        makeAuthMiddleware((user: User) => user.userType === "admin")
+        makeAuthMiddleware((user: User) => user.userType == "admin")
     );
     
     ChatSockets.init(io,

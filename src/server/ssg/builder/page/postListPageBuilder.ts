@@ -1,4 +1,3 @@
-import EnvUtil from "../../../util/envUtil";
 import EJSUtil from "../../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import PostPageBuilder from "./postPageBuilder";
@@ -39,7 +38,7 @@ export default class PostListPageBuilder
                     {title: UIConfig.displayText.menuName["library"], relativeURL: "library.html"},
                     {title: entry.title, relativeURL: undefined},
                 ],
-                backDestination_href: `${EnvUtil.getRootURL()}/library.html`,
+                backDestination_href: `${process.env.ROOT_URL}/library.html`,
             }));
 
             builder.addLine(`<h1>${entry.title}</h1>`);
@@ -47,7 +46,7 @@ export default class PostListPageBuilder
             for (let i = postInfoList.length-1; i >= 0; --i)
             {
                 const postInfo = postInfoList[i];
-                builder.addLine(`<a class="postEntryButton" href="${EnvUtil.getRootURL()}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
+                builder.addLine(`<a class="postEntryButton" href="${process.env.ROOT_URL}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
             }
             
             builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));

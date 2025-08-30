@@ -1,7 +1,6 @@
 import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
 import DebugUtil from "../util/debugUtil";
-import EnvUtil from "../util/envUtil"
 import DB from "../db/db";
 import ServiceLocatorUtil from "../util/serviceLocatorUtil";
 
@@ -41,7 +40,7 @@ const ConsoleSockets =
                         DebugUtil.logRaw((words.length == 0) ? "-" : words.join(" "), "high");
                         break;
                     case "db":
-                        if (EnvUtil.isDevMode())
+                        if (process.env.MODE == "dev")
                         {
                             words.shift();
                             DB.runSQLFile(`${words[0]}.sql`);

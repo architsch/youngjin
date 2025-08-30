@@ -7,7 +7,7 @@ import { Request, Response } from "express";
 const SearchRouter = express.Router();
 
 const validateSearchParams = (req: Request, res: Response): {user: User, page: number} | null => {
-    const user = AuthUtil.getUserFromReqToken(req);
+    const user = (req as any).user;
     if (!user)
     {
         res.status(404).send("User not found.");

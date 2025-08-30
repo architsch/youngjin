@@ -1,7 +1,7 @@
-<a class="inlineTabButton <%= (tabName == "owned") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/rooms.html?tabname=owned"><%= UIConfig.displayText.tabName["rooms/owned"] %></a>
-<a class="inlineTabButton <%= (tabName == "joined") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/rooms.html?tabname=joined"><%= UIConfig.displayText.tabName["rooms/joined"] %></a>
-<a class="inlineTabButton <%= (tabName == "pending") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/rooms.html?tabname=pending"><%= UIConfig.displayText.tabName["rooms/pending"] %></a>
-<a class="inlineTabButton <%= (tabName == "others") ? "selected" : "idle" %>" href="<%= EnvUtil.getRootURL() %>/rooms.html?tabname=others"><%= UIConfig.displayText.tabName["rooms/others"] %></a>
+<a class="inlineTabButton <%= (tabName == "owned") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/rooms?tabname=owned"><%= UIConfig.displayText.tabName["rooms/owned"] %></a>
+<a class="inlineTabButton <%= (tabName == "joined") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/rooms?tabname=joined"><%= UIConfig.displayText.tabName["rooms/joined"] %></a>
+<a class="inlineTabButton <%= (tabName == "pending") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/rooms?tabname=pending"><%= UIConfig.displayText.tabName["rooms/pending"] %></a>
+<a class="inlineTabButton <%= (tabName == "others") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/rooms?tabname=others"><%= UIConfig.displayText.tabName["rooms/others"] %></a>
 
 <%_ if (tabName == "owned") { _%>
     <div class="inlineButton" id="create_room_button" <%= (user.ownedRoomCount >= user.ownedRoomCountMax) ? "disabled" : "" %>>Create Room</div>
@@ -33,7 +33,7 @@ pageModule.rooms = new function()
             process_pending_on();
             
             $.ajax({
-                url: `<%= EnvUtil.getRootURL() %>/popup/create-room`,
+                url: `<%= process.env.ROOT_URL %>/popup/create-room`,
                 method: "GET",
                 success: function(data) {
                     popup_on(data);
@@ -78,7 +78,7 @@ pageModule.rooms = new function()
         const newPage = Math.max(0, currPage + pageChange);
 
         $.ajax({
-            url: `<%= EnvUtil.getRootURL() %>/api/search/rooms/<%= tabName %>?page=${newPage}`,
+            url: `<%= process.env.ROOT_URL %>/api/search/rooms/<%= tabName %>?page=${newPage}`,
             method: "GET",
             success: function(data) {
                 $list.empty();
@@ -97,7 +97,7 @@ pageModule.rooms = new function()
                     const requested = (userStatus == "requested");
 
                     const btn_enter = ownedOrJoined ?
-                        `<a class="inlineButton" href="<%= EnvUtil.getRootURL() %>/room?roomid=${roomID}">Enter</a>` : "";
+                        `<a class="inlineButton" href="<%= process.env.ROOT_URL %>/room?roomid=${roomID}">Enter</a>` : "";
                     const btn_accept_invitation = (!ownedOrJoined && invited) ?
                         `<div class="inlineButton" onclick="makeRoomsAPICall(${roomID}, 'accept_invitation', 'PUT')">Accept</div>` : "";
                     const btn_ignore_invitation = (!ownedOrJoined && invited) ?
@@ -137,7 +137,7 @@ pageModule.rooms = new function()
         process_pending_on();
 
         $.ajax({
-            url: `<%= EnvUtil.getRootURL() %>/api/room/${requestType}`,
+            url: `<%= process.env.ROOT_URL %>/api/room/${requestType}`,
             method: method,
             data: { roomID },
             success: function(result) {

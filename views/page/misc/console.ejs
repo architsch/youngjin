@@ -54,9 +54,9 @@
         </table>
 
         <script src="https://code.jquery.com/jquery.min.js"></script>
-        <script src="<%= EnvUtil.getRootURL() %>/socket.io/socket.io.min.js"></script>
+        <script src="<%= process.env.ROOT_URL %>/socket.io/socket.io.min.js"></script>
         <script>
-            const socket = io("<%= EnvUtil.getRootURL() %>/sockets_console");
+            const socket = io("<%= process.env.ROOT_URL %>/sockets_console");
 
             socket.on("connect_error", (err) => {
                 $("#logList").append($("<tr>").html(err.message));

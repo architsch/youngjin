@@ -24,7 +24,7 @@ pageModule.room = new function()
         process_pending_on();
         
         $.ajax({
-            url: `<%= EnvUtil.getRootURL() %>/popup/room-members?roomid=<%= roomID %>`,
+            url: `<%= process.env.ROOT_URL %>/popup/room-members?roomid=<%= roomID %>`,
             method: "GET",
             success: function(data) {
                 popup_on(data);
@@ -49,11 +49,11 @@ pageModule.room = new function()
         process_pending_on();
         
         $.ajax({
-            url: `<%= EnvUtil.getRootURL() %>/api/room/${youAreOwner ? "delete" : "leave"}`,
+            url: `<%= process.env.ROOT_URL %>/api/room/${youAreOwner ? "delete" : "leave"}`,
             method: "DELETE",
             data: { roomID },
             success: function(data) {
-                window.location.href = "<%= EnvUtil.getRootURL() %>/rooms.html";
+                window.location.href = "<%= process.env.ROOT_URL %>/rooms.html";
             },
             error: function(xhr) {
                 alert(xhr.responseText);

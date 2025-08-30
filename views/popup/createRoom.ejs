@@ -35,7 +35,7 @@
         }
         
         $.ajax({
-            url: `<%= EnvUtil.getRootURL() %>/api/room/create`,
+            url: `<%= process.env.ROOT_URL %>/api/room/create`,
             method: "POST",
             data: { roomName },
             success: function(result) {
