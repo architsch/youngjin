@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 9"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-15.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b113.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 9">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 9</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-15.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/rooms">Rooms</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Games</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net/">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 9</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 9</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: September 6, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 9 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Building Blocks</b></h3>
+<p>Let us recall the data table we have been examining so far. It is reproduced below.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b113.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 1)">
+<p>At this point, you may have realized that the content of our data table can be divided into 3 major groups - (1) rows which belong to the world, (2) rows which belong to the inventory, and (3) rows which do not belong to anywhere.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b117.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 2)">
+<p>As long as a row has an ID associated with it, we can imagine it as a uniquely identifiable object in our game - whether it be the player, an item, an enemy character, a sprite, a particle effect, or whatever. It is something which possesses its own identity, which makes it distinguishable from every other row in our data table.</p>
+<p>Rows whose ID values are empty (zero), on the other hand, are quite special in the sense that they cannot be distinguished from one another based upon their IDs. Instead, they must be distinguished based upon the roles they play in the context of creation, destruction, and transformation.</p>
+<p>Previously, I had mentioned that these special rows are "building blocks of transformation" when it comes to shifting the numerical properies of each object by some predetermined amounts (i.e. constants).</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b118.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 3)">
+<p>However, it is equally true that the objects themselves are made of such building blocks in the first place, just like physical entities (i.e. materials) are made of atoms. By composing these fundamental units of existence, we can give birth to any type of object.</p>
+<p>A list of building blocks is basically a toolset which the gameplay system can leverage to create anything which is able to be generated out of their combination. Here, let me demonstrate what I mean by this. First of all, let us create a data table which is only made up of building blocks and nothing else.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b119.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 4)">
+<p>This table represents an "empty universe". It is empty because there is no object in it - no player, no item, nothing whatsoever. However, it still has the potential to bring a plethora of things into existence because it is equipped with a set of construction materials which, when combined, can manifest themselves into tangible bodies.</p>
+<hr>
+<h3><b>How to Spawn</b></h3>
+<p>As we all know, an empty universe is boring. Since there is no object occupying it, its infinite horizon of vacuum is ruled by complete lethargy, never venturing to utter a spark of curiosity. In order for something interesting to happen in this universe, therefore, we must fill it with new objects.</p>
+<p>To kickstart such a process, let me first spawn a frog in this ocean of emptiness.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b120.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 5)">
+<p>How to spawn a frog? To achieve this goal, we need to take two major steps. First, we will need to create a brand new frog. Second, we will need to put that frog into the universe.</p>
+<p>Let me begin with the first step - creating a frog. Suppose that the new frog I am trying to make is located at the position of (1,1), belongs to the inventory, and has the energy level of 5.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b121.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 6)">
+<p>Conjuring this particular frog out of nowhere might feel like a daunting task, but it will turn out to be pretty easy if we imagine the frog as a combination of building blocks.</p>
+<p>For instance, think of it as the result of combining 1 copy of the X-position building block, 1 copy of the Y-position building block, 5 copies of the energy building block, 2 copies of the domain building block, and 2 copies of the ID building block.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b122.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 7)">
+<p>This process, in fact, can be expressed as a matrix multiplication like the one shown below. Here, we are multiplying our empty universe (i.e. list of building blocks) by a row vector whose numbers tell us how many copies of each of the building blocks we need to collect in order to assemble the aforementioned frog.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b123.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 8)">
+<p>Okay, this completes our first step. We now know how to create a frog.</p>
+<p>Let us move on to the next step. Here is the question which needs to be answered: How shall we put this frog into the universe?</p>
+<p>Remember that our universe is currently empty; it consists only of building blocks (Nothing tangible yet whatsoever).</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b119.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 9)">
+<p>In order to place our new frog in it, therefore, we must add a new row to the table and fill it up with the frog's content. We can accomplish this by generating a copy of our original data table, and then making sure to attach an extra row to it which represents the frog.</p>
+<p>The former can be achieved by selecting all of the original rows in the same order as before, and the latter can be achieved by also "selecting" a particular combination of the building blocks which results in the frog.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b124.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 10)">
+<p>This is how we can spawn a frog inside the game.</p>
+<hr>
+<h3><b>How to Despawn</b></h3>
+<p>Now that we know how to spawn a frog, it is time to ensure that we are also able to despawn it at some point in time. If we happen to keep adding more and more frogs to the world without any means of getting rid of them, it will eventually end up having no room for anything but frogs.</p>
+<p>How to destroy a frog? Or, more generally speaking, how to destroy something which is part of the universe? Remember that each "thing" is essentially just a row in the data table. Each row represents a thing (aka "object") which is located somewhere in the game world, and its column values represent the thing's properties (such as "ID", "Domain", "Position", etc).</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b043.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 11)">
+<p>If we want to get rid of a single "thing" from our universe, therefore, we will have to delete the data table's row which corresponds to it.</p>
+<p>First of all, we can clearly tell that when we select "nothing" at all (by selecting none of the rows in the table), we end of just getting an empty row, whose values are all zeroes.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b125.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 12)">
+<p>An empty row like this, such as the one illustrated above, corresponds to a chunk of empty space (i.e. vacuum).</p>
+<p>The act of despawning our frog, then, will be equivalent to the act of simply transforming the frog's row into an empty row, while keeping the rest of the table the same as before. And the way we do this is depicted below.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b126.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 13)">
+<p>Here, you can see that we are selecting "nothing" in place of the frog's row, thereby clearing it out entirely. Meanwhile, we are also selecting all the other rows of the table in the same exact order as before, thereby preserving them without any modification.</p>
+<hr>
+<h3><b>Pre-Allocation</b></h3>
+<p>We've seen that it is fairly easy to create and destroy things. As long as we know the right recipe for the type of object we want, we must be able to spawn it anywhere as well as despawn it at some point in time.</p>
+<p>There has been a bit of inconvenience, though, in terms of the size of the data table. As you saw in the previous example, adding a frog to the world made us attach an extra row to the table, which inevitably changed its height from 5 rows to 6 rows.</p>
+<p>And you know what? If we wish to add another frog to the world, we will then have to multiply our data table by a matrix of a different size so as to grow the table's height from 6 rows to 7 rows, like the example shown here:</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b127.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 14)">
+<p>And guess what? If we want to add yet another frog, we will have to come up with yet another matrix whose size is different from the previous ones, so as to grow the table's height from 7 rows to 8 rows, and so on.</p>
+<p>This kind of inconsistency is pretty annoying, and we would like to avoid that. Fortunately, there is a simple way to prevent this. The only thing we need is to pre-allocate a bunch of empty spaces at the very beginning, so that we won't have to increase the table's size to make room for a new object.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b128.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 15)">
+<p>The number of such empty spaces is the same as the maximum number of objects which can simultaneously occupy the world without having to expand its volume. In the picture below, for instance, we are clearly able to spawn 4 frogs without changing the table's size at all.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b129.jpg" alt="Linear Algebra for Game Development - Part 9 (Figure 16)">
+<div class="l_row"></div>
+<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</div>
+</body>
+</html>
