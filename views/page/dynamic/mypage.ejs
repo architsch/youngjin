@@ -1,0 +1,23 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    url: `${isStaticPage ? process.env.URL_STATIC : process.env.URL_DYNAMIC}/mypage`,
+    pageName: "mypage",
+    pagePathList: [
+        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: UIConfig.displayText.pageName["mypage"], url: undefined},
+    ],
+    backDestination_href: process.env.URL_STATIC,
+}) %>
+
+<%_ if (isStaticPage) { _%>
+    <h1>Coming Soon</h1>
+<%_ } else if (user) { _%>
+    <h1>Welcome, <%= user.userName %>!</h1>
+    <h3>What do you want to do?</h3>
+    <a href="<%= process.env.URL_DYNAMIC %>/chat">
+        <%= UIConfig.displayText.pageName["chat"] %>
+    </a>
+<%_ } else { _%>
+    <%- include(`${ejsPartialRootPath}/common/login.ejs`) %>
+<%_ } _%>
+
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

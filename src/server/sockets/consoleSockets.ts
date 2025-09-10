@@ -2,7 +2,6 @@ import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
 import DebugUtil from "../util/debugUtil";
 import DB from "../db/db";
-import ServiceLocatorUtil from "../util/serviceLocatorUtil";
 
 let nsp: socketIO.Namespace;
 
@@ -17,7 +16,7 @@ const ConsoleSockets =
 {
     init: (io: socketIO.Server, authMiddleware: SocketMiddleware): void =>
     {
-        nsp = io.of("/sockets_console");
+        nsp = io.of("/console_sockets");
         nsp.use(authMiddleware);
     
         nsp.on("connection", (socket: socketIO.Socket) => {
@@ -28,13 +27,6 @@ const ConsoleSockets =
                 const words = command.split(" ");
                 switch (words[0])
                 {
-                    case "test":
-                        words.shift();
-                        if (words.length == 0)
-                            DebugUtil.logRaw("Please provide the name of the test.", "high", "pink");
-                        else
-                            ServiceLocatorUtil.get("test")(words[0], (words.length == 1) ? "low" : words[1]);
-                        break;
                     case "print":
                         words.shift();
                         DebugUtil.logRaw((words.length == 0) ? "-" : words.join(" "), "high");

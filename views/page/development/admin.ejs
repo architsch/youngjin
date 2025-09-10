@@ -1,0 +1,40 @@
+<%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {}) %>
+
+<h1>Admin Portal</h1>
+
+<div class="inlineLabel">Table Name:</div>
+<input type="text" class="inlineTextInput" id="tableName_input">
+<div class="inlineButton" id="showTable_button">Load</div>
+
+<div id="db"></div>
+<div class="inlineButton" id="addRow_button" style="display: none;">Add Row</div>
+
+<iframe src="<%= process.env.URL_DYNAMIC %>/console" style="width:100%; height:80%;"></iframe>
+
+<script>
+    const $db = $("#db");
+
+    $("#showTable_button").click(function() {
+        if (process_pending)
+            return;
+        process_pending_on();
+
+        const tableName = $("#tableName_input").val();
+        $("#addRow_button").css("display", "none");
+
+        $.ajax({
+            url: `<%= process.env.URL_DYNAMIC %>/api/admin/db/${tableName}`,
+            method: "GET",
+            success: function(result) {
+                $db.html(result.responseText);
+                $("#addRow_button").css("display", "block");
+            },
+            error: function(xhr) {
+                alert(xhr.responseText);
+                process_pending_off();
+            }
+        });
+    });
+</script>
+
+<%- include(`${ejsPartialRootPath}/common/footer_min.ejs`) %>

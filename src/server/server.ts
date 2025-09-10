@@ -10,9 +10,6 @@ import Sockets from "./sockets/sockets";
 import dotenv from "dotenv";
 dotenv.config();
 
-require("./util/serviceLocatorUtil");
-require("./test/test");
-
 async function Server(): Promise<void>
 {
     // SSG = "Static Site Generator"

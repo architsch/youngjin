@@ -1,0 +1,160 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    url: `${process.env.URL_DYNAMIC}/register`,
+    pageName: "index",
+    pagePathList: [
+        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: UIConfig.displayText.pageName["register"], url: undefined},
+    ],
+    backDestination_href: process.env.URL_STATIC,
+}) %>
+
+<h1>Create Account:</h1>
+
+<div class="inlineLabel">Username:</div><input type="text" class="inlineTextInput" id="userName_input">
+<div class="zero_row"></div>
+
+<div class="inlineLabel">Password:</div><input type="password" class="inlineTextInput" id="password_input">
+<div class="zero_row"></div>
+
+<div class="inlineLabel">Confirm Password:</div><input type="password" class="inlineTextInput" id="confirm_password_input">
+<div class="zero_row"></div>
+
+<div class="inlineLabel">Email:</div><input type="email" class="inlineTextInput" id="email_input">
+<div class="inlineButton" id="verify_button" style="color: #b0b020; background-color: #105010;">Send Verification Code</div>
+<div class="zero_row"></div>
+<p id="code_sent_indicator" style="display: none; color: #60b060;">We sent a verification code to your email. Please enter it below.</p>
+
+<div class="inlineLabel">Email Verification Code:</div><input type="number" class="inlineTextInput" id="verify_input">
+<div class="xs_row"></div>
+
+<div class="inlineButton" id="register_button">Create Account</div>
+<div class="xs_row"></div>
+
+<h3>Notes</h3>
+<p>- <%= UIConfig.displayText.message["rule/userName/length"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/userName/chars"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/password/length"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/password/chars"] %></p>
+<p>- <%= UIConfig.displayText.message["rule/email/length"] %></p>
+
+<%- include(`${ejsPartialRootPath}/embeddedScript/config/uiConfig.ejs`) %>
+<%- include(`${ejsPartialRootPath}/embeddedScript/util/textUtil.ejs`) %>
+
+<script>
+    let cached_email = null;
+
+    function verification_mode_on(email)
+    {
+        cached_email = email;
+        $("#email_input").prop("disabled", true);
+        $("#verify_button").css("display", "none");
+        $("#verify_input").prop("disabled", false);
+    }
+    function verification_mode_off()
+    {
+        cached_email = null;
+        $("#email_input").prop("disabled", false);
+        $("#verify_button").css("display", "inline-block");
+        $("#code_sent_indicator").css("display", "none");
+        $("#verify_input").prop("disabled", true);
+        $("#verify_input").val("");
+    }
+    verification_mode_off();
+
+    $("#userName_input").on("input", function() {
+        this.value = TextUtil.sanitizeUserName(this.value);
+    });
+    $("#password_input").on("input", function() {
+        this.value = TextUtil.sanitizePassword(this.value);
+    });
+    $("#confirm_password_input").on("input", function() {
+        this.value = TextUtil.sanitizePassword(this.value);
+    });
+
+    $("#verify_button").click(function() {
+        if (process_pending)
+            return;
+        process_pending_on();
+
+        const email = $("#email_input").val();
+        const emailError = TextUtil.findErrorInEmailAddress(email);
+        if (emailError != null)
+        {
+            alert(UIConfig.displayText.message[emailError]);
+            process_pending_off();
+            return;
+        }
+
+        verification_mode_on(email);
+
+        $.ajax({
+            url: "<%= process.env.URL_DYNAMIC %>/api/auth/vemail",
+            method: "POST",
+            data: { email: cached_email },
+            success: function(result) {
+                $("#code_sent_indicator").css("display", "block");
+                process_pending_off();
+            },
+            error: function(xhr) {
+                verification_mode_off();
+                alert(xhr.responseText);
+                process_pending_off();
+            }
+        });
+    });
+
+    $("#register_button").click(function() {
+        if (process_pending)
+            return;
+        process_pending_on();
+
+        const userName = $("#userName_input").val();
+        const userNameError = TextUtil.findErrorInUserName(userName);
+        if (userNameError != null)
+        {
+            alert(UIConfig.displayText.message[userNameError]);
+            process_pending_off();
+            return;
+        }
+
+        const password = $("#password_input").val();
+        const passwordError = TextUtil.findErrorInPassword(password);
+        if (passwordError != null)
+        {
+            alert(UIConfig.displayText.message[passwordError]);
+            process_pending_off();
+            return;
+        }
+        const confirmPassword = $("#confirm_password_input").val();
+        if (password != confirmPassword)
+        {
+            alert("Passwords do not match. Please make sure that 'Password' and 'Confirm Password' are the same.");
+            process_pending_off();
+            return;
+        }
+
+        const verificationCode = $("#verify_input").val().trim();
+        if (verificationCode.length == 0)
+        {
+            alert("Please enter your email verification code.");
+            process_pending_off();
+            return;
+        }
+
+        $.ajax({
+            url: "<%= process.env.URL_DYNAMIC %>/api/auth/register",
+            method: "POST",
+            data: { userName, password, email: cached_email, verificationCode },
+            success: function(result) {
+                window.location.href = "<%= registerDestination %>";
+            },
+            error: function(xhr) {
+                verification_mode_off();
+                alert(xhr.responseText);
+                process_pending_off();
+            }
+        });
+    });
+</script>
+
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

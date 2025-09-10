@@ -28,17 +28,17 @@ export default class PostListPageBuilder
             const builder = new TextFileBuilder();
 
             builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/header.ejs", {
-                menuName: "library",
                 title: "ThingsPool - " + entry.title,
                 desc: entry.title,
                 keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
-                relativePageURL: listRelativeURL,
+                url: `${process.env.URL_STATIC}/${listRelativeURL}`,
+                pageName: "library",
                 pagePathList: [
-                    {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
-                    {title: UIConfig.displayText.menuName["library"], relativeURL: "library.html"},
-                    {title: entry.title, relativeURL: undefined},
+                    {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+                    {title: UIConfig.displayText.pageName["library"], url: `${process.env.URL_STATIC}/library.html`},
+                    {title: entry.title, url: undefined},
                 ],
-                backDestination_href: `${process.env.ROOT_URL}/library.html`,
+                backDestination_href: `${process.env.URL_STATIC}/library.html`,
             }));
 
             builder.addLine(`<h1>${entry.title}</h1>`);
@@ -46,7 +46,7 @@ export default class PostListPageBuilder
             for (let i = postInfoList.length-1; i >= 0; --i)
             {
                 const postInfo = postInfoList[i];
-                builder.addLine(`<a class="postEntryButton" href="${process.env.ROOT_URL}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
+                builder.addLine(`<a class="postEntryButton" href="${process.env.URL_STATIC}/${entry.dirName}/page-${postInfo.pageNumber}.html">${postInfo.title}</a>`);
             }
             
             builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));

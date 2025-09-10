@@ -8,7 +8,7 @@ const ChatSockets =
 {
     init: (io: socketIO.Server, authMiddleware: SocketMiddleware): void =>
     {
-        nsp = io.of("/sockets_chat");
+        nsp = io.of("/chat_sockets");
         nsp.use(authMiddleware);
 
         nsp.on("connection", socket => {
@@ -19,17 +19,13 @@ const ChatSockets =
             });
             socket.on("leave", async (roomID) => {
                 await socket.leave(roomID);
-            });
-            socket.on("message", (data) => { // data = {name, room, message}
-                DebugUtil.log("Chat Message Received", {data}, "low");
-    
-                const name = socket.data.name = data.name;
-                const room = socket.data.room = data.room;
-                const message = data.message;
-    
-                socket.join(room);
-                nsp.to(room).emit("chat message", `<b>${name}:</b> ${message}`);
             });*/
+            socket.on("message", (message) => {
+                DebugUtil.log("Chat Message Received", {message}, "low");
+    
+                //socket.join(room);
+                nsp/*.to(room)*/.emit("message", message);
+            });
 
             socket.on("disconnect", () => {
                 console.log(`(ChatSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth.user)}`);

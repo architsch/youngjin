@@ -1,7 +1,6 @@
 import mysql from "mysql2/promise";
 import FileUtil from "../util/fileUtil";
 import DebugUtil from "../util/debugUtil";
-import TextUtil from "../../shared/util/textUtil";
 import dotenv from "dotenv";
 import Query from "./types/query";
 import Transaction from "./types/transaction";
@@ -69,17 +68,6 @@ const DB =
         finally {
             conn?.end();
         }
-    },
-    toHTMLString: async (): Promise<string> =>
-    {
-        const section = (text: string) => `\n\n<h1>${text}</h1>\n`;
-        const toSafeStr = (obj: {[key: string]: any}) => TextUtil.escapeHTMLChars(JSON.stringify(obj, null, 4));
-        const content =
-            section("users") + toSafeStr(await (DB.makeQuery("SELECT * FROM users;").run())) +
-            section("rooms") + toSafeStr(await (DB.makeQuery("SELECT * FROM rooms;").run())) +
-            section("roomMemberships") + toSafeStr(await (DB.makeQuery("SELECT * FROM roomMemberships;").run())) +
-            section("emailVerifications") + toSafeStr(await (DB.makeQuery("SELECT * FROM emailVerifications;").run()));
-        return content;
     },
 }
 

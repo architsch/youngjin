@@ -5,20 +5,14 @@
 const UIConfig =
 {
     displayText: {
-        menuName: {
-            "index": "Home",
-            "rooms": "Rooms",
-            "arcade": "Games",
-            "library": "Blog",
-            "admin": "Admin",
-        },
-        tabName: {
-            "rooms/owned": "My",
-            "rooms/joined": "Joined",
-            "rooms/pending": "Pending",
-            "rooms/others": "Others",
-            "roomMembers/associated": "Members",
-            "roomMembers/others": "Invite Others",
+        pageName: {
+            "index": "Home", // static
+            "arcade": "Arcade", // static
+            "library": "Library", // static
+            "portfolio": "Portfolio", // static
+            "register": "Create Account", // dynamic
+            "mypage": "My Page", // dynamic
+            "chat": "Chat", // dynamic
         },
         message: {
             "error/userName/length": "Username must be between 4 and 16 characters long.",
@@ -38,9 +32,6 @@ const UIConfig =
             "rule/roomName/length": "Room name must be between 4 and 64 characters long.",
             "rule/roomName/chars": "Room name can only contain alphabets, numbers, spaces, and the following special characters: ~`!@#$%^&*()-_+={}[]|\\:;\"'<>,.?/",
         },
-    },
-    search: {
-        searchLimitPerPage: 10,
     },
 }
 </script>

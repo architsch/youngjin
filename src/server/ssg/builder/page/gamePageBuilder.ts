@@ -43,23 +43,23 @@ export default class GamePageBuilder
 
         builder = new TextFileBuilder();
         builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/header.ejs", {
-            menuName: "arcade",
             title: "ThingsPool - " + entry.title,
             desc: description,
             keywords: keywords,
-            relativePageURL: relativeURL,
+            url: `${process.env.URL_STATIC}/${relativeURL}`,
+            pageName: "arcade",
             pagePathList: [
-                {title: UIConfig.displayText.menuName["index"], relativeURL: ""},
-                {title: UIConfig.displayText.menuName["arcade"], relativeURL: "arcade.html"},
-                {title: entry.title, relativeURL: undefined},
+                {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+                {title: UIConfig.displayText.pageName["arcade"], url: `${process.env.URL_STATIC}/arcade.html`},
+                {title: entry.title, url: undefined},
             ],
-            backDestination_href: `${process.env.ROOT_URL}/arcade.html`,
+            backDestination_href: `${process.env.URL_STATIC}/arcade.html`,
         }));
 
         builder.addLine(`<h1>${entry.title}</h1>`);
 
         builder.addLine(`<a class="noTextDeco" target="_blank" href="${entry.playLinkURL}">`);
-        builder.addLine(`<img class="xs_image" src="${process.env.ROOT_URL}/${playLinkImagePath}" alt="Play">`);
+        builder.addLine(`<img class="xs_image" src="${process.env.URL_STATIC}/${playLinkImagePath}" alt="Play">`);
         builder.addLine(`</a>`);
         builder.addLine(`<div class="zero_row"></div>`);
 
@@ -98,7 +98,7 @@ export default class GamePageBuilder
                 const imgName = (line.match(/<(.*?)>/) as string[])[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${process.env.ROOT_URL}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${process.env.URL_STATIC}/${entry.dirName}/${imgName}.jpg`;
                     builder.addLine(`<img class="m_image" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
                 }
             }
@@ -117,7 +117,7 @@ export default class GamePageBuilder
         builder.addLine(await EJSUtil.createStaticHTMLFromEJS("partial/common/footer.ejs"));
 
         this.sitemapBuilder.addEntry(relativeURL, entry.lastmod);
-        this.atomFeedBuilder.addEntry(`${process.env.ROOT_URL}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
+        this.atomFeedBuilder.addEntry(`${process.env.URL_STATIC}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
 
         await builder.build(relativeURL);
     };

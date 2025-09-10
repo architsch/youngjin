@@ -1,11 +1,10 @@
 import DB from "./db";
 import { Response } from "express";
-import UIConfig from "../../shared/config/uiConfig";
 import dotenv from "dotenv";
 dotenv.config();
 
 const searchRoomsAssociatedWithUser = (userStatusesToInclude: string[], page: number) => {
-    const limit = UIConfig.search.searchLimitPerPage;
+    const limit = 10;
     const condsStr = ` AND (${userStatusesToInclude.map(x => `roomMemberships.userStatus = '${x}'`).join(" OR ")})`;
     return `SELECT rooms.roomID AS roomID, rooms.roomName AS roomName, roomMemberships.userStatus as userStatus, rooms.ownerUserName as ownerUserName
     FROM rooms INNER JOIN roomMemberships ON roomMemberships.roomID = rooms.roomID
@@ -14,7 +13,7 @@ const searchRoomsAssociatedWithUser = (userStatusesToInclude: string[], page: nu
 }
 
 const searchUsersAssociatedWithRoom = (userStatusesToInclude: string[], page: number) => {
-    const limit = UIConfig.search.searchLimitPerPage;
+    const limit = 10;
     const condsStr = ` AND (${userStatusesToInclude.map(x => `roomMemberships.userStatus = '${x}'`).join(" OR ")})`;
     return `SELECT users.userID as userID, users.userName AS userName, roomMemberships.userStatus as userStatus
     FROM users INNER JOIN roomMemberships ON roomMemberships.userID = users.userID
@@ -54,7 +53,7 @@ const SearchDB =
                 .run(res, "SearchDB.rooms.whichIAmAssociatedWith");
         },
         others: async (userID: string, page: number, res?: Response): Promise<Room[]> => {
-            const limit = UIConfig.search.searchLimitPerPage;
+            const limit = 10;
             return await DB.makeQuery<Room>(
                 `SELECT roomID, roomName FROM rooms
                 WHERE NOT EXISTS (SELECT roomID FROM roomMemberships WHERE userID = ${userID} LIMIT 1)
@@ -93,7 +92,7 @@ const SearchDB =
                 .run(res, "SearchDB.users.whoAreAssociatedWithRoom");
         },
         others: async (roomID: string, page: number, res?: Response): Promise<User[]> => {
-            const limit = UIConfig.search.searchLimitPerPage;
+            const limit = 10;
             return await DB.makeQuery<User>(
                 `SELECT userID, userName FROM users
                 WHERE NOT EXISTS (SELECT userID FROM roomMemberships WHERE roomID = ${roomID} LIMIT 1)

@@ -9,8 +9,6 @@ CREATE TABLE IF NOT EXISTS users(
     userType VARCHAR(16) NOT NULL,
     passwordHash VARCHAR(72) NOT NULL,
     email VARCHAR(64) NOT NULL,
-    ownedRoomCount INT NOT NULL DEFAULT 0,
-    ownedRoomCountMax INT NOT NULL DEFAULT 5,
     PRIMARY KEY (userID),
     UNIQUE KEY (userName, email)
 );

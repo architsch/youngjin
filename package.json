@@ -1,7 +1,7 @@
 {
 	"name": "youngjin",
 	"scripts": {
-		"dev": "MODE=dev pm2 start ./devRunner.js --no-daemon --watch --ignore-watch=\"dist public .git views/partial/embeddedScript views/page/menu/arcade.ejs views/page/menu/library.ejs\"",
+		"dev": "MODE=dev pm2 start ./devRunner.js --no-daemon --watch --ignore-watch=\"dist public .git views/partial/embeddedScript\"",
 		"ssg": "webpack && MODE=ssg node dist/server/bundle.js",
 		"prod": "webpack && MODE=prod pm2 start dist/server/bundle.js --name=admin",
 		"stop": "pm2 stop all && pm2 delete all"
@@ -9,7 +9,6 @@
 	"dependencies": {
 		"bcrypt": "^5.1.1",
 		"body-parser": "^1.20.3",
-		"cookie": "^1.0.2",
 		"cookie-parser": "^1.4.7",
 		"dotenv": "^16.4.7",
 		"ejs": "^3.1.10",

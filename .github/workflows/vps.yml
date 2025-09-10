@@ -34,7 +34,8 @@ jobs:
     - name: Create .env
       run: |
         echo "PORT=${{ secrets.PORT }}" >> ./.env
-        echo "ROOT_URL=${{ secrets.ROOT_URL }}" >> ./.env
+        echo "URL_STATIC=${{ secrets.URL_STATIC }}" >> ./.env
+        echo "URL_DYNAMIC=${{ secrets.URL_DYNAMIC }}" >> ./.env
         echo "STATIC_PAGE_ROOT_DIR=public" >> ./.env
         echo "VIEWS_ROOT_DIR=views" >> ./.env
         echo "SRC_ROOT_DIR=src" >> ./.env

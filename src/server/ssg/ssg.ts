@@ -20,36 +20,39 @@ export default async function SSG(): Promise<void>
     const atomFeedB = new AtomFeedBuilder();
 
     let tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/menu/index.ejs", {
-        isStaticPage: true,
-        user: undefined,
-        loginDestination: "",
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
+        url: process.env.URL_STATIC,
     }));
     await tb.build("index.html");
 
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/menu/rooms.ejs", {
-        isStaticPage: true,
-        user: undefined,
-        loginDestination: "",
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/portfolio.ejs", {
+        url: `${process.env.URL_STATIC}/portfolio.html`,
     }));
-    await tb.build("rooms.html");
-
-    tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/portfolio.ejs", {}));
     await tb.build("portfolio.html");
 
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/portfolio_minimal.ejs", {}));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/portfolio_minimal.ejs", {}));
     await tb.build("portfolio_minimal.html");
 
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/privacyPolicy.ejs", {}));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/privacyPolicy.ejs", {
+        url: `${process.env.URL_STATIC}/privacy-policy.html`,
+    }));
     await tb.build("privacy-policy.html");
 
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/misc/termsOfService.ejs", {}));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/termsOfService.ejs", {
+        url: `${process.env.URL_STATIC}/terms-of-service.html`,
+    }));
     await tb.build("terms-of-service.html");
+
+    // Static version of 'mypage' (in case the dynamic web app is currently not available)
+    tb = new TextFileBuilder();
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/dynamic/mypage.ejs", {
+        url: `${process.env.URL_STATIC}/mypage.html`,
+    }));
+    await tb.build("mypage.html");
 
     await new ArcadePageBuilder(sitemapB, atomFeedB).build();
     await new LibraryPageBuilder(sitemapB, atomFeedB).build();

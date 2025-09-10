@@ -24,7 +24,7 @@ const validateUser = (req: Request, res: Response): User | null => {
 //------------------------------------------------------------------------------------
 
 // req.body = {roomName}
-RoomRouter.post("/create", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.post("/create", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -39,7 +39,7 @@ RoomRouter.post("/create", AuthUtil.authenticateToken, async (req: Request, res:
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID}
-RoomRouter.delete("/delete", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.delete("/delete", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -47,7 +47,7 @@ RoomRouter.delete("/delete", AuthUtil.authenticateToken, async (req: Request, re
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID}
-RoomRouter.delete("/leave", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.delete("/leave", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -60,7 +60,7 @@ RoomRouter.delete("/leave", AuthUtil.authenticateToken, async (req: Request, res
 //------------------------------------------------------------------------------------
 
 // req.body = {roomID}
-RoomRouter.put("/accept-invitation", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.put("/accept-invitation", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -68,7 +68,7 @@ RoomRouter.put("/accept-invitation", AuthUtil.authenticateToken, async (req: Req
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID}
-RoomRouter.delete("/ignore-invitation", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.delete("/ignore-invitation", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -76,7 +76,7 @@ RoomRouter.delete("/ignore-invitation", AuthUtil.authenticateToken, async (req: 
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID}
-RoomRouter.post("/request-to-join", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.post("/request-to-join", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -84,7 +84,7 @@ RoomRouter.post("/request-to-join", AuthUtil.authenticateToken, async (req: Requ
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID}
-RoomRouter.delete("/cancel-request", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.delete("/cancel-request", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -97,7 +97,7 @@ RoomRouter.delete("/cancel-request", AuthUtil.authenticateToken, async (req: Req
 //------------------------------------------------------------------------------------
 
 // req.body = {roomID, userID}
-RoomRouter.post("/invite", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.post("/invite", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -105,7 +105,7 @@ RoomRouter.post("/invite", AuthUtil.authenticateToken, async (req: Request, res:
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID, userID}
-RoomRouter.delete("/cancel-invite", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.delete("/cancel-invite", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -113,7 +113,7 @@ RoomRouter.delete("/cancel-invite", AuthUtil.authenticateToken, async (req: Requ
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID, userID}
-RoomRouter.put("/accept-request", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.put("/accept-request", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -121,7 +121,7 @@ RoomRouter.put("/accept-request", AuthUtil.authenticateToken, async (req: Reques
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID, userID}
-RoomRouter.delete("/ignore-request", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.delete("/ignore-request", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;
@@ -129,7 +129,7 @@ RoomRouter.delete("/ignore-request", AuthUtil.authenticateToken, async (req: Req
     NetworkUtil.onRouteResponse(res);
 });
 // req.body = {roomID, userID}
-RoomRouter.delete("/kickout", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.delete("/kickout", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = validateUser(req, res);
     if (!user)
         return;

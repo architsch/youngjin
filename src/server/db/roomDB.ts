@@ -26,18 +26,12 @@ const RoomDB =
                 [roomName, ownerUserName]),
             DB.makeQuery(`INSERT INTO roomMemberships (roomID, userID, userStatus)
                 VALUES (LAST_INSERT_ID(), (SELECT userID FROM users WHERE userName = ?), 'owner');`,
-                [ownerUserName]),
-            DB.makeQuery(`UPDATE users SET ownedRoomCount = ownedRoomCount + 1
-                WHERE userName = ? AND ownedRoomCount < ownedRoomCountMax;`,
                 [ownerUserName])
         ]).run(res, "RoomDB.createRoom");
     },
     deleteRoom: async (roomID: string, ownerUserName: string, res?: Response): Promise<void> =>
     {
         return await DB.makeTransaction([
-            DB.makeQuery(`UPDATE users SET ownedRoomCount = ownedRoomCount - 1
-                WHERE userID = ? AND ownedRoomCount > 0;`,
-                [ownerUserName]),
             DB.makeQuery(`DELETE FROM rooms WHERE roomID = ? AND ownerUserName = ?;`,
                 [roomID, ownerUserName]),
             DB.makeQuery(`DELETE FROM roomMemberships WHERE roomID = ?;`,

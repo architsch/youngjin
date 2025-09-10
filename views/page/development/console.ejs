@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Console</title>
+    <style>
+        body {
+            font-family: monospace;
+            color: #f0f0f0;
+            background-color: #000000;
+            overflow: auto;
+        }
+        table {
+            table-layout: fixed;
+            border-collapse: separate;
+            width: 100%;
+        }
+        thead {
+            position: sticky;
+            top: 0;
+            text-align: left;
+            color: #000000;
+            background-color: #b0b0f0;
+        }
+        label, input, button {
+            display: inline-block;
+        }
+        th {
+            padding: 6px 6px;
+            overflow: auto;
+            resize: horizontal;
+            border: 2px solid black;
+        }
+        td {
+            padding: 2px 2px;
+            word-break: break-all;
+            overflow: auto;
+            border-top: 2px solid #808080;
+            border-left: 2px solid black;
+            border-right: 2px solid black;
+        }
+    </style>
+    <body>
+        <label>Command: </label>
+        <input id="command_input" type="text">
+        <button id="send_command_button">Run</button>
+        <br>
+        <table>
+            <thead>
+                <tr><th>Message</th><th>Origin</th><th style="overflow:hidden; resize:none;">Details</th></tr>
+            </thead>
+            <tbody id="logList">
+            </tbody>
+        </table>
+
+        <script src="https://code.jquery.com/jquery.min.js"></script>
+        <script src="<%= process.env.URL_DYNAMIC %>/socket.io/socket.io.min.js"></script>
+        <script>
+            const socket = io("<%= process.env.URL_DYNAMIC %>/console_sockets", { auth: user });
+
+            socket.on("connect_error", (err) => {
+                $("#logList").append($("<tr>").html(err.message));
+            });
+
+            socket.on("log", (message) => {
+                $("#logList").append($("<tr>").html(message));
+            });
+
+            $("#send_command_button").click(runCommand);
+
+            addEventListener("keydown", (event) => {
+                if (event.key == "Enter")
+                {
+                    event.preventDefault();
+                    if ($("#command_input").val().trim().length > 0)
+                        runCommand();
+                }
+            });
+
+            function runCommand()
+            {
+                const command = $("#command_input").val().trim();
+
+                switch (command)
+                {
+                    case "clear":
+                        $("#logList").empty();
+                        break;
+                    default:
+                        socket.emit("command", command);
+                        break;
+                }
+                $("#command_input").val("");
+            }
+        </script>
+    </body>
+</html>

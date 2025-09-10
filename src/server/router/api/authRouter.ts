@@ -24,8 +24,8 @@ AuthRouter.post("/login", async (req: Request, res: Response): Promise<void> => 
     NetworkUtil.onRouteResponse(res);
 });
 
-AuthRouter.delete("/logout", (req: Request, res: Response): void => {
-    AuthUtil.clearToken(res);
+AuthRouter.delete("/clear-token", (req: Request, res: Response): void => {
+    AuthUtil.clearToken(req, res);
     NetworkUtil.onRouteResponse(res);
 });
 

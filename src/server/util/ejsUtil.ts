@@ -46,7 +46,8 @@ const EJSUtil =
                 .replaceAll("\n", "!*NEW_LINE*!")
                 .replace(/(PROD_CODE_BEGIN).*?(PROD_CODE_END)/g, "REMOVED_PROD_CODE")
                 .replaceAll("!*NEW_LINE*!", "\n")
-                .replaceAll(process.env.ROOT_URL as string, `http://localhost:${process.env.PORT}`);
+                .replaceAll(process.env.URL_STATIC as string, `http://localhost:${process.env.PORT}`) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
+                .replaceAll(process.env.URL_DYNAMIC as string, `http://localhost:${process.env.PORT}`);
             return html;
         }
         else

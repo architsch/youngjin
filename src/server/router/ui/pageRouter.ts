@@ -1,98 +1,55 @@
-import RoomDB from "../../db/roomDB";
 import AuthUtil from "../../util/authUtil";
 import EJSUtil from "../../util/ejsUtil";
 import express from "express";
 import { Request, Response } from "express";
+import dotenv from "dotenv";
+dotenv.config();
 
 const PageRouter = express.Router();
 
-//------------------------------------------------------------------------------------
-// menu pages
-//------------------------------------------------------------------------------------
-
-PageRouter.get("/", AuthUtil.authenticateTokenOptional, (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/menu/index", {
-        loginDestination: "",
+PageRouter.get("/mypage", AuthUtil.authenticateAnyUser, (req: Request, res: Response): void => {
+    EJSUtil.render(req, res, "page/dynamic/mypage", {
+        loginDestination: `${process.env.URL_DYNAMIC}/mypage`,
     });
 });
-
-// query strings = {tabname(optional)}
-PageRouter.get("/rooms", AuthUtil.authenticateTokenOptional, (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/menu/rooms", {
-        loginDestination: "rooms",
-        tabName: req.query.tabname ? req.query.tabname : "owned",
-    });
-});
-
-PageRouter.get("/arcade", (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/menu/arcade", {});
-});
-
-PageRouter.get("/library", (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/menu/library", {});
-});
-
-PageRouter.get("/admin", AuthUtil.authenticateToken, (req: Request, res: Response): void => {
-    const user = (req as any).user;
-    if (user && user.userType == "admin")
-        EJSUtil.render(req, res, "page/menu/admin", {});
-    else
-        res.status(403).send("Only the admin can access this page.");
-});
-
-//------------------------------------------------------------------------------------
-// form pages
-//------------------------------------------------------------------------------------
 
 PageRouter.get("/register", (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/form/register", {
-        registerDestination: "",
+    EJSUtil.render(req, res, "page/dynamic/register", {
+        registerDestination: `${process.env.URL_DYNAMIC}/mypage`,
     });
 });
 
-//------------------------------------------------------------------------------------
-// private pages
-//------------------------------------------------------------------------------------
-
-// query strings = {roomid}
-PageRouter.get("/room", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
-    const user = (req as any).user;
-    if (!user)
-    {
-        res.status(404).send("User not found.");
-        return;
-    }
-    const roomContents = await RoomDB.getRoomContent(req.query.roomid as string, user.userID, res);
-    if (res.statusCode < 200 || res.statusCode >= 300)
-        return;
-    const roomContent = roomContents[0];
-
-    EJSUtil.render(req, res, "page/private/room", {
-        roomID: req.query.roomid,
-        roomContent,
-        title: roomContent.roomName,
-        desc: roomContent.roomName,
+PageRouter.get("/chat", AuthUtil.authenticateAnyUser, async (req: Request, res: Response): Promise<void> => {
+    EJSUtil.render(req, res, "page/dynamic/chat", {
+        title: "Chat",
+        desc: "This is ThingsPool's chat room.",
         keywords: undefined,
     });
 });
 
-//------------------------------------------------------------------------------------
-// misc pages
-//------------------------------------------------------------------------------------
-
-PageRouter.get("/console", AuthUtil.authenticateToken, (req: Request, res: Response): void => {
-    const user = (req as any).user;
-    if (user && user.userType == "admin")
-        EJSUtil.render(req, res, "page/misc/console", {});
-    else
-        res.status(403).send("Only the admin can access this page.");
-});
-
-PageRouter.get("/test-ui", (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/misc/test_ui", {
-        loginDestination: "",
-        registerDestination: "",
+if (process.env.MODE == "dev")
+{
+    PageRouter.get("/admin", (req: Request, res: Response): void => {
+        EJSUtil.render(req, res, "page/development/admin", {});
     });
-});
+
+    PageRouter.get("/console", (req: Request, res: Response): void => {
+        EJSUtil.render(req, res, "page/development/console", {});
+    });
+
+    PageRouter.get("/test-ui", (req: Request, res: Response): void => {
+        EJSUtil.render(req, res, "page/development/test_ui", {});
+    });
+}
+else
+{
+    PageRouter.get("/admin", AuthUtil.authenticateAdmin, (req: Request, res: Response): void => {
+        EJSUtil.render(req, res, "page/development/admin", {});
+    });
+
+    PageRouter.get("/console", AuthUtil.authenticateAdmin, (req: Request, res: Response): void => {
+        EJSUtil.render(req, res, "page/development/console", {});
+    });
+}
 
 export default PageRouter;

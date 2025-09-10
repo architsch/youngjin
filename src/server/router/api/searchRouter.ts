@@ -27,7 +27,7 @@ const validateSearchParams = (req: Request, res: Response): {user: User, page: n
 //------------------------------------------------------------------------------------
 
 // query strings: {page}
-SearchRouter.get("/rooms/owned", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/rooms/owned", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -36,7 +36,7 @@ SearchRouter.get("/rooms/owned", AuthUtil.authenticateToken, async (req: Request
 });
 
 // query strings: {page}
-SearchRouter.get("/rooms/joined", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/rooms/joined", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -45,7 +45,7 @@ SearchRouter.get("/rooms/joined", AuthUtil.authenticateToken, async (req: Reques
 });
 
 // query strings: {page}
-SearchRouter.get("/rooms/invited", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/rooms/invited", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -54,7 +54,7 @@ SearchRouter.get("/rooms/invited", AuthUtil.authenticateToken, async (req: Reque
 });
 
 // query strings: {page}
-SearchRouter.get("/rooms/requested", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/rooms/requested", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -63,7 +63,7 @@ SearchRouter.get("/rooms/requested", AuthUtil.authenticateToken, async (req: Req
 });
 
 // query strings: {page}
-SearchRouter.get("/rooms/pending", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/rooms/pending", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -72,7 +72,7 @@ SearchRouter.get("/rooms/pending", AuthUtil.authenticateToken, async (req: Reque
 });
 
 // query strings: {page}
-SearchRouter.get("/rooms/associated", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/rooms/associated", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -81,7 +81,7 @@ SearchRouter.get("/rooms/associated", AuthUtil.authenticateToken, async (req: Re
 });
 
 // query strings: {page}
-SearchRouter.get("/rooms/others", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/rooms/others", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -94,7 +94,7 @@ SearchRouter.get("/rooms/others", AuthUtil.authenticateToken, async (req: Reques
 //------------------------------------------------------------------------------------
 
 // query strings: {roomid, page}
-SearchRouter.get("/users/joined", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/users/joined", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -103,7 +103,7 @@ SearchRouter.get("/users/joined", AuthUtil.authenticateToken, async (req: Reques
 });
 
 // query strings: {roomid, page}
-SearchRouter.get("/users/invited", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/users/invited", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -112,7 +112,7 @@ SearchRouter.get("/users/invited", AuthUtil.authenticateToken, async (req: Reque
 });
 
 // query strings: {roomid, page}
-SearchRouter.get("/users/requested", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/users/requested", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -121,7 +121,7 @@ SearchRouter.get("/users/requested", AuthUtil.authenticateToken, async (req: Req
 });
 
 // query strings: {roomid, page}
-SearchRouter.get("/users/pending", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/users/pending", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -130,7 +130,7 @@ SearchRouter.get("/users/pending", AuthUtil.authenticateToken, async (req: Reque
 });
 
 // query strings: {roomid, page}
-SearchRouter.get("/users/associated", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/users/associated", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;
@@ -139,7 +139,7 @@ SearchRouter.get("/users/associated", AuthUtil.authenticateToken, async (req: Re
 });
 
 // query strings: {roomid, page}
-SearchRouter.get("/users/others", AuthUtil.authenticateToken, async (req: Request, res: Response): Promise<void> => {
+SearchRouter.get("/users/others", AuthUtil.authenticateRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const searchParams = validateSearchParams(req, res);
     if (!searchParams)
         return;

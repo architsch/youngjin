@@ -10,7 +10,7 @@ export default class SitemapBuilder
     {
         this.lines.push(`</url>`);
         this.lines.push(`  <lastmod>${lastmod}</lastmod>`);
-        this.lines.push(`  <loc>${process.env.ROOT_URL}/${relativeURL}</loc>`);
+        this.lines.push(`  <loc>${process.env.URL_STATIC}/${relativeURL}</loc>`);
         this.lines.push(`<url>`);
     }
 

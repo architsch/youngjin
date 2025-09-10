@@ -1,8 +1,9 @@
 <%_ const v_title = locals.title ? locals.title.replaceAll("\"", "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;") : "ThingsPool"; _%>
 <%_ const v_desc = locals.desc ? locals.desc.replaceAll("\"", "&quot;") : "ThingsPool is an experimental web community for collaborative research and development in arts, games, and other forms of interactive media."; _%>
 <%_ const v_keywords = locals.keywords ? locals.keywords.replaceAll("\"", "&quot;") : "thingspool, software toys, technical design, computer science, systems engineering, game design, game development"; _%>
-<%_ const v_relativePageURL = locals.relativePageURL ? locals.relativePageURL : undefined; _%>
 <%_ const v_ogImageURLOverride = locals.ogImageURLOverride ? locals.ogImageURLOverride : undefined; _%>
+<%_ const v_url = locals.url ? locals.url : process.env.URL_STATIC _%>
+<%_ const v_ogType = locals.ogType ? locals.ogType : "website" _%>
 <%_ const v_pagePathList = locals.pagePathList ? locals.pagePathList : undefined; _%>
 <%_ const v_backDestination_href = locals.backDestination_href ? locals.backDestination_href : undefined; _%>
 <!DOCTYPE html>
@@ -15,11 +16,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- PROD_CODE_BEGIN -->
 <meta property="og:title" content="<%= v_title %>"/>
-<meta property="og:url" content="<%= process.env.ROOT_URL %>/<%= (v_relativePageURL != undefined) ? v_relativePageURL : '' %>"/>
-<meta property="og:type" content="<%= (v_relativePageURL != undefined) ? 'article' : 'website' %>"/>
+<meta property="og:url" content="<%= v_url %>"/>
+<meta property="og:type" content="<%= v_ogType %>"/>
 <meta property="og:site_name" content="ThingsPool"/>
 <meta property="og:description" content="<%= v_desc %>"/>
-<meta property="og:image" content="<%= (v_ogImageURLOverride != undefined) ? v_ogImageURLOverride : `${process.env.ROOT_URL}/share.jpg` %>"/>
+<meta property="og:image" content="<%= (v_ogImageURLOverride != undefined) ? v_ogImageURLOverride : `${process.env.URL_STATIC}/share.jpg` %>"/>
 <meta property="og:image:alt" content="<%= v_title %>">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
@@ -31,11 +32,11 @@ gtag('config', 'G-JL7KHR7HK8');
 </script>
 <!-- PROD_CODE_END -->
 <title><%= v_title %></title>
-<link rel="shortcut icon" href="<%= process.env.ROOT_URL %>/favicon.ico">
-<link rel="stylesheet" href="<%= process.env.ROOT_URL %>/style.css">
+<link rel="shortcut icon" href="<%= process.env.URL_STATIC %>/favicon.ico">
+<link rel="stylesheet" href="<%= process.env.URL_STATIC %>/style.css">
 <link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
-<link rel="alternate" type="application/atom+xml" href="<%= process.env.ROOT_URL %>/feed.atom" title="Atom Feed">
-<link rel="canonical" href="<%= (v_relativePageURL != undefined) ? `${process.env.ROOT_URL}/${v_relativePageURL}` : process.env.ROOT_URL %>">
+<link rel="alternate" type="application/atom+xml" href="<%= process.env.URL_STATIC %>/feed.atom" title="Atom Feed">
+<link rel="canonical" href="<%= v_url %>">
 </head>
 <body>
 <%_ if (!isStaticPage) { _%>
@@ -43,16 +44,13 @@ gtag('config', 'G-JL7KHR7HK8');
 <%_ } _%>
 <div class="fullscreenBar">
 <div class="fullscreenBarLogo">
-<img class="fullscreenBarLogoImage" src="<%= process.env.ROOT_URL %>/logo_light.png" alt="ThingsPool Logo">
+<img class="fullscreenBarLogoImage" src="<%= process.env.URL_STATIC %>/logo_light.png" alt="ThingsPool Logo">
 </div>
 <div class="fullscreenBarMenu">
-<a class="fullscreenBarMenuButton <%= (menuName == "index") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>"><%= UIConfig.displayText.menuName["index"] %></a>
-<a class="fullscreenBarMenuButton <%= (menuName == "rooms") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/rooms"><%= UIConfig.displayText.menuName["rooms"] %></a>
-<a class="fullscreenBarMenuButton <%= (menuName == "arcade") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/arcade"><%= UIConfig.displayText.menuName["arcade"] %></a>
-<a class="fullscreenBarMenuButton <%= (menuName == "library") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/library"><%= UIConfig.displayText.menuName["library"] %></a>
-<% if (locals.user && locals.user.userType == "admin") { %>
-<a class="fullscreenBarMenuButton <%= (menuName == "admin") ? "selected" : "idle" %>" href="<%= process.env.ROOT_URL %>/admin"><%= UIConfig.displayText.menuName["admin"] %></a>
-<%_ } _%>
+<a class="fullscreenBarMenuButton <%= (pageName == "index") ? "selected" : "idle" %>" href="<%= process.env.URL_STATIC %>"><%= UIConfig.displayText.pageName["index"] %></a>
+<a class="fullscreenBarMenuButton <%= (pageName == "mypage") ? "selected" : "idle" %>" href="<%= process.env.URL_STATIC %>/mypage.html"><%= UIConfig.displayText.pageName["mypage"] %></a>
+<a class="fullscreenBarMenuButton <%= (pageName == "library") ? "selected" : "idle" %>" href="<%= process.env.URL_STATIC %>/library.html"><%= UIConfig.displayText.pageName["library"] %></a>
+<a class="fullscreenBarMenuButton <%= (pageName == "arcade") ? "selected" : "idle" %>" href="<%= process.env.URL_STATIC %>/arcade.html"><%= UIConfig.displayText.pageName["arcade"] %></a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -61,7 +59,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <a class="inlineButton" href="<%= v_backDestination_href %>">Back</a><%- (v_pagePathList != undefined) ? "&nbsp;&nbsp;" : "" %>
 <%_ } _%>
 <%_ if (v_pagePathList != undefined) { _%>
-<div class="pagePath"><%- v_pagePathList.map(x => (x.relativeURL != undefined) ? `<a href="${process.env.ROOT_URL}/${x.relativeURL}">${x.title}</a>` : x.title).join("/") %></div>
+<div class="pagePath"><%- v_pagePathList.map(x => (x.url != undefined) ? `<a href="${x.url}">${x.title}</a>` : x.title).join("/") %></div>
 <%_ } _%>
 <%_ if (v_pagePathList != undefined || v_backDestination_href != undefined) { _%>
 <div class="s_row"></div>

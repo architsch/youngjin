@@ -1,0 +1,89 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    url: `${process.env.URL_STATIC}/test_ui`,
+    pageName: "index",
+    pagePathList: [
+        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: "Test title #1", url: process.env.URL_STATIC},
+        {title: "Test title #2", url: process.env.URL_STATIC},
+        {title: "Test title #3", url: undefined},
+    ],
+    backDestination_href: process.env.URL_STATIC,
+}) %>
+
+<h1>List Example</h1>
+<a class="postEntryButton" href="<%= process.env.URL_STATIC %>">Lorem ipsum</a>
+<a class="postEntryButton" href="<%= process.env.URL_STATIC %>">Lorem ipsum dolor sit amet</a>
+<a class="postEntryButton" href="<%= process.env.URL_STATIC %>">Lorem ipsum dolor sit amet, consectetur adipiscing elit</a>
+
+<h1>Header1 Title</h1>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+
+<h2>Header2 Title</h2>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<hr>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+
+<h3>Header3 Title</h3>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+<img class="m_image" src="<%= process.env.URL_STATIC %>/profile.jpg" alt="Test">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+<img class="m_image" src="<%= process.env.URL_STATIC %>/software-development/001_06.jpg" alt="Test">
+<img class="m_image" src="<%= process.env.URL_STATIC %>/read-rec/005.jpg" alt="Test">
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+
+<h3>Header3 Title</h3>
+<hr>
+<img class="m_image" src="<%= process.env.URL_STATIC %>/read-rec/008.jpg" alt="Test">
+<hr>
+<h3><a target="_blank" href="<%= process.env.URL_STATIC %>">Test Big Link</a></h3>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<pre><div class="excerpt"><font color="#707070"><b>Lorem ipsum dolor sit amet</b></font>
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div></pre>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+<div class="snippet"><pre><code>public class RegularPlace : Place
+{
+    private void ApplyFilter(Force force)
+    {
+    }
+}
+
+public class DamageDisabledPlace : Place
+{
+    private void ApplyFilter(Force force)
+    {
+        if (force.ForceVector.Components[(int)ForceVectorComponentIndex.HealthForce] &lt; 0)
+            force.ForceVector.Components[(int)ForceVectorComponentIndex.HealthForce] = 0
+    }
+}
+
+public class MechanicalForceDisabledPlace : Place
+{
+    private void ApplyFilter(Force force)
+    {
+        force.ForceVector.Components[(int)ForceVectorComponentIndex.PositionForceX] = 0;
+        force.ForceVector.Components[(int)ForceVectorComponentIndex.PositionForceY] = 0;
+    }
+}</code></pre></div>
+
+<p>Links:&nbsp;&nbsp;<a target="_blank" href="https://www.linkedin.com/in/youngjin-kang-55321882">LinkedIn</a>&nbsp;&nbsp;<a target="_blank" href="https://github.com/architsch">GitHub</a>&nbsp;&nbsp;<a target="_blank" href="https://www.pacogames.com/developers/thingspool">PacoGames</a></p>
+<%- include(`${ejsPartialRootPath}/info/gameLinks.ejs`) %>
+<%- include(`${ejsPartialRootPath}/info/featureLinks.ejs`) %>
+
+<h1>Input Forms</h1>
+
+<div class="inlineLabel">Username:</div><input type="text" class="inlineTextInput">
+<div class="zero_row"></div>
+
+<div class="inlineLabel">Password:</div><input type="password" class="inlineTextInput">
+<div class="xs_row"></div>
+
+<div class="inlineButton" id="login_button">Log In</div><div class="inlineButton" id="register_button">Create Account</div>
+<div class="m_row"></div>
+
+<div class="inlineLabel">Email:</div><input type="email" class="inlineTextInput">
+<div class="inlineButton" style="color: #b0b020; background-color: #105010;">Send Verification Code</div>
+<div class="zero_row"></div>
+
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

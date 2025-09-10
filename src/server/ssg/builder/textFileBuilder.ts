@@ -11,11 +11,6 @@ export default class TextFileBuilder
         this.lines.push(line);
     }
 
-    prependLine(line: string): void
-    {
-        this.lines.unshift(line);
-    }
-
     getText(): string
     {
         return this.lines.join("\n");

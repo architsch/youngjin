@@ -29,8 +29,8 @@ export default class AtomFeedBuilder
         this.lines.push(`  <name>Youngjin Kang</name>`);
         this.lines.push(`<author>`);
         this.lines.push(`<updated>${this.globalLatestUpdate.toISOString()}</updated>`);
-        this.lines.push(`<link href="${process.env.ROOT_URL}"/>`);
-        this.lines.push(`<link rel="self" type="application/atom+xml" href="${process.env.ROOT_URL}/feed.atom"/>`);
+        this.lines.push(`<link href="${process.env.URL_STATIC}"/>`);
+        this.lines.push(`<link rel="self" type="application/atom+xml" href="${process.env.URL_STATIC}/feed.atom"/>`);
         this.lines.push(`<title>ThingsPool</title>`);
         this.lines.push(`<feed xmlns="http://www.w3.org/2005/Atom">`);
         this.lines.push(`<?xml version="1.0" encoding="utf-8"?>`);
