@@ -37,7 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/mypage.html">My Page</a>
+<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
@@ -209,7 +209,9 @@ new Game();</code></pre></div>
 <p>This, of course, starts to become too verbose as we keep elongating the game's memory stream. Therefore, a much more realistic implementation would be to represent the history of the game's state as a single list variable rather than a sequence of manually specified function arguments.</p>
 <div class="snippet"><pre><code>(defun update-loop (stateHistory)
     (wait-for-next-frame)
-    (update-loop (cons (update-state stateHistory) (without-last stateHistory))))</code></pre></div>
+    (update-loop (cons (update-state stateHistory) (without-last stateHistory))))</code></pre></div><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/software-development/page-20.html">Previous Page</a>
+    <a class="inlineButton" href="https://thingspool.net/software-development/page-22.html">Next Page</a>
 <div class="l_row"></div>
 <img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>

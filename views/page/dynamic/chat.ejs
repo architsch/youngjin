@@ -11,7 +11,7 @@
 
 <%_ if (user) { _%>
     <h1>Chat</h1>
-
+    <p>Details: <%= JSON.stringify(user) %></p>
     <label>Message: </label>
     <input id="message_input" type="text">
     <button id="send_button">Send</button>
@@ -21,7 +21,8 @@
     <script src="https://code.jquery.com/jquery.min.js"></script>
     <script src="<%= process.env.URL_DYNAMIC %>/socket.io/socket.io.min.js"></script>
     <script>
-        const socket = io("<%= process.env.URL_DYNAMIC %>/chat_sockets", { auth: user });
+        const userString = `<%- JSON.stringify(user) %>`;
+        const socket = io("<%= process.env.URL_DYNAMIC %>/chat_sockets", { auth: JSON.parse(userString) });
 
         socket.on("connect_error", (err) => {
             $("#message_list").append($("<p>").html(`<font color="red"><b>${err.message}</b></font>`));
@@ -31,11 +32,13 @@
             $("#message_list").append($("<p>").html(message));
         });
 
-        $("#send_button").click(() => {
+        function send()
+        {
             const message = $("#message_input").val().trim();
             socket.emit("message", message);
             $("#message_input").val("");
-        });
+        }
+        $("#send_button").click(send);
 
         addEventListener("keydown", (event) => {
             if (event.key == "Enter")

@@ -37,7 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/mypage.html">My Page</a>
+<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
@@ -136,7 +136,9 @@ localPosition[n](X, LP) :- !addChild[n-1](_, X), !removeChild[n-1](_, X),
 <div class="snippet"><pre><code>despawn[n](Child) :- parent[n](Parent, Child), despawn[n](Parent).
 removeChild[n](Parent, Child) :- parent[n](Parent, Child), !alive[n](Child).</code></pre></div>
 <p>The things I have mentioned so far are all the essential stuff we need to know to be able to play with parent-child relations. In the next article, I will explain how these building blocks can be used to represent an omurice as a standalone actor, rather than a mere extraneous identity which is superficially being attached to one of its components (i.e. fried rice).</p>
-<p>(Will be continued in <a href="https://thingspool.net/morsels/page-20.html">Part 11</a>)</p>
+<p>(Will be continued in <a href="https://thingspool.net/morsels/page-20.html">Part 11</a>)</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/morsels/page-18.html">Previous Page</a>
+    <a class="inlineButton" href="https://thingspool.net/morsels/page-20.html">Next Page</a>
 <div class="l_row"></div>
 <img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>

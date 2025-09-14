@@ -3,6 +3,7 @@ import EJSUtil from "../../util/ejsUtil";
 import express from "express";
 import { Request, Response } from "express";
 import dotenv from "dotenv";
+import { ArcadeData } from "../../ssg/data/arcadeData";
 dotenv.config();
 
 const PageRouter = express.Router();
@@ -38,7 +39,9 @@ if (process.env.MODE == "dev")
     });
 
     PageRouter.get("/test-ui", (req: Request, res: Response): void => {
-        EJSUtil.render(req, res, "page/development/test_ui", {});
+        EJSUtil.render(req, res, "page/development/test_ui", {
+            gameEntries: ArcadeData.gameEntries
+        });
     });
 }
 else

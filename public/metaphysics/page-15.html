@@ -37,7 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/mypage.html">My Page</a>
+<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
@@ -61,7 +61,9 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>우리가 흔히 공간의 단면들로 인식하고 있는 x,y,z값들이 사물의 종류를 나타내는 변수들 중 일부라면, 우리는 서로 100% 동일한 종류를 가지는 2개 이상의 사물들이 존재할 수 없다는 것을 시인해야 한다. 왜냐하면 그럴려면 해당 사물들이 공간의 똑같은 지점에 "겹쳐져" 있어야 할 것이기 때문이다. 만약에 겹쳐지지 않으려면 사물의 모양을 다르게 해야 하는데, 모양을 바꾸는 것도 결국 사물의 종류를 바꾸는 것이 되어버린다. 설사 모양과 위치를 동일하게 유지하면서도 방향을 다르게 하여 서로 겹쳐지지 않게 했다 할지라도, 방향 또한 사물의 종류를 이루는 차원들 중 하나가 되어야 하기 때문에, 종류차이 없이 두 개 이상의 사물들을 공존시키는 것은 불가능하다.</p>
 <p>여기서 또 하나 알아야 할 점이 있다. 그건 바로 사물의 종류에는 운동의 개념도 포함된다는 것이다. 이는 즉, x,y,z라는 3개의 차원들로 이루어진 공간 속에서 자유롭게 움직일 수 있는 사물이 있다면 그 사물의 속도와 가속도를 나타내는 차원들도 그것의 "종류"를 나타내는 공간의 차원들 중 일부로 여겨져야 한다. 만약에 어떠한 사물이 x축을 따라 5라는 속도로 이동하고 있다면, 그 사물의 종류를 나타내는 점은 현재 x축을 따라 5라는 속도로 움직일 뿐만 아니라, "x의 속력(dx)" 이라는 차원의 5라는 위치에 머물러 있는 것이기도 하다. 즉, 해당 사물을 나타내는 점이 dx차원을 따라 더 멀리 이동할수록 그 점의 x축에서의 속도는 증가하는 셈이다. 이는 x축에 평행인 방향으로 점의 운동속도를 바꿔주는 "속력장(Velocity Field)"이 dx축과 x축 사이의 평면을 따라 분포하고 있다는 뜻이다 (dx의 값이 커질수록, 점이 x축의 방향으로 이동하는 속도도 커진다). dx의 값의 절대값이 커지면 더 커질수록, 점은 그 장(Field)의 더더욱 강력한 부위에 귀속되게 되고, 그에 따라 더더욱 빠르게 x축을 따라 이동하게 된다.</p>
 <p>이런 식으로, 사물의 종류를 나타내는 차원들 사이에는 일종의 상호관계가 형성되어 있고, 이는 두 차원축들 사이의 평면상에 분포되어 있는 벡터장(Vector Field)에 의해 그 힘이 실현된다. 예컨대 색깔이 붉어지는 만큼 점점 더 밝게 빛나고, 붉은 색이 줄어들수록 점점 더 어두워지는 사물이 하나 있다고 가정해 보자. 그 사물의 종류를 나타내는 2차원 공간을 만들어 본다면, 붉은색의 농도는 x축으로 가정하고 밝기는 y축으로 가정할 수 있다. 해당 사물에게 있어서 붉은색과 밝기는 정비례 관계를 띈다. 이는 즉, 방금 말한 사물의 종류는 항상 x축과 y축 사이의 방향을 따라 가로지르는 대각선 위에만 위치해 있다는 것을 의미한다.</p>
-<p>그러나 이번에는 "운동"의 개념을 도입해 보자. 예컨대 어떠한 사물이 하나 있고, 그 사물의 밝기에 따라 그것의 색깔이 "얼마나 빠르게" 붉어지냐가 결정된다고 가정해 보는 것이다. 즉, "밝기를 나타내는 축에서의 위치"가, "붉은색의 농도를 나타내는 축에서의 이동속도"를 결정짓는 것이다. 이렇게 되면 아까처럼 속력장이 밝기의 축과 붉은색의 축 사이의 평면상에 분포하게 되는데, 여기서도 마찬가지로 밝기축에서의 위치의 절대값이 클수록, 붉은색의 축의 방향으로 향하는 속력벡터의 길이가 길어지게 된다.</p>
+<p>그러나 이번에는 "운동"의 개념을 도입해 보자. 예컨대 어떠한 사물이 하나 있고, 그 사물의 밝기에 따라 그것의 색깔이 "얼마나 빠르게" 붉어지냐가 결정된다고 가정해 보는 것이다. 즉, "밝기를 나타내는 축에서의 위치"가, "붉은색의 농도를 나타내는 축에서의 이동속도"를 결정짓는 것이다. 이렇게 되면 아까처럼 속력장이 밝기의 축과 붉은색의 축 사이의 평면상에 분포하게 되는데, 여기서도 마찬가지로 밝기축에서의 위치의 절대값이 클수록, 붉은색의 축의 방향으로 향하는 속력벡터의 길이가 길어지게 된다.</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/metaphysics/page-14.html">Previous Page</a>
+    <a class="inlineButton" href="https://thingspool.net/metaphysics/page-16.html">Next Page</a>
 <div class="l_row"></div>
 <img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>

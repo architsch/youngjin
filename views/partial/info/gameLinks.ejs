@@ -1,15 +1,5 @@
-<a class="noTextDeco" href="<%= process.env.URL_STATIC %>/ArtRaider/page.html">
-<img class="m_linkImage" src="<%= process.env.URL_STATIC %>/ArtRaider/entry.jpg" alt="ArtRaider">
+<%_ for (const entry of entries) { _%>
+<a class="noTextDeco" href="<%= process.env.URL_STATIC %>/<%= entry.dirName %>/page.html">
+<img class="m_linkImage" src="<%= process.env.URL_STATIC %>/<%= entry.dirName %>/entry.jpg" alt="<%= entry.title %>">
 </a>
-<a class="noTextDeco" href="<%= process.env.URL_STATIC %>/Water-vs-Fire/page.html">
-<img class="m_linkImage" src="<%= process.env.URL_STATIC %>/Water-vs-Fire/entry.jpg" alt="Water vs Fire">
-</a>
-<a class="noTextDeco" href="<%= process.env.URL_STATIC %>/HuntLand/page.html">
-<img class="m_linkImage" src="<%= process.env.URL_STATIC %>/HuntLand/entry.jpg" alt="HuntLand">
-</a>
-<a class="noTextDeco" href="<%= process.env.URL_STATIC %>/PoliceChase/page.html">
-<img class="m_linkImage" src="<%= process.env.URL_STATIC %>/PoliceChase/entry.jpg" alt="Police Chase">
-</a>
-<a class="noTextDeco" href="<%= process.env.URL_STATIC %>/SpaceTown/page.html">
-<img class="m_linkImage" src="<%= process.env.URL_STATIC %>/SpaceTown/entry.jpg" alt="SpaceTown">
-</a>
+<%_ } _%>

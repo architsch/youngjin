@@ -12,7 +12,7 @@ const ChatSockets =
         nsp.use(authMiddleware);
 
         nsp.on("connection", socket => {
-            console.log(`(ChatSockets) Client connected :: ${JSON.stringify(socket.handshake.auth.user)}`);
+            console.log(`(ChatSockets) Client connected :: ${JSON.stringify(socket.handshake.auth)}`);
 
             /*socket.on("join", async (roomID) => {
                 await socket.join(roomID);
@@ -28,7 +28,7 @@ const ChatSockets =
             });
 
             socket.on("disconnect", () => {
-                console.log(`(ChatSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth.user)}`);
+                console.log(`(ChatSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth)}`);
             });
         });
     },

@@ -1,0 +1,25 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    title: title,
+    desc: desc,
+    keywords: keywords,
+    ogImageURLOverride: customOGImagePath,
+    url: `${process.env.URL_STATIC}/${entry.dirName}/page-${pageNumber}.html`,
+    ogType: "article",
+    pageName: "library",
+    pagePathList: [
+        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: UIConfig.displayText.pageName["library"], url: `${process.env.URL_STATIC}/library.html`},
+        {title: entry.title, url: `${process.env.URL_STATIC}/${entry.dirName}/list.html`},
+        {title: title, url: undefined},
+    ],
+    backDestination_href: `${process.env.URL_STATIC}/${entry.dirName}/list.html`,
+}) %>
+<%- content _%>
+<div class="s_row"></div>
+<%_ if (pageNumber > 1) { _%>
+    <a class="inlineButton" href="<%= process.env.URL_STATIC %>/<%= entry.dirName %>/page-<%= pageNumber-1 %>.html">Previous Page</a>
+<%_ } _%>
+<%_ if (!isLastPage) { _%>
+    <a class="inlineButton" href="<%= process.env.URL_STATIC %>/<%= entry.dirName %>/page-<%= pageNumber+1 %>.html">Next Page</a>
+<%_ } _%>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

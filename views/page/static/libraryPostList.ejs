@@ -1,0 +1,19 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    title: "ThingsPool - " + entry.title,
+    desc: entry.title,
+    keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
+    url: `${process.env.URL_STATIC}/${entry.dirName}/list.html`,
+    pageName: "library",
+    pagePathList: [
+        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: UIConfig.displayText.pageName["library"], url: `${process.env.URL_STATIC}/library.html`},
+        {title: entry.title, url: undefined},
+    ],
+    backDestination_href: `${process.env.URL_STATIC}/library.html`,
+}) %>
+<h1><%- entry.title %></h1>
+<%_ for (let i = postInfoList.length-1; i >= 0; --i) { _%>
+<%_ const postInfo = postInfoList[i]; _%>
+<a class="postEntryButton" href="<%= process.env.URL_STATIC %>/<%= entry.dirName %>/page-<%= postInfo.pageNumber %>.html"><%- postInfo.title %></a>
+<%_ } _%>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

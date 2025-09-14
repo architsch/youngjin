@@ -1,11 +1,12 @@
 <%- include(`${ejsPartialRootPath}/common/header.ejs`, {
     url: `${process.env.URL_DYNAMIC}/register`,
-    pageName: "index",
+    pageName: "mypage",
     pagePathList: [
         {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: UIConfig.displayText.pageName["mypage"], url: `${process.env.URL_DYNAMIC}/mypage`},
         {title: UIConfig.displayText.pageName["register"], url: undefined},
     ],
-    backDestination_href: process.env.URL_STATIC,
+    backDestination_href: `${process.env.URL_DYNAMIC}/mypage`,
 }) %>
 
 <h1>Create Account:</h1>

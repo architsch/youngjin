@@ -1,0 +1,15 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    desc: "Games made by ThingsPool.",
+    keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
+    url: `${process.env.URL_STATIC}/arcade.html`,
+    pageName: "arcade",
+    pagePathList: [
+        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: UIConfig.displayText.pageName["arcade"], url: undefined},
+    ],
+    backDestination_href: process.env.URL_STATIC,
+}) %>
+<hr>
+<h1>Games</h1>
+<%- include(`${ejsPartialRootPath}/info/gameLinks.ejs`, { entries }) _%>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

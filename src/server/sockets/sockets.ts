@@ -25,7 +25,8 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
 {
     return (socket: socketIO.Socket, next: (err?: socketIO.ExtendedError) => void) =>
     {
-        const user = socket.handshake.auth.user;
+        const user = socket.handshake.auth as User;
+        console.log(user + " ::::: " + JSON.stringify(user));
         if (!passCondition(user))
         {
             next(new Error(`Authorization Failed (User "${user.userName}" does not satisfy the pass-condition)`));

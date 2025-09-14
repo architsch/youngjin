@@ -20,7 +20,7 @@ const ConsoleSockets =
         nsp.use(authMiddleware);
     
         nsp.on("connection", (socket: socketIO.Socket) => {
-            console.log(`(ConsoleSockets) Client connected :: ${JSON.stringify(socket.handshake.auth.user)}`);
+            console.log(`(ConsoleSockets) Client connected :: ${JSON.stringify(socket.handshake.auth)}`);
 
             socket.on("command", (command) => {
                 console.log(`(ConsoleSockets) Command received :: [${command}] - sent by :: ${JSON.stringify(socket.handshake.auth.user)}`);
@@ -51,7 +51,7 @@ const ConsoleSockets =
             });
 
             socket.on("disconnect", () => {
-                console.log(`(ConsoleSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth.user)}`);
+                console.log(`(ConsoleSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth)}`);
             });
         });
     },

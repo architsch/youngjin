@@ -8,6 +8,7 @@ import TextFileBuilder from "./builder/textFileBuilder";
 import EmbeddedScriptBuilder from "./builder/embeddedScriptBuilder";
 import styleDictionary from "./style/styleDictionary";
 import dotenv from "dotenv";
+import { ArcadeData } from "./data/arcadeData";
 dotenv.config();
 
 export default async function SSG(): Promise<void>
@@ -21,14 +22,12 @@ export default async function SSG(): Promise<void>
 
     let tb = new TextFileBuilder();
     tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
-        url: process.env.URL_STATIC,
+        gameEntries: ArcadeData.gameEntries,
     }));
     await tb.build("index.html");
 
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/portfolio.ejs", {
-        url: `${process.env.URL_STATIC}/portfolio.html`,
-    }));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/portfolio.ejs", {}));
     await tb.build("portfolio.html");
 
     tb = new TextFileBuilder();
@@ -36,22 +35,16 @@ export default async function SSG(): Promise<void>
     await tb.build("portfolio_minimal.html");
 
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/privacyPolicy.ejs", {
-        url: `${process.env.URL_STATIC}/privacy-policy.html`,
-    }));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/privacyPolicy.ejs", {}));
     await tb.build("privacy-policy.html");
 
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/termsOfService.ejs", {
-        url: `${process.env.URL_STATIC}/terms-of-service.html`,
-    }));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/termsOfService.ejs", {}));
     await tb.build("terms-of-service.html");
 
     // Static version of 'mypage' (in case the dynamic web app is currently not available)
     tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/dynamic/mypage.ejs", {
-        url: `${process.env.URL_STATIC}/mypage.html`,
-    }));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/dynamic/mypage.ejs", {}));
     await tb.build("mypage.html");
 
     await new ArcadePageBuilder(sitemapB, atomFeedB).build();
