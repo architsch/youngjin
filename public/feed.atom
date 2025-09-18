@@ -3,7 +3,7 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2025-09-14T00:00:00.000Z</updated>
+<updated>2025-09-18T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
@@ -805,6 +805,13 @@
   <id>https://thingspool.net/novels/page-1.html</id>
   <updated>2023-09-10T00:00:00.000Z</updated>
   <summary>도시에 관한 소설.</summary>
+</entry>
+<entry>
+  <title>Linear Algebra for Game Development - Part 12</title>
+  <link href="https://thingspool.net/concepts-of-plan/page-18.html"/>
+  <id>https://thingspool.net/concepts-of-plan/page-18.html</id>
+  <updated>2025-09-18T00:00:00.000Z</updated>
+  <summary>This article explains how to use linear algebra in the design and implementation of video games.</summary>
 </entry>
 <entry>
   <title>Linear Algebra for Game Development - Part 11</title>
