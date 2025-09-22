@@ -20,11 +20,9 @@ PageRouter.get("/register", (req: Request, res: Response): void => {
     });
 });
 
-PageRouter.get("/chat", AuthUtil.authenticateAnyUser, async (req: Request, res: Response): Promise<void> => {
-    EJSUtil.render(req, res, "page/dynamic/chat", {
-        title: "Chat",
-        desc: "This is ThingsPool's chat room.",
-        keywords: undefined,
+PageRouter.get("/login", (req: Request, res: Response): void => {
+    EJSUtil.render(req, res, "page/dynamic/login", {
+        loginDestination: `${process.env.URL_DYNAMIC}/mypage`,
     });
 });
 

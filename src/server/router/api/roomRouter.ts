@@ -6,6 +6,7 @@ import { Request, Response } from "express";
 import TextUtil from "../../../shared/util/textUtil";
 import DebugUtil from "../../util/debugUtil";
 import UIConfig from "../../../shared/config/uiConfig";
+import User from "../../db/types/schema/user";
 
 const RoomRouter = express.Router();
 

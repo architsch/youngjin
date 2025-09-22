@@ -1,4 +1,4 @@
-interface EmailVerification
+export default interface EmailVerification
 {
     email: string;
     verificationCode: string;

@@ -1,0 +1,14 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    url: `${process.env.URL_DYNAMIC}/login`,
+    pageName: "mypage",
+    pagePathList: [
+        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
+        {title: UIConfig.displayText.pageName["mypage"], url: `${process.env.URL_DYNAMIC}/mypage`},
+        {title: UIConfig.displayText.pageName["login"], url: undefined},
+    ],
+    backDestination_href: `${process.env.URL_DYNAMIC}/mypage`,
+}) %>
+
+<%- include(`${ejsPartialRootPath}/common/login.ejs`) %>
+
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

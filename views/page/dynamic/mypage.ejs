@@ -9,18 +9,29 @@
 }) %>
 
 <%_ if (isStaticPage) { _%>
-    <h1>Coming Soon...</h1>
-<%_ } else if (process.env.MODE != "dev") { _%>
-    <h1>Coming Soon</h1>
+    <h1>Server Not Available</h1>
 <%_ } else if (user) { _%>
-    <h1>Welcome, <%= user.userName %>!</h1>
-    <p>Details: <%= JSON.stringify(user) %></p>
-    <h3>What do you want to do?</h3>
-    <a href="<%= process.env.URL_DYNAMIC %>/chat">
-        <%= UIConfig.displayText.pageName["chat"] %>
-    </a>
+    <hr>
+    <h1>NOTE: This page is under construction.</h1>
+    <hr>
+    <p>User: <%= JSON.stringify(user) %></p>
+    <div id="canvasRoot"></div>
+    <label>Message: </label>
+    <input id="message_input" type="text">
+    <button id="send_button">Send</button>
+    <div id="message_list" style="width: 90%; height: 60%; overflow-y: scroll; overflow-x: hidden; background-color: black; border: 0.25% solid gray"></div>
+
+    <script type="text/javascript" src="<%= process.env.URL_STATIC %>/app/bundle.js"></script>
+    <!--
+    <%_ if (user.userType == "guest") { _%>
+        <div class="s_row"></div>
+        <div class="inlineLabel">Already have an account?</div><a class="inlineButton" href="<%= process.env.URL_DYNAMIC %>/login"><%= UIConfig.displayText.pageName["login"] %></a>
+        <div class="zero_row"></div>
+        <div class="inlineLabel">Don't have an account yet?</div><a class="inlineButton" href="<%= process.env.URL_DYNAMIC %>/register"><%= UIConfig.displayText.pageName["register"] %></a>
+    <%_ } _%>
+    -->
 <%_ } else { _%>
-    <%- include(`${ejsPartialRootPath}/common/login.ejs`) %>
+    <h3>Error: No user found</h3>
 <%_ } _%>
 
 <%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

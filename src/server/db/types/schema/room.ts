@@ -1,4 +1,4 @@
-interface Room
+export default interface Room
 {
     roomID: string;
     roomName: string;

@@ -1,4 +1,5 @@
 import DB from "./db";
+import EmailVerification from "./types/schema/emailVerification"
 import { Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();

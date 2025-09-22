@@ -7,6 +7,7 @@ const UIConfig =
             "library": "Library", // static
             "portfolio": "Portfolio", // static
             "register": "Create Account", // dynamic
+            "login": "Log In", // dynamic
             "mypage": "My Page", // dynamic
             "chat": "Chat", // dynamic
         },

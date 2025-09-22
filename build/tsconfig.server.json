@@ -15,5 +15,5 @@
           "ES2021.String"
         ]
     },
-    "include": ["src/**/*"]
+    "include": ["../src/server/**/*", "../src/shared/**/*"]
 }

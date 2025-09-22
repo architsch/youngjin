@@ -2,13 +2,14 @@
 	"name": "youngjin",
 	"scripts": {
 		"dev": "MODE=dev pm2 start ./devRunner.js --no-daemon --watch --ignore-watch=\"dist public .git views/partial/embeddedScript\"",
-		"ssg": "webpack && MODE=ssg node dist/server/bundle.js",
-		"prod": "webpack && MODE=prod pm2 start dist/server/bundle.js --name=admin",
+		"build": "webpack --config build/webpack.config.server.js && webpack --config build/webpack.config.client.js && MODE=ssg node dist/server/bundle.js",
+		"start": "MODE=prod pm2 start dist/server/bundle.js --name=admin",
 		"stop": "pm2 stop all && pm2 delete all"
 	},
 	"dependencies": {
 		"bcrypt": "^5.1.1",
 		"body-parser": "^1.20.3",
+		"cookie": "^1.0.2",
 		"cookie-parser": "^1.4.7",
 		"dotenv": "^16.4.7",
 		"ejs": "^3.1.10",
@@ -17,7 +18,9 @@
 		"jsonwebtoken": "^9.0.2",
 		"mysql2": "^3.14.0",
 		"nodemailer": "^6.10.0",
-		"socket.io": "^4.8.1"
+		"socket.io": "^4.8.1",
+		"socket.io-client": "^4.8.1",
+		"three": "^0.180.0"
 	},
 	"devDependencies": {
 		"@types/bcrypt": "^5.0.2",
@@ -25,9 +28,11 @@
 		"@types/ejs": "^3.1.5",
 		"@types/express": "^5.0.1",
 		"@types/hpp": "^0.2.6",
+		"@types/jquery": "^3.5.33",
 		"@types/jsonwebtoken": "^9.0.9",
 		"@types/node": "^22.15.17",
 		"@types/nodemailer": "^6.4.17",
+		"@types/three": "^0.180.0",
 		"ts-loader": "^9.5.2",
 		"typescript": "^5.8.3",
 		"webpack": "^5.99.8",

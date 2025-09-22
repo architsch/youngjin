@@ -22,6 +22,10 @@ export default function Router(app: Express): void
             res.status(200).setHeader("content-type", "text/html")
                 .send(EJSUtil.postProcessHTML(staticContent));
         });
+        app.get(/.*\.js$/, async (req: Request, res: Response): Promise<void> => {
+            res.status(200).setHeader("content-type", "text/javascript")
+                .sendFile(FileUtil.getAbsoluteFilePath(req.url));
+        });
         app.get(/(.*\.css)|(.*\.jpg)|(.*\.png)|(.*\.ico)|(.*\.atom)|(.*\.xml)|(.*\.pdf)$/, async (req: Request, res: Response): Promise<void> => {
             res.sendFile(FileUtil.getAbsoluteFilePath(req.url));
         });

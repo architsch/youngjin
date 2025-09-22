@@ -1,4 +1,4 @@
-interface RoomMembership
+export default interface RoomMembership
 {
     roomID: string;
     userID: string;

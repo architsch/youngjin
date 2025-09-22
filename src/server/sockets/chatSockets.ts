@@ -11,25 +11,24 @@ const ChatSockets =
         nsp = io.of("/chat_sockets");
         nsp.use(authMiddleware);
 
-        nsp.on("connection", socket => {
+        nsp.on("connection", (socket: socketIO.Socket) => {
             console.log(`(ChatSockets) Client connected :: ${JSON.stringify(socket.handshake.auth)}`);
 
-            /*socket.on("join", async (roomID) => {
-                await socket.join(roomID);
-            });
-            socket.on("leave", async (roomID) => {
-                await socket.leave(roomID);
-            });*/
-            socket.on("message", (message) => {
+            socket.on("message", (message: string) => {
                 DebugUtil.log("Chat Message Received", {message}, "low");
-    
-                //socket.join(room);
-                nsp/*.to(room)*/.emit("message", message);
+                nsp.to("room_default").emit("message", message);
+            });
+
+            socket.on("object_sync", (id: number, x: number, y: number, angleY: number) => {
+                DebugUtil.log("Object Sync Received", {x, y, angleY}, "low");
+                nsp.to("room_default").emit("object_sync", id, x, y, angleY);
             });
 
             socket.on("disconnect", () => {
                 console.log(`(ChatSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth)}`);
             });
+
+            socket.join("room_default");
         });
     },
 };
