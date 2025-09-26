@@ -1,7 +1,7 @@
 import DB from "./db";
 import { Response } from "express";
 import dotenv from "dotenv";
-import User from "./types/schema/user";
+import User from "../../shared/types/db/user";
 dotenv.config();
 
 const AuthDB =

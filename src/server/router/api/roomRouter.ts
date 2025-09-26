@@ -3,10 +3,10 @@ import RoomDB from "../../db/roomDB";
 import NetworkUtil from "../../util/networkUtil";
 import express from "express";
 import { Request, Response } from "express";
-import TextUtil from "../../../shared/util/textUtil";
+import TextUtil from "../../../shared/embeddedScripts/util/textUtil";
 import DebugUtil from "../../util/debugUtil";
-import UIConfig from "../../../shared/config/uiConfig";
-import User from "../../db/types/schema/user";
+import UIConfig from "../../../shared/embeddedScripts/config/uiConfig";
+import User from "../../../shared/types/db/user";
 
 const RoomRouter = express.Router();
 

@@ -1,4 +1,4 @@
-interface PostInfo
+export default interface PostInfo
 {
     pageNumber: number;
     title: string;

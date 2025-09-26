@@ -21,6 +21,9 @@
     <button id="send_button">Send</button>
     <div id="message_list" style="width: 90%; height: 60%; overflow-y: scroll; overflow-x: hidden; background-color: black; border: 0.25% solid gray"></div>
 
+    <script type="text/javascript">
+        window.thingspool_user = `<%- JSON.stringify(user) %>`;
+    </script>
     <script type="text/javascript" src="<%= process.env.URL_STATIC %>/app/bundle.js"></script>
     <!--
     <%_ if (user.userType == "guest") { _%>

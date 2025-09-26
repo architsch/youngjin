@@ -4,6 +4,7 @@ import TextFileBuilder from "../textFileBuilder";
 import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
+import GameEntry from "../../types/gameEntry"
 dotenv.config();
 
 export default class ArcadeGamePageBuilder

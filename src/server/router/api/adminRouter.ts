@@ -1,4 +1,4 @@
-import TextUtil from "../../../shared/util/textUtil";
+import TextUtil from "../../../shared/embeddedScripts/util/textUtil";
 import DB from "../../db/db";
 import AuthUtil from "../../util/authUtil";
 import express from "express";

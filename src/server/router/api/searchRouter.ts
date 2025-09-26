@@ -3,7 +3,7 @@ import NetworkUtil from "../../util/networkUtil";
 import SearchDB from "../../db/searchDB";
 import express from "express";
 import { Request, Response } from "express";
-import User from "../../db/types/schema/user";
+import User from "../../../shared/types/db/user";
 
 const SearchRouter = express.Router();
 

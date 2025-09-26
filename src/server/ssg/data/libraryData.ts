@@ -1,3 +1,5 @@
+import PostEntry from "../types/postEntry"
+
 export const LibraryData: {
     entriesByCategory: { [category: string]: PostEntry[] }
 } = {

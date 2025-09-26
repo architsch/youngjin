@@ -1,6 +1,3 @@
-import GraphicsContext from "./graphics/graphicsContext";
-import World from "./gameplay/world";
-import ChatSocketsClient from "./networking/chatSocketsClient";
+import GameSocketsClient from "./networking/gameSocketsClient";
 
-new World(new GraphicsContext());
-ChatSocketsClient.init();
+GameSocketsClient.init();

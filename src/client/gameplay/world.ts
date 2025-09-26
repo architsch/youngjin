@@ -1,80 +1,98 @@
 import GraphicsContext from "../graphics/graphicsContext";
-import GameObject from "./objects/gameObject";
-import Wall from "./objects/wall";
-import Floor from "./objects/floor";
-import MyPlayer from "./objects/myPlayer";
-import OtherPlayer from "./objects/otherPlayer";
-import Updatable from "./interfaces/updatable";
+import GameObject from "./object/types/gameObject";
+import Updatable from "./interface/updatable";
+import GameSocketsClient from "../networking/gameSocketsClient";
+import ObjectSyncParams from "../../shared/types/networking/objectSyncParams";
+import ObjectSpawnParams from "../../shared/types/networking/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/types/networking/objectDespawnParams";
+import NetworkObject from "./object/types/networkObject";
+import ObjectFactory from "./object/objectFactory";
+import WorldSyncParams from "../../shared/types/networking/worldSyncParams";
 
 export default class World
 {
-    private graphicsContext: GraphicsContext;
-    private gameObjects: {[id: number]: GameObject};
-    private updatableGameObjects: {[id: number]: Updatable};
-    private lastGameObjectId;
+    userName: string;
+    graphicsContext: GraphicsContext;
+
+    private gameObjects: {[objectId: string]: GameObject};
+    private updatableGameObjects: {[objectId: string]: Updatable};
     private prevTime;
 
-    constructor(graphicsContext: GraphicsContext)
+    constructor(params: WorldSyncParams)
     {
-        this.graphicsContext = graphicsContext;
+        this.userName = JSON.parse((window as any).thingspool_user).userName as string;
+        this.graphicsContext = new GraphicsContext();
         this.gameObjects = {};
         this.updatableGameObjects = {};
-        this.lastGameObjectId = 0;
         this.prevTime = performance.now();
-
-        this.createMyPlayer(0, 0);
-
-        for (let z = -5; z <= 5; ++z)
-        {
-            for (let x = -5; x <= 5; ++x)
-            {
-                this.createFloor(x, z);
-                if (z == -5 || z == 5 || x == -5 || x == 5)
-                    this.createWall(x, z);
-            }
-        }
-
-        this.createOtherPlayer(3, 3);
-        this.createOtherPlayer(-3, -4);
-        this.createOtherPlayer(-2, 4);
-        this.createOtherPlayer(-4, -1);
-        this.createOtherPlayer(-3.5, -2);
-        this.createOtherPlayer(4, 2);
-        this.createOtherPlayer(2, -3.5);
 
         //graphicsContext.renderer.domElement.addEventListener("resize", (ev: UIEvent) => {
         //    graphicsContext.renderer.setSize(graphicsContext.renderer.domElement.clientWidth, graphicsContext.renderer.domElement.clientHeight);
         //});
         this.update = this.update.bind(this);
-        graphicsContext.renderer.setAnimationLoop(this.update);
+        this.graphicsContext.renderer.setAnimationLoop(this.update);
+
+        GameSocketsClient.addObjectSyncListener((params: ObjectSyncParams) => {
+            const gameObject = this.gameObjects[params.objectId];
+            if ("onObjectSync" in gameObject)
+                (gameObject as NetworkObject).onObjectSync(params);
+            else
+                throw new Error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
+        });
+        GameSocketsClient.addObjectSpawnListener((params: ObjectSpawnParams) => {
+            const object = ObjectFactory.createObjectFromNetwork(this, params);
+            this.spawnObject(object);
+        });
+        GameSocketsClient.addObjectDespawnListener((params: ObjectDespawnParams) => {
+            this.despawnObject(params.objectId);
+        });
+
+        for (let z = -5; z <= 5; ++z)
+        {
+            for (let x = -5; x <= 5; ++x)
+            {
+                this.spawnObject(ObjectFactory.createFloor(this, x, z, 0));
+                if (z == -5 || z == 5 || x == -5 || x == 5)
+                    this.spawnObject(ObjectFactory.createWall(this, x, z, 0));
+            }
+        }
+        this.spawnObject(ObjectFactory.createPlayer(this, 0, 0, 0));
+
+        for (const objectRecord of Object.values(params.objectRecords))
+        {
+            const objectSpawnParams: ObjectSpawnParams = {
+                objectType: objectRecord.objectType,
+                objectId: objectRecord.objectId,
+                x: objectRecord.x,
+                z: objectRecord.z,
+                angleY: objectRecord.angleY,
+            };
+            const object = ObjectFactory.createObjectFromNetwork(this, objectSpawnParams);
+            this.spawnObject(object);
+        }
     }
 
-    createMyPlayer(x: number, z: number): void
+    spawnObject(object: GameObject)
     {
-        this.addGameObject(new MyPlayer(this.graphicsContext, x, z));
+        if (this.gameObjects[object.objectId] == undefined)
+        {
+            this.gameObjects[object.objectId] = object;
+            if ("update" in object)
+                this.updatableGameObjects[object.objectId] = object as Updatable;
+            object.onSpawn();
+        }
     }
 
-    createOtherPlayer(x: number, z: number): void
+    despawnObject(objectId: string)
     {
-        this.addGameObject(new OtherPlayer(this.graphicsContext, x, z));
-    }
-
-    createWall(x: number, z: number): void
-    {
-        this.addGameObject(new Wall(this.graphicsContext, x, z));
-    }
-
-    createFloor(x: number, z: number): void
-    {
-        this.addGameObject(new Floor(this.graphicsContext, x, z));
-    }
-
-    private addGameObject(gameObject: GameObject): void
-    {
-        gameObject.id = ++this.lastGameObjectId;
-        this.gameObjects[gameObject.id] = gameObject;
-        if ("update" in gameObject)
-            this.updatableGameObjects[gameObject.id] = gameObject as Updatable;
+        if (this.gameObjects[objectId] != undefined)
+        {
+            const object = this.gameObjects[objectId];
+            object.onDespawn();
+            delete this.gameObjects[objectId];
+            if (this.updatableGameObjects[object.objectId] != undefined)
+                delete this.updatableGameObjects[object.objectId];
+        }
     }
 
     private update(): void

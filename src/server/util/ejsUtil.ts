@@ -1,7 +1,7 @@
 import DebugUtil from "./debugUtil";
 import FileUtil from "./fileUtil";
-import UIConfig from "../../shared/config/uiConfig";
-import TextUtil from "../../shared/util/textUtil";
+import UIConfig from "../../shared/embeddedScripts/config/uiConfig";
+import TextUtil from "../../shared/embeddedScripts/util/textUtil";
 import ejs from "ejs";
 import dotenv from "dotenv";
 import { Request, Response } from "express";

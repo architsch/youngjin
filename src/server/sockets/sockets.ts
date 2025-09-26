@@ -1,22 +1,17 @@
 import http from "http";
 import socketIO from "socket.io";
 import ConsoleSockets from "./consoleSockets";
-import ChatSockets from "./chatSockets";
+import GameSockets from "./gameSockets";
 import dotenv from "dotenv";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import User from "../db/types/schema/user";
+import User from "../../shared/types/db/user";
 import AuthUtil from "../util/authUtil";
 import * as cookie from "cookie";
 dotenv.config();
 
 export default function Sockets(server: http.Server)
 {
-    const io = new socketIO.Server(server, /*{
-        cors: {
-            origin: (process.env.MODE == "dev") ? `http://localhost:${process.env.PORT}` : process.env.URL_DYNAMIC,
-            credentials: true,
-        }
-    }*/);
+    const io = new socketIO.Server(server);
 
     ConsoleSockets.init(io,
         (process.env.MODE == "dev")
@@ -24,7 +19,7 @@ export default function Sockets(server: http.Server)
             : makeAuthMiddleware((user: User) => user.userType == "admin")
     );
     
-    ChatSockets.init(io,
+    GameSockets.init(io,
         makeAuthMiddleware((user: User) => true)
     );
 }

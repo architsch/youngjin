@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 14"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-20.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b192.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 14">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 14</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-20.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 14</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 14</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: September 26, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 14 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Linear and Nonlinear Processes</b></h3>
+<p>What we just saw in the previous article is an example of collaboration between two types of processes - one of them being linear, and the other one being nonlinear.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b192.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 1)">
+<p>In our frog example, there is 1 linear process and 1 nonlinear process.</p>
+<p>The job of the linear process is to decrease the frog's energy level by 1, thereby simulating the effect of the frog's periodic consumption of energy (An animal must keep burning its body's fuel to stay alive, you know).</p>
+<p>The job of the nonlinear process, on the other hand, is to "filter out" erroneous energy values (i.e. negative numbers) by turning them back to 0. This way, we are able to guarantee that the frog's energy level will make sense no matter how many times the system tries to decrement it.</p>
+<hr>
+<h3><b>Two-Step Cycle</b></h3>
+<p>In a away, therefore, we are able to imagine our gameplay system as a cycle of two alternating steps - one being linear, and the other one being nonlinear.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b193.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 2)">
+<p>During the linear step, we simply update the entries in our table by means of plain old matrices - that is, those involving numbers only, without any strange nonlinear operations such as the "MAX" function we saw before.</p>
+<p>Right after doing this, we subsequently wrap up our results by conditionally adjusting them. This is something which should be done by a nonlinear step.</p>
+<p>And for the sake of not only updating our data entries but also ensuring their sanity at all times, we must keep repeatedly executing the two aforementioned steps in an alternating manner. That is, once we update the table, we should then adjust it, and then update it again, and adjust it once more, and so forth.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b194.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 3)">
+<p>As you may have guessed already, the underlying pattern here is that each pair of the two alternating steps (i.e. "update" and "adjust") represents each cycle in the system's clock.</p>
+<p>Each time we update our data table and then subsequently adjust its values, a cycle completes itself and the game's clock ticks once. And every time the clock ticks, we increment our current time by 1 (assuming that time is a sequence of discrete units, each of which is quantified by the value of 1).</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b195.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 4)">
+<p>Note that each cycle contains two instances of the game's state (aka "snapshots"). Let us take a look at them individually.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b196.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 5)">
+<p>The upper one is the immediate result of the crude update process, which is purely linear and thus have none of the necessary adjustments applied yet. The lower one, one the other hand, is the finalized (i.e. adjusted) version of it.</p>
+<p>Since the upper one is just an intermediate byproduct, we may as well just ignore it in the context of gameplay and only take the lower one as what is really happening in our game.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b197.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 6)">
+<p>The philosophy behind this two-step logic is quite clear; it is the decoupling between parts of the system which are linear, and parts of the system which are nonlinear.</p>
+<p>Parts that are linear can easily be combined into a linear operator (such as a matrix multiplication), without forcing the developer to worry about violating the rules of linear algebra.</p>
+<p>Meanwhile, parts that are nonlinear will have the privilege to be playing in their own playground without hurting the ego of mathematical fundamentalists whose highest achievement in life is that they have memorized every axiom in linear algebra and learned how to apply it without any exception.</p>
+<hr>
+<h3><b>Global Properties</b></h3>
+<p>Speaking of gameplay cycles and their implication of the concept of time, I would like to mention one major thing which has hitherto been missing. It is the implementation of the universal quantity called "time", which exists independently of any individual objects in our game.</p>
+<p>Take a look at the picture below.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b198.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 7)">
+<p>Here are 3 objects - a frog, a diamond, and an apple. Each of them possesses its own set of properties, such as energy, health, price, and so forth. Such properties describe the characteristics of these individual objects.</p>
+<p>However, there could also be a property which exists independently, such as time.</p>
+<p>Time does not belong anywhere; it is a number which is directly associated with the universe as a whole. Whenever we discuss anything related to time, we do not say, "My frog's time is 2:00PM". Instead, we simply say, "The time is 2:00PM" because time is a global property rather than something that is local to any specific object.</p>
+<p>The question is, how to represent such an omnipresent being within the context of our data table?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b199.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 8)">
+<p>As you can tell from the image above, each row typically represents a "thing" in our game, such as a character, an item, or a prop. Therefore, it wouldn't really make sense to record the current time in one of such rows.</p>
+<p>This kind of formulation, however, is not strictly necessary. We may just come up with a special row which will serve as the game's "global record" - that is, a list of data entries which are representative of the game as a whole, rather than mere portions of it.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b200.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 9)">
+<p>Here, for example, I justed added a new row and declared that its second column value indicates the universe's current time (which is apparently "12" right now).</p>
+<p>Normally, numbers listed on the second column would all refer to domains to which the game's objects (e.g. frogs) belong. In our example, however, we are designating separate labels to the columns of our "universal row", which make it somewhat special and thus behave differently from any of the other rows.</p>
+<hr>
+<h3><b>Time</b></h3>
+<p>How to let our time flow, then? That is, how to ensure that the clock is ticking, so that our time will periodically increase, from 12 to 13, from 13 to 14, from 14 to 15, and so on?</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b201.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 10)">
+<p>To achieve such an objective, we need some way of adding 1 to the current time. And you what? For this particular purpose, we can just reuse the same "domain building block" we used before, when we were killing/reviving the frogs. Here, I will include this particular building block at the bottom of the data table (See the picture below).</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b202.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 11)">
+<p>The role of the bottommost row here depends on its usage.</p>
+<p>Whenever we add it to one of the "frog rows" (in which case it will be transforming the frog's domain value), it will play the role of a "domain building block".</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b203.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 12)">
+<p>Whenever we add it to our "universal row" (in which case it will be transforming the universe's time value), on the other hand, it will play the role of a "time building block".</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b204.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 13)">
+<p>Here is an idea. By accumulating this "time building block" in a periodic manner, we are able to simulate the passage in time. And the way we do this is not so different from what we have been doing so far with the so-called building blocks; we just add them to the rows we want.</p>
+<p>We know that, in our case, the goal is to periodically increment the time by 1. This can be done by adding the "time building block" to the row of global properties, wherein the time value resides.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b205.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 14)">
+<p>As you can see, this operation is equivalent to the act of ticking the clock. Every time we multiply our table by the matrix shown above, we tick the clock (i.e. increment the time by 1). And we need do this over and over at regular intervals. This will keep the time flowing.</p>
+<img class="m_image" src="https://thingspool.net/concepts-of-plan/b206.jpg" alt="Linear Algebra for Game Development - Part 14 (Figure 15)"><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-19.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>

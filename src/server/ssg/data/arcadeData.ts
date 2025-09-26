@@ -1,3 +1,5 @@
+import GameEntry from "../types/gameEntry"
+
 export const ArcadeData: {
     gameEntries: GameEntry[]
 } = {

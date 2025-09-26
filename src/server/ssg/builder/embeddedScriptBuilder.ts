@@ -7,7 +7,7 @@ export default class EmbeddedScriptBuilder
     async build(sourceDir?: string, targetDir?: string): Promise<void>
     {
         if (sourceDir == undefined)
-            sourceDir = `${process.env.SRC_ROOT_DIR}/shared`;
+            sourceDir = `${process.env.SRC_ROOT_DIR}/shared/embeddedScripts`;
         if (targetDir == undefined)
             targetDir = `${process.env.VIEWS_ROOT_DIR}/partial/embeddedScript`;
 

@@ -4,6 +4,8 @@ import TextFileBuilder from "../textFileBuilder";
 import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
+import PostEntry from "../../types/postEntry"
+import PostInfo from "../../types/postInfo"
 dotenv.config();
 
 export default class LibraryPostPageBuilder

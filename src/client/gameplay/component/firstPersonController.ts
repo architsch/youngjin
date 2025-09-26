@@ -1,21 +1,19 @@
-import GraphicsContext from "../../graphics/graphicsContext";
-import GameObject from "./gameObject";
-import Updatable from "../interfaces/updatable";
+import GameObject from "../object/types/gameObject";
 
-export default class MyPlayer extends GameObject implements Updatable
+export default class FirstPersonController
 {
+    private gameObject: GameObject;
     private pointerIsDown: boolean = false;
     private pointerDownPos: [number, number] = [0, 0];
     private pointerDragPos: [number, number] = [0, 0];
 
-    constructor(graphicsContext: GraphicsContext, x: number, z: number)
+    constructor(gameObject: GameObject)
     {
-        super(graphicsContext, x, z);
+        this.gameObject = gameObject;
+        const graphicsContext = gameObject.world.graphicsContext;
 
-        this.obj.add(graphicsContext.camera);
+        gameObject.obj.add(graphicsContext.camera);
         graphicsContext.camera.position.set(0, 2, 0);
-
-        this.obj.rotateY(Math.PI * 0.35);
 
         const domElement = graphicsContext.renderer.domElement;
         this.onPointerPress = this.onPointerPress.bind(this);
@@ -33,17 +31,18 @@ export default class MyPlayer extends GameObject implements Updatable
     {
         if (this.pointerIsDown)
         {
-            const canvas = this.graphicsContext.renderer.domElement;
+            const canvas = this.gameObject.world.graphicsContext.renderer.domElement;
             const xOffset = this.pointerDragPos[0] - this.pointerDownPos[0];
             const yOffset = this.pointerDragPos[1] - this.pointerDownPos[1];
             //console.log(`xOffset = (${xOffset}), yOffset = (${yOffset}), canvas.width = (${canvas.width}), canvas.height = (${canvas.height})`);
-            this.obj.translateZ(10 * deltaTime * yOffset / canvas.height);
-            this.obj.rotateY(-5 * deltaTime * xOffset / canvas.width);
+            this.gameObject.obj.translateZ(10 * deltaTime * yOffset / canvas.height);
+            this.gameObject.obj.rotateY(-5 * deltaTime * xOffset / canvas.width);
         }
     }
 
     private onPointerPress(ev: PointerEvent): void
     {
+        ev.preventDefault();
         this.pointerIsDown = true;
         this.pointerDownPos[0] = ev.clientX;
         this.pointerDownPos[1] = ev.clientY;
@@ -58,6 +57,7 @@ export default class MyPlayer extends GameObject implements Updatable
 
     private onPointerMove(ev: PointerEvent): void
     {
+        ev.preventDefault();
         if (this.pointerIsDown)
         {
             this.pointerDragPos[0] = ev.clientX;

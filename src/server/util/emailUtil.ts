@@ -1,12 +1,12 @@
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import EmailDB from "../db/emailDB";
-import TextUtil from "../../shared/util/textUtil";
+import TextUtil from "../../shared/embeddedScripts/util/textUtil";
 import DebugUtil from "./debugUtil";
-import GlobalConfig from "../../shared/config/globalConfig";
+import GlobalConfig from "../../shared/embeddedScripts/config/globalConfig";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
-import UIConfig from "../../shared/config/uiConfig";
+import UIConfig from "../../shared/embeddedScripts/config/uiConfig";
 dotenv.config();
 
 const codeChars = "0123456789";

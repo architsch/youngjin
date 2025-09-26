@@ -1,12 +1,12 @@
 import GameObject from "./gameObject";
-import GraphicsContext from "../../graphics/graphicsContext";
-import Mesh from "../../graphics/mesh";
+import Mesh from "../../../graphics/mesh";
+import World from "../../world";
 
 export default class Floor extends GameObject
 {
-    constructor(graphicsContext: GraphicsContext, x: number, z: number)
+    constructor(world: World, objectId: string, x: number, z: number, angleY: number)
     {
-        super(graphicsContext, x, z);
+        super(world, objectId, x, z, angleY);
 
         const mesh = Mesh.floor();
         this.obj.add(mesh);

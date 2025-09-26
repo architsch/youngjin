@@ -1,4 +1,4 @@
-interface GameEntry
+export default interface GameEntry
 {
     dirName: string;
     title: string;

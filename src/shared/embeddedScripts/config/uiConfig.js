@@ -9,7 +9,6 @@ const UIConfig =
             "register": "Create Account", // dynamic
             "login": "Log In", // dynamic
             "mypage": "My Page", // dynamic
-            "chat": "Chat", // dynamic
         },
         message: {
             "error/userName/length": "Username must be between 4 and 16 characters long.",
