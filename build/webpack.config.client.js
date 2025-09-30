@@ -3,7 +3,8 @@ const path = require("path");
 module.exports = {
     entry: path.resolve(__dirname, '../src/client/client.ts'),
     target: 'web',
-    mode: 'production',
+    mode: 'development',
+    devtool: 'inline-source-map',
     module: {
         rules: [
             {
