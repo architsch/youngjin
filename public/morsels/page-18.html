@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -61,17 +59,17 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>If you remember the egg analogy from the last article, you will be able to recall that the system should be able to convert an egg into a broken egg with the help of the "break" event. Since an egg is breakable, we can break it. And whenever we break it, it transforms into a broken egg (i.e. The tag "brokenEgg" gets assigned to it).</p>
 <div class="snippet"><pre><code>breakable(X) :- egg(X).
 brokenEgg[n](X) :- egg[n-1](X), breakable[n-1](X), break[n-1](X).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e73.jpg" alt="Game Programming in Prolog - Part 9 (Figure 1)">
+<img class="l_image" src="https://thingspool.net/morsels/e73.jpg" alt="Game Programming in Prolog - Part 9 (Figure 1)">
 <p>Here is something fishy, though. Even after we break an egg and turn it into a broken egg, it should still be considered an "egg" because breaking it does not disqualify it from being an egg. Mathematically speaking, the set of broken eggs is a subset of the set of all eggs.</p>
 <p>And of course, this is exactly what we are presuming in the rules above. When we assign the tag "brokenEgg" to X, we are not removing the tag "egg" from it because a broken egg is still an egg. An egg may or may not be a broken egg, but a broken egg is always an egg.</p>
-<img class="m_image" src="https://thingspool.net/morsels/e74.jpg" alt="Game Programming in Prolog - Part 9 (Figure 2)">
+<img class="l_image" src="https://thingspool.net/morsels/e74.jpg" alt="Game Programming in Prolog - Part 9 (Figure 2)">
 <p>The problem is that, once an egg gets broken, it should no longer be breakable. So the first horn clause, "breakable(X) :- egg(X)", won't work for broken eggs; it will simply allow broken eggs to be broken again and again, which is a nonsense.</p>
 <p>Thus, we are required to explicitly state that an egg is breakable only if it is NOT a broken egg. The following code is the result of such modification:</p>
 <div class="snippet"><pre><code>breakable[n](X) :- egg[n](X), !brokenEgg[n](X).
 brokenEgg[n](X) :- egg[n-1](X), breakable[n-1](X), break[n-1](X).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e75.jpg" alt="Game Programming in Prolog - Part 9 (Figure 3)">
+<img class="l_image" src="https://thingspool.net/morsels/e75.jpg" alt="Game Programming in Prolog - Part 9 (Figure 3)">
 <p>From the perspective of set theory, one may as well explain this logic by saying that a breakable egg is an element of the set of all eggs MINUS the set of broken eggs. The first of the two rules above, therefore, could be considered an instance of set operation (i.e. "breakableEggs" = "eggs" - "brokenEggs").</p>
-<img class="m_image" src="https://thingspool.net/morsels/e76.jpg" alt="Game Programming in Prolog - Part 9 (Figure 4)">
+<img class="l_image" src="https://thingspool.net/morsels/e76.jpg" alt="Game Programming in Prolog - Part 9 (Figure 4)">
 <p>Now, one might question the necessity of having the "breakable" tag in our code. Why not just directly embed the egg's condition of breakability right inside the second horn clause, like the one displayed below? This way, we will be able to get rid of the word "breakable" entirely, thereby making the code a bit more succinct.</p>
 <div class="snippet"><pre><code>brokenEgg[n](X) :- egg[n-1](X), !brokenEgg[n-1](X), break[n-1](X).</code></pre></div>
 <p>This is a valid way of implementing the system. However, we should also be aware of the fact that eggs are not the only things which may be breakable. Suppose that there is some sort of generic "breaker" in our game, which has a tendency of breaking any breakable object it happens to touch. In such a case, we would like to label any breakable object with the word "breakable", so that the only thing that the breaker will need to do is check the presence of the word "breakable" in whichever actor it encounters, and proceed to break it if so (See the following code).</p>
@@ -98,7 +96,7 @@ breakable[n](X) :- breakable[n-1](X), alive[n-1](X), !broken[n](X).
 
 broken[n](X) :- breakable[n-1](X), break[n-1](X).
 broken[n](X) :- broken[n-1](X), alive[n-1](X).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e77.jpg" alt="Game Programming in Prolog - Part 9 (Figure 5)">
+<img class="l_image" src="https://thingspool.net/morsels/e77.jpg" alt="Game Programming in Prolog - Part 9 (Figure 5)">
 <p>Instead of "brokenEgg", we now have an "egg" which can optionally be labeled as "broken" depending on whether it has been broken or not. The composition of the two words, "egg" and "broken", implies that the object is a broken egg. The absence of the latter implies that the egg has not been broken yet.</p>
 <p>As you can clearly see in the code above, the only type-specific rules (i.e. the ones which have to be repeated for different types of actors) are ones responsible for initializing the "breakable" tag for all object types which are considered initially breakable. The state of being breakable, then, will persist as long as the object to which it is bound is neither dead nor broken. The state of being broken, too, will persist in a similar manner.</p>
 <hr>
@@ -108,23 +106,23 @@ broken[n](X) :- broken[n-1](X), alive[n-1](X).</code></pre></div>
 <p>(1) A default egg (That is, a plain raw egg which has just been laid by a chicken) is an actor with one state-related tag called "egg",<br>(2) A broken egg is an actor with two state-related tags called "egg" and "broken", and<br>(3) A stirred egg is an actor with three state-related tags called "egg", "broken", and "stirred" (because an egg must first be broken in order to be stirred),</p>
 <p>... and so on.</p>
 <p>A state transition of an actor, then, can be interpreted as a process of reconfiguring the actor's inventory of tags. The event of breaking the egg, for example, resulted in attaching an additional tag called "broken" to the egg but did not take away any of its existing tags. If the event were something really extraordinary such as "throwIntoLava", the system would have removed the tag "egg" from the actor because no egg is capable of maintaining its identity as an egg despite being exposed to such an extreme circumstance.</p>
-<img class="m_image" src="https://thingspool.net/morsels/e78.jpg" alt="Game Programming in Prolog - Part 9 (Figure 6)">
+<img class="l_image" src="https://thingspool.net/morsels/e78.jpg" alt="Game Programming in Prolog - Part 9 (Figure 6)">
 <p>From the viewpoint of set theory, an actor's state transition (i.e. addition/removal of tags) may as well be thought of as a displacement of the actor's "conceptual location" from one set to another. The act of breaking an egg, for example, will put it inside the intersection of two sets - eggs and any broken objects. The act of throwing an egg into lava, on the other hand, will put it outside of the set of eggs entirely.</p>
-<img class="m_image" src="https://thingspool.net/morsels/e79.jpg" alt="Game Programming in Prolog - Part 9 (Figure 7)">
+<img class="l_image" src="https://thingspool.net/morsels/e79.jpg" alt="Game Programming in Prolog - Part 9 (Figure 7)">
 <p>What's interesting is that there are alternative ways in which an actor may be transformed, some of which are mutually exclusive with one another. Once you throw an egg into lava, for instance, you cannot break it later on because it will no longer be an egg (Instead, it will perhaps be a morsel of ash, which is definitely not breakable). But if you break the egg first, you will still be able to throw it into lava and turn it into ash-omelet. Thus, we may conclude that the "throwIntoLava" event excludes the "break" event from occurring, while the "break" event does NOT exclude the "throwIntoLava" event from occurring.</p>
-<img class="m_image" src="https://thingspool.net/morsels/e80.jpg" alt="Game Programming in Prolog - Part 9 (Figure 8)">
+<img class="l_image" src="https://thingspool.net/morsels/e80.jpg" alt="Game Programming in Prolog - Part 9 (Figure 8)">
 <p>The reason why this sort of distinction exists is that the current state of an actor is basically a node in a graph (aka "state transition diagram"), in which each node is one of the actor's possible states and each directed edge is an event which triggers a transition from one state to another.</p>
 <p>Let me come up with a more interesting example which contains two alternative choices of actions - pay-frying and stirring (You may recall them from the previous article, in which their definitions were left incomplete).</p>
 <p>The most intriguing aspect of these two choices is that choosing one of them prevents the other one from taking place, thus rendering two alternative pathways (in space space) through which the egg can travel. In order to explain why this is so, I will first come up with a number of rules which will eventually lead to such a scenario.</p>
 <p>The two clauses below are what one may refer to as "enablers"; they are responsible for enabling the egg to be either pan-fried or stirred, the very moment the egg gets broken. An egg which has NOT yet been broken is neither pan-fryable nor stirrable.</p>
 <div class="snippet"><pre><code>payFryable[n](X) :- egg[n-1](X), break[n-1](X).
 stirrable[n](X) :- egg[n-1](X), break[n-1](X).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e81.jpg" alt="Game Programming in Prolog - Part 9 (Figure 9)">
+<img class="l_image" src="https://thingspool.net/morsels/e81.jpg" alt="Game Programming in Prolog - Part 9 (Figure 9)">
 <p>After the initial moment of enablement, of course, the system should let the broken egg stay pan-fryable and stirrable unless some change takes place. The following two rules ensure that anything which is pan-fryable will stay pan-fryable until it either gets destroyed or pan-fried, as well as that anything which is stirrable will stay stirrable until it either gets destroyed, stirred, or pan-fried (because the process pan-frying solidifies the object, thus preventing it from being stirred).</p>
 <div class="snippet"><pre><code>panFryable[n](X) :- panFryable[n-1](X), alive[n-1](X), !panFried[n](X).
 stirrable[n](X) :- stirrable[n-1](X), alive[n-1](X), !stirred[n](X), !panFried[n](X).</code></pre></div>
 <p>The presence of the "!panFried[n](X)" predicate in the second rule implies that pan-frying blocks the subsequent stirring of the object, while the absence of the "!stirred[n](X)" predicate in the first rule implies that stirring does NOT block the subsequent pay-frying of the object.</p>
-<img class="m_image" src="https://thingspool.net/morsels/e82.jpg" alt="Game Programming in Prolog - Part 9 (Figure 10)">
+<img class="l_image" src="https://thingspool.net/morsels/e82.jpg" alt="Game Programming in Prolog - Part 9 (Figure 10)">
 <p>When an actor is pan-fryable, we can pan-fry it by attaching the tag "panFried" to it; once pan-fried, the actor will stay pan-fried as long as it exists. And when an actor is stirrable, we can stir it by attaching the tag "stirred" to it; once stirred, the actor will stay stirred as long as it exists. The code below shows how these lines of logic could be implemented in Prolog.</p>
 <div class="snippet"><pre><code>panFried[n](X) :- panFryable[n-1](X), panFry[n-1](X).
 panFried[n](X) :- panFried[n-1](X), alive[n-1](X).
@@ -142,7 +140,7 @@ friedEgg[n](X) :- egg[n](X), !stirred[n](X), panFried[n](X).</code></pre></div>
     <a class="inlineButton" href="https://thingspool.net/morsels/page-17.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/morsels/page-19.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

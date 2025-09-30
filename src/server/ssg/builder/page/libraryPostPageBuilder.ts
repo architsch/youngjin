@@ -123,7 +123,7 @@ export default class LibraryPostPageBuilder
                     const imgPath = `${process.env.URL_STATIC}/${entry.dirName}/${imgName}.jpg`;
                     if (customOGImagePath == undefined || line.endsWith("*"))
                         customOGImagePath = imgPath;
-                    contentLines.push(`<img class="m_image" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);
+                    contentLines.push(`<img class="l_image" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);
                 }
             }
             else if (line.startsWith("@@")) // Custom HTML tag

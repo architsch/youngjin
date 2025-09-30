@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -56,59 +54,59 @@ gtag('config', 'G-JL7KHR7HK8');
 <hr>
 <h3><b>Resurrection</b></h3>
 <p>In the previous article, we saw that it is not so hard to create a new object (such as a frog), introduce it to the world, and then destroy it later on. All we had to do was fill up a row in the data table with some combination of building blocks to spawn something, and then clear out that particular row once we decide to despawn it.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b130.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 1)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b130.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 1)">
 <p>Here is a potential problem, though. When we erase a row (by turning every one of its column values to 0), there is no way to recover its original values, meaning that we are unable to revive something we just killed.</p>
 <p>This, of course, makes perfect sense in ordinary life because (unless a miracle happens) a living thing simply cannot come back to life after it dies.</p>
 <p>Since a game is a work of fiction, however, it is often fun to grant ourselves a magical power to raise the dead from their graveyard. How shall we implement such a power?</p>
 <p>If we want to be able to bring the dead back to life, we must stop completely annihilating something whenever we decide to kill it. To explain the reason why, let me suppose that there is a frog inside the world, like the one shown here.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b131.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 2)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b131.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 2)">
 <p>If we kill this frog by simply erasing it (without making a backup), it will be gone forever! There will be absolutely no way to bring it back to existence, since we won't have access to the piece of information we need ("1 1 5 2 2") to reconstruct the original frog.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b132.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 3)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b132.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 3)">
 <p>In order for resurrection to be viable, therefore, we need to have some kind of "backup storage" in which we can temporarily store the dead frog, so as to be able to bring it back to life later on. To make room for such a storage, we need to partition the world into two distinct parts - Earth and Heaven.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b133.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 4)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b133.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 4)">
 <p>From now on, when we decide to kill the frog, we will move it over to Heaven instead of just erasing it. Think of Heaven as the frog's backup storage, hosted on the cloud.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b134.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 5)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b134.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 5)">
 <p>Later on, if we want to resurrect the frog, we will simply need to bring it back to Earth. That way, we will successfully recover the original copy of the frog without having to remember and reconstruct it by ourselves.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b135.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 6)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b135.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 6)">
 <p>And the way we implement this is easy. All we need to do is change the frog's domain from "Earth" to "Heaven" when it dies, and change it back to "Earth" when it revives.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b136.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 7)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b136.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 7)">
 <p>This kind of transformation, indeed, will need to be modeled in terms of numerical operations. For such a purpose, let us begin by assigning numbers to our domains. For example, let's say that Earth is 1 and Heaven is 11.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b137.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 8)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b137.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 8)">
 <p>What sort of action, then, will we need to take if we want to kill the frog (i.e. teleport it from Earth to Heaven)? Oh, the answer is crystal clear. Since Earth is 1 and Heaven is 11, we know that adding 10 to Earth will turn it into Heaven. Therefore, if the frog is currently on Earth (1), the only thing we will need to do is increment the domain's value by 10 to change it to Heaven (11).</p>
 <p>The opposite scenario is equally straightforward. If the frog is in Heaven (11) and we want to bring it back to Earth (1), all we need to do is decrement the frog's domain by 10.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b138.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 9)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b138.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 9)">
 <p>In the language of matrix multiplication, it is evident that multiplying the domain's building block by 10 and adding it to the frog's row is equivalent to increasing the frog's domain by 10. If the frog is currently on Earth (1), executing such an operation will move it over to Heaven (11). This is how we kill a frog.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b139.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 10)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b139.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 10)">
 <p>If we multiply the domain's building block by 10 but subtract it from the frog's row instead, the frog's domain will decrease by 10 (instead of increasing). If the frog is currently in Heaven (11), therefore, executing such an operation will move it back to Earth (1). This is how we resurrect a dead frog.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b140.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 11)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b140.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 11)">
 <hr>
 <h3><b>Multiple Heavens</b></h3>
 <p>"But, what about the inventory?" you might ask. And in fact, you are absolutely right that the method I just described does not take the idea of inventory into account.</p>
 <p>Previously, I had mentioned that it is often necessary to split our game into multiple spatial realms such as "world" and "inventory", where the world refers to some kind of 3D space in which physical interactions happen, whereas the inventory refers to some kind of 2D grid in which items are being stored, and so forth.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b141.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 12)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b141.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 12)">
 <p>A question may arise, then. What is going to happen if a frog in the player's inventory suddenly dies? Will it go to some kind of "inventory-heaven", as opposed to "world-heaven"?</p>
 <p>Some people may argue that such a division is unnecessary, yet here is an important point to keep in mind. When a frog in the inventory dies, goes to Heaven, and then comes back to life, at which place will it respawn?</p>
 <p>It may be argued that it doesn't really matter, and that the place of resurrection can be wherever we want, but here is an example which will prove that such a claim is groundless. Imagine that a vampire dies and is buried in a coffin. When it comes back to life, at which location shall we expect to see the vampire again? The same exact coffin, of course!</p>
 <p>Therefore, if a frog dies in the inventory and comes back to life later on, we should be able to see the resurrected frog in the inventory, rather than somewhere else. The rule of thumb is that, whenever something dies and then comes back to life, it should respawn right at the place of its most recent death.</p>
 <p>In order to ensure that this is the case, we must come up with a separate heaven for each domain - one for the world, and another one for the inventory.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b142.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 13)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b142.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 13)">
 <p>When the frog dies in the inventory, it enters the inventory-heaven (which is the place where dead inventory items hang out before they decide to reincarnate).</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b143.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 14)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b143.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 14)">
 <p>The frog stays there, up until the point at which it happens to resurrect. When such a moment comes, it exits the inventory-heaven and respawns in the inventory (i.e. the place it left when it died).</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b144.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 15)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b144.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 15)">
 <p>The same logic applies to the world and its corresponding world-heaven. If the frog were within the world (instead of the inventory) while it was dying, it would have entered the world-heaven rather than the inventory-heaven, and would have come back to the world again when it revived.</p>
 <p>And, just like in the case of Earth and Heaven, we can assign distinct numerical values to the aforementioned earthly domains and their respective heavenly domains (like the ones shown below).</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b145.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 16)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b145.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 16)">
 <p>Here, you may have noticed that the world-heaven differs from the world by 10, and that the inventory-heaven differs from the inventory by 10. This means that, whenever we add 10 to a domain, we will obtain its associated heaven to which the domain's residents will go when they die.</p>
 <p>So, for example, let's assume that our frog is currently residing in the world. We can kill it by adding 10 to its domain value, which will change its domain from the world (1) to the world-heaven (11). Afterwards, we can revive the dead frog by subtracting 10 from its domain value, which will change its domain back to the world.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b146.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 17)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b146.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 17)">
 <p>In the case of the inventory, too, we can kill the frog by adding 10 to its domain value, which will change its domain from the inventory (2) to the inventory-heaven (12). And then of course, we can revive the dead frog by subtracting 10 from its domain value, which will change its domain back to the inventory.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b147.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 18)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b147.jpg" alt="Linear Algebra for Game Development - Part 10 (Figure 18)">
 <p>Note here that, regardless of whether the frog is in the world or the inventory, we can always just add 10 to its domain to kill it, as well as subtract 10 from its domain to revive it. This kind of consistency allows us to deal with life and death without having to keep track of who is in the world, who is in the inventory, etc.</p><div class="s_row"></div>
     <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-15.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-17.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

@@ -21,16 +21,16 @@
     });
 
     $("#login_button").click(function() {
-        if (process_pending)
+        if (window.thingspool_loading)
             return;
-        process_pending_on();
+        window.thingspool_loading_on();
 
         const userName = $("#userName_input").val();
         const userNameError = TextUtil.findErrorInUserName(userName);
         if (userNameError != null)
         {
             alert(UIConfig.displayText.message[userNameError]);
-            process_pending_off();
+            window.thingspool_loading_off();
             return;
         }
 
@@ -39,7 +39,7 @@
         if (passwordError != null)
         {
             alert(UIConfig.displayText.message[passwordError]);
-            process_pending_off();
+            window.thingspool_loading_off();
             return;
         }
 
@@ -52,13 +52,13 @@
             },
             error: function(xhr) {
                 alert(xhr.responseText);
-                process_pending_off();
+                window.thingspool_loading_off();
             }
         });
     });
 
     $("#register_button").click(function() {
-        if (process_pending)
+        if (window.thingspool_loading)
             return;
         window.location.href = "<%= process.env.URL_DYNAMIC %>/register";
     });

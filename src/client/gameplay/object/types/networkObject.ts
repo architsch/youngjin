@@ -1,4 +1,5 @@
 import ObjectSyncParams from "../../../../shared/types/networking/objectSyncParams";
+import ObjectTransform from "../../../../shared/types/networking/objectTransform";
 import GameSocketsClient from "../../../networking/gameSocketsClient";
 import ObjectSyncEmitter from "../../component/objectSyncEmitter";
 import ObjectSyncReceiver from "../../component/objectSyncReceiver";
@@ -12,9 +13,9 @@ export default abstract class NetworkObject extends GameObject implements Updata
     private objectSyncEmitter: ObjectSyncEmitter | undefined;
     private objectSyncReceiver: ObjectSyncReceiver | undefined;
 
-    constructor(world: World, objectId: string, x: number, z: number, angleY: number, mine: boolean)
+    constructor(world: World, objectId: string, transform: ObjectTransform, mine: boolean)
     {
-        super(world, objectId, x, z, angleY);
+        super(world, objectId, transform);
         
         this.mine = mine;
         if (mine)
@@ -39,9 +40,14 @@ export default abstract class NetworkObject extends GameObject implements Updata
             GameSocketsClient.emitObjectSpawn({
                 objectType: this.constructor.name,
                 objectId: this.objectId,
-                x: this.position.x,
-                z: this.position.z,
-                angleY: this.rotation.y,
+                transform: {
+                    x: this.position.x,
+                    y: this.position.y,
+                    z: this.position.z,
+                    eulerX: this.rotation.x,
+                    eulerY: this.rotation.y,
+                    eulerZ: this.rotation.z,
+                },
             });
         }
     }
@@ -66,5 +72,6 @@ export default abstract class NetworkObject extends GameObject implements Updata
     update(deltaTime: number): void
     {
         this.objectSyncEmitter?.update();
+        this.objectSyncReceiver?.update();
     }
 }

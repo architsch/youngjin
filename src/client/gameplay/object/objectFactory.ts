@@ -2,29 +2,30 @@ import ObjectSpawnParams from "../../../shared/types/networking/objectSpawnParam
 import GameObject from "./types/gameObject";
 import ObjectConstructorMap from "./objectConstructorMap"
 import World from "../world";
+import ObjectTransform from "../../../shared/types/networking/objectTransform";
 
 let lastObjectIdNumber = 0;
 
 const ObjectFactory =
 {
-    createPlayer: (world: World, x: number, z: number, angleY: number): GameObject =>
+    createPlayer: (world: World, transform: ObjectTransform): GameObject =>
     {
-        return ObjectFactory.createNewObject(world, "Player", x, z, angleY);
+        return ObjectFactory.createNewObject(world, "Player", transform);
     },
-    createWall: (world: World, x: number, z: number, angleY: number): GameObject =>
+    createWall: (world: World, transform: ObjectTransform): GameObject =>
     {
-        return ObjectFactory.createNewObject(world, "Wall", x, z, angleY);
+        return ObjectFactory.createNewObject(world, "Wall", transform);
     },
-    createFloor: (world: World, x: number, z: number, angleY: number): GameObject =>
+    createFloor: (world: World, transform: ObjectTransform): GameObject =>
     {
-        return ObjectFactory.createNewObject(world, "Floor", x, z, angleY);
+        return ObjectFactory.createNewObject(world, "Floor", transform);
     },
-    createNewObject: (world: World, objectType: string, x: number, z: number, angleY: number): GameObject =>
+    createNewObject: (world: World, objectType: string, transform: ObjectTransform): GameObject =>
     {
         const params: ObjectSpawnParams = {
             objectType,
             objectId: `${world.userName}-${Math.floor(Date.now() * 0.001)}-${++lastObjectIdNumber}`,
-            x, z, angleY,
+            transform,
         };
         return ObjectConstructorMap[objectType](world, params, true);
     },

@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -95,7 +93,7 @@ new Game();</code></pre></div>
 <div class="snippet"><pre><code>(defun update-actors (actors)
     (cons (update-actor (car actor)) (update-actors (cdr actors))))</code></pre></div>
 <p>The chain of "cons" nodes, as shown above, is more or less a LISP construct which may not apply to other languages. The overall idea, however, applies quite universally. Every time we update the list of actors, we build a brand new list by cons-ing the newer instances of the actor objects in a recursive manner instead of just modifying the existing list.</p>
-<img class="m_image" src="https://thingspool.net/software-development/003_06.jpg" alt="Functional Programming for Game Development (Figure 1)">
+<img class="l_image" src="https://thingspool.net/software-development/003_06.jpg" alt="Functional Programming for Game Development (Figure 1)">
 <p>This, again, is for the sake of preserving the entire history of state changes instead of tampering with the past remnants which may be still waiting to be visited by extraterrestrial beings (aka "external systems") whose present moment in time could have been delayed by as much as a few milliseconds, due to the nature of time dilation (special relativity) which oftentimes inadvertently gets simulated by the lack of perfect parallelism in modern computing devices.</p>
 <p>The "update-actor" function checks to see if the "actor" argument it received is just the end of the list (i.e. nil). If so, it won't do anything. If not, it will proceed to search for the actor's own update function by means of "(get-actor-update-func actor)" and then execute it in order to get the updated version of the actor object. This newer instance of the actor, just like the aforementioned ones, is something that is completely separate from its past copy.</p>
 <div class="snippet"><pre><code>(defun update-actor (actor)
@@ -112,7 +110,7 @@ new Game();</code></pre></div>
         (update-particleEffects (get-particleEffects state))
         (update-soundClips (get-soundClips state))))</code></pre></div>
 <p>One major advantage of using this purely functional, append-only approach to the implementation of a game loop is that, since we are preserving the history of the game's state instead of constantly overwriting it with more recent bits of data, the game's update functions can have full access to the state's past instances and therefore make decisions based upon the differential characteristics that can be derived by comparing the past and present (which means it opens up the gateway to the realization of first-order, second-order, and even higher order systems which often occur in physics/engineering and are represented in terms of differential equations). This is easily done by passing the copy of the state from the previous frame (aka "past instance") into the update loop as an additional argument.</p>
-<img class="m_image" src="https://thingspool.net/software-development/003_07.jpg" alt="Functional Programming for Game Development (Figure 2)">
+<img class="l_image" src="https://thingspool.net/software-development/003_07.jpg" alt="Functional Programming for Game Development (Figure 2)">
 <div class="snippet"><pre><code>(defun update-loop (currState prevState)
     (wait-for-next-frame)
     (update-loop (update-state currState prevState) currState))
@@ -205,7 +203,7 @@ new Game();</code></pre></div>
 <div class="snippet"><pre><code>(defun update-loop (currState prevState prevState2 prevState3)
     (wait-for-next-frame)
     (update-loop (update-state currState prevState prevState2 prevState3) currState prevState prevState2))</code></pre></div>
-<img class="m_image" src="https://thingspool.net/software-development/003_08.jpg" alt="Functional Programming for Game Development (Figure 3)">
+<img class="l_image" src="https://thingspool.net/software-development/003_08.jpg" alt="Functional Programming for Game Development (Figure 3)">
 <p>This, of course, starts to become too verbose as we keep elongating the game's memory stream. Therefore, a much more realistic implementation would be to represent the history of the game's state as a single list variable rather than a sequence of manually specified function arguments.</p>
 <div class="snippet"><pre><code>(defun update-loop (stateHistory)
     (wait-for-next-frame)
@@ -213,7 +211,7 @@ new Game();</code></pre></div>
     <a class="inlineButton" href="https://thingspool.net/software-development/page-20.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/software-development/page-22.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

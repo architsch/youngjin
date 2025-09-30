@@ -12,13 +12,13 @@ const ObjectConstructorMap:
     } =
 {
     "Player": (world: World, params: ObjectSpawnParams, mine: boolean) => {
-        return new Player(world, params.objectId, params.x, params.z, params.angleY, mine)
+        return new Player(world, params.objectId, params.transform, mine);
     },
     "Wall": (world: World, params: ObjectSpawnParams, mine: boolean) => {
-        return new Wall(world, params.objectId, params.x, params.z, params.angleY);
+        return new Wall(world, params.objectId, params.transform);
     },
     "Floor": (world: World, params: ObjectSpawnParams, mine: boolean) => {
-        return new Floor(world, params.objectId, params.x, params.z, params.angleY);
+        return new Floor(world, params.objectId, params.transform);
     },
 }
 

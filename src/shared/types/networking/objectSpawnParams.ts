@@ -1,8 +1,8 @@
+import ObjectTransform from "./objectTransform";
+
 export default interface ObjectSpawnParams
 {
     objectType: string,
     objectId: string,
-    x: number,
-    z: number,
-    angleY: number,
+    transform: ObjectTransform,
 }

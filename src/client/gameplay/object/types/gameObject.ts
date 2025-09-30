@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import World from "../../world";
+import ObjectTransform from "../../../../shared/types/networking/objectTransform";
 
 export default abstract class GameObject
 {
@@ -7,23 +8,24 @@ export default abstract class GameObject
     obj: THREE.Object3D;
     world: World;
 
-    constructor(world: World, objectId: string, x: number, z: number, angleY: number)
+    constructor(world: World, objectId: string, transform: ObjectTransform)
     {
         this.objectId = objectId;
         this.obj = new THREE.Object3D();
         this.world = world;
-
-        world.graphicsContext.scene.add(this.obj);
-        this.obj.position.set(x, 0, z);
-        this.obj.rotation.set(0, angleY, 0);
+        
+        this.obj.position.set(transform.x, transform.y, transform.z);
+        this.obj.rotation.set(transform.eulerX, transform.eulerY, transform.eulerZ);
     }
 
     onSpawn(): void
     {
+        this.world.graphicsContext.scene.add(this.obj);
     }
 
-    onDespawn()
+    onDespawn(): void
     {
+        this.obj.removeFromParent();
     }
     
     get position(): THREE.Vector3 { return this.obj.position; }

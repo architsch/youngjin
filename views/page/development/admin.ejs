@@ -1,4 +1,6 @@
-<%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {}) %>
+<%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {
+    includeFullscreenPanel: true
+}) %>
 
 <h1>Admin Portal</h1>
 
@@ -15,9 +17,9 @@
     const $db = $("#db");
 
     $("#showTable_button").click(function() {
-        if (process_pending)
+        if (window.thingspool_loading)
             return;
-        process_pending_on();
+        window.thingspool_loading_on();
 
         const tableName = $("#tableName_input").val();
         $("#addRow_button").css("display", "none");
@@ -31,10 +33,12 @@
             },
             error: function(xhr) {
                 alert(xhr.responseText);
-                process_pending_off();
+                window.thingspool_loading_off();
             }
         });
     });
 </script>
 
-<%- include(`${ejsPartialRootPath}/common/footer_min.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer_min.ejs`, {
+    includeFullscreenPanel: true
+}) %>

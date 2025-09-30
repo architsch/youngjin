@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -59,7 +57,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>You may recall that there are attributes which must be available to let us know the actor's exact time and place of birth. One of them is "spawnTime", and the other one is "spawnPosition". The following two predicates reveal us, for example, that an actor called "actor1" was born at time 0 and at position &lt;0, 0&gt;.</p>
 <div class="snippet"><pre><code>spawnTime(actor1, 0).
 spawnPosition(actor1, &lt;0, 0&gt;).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e56.jpg" alt="Game Programming in Prolog - Part 8 (Figure 1)">
+<img class="l_image" src="https://thingspool.net/morsels/e56.jpg" alt="Game Programming in Prolog - Part 8 (Figure 1)">
 <p>And since these two predicates are not bound to a specific point in time (i.e. they do not have time parameters, such as "[n]"), we know that both the spawn-time and spawn-position of "actor1" will be fully exposed to the rest of Prolog's environment throughout the entirety of time.</p>
 <p>Such a static and timeless way of defining an actor's properties, though, cannot be used for those which have been spawned dynamically. We cannot pre-define their spawn-times and spawn-positions explicitly in the source code itself, since we can never be sure beforehand exactly when and where they are going to spawn, as well as what their IDs are going to be, while the game is running.</p>
 <p>Each of the properties of a dynamically allocated actor, therefore, must be modeled as a sequence of events which gets created when the actor spawns, and gets destroyed when the actor despawns.</p>
@@ -67,7 +65,7 @@ spawnPosition(actor1, &lt;0, 0&gt;).</code></pre></div>
 <p>The two rules listed below defines such a relation, the first of which is the base case and the second one is the recursive case. First of all, we know that an actor must be alive the very moment it comes into existence (i.e. when its "spawned" event kicks off). After this initial moment of birth, we know that the actor will stay alive as long as the "despawn" event does not occur. Think of "despawn" as a signal which orders the given actor (Id) to stop existing.</p>
 <div class="snippet"><pre><code>alive[n](Id) :- spawned[n](Id, Src, Cause, Pos).
 alive[n](Id) :- alive[n-1](Id), !despawn[n-1](Id).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e66.jpg" alt="Game Programming in Prolog - Part 8 (Figure 2)">
+<img class="l_image" src="https://thingspool.net/morsels/e66.jpg" alt="Game Programming in Prolog - Part 8 (Figure 2)">
 <p>With this "alive" attribute, we are now free to define numerous other properties which are supposed to persist only during the actor's lifetime. All we need to do is represent them as chains of events which last only as far as the actor's "alive" event keeps firing itself.</p>
 <p>Let us start with "spawnTime". The moment the actor spawns, we know that the current time (denoted by "n") must be the time at which the actor was born. Thus, the time (n) to which the "spawned" event belongs should be defined as the actor's spawn time.</p>
 <p>The thing is, I am now obliged to include the time notation ("[n]") in the "spawnTime" relation. This is because a dynamically created actor's "spawnTime" is meant to be defined only while it is alive. Defining it before the actor's birth is a nonsense because it would imply that the relation predicted exactly when the instance of birth would take place beforehand. Defining it after the actor's death is not so sensible either, since it is wasteful (from a performance point of view) to let obsolete properties linger and accumulate as time passes by, allowing more and more actors to die and leave their ghostly remnants which are permanently stuck in the overworld.</p>
@@ -75,16 +73,16 @@ alive[n](Id) :- alive[n-1](Id), !despawn[n-1](Id).</code></pre></div>
 <p>The two rules below illustrate how this can be achieved. The first one initializes the first "spawnTime" event the moment the actor comes into existence (This is the beginning of the chain reaction). The second rule, then, keeps reproducing the "spawnTime" event over and over, up until the point at which the actor is no longer "alive".</p>
 <div class="snippet"><pre><code>spawnTime[n](Id, n) :- spawned[n](Id, Src, Cause, Pos).
 spawnTime[n](Id, T) :- spawnTime[n-1](Id, T), alive[n-1](Id).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e67.jpg" alt="Game Programming in Prolog - Part 8 (Figure 3)">
+<img class="l_image" src="https://thingspool.net/morsels/e67.jpg" alt="Game Programming in Prolog - Part 8 (Figure 3)">
 <p>The actor's place of birth, too, can be defined in the same spirit. Just like "spawnTime", "spawnPosition" should be considered a chain of events which gets created when the actor is born, persists itself as long as the actor is still alive, and destroys itself as soon as the actor is found to be dead. The following code is the implementation.</p>
 <div class="snippet"><pre><code>spawnPosition[n](Id, Pos) :- spawned[n](Id, Src, Cause, Pos).
 spawnPosition[n](Id, Pos) :- spawnPosition[n-1](Id, Pos), alive[n-1](Id).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e68.jpg" alt="Game Programming in Prolog - Part 8 (Figure 4)">
+<img class="l_image" src="https://thingspool.net/morsels/e68.jpg" alt="Game Programming in Prolog - Part 8 (Figure 4)">
 <p>But of course, the gameplay system needs to know the actor's current position besides its initial position. This is pretty straightforward to define; all it takes is to modify the previous rules of the "position" relation a bit, so as to ensure that the current position will no longer be defined once the actor disappears from the world. The code below demonstrates how it might be done.</p>
 <div class="snippet"><pre><code>position[n](X, Pos) :- spawned[n](Id, Src, Cause, Pos).
 position[n](X, P) :- move[n-1](X, P), alive[n-1](X).
 position[n](X, P) :- !move[n-1](X, _), alive[n-1](X), position[n-1](X, P).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e69.jpg" alt="Game Programming in Prolog - Part 8 (Figure 5)">
+<img class="l_image" src="https://thingspool.net/morsels/e69.jpg" alt="Game Programming in Prolog - Part 8 (Figure 5)">
 <p>As you can see, we now have the "alive" condition as part of the current position's recursive cases. Once "alive" no longer becomes available, "position" discontinues its chain of self-reproduction regardless of whether the actor wants to move or not.</p>
 <p>Here is something I have not gone over yet. An actor, besides its own temporal and spatial state variables, needs to possess its own type. Otherwise, all actors will appear to be identical, and the game will be pretty boring. Actors must be able to carry distinct characteristics, such as their own colors, shapes, behavioral tendencies, functionalities, and so forth.</p>
 <p>Such differentiation can be done by assigning a tag to each actor. An actor with the "egg" tag, for example, will let us treat it as an egg and use it for egg-related purposes. In this case, the word "egg" serves as the actor's type.</p>
@@ -93,7 +91,7 @@ position[n](X, P) :- !move[n-1](X, _), alive[n-1](X), position[n-1](X, P).</code
 <p>If the "Cause" argument of the "spawned" event is set to "layEgg", for instance, we will be able to tell that the actor was spawned because a chicken decided to lay an egg (i.e. The chicken raised the "layEgg" event, which in turn caused the "spawn" event to happen). Under such a circumstance, therefore, it should make sense to label the actor with the word "egg" in order to indicate that it is an egg, and preserve such a label as long as the actor is alive. The code below shows how it is done.</p>
 <div class="snippet"><pre><code>egg[n](Id) :- spawned[n](Id, Src, layEgg, Pos).
 egg[n](Id) :- egg[n-1](Id), alive[n-1](Id).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e70.jpg" alt="Game Programming in Prolog - Part 8 (Figure 6)">
+<img class="l_image" src="https://thingspool.net/morsels/e70.jpg" alt="Game Programming in Prolog - Part 8 (Figure 6)">
 <p>If the "Cause" argument were set to something else such as "makeSandwich", the tag attached would have been different (e.g. "sandwich"). This is how we are able to spawn actors of specific types.</p>
 <p>Once we manage to assign a tag (i.e. type) to an actor, the rest is history. As soon as the system recognizes the actor as an egg, for instance, it will automatically apply all the egg-related rules to this particular actor, such as the ones stated below.</p>
 <div class="snippet"><pre><code>edible(X) :- egg(X).
@@ -111,7 +109,7 @@ omurice[n](Z) :- friedRice[n-1](X), omelet[n-1](Y), stack[n-1](X, Y, Z).</code><
 <p>The first three clauses are characteristics which can be derived from the fact that the actor is an egg. An egg is edible, has protein in it, and is breakable. These attributes do not need to be given to the actor individually, since they will all automatically be induced once the actor is tagged as "egg".</p>
 <p>The succeeding clauses are a set of behavioral traits which are common to all eggs. If you boil an egg, for example, it will turn itself into a boiled egg. If you break an egg, it will become a broken egg. If you stir a broken egg, it will become a cupful of stirred egg. And if you pan-fry it, it will be transformed into an omelet. And of course, you can make omurice by stacking the omelet on top of fried rice.</p>
 <p>(Note: These transformative rules are incomplete and have logical flaws in them. For example, once an egg becomes a broken egg, it should no longer be breakable (while still maintaining its status as an egg because breaking it does not make it a "non-egg"). Also, a broken egg should stay as a broken egg as long as no event interferes with its state. In the upcoming article, I will be dealing with this sort of problem.)</p>
-<img class="m_image" src="https://thingspool.net/morsels/e71.jpg" alt="Game Programming in Prolog - Part 8 (Figure 7)">
+<img class="l_image" src="https://thingspool.net/morsels/e71.jpg" alt="Game Programming in Prolog - Part 8 (Figure 7)">
 <p>Such a "chain-reaction of thought" is theoretically boundless. Nothing really prevents it from being extended indefinitely, as long as a sufficient degree of freedom is provided. We began with the word "egg" alone, yet this was enough to give birth to its own vast tree of meaning, furnished with all sorts of ways in which an egg could be treated and/or manipulated. We call this kind of phenomenon a "butterfly effect".</p>
 <hr>
 <h3><b>Lifecycle of an Actor</b></h3>
@@ -125,14 +123,14 @@ spawn[n](X, layEgg, Pos) :- layEgg[n](X), position[n](X, Pos).</code></pre></div
 <p>Meanwhile, the snake devours any egg it happens to find in proximity. Whenever the snake eats an egg, the egg despawns (since it is "consumed" by the act of eating). The following code shows how it works.</p>
 <div class="snippet"><pre><code>eat[n](X, Y) :- snake[n-1](X), egg[n-1](Y), collide[n-1](X, Y).
 despawn[n](Y) :- eat[n](X, Y).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/e72.jpg" alt="Game Programming in Prolog - Part 8 (Figure 8)">
+<img class="l_image" src="https://thingspool.net/morsels/e72.jpg" alt="Game Programming in Prolog - Part 8 (Figure 8)">
 <p>At this point, you are probably aware of the grand cycle of production and consumption in this example. The chicken produces an egg, the snake consumes it, the chicken produces another egg, the snake consume it, and so on, thus exhibiting an oscillatory pattern. From an ecological point of view, this should (with a list of additional rules) eventually lead to fluctuations in the populations of chickens, their eggs, and snakes, as well as their long-term positive/negative feedback loops.</p>
 <p>Analogous scenarios may be found in agriculture (i.e. seeding followed by harvesting), dairy (i.e. raising of cows followed by milking), and countless other phenomena.</p>
 <p>(Will be continued in <a href="https://thingspool.net/morsels/page-18.html">Part 9</a>)</p><div class="s_row"></div>
     <a class="inlineButton" href="https://thingspool.net/morsels/page-16.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/morsels/page-18.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

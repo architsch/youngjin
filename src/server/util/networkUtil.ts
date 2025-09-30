@@ -1,4 +1,6 @@
 import { Response } from "express";
+import dotenv from "dotenv";
+dotenv.config();
 
 const NetworkUtil =
 {
@@ -11,6 +13,9 @@ const NetworkUtil =
             else
                 res.end();
         }
+    },
+    getErrorPageURL: (errorPageName: string) => {
+        return `${process.env.MODE == "dev" ? `http://localhost:${process.env.PORT}` : process.env.URL_STATIC}/error/${errorPageName}.html`;
     },
 }
 

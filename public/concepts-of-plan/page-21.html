@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 15"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-21.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b207.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 15">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 15</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-21.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 15</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 15</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: September 30, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 15 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Scoring and Winning</b></h3>
+<p>Okay. Now that we have a special row in our data table which is dedicated to storing global numbers, it is now time to talk about one of the most important mechanics in the context of gameplay - winning.</p>
+<p>In most cases, people play games in order to win. So it makes sense to assume that a game needs to have a winning condition which, as soon as it is satisfied, allows the player to win.</p>
+<p>To decide at which moment the player is supposed to win, we must first come up with a way of measuring the degree of success that the player has achieved so far during gameplay. To fulfill such a purpose, let us create a global number called "score".</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b207.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 1)">
+<p>The rule is clear. You win this game when the score surpasses (i.e. becomes greater than) the goal. Let's say that this goal is 100.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b208.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 2)">
+<p>Besides the score, we need another global property called "won" which explicitly states whether the player has won the game or not. This way, we will be able to tell at which moment we ought to stop playing and congratulate the winner.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b209.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 3)">
+<p>The following question, though, is: "What kind of value should be assigned to this 'won' slot?"</p>
+<p>From a conceptual point of view, it might be sensible to simply set the value of "won" to either "YES" or "NO" (or any other pair of English words that are easy to understand), so as to make it crystal clear whether the game is won or not.</p>
+<p>From a technical perspective, however, letting numbers and words coexist inside the same table usually turns out to be a hindrance to the consistency of logic. In our case, for example, using "YES" and "NO" as potential values of "won" necessitates us to translate the score (which is a number) to something that is not a number (i.e. a word in English).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b210.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 4)">
+<p>While it is possible to write an algorithm which accomplishes such a job, we should also be aware that it requires us to introduce an arbitrary set of rules (e.g. if-then statements) which unnecessarily complicates the way we compute things.</p>
+<p>A more elegant approach is to use a number to represent the value of "won". This should work, since we can simply let 0 stand for "NO", and anything other than 0 stand for "YES".</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b211.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 5)">
+<p>In this model, all we have to do to determine the value of "won" is to set the value of "won" to a nonzero number if the score is greater than 100, or zero otherwise.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b212.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 6)">
+<hr>
+<h3><b>Logic via Arithmetic</b></h3>
+<p>The question is, how?</p>
+<p>Here, I will show you a hacky little trick which can be used to solve the aforementioned problem without even introducing a new mathematical operator. Take a look at the following expression:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b213.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 7)">
+<p>Do you remember that the outcome of the "MAX" function is simply the greatest of its arguments (which, in this particular case, are "0" and "Score-100" respectively)? With this in mind, please examine the formula I've shown here and see what it does.</p>
+<p>And, yes. You probably guessed it right. The output depends on whether the score is greater than 100 or not.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b214.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 8)">
+<p>If it is greater than 100, the value of "Score-100" will be greater than 0, which will in turn suggest that the output of MAX will be equal to "Score-100" (since we know that the maximum number between 0 and "Score-100" will always be "Score-100" under such a circumstance). This is a positive number because "Score-100" is positive.</p>
+<p>If "Score" is less than or equal to 100, the value of "Score-100" will be less than or equal to 0, meaning that the output of MAX shall be 0 (due to the fact that the maximum number between 0 and "Score-100" will always be 0 under such a circumstance).</p>
+<p>Makes sense so far, doesn't it? A major difficulty, though, is that applying this MAX formula to the correct data entries may be tricky.</p>
+<p>Luckily, however, we do have a way to mitigate such a trouble. As you may recall from Part 13 of the series, it is technically possible to do some nonlinear, function-based computations using a matrix. Take a look at the augmented table below, where I attached an extra column with the formula "MAX(0,_-100)" in it.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b215.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 9)">
+<p>What we want to do with this can be described as the following.</p>
+<p>(Step 1) First, we want to put the game's current score into the tiny placeholder ("_") which is sitting inside "MAX(0,_-100)", thereby making it "MAX(0,Score-100)".</p>
+<p>(Step 2) Next, we want to put the result of computing "MAX(0,Score-100)" into the "won" slot of the table, so as to make sure that the value of "won" will be set to a nonzero number if the score is greater than 100 (or zero otherwise).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b216.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 10)">
+<p>And the way we carry out the first step, as illustrated in Part 13, is to add the score to "MAX(0,_-100)". As long as we all implicitly agree that "_" is assumed to be the value of the other term which is being added. This should yield the desired outcome.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b217.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 11)">
+<hr>
+<h3><b>Divide and Conquer</b></h3>
+<p>Here is yet another thing which ought not to be overlooked. When it comes to implementing the aforementioned addition, we might be tempted to simply do a matrix multiplication like this:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b218.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 12)">
+<p>Its job is fairly straightforward; we just add the score's column and the MAX formula's column together and assign the resulting column to the one where the "won" value is located. This, without a doubt, yields the correct value of "won" based on the current score.</p>
+<p>While doing this, however, it also inadvertently replaced the IDs of the frogs with their respective energy values. The reason is obvious; whenever we are adding a column, we are adding ALL of its entries in parallel!</p>
+<p>Luckily, we already know a solution. If you recall the "splitting" method which was demonstrated in Part 5, you will notice that we can just split our table into smaller pieces and process them individually to bypass such an obstacle.</p>
+<p>So, let us first divide our table into two segments, okay? The first segment will only contain the four frogs and their properties, which we are able to obtain by erasing the last row.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b219.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 13)">
+<p>The second segment, on the other hand, will only contain the last row (where global properties reside), which we are able to obtain by erasing the first four rows.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b220.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 14)">
+<p>We can then safely compute the "won" value of our game by simply adding columns in the second segment (See the picture below). I say it is "safe" because there's no frog that can be interfered with.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b221.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 15)">
+<p>After recording this new "won" value, all we need to do is bring the two segments back together so as to reconstruct the full table. And the way we do this is by simply adding these two segments up, on an element-by-element basis.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b222.jpg" alt="Linear Algebra for Game Development - Part 15 (Figure 16)">
+<p>The right side of the equation, which you can see in the picture above, is our desired result. The "won" value was successfully set to 0 (which means "You haven't won yet"), since the score is less than or equal to 100. If the score were greater than 100, the "won" value would've ended up being a positive number.</p>
+<p>Anyways, the point I want to make is that it is possible to keep track of the game's state by means of adding and multiplying the table's entries. Think of it as some kind of office work involving spreadsheets, wherein you would often find yourself writing a function which reads values from a set of cells, processes them, and assigns the result to another cell.</p>
+<p>And the truth is that the whole game might be represented as one big spreadsheet, in which you can establish the rules of play by writing such functions.</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-20.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>

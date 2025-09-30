@@ -8,7 +8,7 @@ import TextFileBuilder from "./builder/textFileBuilder";
 import EmbeddedScriptBuilder from "./builder/embeddedScriptBuilder";
 import styleDictionary from "./style/styleDictionary";
 import dotenv from "dotenv";
-import { ArcadeData } from "./data/arcadeData";
+import ErrorPageBuilder from "./builder/page/errorPageBuilder";
 dotenv.config();
 
 export default async function SSG(): Promise<void>
@@ -21,9 +21,7 @@ export default async function SSG(): Promise<void>
     const atomFeedB = new AtomFeedBuilder();
 
     let tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
-        gameEntries: ArcadeData.gameEntries,
-    }));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {}));
     await tb.build("index.html");
 
     tb = new TextFileBuilder();
@@ -42,23 +40,17 @@ export default async function SSG(): Promise<void>
     tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/termsOfService.ejs", {}));
     await tb.build("terms-of-service.html");
 
-    // Static version of 'mypage' (in case the dynamic web app is currently not available)
-    tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/dynamic/mypage.ejs", {}));
-    await tb.build("mypage.html");
-
     await new ArcadePageBuilder(sitemapB, atomFeedB).build();
     await new LibraryPageBuilder(sitemapB, atomFeedB).build();
+    await new ErrorPageBuilder().build();
 
     await sitemapB.build();
     await atomFeedB.build();
 
     // Generate CSS
-
     await FileUtil.write("style.css", styleDictionary);
 
     // Generate embedded scripts
-
     await new EmbeddedScriptBuilder().build();
 
     console.log("SSG END");

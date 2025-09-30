@@ -115,7 +115,7 @@ const simpleFrame = (backgroundColor: string, foregroundColor: string, opacity: 
 
 const roundedFrame = (backgroundColor: string, foregroundColor: string, opacity: number = 1): string =>
 simpleFrame(backgroundColor, foregroundColor, opacity) + "\n" +
-`\tborder-radius: 4.5vmin;`;
+`\tborder-radius: 2vmin;`;
 
 const elevatedFrame = (backgroundColor: string, foregroundColor: string, borderColor: string,
 	borderThickness: string = "1.25", opacity: number = 1): string =>
@@ -201,9 +201,10 @@ const flexible_col_area = (_?: any): string => relativeAndFlexibleArea(false);
 const zero_spacing = (_?: any): string => "padding: 0 0 0 0; margin: 0 0 0 0;";
 const xs_spacing = (landscape: boolean): string => spacing(landscape, 0.5, 1);
 const s_spacing = (landscape: boolean): string => spacing(landscape, 1, 1);
-const m_spacing = (landscape: boolean): string => spacing(landscape, 2, 1);
-const l_spacing = (landscape: boolean): string => spacing(landscape, 3, 1);
-const xl_spacing = (landscape: boolean): string => spacing(landscape, 4, 1);
+const m_spacing = (landscape: boolean): string => spacing(landscape, 2, 2);
+const l_spacing = (landscape: boolean): string => spacing(landscape, 3, 3);
+const xl_spacing = (landscape: boolean): string => spacing(landscape, 4, 4);
+const xxl_spacing = (landscape: boolean): string => spacing(landscape, 6, 6);
 
 const xs_spacing_paddingOnly = (landscape: boolean): string => spacing(landscape, 0.5, 1, true, false);
 const xs_spacing_marginOnly = (landscape: boolean): string => spacing(landscape, 0.5, 1, false, true);
@@ -255,6 +256,7 @@ const img_frame = roundedFrame(darkColor, lightColor);
 const snippet_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const excerpt_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const button_frame = elevatedFrame(extraDarkColor, mediumColor, dimColor, "0.5");
+const big_button_frame = elevatedFrame(extraDarkColor, mediumColor, dimColor, "0.75");
 const text_input_frame = elevatedFrame(dimColor, lightColor, mediumColor, "0.25");
 const list_scroll_panel_frame = outlinedFrame(darkColor, lightColor, dimColor, "0.1");
 const list_item_frame = outlinedFrame(mediumColor, lightColor, lightColor, "0.1");
@@ -423,26 +425,20 @@ hr {
 		z-index: 501;
 	}
 }
-.xs_image {
-	${landscape ? quarter_col_area(landscape) : half_col_area(landscape)}
-	${m_spacing_marginOnly(landscape)}
-	${l_bold_font}
-	${medium_color_frame}
-}
 .s_image {
-	${landscape ? third_col_area(landscape) : twoThirds_col_area(landscape)}
+	${landscape ? quarter_col_area(landscape) : half_col_area(landscape)}
 	${m_spacing_marginOnly(landscape)}
 	${l_bold_font}
 	${img_frame}
 }
 .m_image {
-	${landscape ? twoThirds_col_area(landscape) : full_col_area(landscape)}
+	${landscape ? third_col_area(landscape) : full_col_area(landscape)}
 	${m_spacing_marginOnly(landscape)}
 	${l_bold_font}
 	${img_frame}
 }
 .m_linkImage {
-	${landscape ? half_col_area(landscape) : near_full_col_area(landscape)}
+	${landscape ? third_col_area(landscape) : near_full_col_area(landscape)}
 	${m_spacing_marginOnly(landscape)}
 	${l_bold_font}
 	${linkImage_frame}
@@ -450,12 +446,39 @@ hr {
 .m_linkImage:hover {
 	border-color: ${lightYellowColor};
 }
+.l_image {
+	${landscape ? half_col_area(landscape) : full_col_area(landscape)}
+	${m_spacing_marginOnly(landscape)}
+	${l_bold_font}
+	${img_frame}
+}
+.portal {
+	position: relative;
+	display: block;
+	margin: ${landscape ? "5%" : "12.5%"} 0;
+	padding: 0 0;
+	max-width: ${landscape ? "30%" : "70%"};
+}
 .postEntryButton {
 	${flexible_row_area(landscape)}
 	${s_spacing(landscape)}
 	${s_bold_font}
 	${button_frame}
 	text-decoration: none;
+}
+.postEntryButton:hover {
+	border-color: ${lightYellowColor};
+}
+.bigButton {
+	${flexible_row_area(landscape)}
+	${xxl_spacing(landscape)}
+	${m_bold_font}
+	${big_button_frame}
+	text-decoration: none;
+	text-align: center;
+}
+.bigButton:hover {
+	border-color: ${lightYellowColor};
 }
 .pagePath {
 	${s_spacing_marginOnly(landscape)}
@@ -494,7 +517,7 @@ hr {
 	text-decoration: none;
 }
 .inlineButton:hover {
-	color: ${lightYellowColor};
+	border-color: ${lightYellowColor};
 	cursor: pointer;
 }
 .inlineButton:disabled {
@@ -603,6 +626,10 @@ a:active {
 }
 .noTextDeco {
 	text-decoration: none;
+}
+.horizontallyCentered {
+	left: 50%;
+	transform: translate(-50%, 0);
 }
 
 @media (orientation: landscape) {

@@ -73,16 +73,16 @@
     });
 
     $("#verify_button").click(function() {
-        if (process_pending)
+        if (window.thingspool_loading)
             return;
-        process_pending_on();
+        window.thingspool_loading_on();
 
         const email = $("#email_input").val();
         const emailError = TextUtil.findErrorInEmailAddress(email);
         if (emailError != null)
         {
             alert(UIConfig.displayText.message[emailError]);
-            process_pending_off();
+            window.thingspool_loading_off();
             return;
         }
 
@@ -94,27 +94,27 @@
             data: { email: cached_email },
             success: function(result) {
                 $("#code_sent_indicator").css("display", "block");
-                process_pending_off();
+                window.thingspool_loading_off();
             },
             error: function(xhr) {
                 verification_mode_off();
                 alert(xhr.responseText);
-                process_pending_off();
+                window.thingspool_loading_off();
             }
         });
     });
 
     $("#register_button").click(function() {
-        if (process_pending)
+        if (window.thingspool_loading)
             return;
-        process_pending_on();
+        window.thingspool_loading_on();
 
         const userName = $("#userName_input").val();
         const userNameError = TextUtil.findErrorInUserName(userName);
         if (userNameError != null)
         {
             alert(UIConfig.displayText.message[userNameError]);
-            process_pending_off();
+            window.thingspool_loading_off();
             return;
         }
 
@@ -123,14 +123,14 @@
         if (passwordError != null)
         {
             alert(UIConfig.displayText.message[passwordError]);
-            process_pending_off();
+            window.thingspool_loading_off();
             return;
         }
         const confirmPassword = $("#confirm_password_input").val();
         if (password != confirmPassword)
         {
             alert("Passwords do not match. Please make sure that 'Password' and 'Confirm Password' are the same.");
-            process_pending_off();
+            window.thingspool_loading_off();
             return;
         }
 
@@ -138,7 +138,7 @@
         if (verificationCode.length == 0)
         {
             alert("Please enter your email verification code.");
-            process_pending_off();
+            window.thingspool_loading_off();
             return;
         }
 
@@ -152,7 +152,7 @@
             error: function(xhr) {
                 verification_mode_off();
                 alert(xhr.responseText);
-                process_pending_off();
+                window.thingspool_loading_off();
             }
         });
     });

@@ -2,9 +2,8 @@ import * as THREE from "three";
 import ObjectSyncParams from "../../../shared/types/networking/objectSyncParams";
 import GameObject from "../object/types/gameObject";
 
-const syncIntervalInMillis = 250;
+const syncIntervalInMillis = 200;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
-const yAxis = new THREE.Vector3(0, 1, 0);
 
 export default class ObjectSyncReceiver
 {
@@ -13,6 +12,8 @@ export default class ObjectSyncReceiver
     private positionInterpRange: [THREE.Vector3, THREE.Vector3];
     private quaternionInterpRange: [THREE.Quaternion, THREE.Quaternion];
 
+    private static eulerTemp = new THREE.Euler();
+
     constructor(gameObject: GameObject)
     {
         this.gameObject = gameObject;
@@ -20,13 +21,13 @@ export default class ObjectSyncReceiver
         const currTime = performance.now();
         this.timeInterpRange = [currTime, currTime];
 
-        const p = gameObject.position;
-        this.positionInterpRange = [new THREE.Vector3(p.x, p.y, p.z), new THREE.Vector3(p.x, p.y, p.z)];
+        this.positionInterpRange = [new THREE.Vector3(), new THREE.Vector3()];
+        this.positionInterpRange[0].copy(gameObject.position);
+        this.positionInterpRange[1].copy(gameObject.position);
 
-        const r = gameObject.rotation;
         this.quaternionInterpRange = [new THREE.Quaternion(), new THREE.Quaternion()];
-        this.quaternionInterpRange[0].setFromAxisAngle(yAxis, r.y);
-        this.quaternionInterpRange[1].setFromAxisAngle(yAxis, r.y);
+        this.quaternionInterpRange[0].setFromEuler(gameObject.rotation);
+        this.quaternionInterpRange[1].setFromEuler(gameObject.rotation);
     }
 
     update(): void
@@ -41,6 +42,7 @@ export default class ObjectSyncReceiver
                 ),
                 syncIntervalInMillis
             );
+
         const interpProgressNormalized = interpProgress * syncIntervalInMillisInverse;
 
         this.gameObject.position.lerpVectors(
@@ -64,9 +66,10 @@ export default class ObjectSyncReceiver
         this.timeInterpRange[1] = this.timeInterpRange[0] + syncIntervalInMillis;
 
         this.positionInterpRange[0].copy(this.gameObject.position);
-        this.positionInterpRange[1].set(params.x, this.gameObject.position.y, params.z);
+        this.positionInterpRange[1].set(params.transform.x, params.transform.y, params.transform.z);
 
-        this.quaternionInterpRange[0].setFromAxisAngle(yAxis, this.gameObject.rotation.y);
-        this.quaternionInterpRange[1].setFromAxisAngle(yAxis, params.angleY);
+        ObjectSyncReceiver.eulerTemp.set(params.transform.eulerX, params.transform.eulerY, params.transform.eulerZ);
+        this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);
+        this.quaternionInterpRange[1].setFromEuler(ObjectSyncReceiver.eulerTemp);
     }
 }

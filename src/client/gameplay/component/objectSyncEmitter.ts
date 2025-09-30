@@ -1,26 +1,25 @@
+import * as THREE from "three";
 import ObjectSyncParams from "../../../shared/types/networking/objectSyncParams";
 import GameSocketsClient from "../../networking/gameSocketsClient";
 import GameObject from "../object/types/gameObject";
 
-const syncIntervalInMillis = 250;
-const minSyncOffset = 0.01;
+const syncIntervalInMillis = 200;
+const minSyncDistSqr = 0.0001;
 const minSyncAngle = 0.01;
 
 export default class ObjectSyncEmitter
 {
     private gameObject: GameObject;
     private lastSyncTime: number;
-    private lastSyncedX: number;
-    private lastSyncedZ: number;
-    private lastSyncedAngleY: number;
+    private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
+    private lastSyncedRotation: THREE.Euler = new THREE.Euler();
 
     constructor(gameObject: GameObject)
     {
         this.gameObject = gameObject;
         this.lastSyncTime = performance.now();
-        this.lastSyncedX = gameObject.position.x;
-        this.lastSyncedZ = gameObject.position.z;
-        this.lastSyncedAngleY = gameObject.rotation.y;
+        this.lastSyncedPosition.copy(gameObject.position);
+        this.lastSyncedRotation.copy(gameObject.rotation);
     }
 
     update(): void
@@ -29,19 +28,24 @@ export default class ObjectSyncEmitter
         if (currTime - this.lastSyncTime > syncIntervalInMillis)
         {
             this.lastSyncTime = currTime;
-            if (Math.abs(this.lastSyncedX - this.gameObject.position.x) > minSyncOffset ||
-                Math.abs(this.lastSyncedZ - this.gameObject.position.z) > minSyncOffset ||
-                Math.abs(this.lastSyncedAngleY - this.gameObject.rotation.y) > minSyncAngle)
+            if (Math.abs(this.gameObject.position.distanceToSquared(this.lastSyncedPosition)) > minSyncDistSqr ||
+                Math.abs(this.gameObject.rotation.x - this.lastSyncedRotation.x) > minSyncAngle ||
+                Math.abs(this.gameObject.rotation.y - this.lastSyncedRotation.y) > minSyncAngle ||
+                Math.abs(this.gameObject.rotation.z - this.lastSyncedRotation.z) > minSyncAngle)
             {
-                this.lastSyncedX = this.gameObject.position.x;
-                this.lastSyncedZ = this.gameObject.position.z;
-                this.lastSyncedAngleY = this.gameObject.rotation.y;
+                this.lastSyncedPosition.copy(this.gameObject.position);
+                this.lastSyncedRotation.copy(this.gameObject.rotation);
 
                 const params: ObjectSyncParams = {
                     objectId: this.gameObject.objectId,
-                    x: this.lastSyncedX,
-                    z: this.lastSyncedZ,
-                    angleY: this.lastSyncedAngleY,
+                    transform: {
+                        x: Math.floor(this.lastSyncedPosition.x * 100) * 0.01,
+                        y: Math.floor(this.lastSyncedPosition.y * 100) * 0.01,
+                        z: Math.floor(this.lastSyncedPosition.z * 100) * 0.01,
+                        eulerX: Math.floor(this.lastSyncedRotation.x * 100) * 0.01,
+                        eulerY: Math.floor(this.lastSyncedRotation.y * 100) * 0.01,
+                        eulerZ: Math.floor(this.lastSyncedRotation.z * 100) * 0.01,
+                    }
                 };
                 GameSocketsClient.emitObjectSync(params);
                 //console.log(`(ObjectSyncEmitter) emitObjectSync :: ${JSON.stringify(params)}`);

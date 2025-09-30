@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -54,7 +52,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <h3><b>Evaluation of a Sandwich</b></h3>
 <p>How to measure the quality of a sandwich?</p>
 <p>It really depends on one's personal taste, but we can still talk about some of the commonly available methodologies. Being able to evaluate the overall quality of a sandwich is a necessary skill to have, in order to become a legendary sandwich craftsman.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/033.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 1)">
+<img class="l_image" src="https://thingspool.net/sandwich/033.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 1)">
 <p>A truly appetizing sandwich must obey the following two principles:</p>
 <div class="snippet"><pre><code>(1) It consists of tasty ingredients.
 (2) These ingredients are stacked in a tasty order.</code></pre></div>
@@ -63,41 +61,41 @@ gtag('config', 'G-JL7KHR7HK8');
 <h3><b>Taste Scores</b></h3>
 <p>Let us begin with the first principle.</p>
 <p>The first step toward the making of a highly edible sandwich is to gather ingredients which can be appreciated even when we eat each of them individually. This means that it is crucial for us to first evaluate the quality of each ingredient and assign a number to it (denoting its degree of tastiness). We may refer to this number as the ingredient's "taste score".</p>
-<img class="m_image" src="https://thingspool.net/sandwich/034.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 2)">
+<img class="l_image" src="https://thingspool.net/sandwich/034.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 2)">
 <p>Since a sandwich is a combination of multiple ingredients, a straightforward way of judging its quality is to first evaluate the scores of its individual components and then sum them all up.</p>
 <p>Let me start with a simple example. The following image is the anatomy of a cheese sandwich which was showcased before.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/018.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 3)">
+<img class="l_image" src="https://thingspool.net/sandwich/018.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 3)">
 <p>How to calculate its overall score? Oh, it may seem daunting at first, but the problem is not complicated at all as long as you put some thought to it. Let us first assign the appropriate score to each of the sandwich's ingredients, and then take the sum of them (denoted by the "+" sign).</p>
-<img class="m_image" src="https://thingspool.net/sandwich/035.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 4)">
+<img class="l_image" src="https://thingspool.net/sandwich/035.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 4)">
 <p>The result of such computation could be used to represent the overall taste score of the cheese sandwich. Why? Because a cheese sandwich is basically just the "sum" of its three constituents - lower bread, cheese, and upper bread. If we know their individual scores, therefore, it should make sense to assume that the score of the whole sandwich is their sum.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/036.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 5)">
+<img class="l_image" src="https://thingspool.net/sandwich/036.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 5)">
 <p>Assuming that the score of each piece of bread is 7 and the score of each slice of cheese is 10, we may conclude that the score of the cheese sandwich is 7 + 10 + 7 = 24.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/037.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 6)">
+<img class="l_image" src="https://thingspool.net/sandwich/037.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 6)">
 <p>All right, here is the next example. How shall we compute the taste score of a sausage sandwich?</p>
-<img class="m_image" src="https://thingspool.net/sandwich/038.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 7)">
+<img class="l_image" src="https://thingspool.net/sandwich/038.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 7)">
 <p>Here, we will assume that the sausage is an abstract item; that is, the word "sausage" is simply a generic term which is being used to indicate one of the 3 possible choices - chicken sausage, pork sausage, and beef sausage.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/039.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 8)">
+<img class="l_image" src="https://thingspool.net/sandwich/039.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 8)">
 <p>This means that, in order to figure out the taste score of the "sausage" part of the sandwich, we must first know how to determine the score of something uncertain (i.e. something which comes with multiple choices).</p>
 <p>This too, however, is not a headache at all. Assuming that each choice has an equal chance of being picked up, we can claim from a statistical point of view that the most expected score of a randomly selected sausage is simply the average score of its 3 potential choices (i.e. chicken, pork, or beef).</p>
-<img class="m_image" src="https://thingspool.net/sandwich/040.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 9)">
+<img class="l_image" src="https://thingspool.net/sandwich/040.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 9)">
 <p>The term "avg" is just a shorthand for "average", by the way. If we suppose that the scores of the 3 aforementioned types of sausages are 13, 14, and 15, respectively, we will be able to conclude that the overall score of the "sausage" in our context is the average of 13, 14, and 15.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/041.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 10)">
+<img class="l_image" src="https://thingspool.net/sandwich/041.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 10)">
 <p>This score calculation procedure can substitute the "sausage" part of the sausage sandwich, yielding the following arithmetic scheme:</p>
-<img class="m_image" src="https://thingspool.net/sandwich/042.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 11)">
+<img class="l_image" src="https://thingspool.net/sandwich/042.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 11)">
 <p>If we compute the "avg" part, we will get this:</p>
-<img class="m_image" src="https://thingspool.net/sandwich/043.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 12)">
+<img class="l_image" src="https://thingspool.net/sandwich/043.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 12)">
 <p>... which eventually simplifies down to a single number, representing the sausage sandwich's overall score (shown below).</p>
-<img class="m_image" src="https://thingspool.net/sandwich/044.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 13)">
+<img class="l_image" src="https://thingspool.net/sandwich/044.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 13)">
 <hr>
 <h3><b>Pitfalls of Summation</b></h3>
 <p>Okay, you might have noticed that there is something fishy in here. It is the fact that, if we are to stick to the above methodology and refuse further elaboration on how scores are to be derived, we will soon be forced to reach the conclusion that a sandwich with more ingredients should score higher than those with fewer ingredients.</p>
 <p>This, of course, is not desirable. Unless you are a mere glutton whose only interest is to eat as much as possible, you will agree that packing more ingredients does not necessarily yield a better sandwich.</p>
 <p>Let us take a cheese sandwich as an example. We know that it has a single slice of cheese in it, so it makes sense to simply add the score of the cheese to the sandwich's total score.</p>
 <p>Since cheese is a highly favored ingredient (because it is tasty), let us add an additional slice of cheese to the sandwich and make it a "double-cheese sandwich".</p>
-<img class="m_image" src="https://thingspool.net/sandwich/045.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 14)">
+<img class="l_image" src="https://thingspool.net/sandwich/045.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 14)">
 <p>If we are to follow the scoring method established so far, we will have to say that adding this additional slice of cheese will basically double the cheese-score of the sandwich. This feels a bit excessive, but, let us move on anyways.</p>
 <p>Next, I will try adding yet another slice of cheese to this double-cheese sandwich and turn it into a "triple-cheese sandwich". What will the new score be?</p>
-<img class="m_image" src="https://thingspool.net/sandwich/046.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 15)">
+<img class="l_image" src="https://thingspool.net/sandwich/046.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 15)">
 <p>Of course, it will be even higher than that of the double-cheese sandwich, simply because there are more slices of cheese in this case.</p>
 <p>The problem with this approach is that it just keeps incrementing the score as we add more and more ingredients.</p>
 <p>What if we put 4 slices of cheese instead of 3? What about 5, 6, 7, or even 100 slices of cheese? Should a hundred-cheese sandwich score about 100 times higher than a single-cheese sandwich? Probably not. No one wants to eat a sandwich with a hundred slices of cheese in it.</p>
@@ -105,19 +103,19 @@ gtag('config', 'G-JL7KHR7HK8');
 <hr>
 <h3><b>Relational Taste Scores</b></h3>
 <p>So, what's the solution? First off, we definitely need a better way to tell how good a sandwich is. Let us revisit the previous cheese sandwich example.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/018.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 16)">
+<img class="l_image" src="https://thingspool.net/sandwich/018.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 16)">
 <p>Just by looking at the ingredients, I am able to tell that it should score pretty high because it has cheese in it, yet not "too" high because it has cheese only and nothing else. A slice of ham would have made it a lot more appetizing.</p>
 <p>But the question is, will this sandwich become more appetizing if I add a totally random thing as an extra ingredient, such as apple jam?</p>
-<img class="m_image" src="https://thingspool.net/sandwich/047.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 17)">
+<img class="l_image" src="https://thingspool.net/sandwich/047.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 17)">
 <p>In my opinion, both a "cheese sandwich" and an "apple jam sandwich" deserve high scores, while a sandwich which contains both cheese AND apple jam in it does not.</p>
 <p>The reason behind this is that cheese and apple jam usually do not pair up well. Some people might find it particularly attractive, but I do not believe that such appetite is commonplace (Consider "mint chocolate" as an example).</p>
 <p>The main problem here is that when two things are combined, their values do not necessarily add up. Depending on how harmonious they are when put together, they may introduce either synergy or dissonance.</p>
 <p>Take a look at the following example here, which shows the anatomy of a PB&J (Peanut Butter & Jelly) sandwich.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/048.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 18)">
+<img class="l_image" src="https://thingspool.net/sandwich/048.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 18)">
 <p>Compare this with the "cheese & apple jam sandwich" we saw before. If you are equipped with a decent sense of taste, you should probably agree that the PB&J sandwich deserves a much higher score than the other one. Peanut butter and jelly is a way better choice of combination than the one between cheese and apple jam.</p>
 <p>This sort of reasoning leads us to the conclusion that, when evaluating a sandwich, we must take into account not only the scores of the individual ingredients, but also the scores of their relations.</p>
 <p>Here is an alternative scoring method.</p>
-<img class="m_image" src="https://thingspool.net/sandwich/049.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 19)">
+<img class="l_image" src="https://thingspool.net/sandwich/049.jpg" alt="Sandwich Engineering - Chapter 3 (Figure 19)">
 <p>As you can tell from the pictures above, I am now assigning scores to pairs of neighboring items, not the items themselves (Notice that the pairing of peanut butter and jelly produces a higher score than that of cheese and apple jam). Then, I am simply taking their average to obtain the overall score of the sandwich.</p>
 <p>This, too, has its own flaws. For instance, it does not consider cases in which we are duplicating the same thing a bunch of times (e.g. 100 cheese slices).</p>
 <p>Nevertheless, what is shown above is an improvement over the previous methodology, and we are free to keep rectifying it. For now, though, I will pause here and move on to other important topics.</p>
@@ -125,7 +123,7 @@ gtag('config', 'G-JL7KHR7HK8');
     <a class="inlineButton" href="https://thingspool.net/sandwich/page-2.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/sandwich/page-4.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

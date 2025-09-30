@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -58,65 +56,65 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>We have seen so far that it is possible to select individual rows in our data table, swap them with each other, add one of the rows to another, and so on. But what if we want to be able to manipulate not just rows, but also columns in a like manner?</p>
 <p>In the previous article, I have shown that it is necessary for us to split the table by its columns and then recombine them later on, so as to be able to modify each of the properties (i.e. column values) without unintentionally tampering with the others.</p>
 <p>Let me revisit the example we have been looking at. In order to handle the two properties (i.e. ID and energy) separately, we must first separate out the table's two columns.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b052.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 1)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b052.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 1)">
 <p>Then, after modifying them individually (by means of matrix multiplication), we must be able to rejoin these two columns back to the original form.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b055.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 2)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b055.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 2)">
 <p>Let's see how we can manage the splitting part. First of all, I would like to tell you that the act of splitting is basically the same thing as executing the following two tasks:</p>
 <p>(1) Select the first column of the table.<br>(2) Select the second column of the table.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b056.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 3)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b056.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 3)">
 <p>One noteworthy point is that these two must be carried out separately. Let me begin with the first one - the process of selecting the first column.</p>
 <p>How shall we manage to select only the first column of the table, leaving out the second column? The answer is that we can't, as long as we choose to multiply a matrix on the left side of the data table.</p>
 <p>If we choose to multiply a matrix on the right side of the data table, however, it will let us select the individual columns of the table instead of rows. Here is how it works.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b057.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 4)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b057.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 4)">
 <p>What you are seeing here is an act of selecting a column. This example selects the first column of the table in particular, since we are multiplying it by a selector (i.e. a column vector) whose first entry is 1. If you carry out the multiplication, you will realize that it does indeed result in the first column of the original table and ignores the second column.</p>
 <p>In contrast, we can select the second column of the table by setting the second entry of the selector to 1.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b058.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 5)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b058.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 5)">
 <p>As a side note, I would also like to mention that it is also possible to select multiple columns at once by putting multiple selectors in one place.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b059.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 6)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b059.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 6)">
 <hr>
 <h3><b>Row Selectors and Column Selectors</b></h3>
 <p>This leads us to the realization that there are two different ways of selecting a portion of our table - selection by rows and selection by columns.</p>
 <p>The core idea is that, by multiplying the table by some kind of "selector", you can select either a row or column of that table. If this selector is a row of numbers which is placed on the left side of the table, it will return a row.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b060.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 7)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b060.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 7)">
 <p>If you put a multitude of such selectors in parallel, you will be able to select multiple rows at once.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b061.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 8)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b061.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 8)">
 <p>On the other hand, if the selector happens to be a column of numbers which is placed on the right side of the table, it will return one of the columns of the table instead of a row.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b062.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 9)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b062.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 9)">
 <p>And, just like you can select multiple rows by putting multiple row selectors in one place, you can select multiple columns by putting multiple column selectors in one place.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b063.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 10)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b063.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 10)">
 <p>What if you decide to select both a row AND a column at the same time? The way you do this is straightforward; you just put your row selector on the left side of the table, and your column selector on the right side of the table.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b064.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 11)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b064.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 11)">
 <p>Once you do the calculation, you will soon discover that the result of this two-step multiplication is the intersection between the selected row and the selected column.</p>
 <hr>
 <h3><b>Modification of both Rows and Columns</b></h3>
 <p>In general, though, the range of things we can do by means of matrix multiplication is a lot broader than what I just demonstrated here. Besides selection, as you already know, we are also able to swap the rows (columns), add them up, etc.</p>
 <p>Rather than just row selectors, for instance, we may as well construct a generic "row-manipulating matrix" which, when placed on the left side of our data table, will fiddle with its rows.</p>
 <p>Likewise, rather than just column selectors, we may as well come up with a generic "column-manipulating matrix" which, when placed on the right side of our data table, will fiddle with its columns.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b065.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 12)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b065.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 12)">
 <hr>
 <h3><b>Two-Step Operations</b></h3>
 <p>Based upon these two major building blocks, we are now able to define all sorts of sophisticated game mechanics using matrix multiplication. Since we have the power to manipulate not just rows but also columns of our data table, separately managing each individual property (e.g. ID, energy, etc) will be a piece of cake.</p>
 <p>The picture below demonstrates how we can destroy the apple by simply erasing it from the player's inventory AND discarding the energy-column of the table at the same time. All we have to do is carry out the former process on the left side of the table (because it deals with rows), while also making sure to carry out the latter process on the right side of the table (because it deals with columns).</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b066.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 13)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b066.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 13)">
 <p>Meanwhile, we can handle the concept of energy exchange by transferring the apple's energy to the player AND discarding the ID-column of the table at the same time.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b067.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 14)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b067.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 14)">
 <p>These two actions will give us the two halves of our desired result. In the first half of the result (i.e. first column), we see that the apple has been successfully removed from the inventory. In the second half of the result (i.e. second column), we see that the apple's energy has been successfully transferred to the player. The only remaining task is to join them back.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b055.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 15)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b055.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 15)">
 <p>How to do this? In order to accomplish the goal of converting two single-column tables into one double-column table, we must first realize that we are trying to apply some kind of "size change" to the tables we are dealing with. Do you remember that it is possible to add extra rows (i.e. items) to the inventory by making more row-selections than the ones which are currently available?</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b023.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 16)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b023.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 16)">
 <p>In a similar manner, we are also able to add extra columns to our data table by making more column-selections than the ones which are currently available. For example, if we choose to make an extra "empty selection" on the right side of the ID-column, a new empty column will appear on its right side.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b068.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 17)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b068.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 17)">
 <p>Likewise, if we choose to make an extra "empty selection" on the left side of the energy-column, a new empty column will appear on its left side.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b069.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 18)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b069.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 18)">
 <p>We are one more step closer to the final result. Now that the sizes of these two tables are both identical to that of the original data table (which consists of 6 rows and 2 columns), all we need to do, then, is simply add them up to finish our mission.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b070.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 19)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b070.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 19)">
 <p>The result is exactly what we expected. The apple is now gone, and the player has successfully absorbed the apple's energy.</p>
 <p>The diagram shown below depicts the full process of making the player eat the apple and acquire energy from it. As you can see, it first splits the data table into two columns, manipulates them separately, and then recombines them to recover the table's original format.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b071.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 20)"><div class="s_row"></div>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b071.jpg" alt="Linear Algebra for Game Development - Part 5 (Figure 20)"><div class="s_row"></div>
     <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-10.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-12.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

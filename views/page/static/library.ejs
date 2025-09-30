@@ -15,4 +15,7 @@
 <a class="postEntryButton" href="<%= process.env.URL_STATIC %>/<%= entry.dirName %>/list.html"><%- entry.title %></a>
 <%_ } _%>
 <%_ } _%>
+<hr>
+<h1>Games</h1>
+<%- include(`${ejsPartialRootPath}/info/gameLinks.ejs`, { entries: gameEntries }) %>
 <%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

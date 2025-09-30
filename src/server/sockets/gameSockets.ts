@@ -6,6 +6,7 @@ import ObjectSpawnParams from "../../shared/types/networking/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/types/networking/objectDespawnParams";
 import ObjectRecord from "../../shared/types/networking/objectRecord";
 import User from "../../shared/types/db/user";
+import ObjectTransform from "../../shared/types/networking/objectTransform";
 
 let nsp: socketIO.Namespace;
 
@@ -28,16 +29,13 @@ const GameSockets =
             });
 
             socket.on("objectSync", (params: ObjectSyncParams) => {
-                const object = objectRecords[params.objectId];
-                if (object == undefined)
+                const objectRecord = objectRecords[params.objectId];
+                if (objectRecord == undefined)
                 {
                     console.error(`Tried to sync a nonexistent object :: ${JSON.stringify(params)}`);
                     return;
                 }
-                object.x = params.x;
-                object.z = params.z;
-                object.angleY = params.angleY;
-
+                Object.assign(objectRecord.transform, params.transform);
                 nsp.to("room_default").emit("objectSync", params);
             });
 
@@ -48,12 +46,13 @@ const GameSockets =
                     console.error(`Tried to spawn an already existing object :: ${JSON.stringify(params)}`);
                     return;
                 }
+                const transformCopy = {};
+                Object.assign(transformCopy, params.transform);
+
                 objectRecords[params.objectId] = {
                     objectType: params.objectType,
                     objectId: params.objectId,
-                    x: params.x,
-                    z: params.z,
-                    angleY: params.angleY,
+                    transform: transformCopy as ObjectTransform,
                 };
 
                 nsp.to("room_default").emit("objectSpawn", params);

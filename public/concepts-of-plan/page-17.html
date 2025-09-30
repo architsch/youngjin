@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -56,56 +54,56 @@ gtag('config', 'G-JL7KHR7HK8');
 <hr>
 <h3><b>Multiple Levels of Heaven</b></h3>
 <p>It is now pretty obvious that, by assigning numbers to our domains (e.g. world, inventory, etc), we can simply represent the process of death as the increment of one's domain value by a fixed amount (such as 10), and the process of birth as its inverse (i.e. decrement).</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b146.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 1)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b146.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 1)">
 <p>Since both domains and their respective heavens are being expressed numerically, we should be able to imagine them as points on a number line, such as the one illustrated below. Here, the point at "1" indicates the world, whereas the point at "11" indicates the world-heaven.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b148.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 2)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b148.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 2)">
 <p>When somebody in the world dies, he enters the world-heaven. This is done by adding 10 to his domain value (because the world is located at 1 and the world-heaven is located at 11). If he happen to reincarnate while he is in the world-heaven, we will bring him back to the world by subtracting 10 from his domain value.</p>
 <p>And, just like we saw before, there could be multiple domains in Heaven as well as multiple domains on Earth. If we do suppose that 1 and 2 refer to the world and the inventory, respectively, as well as that 11 and 12 refer to their corresponding heavens (i.e. "world-heaven" and "inventory-heaven"), we can plot them as two pairs of points on the number line, such as the one shown here:</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b149.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 3)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b149.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 3)">
 <p>In this diagram, you will clearly be able to tell that the number line is divided into two regions.</p>
 <p>The points on the left region represent earthly domains which are being dwelled by living creatures, whereas the points on the right region represent heavenly domains which are being dwelled by ghosts.</p>
 <p>The act of moving a point to the right by the distance of 10 (aka "adding 10"), then, has the effect of moving the point from Earth to Heaven. In contrast, the act of moving a point to the left by the distance of 10 (aka "subtracting 10") has the effect of moving the point from Heaven to Earth.</p>
 <p>Here is a question, though. What happens when we kill something which is already dead (i.e. already in Heaven)? The answer is, it will enter what we could refer to as the "level 2 heaven".</p>
 <p>The first time something dies while it is on Earth, it will enter the "level 1 heaven". The next time it dies, it will level-up to the heaven's heaven, which is "level 2 heaven" (Level 0 refers to Earth; it's the "ground level" after all).</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b150.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 4)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b150.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 4)">
 <p>And of course, each level itself may comprise multiple domains. At level 0, we have both the world (1) and the inventory (2); these two realms are the ones in which living things reside. At level 1, we have the world-heaven (11) and the inventory-heaven (12). At level 2, we have the world-heaven's heaven (21) as well as the inventory-heaven's heaven (22).</p>
 <hr>
 <h3><b>Spectrum of Domains</b></h3>
 <p>And you know what? We can extend the aforementioned definition to infinity, so that the act of killing/reviving will make sense no matter what the current value of the domain is.</p>
 <p>The truth is that nothing stops us from making things up, since our gameplay universe is purely fictional. With this in mind, let us assume that there are infinite levels of heavens, as well as infinite levels of "antiheavens" which correspond to negative domain values.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b151.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 5)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b151.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 5)">
 <p>So, if you happen to "resurrect" while you are still alive, you will enter the level 1 "antiheaven" (instead of heaven) due to the extra layer of life you just acquired. If you get killed while hanging out in this antiheaven, you will be transferred back to the land of living creatures (i.e. Earth).</p>
 <p>The general idea, though, is that such an extended definition lets us imagine that there is an infinitely long line of domain values (just like a line of real numbers in mathematics). In this model, we can shift any domain value by 10 however many times we want, and the result will still be a fully legitimate domain value.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b152.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 6)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b152.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 6)">
 <p>This kind of unboundedness allows us to imagine the so-called "domain" as just another dimension in space.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b153.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 7)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b153.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 7)">
 <p>In this alternative model, the act of killing somebody is the same as pushing him in the direction of the domain axis by the distance of 10, and the act of reviving somebody is the same as pushing him in the opposite direction by the distance of 10.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b154.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 8)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b154.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 8)">
 <hr>
 <h3><b>Multikill</b></h3>
 <p>"Okay, so what's the use of such an abstract model?", you might ask. Here, I will show you a reason why expressing life/death in terms of a spectrum of numbers is so useful.</p>
 <p>Suppose that there are 4 frogs in our game, and we want to kill them all by dropping a nuke or something. This sort of event is not so uncommon in a video game, by the way. The player might for example be equipped with a special weapon which, when deployed, will annihilate everything in the known universe.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b155.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 9)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b155.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 9)">
 <p>Here is a problem, though. Imagine that the kind of weapon we are about to drop is not just a regular nuke, but some kind of "pandimensional nuke" which is capable of destroying the lives of not just those who are here on Earth, but also those who reside in heavens, antiheavens, and every other supernatural realm we can think of.</p>
 <p>So, for example, imagine that each of the 4 frogs in our game exists in a separate domain, and that two of these domains do not even belong to Earth; one of them is a heaven, and the other one is an antiheaven.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b156.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 10)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b156.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 10)">
 <p>How, then, are we going to "kill" all of these frogs simultaneously? One of them is already dead (i.e. It is in Heaven), and the other one is anti-dead (i.e. It is in Antiheaven). Will it even make sense to "kill" something which is either already dead or anti-dead?</p>
 <p>And the thing is, yes! It absolutely makes sense to kill something regardless of its current state of life/death. The reason is that the process of killing is nothing more than the addition of number 10 to one's domain value.</p>
 <p>For the sake of demonstration, let me list the aforementioned 4 frogs as rows in the data table.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b157.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 11)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b157.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 11)">
 <p>As you can see, their domain values are different from each other. The first (topmost) frog belongs to the world, the second frog belongs to the inventory, the third frog belongs to the level 1 inventory-heaven (i.e. This frog is dead), and the fourth frog belongs to the level 1 world-antiheaven (i.e. This frog is anti-head).</p>
 <p>The way we kill all these 4 frogs is surprisingly easy from a computational point of view. The only thing we have to do is keep them as they are, while making sure to add 10 to each of their domain values. This can be done by adding 10 copies of the "domain building block" to each of the first 4 rows of the data table.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b158.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 12)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b158.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 12)">
 <p>And the effect of doing this can be stated as the following:</p>
 <p>- The frog in the world (1), after being killed, entered the level 1 world-heaven (11).<br>- The frog in the inventory (2), after being killed, entered the level 1 inventory-heaven (12).<br>- The frog in the level 1 inventory-heaven (12), after being killed, entered the level 2 inventory-heaven (22).<br>- The frog in the level 1 world-antiheaven (-9), after being killed, entered the world (1).</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b159.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 13)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b159.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 13)">
 <p>What happened here is just a verbose description of the fact that we just "moved" all these 4 frogs by the distance of 10, in the direction of the domain axis.</p>
-<img class="m_image" src="https://thingspool.net/concepts-of-plan/b160.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 14)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b160.jpg" alt="Linear Algebra for Game Development - Part 11 (Figure 14)">
 <p>And the result of every one of these movements is guaranteed to make sense, since the distance between every domain and its respective heaven (i.e. the place to which the domain-dweller goes when it dies) is always 10.</p><div class="s_row"></div>
     <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-16.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-18.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

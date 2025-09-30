@@ -6,33 +6,31 @@ import ObjectSyncParams from "../../shared/types/networking/objectSyncParams";
 import ObjectSpawnParams from "../../shared/types/networking/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/types/networking/objectDespawnParams";
 import WorldSyncParams from "../../shared/types/networking/worldSyncParams";
-import World from "../gameplay/world";
 
 let socket: Socket;
 
-const worldSyncListeners: ((params: WorldSyncParams) => void)[] = [];
 const objectSyncListeners: ((params: ObjectSyncParams) => void)[] = [];
 const objectSpawnListeners: ((params: ObjectSpawnParams) => void)[] = [];
 const objectDespawnListeners: ((params: ObjectDespawnParams) => void)[] = [];
 
 const GameSocketsClient =
 {
-    init: () =>
+    init: (onWorldSync: (params: WorldSyncParams) => void) =>
     {
-        //socket = io(`http://localhost:3000/game_sockets`);
-        socket = io(`https://app.thingspool.net/game_sockets`); // TODO: Get the URL from an env variable.
+        socket = io(`${(window as any).thingspool_env.socket_server_url}/game_sockets`);
 
         socket.on("connect_error", (err) => {
-            $("#message_list").append($("<p>")
-                .css("margin", "0 0")
-                .css("padding", "2px 2px")
-                .html(`<font color="red"><b>${err.message}</b></font>`));
+            if (err.message.startsWith("http"))
+            {
+                (window as any).location.href = err.message;
+            }
+            else
+            {
+                (window as any).location.reload(true);
+            }
         });
 
-        socket.on("worldSync", (params: WorldSyncParams) => {
-            console.log(`(GameSocketsClient) worldSync :: ${JSON.stringify(params)}`);
-            new World(params);
-        });
+        socket.on("worldSync", onWorldSync);
 
         socket.on("objectSync", (params: ObjectSyncParams) => {
             //console.log(`(GameSocketsClient) objectSync :: ${JSON.stringify(params)}`);
@@ -84,7 +82,6 @@ const GameSocketsClient =
     emitObjectSpawn: (params: ObjectSpawnParams) => { socket.emit("objectSpawn", params); },
     emitObjectDespawn: (params: ObjectDespawnParams) => { socket.emit("objectDespawn", params); },
 
-    addWorldSyncListener: (callback: (params: WorldSyncParams) => void) => { worldSyncListeners.push(callback); },
     addObjectSyncListener: (callback: (params: ObjectSyncParams) => void) => { objectSyncListeners.push(callback); },
     addObjectSpawnListener: (callback: (params: ObjectSpawnParams) => void) => { objectSpawnListeners.push(callback); },
     addObjectDespawnListener: (callback: (params: ObjectDespawnParams) => void) => { objectDespawnListeners.push(callback); },

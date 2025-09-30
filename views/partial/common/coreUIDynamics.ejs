@@ -4,21 +4,17 @@
     <div class="content">Loading...</div>
 </div>
 <script>
-    const pageModule = {};
-    let process_pending = false;
+    window.thingspool_loading = false;
 
-    function process_pending_on()
-    {
-        if (process_pending)
-            alert("Error: Process is already pending.");
-        process_pending = true;
+    window.thingspool_loading_on = () => {
+        if (window.thingspool_loading)
+            alert("Error: Already loading.");
+        window.thingspool_loading = true;
         $("#loadingScreen").css("display", "block");
-    }
-    function process_pending_off()
-    {
-        if (!process_pending)
-            alert("Error: Process is inactive.");
-        process_pending = false;
+    };
+
+    window.thingspool_loading_off = () => {
+        window.thingspool_loading = false;
         $("#loadingScreen").css("display", "none");
-    }
+    };
 </script>

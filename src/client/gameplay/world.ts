@@ -8,6 +8,7 @@ import ObjectDespawnParams from "../../shared/types/networking/objectDespawnPara
 import NetworkObject from "./object/types/networkObject";
 import ObjectFactory from "./object/objectFactory";
 import WorldSyncParams from "../../shared/types/networking/worldSyncParams";
+import ObjectTransform from "../../shared/types/networking/objectTransform";
 
 export default class World
 {
@@ -20,15 +21,12 @@ export default class World
 
     constructor(params: WorldSyncParams)
     {
-        this.userName = JSON.parse((window as any).thingspool_user).userName as string;
+        this.userName = JSON.parse((window as any).thingspool_env.userString).userName as string;
         this.graphicsContext = new GraphicsContext();
         this.gameObjects = {};
         this.updatableGameObjects = {};
         this.prevTime = performance.now();
 
-        //graphicsContext.renderer.domElement.addEventListener("resize", (ev: UIEvent) => {
-        //    graphicsContext.renderer.setSize(graphicsContext.renderer.domElement.clientWidth, graphicsContext.renderer.domElement.clientHeight);
-        //});
         this.update = this.update.bind(this);
         this.graphicsContext.renderer.setAnimationLoop(this.update);
 
@@ -51,21 +49,25 @@ export default class World
         {
             for (let x = -5; x <= 5; ++x)
             {
-                this.spawnObject(ObjectFactory.createFloor(this, x, z, 0));
+                this.spawnObject(ObjectFactory.createFloor(this, { x: x, y: 0, z: z, eulerX: 0, eulerY: 0, eulerZ: 0 }));
                 if (z == -5 || z == 5 || x == -5 || x == 5)
-                    this.spawnObject(ObjectFactory.createWall(this, x, z, 0));
+                    this.spawnObject(ObjectFactory.createWall(this, { x: x, y: 0, z: z, eulerX: 0, eulerY: 0, eulerZ: 0 }));
             }
         }
-        this.spawnObject(ObjectFactory.createPlayer(this, 0, 0, 0));
+        this.spawnObject(ObjectFactory.createPlayer(this, {
+            x: 4*Math.random() - 2, y: 0, z: 4*Math.random() - 2,
+            eulerX: 0, eulerY: Math.random() * Math.PI*2, eulerZ: 0,
+        }));
 
         for (const objectRecord of Object.values(params.objectRecords))
         {
+            const transformCopy = {};
+            Object.assign(transformCopy, objectRecord.transform);
+
             const objectSpawnParams: ObjectSpawnParams = {
                 objectType: objectRecord.objectType,
                 objectId: objectRecord.objectId,
-                x: objectRecord.x,
-                z: objectRecord.z,
-                angleY: objectRecord.angleY,
+                transform: transformCopy as ObjectTransform,
             };
             const object = ObjectFactory.createObjectFromNetwork(this, objectSpawnParams);
             this.spawnObject(object);

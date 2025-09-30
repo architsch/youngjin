@@ -1,7 +1,7 @@
+import ObjectTransform from "./objectTransform";
+
 export default interface ObjectSyncParams
 {
     objectId: string,
-    x: number,
-    z: number,
-    angleY: number,
+    transform: ObjectTransform,
 }

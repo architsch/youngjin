@@ -1,15 +1,17 @@
+import * as THREE from "three";
 import Mesh from "../../../graphics/mesh";
 import World from "../../world";
 import FirstPersonController from "../../component/firstPersonController";
 import NetworkObject from "./networkObject";
+import ObjectTransform from "../../../../shared/types/networking/objectTransform";
 
 export default class Player extends NetworkObject
 {
     private firstPersonController: FirstPersonController | undefined;
 
-    constructor(world: World, objectId: string, x: number, z: number, angleY: number, mine: boolean)
+    constructor(world: World, objectId: string, transform: ObjectTransform, mine: boolean)
     {
-        super(world, objectId, x, z, angleY, mine);
+        super(world, objectId, transform, mine);
 
         if (this.isMine())
         {
@@ -17,9 +19,17 @@ export default class Player extends NetworkObject
         }
         else
         {
-            const mesh = Mesh.player();
+            let mesh: THREE.Mesh = Mesh.player();
             this.obj.add(mesh);
-            mesh.position.set(0, 1.25, 0);
+            mesh.position.set(0, 1.1, 0);
+
+            mesh = Mesh.playerEye();
+            this.obj.add(mesh);
+            mesh.position.set(-0.1, 2, -0.235);
+
+            mesh = Mesh.playerEye();
+            this.obj.add(mesh);
+            mesh.position.set(0.1, 2, -0.235);
         }
     }
 

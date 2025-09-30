@@ -37,9 +37,7 @@ gtag('config', 'G-JL7KHR7HK8');
 </div>
 <div class="fullscreenBarMenu">
 <a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
-<a class="fullscreenBarMenuButton idle" href="https://app.thingspool.net/mypage">My Page</a>
 <a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
-<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Arcade</a>
 </div>
 </div>
 <div class="fullscreenPanel">
@@ -58,7 +56,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <p>In the last article, I spent quite a bit of time demonstrating our "hypothetical Prolog game engine" in action. If you have gone through my seemingly verbose step-by-step description of what is supposed to happen during the application's runtime, you would have recognized a common protocol via which the code is expected to be interpreted.</p>
 <p>Instead of just hopping from one example to another and making case-by-case analysis, I will try to write an actual piece of code which may reflect the underlying logic with a fair amount of accuracy. It may not be directly written in Prolog, since I am assuming here that Prolog itself could be treated as a scripting language which is embedded within a more general-purpose programming environment.</p>
 <p>Imagine that we are constructing our own custom game engine which consists of two major parts - outer part and inner part.</p>
-<img class="m_image" src="https://thingspool.net/morsels/f20.jpg" alt="Game Programming in Prolog - Part 15 (Figure 1)">
+<img class="l_image" src="https://thingspool.net/morsels/f20.jpg" alt="Game Programming in Prolog - Part 15 (Figure 1)">
 <p>The outer part is written in a popular programming language such as C#, which runs on Unity or some other easy-to-use development framework. This way, we will be able to conveniently build portions of the game which do not necessarily offer distinctive benefits when they are written in Prolog. For instance, I do not think that writing the entire graphics engine (e.g. OpenGL) using Prolog is a good idea from a pragmatic standpoint; it may not be an impossible task, but I doubt if it is even worth doing it that way.</p>
 <p>The inner part is where things start to get interesting. This is essentially a virtual machine which emulates the way a Prolog interpreter behaves. It is the central processing unit of the gameplay logic, which runs itself by executing rules which are written in declarative syntax (i.e. horn clauses).</p>
 <p>The code below is a rough outline of what this "virtual Prolog machine" might look like if it were implemented inside a C# application.</p>
@@ -176,7 +174,7 @@ public class Fact : Relation&lt;T&gt; where T : Constant
     little(actor1).
     hot(actor2).
     dense(actor2).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/f21.jpg" alt="Game Programming in Prolog - Part 15 (Figure 2)">
+<img class="l_image" src="https://thingspool.net/morsels/f21.jpg" alt="Game Programming in Prolog - Part 15 (Figure 2)">
 <p>These are all unary facts, and they can be imagined as "tags" (i.e. adjectives) which are being attached to actors for the purpose of describing what they are. The constant "actor1", for example, can be depicted as "hot and dense and little" because it is associated with 3 tags: "hot", "dense", and "little". The constant "actor2", on the other hand, will be depicted as "hot and dense but not necessarily little" because it is associated with only 2 tags: "hot" and "dense".</p>
 <p>Storing these facts is very straightforward. All we need to do is create a separate HashSet for each of the tags, so as to enable the interpreter to quickly access facts of the desired types (e.g. Whenever it wants to access facts which begin with the keyword "hot", it only needs to look up the entries in a set called "hot" and nowhere else).</p>
 <p>The following code will show you how the aforementioned facts are able to be mapped into their corresponding HashSet entries.</p>
@@ -204,7 +202,7 @@ public class Fact : Relation&lt;T&gt; where T : Constant
     health(actor2, 3).
     likes(actor1, actor2).
     hates(actor2, actor1).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/f22.jpg" alt="Game Programming in Prolog - Part 15 (Figure 3)">
+<img class="l_image" src="https://thingspool.net/morsels/f22.jpg" alt="Game Programming in Prolog - Part 15 (Figure 3)">
 <p>These ones involve multiple arguments, and they are somewhat more complicated than mere tags. The first two are numerical attributes, and they describe the actors' quantitative states. "health(actor1, 6)", for instance, represents the fact that the current health of "actor1" is 6.</p>
 <p>The remaining two are relationships between actors which could be described in terms of simple keywords. "likes(actor1, actor2)", for instance, represents the fact that "actor1" likes "actor2". This kind of relation is binary in nature, since an actor either "likes" or "does not like" the other actor; there is no in-between (i.e. grayscale) state, as far as the semantic structure of "likes(X, Y)" goes.</p>
 <p>Such facts can be accessed quite efficiently as long as we represent them as dictionaries (aka "HashMaps"), which are internally just hash tables. Each key of the dictonary will be the actor which is the "main subject" of the relation, and the key's corresponding value will be whatever thing that the subject is associated with in the context of the relation. The "likes" relation, for example, could be constructed as a dictionary in which each key indicates the subject who likes somebody else, and each value indicates that "somebody else" who is being liked by the subject.</p>
@@ -230,7 +228,7 @@ public class Fact : Relation&lt;T&gt; where T : Constant
     likes(actor1, actor2).
     likes(actor1, actor3).
     likes(actor1, actor4).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/f23.jpg" alt="Game Programming in Prolog - Part 15 (Figure 4)">
+<img class="l_image" src="https://thingspool.net/morsels/f23.jpg" alt="Game Programming in Prolog - Part 15 (Figure 4)">
 <p>This problem is not hard to resolve at all. All we need is a dictionary whose values are sets of actors instead of just actors. This way, it will be possible to allow each key to reference multiple actors at once.</p>
 <div class="snippet"><pre><code>public class Facts
 {
@@ -250,7 +248,7 @@ public class Fact : Relation&lt;T&gt; where T : Constant
     attacks(actor1, actor2, 1).
     attacks(actor1, actor3, 5).
     attacks(actor2, actor1, 2).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/f24.jpg" alt="Game Programming in Prolog - Part 15 (Figure 5)">
+<img class="l_image" src="https://thingspool.net/morsels/f24.jpg" alt="Game Programming in Prolog - Part 15 (Figure 5)">
 <p>In each of these facts, the first argument indicates the subject who is attacking somebody else, the second argument indicates the object (i.e. target) who is being attacked, and the third argument indicates the strength of the attack. This means that, from the viewpoint of a dictionary, the first argument should be used as the key and the other 2 arguments should be used as its corresponding value. For convenience, let us just put these 2 arguments in a tuple and treat it as the data with which the key is associated. If we do so, the resulting data structure will look like this:</p>
 <div class="snippet"><pre><code>public class Facts
 {
@@ -265,12 +263,12 @@ public class Fact : Relation&lt;T&gt; where T : Constant
     }
     ...
 }</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/f25.jpg" alt="Game Programming in Prolog - Part 15 (Figure 6)">
+<img class="l_image" src="https://thingspool.net/morsels/f25.jpg" alt="Game Programming in Prolog - Part 15 (Figure 6)">
 <p>Everything is the same as before, except that the set of values now consist of tuples instead of just singletons.</p>
 <p>The idea of treating one of the arguments as the key and the rest as the value is pretty versatile, and is able to be extended as much as we desire. The act of handing over a certain number of items to another actor, for example, can be written as:</p>
 <div class="snippet"><pre><code>FACTS:
     gives(actor1, actor2, healthPotion, 5).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/f26.jpg" alt="Game Programming in Prolog - Part 15 (Figure 7)">
+<img class="l_image" src="https://thingspool.net/morsels/f26.jpg" alt="Game Programming in Prolog - Part 15 (Figure 7)">
 <p>This is a fact with 4 arguments, where the first two refer to the donor and receiver of the items, and the rest two refer to the type and number of items given. So in this case, the fact says that "actor1" is giving 5 bottles of health potion to "actor2".</p>
 <p>Such a kind of relation can be constructed as a dictionary in which the set of values have 3-element tuples in them instead of 2, for the purpose of representing the receiver, the type, and the number of the items given.</p>
 <div class="snippet"><pre><code>public class Facts
@@ -288,7 +286,7 @@ public class Fact : Relation&lt;T&gt; where T : Constant
 <p>There are, however, cases in which treating only one of the arguments as the key may not be appropriate. If there is a relationship between two equally important subjects, for instance, we won't necessarily favor the notion of putting only one of them as the key of the dictionary and the other one as part of the mapped value. Here is a quick example which demonstrates such a scenario:</p>
 <div class="snippet"><pre><code>FACTS:
     distance(actor1, actor2, 10).</code></pre></div>
-<img class="m_image" src="https://thingspool.net/morsels/f27.jpg" alt="Game Programming in Prolog - Part 15 (Figure 8)">
+<img class="l_image" src="https://thingspool.net/morsels/f27.jpg" alt="Game Programming in Prolog - Part 15 (Figure 8)">
 <p>The fact shown above tells us that the distance between "actor1" and "actor2" is 10. Here, should we say that "actor1" is the subject of this relation? Or should we say that "actor2" is the subject?</p>
 <p>An honest answer would be that neither of them accurately reflects the symmetric nature of a distance. Both of the two given actors are of equal agency and, unlike in the previous examples, the "distance" relation does not suggest in any way that one of the actors is actively "doing something" against the other actor. In other words, "distance" is not a verb in which there is a clear distinction between the subject and the object.</p>
 <p>In this case, therefore, it makes a lot more sense to consider both of the actors as the subject of the relation. It means that each key in the dictionary of "distance" relationships should be defined as the pair of actors involved.</p>
@@ -310,7 +308,7 @@ public class Fact : Relation&lt;T&gt; where T : Constant
     <a class="inlineButton" href="https://thingspool.net/morsels/page-23.html">Previous Page</a>
     <a class="inlineButton" href="https://thingspool.net/morsels/page-25.html">Next Page</a>
 <div class="l_row"></div>
-<img class="xs_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
 <p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
 </body>

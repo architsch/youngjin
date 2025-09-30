@@ -77,7 +77,7 @@ export default class ArcadeGamePageBuilder
                 if (imgName.length > 0)
                 {
                     const imgPath = `${process.env.URL_STATIC}/${entry.dirName}/${imgName}.jpg`;
-                    contentLines.push(`<img class="m_image" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
+                    contentLines.push(`<img class="l_image" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
                 }
             }
             else // plain text

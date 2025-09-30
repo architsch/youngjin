@@ -1,28 +1,15 @@
-<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
-    url: `${isStaticPage ? process.env.URL_STATIC : process.env.URL_DYNAMIC}/mypage`,
-    pageName: "mypage",
-    pagePathList: [
-        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
-        {title: UIConfig.displayText.pageName["mypage"], url: undefined},
-    ],
-    backDestination_href: process.env.URL_STATIC,
+<%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {
+    includeFullscreenPanel: false
 }) %>
 
 <%_ if (isStaticPage) { _%>
     <h1>Server Not Available</h1>
 <%_ } else if (user) { _%>
-    <hr>
-    <h1>NOTE: This page is under construction.</h1>
-    <hr>
-    <p>User: <%= JSON.stringify(user) %></p>
-    <div id="canvasRoot"></div>
-    <label>Message: </label>
-    <input id="message_input" type="text">
-    <button id="send_button">Send</button>
-    <div id="message_list" style="width: 90%; height: 60%; overflow-y: scroll; overflow-x: hidden; background-color: black; border: 0.25% solid gray"></div>
-
     <script type="text/javascript">
-        window.thingspool_user = `<%- JSON.stringify(user) %>`;
+        window.thingspool_env = { // client-side environment variables
+            userString: `<%- JSON.stringify(user) %>`,
+            socket_server_url: "<%= (process.env.MODE == `dev`) ? `http://localhost:${process.env.PORT}` : process.env.URL_DYNAMIC %>",
+        };
     </script>
     <script type="text/javascript" src="<%= process.env.URL_STATIC %>/app/bundle.js"></script>
     <!--
@@ -37,4 +24,6 @@
     <h3>Error: No user found</h3>
 <%_ } _%>
 
-<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer_min.ejs`, {
+    includeFullscreenPanel: false
+}) %>

@@ -40,6 +40,10 @@ a:active {
 .noTextDeco {
 	text-decoration: none;
 }
+.horizontallyCentered {
+	left: 50%;
+	transform: translate(-50%, 0);
+}
 
 @media (orientation: landscape) {
 	
@@ -268,11 +272,11 @@ hr {
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
-		padding: 2.40% 1.00% 2.40% 1.00%;
-	margin: 2.40% 1.00% 2.40% 0;
+		padding: 2.40% 4.00% 2.40% 4.00%;
+	margin: 2.40% 4.00% 2.40% 0;
 		background-color: #d0c090;
 	color: #303030;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 1.25vmin #b0a070 solid;
 	border-right: 1.25vmin #b0a070 solid;
 		text-align: center;
@@ -316,18 +320,18 @@ hr {
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
 	font-weight: 400;
-		padding: 1.20% 1.00% 1.20% 1.00%;
-	margin: 1.20% 1.00% 1.20% 0;
+		padding: 1.20% 2.00% 1.20% 2.00%;
+	margin: 1.20% 2.00% 1.20% 0;
 		background-color: #303030;
 	color: #a0a0a0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 1.25vmin #c0c0c0 solid;
 	border-right: 1.25vmin #c0c0c0 solid;
 		overflow-y: scroll;
 		z-index: 501;
 	}
 }
-.xs_image {
+.s_image {
 	position: relative;
 	display: inline-block;
 	max-width: 23.00%;
@@ -338,9 +342,10 @@ hr {
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
-	color: #a0a0a0;
+	color: #c0c0c0;
+	border-radius: 2vmin;
 }
-.s_image {
+.m_image {
 	position: relative;
 	display: inline-block;
 	max-width: 31.00%;
@@ -352,12 +357,12 @@ hr {
 	font-weight: 800;
 	background-color: #303030;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 }
-.m_image {
+.m_linkImage {
 	position: relative;
 	display: inline-block;
-	max-width: 64.00%;
+	max-width: 31.00%;
 	padding: 0 0 0 0;
 	margin: 1.20% 1.00% 1.20% 0;
 	font-size: min(2.62vmax, 23.04px);
@@ -365,10 +370,15 @@ hr {
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
-	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	color: #a0a0a0;
+	border-radius: 2vmin;
+	border-bottom: 1.25vmin #a0a0a0 solid;
+	border-right: 1.25vmin #a0a0a0 solid;
 }
-.m_linkImage {
+.m_linkImage:hover {
+	border-color: #d0c090;
+}
+.l_image {
 	position: relative;
 	display: inline-block;
 	max-width: 48.00%;
@@ -379,13 +389,15 @@ hr {
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
-	color: #a0a0a0;
-	border-radius: 4.5vmin;
-	border-bottom: 1.25vmin #a0a0a0 solid;
-	border-right: 1.25vmin #a0a0a0 solid;
+	color: #c0c0c0;
+	border-radius: 2vmin;
 }
-.m_linkImage:hover {
-	border-color: #d0c090;
+.portal {
+	position: relative;
+	display: block;
+	margin: 5% 0;
+	padding: 0 0;
+	max-width: 30%;
 }
 .postEntryButton {
 	position: relative;
@@ -401,10 +413,36 @@ hr {
 	font-weight: 800;
 	background-color: #101010;
 	color: #a0a0a0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 0.5vmin #707070 solid;
 	border-right: 0.5vmin #707070 solid;
 	text-decoration: none;
+}
+.postEntryButton:hover {
+	border-color: #d0c090;
+}
+.bigButton {
+	position: relative;
+	display: block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 3.60% 6.00% 3.60% 6.00%;
+	margin: 3.60% 6.00% 3.60% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #101010;
+	color: #a0a0a0;
+	border-radius: 2vmin;
+	border-bottom: 0.75vmin #707070 solid;
+	border-right: 0.75vmin #707070 solid;
+	text-decoration: none;
+	text-align: center;
+}
+.bigButton:hover {
+	border-color: #d0c090;
 }
 .pagePath {
 	padding: 0 0 0 0;
@@ -423,7 +461,7 @@ hr {
 	margin: 0.60% 1.00% 0.60% 0;
 	background-color: #303030;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border: 0.1vmin #707070 solid;
 	overflow: auto;
 }
@@ -441,7 +479,7 @@ hr {
 	font-weight: 400;
 	background-color: #a0a0a0;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border: 0.1vmin #c0c0c0 solid;
 	text-decoration: none;
 }
@@ -459,7 +497,7 @@ hr {
 	font-weight: 400;
 	background-color: #707070;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 0.25vmin #a0a0a0 solid;
 	border-right: 0.25vmin #a0a0a0 solid;
 }
@@ -492,13 +530,13 @@ hr {
 	font-weight: 400;
 	background-color: #101010;
 	color: #a0a0a0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 0.5vmin #707070 solid;
 	border-right: 0.5vmin #707070 solid;
 	text-decoration: none;
 }
 .inlineButton:hover {
-	color: #d0c090;
+	border-color: #d0c090;
 	cursor: pointer;
 }
 .inlineButton:disabled {
@@ -540,30 +578,30 @@ hr {
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 1.20% 1.00% 1.20% 1.00%;
-	margin: 1.20% 1.00% 1.20% 0;
+	padding: 1.20% 2.00% 1.20% 2.00%;
+	margin: 1.20% 2.00% 1.20% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
 	font-weight: 800;
 	background-color: #101010;
 	color: #70c060;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	white-space: nowrap;
 }
 .excerpt {
 	position: relative;
 	display: block;
 	max-width: 100.00%;
-	padding: 1.20% 1.00% 1.20% 1.00%;
-	margin: 1.20% 1.00% 1.20% 0;
+	padding: 1.20% 2.00% 1.20% 2.00%;
+	margin: 1.20% 2.00% 1.20% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 400;
 	background-color: #101010;
 	color: #70c060;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	white-space: pre-wrap;
 	white-space: -moz-pre-wrap;
 	white-space: -pre-wrap;
@@ -597,24 +635,24 @@ hr {
 	position: relative;
 	display: block;
 	max-width: 1%;
-	padding: 1.20% 1.00% 1.20% 1.00%;
-	margin: 1.20% 1.00% 1.20% 0;
+	padding: 1.20% 2.00% 1.20% 2.00%;
+	margin: 1.20% 2.00% 1.20% 0;
 	opacity: 0;
 }
 .l_row {
 	position: relative;
 	display: block;
 	max-width: 1%;
-	padding: 1.80% 1.00% 1.80% 1.00%;
-	margin: 1.80% 1.00% 1.80% 0;
+	padding: 1.80% 3.00% 1.80% 3.00%;
+	margin: 1.80% 3.00% 1.80% 0;
 	opacity: 0;
 }
 .xl_row {
 	position: relative;
 	display: block;
 	max-width: 1%;
-	padding: 2.40% 1.00% 2.40% 1.00%;
-	margin: 2.40% 1.00% 2.40% 0;
+	padding: 2.40% 4.00% 2.40% 4.00%;
+	margin: 2.40% 4.00% 2.40% 0;
 	opacity: 0;
 }
 
@@ -847,11 +885,11 @@ hr {
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 800;
-		padding: 4.00% 2.50% 4.00% 2.50%;
-	margin: 4.00% 2.50% 4.00% 0;
+		padding: 4.00% 10.00% 4.00% 10.00%;
+	margin: 4.00% 10.00% 4.00% 0;
 		background-color: #d0c090;
 	color: #303030;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 1.25vmin #b0a070 solid;
 	border-right: 1.25vmin #b0a070 solid;
 		text-align: center;
@@ -895,18 +933,18 @@ hr {
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
 	font-weight: 400;
-		padding: 2.00% 2.50% 2.00% 2.50%;
-	margin: 2.00% 2.50% 2.00% 0;
+		padding: 2.00% 5.00% 2.00% 5.00%;
+	margin: 2.00% 5.00% 2.00% 0;
 		background-color: #303030;
 	color: #a0a0a0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 1.25vmin #c0c0c0 solid;
 	border-right: 1.25vmin #c0c0c0 solid;
 		overflow-y: scroll;
 		z-index: 501;
 	}
 }
-.xs_image {
+.s_image {
 	position: relative;
 	display: inline-block;
 	max-width: 45.00%;
@@ -917,21 +955,8 @@ hr {
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
-	color: #a0a0a0;
-}
-.s_image {
-	position: relative;
-	display: inline-block;
-	max-width: 61.00%;
-	padding: 0 0 0 0;
-	margin: 2.00% 2.50% 2.00% 0;
-	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #303030;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 }
 .m_image {
 	position: relative;
@@ -945,7 +970,7 @@ hr {
 	font-weight: 800;
 	background-color: #303030;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 }
 .m_linkImage {
 	position: relative;
@@ -959,12 +984,33 @@ hr {
 	font-weight: 800;
 	background-color: #303030;
 	color: #a0a0a0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 1.25vmin #a0a0a0 solid;
 	border-right: 1.25vmin #a0a0a0 solid;
 }
 .m_linkImage:hover {
 	border-color: #d0c090;
+}
+.l_image {
+	position: relative;
+	display: inline-block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.00% 2.50% 2.00% 0;
+	font-size: min(2.62vmax, 23.04px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #c0c0c0;
+	border-radius: 2vmin;
+}
+.portal {
+	position: relative;
+	display: block;
+	margin: 12.5% 0;
+	padding: 0 0;
+	max-width: 70%;
 }
 .postEntryButton {
 	position: relative;
@@ -980,10 +1026,36 @@ hr {
 	font-weight: 800;
 	background-color: #101010;
 	color: #a0a0a0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 0.5vmin #707070 solid;
 	border-right: 0.5vmin #707070 solid;
 	text-decoration: none;
+}
+.postEntryButton:hover {
+	border-color: #d0c090;
+}
+.bigButton {
+	position: relative;
+	display: block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 6.00% 15.00% 6.00% 15.00%;
+	margin: 6.00% 15.00% 6.00% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #101010;
+	color: #a0a0a0;
+	border-radius: 2vmin;
+	border-bottom: 0.75vmin #707070 solid;
+	border-right: 0.75vmin #707070 solid;
+	text-decoration: none;
+	text-align: center;
+}
+.bigButton:hover {
+	border-color: #d0c090;
 }
 .pagePath {
 	padding: 0 0 0 0;
@@ -1002,7 +1074,7 @@ hr {
 	margin: 1.00% 2.50% 1.00% 0;
 	background-color: #303030;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border: 0.1vmin #707070 solid;
 	overflow: auto;
 }
@@ -1020,7 +1092,7 @@ hr {
 	font-weight: 400;
 	background-color: #a0a0a0;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border: 0.1vmin #c0c0c0 solid;
 	text-decoration: none;
 }
@@ -1038,7 +1110,7 @@ hr {
 	font-weight: 400;
 	background-color: #707070;
 	color: #c0c0c0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 0.25vmin #a0a0a0 solid;
 	border-right: 0.25vmin #a0a0a0 solid;
 }
@@ -1071,13 +1143,13 @@ hr {
 	font-weight: 400;
 	background-color: #101010;
 	color: #a0a0a0;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	border-bottom: 0.5vmin #707070 solid;
 	border-right: 0.5vmin #707070 solid;
 	text-decoration: none;
 }
 .inlineButton:hover {
-	color: #d0c090;
+	border-color: #d0c090;
 	cursor: pointer;
 }
 .inlineButton:disabled {
@@ -1119,30 +1191,30 @@ hr {
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 2.00% 2.50% 2.00% 2.50%;
-	margin: 2.00% 2.50% 2.00% 0;
+	padding: 2.00% 5.00% 2.00% 5.00%;
+	margin: 2.00% 5.00% 2.00% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: normal;
 	font-weight: 800;
 	background-color: #101010;
 	color: #70c060;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	white-space: nowrap;
 }
 .excerpt {
 	position: relative;
 	display: block;
 	max-width: 100.00%;
-	padding: 2.00% 2.50% 2.00% 2.50%;
-	margin: 2.00% 2.50% 2.00% 0;
+	padding: 2.00% 5.00% 2.00% 5.00%;
+	margin: 2.00% 5.00% 2.00% 0;
 	font-size: min(1.82vmax, 16.00px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
 	font-weight: 400;
 	background-color: #101010;
 	color: #70c060;
-	border-radius: 4.5vmin;
+	border-radius: 2vmin;
 	white-space: pre-wrap;
 	white-space: -moz-pre-wrap;
 	white-space: -pre-wrap;
@@ -1176,24 +1248,24 @@ hr {
 	position: relative;
 	display: block;
 	max-width: 1%;
-	padding: 2.00% 2.50% 2.00% 2.50%;
-	margin: 2.00% 2.50% 2.00% 0;
+	padding: 2.00% 5.00% 2.00% 5.00%;
+	margin: 2.00% 5.00% 2.00% 0;
 	opacity: 0;
 }
 .l_row {
 	position: relative;
 	display: block;
 	max-width: 1%;
-	padding: 3.00% 2.50% 3.00% 2.50%;
-	margin: 3.00% 2.50% 3.00% 0;
+	padding: 3.00% 7.50% 3.00% 7.50%;
+	margin: 3.00% 7.50% 3.00% 0;
 	opacity: 0;
 }
 .xl_row {
 	position: relative;
 	display: block;
 	max-width: 1%;
-	padding: 4.00% 2.50% 4.00% 2.50%;
-	margin: 4.00% 2.50% 4.00% 0;
+	padding: 4.00% 10.00% 4.00% 10.00%;
+	margin: 4.00% 10.00% 4.00% 0;
 	opacity: 0;
 }
 
