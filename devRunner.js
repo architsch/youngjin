@@ -25,9 +25,9 @@ function compile(webpackConfig, onAfterCompile)
     devModeWebpackConfig.devtool = "inline-source-map";
     
     const compiler = webpack(devModeWebpackConfig, (err, stats) => {
-    if (err || stats.hasErrors())
-        throw new Error(stats.toString());
-    else
-        compiler.run(onAfterCompile);
-});
+        if (err || stats.hasErrors())
+            throw new Error(stats.toString());
+        else
+            compiler.run(onAfterCompile);
+    });
 }

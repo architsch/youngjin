@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import ObjectSyncParams from "../../../shared/types/networking/objectSyncParams";
+import ObjectSyncParams from "../../../shared/types/gameplay/objectSyncParams";
 import GameObject from "../object/types/gameObject";
 
 const syncIntervalInMillis = 200;

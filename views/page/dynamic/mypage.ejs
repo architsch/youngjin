@@ -5,8 +5,12 @@
 <%_ if (isStaticPage) { _%>
     <h1>Server Not Available</h1>
 <%_ } else if (user) { _%>
+    <div id="gameCanvasRoot" style="position:absolute; margin:0 0; padding:0 0; left:0; right:0; top:0; bottom:0;"></div>
+    <div id="overlayCanvasRoot" style="pointer-events:none; position:absolute; margin:0 0; padding:0 0; left:0; right:0; top:0; bottom:0;"></div>
+    <div id="uiRoot" style="pointer-events:none; position:absolute; margin:0 0; padding:0 0; left:0; right:0; top:0; bottom:0;"></div>
     <script type="text/javascript">
         window.thingspool_env = { // client-side environment variables
+            mode: `<%- process.env.MODE %>`,
             userString: `<%- JSON.stringify(user) %>`,
             socket_server_url: "<%= (process.env.MODE == `dev`) ? `http://localhost:${process.env.PORT}` : process.env.URL_DYNAMIC %>",
         };

@@ -1,12 +1,12 @@
 import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import MessageParams from "../../shared/types/networking/messageParams"
-import ObjectSyncParams from "../../shared/types/networking/objectSyncParams";
-import ObjectSpawnParams from "../../shared/types/networking/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/types/networking/objectDespawnParams";
-import ObjectRecord from "../../shared/types/networking/objectRecord";
+import ObjectMessageParams from "../../shared/types/gameplay/objectMessageParams"
+import ObjectSyncParams from "../../shared/types/gameplay/objectSyncParams";
+import ObjectSpawnParams from "../../shared/types/gameplay/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/types/gameplay/objectDespawnParams";
+import ObjectRecord from "../../shared/types/gameplay/objectRecord";
 import User from "../../shared/types/db/user";
-import ObjectTransform from "../../shared/types/networking/objectTransform";
+import ObjectTransform from "../../shared/types/gameplay/objectTransform";
 
 let nsp: socketIO.Namespace;
 
@@ -24,8 +24,8 @@ const GameSockets =
 
             console.log(`(GameSockets) Client connected :: ${JSON.stringify(user)}`);
 
-            socket.on("message", (params: MessageParams) => {
-                nsp.to("room_default").emit("message", params);
+            socket.on("objectMessage", (params: ObjectMessageParams) => {
+                socket.broadcast.to("room_default").emit("objectMessage", params);
             });
 
             socket.on("objectSync", (params: ObjectSyncParams) => {
@@ -35,8 +35,8 @@ const GameSockets =
                     console.error(`Tried to sync a nonexistent object :: ${JSON.stringify(params)}`);
                     return;
                 }
-                Object.assign(objectRecord.transform, params.transform);
-                nsp.to("room_default").emit("objectSync", params);
+                Object.assign(objectRecord.objectSpawnParams.transform, params.transform);
+                socket.broadcast.to("room_default").emit("objectSync", params);
             });
 
             socket.on("objectSpawn", (params: ObjectSpawnParams) => {
@@ -50,12 +50,15 @@ const GameSockets =
                 Object.assign(transformCopy, params.transform);
 
                 objectRecords[params.objectId] = {
-                    objectType: params.objectType,
-                    objectId: params.objectId,
-                    transform: transformCopy as ObjectTransform,
+                    objectSpawnParams: {
+                        sourceUserName: params.sourceUserName,
+                        objectType: params.objectType,
+                        objectId: params.objectId,
+                        transform: transformCopy as ObjectTransform,
+                    }
                 };
 
-                nsp.to("room_default").emit("objectSpawn", params);
+                socket.broadcast.to("room_default").emit("objectSpawn", params);
             });
 
             socket.on("objectDespawn", (params: ObjectDespawnParams) => {
@@ -67,7 +70,7 @@ const GameSockets =
                 }
                 delete objectRecords[params.objectId];
 
-                nsp.to("room_default").emit("objectDespawn", params);
+                socket.broadcast.to("room_default").emit("objectDespawn", params);
             });
 
             socket.on("disconnect", () => {
@@ -76,10 +79,11 @@ const GameSockets =
                 const despawnPendingObjectIds: string[] = [];
                 for (const objectRecord of Object.values(objectRecords))
                 {
-                    if (objectRecord.objectId.startsWith(user.userName))
+                    const params = objectRecord.objectSpawnParams;
+                    if (params.objectId.startsWith(user.userName))
                     {
-                        console.log(`Despawned :: ${objectRecord.objectId}`);
-                        despawnPendingObjectIds.push(objectRecord.objectId);
+                        console.log(`Despawned :: ${params.objectId}`);
+                        despawnPendingObjectIds.push(params.objectId);
                     }
                 }
                 for (const objectId of despawnPendingObjectIds)

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import ObjectSyncParams from "../../../shared/types/networking/objectSyncParams";
+import ObjectSyncParams from "../../../shared/types/gameplay/objectSyncParams";
 import GameSocketsClient from "../../networking/gameSocketsClient";
 import GameObject from "../object/types/gameObject";
 

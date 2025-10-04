@@ -1,22 +1,26 @@
 import * as THREE from "three";
 import World from "../../world";
-import ObjectTransform from "../../../../shared/types/networking/objectTransform";
+import ObjectTransform from "../../../../shared/types/gameplay/objectTransform";
 
 export default abstract class GameObject
 {
     objectId: string;
     obj: THREE.Object3D;
     world: World;
+    sourceUserName: string;
 
-    constructor(world: World, objectId: string, transform: ObjectTransform)
+    constructor(world: World, sourceUserName: string, objectId: string, transform: ObjectTransform)
     {
         this.objectId = objectId;
         this.obj = new THREE.Object3D();
         this.world = world;
+        this.sourceUserName = sourceUserName;
         
         this.obj.position.set(transform.x, transform.y, transform.z);
         this.obj.rotation.set(transform.eulerX, transform.eulerY, transform.eulerZ);
     }
+
+    abstract getObjectType(): string;
 
     onSpawn(): void
     {
@@ -26,6 +30,11 @@ export default abstract class GameObject
     onDespawn(): void
     {
         this.obj.removeFromParent();
+    }
+
+    isMine(): boolean
+    {
+        return this.sourceUserName == this.world.userName;
     }
     
     get position(): THREE.Vector3 { return this.obj.position; }

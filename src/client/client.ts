@@ -1,4 +1,4 @@
-import WorldSyncParams from "../shared/types/networking/worldSyncParams";
+import WorldSyncParams from "../shared/types/gameplay/worldSyncParams";
 import World from "./gameplay/world";
 import GameSocketsClient from "./networking/gameSocketsClient";
 
