@@ -1,15 +1,20 @@
-import WorldSyncParams from "../shared/types/gameplay/worldSyncParams";
-import World from "./gameplay/world";
+import RoomLoadParams from "../shared/types/room/roomLoadParams";
 import GameSocketsClient from "./networking/gameSocketsClient";
+import App from "./app";
+
+const env = (window as any).thingspool_env;
 
 if (!(window as any).thingspool_loading)
 {
     (window as any).thingspool_loading_on();
-    GameSocketsClient.init((params: WorldSyncParams) => {
-        console.log(`(GameSocketsClient) worldSync :: ${JSON.stringify(params)}`);
-        new World(params);
-        (window as any).thingspool_loading_off();
+
+    GameSocketsClient.roomLoadObservable.addListener("init", (params: RoomLoadParams) => {
+        App.setEnv(env);
+        App.loadRoom(params).then(_ => {
+            (window as any).thingspool_loading_off();
+        });
     });
+    GameSocketsClient.init(env);
 }
 else
 {

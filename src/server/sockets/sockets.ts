@@ -4,7 +4,7 @@ import ConsoleSockets from "./consoleSockets";
 import GameSockets from "./gameSockets";
 import dotenv from "dotenv";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import User from "../../shared/types/db/user";
+import User from "../../shared/types/auth/user";
 import AuthUtil from "../util/authUtil";
 import NetworkUtil from "../util/networkUtil";
 import * as cookie from "cookie";

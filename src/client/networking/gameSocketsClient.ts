@@ -1,27 +1,20 @@
 import { io, Socket } from "socket.io-client";
-import ObjectMessageParams from "../../shared/types/gameplay/objectMessageParams";
-import User from "../../shared/types/db/user";
-import ObjectSyncParams from "../../shared/types/gameplay/objectSyncParams";
-import ObjectSpawnParams from "../../shared/types/gameplay/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/types/gameplay/objectDespawnParams";
-import WorldSyncParams from "../../shared/types/gameplay/worldSyncParams";
-import World from "../gameplay/world";
+import ObjectMessageParams from "../../shared/types/object/objectMessageParams";
+import ObjectSyncParams from "../../shared/types/object/objectSyncParams";
+import ObjectSpawnParams from "../../shared/types/object/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/types/object/objectDespawnParams";
 import TextUtil from "../../shared/embeddedScripts/util/textUtil"
+import RoomLoadParams from "../../shared/types/room/roomLoadParams";
+import ThingsPoolEnv from "./thingsPoolEnv";
+import Observable from "./observable";
+import ObjectManager from "../object/objectManager";
 
 let socket: Socket;
 
-const objectSyncListeners: ((params: ObjectSyncParams) => void)[] = [];
-const objectSpawnListeners: ((params: ObjectSpawnParams) => void)[] = [];
-const objectDespawnListeners: ((params: ObjectDespawnParams) => void)[] = [];
-const objectMessageListeners: ((params: ObjectMessageParams) => void)[] = [];
-
 const GameSocketsClient =
 {
-    init: (onWorldSync: (params: WorldSyncParams) => void) =>
+    init: (env: ThingsPoolEnv) =>
     {
-        const env = (window as any).thingspool_env;
-        const user = JSON.parse(env.userString) as User;
-
         socket = io(`${env.socket_server_url}/game_sockets`);
 
         socket.on("connect_error", (err) => {
@@ -31,27 +24,25 @@ const GameSocketsClient =
                 (window as any).location.reload(true);
         });
 
-        socket.on("worldSync", onWorldSync);
-
+        socket.on("roomLoad", (params: RoomLoadParams) => {
+            console.log(`(GameSocketsClient) roomLoad :: ${JSON.stringify(params)}`);
+            GameSocketsClient.roomLoadObservable.broadcast(params);
+        });
         socket.on("objectSync", (params: ObjectSyncParams) => {
             //console.log(`(GameSocketsClient) objectSync :: ${JSON.stringify(params)}`);
-            for (const listener of objectSyncListeners)
-                listener(params);
+            GameSocketsClient.objectSyncObservable.broadcast(params);
         });
         socket.on("objectSpawn", (params: ObjectSpawnParams) => {
             console.log(`(GameSocketsClient) objectSpawn :: ${JSON.stringify(params)}`);
-            for (const listener of objectSpawnListeners)
-                listener(params);
+            GameSocketsClient.objectSpawnObservable.broadcast(params);
         });
         socket.on("objectDespawn", (params: ObjectDespawnParams) => {
             console.log(`(GameSocketsClient) objectDespawn :: ${JSON.stringify(params)}`);
-            for (const listener of objectDespawnListeners)
-                listener(params);
+            GameSocketsClient.objectDespawnObservable.broadcast(params);
         });
         socket.on("objectMessage", (params: ObjectMessageParams) => {
             console.log(`(GameSocketsClient) objectMessage :: ${JSON.stringify(params)}`);
-            for (const listener of objectMessageListeners)
-                listener(params);
+            GameSocketsClient.objectMessageObservable.broadcast(params);
         });
 
         // temp UI
@@ -62,11 +53,14 @@ const GameSocketsClient =
         messageInput.type = "text";
         messageInput.placeholder = "Your Message Here";
         messageInput.style = "pointer-events:all; position:absolute; margin:0.25rem 0.25rem; padding:0.25rem 0.25rem; left:0; right:20%; bottom:0; height:1.5rem; text-size:1rem; line-height:1.5rem;";
+        messageInput.oninput = (ev: Event) => {
+            messageInput.value = messageInput.value.substring(0, 32);
+        };
         uiRoot.appendChild(messageInput);
 
         const sendButton = document.createElement("button");
         sendButton.innerHTML = "Send";
-        sendButton.style = "pointer-events:all; position:absolute; margin:0.25rem 0.25rem; padding:0.25rem 0.25rem; left:80%; right:0%; bottom:0; height:1.5rem; text-size:1rem; line-height:1.5rem; background-color:green; color:white;"
+        sendButton.style = "pointer-events:all; position:absolute; margin:0.25rem 0.25rem; padding:0.25rem 0.25rem; left:80%; right:0%; bottom:0; height:2.25rem; text-size:1rem; line-height:1.5rem; background-color:green; color:white;"
         sendButton.onclick = (ev: PointerEvent) => {
             send();
         };
@@ -81,17 +75,17 @@ const GameSocketsClient =
 
         function send()
         {
-            const message = messageInput.value.trim();
+            const message = messageInput.value.trim().substring(0, 32);
             if (message.length > 0)
             {
-                const player = World.currentInstance.getPlayer(user.userName);
+                const player = ObjectManager.getPlayer();
                 if (!player)
                 {
-                    console.error(`Player not found (userName = ${user.userName})`);
+                    console.error(`Player not found (userName = ${env.user.userName})`);
                     return;
                 }
                 const params: ObjectMessageParams = {
-                    senderObjectId: player.objectId,
+                    senderObjectId: player.params.objectId,
                     message,
                 };
                 GameSocketsClient.emitObjectMessage(params);
@@ -116,15 +110,16 @@ const GameSocketsClient =
         });
     },
 
-    emitObjectSync: (params: ObjectSyncParams) => { socket.emit("objectSync", params); },
-    emitObjectSpawn: (params: ObjectSpawnParams) => { socket.emit("objectSpawn", params); },
-    emitObjectDespawn: (params: ObjectDespawnParams) => { socket.emit("objectDespawn", params); },
-    emitObjectMessage: (params: ObjectMessageParams) => { socket.emit("objectMessage", params); },
+    emitObjectSync: (params: ObjectSyncParams) => socket.emit("objectSync", params),
+    emitObjectSpawn: (params: ObjectSpawnParams) => socket.emit("objectSpawn", params),
+    emitObjectDespawn: (params: ObjectDespawnParams) => socket.emit("objectDespawn", params),
+    emitObjectMessage: (params: ObjectMessageParams) => socket.emit("objectMessage", params),
 
-    addObjectSyncListener: (callback: (params: ObjectSyncParams) => void) => { objectSyncListeners.push(callback); },
-    addObjectSpawnListener: (callback: (params: ObjectSpawnParams) => void) => { objectSpawnListeners.push(callback); },
-    addObjectDespawnListener: (callback: (params: ObjectDespawnParams) => void) => { objectDespawnListeners.push(callback); },
-    addObjectMessageListener: (callback: (params: ObjectMessageParams) => void) => { objectMessageListeners.push(callback); },
+    roomLoadObservable: new Observable<RoomLoadParams>(),
+    objectSyncObservable: new Observable<ObjectSyncParams>(),
+    objectSpawnObservable: new Observable<ObjectSpawnParams>(),
+    objectDespawnObservable: new Observable<ObjectDespawnParams>(),
+    objectMessageObservable: new Observable<ObjectMessageParams>(),
 }
 
 export default GameSocketsClient;

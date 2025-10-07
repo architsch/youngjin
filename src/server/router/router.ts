@@ -26,7 +26,7 @@ export default function Router(app: Express): void
             res.status(200).setHeader("content-type", "text/javascript")
                 .sendFile(FileUtil.getAbsoluteFilePath(req.url));
         });
-        app.get(/(.*\.css)|(.*\.jpg)|(.*\.png)|(.*\.ico)|(.*\.atom)|(.*\.xml)|(.*\.pdf)$/, async (req: Request, res: Response): Promise<void> => {
+        app.get(/(.*\.css)|(.*\.jpg)|(.*\.png)|(.*\.ico)|(.*\.atom)|(.*\.xml)|(.*\.pdf)|(.*\.glb)$/, async (req: Request, res: Response): Promise<void> => {
             res.sendFile(FileUtil.getAbsoluteFilePath(req.url));
         });
     }

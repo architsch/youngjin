@@ -1,16 +1,51 @@
 import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import ObjectMessageParams from "../../shared/types/gameplay/objectMessageParams"
-import ObjectSyncParams from "../../shared/types/gameplay/objectSyncParams";
-import ObjectSpawnParams from "../../shared/types/gameplay/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/types/gameplay/objectDespawnParams";
-import ObjectRecord from "../../shared/types/gameplay/objectRecord";
-import User from "../../shared/types/db/user";
-import ObjectTransform from "../../shared/types/gameplay/objectTransform";
+import ObjectMessageParams from "../../shared/types/object/objectMessageParams"
+import ObjectSyncParams from "../../shared/types/object/objectSyncParams";
+import ObjectSpawnParams from "../../shared/types/object/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/types/object/objectDespawnParams";
+import ObjectRecord from "../../shared/types/object/objectRecord";
+import User from "../../shared/types/auth/user";
+import RoomLoadParams from "../../shared/types/room/roomLoadParams";
 
 let nsp: socketIO.Namespace;
 
 const objectRecords: {[objectId: string]: ObjectRecord} = {};
+
+const defaultRoomMap = `
+GGGGGGGGGGAAAAAAAAACCCCCCCCCCCCC
+GggggggggGaHaHaHaHaCcccccccccccC
+GggggggggGaaaaaaaaaCcccccccccccC
+GggggggggGaaaaaaaaaCCCCCccccCccC
+GggggggggGaaaaaaaaaaaaabbbbbbbbB
+GggggggggGaaaaahhhhhaaabbbbbBbbB
+KaaaaaaaaaaaaaahjjjhaaabbbbbbbbB
+KaaaaaaaaaaaaaahjjjhaaabbbbbbbbB
+KaaaaaaaaaaaaaahjjjhaaaBBBBBBBBB
+DDDDDDDDDaaaaaahjjjhaaaeeeeeeeeE
+DdddddddddddaaahjjjhaaaeeeeeeeeE
+DdddddddddddaaahhhhhaaaEeeeeeeeE
+DdddddddddddaaaaaaaaaaaEeeeeeeeE
+DdddddddddddDaaaaaaaaaaEeeeeeeeE
+DdddddddddddDiiiiiiiiiiEJeeeeeeE
+DDDDDDDDDDDDDiiiiiiiiiiEEEEEEEEE
+LLLLLLLLLLmmmmmmmmmNNNNNNNNNNNNN
+LllllllllLmmmmmmmmmnnnnnnnnnnnnN
+LllllllllLmmmooommmnnnnnnnnnnnnN
+LllllllllLmmmooommmnnnnPnnnnnnON
+LlllllllllmmmooommmnnnnPnnnnnnnN
+LlllllllllmmmooommmnnnnPnnnnnnON
+LllllllllLmmmooommmnnnnPnnnnnnnN
+LllllllllLmmmooommmnnnnnnnnnnnON
+LLLLLLLLLLmmmmmmmmmnnnnnnnnnnnnN
+RrrrrrrrssmmmmmmmmmNNqqqqqNNNNNN
+RrrrrrrrsssssssssssQQqqqqqQQQQQQ
+RrrrrrrRSssssssssssQqqqqqqqqqqqQ
+RrrrrrrRSssssssssssQqqqqqqqqqqqQ
+RrrrrrrRSssssssssssQqqqqqqqqqqqQ
+RrrrrrrRSssssssssssQqqqqqqqqqqqQ
+RRRRRRRRSSSSSSSSSSSQQQQQQQQQQQQQ
+`.split("\n").map(x => x.trim()).filter(x => x.length > 0).join("\n");
 
 const GameSockets =
 {
@@ -25,6 +60,7 @@ const GameSockets =
             console.log(`(GameSockets) Client connected :: ${JSON.stringify(user)}`);
 
             socket.on("objectMessage", (params: ObjectMessageParams) => {
+                params.message = params.message.trim().substring(0, 32);
                 socket.broadcast.to("room_default").emit("objectMessage", params);
             });
 
@@ -49,14 +85,7 @@ const GameSockets =
                 const transformCopy = {};
                 Object.assign(transformCopy, params.transform);
 
-                objectRecords[params.objectId] = {
-                    objectSpawnParams: {
-                        sourceUserName: params.sourceUserName,
-                        objectType: params.objectType,
-                        objectId: params.objectId,
-                        transform: transformCopy as ObjectTransform,
-                    }
-                };
+                objectRecords[params.objectId] = { objectSpawnParams: params };
 
                 socket.broadcast.to("room_default").emit("objectSpawn", params);
             });
@@ -96,7 +125,11 @@ const GameSockets =
 
             socket.join("room_default");
 
-            socket.emit("worldSync", { objectRecords });
+            const roomLoadParams: RoomLoadParams = {
+                roomMap: defaultRoomMap,
+                objectRecords
+            }
+            socket.emit("roomLoad", roomLoadParams);
         });
     },
 };

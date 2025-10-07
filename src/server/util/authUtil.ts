@@ -8,7 +8,7 @@ import DebugUtil from "./debugUtil";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
 import UIConfig from "../../shared/embeddedScripts/config/uiConfig";
-import User from "../../shared/types/db/user";
+import User from "../../shared/types/auth/user";
 dotenv.config();
 
 const dev = process.env.MODE == "dev";

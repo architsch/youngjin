@@ -11,8 +11,9 @@
     <script type="text/javascript">
         window.thingspool_env = { // client-side environment variables
             mode: `<%- process.env.MODE %>`,
-            userString: `<%- JSON.stringify(user) %>`,
+            user: JSON.parse(`<%- JSON.stringify(user) %>`),
             socket_server_url: "<%= (process.env.MODE == `dev`) ? `http://localhost:${process.env.PORT}` : process.env.URL_DYNAMIC %>",
+            assets_url: "<%= (process.env.MODE == `dev`) ? `http://localhost:${process.env.PORT}` : process.env.URL_STATIC %>/app/assets",
         };
     </script>
     <script type="text/javascript" src="<%= process.env.URL_STATIC %>/app/bundle.js"></script>

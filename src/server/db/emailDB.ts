@@ -1,5 +1,5 @@
 import DB from "./db";
-import EmailVerification from "../../shared/types/db/emailVerification";
+import EmailVerification from "../../shared/types/auth/emailVerification";
 import { Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();
