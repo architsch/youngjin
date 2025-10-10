@@ -21,17 +21,17 @@ export default abstract class NetworkObject extends GameObject implements Updata
             this.objectSyncReceiver = new ObjectSyncReceiver(this);
     }
 
-    onSpawn()
+    async onSpawn(): Promise<void>
     {
-        super.onSpawn();
+        await super.onSpawn();
 
         if (this.isMine())
             GameSocketsClient.emitObjectSpawn(this.params);
     }
 
-    onDespawn()
+    async onDespawn(): Promise<void>
     {
-        super.onDespawn();
+        await super.onDespawn();
 
         if (this.isMine())
             GameSocketsClient.emitObjectDespawn({ objectId: this.params.objectId });

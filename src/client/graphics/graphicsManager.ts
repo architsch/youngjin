@@ -28,6 +28,11 @@ const GraphicsManager =
     {
         scene.add(obj);
     },
+    addObjectToSceneIfNotAlreadyAdded: (obj: THREE.Object3D) =>
+    {
+        if (obj.parent != scene)
+            scene.add(obj);
+    },
     getCamera: (): THREE.PerspectiveCamera =>
     {
         return camera;
@@ -45,20 +50,50 @@ const GraphicsManager =
 
         scene = new THREE.Scene();
 
-        ambLight = new THREE.AmbientLight(0xffffff, 0.5);
+        ambLight = new THREE.AmbientLight(0xffffff, 0.25);
         scene.add(ambLight);
 
-        dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        dirLight.position.set(3, 3, 0);
-        dirLight.target.position.set(0, 0, 0);
-        scene.add(dirLight);
-        scene.add(dirLight.target);
+        let pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        pointLight.position.set(16, 4, 16);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        pointLight.position.set(8, 4, 8);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        pointLight.position.set(24, 4, 24);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        pointLight.position.set(8, 4, 24);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        pointLight.position.set(24, 4, 8);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        pointLight.position.set(26, 4, 4);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        pointLight.position.set(6, 4, 26);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
 
         camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
         if (!gameRenderer)
         {
-            gameRenderer = new THREE.WebGLRenderer();
+            gameRenderer = new THREE.WebGLRenderer({ antialias: true });
+            gameRenderer.shadowMap.enabled = true;
             gameRenderer.setClearColor("#000000");
             gameRenderer.domElement.style.position = "absolute";
             gameRenderer.domElement.style.margin = "auto auto";
@@ -103,7 +138,7 @@ const GraphicsManager =
         // Update Loop
         gameRenderer.setAnimationLoop(updateCallback);
     },
-    unload: () =>
+    unload: async () =>
     {
         scene.remove();
         camera.remove();

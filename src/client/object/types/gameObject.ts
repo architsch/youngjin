@@ -12,16 +12,16 @@ export default abstract class GameObject
     {
         this.params = params;
         this.obj = new THREE.Object3D();
-        this.obj.position.set(params.transform.x, params.transform.y, params.transform.z);
-        this.obj.rotation.set(params.transform.eulerX, params.transform.eulerY, params.transform.eulerZ);
     }
 
-    onSpawn(): void
+    async onSpawn(): Promise<void>
     {
         GraphicsManager.addObjectToScene(this.obj);
+        this.obj.position.set(this.params.transform.x, this.params.transform.y, this.params.transform.z);
+        this.obj.rotation.set(this.params.transform.eulerX, this.params.transform.eulerY, this.params.transform.eulerZ);
     }
 
-    onDespawn(): void
+    async onDespawn(): Promise<void>
     {
         this.obj.removeFromParent();
     }

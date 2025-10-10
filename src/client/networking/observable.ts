@@ -1,6 +1,6 @@
 export default class Observable<ValueType>
 {
-    private listeners: {[key: string]: (value: ValueType) => void} = {};
+    private listeners: {[key: string]: (value: ValueType) => (void | Promise<void>)} = {};
 
     broadcast(value: ValueType): void
     {
@@ -8,7 +8,7 @@ export default class Observable<ValueType>
             listener(value);
     }
 
-    addListener(key: string, callback: (value: ValueType) => void): void
+    addListener(key: string, callback: (value: ValueType) => (void | Promise<void>)): void
     {
         if (this.listeners[key] != undefined)
             throw new Error(`Listener key already exists (key = ${key})`);

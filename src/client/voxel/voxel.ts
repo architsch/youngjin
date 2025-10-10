@@ -1,3 +1,4 @@
+import VoxelObject from "../object/types/voxelObject";
 import VoxelType from "./voxelType";
 
 export default interface Voxel
@@ -6,4 +7,5 @@ export default interface Voxel
     textureId: string;
     row: number;
     col: number;
+    object: VoxelObject | undefined;
 }

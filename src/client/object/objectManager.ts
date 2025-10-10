@@ -11,6 +11,8 @@ import ObjectMessageParams from "../../shared/types/object/objectMessageParams";
 import Voxel from "../voxel/voxel";
 import ObjectRecord from "../../shared/types/object/objectRecord";
 import App from "../app";
+import VoxelManager from "../voxel/voxelManager";
+import VoxelObject from "./types/voxelObject";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: Updatable} = {};
@@ -18,6 +20,10 @@ const players: {[userName: string]: Player} = {};
 
 const ObjectManager =
 {
+    getObjectById: (objectId: string): GameObject | undefined =>
+    {
+        return gameObjects[objectId];
+    },
     getPlayer: (): Player | undefined =>
     {
         return players[App.getEnv().user.userName];
@@ -27,21 +33,25 @@ const ObjectManager =
         for (const updatableGameObject of Object.values(updatableGameObjects))
             updatableGameObject.update(deltaTime);
     },
-    load: async (voxelGrid: Voxel[], objectRecords: {[objectId: string]: ObjectRecord}) =>
+    load: async (objectRecords: {[objectId: string]: ObjectRecord}) =>
     {
-        // Load objects from voxelGrid
-        for (let i = 0; i < voxelGrid.length; ++i)
-        {
-            const voxel = voxelGrid[i];
-            ObjectManager.spawnObject(ObjectFactory.createNewObject(voxel.voxelType,
-            { // transform
-                x: voxel.col, y: 0, z: voxel.row,
-                eulerX: 0, eulerY: 0, eulerZ: 0,
-            }, { // metadata
-                textureId: voxel.textureId,
-            }));
-        }
-        ObjectManager.spawnObject(ObjectFactory.createNewObject("Player", {
+        VoxelManager.forEachVoxelAsync(async (voxel: Voxel) => {
+            const gameObject = ObjectFactory.createNewObject(voxel.voxelType,
+                { // transform
+                    x: voxel.col, y: 0, z: voxel.row,
+                    eulerX: 0, eulerY: 0, eulerZ: 0,
+                }, { // metadata
+                    geometryId: voxel.voxelType as string,
+                    materialId: `Phong-${voxel.textureId}`,
+                    numInstances: 1024,
+                }
+            );
+            await ObjectManager.spawnObject(gameObject);
+            voxel.object = gameObject as VoxelObject;
+            voxel.object.setVoxel(voxel);
+        });
+        
+        await ObjectManager.spawnObject(ObjectFactory.createNewObject("Player", {
             x: 15 + 2*Math.random(), y: 0, z: 15 + 2*Math.random(),
             eulerX: 0, eulerY: Math.random() * Math.PI*2, eulerZ: 0,
         }));
@@ -50,7 +60,7 @@ const ObjectManager =
         for (const objectRecord of Object.values(objectRecords))
         {
             const object = ObjectFactory.createObjectFromNetwork(objectRecord.objectSpawnParams);
-            ObjectManager.spawnObject(object);
+            await ObjectManager.spawnObject(object);
         }
 
         // Add listeners
@@ -61,14 +71,14 @@ const ObjectManager =
             else
                 throw new Error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
         });
-        GameSocketsClient.objectSpawnObservable.addListener("room", (params: ObjectSpawnParams) => {
+        GameSocketsClient.objectSpawnObservable.addListener("room", async (params: ObjectSpawnParams) => {
             if (gameObjects[params.objectId] != undefined)
                 return;
             const gameObject = ObjectFactory.createObjectFromNetwork(params);
-            ObjectManager.spawnObject(gameObject);
+            await ObjectManager.spawnObject(gameObject);
         });
-        GameSocketsClient.objectDespawnObservable.addListener("room", (params: ObjectDespawnParams) => {
-            ObjectManager.despawnObject(params.objectId);
+        GameSocketsClient.objectDespawnObservable.addListener("room", async (params: ObjectDespawnParams) => {
+            await ObjectManager.despawnObject(params.objectId);
         });
         GameSocketsClient.objectMessageObservable.addListener("room", (params: ObjectMessageParams) => {
             const gameObject = gameObjects[params.senderObjectId];
@@ -83,7 +93,7 @@ const ObjectManager =
             }
         });
     },
-    unload: () =>
+    unload: async () =>
     {
         // Unload objects
         const stringsTemp: string[] = [];
@@ -91,7 +101,7 @@ const ObjectManager =
             stringsTemp.push(key);
         for (const key of stringsTemp)
         {
-            ObjectManager.despawnObject(key);
+            await ObjectManager.despawnObject(key);
             delete gameObjects[key];
         }
 
@@ -113,7 +123,7 @@ const ObjectManager =
         GameSocketsClient.objectDespawnObservable.removeListener("room");
         GameSocketsClient.objectMessageObservable.removeListener("room");
     },
-    spawnObject: (object: GameObject) =>
+    spawnObject: async (object: GameObject) =>
     {
         if (gameObjects[object.params.objectId] == undefined)
         {
@@ -122,19 +132,19 @@ const ObjectManager =
                 updatableGameObjects[object.params.objectId] = object as Updatable;
             if (object.params.objectType == "Player")
                 players[object.params.sourceUserName] = object as Player;
-            object.onSpawn();
+            await object.onSpawn();
         }
         else
         {
             console.error(`Object (ID = ${object.params.objectId}) has already been spawned.`);
         }
     },
-    despawnObject: (objectId: string) =>
+    despawnObject: async (objectId: string) =>
     {
         if (gameObjects[objectId] != undefined)
         {
             const object = gameObjects[objectId];
-            object.onDespawn();
+            await object.onDespawn();
             delete gameObjects[objectId];
             if (updatableGameObjects[object.params.objectId] != undefined)
                 delete updatableGameObjects[object.params.objectId];

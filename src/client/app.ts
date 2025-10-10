@@ -21,19 +21,14 @@ const App =
     {
         await GraphicsManager.load(update);
         await VoxelManager.load(params.roomMap);
-        await ObjectManager.load(VoxelManager.getVoxelGrid(), params.objectRecords);
+        await ObjectManager.load(params.objectRecords);
         prevTime = performance.now();
     },
-    unloadRoom: () =>
+    unloadRoom: async () =>
     {
-        ObjectManager.unload();
-        VoxelManager.unload();
-        GraphicsManager.unload();
-    },
-    changeRoom: async (params: RoomLoadParams) =>
-    {
-        App.unloadRoom();
-        await App.loadRoom(params);
+        await ObjectManager.unload();
+        await VoxelManager.unload();
+        await GraphicsManager.unload();
     },
 }
 

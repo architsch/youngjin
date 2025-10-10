@@ -1,16 +1,5 @@
-import GameObject from "./gameObject";
-import MeshFactory from "../../graphics/factories/meshFactory";
-import ObjectSpawnParams from "../../../shared/types/object/objectSpawnParams";
+import VoxelObject from "./voxelObject";
 
-export default class Wall extends GameObject
+export default class Wall extends VoxelObject
 {
-    constructor(params: ObjectSpawnParams)
-    {
-        super(params);
-
-        MeshFactory.load("Wall", params.metadata.textureId).then(mesh => {
-            const meshClone = mesh.clone();
-            this.obj.add(meshClone);
-        });
-    }
 }

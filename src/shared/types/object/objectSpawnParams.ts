@@ -6,5 +6,5 @@ export default interface ObjectSpawnParams
     objectType: string,
     objectId: string,
     transform: ObjectTransform,
-    metadata: { [key: string]: string },
+    metadata: { [key: string]: string | number },
 }

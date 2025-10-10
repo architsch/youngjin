@@ -8,11 +8,10 @@ if (!(window as any).thingspool_loading)
 {
     (window as any).thingspool_loading_on();
 
-    GameSocketsClient.roomLoadObservable.addListener("init", (params: RoomLoadParams) => {
+    GameSocketsClient.roomLoadObservable.addListener("init", async (params: RoomLoadParams) => {
         App.setEnv(env);
-        App.loadRoom(params).then(_ => {
-            (window as any).thingspool_loading_off();
-        });
+        await App.loadRoom(params);
+        (window as any).thingspool_loading_off();
     });
     GameSocketsClient.init(env);
 }

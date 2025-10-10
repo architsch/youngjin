@@ -1,36 +1,26 @@
+import * as THREE from "three";
 import FirstPersonController from "../components/firstPersonController";
 import NetworkObject from "./networkObject";
 import SpeechBubble from "../components/speechBubble";
-import ObjectMessageParams from "../../../shared/types/object/objectMessageParams";
 import ObjectSpawnParams from "../../../shared/types/object/objectSpawnParams";
 import ModelFactory from "../../graphics/factories/modelFactory";
 import App from "../../app"
+import ObjectMessageParams from "../../../shared/types/object/objectMessageParams";
 
 export default class Player extends NetworkObject
 {
     private firstPersonController: FirstPersonController | undefined;
     private speechBubble: SpeechBubble | undefined;
+    private model: THREE.Group | undefined;
 
     constructor(params: ObjectSpawnParams)
     {
         super(params);
 
         if (this.isMine())
-        {
             this.firstPersonController = new FirstPersonController(this);
-        }
         else
-        {
             this.speechBubble = new SpeechBubble(this, 3);
-
-            ModelFactory.load(`${App.getEnv().assets_url}/lowpolyghost/lowpolyghost.glb`).then(model => {
-                const modelClone = model.clone();
-                this.obj.add(modelClone);
-                modelClone.position.set(0, 0.13, 0);
-                modelClone.scale.set(0.7, 0.7, 0.7);
-                modelClone.rotation.set(0, Math.PI, 0);
-            });
-        }
     }
 
     update(deltaTime: number): void
@@ -41,11 +31,30 @@ export default class Player extends NetworkObject
         this.speechBubble?.update();
     }
 
-    onDespawn(): void
+    async onSpawn(): Promise<void>
     {
-        super.onDespawn();
+        await super.onSpawn();
+
+        if (!this.isMine())
+        {
+            const model = await ModelFactory.load(`${App.getEnv().assets_url}/lowpolyghost/lowpolyghost.glb`);
+            this.model = model.clone();
+            this.model.castShadow = true;
+            this.model.receiveShadow = true;
+            this.obj.add(this.model);
+            this.model.position.set(0, 0.13, 0);
+            this.model.scale.set(0.7, 0.7, 0.7);
+            this.model.rotation.set(0, Math.PI, 0);
+        }
+    }
+
+    async onDespawn(): Promise<void>
+    {
+        await super.onDespawn();
 
         this.speechBubble?.onDespawn();
+        
+        this.model?.removeFromParent();
     }
 
     onObjectMessageReceived(params: ObjectMessageParams)
