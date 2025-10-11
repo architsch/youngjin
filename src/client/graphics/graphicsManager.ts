@@ -9,13 +9,16 @@ import MeshFactory from "./factories/meshFactory";
 const minAspectRatio = 0.6;
 const maxAspectRatio = 2;
 
+const minPixelRatio = 0.5;
+const maxPixelRatio = window.devicePixelRatio;
+let currPixelRatio = window.devicePixelRatio;
+
 let gameCanvasRoot: HTMLElement;
 let overlayCanvasRoot: HTMLElement;
 let gameRenderer: THREE.WebGLRenderer;
 let overlayRenderer: CSS2DRenderer;
 let scene: THREE.Scene;
 let ambLight: THREE.AmbientLight;
-let dirLight: THREE.DirectionalLight;
 let camera: THREE.PerspectiveCamera;
 
 const GraphicsManager =
@@ -37,8 +40,17 @@ const GraphicsManager =
     {
         return camera;
     },
-    update: () =>
+    update: (currFPS: number, minFPS: number, maxFPS: number) =>
     {
+        const performanceScore = Math.max(0, Math.min(1, (currFPS - minFPS) / (maxFPS - minFPS))); // 1 = best, 0 = worst
+        let desiredPixelRatio = minPixelRatio + (maxPixelRatio - minAspectRatio) * performanceScore;
+        desiredPixelRatio = Math.round(desiredPixelRatio * 10) * 0.1; // round up to 1 decimal digit.
+        if (desiredPixelRatio != currPixelRatio)
+        {
+            gameRenderer.setPixelRatio(desiredPixelRatio);
+            currPixelRatio = desiredPixelRatio;
+            //console.log(desiredPixelRatio);
+        }
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);
     },
@@ -50,10 +62,10 @@ const GraphicsManager =
 
         scene = new THREE.Scene();
 
-        ambLight = new THREE.AmbientLight(0xffffff, 0.25);
+        ambLight = new THREE.AmbientLight(0xffffff, 0.15);
         scene.add(ambLight);
 
-        let pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
+        /*let pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
         pointLight.position.set(16, 4, 16);
         pointLight.castShadow = true;
         scene.add(pointLight);
@@ -86,7 +98,7 @@ const GraphicsManager =
         pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
         pointLight.position.set(6, 4, 26);
         pointLight.castShadow = true;
-        scene.add(pointLight);
+        scene.add(pointLight);*/
 
         camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
@@ -180,7 +192,7 @@ function updateRenderSizes()
     }
 
     gameRenderer.setSize(desiredWidth, desiredHeight);
-    gameRenderer.setPixelRatio(window.devicePixelRatio);
+    gameRenderer.setPixelRatio(currPixelRatio);
     overlayRenderer.setSize(desiredWidth, desiredHeight);
 
     camera.aspect = desiredAspectRatio;

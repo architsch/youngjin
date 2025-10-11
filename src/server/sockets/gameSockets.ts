@@ -47,6 +47,41 @@ RrrrrrrRSssssssssssQqqqqqqqqqqqQ
 RRRRRRRRSSSSSSSSSSSQQQQQQQQQQQQQ
 `.split("\n").map(x => x.trim()).filter(x => x.length > 0).join("\n");
 
+const simpleRoomMap = `
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GgggggGgGgGgGgGgGgGgGggggggggggG
+GggggggggggggggggggggggggggggggG
+GggggggggggggggggggggggggggggggG
+GggggggggggggggggggggggggggggggG
+GGGGGGGGGggggggggGGGGGGGGGGGGGGG
+GgggggggGggggggggGgggggggggggggG
+GgggggggGggggggggGgggggggggggggG
+GGggggggGggggggggGgggggggggggggG
+GgggggggGgggggggggggggggGggggggG
+GGggggggGgggggggggggggggGggggggG
+GgggggggGgggggggggggggggGGGGGGGG
+GGggggggGgggggggggggggggGggggggG
+GgggggggGgggggggggggggggGggggggG
+GgggggggggggggggggggggggGggggggG
+GGggggggggggggggggggggggGggggggG
+GgggggggggggggggggggggggGggggggG
+GGggggggggggggggggggggggGggggggG
+GggggggggggggggggggggggggggggggG
+GGGGGGGGGGGGGGgggggggggggggggggG
+GggggggggggggggggggggggggggggggG
+GgggggggggggggggggggggggGggggggG
+GggggggggggggGggggggggggGggggggG
+GggggggggggggGggggggggggGggggggG
+GggggggggggggGggggggggggGggggggG
+GggggggggggggGggggggggggGggggggG
+GggggggggggggGggggggggggGggggggG
+GggggggggggggGggggGGGGGGGGGGGGGG
+GggggggggggggGgggggggggggggggggG
+GggggggggggggGgggggggggggggggggG
+GggggggggggggGgggggggggggggggggG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+`.split("\n").map(x => x.trim()).filter(x => x.length > 0).join("\n");
+
 const GameSockets =
 {
     init: (io: socketIO.Server, authMiddleware: SocketMiddleware): void =>
@@ -126,7 +161,8 @@ const GameSockets =
             socket.join("room_default");
 
             const roomLoadParams: RoomLoadParams = {
-                roomMap: defaultRoomMap,
+                //roomMap: defaultRoomMap,
+                roomMap: simpleRoomMap,
                 objectRecords
             }
             socket.emit("roomLoad", roomLoadParams);

@@ -39,8 +39,8 @@ export default class Player extends NetworkObject
         {
             const model = await ModelFactory.load(`${App.getEnv().assets_url}/lowpolyghost/lowpolyghost.glb`);
             this.model = model.clone();
-            this.model.castShadow = true;
-            this.model.receiveShadow = true;
+            //this.model.castShadow = true;
+            //this.model.receiveShadow = true;
             this.obj.add(this.model);
             this.model.position.set(0, 0.13, 0);
             this.model.scale.set(0.7, 0.7, 0.7);

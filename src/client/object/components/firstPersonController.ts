@@ -28,6 +28,11 @@ export default class FirstPersonController
         gameObject.obj.add(camera);
         camera.position.set(0, 2, 0);
 
+        let pointLight = new THREE.PointLight(0xffffff, 4.0, 16, 0.5);
+        //pointLight.castShadow = true;
+        camera.add(pointLight);
+        pointLight.position.set(0, 0, 0);
+
         const canvas = GraphicsManager.getGameCanvas();
         this.onPointerPress = this.onPointerPress.bind(this);
         this.onPointerRelease = this.onPointerRelease.bind(this);
@@ -62,8 +67,8 @@ export default class FirstPersonController
             const dxWithSpeedLimit = Math.max(-1, Math.min(1, dx));
             const dyWithSpeedLimit = Math.max(-1, Math.min(1, dy));
             
-            this.gameObject.obj.rotateY(-0.75 * deltaTime * dxWithSpeedLimit);
-            this.gameObject.obj.translateZ(-4 * deltaTime * dyWithSpeedLimit);
+            this.gameObject.obj.rotateY(-1.5 * deltaTime * dxWithSpeedLimit);
+            this.gameObject.obj.translateZ(-6 * deltaTime * dyWithSpeedLimit);
         }
     }
 

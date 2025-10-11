@@ -42,8 +42,8 @@ export default abstract class InstancedMeshObject extends GameObject
         instancedMesh.setMatrixAt(instanceId, this.obj.matrix);
         instancedMesh.instanceMatrix.needsUpdate = true;
         instancedMesh.frustumCulled = false;
-        instancedMesh.castShadow = true;
-        instancedMesh.receiveShadow = true;
+        //instancedMesh.castShadow = true;
+        //instancedMesh.receiveShadow = true;
         this.instanceId = instanceId;
     }
 
