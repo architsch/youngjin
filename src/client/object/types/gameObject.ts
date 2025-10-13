@@ -6,12 +6,11 @@ import ObjectSpawnParams from "../../../shared/types/object/objectSpawnParams";
 export default abstract class GameObject
 {
     params: ObjectSpawnParams;
-    obj: THREE.Object3D;
+    obj: THREE.Object3D = new THREE.Object3D();
 
     constructor(params: ObjectSpawnParams)
     {
         this.params = params;
-        this.obj = new THREE.Object3D();
     }
 
     async onSpawn(): Promise<void>

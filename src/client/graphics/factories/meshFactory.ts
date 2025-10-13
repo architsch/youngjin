@@ -44,6 +44,9 @@ const MeshFactory =
         const geometry = await GeometryFactory.load(geometryId);
         const material = await MaterialFactory.load(materialId);
 
+        const uvStartArray = new Float32Array(numInstances * 2);
+        geometry.setAttribute("uvStart", new THREE.InstancedBufferAttribute(uvStartArray, 2));
+
         const newMesh = new THREE.InstancedMesh(geometry, material, numInstances);
         loadedMeshes[meshId] = newMesh;
 

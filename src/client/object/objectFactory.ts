@@ -9,7 +9,7 @@ let lastObjectIdNumber = 0;
 const ObjectFactory =
 {
     createNewObject: (objectType: string, transform: ObjectTransform,
-        metadata: { [key: string]: string | number } = {}): GameObject =>
+        metadata: { [key: string]: any } = {}): GameObject =>
     {
         const userName = App.getEnv().user.userName;
         const params: ObjectSpawnParams = {

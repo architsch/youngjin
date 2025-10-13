@@ -1,18 +1,10 @@
-import ObjectSpawnParams from "../../../shared/types/object/objectSpawnParams";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObject from "./gameObject";
 
 export default abstract class InstancedMeshObject extends GameObject
 {
-    private instanceId: number;
-
-    constructor(params: ObjectSpawnParams)
-    {
-        super(params);
-
-        this.instanceId = -1;
-    }
+    private instanceId: number = -1;
 
     getMeshId(): string
     {
@@ -20,7 +12,7 @@ export default abstract class InstancedMeshObject extends GameObject
     }
     getMeshInstanceId(): string
     {
-        return `${this.params.metadata.geometryId}-${this.params.metadata.materialId}-${this.instanceId}`;
+        return `${this.getMeshId()}-${this.instanceId}`;
     }
 
     async onSpawn(): Promise<void>
@@ -38,12 +30,17 @@ export default abstract class InstancedMeshObject extends GameObject
             instancedMesh.name = this.getMeshId();
 
         GraphicsManager.addObjectToSceneIfNotAlreadyAdded(instancedMesh);
+
         this.obj.updateMatrix();
         instancedMesh.setMatrixAt(instanceId, this.obj.matrix);
         instancedMesh.instanceMatrix.needsUpdate = true;
+
+        const uvStart = this.params.metadata.uvStart as [number, number];
+        instancedMesh.geometry.attributes.uvStart.setXY(instanceId, uvStart[0], uvStart[1]);
+        instancedMesh.geometry.attributes.uvStart.needsUpdate = true;
+
         instancedMesh.frustumCulled = false;
-        //instancedMesh.castShadow = true;
-        //instancedMesh.receiveShadow = true;
+
         this.instanceId = instanceId;
     }
 

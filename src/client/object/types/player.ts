@@ -2,7 +2,6 @@ import * as THREE from "three";
 import FirstPersonController from "../components/firstPersonController";
 import NetworkObject from "./networkObject";
 import SpeechBubble from "../components/speechBubble";
-import ObjectSpawnParams from "../../../shared/types/object/objectSpawnParams";
 import ModelFactory from "../../graphics/factories/modelFactory";
 import App from "../../app"
 import ObjectMessageParams from "../../../shared/types/object/objectMessageParams";
@@ -13,30 +12,18 @@ export default class Player extends NetworkObject
     private speechBubble: SpeechBubble | undefined;
     private model: THREE.Group | undefined;
 
-    constructor(params: ObjectSpawnParams)
-    {
-        super(params);
-
-        if (this.isMine())
-            this.firstPersonController = new FirstPersonController(this);
-        else
-            this.speechBubble = new SpeechBubble(this, 3);
-    }
-
-    update(deltaTime: number): void
-    {
-        super.update(deltaTime);
-        
-        this.firstPersonController?.update(deltaTime);
-        this.speechBubble?.update();
-    }
-
     async onSpawn(): Promise<void>
     {
         await super.onSpawn();
 
-        if (!this.isMine())
+        if (this.isMine())
         {
+            this.firstPersonController = new FirstPersonController(this);
+        }
+        else
+        {
+            this.speechBubble = new SpeechBubble(this, 3);
+
             const model = await ModelFactory.load(`${App.getEnv().assets_url}/lowpolyghost/lowpolyghost.glb`);
             this.model = model.clone();
             //this.model.castShadow = true;
@@ -55,6 +42,14 @@ export default class Player extends NetworkObject
         this.speechBubble?.onDespawn();
         
         this.model?.removeFromParent();
+    }
+
+    update(deltaTime: number): void
+    {
+        super.update(deltaTime);
+        
+        this.firstPersonController?.update(deltaTime);
+        this.speechBubble?.update();
     }
 
     onObjectMessageReceived(params: ObjectMessageParams)

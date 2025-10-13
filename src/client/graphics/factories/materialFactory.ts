@@ -46,6 +46,24 @@ async function loadTexturedPhongMaterial(materialId: string): Promise<THREE.Mate
     const newMaterial = new THREE.MeshPhongMaterial();
     newMaterial.map = texture;
 
+    const pixelBleedingPreventionScale = 127 / 128;
+    const textureGridCellScale = 0.125;
+    const uvScale = textureGridCellScale * pixelBleedingPreventionScale;
+
+    newMaterial.onBeforeCompile = (shader) => {
+        shader.vertexShader = `
+            attribute vec2 uvStart;
+            ${shader.vertexShader}
+        `;
+        shader.vertexShader = shader.vertexShader.replace(
+            "#include <uv_vertex>",
+            `
+            #include <uv_vertex>
+            vMapUv = uvStart + ${uvScale.toFixed(7)} * vMapUv;
+            `
+        );
+    };
+
     loadedMaterials[materialId] = newMaterial;
     return newMaterial;
 }

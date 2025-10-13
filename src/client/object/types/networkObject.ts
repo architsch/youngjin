@@ -1,4 +1,3 @@
-import ObjectSpawnParams from "../../../shared/types/object/objectSpawnParams";
 import ObjectSyncParams from "../../../shared/types/object/objectSyncParams";
 import GameSocketsClient from "../../networking/gameSocketsClient";
 import ObjectSyncEmitter from "../components/objectSyncEmitter";
@@ -11,22 +10,19 @@ export default abstract class NetworkObject extends GameObject implements Updata
     private objectSyncEmitter: ObjectSyncEmitter | undefined;
     private objectSyncReceiver: ObjectSyncReceiver | undefined;
 
-    constructor(params: ObjectSpawnParams)
-    {
-        super(params);
-        
-        if (this.isMine())
-            this.objectSyncEmitter = new ObjectSyncEmitter(this);
-        else
-            this.objectSyncReceiver = new ObjectSyncReceiver(this);
-    }
-
     async onSpawn(): Promise<void>
     {
         await super.onSpawn();
 
         if (this.isMine())
+        {
+            this.objectSyncEmitter = new ObjectSyncEmitter(this);
             GameSocketsClient.emitObjectSpawn(this.params);
+        }
+        else
+        {
+            this.objectSyncReceiver = new ObjectSyncReceiver(this);
+        }
     }
 
     async onDespawn(): Promise<void>

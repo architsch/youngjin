@@ -44,6 +44,7 @@ const ObjectManager =
                     geometryId: voxel.voxelType as string,
                     materialId: `Phong-${voxel.textureId}`,
                     numInstances: 1024,
+                    uvStart: voxel.uvStart,
                 }
             );
             await ObjectManager.spawnObject(gameObject);

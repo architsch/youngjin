@@ -2,11 +2,8 @@ import * as THREE from "three";
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObject from "../types/gameObject";
 import VoxelManager from "../../voxel/voxelManager";
-import ObjectManager from "../objectManager";
-import VoxelObject from "../types/voxelObject";
 import MeshFactory from "../../graphics/factories/meshFactory";
 
-const objsTemp: THREE.Object3D[] = new Array<THREE.Object3D>(1024);
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 
 export default class FirstPersonController
@@ -67,8 +64,8 @@ export default class FirstPersonController
             const dxWithSpeedLimit = Math.max(-1, Math.min(1, dx));
             const dyWithSpeedLimit = Math.max(-1, Math.min(1, dy));
             
-            this.gameObject.obj.rotateY(-1.5 * deltaTime * dxWithSpeedLimit);
-            this.gameObject.obj.translateZ(-6 * deltaTime * dyWithSpeedLimit);
+            this.gameObject.obj.rotateY(-3 * deltaTime * dxWithSpeedLimit);
+            this.gameObject.obj.translateZ(-12 * deltaTime * dyWithSpeedLimit);
         }
     }
 
@@ -125,17 +122,6 @@ export default class FirstPersonController
     {
         if (this.pointerDragPos.distanceToSquared(this.pointerDownPos) > 0.0009)
             return;
-        /*const p = this.gameObject.position;
-        const nearbyVoxels = VoxelManager.getVoxelsInCircle(p.x, p.z, 5);
-
-        objsTemp.length = 0;
-        for (const voxel of nearbyVoxels)
-        {
-            const gameObject = voxel.object;
-            if (!gameObject)
-                throw new Error(`GameObject not found in voxel (voxelType = ${voxel.voxelType}, row = ${voxel.row}, col = ${voxel.col})`);
-            objsTemp.push(gameObject.obj);
-        }*/
 
         getNDC(ev, vec2Temp);
         
@@ -148,17 +134,7 @@ export default class FirstPersonController
             const instanceId = intersections[0].instanceId;
             
             const voxel = VoxelManager.getVoxelByMeshInstanceId(`${meshId}-${instanceId}`);
-            console.log(`key = ${meshId}-${instanceId}, voxel = ${voxel.object?.getMeshInstanceId()}, row = ${voxel.row}, col = ${voxel.col}`);
-
-            /*const objectId = intersections[0].object.name;
-            const gameObject = ObjectManager.getObjectById(objectId);
-            if (!gameObject)
-                throw new Error(`Object not found (id = ${objectId})`);
-            if ("getVoxel" in gameObject)
-            {
-                const voxelObject = gameObject as VoxelObject;
-                console.log(`Voxel Object (${voxelObject.getVoxel().textureId})`);
-            }*/
+            console.log(`meshInstanceId = ${voxel.object?.getMeshInstanceId()}, voxel = ${voxel.object?.getMeshInstanceId()}, row = ${voxel.row}, col = ${voxel.col}`);
         }
     }
 }

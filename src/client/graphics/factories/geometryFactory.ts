@@ -2,6 +2,14 @@ import * as THREE from "three";
 
 const loadedGeometries: { [geometryId: string]: THREE.BufferGeometry } = {};
 
+const positionsTemp: number[] = [];
+const uvsTemp: number[] = [];
+const mat4Temp: THREE.Matrix4 = new THREE.Matrix4();
+const vec3Temp: THREE.Vector3 = new THREE.Vector3();
+const axisX = new THREE.Vector3(1, 0, 0);
+const axisY = new THREE.Vector3(0, 1, 0);
+const axisZ = new THREE.Vector3(0, 0, 1);
+
 const GeometryFactory =
 {
     load: async (geometryId: string): Promise<THREE.BufferGeometry> =>
@@ -41,93 +49,130 @@ const GeometryFactory =
 const geometryConstructorMap: { [geometryId: string]: () => THREE.BufferGeometry } =
 {
     "Floor": () => {
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array([
-            -0.5, 0.0, -0.5, // 0
-            -0.5, 0.0, +0.5, // 1
-            +0.5, 0.0, -0.5, // 2
-            +0.5, 0.0, +0.5, // 3
-            +0.5, 0.0, -0.5, // 4
-            -0.5, 0.0, +0.5, // 5
-        ]);
-        const uvs = new Float32Array([
-            0.0, 0.0,
-            0.0, 1.0,
-            1.0, 0.0,
-            1.0, 1.0,
-            1.0, 0.0,
-            0.0, 1.0,
-        ]);
-        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
-        geometry.computeVertexNormals();
-        return geometry;
+        clear();
+        writeYFacingUnitQuad();
+        return makeGeometry();
     },
     "Wall": () => {
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array([
-            -0.5, 0.0, +0.5, // 00
-            -0.5, 4.0, +0.5, // 01
-            -0.5, 0.0, -0.5, // 10
-            -0.5, 4.0, -0.5, // 11
-            -0.5, 0.0, -0.5, // 10
-            -0.5, 4.0, +0.5, // 01
-
-            +0.5, 0.0, +0.5, // 00
-            +0.5, 4.0, +0.5, // 01
-            -0.5, 0.0, +0.5, // 10
-            -0.5, 4.0, +0.5, // 11
-            -0.5, 0.0, +0.5, // 10
-            +0.5, 4.0, +0.5, // 01
-
-            +0.5, 0.0, -0.5, // 00
-            +0.5, 4.0, -0.5, // 01
-            +0.5, 0.0, +0.5, // 10
-            +0.5, 4.0, +0.5, // 11
-            +0.5, 0.0, +0.5, // 10
-            +0.5, 4.0, -0.5, // 01
-
-            -0.5, 0.0, -0.5, // 00
-            -0.5, 4.0, -0.5, // 01
-            +0.5, 0.0, -0.5, // 10
-            +0.5, 4.0, -0.5, // 11
-            +0.5, 0.0, -0.5, // 10
-            -0.5, 4.0, -0.5, // 01
-        ]);
-        const uvs = new Float32Array([
-            0.0, 0.0, // 00
-            0.0, 4.0, // 01
-            1.0, 0.0, // 10
-            1.0, 4.0, // 11
-            1.0, 0.0, // 10
-            0.0, 4.0, // 01
-
-            0.0, 0.0, // 00
-            0.0, 4.0, // 01
-            1.0, 0.0, // 10
-            1.0, 4.0, // 11
-            1.0, 0.0, // 10
-            0.0, 4.0, // 01
-
-            0.0, 0.0, // 00
-            0.0, 4.0, // 01
-            1.0, 0.0, // 10
-            1.0, 4.0, // 11
-            1.0, 0.0, // 10
-            0.0, 4.0, // 01
-
-            0.0, 0.0, // 00
-            0.0, 4.0, // 01
-            1.0, 0.0, // 10
-            1.0, 4.0, // 11
-            1.0, 0.0, // 10
-            0.0, 4.0, // 01
-        ]);
-        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
-        geometry.computeVertexNormals();
-        return geometry;
+        clear();
+        writeUnitSideBox(0.5);
+        writeUnitSideBox(1.5);
+        writeUnitSideBox(2.5);
+        writeUnitSideBox(3.5);
+        return makeGeometry();
     },
 }
+
+function makeGeometry(): THREE.BufferGeometry
+{
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(positionsTemp), 3));
+    geometry.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(uvsTemp), 2));
+    geometry.computeVertexNormals();
+    return geometry;
+}
+
+function clear()
+{
+    positionsTemp.length = 0;
+    uvsTemp.length = 0;
+}
+
+function writeUnitSideBox(y: number)
+{
+    writeZFacingUnitQuad();
+    translate(6, 0, y, 0.5);
+    writeZMinusFacingUnitQuad();
+    translate(6, 0, y, -0.5);
+    writeXFacingUnitQuad();
+    translate(6, 0.5, y, 0);
+    writeXMinusFacingUnitQuad();
+    translate(6, -0.5, y, 0);
+}
+
+function writeXMinusFacingUnitQuad()
+{
+    writeZFacingUnitQuad();
+    rotate(6, axisY, -90);
+}
+
+function writeXFacingUnitQuad()
+{
+    writeZFacingUnitQuad();
+    rotate(6, axisY, 90);
+}
+
+function writeYMinusFacingUnitQuad()
+{
+    writeZFacingUnitQuad();
+    rotate(6, axisX, 90);
+}
+
+function writeYFacingUnitQuad()
+{
+    writeZFacingUnitQuad();
+    rotate(6, axisX, -90);
+}
+
+function writeZMinusFacingUnitQuad()
+{
+    writeZFacingUnitQuad();
+    rotate(6, axisY, 180);
+}
+
+function writeZFacingUnitQuad()
+{
+    for (const position of unitQuadPositions)
+        positionsTemp.push(position);
+    for (const uv of unitQuadUVs)
+        uvsTemp.push(uv);
+}
+
+function translate(numRecentlyAddedVerticesToTransform: number, x: number, y: number, z: number)
+{
+    vec3Temp.set(x, y, z);
+    mat4Temp.makeTranslation(vec3Temp);
+    transformVertices(numRecentlyAddedVerticesToTransform);
+}
+
+function rotate(numRecentlyAddedVerticesToTransform: number, axis: THREE.Vector3, angleInDeg: number)
+{
+    mat4Temp.makeRotationAxis(axis, angleInDeg * 0.01745329);
+    transformVertices(numRecentlyAddedVerticesToTransform);
+}
+
+function transformVertices(numRecentlyAddedVerticesToTransform: number)
+{
+    const n = positionsTemp.length;
+    for (let i = 0; i < numRecentlyAddedVerticesToTransform; ++i)
+    {
+        const ind1 = n-1 - 3*i;
+        const ind2 = n-2 - 3*i;
+        const ind3 = n-3 - 3*i;
+        vec3Temp.set(positionsTemp[ind3], positionsTemp[ind2], positionsTemp[ind1]);
+        vec3Temp.applyMatrix4(mat4Temp);
+        positionsTemp[ind1] = vec3Temp.z;
+        positionsTemp[ind2] = vec3Temp.y;
+        positionsTemp[ind3] = vec3Temp.x;
+    }
+}
+
+const unitQuadPositions = [
+    -0.5, +0.5, 0.0,
+    -0.5, -0.5, 0.0,
+    +0.5, -0.5, 0.0,
+    +0.5, -0.5, 0.0,
+    +0.5, +0.5, 0.0,
+    -0.5, +0.5, 0.0,
+]
+
+const unitQuadUVs = [
+    0.0, 1.0,
+    0.0, 0.0,
+    1.0, 0.0,
+    1.0, 0.0,
+    1.0, 1.0,
+    0.0, 1.0,
+]
 
 export default GeometryFactory;

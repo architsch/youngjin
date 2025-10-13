@@ -1,6 +1,11 @@
 import Voxel from "./voxel";
 import VoxelType from "./voxelType";
 
+const charCode_a = "a".charCodeAt(0);
+const charCode_z = "z".charCodeAt(0);
+const charCode_A = "A".charCodeAt(0);
+const charCode_Z = "Z".charCodeAt(0);
+
 let numGridRows: number = 0;
 let numGridCols: number = 0;
 let voxelGrid: Voxel[] = [];
@@ -68,22 +73,40 @@ const VoxelManager =
         numGridCols = lines[0].length;
         voxelGrid = new Array<Voxel>(numGridRows * numGridCols);
 
+        const pixelBleedingPreventionShift = 0.5 / 128;
+        const textureGridCellScale = 0.125;
+
         for (let row = 0; row < numGridRows; ++row)
         {
             const line = lines[row];
             for (let col = 0; col < numGridCols; ++col)
             {
-                const voxelCode = line[col];
-                let voxelType: VoxelType = "Floor";
+                const voxelCode = line.charCodeAt(col);
+                let voxelCodeBase: number;
+                let voxelType: VoxelType;
 
-                if (voxelCode >= "a" && voxelCode <= "z")
+                if (voxelCode >= charCode_a && voxelCode <= charCode_z)
+                {
+                    voxelCodeBase = charCode_a;
                     voxelType = "Floor";
-                else if (voxelCode >= "A" && voxelCode <= "Z")
+                }
+                else if (voxelCode >= charCode_A && voxelCode <= charCode_Z)
+                {
+                    voxelCodeBase = charCode_A;
                     voxelType = "Wall";
+                }
+                else
+                    throw new Error(`Character '${line[col]}' cannot be converted to a voxel.`);
 
                 voxelGrid[row * numGridCols + col] = {
                     voxelType,
-                    textureId: voxelCode,
+                    textureId: voxelType as string,
+                    uvStart: [
+                        textureGridCellScale *
+                            (pixelBleedingPreventionShift + (voxelCode - voxelCodeBase) % 8),
+                        textureGridCellScale *
+                            (pixelBleedingPreventionShift + Math.floor((voxelCode - voxelCodeBase) * 0.125)),
+                    ],
                     row, col,
                     object: undefined,
                 };

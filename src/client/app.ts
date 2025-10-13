@@ -53,7 +53,7 @@ function update()
         deltaTimePending -= deltaTime;
         
         ObjectManager.update(deltaTime);
-        GraphicsManager.update(getFPS(), minFramesPerSecond, maxFramesPerSecond);
+        GraphicsManager.update(getFPS());
 
         tickTimeQueue.push(currTime);
         while (tickTimeQueue[0] < currTime - 1)

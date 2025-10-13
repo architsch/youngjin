@@ -11,6 +11,8 @@ const maxAspectRatio = 2;
 
 const minPixelRatio = 0.5;
 const maxPixelRatio = window.devicePixelRatio;
+const minPixelRatioTargetFPS = 20;
+const maxPixelRatioTargetFPS = 40;
 let currPixelRatio = window.devicePixelRatio;
 
 let gameCanvasRoot: HTMLElement;
@@ -40,12 +42,19 @@ const GraphicsManager =
     {
         return camera;
     },
-    update: (currFPS: number, minFPS: number, maxFPS: number) =>
+    update: (currFPS: number) =>
     {
-        const performanceScore = Math.max(0, Math.min(1, (currFPS - minFPS) / (maxFPS - minFPS))); // 1 = best, 0 = worst
+        const performanceScore = Math.max(
+            0,
+            Math.min(
+                1,
+                (currFPS - minPixelRatioTargetFPS) / (maxPixelRatioTargetFPS - minPixelRatioTargetFPS)
+            )
+        ); // 1 = best, 0 = worst
+
         let desiredPixelRatio = minPixelRatio + (maxPixelRatio - minAspectRatio) * performanceScore;
         desiredPixelRatio = Math.round(desiredPixelRatio * 10) * 0.1; // round up to 1 decimal digit.
-        if (desiredPixelRatio != currPixelRatio)
+        if (Math.abs(desiredPixelRatio - currPixelRatio) >= 0.2)
         {
             gameRenderer.setPixelRatio(desiredPixelRatio);
             currPixelRatio = desiredPixelRatio;

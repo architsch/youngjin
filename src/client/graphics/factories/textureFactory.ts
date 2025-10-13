@@ -13,8 +13,6 @@ const TextureFactory =
             return loadedTexture;
         
         const newTexture = await textureLoader.loadAsync(getTextureURL(textureId));
-        newTexture.wrapS = THREE.RepeatWrapping;
-        newTexture.wrapT = THREE.RepeatWrapping;
         loadedTextures[textureId] = newTexture;
         return newTexture;
     },
@@ -49,6 +47,10 @@ function getTextureURL(textureId: string): string
 
 const textureRelativeURLMap: { [textureId: string]: string } =
 {
+    // Texture Packs
+    "Floor": "texture_packs/floor_default.jpg",
+    "Wall": "texture_packs/wall_default.jpg",
+
     // Floor
     "a": "TexturePack1/128x128/Tile/Tile_02-128x128.png",
     "b": "TexturePack1/128x128/Tile/Tile_03-128x128.png",
