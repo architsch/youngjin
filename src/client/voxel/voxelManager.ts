@@ -1,3 +1,4 @@
+import roomServerRecord from "../../shared/room/roomServerRecord";
 import Voxel from "./voxel";
 import VoxelType from "./voxelType";
 
@@ -66,9 +67,9 @@ const VoxelManager =
             await callback(voxel);
         }
     },
-    load: async (roomMap: string) =>
+    load: async (roomServerRecord: roomServerRecord) =>
     {
-        const lines = roomMap.split("\n").map(x => x.trim()).filter(x => x.length > 0);
+        const lines = roomServerRecord.roomMap.split("\n").map(x => x.trim()).filter(x => x.length > 0);
         numGridRows = lines.length;
         numGridCols = lines[0].length;
         voxelGrid = new Array<Voxel>(numGridRows * numGridCols);

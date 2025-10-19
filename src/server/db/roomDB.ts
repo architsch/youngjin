@@ -1,5 +1,5 @@
 import DB from "./db";
-import Room from "../../shared/types/room/room";
+import Room from "../../shared/room/room";
 import { Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();

@@ -1,8 +1,9 @@
 import ObjectManager from "./object/objectManager";
 import VoxelManager from "./voxel/voxelManager";
-import RoomLoadParams from "./../shared/types/room/roomLoadParams";
+import RoomServerRecord from "./../shared/room/roomServerRecord";
 import ThingsPoolEnv from "./networking/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
+import PhysicsManager from "../shared/physics/physicsManager";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -13,6 +14,7 @@ const maxSecondsPerFrame = 1 / minFramesPerSecond;
 let env: ThingsPoolEnv;
 let prevTime: number;
 let deltaTimePending: number;
+let currentRoomName: string = "";
 
 const tickTimeQueue: number[] = [];
 
@@ -26,11 +28,19 @@ const App =
     {
         return env;
     },
-    loadRoom: async (params: RoomLoadParams) =>
+    getCurrentRoomName: (): string =>
     {
+        return currentRoomName;
+    },
+    loadRoom: async (roomServerRecord: RoomServerRecord) =>
+    {
+        currentRoomName = roomServerRecord.roomName;
+
         await GraphicsManager.load(update);
-        await VoxelManager.load(params.roomMap);
-        await ObjectManager.load(params.objectRecords);
+        await PhysicsManager.loadRoom(roomServerRecord);
+        await VoxelManager.load(roomServerRecord);
+        await ObjectManager.load(roomServerRecord);
+
         prevTime = performance.now() * 0.001;
         deltaTimePending = 0;
     },
@@ -38,7 +48,10 @@ const App =
     {
         await ObjectManager.unload();
         await VoxelManager.unload();
+        await PhysicsManager.unloadAllRooms(); // Only one room will be active at a time on the client side, so unloading all rooms is equivalent to unloading just the currently active room.
         await GraphicsManager.unload();
+
+        currentRoomName = "";
     },
 }
 

@@ -1,4 +1,4 @@
-import ObjectSpawnParams from "../../shared/types/object/objectSpawnParams";
+import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
 import Floor from "./types/floor";
 import GameObject from "./types/gameObject";
 import Player from "./types/player";

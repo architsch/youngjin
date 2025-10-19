@@ -1,18 +1,19 @@
 import GameObject from "../object/types/gameObject";
 import Updatable from "../object/interfaces/updatable";
 import GameSocketsClient from "../networking/gameSocketsClient";
-import ObjectSyncParams from "../../shared/types/object/objectSyncParams";
-import ObjectSpawnParams from "../../shared/types/object/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/types/object/objectDespawnParams";
+import ObjectSyncParams from "../../shared/object/objectSyncParams";
+import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/object/objectDespawnParams";
 import NetworkObject from "../object/types/networkObject";
 import ObjectFactory from "../object/objectFactory";
 import Player from "../object/types/player";
-import ObjectMessageParams from "../../shared/types/object/objectMessageParams";
+import ObjectMessageParams from "../../shared/object/objectMessageParams";
 import Voxel from "../voxel/voxel";
-import ObjectRecord from "../../shared/types/object/objectRecord";
 import App from "../app";
 import VoxelManager from "../voxel/voxelManager";
 import VoxelObject from "./types/voxelObject";
+import RoomServerRecord from "../../shared/room/roomServerRecord";
+import ObjectDesyncResolveParams from "../../shared/object/objectDesyncResolveParams";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: Updatable} = {};
@@ -33,7 +34,7 @@ const ObjectManager =
         for (const updatableGameObject of Object.values(updatableGameObjects))
             updatableGameObject.update(deltaTime);
     },
-    load: async (objectRecords: {[objectId: string]: ObjectRecord}) =>
+    load: async (roomServerRecord: RoomServerRecord) =>
     {
         VoxelManager.forEachVoxelAsync(async (voxel: Voxel) => {
             const gameObject = ObjectFactory.createNewObject(voxel.voxelType,
@@ -57,10 +58,10 @@ const ObjectManager =
             eulerX: 0, eulerY: Math.random() * Math.PI*2, eulerZ: 0,
         }));
 
-        // Load objects from objectRecords
-        for (const objectRecord of Object.values(objectRecords))
+        // Load objects from objectServerRecords
+        for (const objectServerRecord of Object.values(roomServerRecord.objectServerRecords))
         {
-            const object = ObjectFactory.createObjectFromNetwork(objectRecord.objectSpawnParams);
+            const object = ObjectFactory.createObjectFromNetwork(objectServerRecord.objectSpawnParams);
             await ObjectManager.spawnObject(object);
         }
 
@@ -69,6 +70,13 @@ const ObjectManager =
             const gameObject = gameObjects[params.objectId];
             if ("onObjectSync" in gameObject)
                 (gameObject as NetworkObject).onObjectSync(params);
+            else
+                throw new Error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
+        });
+        GameSocketsClient.objectDesyncResolveObservable.addListener("room", (params: ObjectDesyncResolveParams) => {
+            const gameObject = gameObjects[params.objectId];
+            if ("onObjectDesyncResolve" in gameObject)
+                (gameObject as NetworkObject).onObjectDesyncResolve(params);
             else
                 throw new Error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
         });

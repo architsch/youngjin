@@ -5,6 +5,7 @@ import VoxelManager from "../../voxel/voxelManager";
 import MeshFactory from "../../graphics/factories/meshFactory";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
+const objTemp: THREE.Object3D = new THREE.Object3D();
 
 export default class FirstPersonController
 {
@@ -25,8 +26,7 @@ export default class FirstPersonController
         gameObject.obj.add(camera);
         camera.position.set(0, 2, 0);
 
-        let pointLight = new THREE.PointLight(0xffffff, 4.0, 16, 0.5);
-        //pointLight.castShadow = true;
+        const pointLight = new THREE.PointLight(0xffffff, 4.0, 16, 0.5);
         camera.add(pointLight);
         pointLight.position.set(0, 0, 0);
 
@@ -65,7 +65,10 @@ export default class FirstPersonController
             const dyWithSpeedLimit = Math.max(-1, Math.min(1, dy));
             
             this.gameObject.obj.rotateY(-3 * deltaTime * dxWithSpeedLimit);
-            this.gameObject.obj.translateZ(-12 * deltaTime * dyWithSpeedLimit);
+
+            objTemp.copy(this.gameObject.obj, false);
+            objTemp.translateZ(-12 * deltaTime * dyWithSpeedLimit);
+            this.gameObject.trySetPosition(objTemp.position);
         }
     }
 

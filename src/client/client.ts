@@ -1,4 +1,4 @@
-import RoomLoadParams from "../shared/types/room/roomLoadParams";
+import RoomServerRecord from "../shared/room/roomServerRecord";
 import GameSocketsClient from "./networking/gameSocketsClient";
 import App from "./app";
 
@@ -8,9 +8,9 @@ if (!(window as any).thingspool_loading)
 {
     (window as any).thingspool_loading_on();
 
-    GameSocketsClient.roomLoadObservable.addListener("init", async (params: RoomLoadParams) => {
+    GameSocketsClient.roomLoadObservable.addListener("init", async (roomServerRecord: RoomServerRecord) => {
         App.setEnv(env);
-        await App.loadRoom(params);
+        await App.loadRoom(roomServerRecord);
         (window as any).thingspool_loading_off();
     });
     GameSocketsClient.init(env);

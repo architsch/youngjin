@@ -1,12 +1,13 @@
 import { io, Socket } from "socket.io-client";
-import ObjectMessageParams from "../../shared/types/object/objectMessageParams";
-import ObjectSyncParams from "../../shared/types/object/objectSyncParams";
-import ObjectSpawnParams from "../../shared/types/object/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/types/object/objectDespawnParams";
+import ObjectMessageParams from "../../shared/object/objectMessageParams";
+import ObjectSyncParams from "../../shared/object/objectSyncParams";
+import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/object/objectDespawnParams";
+import ObjectDesyncResolveParams from "../../shared/object/objectDesyncResolveParams";
 import TextUtil from "../../shared/embeddedScripts/util/textUtil"
-import RoomLoadParams from "../../shared/types/room/roomLoadParams";
+import RoomServerRecord from "../../shared/room/roomServerRecord";
 import ThingsPoolEnv from "./thingsPoolEnv";
-import Observable from "./observable";
+import Observable from "../util/observable";
 import ObjectManager from "../object/objectManager";
 
 let socket: Socket;
@@ -24,13 +25,17 @@ const GameSocketsClient =
                 (window as any).location.reload(true);
         });
 
-        socket.on("roomLoad", (params: RoomLoadParams) => {
-            console.log(`(GameSocketsClient) roomLoad :: ${JSON.stringify(params)}`);
-            GameSocketsClient.roomLoadObservable.broadcast(params);
+        socket.on("roomLoad", (roomServerRecord: RoomServerRecord) => {
+            console.log(`(GameSocketsClient) roomLoad :: ${JSON.stringify(roomServerRecord)}`);
+            GameSocketsClient.roomLoadObservable.broadcast(roomServerRecord);
         });
         socket.on("objectSync", (params: ObjectSyncParams) => {
             //console.log(`(GameSocketsClient) objectSync :: ${JSON.stringify(params)}`);
             GameSocketsClient.objectSyncObservable.broadcast(params);
+        });
+        socket.on("objectDesyncResolve", (params: ObjectDesyncResolveParams) => {
+            console.log(`(GameSocketsClient) objectDesyncResolve :: ${JSON.stringify(params)}`);
+            GameSocketsClient.objectDesyncResolveObservable.broadcast(params);
         });
         socket.on("objectSpawn", (params: ObjectSpawnParams) => {
             console.log(`(GameSocketsClient) objectSpawn :: ${JSON.stringify(params)}`);
@@ -115,8 +120,9 @@ const GameSocketsClient =
     emitObjectDespawn: (params: ObjectDespawnParams) => socket.emit("objectDespawn", params),
     emitObjectMessage: (params: ObjectMessageParams) => socket.emit("objectMessage", params),
 
-    roomLoadObservable: new Observable<RoomLoadParams>(),
+    roomLoadObservable: new Observable<RoomServerRecord>(),
     objectSyncObservable: new Observable<ObjectSyncParams>(),
+    objectDesyncResolveObservable: new Observable<ObjectDesyncResolveParams>(),
     objectSpawnObservable: new Observable<ObjectSpawnParams>(),
     objectDespawnObservable: new Observable<ObjectDespawnParams>(),
     objectMessageObservable: new Observable<ObjectMessageParams>(),

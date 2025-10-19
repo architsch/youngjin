@@ -1,11 +1,14 @@
 import * as THREE from "three";
-import ObjectSyncParams from "../../../shared/types/object/objectSyncParams";
+import ObjectSyncParams from "../../../shared/object/objectSyncParams";
 import GameSocketsClient from "../../networking/gameSocketsClient";
 import GameObject from "../../object/types/gameObject";
+import ObjectDesyncResolveParams from "../../../shared/object/objectDesyncResolveParams";
 
 const syncIntervalInMillis = 200;
 const minSyncDistSqr = 0.0001;
 const minSyncAngle = 0.01;
+
+const vec3Temp = new THREE.Vector3();
 
 export default class ObjectSyncEmitter
 {
@@ -51,5 +54,15 @@ export default class ObjectSyncEmitter
                 //console.log(`(ObjectSyncEmitter) emitObjectSync :: ${JSON.stringify(params)}`);
             }
         }
+    }
+
+    resolveDesync(params: ObjectDesyncResolveParams): void
+    {
+        const p = params.resolvedPos;
+        vec3Temp.set(p.x, this.gameObject.position.y, p.y);
+        this.gameObject.forceSetPosition(vec3Temp);
+        
+        this.lastSyncedPosition.copy(vec3Temp);
+        this.lastSyncTime = performance.now();
     }
 }

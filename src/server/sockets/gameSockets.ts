@@ -1,86 +1,18 @@
 import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import ObjectMessageParams from "../../shared/types/object/objectMessageParams"
-import ObjectSyncParams from "../../shared/types/object/objectSyncParams";
-import ObjectSpawnParams from "../../shared/types/object/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/types/object/objectDespawnParams";
-import ObjectRecord from "../../shared/types/object/objectRecord";
-import User from "../../shared/types/auth/user";
-import RoomLoadParams from "../../shared/types/room/roomLoadParams";
+import ObjectMessageParams from "../../shared/object/objectMessageParams"
+import ObjectSyncParams from "../../shared/object/objectSyncParams";
+import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/object/objectDespawnParams";
+import User from "../../shared/auth/user";
+import Circle2 from "../../shared/math/types/circle2";
+import PhysicsManager from "../../shared/physics/physicsManager";
+import Vec2 from "../../shared/math/types/vec2";
+import RoomManager from "../room/roomManager";
 
 let nsp: socketIO.Namespace;
 
-const objectRecords: {[objectId: string]: ObjectRecord} = {};
-
-const defaultRoomMap = `
-GGGGGGGGGGAAAAAAAAACCCCCCCCCCCCC
-GggggggggGaHaHaHaHaCcccccccccccC
-GggggggggGaaaaaaaaaCcccccccccccC
-GggggggggGaaaaaaaaaCCCCCccccCccC
-GggggggggGaaaaaaaaaaaaabbbbbbbbB
-GggggggggGaaaaahhhhhaaabbbbbBbbB
-KaaaaaaaaaaaaaahjjjhaaabbbbbbbbB
-KaaaaaaaaaaaaaahjjjhaaabbbbbbbbB
-KaaaaaaaaaaaaaahjjjhaaaBBBBBBBBB
-DDDDDDDDDaaaaaahjjjhaaaeeeeeeeeE
-DdddddddddddaaahjjjhaaaeeeeeeeeE
-DdddddddddddaaahhhhhaaaEeeeeeeeE
-DdddddddddddaaaaaaaaaaaEeeeeeeeE
-DdddddddddddDaaaaaaaaaaEeeeeeeeE
-DdddddddddddDiiiiiiiiiiEJeeeeeeE
-DDDDDDDDDDDDDiiiiiiiiiiEEEEEEEEE
-LLLLLLLLLLmmmmmmmmmNNNNNNNNNNNNN
-LllllllllLmmmmmmmmmnnnnnnnnnnnnN
-LllllllllLmmmooommmnnnnnnnnnnnnN
-LllllllllLmmmooommmnnnnPnnnnnnON
-LlllllllllmmmooommmnnnnPnnnnnnnN
-LlllllllllmmmooommmnnnnPnnnnnnON
-LllllllllLmmmooommmnnnnPnnnnnnnN
-LllllllllLmmmooommmnnnnnnnnnnnON
-LLLLLLLLLLmmmmmmmmmnnnnnnnnnnnnN
-RrrrrrrrssmmmmmmmmmNNqqqqqNNNNNN
-RrrrrrrrsssssssssssQQqqqqqQQQQQQ
-RrrrrrrRSssssssssssQqqqqqqqqqqqQ
-RrrrrrrRSssssssssssQqqqqqqqqqqqQ
-RrrrrrrRSssssssssssQqqqqqqqqqqqQ
-RrrrrrrRSssssssssssQqqqqqqqqqqqQ
-RRRRRRRRSSSSSSSSSSSQQQQQQQQQQQQQ
-`.split("\n").map(x => x.trim()).filter(x => x.length > 0).join("\n");
-
-const simpleRoomMap = `
-GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-GgggggDgDgDgDgDgDgDgDggggggggggG
-GggggggggggggggggggggggggggggggG
-GggggggggggggggggggggggggggggggG
-GggggggggggggggggggggggggggggggG
-BBBBBBBBBggggggggGGGGGGGGGGGGGGG
-BbbbbbbbBggggggggGgggggggggggggG
-BbbbbbbbBggggggggGgggggggggggggG
-BEbbbbbbBggggggggGgggggggggggggG
-BbbbbbbbBeeeeeeeeeeeeeeeCccccccC
-BEbbbbbbBeeeeeeeeeeeeeeeCccccccC
-BbbbbbbbBeeeeeeeeeeeeeeeCCCCCCCC
-BEbbbbbbBeeeeiiiiiiieeeeCccccccC
-BbbbbbbbBeeeeiiiiiiieeeeCccccccC
-GddddddddeeeeiiiiiiieeeeCccccccC
-GGdddddddeeeeiiiiiiieeeeCccccccC
-GddddddddeeeeeeeeeeeeeeeCccccccC
-GGdddddddeeeeeeeeeeeeeeeCccccccC
-GddddddddeeeeeeeeeeeeeeegggggggG
-GGGGGGGGGGGGGGgggggggggggggggggG
-GggggggggggggggggggggggggggggggG
-GgggggggggggggggggggggggHhhhhhhH
-FffffffffffffFggggggggggHhhhhhhH
-FffffffffffffFggggggggggHhhhhhhH
-FffffffffffffFggggggggggHhhhhhhH
-FffffffffffffFggggggggggHhhhhhhH
-FffffffffffffFggggggggggHhhhhhhH
-FffffffffffffFggggHHHHHHHHHHHHHH
-FffffffffffffFgggggggggggggggggG
-FffffffffffffFgggggggggggggggggG
-FffffffffffffFgggggggggggggggggG
-FFFFFFFFFFFFFFGGGGGGGGGGGGGGGGGG
-`.split("\n").map(x => x.trim()).filter(x => x.length > 0).join("\n");
+const joinedRoomNames: {[userName: string]: string} = {};
 
 const GameSockets =
 {
@@ -89,85 +21,130 @@ const GameSockets =
         nsp = io.of("/game_sockets");
         nsp.use(authMiddleware);
 
-        nsp.on("connection", (socket: socketIO.Socket) => {
+        nsp.on("connection", async (socket: socketIO.Socket) => {
             const user: User = socket.handshake.auth as User;
 
             console.log(`(GameSockets) Client connected :: ${JSON.stringify(user)}`);
 
             socket.on("objectMessage", (params: ObjectMessageParams) => {
+                const joinedRoomName = joinedRoomNames[user.userName];
+                if (joinedRoomName == undefined)
+                {
+                    console.error(`User is not in any of the rooms. (userName = ${user.userName})`);
+                    return;
+                }
                 params.message = params.message.trim().substring(0, 32);
-                socket.broadcast.to("room_default").emit("objectMessage", params);
+                socket.broadcast.to(joinedRoomName).emit("objectMessage", params);
             });
 
             socket.on("objectSync", (params: ObjectSyncParams) => {
-                const objectRecord = objectRecords[params.objectId];
-                if (objectRecord == undefined)
+                const joinedRoomName = joinedRoomNames[user.userName];
+                if (joinedRoomName == undefined)
                 {
-                    console.error(`Tried to sync a nonexistent object :: ${JSON.stringify(params)}`);
+                    console.error(`User is not in any of the rooms. (userName = ${user.userName})`);
                     return;
                 }
-                Object.assign(objectRecord.objectSpawnParams.transform, params.transform);
-                socket.broadcast.to("room_default").emit("objectSync", params);
+                if (!RoomManager.objectIsSpawnedByUser(joinedRoomName, user.userName, params.objectId))
+                {
+                    console.error(`User tried to sync an object which he/she doesn't own (roomName = ${joinedRoomName}, userName = ${user.userName}, objectId = ${params.objectId})`);
+                    return;
+                }
+                const targetPos: Vec2 = { x: params.transform.x, y: params.transform.z };
+                const result = PhysicsManager.tryMoveObject(joinedRoomName, params.objectId, targetPos);
+                RoomManager.updateObjectTransform(joinedRoomName, params.objectId,
+                    result.resolvedPos.x, params.transform.y, result.resolvedPos.y,
+                    params.transform.eulerX, params.transform.eulerY, params.transform.eulerZ
+                );
+                if (result.desyncDetected)
+                    nsp.to(joinedRoomName).emit("objectDesyncResolve", { objectId: params.objectId, resolvedPos: result.resolvedPos });
+                else
+                    socket.broadcast.to(joinedRoomName).emit("objectSync", params);
             });
 
             socket.on("objectSpawn", (params: ObjectSpawnParams) => {
-                const object = objectRecords[params.objectId];
-                if (object != undefined)
+                const joinedRoomName = joinedRoomNames[user.userName];
+                if (joinedRoomName == undefined)
                 {
-                    console.error(`Tried to spawn an already existing object :: ${JSON.stringify(params)}`);
+                    console.error(`User is not in any of the rooms. (userName = ${user.userName})`);
                     return;
                 }
-                const transformCopy = {};
-                Object.assign(transformCopy, params.transform);
-
-                objectRecords[params.objectId] = { objectSpawnParams: params };
-
-                socket.broadcast.to("room_default").emit("objectSpawn", params);
+                if (RoomManager.hasObject(joinedRoomName, params.objectId))
+                {
+                    console.error(`Tried to spawn an already existing object (objectId = ${params.objectId})`);
+                    return;
+                }
+                const collisionShape: Circle2 = {
+                    x: params.transform.x,
+                    y: params.transform.z,
+                    radius: 0.3,
+                };
+                PhysicsManager.addObject(joinedRoomName, params.objectId, collisionShape, 0);
+                RoomManager.addObject(joinedRoomName, { objectSpawnParams: params });
+                socket.broadcast.to(joinedRoomName).emit("objectSpawn", params);
             });
 
             socket.on("objectDespawn", (params: ObjectDespawnParams) => {
-                const object = objectRecords[params.objectId];
-                if (object == undefined)
+                const joinedRoomName = joinedRoomNames[user.userName];
+                if (joinedRoomName == undefined)
                 {
-                    console.error(`Tried to despawn a nonexistent object :: ${JSON.stringify(params)}`);
+                    console.error(`User is not in any of the rooms. (userName = ${user.userName})`);
                     return;
                 }
-                delete objectRecords[params.objectId];
-
-                socket.broadcast.to("room_default").emit("objectDespawn", params);
+                if (RoomManager.hasObject(joinedRoomName, params.objectId))
+                {
+                    console.error(`Tried to despawn a nonexistent object (objectId = ${params.objectId})`);
+                    return;
+                }
+                PhysicsManager.removeObject(joinedRoomName, params.objectId);
+                RoomManager.removeObject(joinedRoomName, params.objectId)
+                socket.broadcast.to(joinedRoomName).emit("objectDespawn", params);
             });
 
             socket.on("disconnect", () => {
                 console.log(`(GameSockets) Client disconnected :: ${JSON.stringify(user)}`);
-                
-                const despawnPendingObjectIds: string[] = [];
-                for (const objectRecord of Object.values(objectRecords))
+
+                const joinedRoomName = joinedRoomNames[user.userName];
+                if (joinedRoomName == undefined)
                 {
-                    const params = objectRecord.objectSpawnParams;
-                    if (params.objectId.startsWith(user.userName))
-                    {
-                        console.log(`Despawned :: ${params.objectId}`);
-                        despawnPendingObjectIds.push(params.objectId);
-                    }
+                    console.warn(`User is not in any of the rooms. (userName = ${user.userName})`);
+                    return;
                 }
-                for (const objectId of despawnPendingObjectIds)
+                if (!RoomManager.hasRoom(joinedRoomName))
                 {
-                    if (objectRecords[objectId] != undefined)
-                        delete objectRecords[objectId];
-                    nsp.to("room_default").emit("objectDespawn", { objectId });
+                    console.error(`Room not found (roomName = ${joinedRoomName})`);
+                    return;
                 }
+                RoomManager.removeUserFromRoom(joinedRoomName, user.userName);
+                    
+                const objectIds = RoomManager.getIdsOfObjectsSpawnedByUser(joinedRoomName, user.userName);
+                for (const objectId of objectIds)
+                {
+                    PhysicsManager.removeObject(joinedRoomName, objectId);
+                    RoomManager.removeObject(joinedRoomName, objectId);
+                    nsp.to(joinedRoomName).emit("objectDespawn", { objectId });
+                }
+
+                delete joinedRoomNames[user.userName];
             });
 
-            socket.join("room_default");
+            // For now, just let the client automatically join the default room.
+            const roomName = "room_default";
+            socket.join(roomName);
 
-            const roomLoadParams: RoomLoadParams = {
-                //roomMap: defaultRoomMap,
-                roomMap: simpleRoomMap,
-                objectRecords
-            }
-            socket.emit("roomLoad", roomLoadParams);
+            if (!RoomManager.hasRoom(roomName))
+                await RoomManager.loadRoom(roomName);
+            const roomServerRecord = RoomManager.getRoom(roomName);
+            RoomManager.addUserToRoom(roomName, user.userName);
+            joinedRoomNames[user.userName] = roomName;
+
+            if (!PhysicsManager.hasRoom(roomName))
+                await PhysicsManager.loadRoom(roomServerRecord);
+
+            socket.emit("roomLoad", roomServerRecord);
         });
     },
-};
+}
+
+
 
 export default GameSockets;

@@ -6,7 +6,7 @@ import { Request, Response } from "express";
 import TextUtil from "../../../shared/embeddedScripts/util/textUtil";
 import DebugUtil from "../../util/debugUtil";
 import UIConfig from "../../../shared/embeddedScripts/config/uiConfig";
-import User from "../../../shared/types/auth/user";
+import User from "../../../shared/auth/user";
 
 const RoomRouter = express.Router();
 

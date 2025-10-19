@@ -1,7 +1,7 @@
-import ObjectSpawnParams from "../../shared/types/object/objectSpawnParams";
+import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
 import GameObject from "./types/gameObject";
 import ObjectConstructorMap from "./objectConstructorMap";
-import ObjectTransform from "../../shared/types/object/objectTransform";
+import ObjectTransform from "../../shared/object/objectTransform";
 import App from "../app";
 
 let lastObjectIdNumber = 0;

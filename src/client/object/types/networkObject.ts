@@ -1,4 +1,5 @@
-import ObjectSyncParams from "../../../shared/types/object/objectSyncParams";
+import ObjectDesyncResolveParams from "../../../shared/object/objectDesyncResolveParams";
+import ObjectSyncParams from "../../../shared/object/objectSyncParams";
 import GameSocketsClient from "../../networking/gameSocketsClient";
 import ObjectSyncEmitter from "../components/objectSyncEmitter";
 import ObjectSyncReceiver from "../components/objectSyncReceiver";
@@ -36,6 +37,12 @@ export default abstract class NetworkObject extends GameObject implements Updata
     onObjectSync(params: ObjectSyncParams)
     {
         this.objectSyncReceiver?.onSyncReceived(params);
+    }
+
+    onObjectDesyncResolve(params: ObjectDesyncResolveParams)
+    {
+        this.objectSyncEmitter?.resolveDesync(params);
+        this.objectSyncReceiver?.resolveDesync(params);
     }
 
     update(deltaTime: number): void

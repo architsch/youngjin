@@ -3,8 +3,8 @@ import FirstPersonController from "../components/firstPersonController";
 import NetworkObject from "./networkObject";
 import SpeechBubble from "../components/speechBubble";
 import ModelFactory from "../../graphics/factories/modelFactory";
-import App from "../../app"
-import ObjectMessageParams from "../../../shared/types/object/objectMessageParams";
+import App from "../../app";
+import ObjectMessageParams from "../../../shared/object/objectMessageParams";
 
 export default class Player extends NetworkObject
 {
@@ -26,13 +26,13 @@ export default class Player extends NetworkObject
 
             const model = await ModelFactory.load(`${App.getEnv().assets_url}/lowpolyghost/lowpolyghost.glb`);
             this.model = model.clone();
-            //this.model.castShadow = true;
-            //this.model.receiveShadow = true;
             this.obj.add(this.model);
             this.model.position.set(0, 0.13, 0);
             this.model.scale.set(0.7, 0.7, 0.7);
             this.model.rotation.set(0, Math.PI, 0);
         }
+
+        this.addCollider();
     }
 
     async onDespawn(): Promise<void>
@@ -40,7 +40,6 @@ export default class Player extends NetworkObject
         await super.onDespawn();
 
         this.speechBubble?.onDespawn();
-        
         this.model?.removeFromParent();
     }
 
