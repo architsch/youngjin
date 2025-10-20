@@ -18,6 +18,7 @@ export default class Collider
             y: this.gameObject.position.z,
             radius: 0.3,
         };
+
         PhysicsManager.addObject(App.getCurrentRoomName(), this.gameObject.params.objectId, collisionShape, 0);
     }
 

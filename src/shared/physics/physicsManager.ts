@@ -107,8 +107,8 @@ const PhysicsManager =
         if (rooms[roomName] == undefined)
             throw new Error(`Physics-room doesn't exist (roomName = ${roomName})`);
 
-        if (room.objectById[objectId] != undefined)
-            throw new Error(`PhysicsObject is already registered (objectId = ${objectId})`);
+        if (room.objectById[objectId] != undefined) // already added
+            return;
         const intersectingVoxels = new Array<PhysicsVoxel>(4);
         intersectingVoxels.length = 0;
         const newObject: PhysicsObject = { objectId, collisionLayer, collisionShape, intersectingVoxels };
