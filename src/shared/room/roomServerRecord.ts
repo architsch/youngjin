@@ -1,9 +1,9 @@
 import ObjectServerRecord from "../object/objectServerRecord";
+import Room from "./room";
 
 export default interface RoomServerRecord
 {
-    roomName: string,
-    roomMap: string,
-    participantUserNames: { [userName: string]: boolean },
-    objectServerRecords: {[objectId: string]: ObjectServerRecord},
+    room: Room;
+    participantUserNames: { [userName: string]: boolean };
+    objectServerRecords: {[objectId: string]: ObjectServerRecord};
 }

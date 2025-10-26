@@ -2,6 +2,7 @@ import * as THREE from "three";
 import GeometryFactory from "./geometryFactory";
 import MaterialFactory from "./materialFactory";
 import Pool from "../../util/pool";
+import MaterialParams from "../types/materialParams";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
@@ -12,24 +13,25 @@ const MeshFactory =
     {
         return Object.values(loadedMeshes);
     },
-    loadMesh: async (geometryId: string, materialId: string): Promise<THREE.Mesh> =>
+    loadMesh: async (geometryId: string, materialParams: MaterialParams): Promise<THREE.Mesh> =>
     {
-        const meshId = `${geometryId}-${materialId}`;
+        const meshId = `${geometryId}-${materialParams.type}-${materialParams.additionalParam}`;
         const loadedMesh = loadedMeshes[meshId];
         if (loadedMesh != undefined)
             return loadedMesh;
 
         const geometry = await GeometryFactory.load(geometryId);
-        const material = await MaterialFactory.load(materialId);
+        const material = await MaterialFactory.load(materialParams);
 
         const newMesh = new THREE.Mesh(geometry, material);
         loadedMeshes[meshId] = newMesh;
         return newMesh;
     },
-    loadInstancedMesh: async (geometryId: string, materialId: string, numInstances: number)
-        : Promise<{ instancedMesh: THREE.InstancedMesh, instanceId: number }> =>
+    loadInstancedMesh: async (geometryId: string, materialParams: MaterialParams,
+        totalNumInstances: number, numInstancesToRent: number)
+        : Promise<{ instancedMesh: THREE.InstancedMesh, rentedInstanceIds: number[] }> =>
     {
-        const meshId = `${geometryId}-${materialId}`;
+        const meshId = `${geometryId}-${materialParams.type}-${materialParams.additionalParam}`;
         const loadedMesh = loadedMeshes[meshId];
         if (loadedMesh != undefined)
         {
@@ -37,41 +39,41 @@ const MeshFactory =
             if (pool == undefined)
                 throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
 
-            const instanceId = pool.rentItem();
-            //console.log(`Existing mesh (meshId = ${meshId}, instanceId = ${instanceId})`);
-            return { instancedMesh: loadedMesh as THREE.InstancedMesh, instanceId };
+            const rentedInstanceIds = new Array<number>(numInstancesToRent);
+            for (let i = 0; i < numInstancesToRent; ++i)
+                rentedInstanceIds[i] = pool.rentItem();
+            return { instancedMesh: loadedMesh as THREE.InstancedMesh, rentedInstanceIds };
         }
         const geometry = await GeometryFactory.load(geometryId);
-        const material = await MaterialFactory.load(materialId);
+        const material = await MaterialFactory.load(materialParams);
 
-        const uvStartArray = new Float32Array(numInstances * 2);
+        const uvStartArray = new Float32Array(totalNumInstances * 2);
         geometry.setAttribute("uvStart", new THREE.InstancedBufferAttribute(uvStartArray, 2));
 
-        const newMesh = new THREE.InstancedMesh(geometry, material, numInstances);
+        const newMesh = new THREE.InstancedMesh(geometry, material, totalNumInstances);
         loadedMeshes[meshId] = newMesh;
 
         if (instanceIdPools[meshId] != undefined)
             throw new Error(`Instance ID pool already exists (meshId = ${meshId})`);
 
-        const pool = new Pool<number>(numInstances, (index: number) => numInstances - index - 1);
+        const pool = new Pool<number>(totalNumInstances, (index: number) => totalNumInstances - index - 1);
         instanceIdPools[meshId] = pool;
 
-        const instanceId = pool.rentItem();
-        //console.log(`New mesh (meshId = ${meshId}, instanceId = ${instanceId})`);
-        return { instancedMesh: newMesh, instanceId };
+        const rentedInstanceIds = new Array<number>(numInstancesToRent);
+        for (let i = 0; i < numInstancesToRent; ++i)
+            rentedInstanceIds[i] = pool.rentItem();
+        return { instancedMesh: newMesh as THREE.InstancedMesh, rentedInstanceIds };
     },
     unloadAll: (): void =>
     {
-        //console.log("MeshFactory :: unloadAll");
         const idsTemp: string[] = [];
         for (const url of Object.keys(loadedMeshes))
             idsTemp.push(url);
         for (const url of idsTemp)
             MeshFactory.unload(url);
     },
-    unload: (meshId: string, instanceId: number = -1): void =>
+    unload: (meshId: string, instanceIds: number[] = []): void =>
     {
-        //console.log(`Unloading mesh... (meshId = ${meshId}, instanceId = ${instanceId})`);
         const mesh = loadedMeshes[meshId];
         if (mesh == undefined)
         {
@@ -79,12 +81,13 @@ const MeshFactory =
             return;
         }
 
-        if (instanceId >= 0)
+        if (instanceIds.length > 0) // This is an instanced mesh
         {
             const pool = instanceIdPools[meshId];
             if (pool == undefined)
                 throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
-            pool.returnItem(instanceId);
+            for (const instanceId of instanceIds)
+                pool.returnItem(instanceId);
             
             if (pool.allItemsAreFree())
             {
@@ -95,7 +98,7 @@ const MeshFactory =
                 delete instanceIdPools[meshId];
             }
         }
-        else
+        else // This is NOT an instanced mesh
         {
             const mesh = loadedMeshes[meshId];
             mesh.removeFromParent();

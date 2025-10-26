@@ -48,17 +48,9 @@ const GeometryFactory =
 
 const geometryConstructorMap: { [geometryId: string]: () => THREE.BufferGeometry } =
 {
-    "Floor": () => {
+    "VoxelQuad": () => {
         clear();
-        writeYFacingUnitQuad();
-        return makeGeometry();
-    },
-    "Wall": () => {
-        clear();
-        writeUnitSideBox(0.5);
-        writeUnitSideBox(1.5);
-        writeUnitSideBox(2.5);
-        writeUnitSideBox(3.5);
+        writeZFacingUnitQuad();
         return makeGeometry();
     },
 }

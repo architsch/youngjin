@@ -1,17 +1,27 @@
 import * as THREE from "three";
 import TextureFactory from "./textureFactory";
+import MaterialParams from "../types/materialParams";
 
 const loadedMaterials: { [materialId: string]: THREE.Material } = {};
 
 const MaterialFactory =
 {
-    load: async (materialId: string): Promise<THREE.Material> =>
+    load: async (materialParams: MaterialParams): Promise<THREE.Material> =>
     {
-        if (materialId.startsWith("Phong-"))
-            return await loadTexturedPhongMaterial(materialId);
-        else if (materialId.startsWith("Wire-"))
-            return await loadWireframeMaterial(materialId);
-        throw new Error(`Unknown material type (materialId = ${materialId})`);
+        const materialId = `${materialParams.type}-${materialParams.additionalParam}`;
+        const loadedMaterial = loadedMaterials[materialId];
+        if (loadedMaterial != undefined)
+            return loadedMaterial;
+
+        let newMaterial: THREE.Material;
+        switch (materialParams.type)
+        {
+            case "Regular": newMaterial = await createRegularMaterial(materialParams.additionalParam); break;
+            case "Wireframe": newMaterial = await createWireframeMaterial(materialParams.additionalParam); break;
+            default: throw new Error(`Unknown material type (materialParams.type = ${materialParams.type})`);
+        }
+        loadedMaterials[materialId] = newMaterial;
+        return newMaterial;
     },
     unloadAll: (): void =>
     {
@@ -34,15 +44,9 @@ const MaterialFactory =
     },
 }
 
-// materialId format = "Phong-[textureId]"
-async function loadTexturedPhongMaterial(materialId: string): Promise<THREE.Material>
+async function createRegularMaterial(textureURL: string): Promise<THREE.Material>
 {
-    const loadedMaterial = loadedMaterials[materialId];
-    if (loadedMaterial != undefined)
-        return loadedMaterial;
-
-    // 6 = length of "Phong-"
-    const texture = await TextureFactory.load(materialId.substring(6));
+    const texture = await TextureFactory.load(textureURL);
     const newMaterial = new THREE.MeshPhongMaterial();
     newMaterial.map = texture;
 
@@ -63,22 +67,12 @@ async function loadTexturedPhongMaterial(materialId: string): Promise<THREE.Mate
             `
         );
     };
-
-    loadedMaterials[materialId] = newMaterial;
     return newMaterial;
 }
 
-// materialId format = "Wire-[colorHex]"
-async function loadWireframeMaterial(materialId: string): Promise<THREE.Material>
+async function createWireframeMaterial(colorHex: string): Promise<THREE.Material>
 {
-    const loadedMaterial = loadedMaterials[materialId];
-    if (loadedMaterial != undefined)
-        return loadedMaterial;
-
-    // 5 = length of "Wire-"
-    const newMaterial = new THREE.MeshBasicMaterial({ color: materialId.substring(5), wireframe: true });
-
-    loadedMaterials[materialId] = newMaterial;
+    const newMaterial = new THREE.MeshBasicMaterial({ color: colorHex, wireframe: true });
     return newMaterial;
 }
 

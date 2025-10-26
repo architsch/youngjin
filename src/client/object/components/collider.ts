@@ -19,18 +19,18 @@ export default class Collider
             radius: 0.3,
         };
 
-        PhysicsManager.addObject(App.getCurrentRoomName(), this.gameObject.params.objectId, collisionShape, 0);
+        PhysicsManager.addObject(App.getCurrentRoom()!.roomID, this.gameObject.params.objectId, collisionShape, 0);
     }
 
     onDespawn(): void
     {
-        PhysicsManager.removeObject(App.getCurrentRoomName(), this.gameObject.params.objectId);
+        PhysicsManager.removeObject(App.getCurrentRoom()!.roomID, this.gameObject.params.objectId);
     }
 
     trySetPosition(pos: THREE.Vector3): void
     {
         const targetPos: Vec2 = { x: pos.x, y: pos.z };
-        const result = PhysicsManager.tryMoveObject(App.getCurrentRoomName(), this.gameObject.params.objectId, targetPos);
+        const result = PhysicsManager.tryMoveObject(App.getCurrentRoom()!.roomID, this.gameObject.params.objectId, targetPos);
         this.gameObject.position.set(result.resolvedPos.x, pos.y, result.resolvedPos.y);
         if (result.desyncDetected)
             console.warn(`Physics-position desync detected.`);
@@ -39,7 +39,7 @@ export default class Collider
     forceSetPosition(pos: THREE.Vector3): void
     {
         const targetPos: Vec2 = { x: pos.x, y: pos.z };
-        PhysicsManager.forceMoveObject(App.getCurrentRoomName(), this.gameObject.params.objectId, targetPos);
+        PhysicsManager.forceMoveObject(App.getCurrentRoom()!.roomID, this.gameObject.params.objectId, targetPos);
         this.gameObject.position.copy(pos);
     }
 }

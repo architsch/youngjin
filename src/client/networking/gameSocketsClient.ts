@@ -25,9 +25,9 @@ const GameSocketsClient =
                 (window as any).location.reload(true);
         });
 
-        socket.on("roomLoad", (roomServerRecord: RoomServerRecord) => {
-            console.log(`(GameSocketsClient) roomLoad :: ${JSON.stringify(roomServerRecord)}`);
-            GameSocketsClient.roomLoadObservable.broadcast(roomServerRecord);
+        socket.on("changeRoom", (roomServerRecord: RoomServerRecord) => {
+            //console.log(`(GameSocketsClient) changeRoom :: ${JSON.stringify(roomServerRecord)}`);
+            GameSocketsClient.changeRoomObservable.broadcast(roomServerRecord);
         });
         socket.on("objectSync", (params: ObjectSyncParams) => {
             //console.log(`(GameSocketsClient) objectSync :: ${JSON.stringify(params)}`);
@@ -83,7 +83,7 @@ const GameSocketsClient =
             const message = messageInput.value.trim().substring(0, 32);
             if (message.length > 0)
             {
-                const player = ObjectManager.getPlayer();
+                const player = ObjectManager.getMyPlayer();
                 if (!player)
                 {
                     console.error(`Player not found (userName = ${env.user.userName})`);
@@ -120,7 +120,7 @@ const GameSocketsClient =
     emitObjectDespawn: (params: ObjectDespawnParams) => socket.emit("objectDespawn", params),
     emitObjectMessage: (params: ObjectMessageParams) => socket.emit("objectMessage", params),
 
-    roomLoadObservable: new Observable<RoomServerRecord>(),
+    changeRoomObservable: new Observable<RoomServerRecord>(),
     objectSyncObservable: new Observable<ObjectSyncParams>(),
     objectDesyncResolveObservable: new Observable<ObjectDesyncResolveParams>(),
     objectSpawnObservable: new Observable<ObjectSpawnParams>(),

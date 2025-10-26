@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 20"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-26.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b285.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 20">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 20</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-26.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 20</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 20</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: October 26, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 20 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Processing Multiple Targets</b></h3>
+<p>Last time, we saw that it is possible to let the system automatically generate a basis which can be used to find any number of existing targets in our game. That is, we saw that there is a way to extend a table which looks like this:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b285.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 1)">
+<p>into something which looks like this:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b287.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 2)">
+<p>The right half of this table (i.e. 5th, 6th, 7th, and 8th columns) is a basis for processing the targets. For the sake of understanding the reasoning behind this, let us review the scenario which our table is illustrating.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b284.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 3)">
+<p>As the picture suggests, 4 frogs in our game are simultaneously attacking each other. Every one of them has its own attack-target, which is represented by one of the "target" ID values in the 4th column of our data table.</p>
+<p>What shall we do with these targets?</p>
+<p>Oh, for sure, we want their attacks (i.e. damages) to be applied to their appropriate targets. The picture below shows who's attacking whom, and how these frogs' health numbers should change once the attacks are over.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b297.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 4)">
+<p>Let us assume that each attack deducts 1 from the target's health. Given this, we are able to say that frog-1's health will be reduced by 2 because BOTH frog-2 and frog-4 are attacking frog-1 at the same time. Frog-2's health will stay the same because it is not being targeted by anyone else, whereas frog-5 and frog-4 will each have its health reduced by 1 because each of them is being attacked by one other frog.</p>
+<p>How to automate this kind of process?</p>
+<p>Since the targets are supposed to be attacked (i.e. receive damage), we know that we need to search for the rows which correspond to these targets, and then move on to reduce their health values. Since there are 4 targets, we will need to search for their corresponding 4 rows and reduce their health values accordingly.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b287.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 5)">
+<p>And this is where the right half of our extended table (shown above) comes in handy. We can use these 4 extra columns to look up and update not only a single frog (row), but all 4 of them.</p>
+<p>In order to search for all 4 targets in parallel, we must first append 4 additional columns to our table in order to make room for the search results.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b298.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 6)">
+<p>The way we carry out the searching process is the same as what we saw in the previous article, but this time we will be executing the same type of calculation 4 times, in the manner shown below.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b299.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 7)">
+<p>If we were only searching for row-1's target, we would only need to take the sum of the 1st and 4th columns of the table and declare it as the search result. In our current scenario, however, we are searching for the targets of all 4 of the rows, which means that we need to perform 4 separate searches and group them into 4 columns.</p>
+<p>The procedure shown above can be carried out by means of a single matrix multiplication. See the picture below, and you will see how it works.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b300.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 8)">
+<p>The result of such a computation will be the table displayed below. The "search result" columns in this resulting table, as you can tell, are filled with instances of the "EQ" function which have BOTH of its arguments specified and none of them left as unknown.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b301.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 9)">
+<p>Since both of the function's arguments are fully identified at this point, we can simply evaluate the values of "EQ" according to its rule.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b302.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 10)">
+<p>This is the result of the searching process, made up of 1s and 0s ("1" means "found" and "0" means "not found"). Let me explain what I mean by this, as well as how to interpret the result shown here.</p>
+<p>For the ease of comprehension, I will go over the meaning of the resulting data step by step.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b303.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 11)">
+<p>Let us take a brief look at the 1st row of the table, which is representative of the frog whose ID is 1. This can be called the "source" of an attack, as opposed to the "target" who is being attacked by the source.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b304.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 12)">
+<p>And in this particular example, we know that if the source's ID is 1, its target's ID must be 5 because that's what is written in the "target" entry of the source's row.</p>
+<p>The thing is, we need an automated (i.e. computational) way of figuring out that the ID of the target is 5 when the ID of the source is 1. For such a purpose, we will take a look at the 9th column in our table. This column denotes the search result for the 1st row's target.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b305.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 13)">
+<p>This column consists of four binary digits: [0, 0, 1, 0]. What does this mean? Here, I will tell you the meaning of this esoteric sequence of 1s and 0s.</p>
+<p>The 1st element of search result is 0. What this means is that the 1st row of the table is NOT the 1st row's target.</p>
+<p>The 2nd and 4th elements of the search result are 0s as well, which means that NEITHER of the 2nd and 4th rows of the table is the 1st row's target.</p>
+<p>The 3rd element of the search result, on the other hand, is 1. Do you know what this means? It means that the 3rd row of the table must be the 1st row's target.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b306.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 14)">
+<p>We can apply this sort of interpretation to the other 3 rows (frog) as well. They are displayed below.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b307.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 15)">
+<hr>
+<h3><b>Parallel Computation</b></h3>
+<p>All right. What is the point of having these, then? As you may remember, our ultimate goal is to apply damages (i.e. decrements in health) to the targets. And it turns out that the search results we managed to derive can be used to fulfill such a goal. Let me show you how.</p>
+<p>Take a look at the labels shown below. As you can see, the table's 3rd column contains the current health values of the frogs, while the last 4 columns contain the search results of the frogs' respective targets.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b308.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 16)">
+<p>Let me tell you what we are supposed to do to compute the aftermath of the attacks. We first need to grab the column of health values (i.e. 3rd column of the table), and subtract all 4 of the search results from it. If you think about the implication this this process a bit, you will soon realize that the resulting column is the new health values of the frogs after the round of attacks.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b309.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 17)">
+<p>Here is a breakdown of what is going on here.</p>
+<p>First, we subtracted the 1st row's search result from the health values. By doing this, we decremented the health of the frog who was being targeted by the frog in the 1st row.</p>
+<p>Next, we subtracted the 2nd row's search result from the health values. By doing this, we decremented the health of the frog who was being targeted by the frog in the 2nd row.</p>
+<p>This pattern continued down to the bottom (4th row) of the table, leading to 4 subtractions in total (1 for each source of an attack).</p>
+<p>If you are confused, just stare at the picture below for an hour and you will get it.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b310.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 18)">
+<p>The 4 subtractions I mentioned above can be carried out by means of a matrix multiplication as well (See the image below).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b311.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 19)">
+<p>Overall, we can summarize the whole procedure of executing multiple attacks into two matrix multiplications. The first multiplication fills out the "search result" columns with their appropriate values (i.e. 1s and 0s), and the second multiplication applies damages to the targeted frogs based upon the computed search results.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b312.jpg" alt="Linear Algebra for Game Development - Part 20 (Figure 20)">
+<p>And again, the first step of calculation is not really an authentic "matrix multiplication" in linear algebra because it involves a nonlinear function called "EQ". For this reason, I had to put parentheses around the first step to denote that the search must be performed first before applying damages (i.e. that the two matrices, labeled as "Search" and "Attack", cannot be combined into a single matrix).</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-25.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>

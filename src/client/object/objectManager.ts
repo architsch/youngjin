@@ -8,12 +8,13 @@ import NetworkObject from "../object/types/networkObject";
 import ObjectFactory from "../object/objectFactory";
 import Player from "../object/types/player";
 import ObjectMessageParams from "../../shared/object/objectMessageParams";
-import Voxel from "../voxel/voxel";
 import App from "../app";
-import VoxelManager from "../voxel/voxelManager";
+import VoxelManager from "../../shared/voxel/voxelManager";
 import VoxelObject from "./types/voxelObject";
 import RoomServerRecord from "../../shared/room/roomServerRecord";
 import ObjectDesyncResolveParams from "../../shared/object/objectDesyncResolveParams";
+import MaterialParams from "../graphics/types/materialParams";
+import VoxelGrid from "../../shared/voxel/voxelGrid";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: Updatable} = {};
@@ -25,7 +26,7 @@ const ObjectManager =
     {
         return gameObjects[objectId];
     },
-    getPlayer: (): Player | undefined =>
+    getMyPlayer: (): Player | undefined =>
     {
         return players[App.getEnv().user.userName];
     },
@@ -34,28 +35,31 @@ const ObjectManager =
         for (const updatableGameObject of Object.values(updatableGameObjects))
             updatableGameObject.update(deltaTime);
     },
-    load: async (roomServerRecord: RoomServerRecord) =>
+    load: async (roomServerRecord: RoomServerRecord, voxelGrid: VoxelGrid) =>
     {
-        VoxelManager.forEachVoxelAsync(async (voxel: Voxel) => {
-            const gameObject = ObjectFactory.createNewObject(voxel.voxelType,
+        const materialParams: MaterialParams = {
+            type: "Regular",
+            additionalParam: roomServerRecord.room.texturePackURL,
+        };
+
+        for (const voxel of voxelGrid.voxels)
+        {
+            const gameObject = ObjectFactory.createNewObject("VoxelObject",
                 { // transform
-                    x: voxel.col, y: 0, z: voxel.row,
+                    x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5,
                     eulerX: 0, eulerY: 0, eulerZ: 0,
                 }, { // metadata
-                    geometryId: voxel.voxelType as string,
-                    materialId: `Phong-${voxel.textureId}`,
-                    numInstances: 1024,
-                    uvStart: voxel.uvStart,
-                }
-            );
+                    geometryId: "VoxelQuad",
+                    materialParams,
+                    totalNumInstances: 8192,
+                });
+            (gameObject as VoxelObject).setVoxel(voxel);
             await ObjectManager.spawnObject(gameObject);
-            voxel.object = gameObject as VoxelObject;
-            voxel.object.setVoxel(voxel);
-        });
+        };
         
         await ObjectManager.spawnObject(ObjectFactory.createNewObject("Player", {
-            x: 15 + 2*Math.random(), y: 0, z: 15 + 2*Math.random(),
-            eulerX: 0, eulerY: Math.random() * Math.PI*2, eulerZ: 0,
+            x: 0.5*VoxelManager.getNumGridCols(), y: 0, z: 0.5*VoxelManager.getNumGridRows(),
+            eulerX: 0, eulerY: Math.PI, eulerZ: 0,
         }));
 
         // Load objects from objectServerRecords

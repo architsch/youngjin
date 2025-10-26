@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObject from "../types/gameObject";
-import VoxelManager from "../../voxel/voxelManager";
 import MeshFactory from "../../graphics/factories/meshFactory";
+import VoxelObject from "../types/voxelObject";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 const objTemp: THREE.Object3D = new THREE.Object3D();
@@ -133,11 +133,24 @@ export default class FirstPersonController
 
         if (intersections.length > 0)
         {
-            const meshId = intersections[0].object.name;
             const instanceId = intersections[0].instanceId;
             
-            const voxel = VoxelManager.getVoxelByMeshInstanceId(`${meshId}-${instanceId}`);
-            console.log(`meshInstanceId = ${voxel.object?.getMeshInstanceId()}, voxel = ${voxel.object?.getMeshInstanceId()}, row = ${voxel.row}, col = ${voxel.col}`);
+            if (instanceId != undefined)
+            {
+                const voxelObject = VoxelObject.get(instanceId);
+                if (voxelObject != undefined)
+                {
+                    console.log(`Selected Voxel = ${JSON.stringify(voxelObject.getVoxel())}`);
+                }
+                else
+                {
+                    console.error(`VoxelObject not found (instanceId = ${instanceId})`);
+                }
+            }
+            else
+            {
+                console.error(`InstanceId not found (object name = ${intersections[0].object.name})`);
+            }
         }
     }
 }

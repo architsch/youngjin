@@ -5,6 +5,6 @@ export default interface PhysicsRoom
 {
     numGridRows: number;
     numGridCols: number;
-    voxelGrid: PhysicsVoxel[];
+    voxels: PhysicsVoxel[];
     objectById: { [objectId: string]: PhysicsObject };
 }

@@ -1,9 +1,12 @@
 import ObjectManager from "./object/objectManager";
-import VoxelManager from "./voxel/voxelManager";
+import VoxelManager from "../shared/voxel/voxelManager";
 import RoomServerRecord from "./../shared/room/roomServerRecord";
 import ThingsPoolEnv from "./networking/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
+import Room from "../shared/room/room";
+import VoxelGridEncoding from "../shared/voxel/voxelGridEncoding";
+import VoxelGridGenerator from "../shared/voxel/voxelGridGenerator";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -14,7 +17,7 @@ const maxSecondsPerFrame = 1 / minFramesPerSecond;
 let env: ThingsPoolEnv;
 let prevTime: number;
 let deltaTimePending: number;
-let currentRoomName: string = "";
+let currentRoom: Room | undefined;
 
 const tickTimeQueue: number[] = [];
 
@@ -28,31 +31,60 @@ const App =
     {
         return env;
     },
-    getCurrentRoomName: (): string =>
+    getCurrentRoom: (): Room | undefined =>
     {
-        return currentRoomName;
+        return currentRoom;
     },
-    loadRoom: async (roomServerRecord: RoomServerRecord) =>
+    changeRoom: async (roomServerRecord: RoomServerRecord) =>
     {
-        currentRoomName = roomServerRecord.roomName;
-
-        await GraphicsManager.load(update);
-        await PhysicsManager.loadRoom(roomServerRecord);
-        await VoxelManager.load(roomServerRecord);
-        await ObjectManager.load(roomServerRecord);
-
-        prevTime = performance.now() * 0.001;
-        deltaTimePending = 0;
+        if (currentRoom != undefined)
+            await unloadCurrentRoom();
+        loadRoom(roomServerRecord);
     },
-    unloadRoom: async () =>
+}
+
+async function loadRoom(roomServerRecord: RoomServerRecord)
+{
+    currentRoom = roomServerRecord.room;
+
+    await GraphicsManager.load(update);
+
+    const voxelGrid = VoxelGridEncoding.decode(roomServerRecord.room.encodedVoxelGrid);
+    /*
+    const encoded1 = roomServerRecord.room.encodedVoxelGrid;
+    const encoded2 = VoxelGridEncoding.encode(VoxelGridGenerator.generateEmptyRoom(32, 32, 0, 1));
+    const len = Math.min(encoded1.length, encoded2.length);
+    const diff: any[] = [];
+    for (let i = 0; i < len; ++i)
     {
-        await ObjectManager.unload();
-        await VoxelManager.unload();
-        await PhysicsManager.unloadAllRooms(); // Only one room will be active at a time on the client side, so unloading all rooms is equivalent to unloading just the currently active room.
-        await GraphicsManager.unload();
+        const c1 = encoded1[i];
+        const c2 = encoded2[i];
+        if (c1 != c2)
+        {
+            diff.push({i, c1, c2});
+        }
+    }
+    console.log(`Encoding comparison :: length1 = ${encoded1.length}, length2 = ${encoded2.length}, diff = ${JSON.stringify(diff)}`);
+    */
+    await PhysicsManager.loadRoom(roomServerRecord, voxelGrid);
+    await VoxelManager.load(voxelGrid);
+    await ObjectManager.load(roomServerRecord, voxelGrid);
 
-        currentRoomName = "";
-    },
+    prevTime = performance.now() * 0.001;
+    deltaTimePending = 0;
+}
+
+async function unloadCurrentRoom()
+{
+    if (currentRoom == undefined)
+        throw new Error(`No room to unload.`);
+
+    await ObjectManager.unload();
+    await VoxelManager.unload();
+    await PhysicsManager.unloadRoom(currentRoom.roomID);
+    await GraphicsManager.unload();
+
+    currentRoom = undefined;
 }
 
 function update()
@@ -87,11 +119,19 @@ const uiRoot = document.getElementById("uiRoot") as HTMLElement;
 
 const fpsDisplay = document.createElement("div");
 fpsDisplay.style = "position:absolute; top:2rem; left:0.25rem; margin:0 0; padding:0.25rem 0.25rem; height:1.5rem; text-size:1rem; line-height:1.5rem; background-color:rgba(0, 0, 0, 0.5); color:red;";
-fpsDisplay.innerHTML = `FPS: ?`;
+fpsDisplay.innerHTML = `FPS: ?, Position: (?, ?, ?)`;
 uiRoot.appendChild(fpsDisplay);
 
 setInterval(() => {
-    fpsDisplay.innerHTML = `FPS: ${getFPS()}`;
+    const myPlayer = ObjectManager.getMyPlayer();
+    let x = "?", y = "?", z = "?";
+    if (myPlayer)
+    {
+        x = myPlayer.position.x.toFixed(2);
+        y = myPlayer.position.y.toFixed(2);
+        z = myPlayer.position.z.toFixed(2);
+    }
+    fpsDisplay.innerHTML = `FPS: ${getFPS()}, Position: (${x}, ${y}, ${z})`;
 }, 250);
 
 export default App;
