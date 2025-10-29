@@ -58,11 +58,6 @@ export default class Player extends NetworkObject
             console.error(`User's own object shouldn't be able to receive a message (receiverObjectID = ${this.params.sourceUserName}, senderObjectID = ${params.senderObjectId})`);
             return;
         }
-        if (!params.senderObjectId.startsWith(this.params.sourceUserName))
-        {
-            console.error(`senderObjectId doesn't start with the object's sourceUserName. This is inconsistent with how objectId is being formatted. (receiverObjectID = ${this.params.sourceUserName}, senderObjectID = ${params.senderObjectId})`);
-            return;
-        }
         this.speechBubble?.showMessage(params.message);
     }
 }

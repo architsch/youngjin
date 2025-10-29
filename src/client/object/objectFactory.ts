@@ -1,6 +1,6 @@
 import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
 import GameObject from "./types/gameObject";
-import ObjectConstructorMap from "./objectConstructorMap";
+import { ClientSideObjectConstructorMap, ServerSideObjectConstructorMap } from "./objectConstructorMap";
 import ObjectTransform from "../../shared/object/objectTransform";
 import App from "../app";
 
@@ -8,27 +8,27 @@ let lastObjectIdNumber = 0;
 
 const ObjectFactory =
 {
-    createNewObject: (objectType: string, transform: ObjectTransform,
+    createClientSideObject: (objectType: string, transform: ObjectTransform,
         metadata: { [key: string]: any } = {}): GameObject =>
     {
         const userName = App.getEnv().user.userName;
         const params: ObjectSpawnParams = {
             sourceUserName: userName,
             objectType,
-            objectId: `${userName}-${Math.floor(Date.now() * 0.001)}-${++lastObjectIdNumber}`,
+            objectId: (++lastObjectIdNumber).toString(),
             transform,
             metadata,
         };
-        const objectConstructor = ObjectConstructorMap[objectType];
+        const objectConstructor = ClientSideObjectConstructorMap[objectType];
         if (objectConstructor == undefined)
-            throw new Error(`objectConstructor not found (objectType = ${objectType})`);
+            throw new Error(`Client-side objectConstructor not found (objectType = ${objectType})`);
         return objectConstructor(params);
     },
-    createObjectFromNetwork: (params: ObjectSpawnParams): GameObject =>
+    createServerSideObject: (params: ObjectSpawnParams): GameObject =>
     {
-        const objectConstructor = ObjectConstructorMap[params.objectType];
+        const objectConstructor = ServerSideObjectConstructorMap[params.objectType];
         if (objectConstructor == undefined)
-            throw new Error(`objectConstructor not found (params.objectType = ${params.objectType})`);
+            throw new Error(`Server-side objectConstructor not found (params.objectType = ${params.objectType})`);
         return objectConstructor(params);
     },
 }

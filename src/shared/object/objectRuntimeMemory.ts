@@ -1,6 +1,6 @@
 import ObjectSpawnParams from "./objectSpawnParams";
 
-export default interface ObjectServerRecord
+export default interface ObjectRuntimeMemory
 {
     objectSpawnParams: ObjectSpawnParams,
 }

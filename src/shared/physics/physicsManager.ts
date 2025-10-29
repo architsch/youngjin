@@ -5,7 +5,7 @@ import Vector2D from "../math/util/vector2D";
 import PhysicsObject from "./physicsObject";
 import PhysicsVoxel from "./physicsVoxel";
 import PhysicsPosUpdateResult from "./physicsPosUpdateResult";
-import RoomServerRecord from "../room/roomServerRecord";
+import RoomRuntimeMemory from "../room/roomRuntimeMemory";
 import PhysicsRoom from "./physicsRoom";
 import PhysicsHitState from "./physicsHitState";
 import VoxelGrid from "../voxel/voxelGrid";
@@ -22,15 +22,15 @@ let hitStateTemp: PhysicsHitState = {
 
 const PhysicsManager =
 {
-    loadRoom: async (roomServerRecord: RoomServerRecord, voxelGrid: VoxelGrid) =>
+    loadRoom: (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid) =>
     {
-        if (rooms[roomServerRecord.room.roomID] != undefined)
-            throw new Error(`Physics-room already exists (roomID = ${roomServerRecord.room.roomID})`);
+        if (rooms[roomRuntimeMemory.room.roomID] != undefined)
+            throw new Error(`Physics-room already exists (roomID = ${roomRuntimeMemory.room.roomID})`);
 
         const objectById: { [objectId: string]: PhysicsObject } = {};
-        for (const objectServerRecord of Object.values(roomServerRecord.objectServerRecords))
+        for (const objectRuntimeMemory of Object.values(roomRuntimeMemory.objectRuntimeMemories))
         {
-            const spawnParams = objectServerRecord.objectSpawnParams;
+            const spawnParams = objectRuntimeMemory.objectSpawnParams;
             const collisionShape: Circle2 = {
                 x: spawnParams.transform.x,
                 y: spawnParams.transform.z,
@@ -47,10 +47,10 @@ const PhysicsManager =
             };
         }
 
-        rooms[roomServerRecord.room.roomID] = {
-            numGridRows: voxelGrid.numGridRows,
-            numGridCols: voxelGrid.numGridCols,
-            voxels: voxelGrid.voxels.map(voxel => {
+        rooms[roomRuntimeMemory.room.roomID] = {
+            numGridRows: decodedVoxelGrid.numGridRows,
+            numGridCols: decodedVoxelGrid.numGridCols,
+            voxels: decodedVoxelGrid.voxels.map(voxel => {
                 const row = voxel.row;
                 const col = voxel.col;
                 const collisionShape = { x1: col, y1: row, x2: col+1, y2: row+1 };
@@ -68,7 +68,7 @@ const PhysicsManager =
             objectById
         };
     },
-    unloadRoom: async (roomID: string) =>
+    unloadRoom: (roomID: string) =>
     {
         if (rooms[roomID] == undefined)
             throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);

@@ -2,14 +2,14 @@ import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
 import ObjectMessageParams from "../../shared/object/objectMessageParams"
 import ObjectSyncParams from "../../shared/object/objectSyncParams";
-import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/object/objectDespawnParams";
 import RoomChangeRequestParams from "../../shared/room/roomChangeRequestParams";
 import User from "../../shared/auth/user";
 import RoomManager from "../room/roomManager";
-import ObjectServerRecord from "../../shared/object/objectServerRecord";
+import SocketUserContext from "./types/socketUserContext";
 
 let nsp: socketIO.Namespace;
+let signalProcessingInterval: NodeJS.Timeout;
+const socketUserContexts: {[userName: string]: SocketUserContext} = {};
 
 const GameSockets =
 {
@@ -19,46 +19,51 @@ const GameSockets =
         nsp.use(authMiddleware);
 
         nsp.on("connection", async (socket: socketIO.Socket) => {
+            const socketUserContext = new SocketUserContext(socket);
             const user: User = socket.handshake.auth as User;
-
             console.log(`(GameSockets) Client connected :: ${JSON.stringify(user)}`);
+            
+            if (socketUserContexts[user.userName] != undefined)
+            {
+                console.error(`SocketUserContext with userName already exists (userName = ${user.userName})`);
+                return;
+            }
+            socketUserContexts[user.userName] = socketUserContext;
 
             socket.on("objectMessage", (params: ObjectMessageParams) => {
-                const currentRoomID = RoomManager.getUserRoomID(user.userName);
-                if (currentRoomID == undefined)
-                {
-                    console.error(`User does not belong to any room (userName = ${user.userName})`);
-                    return;
-                }
-                params.message = params.message.trim().substring(0, 32);
-                socket.broadcast.to(currentRoomID).emit("objectMessage", params);
+                RoomManager.sendObjectMessage(socketUserContext, params);
             });
-
             socket.on("objectSync", (params: ObjectSyncParams) => {
-                RoomManager.updateObjectTransform(nsp, socket, params.objectId, params.transform);
-            });
-            socket.on("objectSpawn", (params: ObjectSpawnParams) => {
-                const objectServerRecord: ObjectServerRecord = { objectSpawnParams: params };
-                RoomManager.addObject(socket, objectServerRecord);
-            });
-            socket.on("objectDespawn", (params: ObjectDespawnParams) => {
-                RoomManager.removeObject(socket, params.objectId);
+                RoomManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
             socket.on("roomChangeRequest", async (params: RoomChangeRequestParams) => {
-                await RoomManager.changeUserRoom(nsp, socket, params.roomID, true);
+                await RoomManager.changeUserRoom(socketUserContext, params.roomID, true);
             });
 
             socket.on("disconnect", async () => {
                 console.log(`(GameSockets) Client disconnected :: ${JSON.stringify(user)}`);
-                await RoomManager.removeUserFromRoom(nsp, socket, true);
+
+                if (socketUserContexts[user.userName] == undefined)
+                {
+                    console.error(`SocketUserContext with userName doesn't exist (userName = ${user.userName})`);
+                    return;
+                }
+                delete socketUserContexts[user.userName];
+
+                await RoomManager.changeUserRoom(socketUserContext, undefined, false);
             });
 
             // A recently connected client should automatically join the default room.
-            await RoomManager.changeUserRoom(nsp, socket, "s0", false);
+            await RoomManager.changeUserRoom(socketUserContext, "s0", false);
         });
+
+        signalProcessingInterval = setInterval(() => {
+            for (const socketUserContext of Object.values(socketUserContexts))
+            {
+                socketUserContext.processAllIncomingSignals();
+            }
+        }, 200);
     },
 }
-
-
 
 export default GameSockets;

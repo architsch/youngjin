@@ -1,28 +1,44 @@
+import RoomRuntimeMemory from "../room/roomRuntimeMemory";
 import Voxel from "./voxel";
 import VoxelGrid from "./voxelGrid";
+import VoxelGridEncoding from "./voxelGridEncoding";
 
-let voxelGrid: VoxelGrid;
+const voxelGrids: {[roomID: string]: VoxelGrid} = {};
 
 const voxelsTemp: Voxel[] = new Array<Voxel>(1024);
 
 const VoxelManager =
 {
-    getNumGridRows: (): number =>
+    loadRoom: (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid) =>
     {
-        return voxelGrid!.numGridRows;
+        if (voxelGrids[roomRuntimeMemory.room.roomID] != undefined)
+            throw new Error(`VoxelGrid already exists (roomID = ${roomRuntimeMemory.room.roomID})`);
+        voxelGrids[roomRuntimeMemory.room.roomID] = decodedVoxelGrid;
     },
-    getNumGridCols: (): number =>
+    unloadRoom: (roomID: string) =>
     {
-        return voxelGrid!.numGridCols;
+        if (voxelGrids[roomID] == undefined)
+            throw new Error(`VoxelGrid doesn't exist (roomID = ${roomID})`);
+        delete voxelGrids[roomID];
     },
-    getVoxelsInCircle: (centerX: number, centerZ: number, radius: number): Voxel[] =>
+    getEncodedVoxelGrid: (roomID: string): string =>
+    {
+        const voxelGrid = voxelGrids[roomID];
+        if (voxelGrids[roomID] == undefined)
+            throw new Error(`VoxelGrid doesn't exist (roomID = ${roomID})`);
+        return VoxelGridEncoding.encode(voxelGrid);
+    },
+    getVoxelsInCircle: (roomID: string, centerX: number, centerZ: number, radius: number): Voxel[] =>
     {
         voxelsTemp.length = 0;
+        const voxelGrid = voxelGrids[roomID];
+        if (voxelGrids[roomID] == undefined)
+            throw new Error(`VoxelGrid doesn't exist (roomID = ${roomID})`);
 
         const row1 = Math.max(0, Math.floor(centerZ - radius));
-        const row2 = Math.min(voxelGrid!.numGridRows-1, Math.ceil(centerZ + radius));
+        const row2 = Math.min(voxelGrid.numGridRows-1, Math.floor(centerZ + radius));
         const col1 = Math.max(0, Math.floor(centerX - radius));
-        const col2 = Math.min(voxelGrid!.numGridCols-1, Math.ceil(centerX + radius));
+        const col2 = Math.min(voxelGrid.numGridCols-1, Math.floor(centerX + radius));
         const radiusSqr = radius * radius;
 
         for (let row = row1; row <= row2; ++row)
@@ -34,25 +50,10 @@ const VoxelManager =
                 let colDiffSqr = col - centerX;
                 colDiffSqr = colDiffSqr * colDiffSqr;
                 if (rowDiffSqr + colDiffSqr <= radiusSqr)
-                    voxelsTemp.push(voxelGrid!.voxels[row * voxelGrid!.numGridCols + col]);
+                    voxelsTemp.push(voxelGrid.voxels[row * voxelGrid.numGridCols + col]);
             }
         }
         return voxelsTemp;
-    },
-    forEachVoxelAsync: async (callback: (voxel: Voxel) => Promise<void>) =>
-    {
-        for (let i = 0; i < voxelGrid!.voxels.length; ++i)
-        {
-            const voxel = voxelGrid!.voxels[i];
-            await callback(voxel);
-        }
-    },
-    load: async (voxelGridToLoad: VoxelGrid) =>
-    {
-        voxelGrid = voxelGridToLoad;
-    },
-    unload: async () =>
-    {
     },
 }
 

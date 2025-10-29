@@ -9,9 +9,8 @@ import ObjectFactory from "../object/objectFactory";
 import Player from "../object/types/player";
 import ObjectMessageParams from "../../shared/object/objectMessageParams";
 import App from "../app";
-import VoxelManager from "../../shared/voxel/voxelManager";
 import VoxelObject from "./types/voxelObject";
-import RoomServerRecord from "../../shared/room/roomServerRecord";
+import RoomRuntimeMemory from "../../shared/room/roomRuntimeMemory";
 import ObjectDesyncResolveParams from "../../shared/object/objectDesyncResolveParams";
 import MaterialParams from "../graphics/types/materialParams";
 import VoxelGrid from "../../shared/voxel/voxelGrid";
@@ -35,16 +34,16 @@ const ObjectManager =
         for (const updatableGameObject of Object.values(updatableGameObjects))
             updatableGameObject.update(deltaTime);
     },
-    load: async (roomServerRecord: RoomServerRecord, voxelGrid: VoxelGrid) =>
+    load: async (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid) =>
     {
         const materialParams: MaterialParams = {
             type: "Regular",
-            additionalParam: roomServerRecord.room.texturePackURL,
+            additionalParam: roomRuntimeMemory.room.texturePackURL,
         };
 
-        for (const voxel of voxelGrid.voxels)
+        for (const voxel of decodedVoxelGrid.voxels)
         {
-            const gameObject = ObjectFactory.createNewObject("VoxelObject",
+            const gameObject = ObjectFactory.createClientSideObject("VoxelObject",
                 { // transform
                     x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5,
                     eulerX: 0, eulerY: 0, eulerZ: 0,
@@ -56,26 +55,26 @@ const ObjectManager =
             (gameObject as VoxelObject).setVoxel(voxel);
             await ObjectManager.spawnObject(gameObject);
         };
-        
-        await ObjectManager.spawnObject(ObjectFactory.createNewObject("Player", {
-            x: 0.5*VoxelManager.getNumGridCols(), y: 0, z: 0.5*VoxelManager.getNumGridRows(),
-            eulerX: 0, eulerY: Math.PI, eulerZ: 0,
-        }));
 
-        // Load objects from objectServerRecords
-        for (const objectServerRecord of Object.values(roomServerRecord.objectServerRecords))
+        // Load objects from objectRuntimeMemories
+        for (const objectRuntimeMemory of Object.values(roomRuntimeMemory.objectRuntimeMemories))
         {
-            const object = ObjectFactory.createObjectFromNetwork(objectServerRecord.objectSpawnParams);
+            const object = ObjectFactory.createServerSideObject(objectRuntimeMemory.objectSpawnParams);
             await ObjectManager.spawnObject(object);
         }
 
         // Add listeners
         GameSocketsClient.objectSyncObservable.addListener("room", (params: ObjectSyncParams) => {
             const gameObject = gameObjects[params.objectId];
+            if (!gameObject)
+            {
+                console.error(`Server-side GameObject not found (objectId = ${params.objectId})`);
+                return;
+            }
             if ("onObjectSync" in gameObject)
                 (gameObject as NetworkObject).onObjectSync(params);
             else
-                throw new Error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
+                console.error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
         });
         GameSocketsClient.objectDesyncResolveObservable.addListener("room", (params: ObjectDesyncResolveParams) => {
             const gameObject = gameObjects[params.objectId];
@@ -87,7 +86,7 @@ const ObjectManager =
         GameSocketsClient.objectSpawnObservable.addListener("room", async (params: ObjectSpawnParams) => {
             if (gameObjects[params.objectId] != undefined)
                 return;
-            const gameObject = ObjectFactory.createObjectFromNetwork(params);
+            const gameObject = ObjectFactory.createServerSideObject(params);
             await ObjectManager.spawnObject(gameObject);
         });
         GameSocketsClient.objectDespawnObservable.addListener("room", async (params: ObjectDespawnParams) => {
