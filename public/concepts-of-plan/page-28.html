@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 22"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-28.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b331.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 22">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 22</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-28.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 22</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 22</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: November 2, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 22 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Physics</b></h3>
+<p>By now, you are probably familiar with how collision detection works. If you paid attention to the foregoing article, you must be able to use the technique I described to find out which objects are colliding with which.</p>
+<p>So far, so good. But the problem is, we usually do not detect collisions just for the sake of collision itself; we also want to use it for practical purposes, such as triggering interactions between objects based on the manner in which they collide, and so on.</p>
+<p>The most basic kind of interaction can be found in the context of physics. When pieces of matter (i.e. rigid bodies) bump into one another, for instance, they must push each other away. Such a phenomenon can be modeled in terms of a pair of force vectors, such as the ones shown here:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b331.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 1)">
+<p>This figure tells us that there are two circles, whose center positions are P1 and P2, respectively. Since their areas overlap, we can say that they are colliding.</p>
+<p>If we assume that both of them are rigid bodies (i.e. physical objects with mass and volume), there will have to be a pair of force vectors which are responsible for pushing these circles away from each other. "F(P1,P2)" is the force which pushes P1 away from P2, while "F(P2,P1)" is the force which pushes P2 away from P1.</p>
+<p>As soon as the forces get applied, new values will be assigned to both P1 and P2. This will shift the positions of the two circles in way which ensures that their distance is greater than before.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b332.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 2)">
+<p>In a realistic context, it should make sense to imagine a force as an indicator of one's acceleration. For simplicity, however, let us just suppose here (in our fictional physics) that simply adding the force to the original position will give us the new position (i.e. the position after the force gets applied).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b333.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 3)">
+<hr>
+<h3><b>Preliminary Definitions</b></h3>
+<p>In order to integrate physics into our gameplay system, we need to do something more than just stating the relation between force and position; that is, we ought to come up with a way of actually computing the forces and applying them to their corresponding objects.</p>
+<p>For this purpose, we must first begin by redefining our "C" function (i.e. collision detection rule) into something like this:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b334.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 4)">
+<p>The expression above looks almost the same as the one I have shown you before, except that the "1" is now "P2" instead.</p>
+<p>Whereas the "1" in the previous definition of "C" could only tell us whether a pair of circles are colliding or not ("1" for "colliding" and "0" for "NOT colliding"), our new "C" function now provides us with the information which answers the question: "What is the position of the circle (P2) that the given circle (P1) is colliding with?"</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b335.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 5)">
+<p>If the result of the function is 0, it means that there is no collision. If the result is something other than 0, on the other hand, it must be the position of the neighboring circle that the given circle (whose "position" is specified in the first argument of the "C" function) is currently colliding with.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b336.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 6)">
+<p>And of course, if the two circles are located at the same exact spot, we say that they are the same circle (assuming that it is impossible for multiple circles to coincide at the same exact spot). Since nothing can collide with itself, it can be asserted that "C(P,P) = 0", where "P" refers to any arbitrary point in space.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b337.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 7)">
+<hr>
+<h3><b>Computation of Forces</b></h3>
+<p>With this new version of the "C" function, we are now ready to compute physical forces which will ensue from the state of collision.</p>
+<p>Recall that, in the previous article, we saw that the result of detecting collisions turned out to be a grid of 1s and 0s.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b329.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 8)">
+<p>The reason behind this was that, in our previous definition of "C", the result was always supposed to be "1" whenever a collision occurred between a pair of circles and "0" otherwise. There was no information to tell us anything about the "other circle" with which the given circle was colliding.</p>
+<p>Now that we have redefined our "C" function, however, we are able to fill our search results with a richer set of data. Let us re-evaluate the instances of the "C" function, which are reproduced below.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b328.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 9)">
+<p>Okay! As you may remember from the previous example, only the circles at (2,2) and (4,4) are colliding with each other. So, we can still conclude that only "C((2,2),(4,4))" and "C((4,4),(2,2))" will result in nonzero values.</p>
+<p>What is the value of "C((2,2),(4,4))"? By our new definition, it must be (4,4) because (2,2) and (4,4) are not identical and the distance between them is less than 4 (where 4 is the minimum distance required to ensure that the two circles do not overlap). For a similar reason, the value of "C((4,4),(2,2))" must be (2,2).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b338.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 10)">
+<p>This eventually yields the following search result:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b339.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 11)">
+<p>Instead of just 1, here we've got the origins of collsion - i.e. positions of those who are "pushing" their neighbors due to physical contact.</p>
+<p>The 2nd element of "Row 1's Search Result" is set to (2,2). This indicates that the 2nd row's circle is being pushed away by the circle at (2,2).</p>
+<p>Similarly, the 1st element of "Row 2's Search Result" is set to (4,4). This indicates that the 1st row's circle is being pushed away by the circle at (4,4).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b340.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 12)">
+<p>And by "push", I mean a force which is being applied from one circle to the other.</p>
+<p>For example, a push that the circle at (4,4) receives from the circle at (2,2) can be written as "F((4,4),(2,2))", since the first argument of "F" denotes the force's recipient whereas the second argument denotes the force's sender (and vice versa for the circle at (2,2)).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b341.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 13)">
+<p>Our next goal is to generate forces by means of this "F" function. For this purpose, we will first need to add an extra column to our data table, and fill it with "F(_,_)".</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b342.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 14)">
+<p>This is where we will start constructing force vectors. First, let us add our search results to the column of "F" functions, by means of the multiplication shown below.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b343.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 15)">
+<p>This will result in the following table, in which the "F" functions are now partially filled out.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b344.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 16)">
+<p>The "F" function inside the 3rd row, though, still has its second argument left as unknown because nothing was added to it (adding 0 is the same thing as adding nothing).</p>
+<p>Next, let us add our circle's positions to these partially filled "F" functions:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b345.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 17)">
+<p>Can you guess what it's about to do? Yeah, you got it right (probably). The positions, (2,2) and (4,4), will fill out the remaining underbars (_) of their respective "F" functions.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b346.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 18)">
+<p>Now, how shall we evaluate these resulting "F" functions? Indeed, it is possible for us to come up with an algebraic formula which will tell us how "F" should be computed, but it takes too much time to go through such a process.</p>
+<p>Therefore, let us simply assume for now that "F((2,2),(4,4))" evaluates to (-1,-1), while "F((4,4),(2,2))" evaluates to (1,1) and "F(_,(8,2))" evaluates to (0,0).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b347.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 19)">
+<p>These are the force vectors which will be responsible for "pushing" circles away from each other, so that they can practice social distancing. In order to make that happen, let us add these forces to the current position values (via the multiplication shown below).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b348.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 20)">
+<p>This will update the positions of our two colliding circles.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b349.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 21)">
+<p>As you can see in this table, 2 events happened due to collision:</p>
+<p>(1) The circle at (2,2) got pushed by the circle at (4,4), thereby being relocated to (1,1).<br>(2) The circle at (4,4) got pushed by the circle at (2,2), thereby being relocated to (5,5).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b350.jpg" alt="Linear Algebra for Game Development - Part 22 (Figure 22)"><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-27.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>
