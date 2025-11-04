@@ -1,10 +1,10 @@
 import PhysicsVoxel from "./physicsVoxel";
-import Circle2 from "../math/types/circle2";
+import AABB2 from "../../math/types/aabb2";
 
 export default interface PhysicsObject
 {
     objectId: string;
     collisionLayer: number;
-    collisionShape: Circle2;
+    hitbox: AABB2;
     intersectingVoxels: PhysicsVoxel[];
 }

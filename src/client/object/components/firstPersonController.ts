@@ -1,15 +1,14 @@
 import * as THREE from "three";
 import GraphicsManager from "../../graphics/graphicsManager";
-import GameObject from "../types/gameObject";
 import MeshFactory from "../../graphics/factories/meshFactory";
-import VoxelObject from "../types/voxelObject";
+import GameObjectComponent from "./gameObjectComponent";
+import VoxelObject from "./voxelObject";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 const objTemp: THREE.Object3D = new THREE.Object3D();
 
-export default class FirstPersonController
+export default class FirstPersonController extends GameObjectComponent
 {
-    private gameObject: GameObject;
     private pointerIsDown: boolean = false;
     private pointerDownPos: THREE.Vector2 = new THREE.Vector2();
     private pointerDragPos: THREE.Vector2 = new THREE.Vector2();
@@ -18,12 +17,13 @@ export default class FirstPersonController
 
     private pointerInstructionRemoved = false;
 
-    constructor(gameObject: GameObject)
+    async onSpawn(): Promise<void>
     {
-        this.gameObject = gameObject;
+        if (!this.gameObject.isMine())
+            throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
 
         const camera = GraphicsManager.getCamera();
-        gameObject.obj.add(camera);
+        this.gameObject.obj.add(camera);
         camera.position.set(0, 2, 0);
 
         const pointLight = new THREE.PointLight(0xffffff, 4.0, 16, 0.5);
@@ -47,6 +47,10 @@ export default class FirstPersonController
         canvas.addEventListener("click", this.onClick);
     }
 
+    async onDespawn(): Promise<void>
+    {
+    }
+
     update(deltaTime: number): void
     {
         if (this.pointerIsDown)
@@ -62,7 +66,7 @@ export default class FirstPersonController
             const dy = (this.pointerDragPos.y - this.pointerDownPos.y) * y_sensitivity;
 
             const dxWithSpeedLimit = Math.max(-1, Math.min(1, dx));
-            const dyWithSpeedLimit = Math.max(-1, Math.min(1, dy));
+            const dyWithSpeedLimit = Math.max(-0.5, Math.min(0.5, dy));
             
             this.gameObject.obj.rotateY(-3 * deltaTime * dxWithSpeedLimit);
 

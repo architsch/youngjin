@@ -1,8 +1,8 @@
 import * as THREE from "three";
+import GameObjectComponent from "./gameObjectComponent";
+import MaterialParams from "../../graphics/types/materialParams";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GraphicsManager from "../../graphics/graphicsManager";
-import GameObject from "./gameObject";
-import MaterialParams from "../../graphics/types/materialParams";
 
 const pixelBleedingPreventionShift = 0.5 / 128;
 const textureGridCellScale = 0.125;
@@ -10,31 +10,31 @@ const tempObj = new THREE.Object3D();
 const xAxis = new THREE.Vector3(1, 0, 0);
 const yAxis = new THREE.Vector3(0, 1, 0);
 
-export default abstract class InstancedMeshObject extends GameObject
+export default class InstancedMeshGraphics extends GameObjectComponent
 {
-    protected instanceIds: number[] = [];
+    instanceIds: number[] = [];
+    getMeshMaterialParams: (() => MaterialParams) | undefined;
+    getMeshGeometryId: (() => string) | undefined;
+    getTotalNumInstances: (() => number) | undefined;
+    getNumInstancesToRent: (() => number) | undefined;
+    getMeshInstanceInfo: ((indexInInstanceIdsArray: number)
+        => { xOffset: number, yOffset: number, zOffset: number,
+            xAxisAngle: number, yAxisAngle: number, textureIndex: number }) | undefined;
 
     getMeshId(): string
     {
-        const materialParams = this.params.metadata.materialParams;
+        const materialParams = this.getMeshMaterialParams!();
         const materialId = `${materialParams.type}-${materialParams.additionalParam}`;
-        return `${this.params.metadata.geometryId}-${materialId}`;
+        return `${this.getMeshGeometryId!()}-${materialId}`;
     }
-
-    abstract getNumInstancesToRent(): number;
-    abstract getMeshInstanceInfo(indexInInstanceIdsArray: number)
-        : { xOffset: number, yOffset: number, zOffset: number,
-            xAxisAngle: number, yAxisAngle: number, textureIndex: number };
 
     async onSpawn(): Promise<void>
     {
-        await super.onSpawn();
-
         const { instancedMesh, rentedInstanceIds } = await MeshFactory.loadInstancedMesh(
-            this.params.metadata.geometryId as string,
-            this.params.metadata.materialParams as MaterialParams,
-            this.params.metadata.totalNumInstances as number,
-            this.getNumInstancesToRent()
+            this.getMeshGeometryId!(),
+            this.getMeshMaterialParams!(),
+            this.getTotalNumInstances!(),
+            this.getNumInstancesToRent!()
         );
         for (const instanceId of rentedInstanceIds)
             this.instanceIds.push(instanceId);
@@ -46,13 +46,13 @@ export default abstract class InstancedMeshObject extends GameObject
 
         GraphicsManager.addObjectToSceneIfNotAlreadyAdded(instancedMesh);
 
-        this.obj.updateMatrixWorld();
-        this.obj.add(tempObj);
+        this.gameObject.obj.updateMatrixWorld();
+        this.gameObject.obj.add(tempObj);
 
         for (let i = 0; i < rentedInstanceIds.length; ++i)
         {
             const instanceId = rentedInstanceIds[i];
-            const info = this.getMeshInstanceInfo(i);
+            const info = this.getMeshInstanceInfo!(i);
 
             tempObj.position.set(0, 0, 0);
             tempObj.rotation.set(0, 0, 0);
@@ -79,8 +79,6 @@ export default abstract class InstancedMeshObject extends GameObject
 
     async onDespawn(): Promise<void>
     {
-        await super.onDespawn();
-
         MeshFactory.unload(this.getMeshId(), this.instanceIds);
     }
 }

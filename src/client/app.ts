@@ -1,12 +1,11 @@
 import ObjectManager from "./object/objectManager";
 import VoxelManager from "../shared/voxel/voxelManager";
-import RoomRuntimeMemory from "../shared/room/roomRuntimeMemory";
+import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "./networking/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
-import Room from "../shared/room/room";
-import VoxelGridEncoding from "../shared/voxel/voxelGridEncoding";
-import VoxelGridGenerator from "../shared/voxel/voxelGridGenerator";
+import Room from "../shared/room/types/room";
+import PersistentObjectManager from "../shared/object/persistentObjectManager";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -48,27 +47,10 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
     currentRoom = roomRuntimeMemory.room;
 
     await GraphicsManager.load(update);
-
-    const decodedVoxelGrid = VoxelGridEncoding.decode(roomRuntimeMemory.room.encodedVoxelGrid);
-    /*
-    const encoded1 = roomRuntimeMemory.room.encodedVoxelGrid;
-    const encoded2 = VoxelGridEncoding.encode(VoxelGridGenerator.generateEmptyRoom(32, 32, 0, 1));
-    const len = Math.min(encoded1.length, encoded2.length);
-    const diff: any[] = [];
-    for (let i = 0; i < len; ++i)
-    {
-        const c1 = encoded1[i];
-        const c2 = encoded2[i];
-        if (c1 != c2)
-        {
-            diff.push({i, c1, c2});
-        }
-    }
-    console.log(`Encoding comparison :: length1 = ${encoded1.length}, length2 = ${encoded2.length}, diff = ${JSON.stringify(diff)}`);
-    */
+    const decodedVoxelGrid = VoxelManager.loadRoom(roomRuntimeMemory);
     PhysicsManager.loadRoom(roomRuntimeMemory, decodedVoxelGrid);
-    VoxelManager.loadRoom(roomRuntimeMemory, decodedVoxelGrid);
-    await ObjectManager.load(roomRuntimeMemory, decodedVoxelGrid);
+    const decodedPersistentObjects = PersistentObjectManager.loadRoom(roomRuntimeMemory);
+    await ObjectManager.load(roomRuntimeMemory, decodedVoxelGrid, decodedPersistentObjects);
 
     prevTime = performance.now() * 0.001;
     deltaTimePending = 0;
@@ -80,8 +62,9 @@ async function unloadCurrentRoom()
         throw new Error(`No room to unload.`);
 
     await ObjectManager.unload();
-    VoxelManager.unloadRoom(currentRoom.roomID);
+    PersistentObjectManager.unloadRoom(currentRoom.roomID);
     PhysicsManager.unloadRoom(currentRoom.roomID);
+    VoxelManager.unloadRoom(currentRoom.roomID);
     await GraphicsManager.unload();
 
     currentRoom = undefined;

@@ -1,4 +1,4 @@
-import LineSegment2 from "../math/types/lineSegment2";
+import LineSegment2 from "../../math/types/lineSegment2";
 
 export default interface PhysicsHitState
 {

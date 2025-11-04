@@ -1,13 +1,18 @@
-import Voxel from "./voxel";
-import VoxelGrid from "./voxelGrid";
-import VoxelQuad from "./voxelQuad";
+import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
+import PersistentObject from "../object/types/persistentObject";
+import Voxel from "../voxel/types/voxel";
+import VoxelGrid from "../voxel/types/voxelGrid";
+import VoxelQuad from "../voxel/types/voxelQuad";
 
 type CollisionLayerMask = number;
 
-const VoxelGridGenerator =
+const staticRoomIDs = ["s1", "s2", "s3", "s4"];
+
+const RoomGenerator =
 {
-    generateEmptyRoom: (numGridRows: number, numGridCols: number,
-        floorTextureIndex: number, wallTextureIndex: number): VoxelGrid =>
+    generateEmptyRoom: (roomID: string, numGridRows: number, numGridCols: number,
+        floorTextureIndex: number, wallTextureIndex: number)
+        : {voxelGrid: VoxelGrid, persistentObjects: PersistentObject[]} =>
     {
         const voxels = new Array<Voxel>(numGridRows * numGridCols);
         for (let row = 0; row < numGridRows; ++row)
@@ -30,7 +35,35 @@ const VoxelGridGenerator =
         makePillarVoxel(voxels, numGridCols, numGridRows-4, numGridCols-4, wallTextureIndex);
         makePillarVoxel(voxels, numGridCols, 3, numGridCols-4, wallTextureIndex);
         makePillarVoxel(voxels, numGridCols, numGridRows-4, 3, wallTextureIndex);
-        return { numGridRows, numGridCols, voxels };
+
+        const persistentObjects: PersistentObject[] = [];
+
+        /*let shift = 12;
+        const objectTypeIndex = ObjectTypeConfigMap.getIndexByType("Portal");
+        for (const otherRoomID of staticRoomIDs)
+        {
+            if (otherRoomID != roomID)
+            {
+                const x = shift;
+                const y = 0;
+                const z = 1.5;
+                shift += 4;
+                const objectId = `p${x}-${y}-${z}`;
+
+                persistentObjects.push({
+                    objectId,
+                    objectTypeIndex,
+                    direction: "+z",
+                    x, y, z,
+                    metadata: otherRoomID
+                });
+            }
+        }*/
+        
+        return {
+            voxelGrid: { numGridRows, numGridCols, voxels },
+            persistentObjects,
+        };
     },
 }
 
@@ -76,7 +109,7 @@ function makeVoxel(voxels: Voxel[], numGridCols: number, row: number, col: numbe
 }
 
 //---------------------------------------------------------------------------
-// Quad Operations
+// VoxelQuad Operations
 //---------------------------------------------------------------------------
 
 function addFloorQuad(textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
@@ -93,4 +126,8 @@ function addWallQuads(facingAxis: "x" | "y" | "z", orientation: "-" | "+",
     return 0b0001;
 }
 
-export default VoxelGridGenerator;
+//---------------------------------------------------------------------------
+// PersistentObject Operations
+//---------------------------------------------------------------------------
+
+export default RoomGenerator;

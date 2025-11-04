@@ -1,8 +1,8 @@
 import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import ObjectMessageParams from "../../shared/object/objectMessageParams"
-import ObjectSyncParams from "../../shared/object/objectSyncParams";
-import RoomChangeRequestParams from "../../shared/room/roomChangeRequestParams";
+import ObjectMessageParams from "../../shared/object/types/objectMessageParams"
+import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
+import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
 import User from "../../shared/auth/user";
 import RoomManager from "../room/roomManager";
 import SocketUserContext from "./types/socketUserContext";
@@ -54,7 +54,7 @@ const GameSockets =
             });
 
             // A recently connected client should automatically join the default room.
-            await RoomManager.changeUserRoom(socketUserContext, "s0", false);
+            await RoomManager.changeUserRoom(socketUserContext, "s1", false);
         });
 
         signalProcessingInterval = setInterval(() => {

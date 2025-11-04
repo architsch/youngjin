@@ -1,21 +1,24 @@
 import User from "../../shared/auth/user";
-import ObjectRuntimeMemory from "../../shared/object/objectRuntimeMemory";
+import ObjectRuntimeMemory from "../../shared/object/types/objectRuntimeMemory";
 import PhysicsManager from "../../shared/physics/physicsManager";
-import Room from "../../shared/room/room";
-import RoomRuntimeMemory from "../../shared/room/roomRuntimeMemory";
-import Circle2 from "../../shared/math/types/circle2";
-import ObjectDespawnParams from "../../shared/object/objectDespawnParams";
+import Room from "../../shared/room/types/room";
+import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
+import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import Vec2 from "../../shared/math/types/vec2";
-import ObjectTransform from "../../shared/object/objectTransform";
-import ObjectDesyncResolveParams from "../../shared/object/objectDesyncResolveParams";
-import ObjectSyncParams from "../../shared/object/objectSyncParams";
-import VoxelGridEncoding from "../../shared/voxel/voxelGridEncoding";
+import ObjectTransform from "../../shared/object/types/objectTransform";
+import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
+import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
+import VoxelGridEncoding from "../../shared/voxel/encoding/voxelGridEncoding";
 import dotenv from "dotenv";
-import VoxelGridGenerator from "../../shared/voxel/voxelGridGenerator";
+import RoomGenerator from "../../shared/room/roomGenerator";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import VoxelManager from "../../shared/voxel/voxelManager";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
-import ObjectMessageParams from "../../shared/object/objectMessageParams";
+import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
+import PersistentObjectEncoding from "../../shared/object/encoding/persistentObjectEncoding";
+import PersistentObjectManager from "../../shared/object/persistentObjectManager";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import AABB2 from "../../shared/math/types/aabb2";
 dotenv.config();
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
@@ -40,6 +43,7 @@ const RoomManager =
 
         const roomRuntimeMemory = roomRuntimeMemories[roomID];
         roomRuntimeMemory.room.encodedVoxelGrid = VoxelManager.getEncodedVoxelGrid(roomID);
+        roomRuntimeMemory.room.encodedPersistentObjects = PersistentObjectManager.getEncodedPersistentObjects(roomID);
 
         socketUserContext.socket.emit("changeRoom", roomRuntimeMemory);
     },
@@ -137,26 +141,36 @@ async function loadRoom(roomID: string): Promise<RoomRuntimeMemory>
     if (roomRuntimeMemories[roomID] != undefined)
         throw new Error(`RoomManager.loadRoom :: RoomRuntimeMemory already exists (roomID = ${roomID})`);
 
-    const room: Room = { // TODO: Fetch from database
-        roomID,
-        roomName: roomID,
-        ownerUserName: "",
-        texturePackURL: `${process.env.MODE == "dev" ? `http://localhost:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`,
-        encodedVoxelGrid: VoxelGridEncoding.encode(VoxelGridGenerator.generateEmptyRoom(32, 32, 0, 1)),
-        linkedRoomIDs: "s1,s2",
-    };
+    let room: Room;
+
+    if (roomID.startsWith("s")) // static room (procedurally generated)
+    {
+        const roomData = RoomGenerator.generateEmptyRoom(roomID, 32, 32, 0, 1);
+        room = {
+            roomID,
+            roomName: roomID,
+            ownerUserName: "", // static room is not owned by anyone
+            texturePackURL: `${process.env.MODE == "dev" ? `http://localhost:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`,
+            encodedVoxelGrid: VoxelGridEncoding.encode(roomData.voxelGrid),
+            encodedPersistentObjects: PersistentObjectEncoding.encode(roomData.persistentObjects),
+        };
+    }
+    else
+    {
+        throw new Error(`Fetching room from database is not supported yet (roomID = ${roomID})`);
+    }
+
     const roomRuntimeMemory: RoomRuntimeMemory = {
         room,
         participantUserNames: {},
         objectRuntimeMemories: {},
     };
-
-    const decodedVoxelGrid = VoxelGridEncoding.decode(room.encodedVoxelGrid);
     roomRuntimeMemories[roomID] = roomRuntimeMemory;
     socketRoomContexts[roomID] = new SocketRoomContext();
 
+    const decodedVoxelGrid = VoxelManager.loadRoom(roomRuntimeMemory);
     PhysicsManager.loadRoom(roomRuntimeMemory, decodedVoxelGrid);
-    VoxelManager.loadRoom(roomRuntimeMemory, decodedVoxelGrid);
+    const decodedPersistentObjects = PersistentObjectManager.loadRoom(roomRuntimeMemory);
     return roomRuntimeMemory;
 }
 
@@ -171,8 +185,9 @@ function unloadRoom(roomID: string)
     delete roomRuntimeMemories[roomID];
     delete socketRoomContexts[roomID];
 
-    VoxelManager.unloadRoom(roomID);
+    PersistentObjectManager.unloadRoom(roomID);
     PhysicsManager.unloadRoom(roomID);
+    VoxelManager.unloadRoom(roomID);
 }
 
 function addUserToRoom(socketUserContext: SocketUserContext, roomID: string, userName: string)
@@ -193,8 +208,6 @@ function addUserToRoom(socketUserContext: SocketUserContext, roomID: string, use
     }
     currentRoomIDByUserName[userName] = roomID;
     roomRuntimeMemory.participantUserNames[userName] = true;
-    
-    socketUserContext.socket.join(roomID);
 
     const socketRoomContext = socketRoomContexts[roomID];
     if (!socketRoomContext)
@@ -205,13 +218,13 @@ function addUserToRoom(socketUserContext: SocketUserContext, roomID: string, use
     // Create the user's player object
     addObject(socketUserContext, { objectSpawnParams: {
         sourceUserName: user.userName,
-        objectType: "Player",
+        objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
         objectId: `#${++lastObjectIdNumber}`,
         transform: {
             x: 16, y: 0, z: 16,
             eulerX: 0, eulerY: Math.PI, eulerZ: 0,
         },
-        metadata: {},
+        metadata: "",
     } });
 }
 
@@ -243,8 +256,6 @@ function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoomShould
     }
     delete currentRoomIDByUserName[user.userName];
     delete roomRuntimeMemory.participantUserNames[user.userName];
-
-    socketUserContext.socket.leave(roomID);
 
     const socketRoomContext = socketRoomContexts[roomID];
     if (!socketRoomContext)
@@ -297,12 +308,23 @@ function addObject(socketUserContext: SocketUserContext, objectRuntimeMemory: Ob
         return;
     }
     roomRuntimeMemory.objectRuntimeMemories[objectId] = objectRuntimeMemory;
-    const collisionShape: Circle2 = {
-        x: objectRuntimeMemory.objectSpawnParams.transform.x,
-        y: objectRuntimeMemory.objectSpawnParams.transform.z,
-        radius: 0.3,
-    };
-    PhysicsManager.addObject(roomID, objectId, collisionShape, 0);
+
+    const config = ObjectTypeConfigMap.getConfigByIndex(objectRuntimeMemory.objectSpawnParams.objectTypeIndex);
+    
+    const colliderConfig = config.components.spawnedByAny?.collider;
+    if (colliderConfig)
+    {
+        const halfSizeX = 0.5 * colliderConfig.hitboxSize.sizeX;
+        const halfSizeY = 0.5 * colliderConfig.hitboxSize.sizeZ;
+    
+        const hitbox: AABB2 = {
+            x: objectRuntimeMemory.objectSpawnParams.transform.x,
+            y: objectRuntimeMemory.objectSpawnParams.transform.z,
+            halfSizeX,
+            halfSizeY,
+        };
+        PhysicsManager.addObject(roomID, objectId, hitbox, colliderConfig.collisionLayer);
+    }
 
     const socketRoomContext = socketRoomContexts[roomID];
     if (!socketRoomContext)
@@ -327,18 +349,24 @@ function removeObject(socketUserContext: SocketUserContext, objectId: string)
         console.error(`RoomManager.removeObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-    if (roomRuntimeMemory.objectRuntimeMemories[objectId] == undefined)
+    const objectRuntimeMemory = roomRuntimeMemory.objectRuntimeMemories[objectId];
+    if (objectRuntimeMemory == undefined)
     {
         console.error(`RoomManager.removeObject :: ObjectRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
     delete roomRuntimeMemory.objectRuntimeMemories[objectId];
-    PhysicsManager.removeObject(roomID, objectId);
+
+    const config = ObjectTypeConfigMap.getConfigByIndex(objectRuntimeMemory.objectSpawnParams.objectTypeIndex);
+    const colliderConfig = config.components.spawnedByAny?.collider;
+    if (colliderConfig)
+        PhysicsManager.removeObject(roomID, objectId);
+    
     const despawnParams: ObjectDespawnParams = { objectId };
 
     const socketRoomContext = socketRoomContexts[roomID];
     if (!socketRoomContext)
-        console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+        console.error(`RoomManager.removeObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
         socketRoomContext.multicastSignal("objectDespawn", despawnParams, user.userName);
 }

@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import ObjectSyncParams from "../../../shared/object/objectSyncParams";
-import GameObject from "../types/gameObject";
-import ObjectDesyncResolveParams from "../../../shared/object/objectDesyncResolveParams";
+import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
+import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
+import GameObjectComponent from "./gameObjectComponent";
 
 const syncIntervalInMillis = 200;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
@@ -9,30 +9,33 @@ const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
 const vec3Temp = new THREE.Vector3();
 const eulerTemp = new THREE.Euler();
 
-export default class ObjectSyncReceiver
+export default class ObjectSyncReceiver extends GameObjectComponent
 {
-    private gameObject: GameObject;
-    private timeInterpRange: [number, number];
-    private positionInterpRange: [THREE.Vector3, THREE.Vector3];
-    private quaternionInterpRange: [THREE.Quaternion, THREE.Quaternion];
+    private timeInterpRange: [number, number] = [0, 0];
+    private positionInterpRange: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3()];
+    private quaternionInterpRange: [THREE.Quaternion, THREE.Quaternion] = [new THREE.Quaternion(), new THREE.Quaternion()];
 
-    constructor(gameObject: GameObject)
+    async onSpawn(): Promise<void>
     {
-        this.gameObject = gameObject;
+        if (this.gameObject.isMine())
+            throw new Error("User's own object is not allowed to have the ObjectSyncEmitter component.");
 
         const currTime = performance.now();
-        this.timeInterpRange = [currTime, currTime];
+        this.timeInterpRange[0] = currTime;
+        this.timeInterpRange[1] = currTime;
 
-        this.positionInterpRange = [new THREE.Vector3(), new THREE.Vector3()];
-        this.positionInterpRange[0].copy(gameObject.position);
-        this.positionInterpRange[1].copy(gameObject.position);
+        this.positionInterpRange[0].copy(this.gameObject.position);
+        this.positionInterpRange[1].copy(this.gameObject.position);
 
-        this.quaternionInterpRange = [new THREE.Quaternion(), new THREE.Quaternion()];
-        this.quaternionInterpRange[0].setFromEuler(gameObject.rotation);
-        this.quaternionInterpRange[1].setFromEuler(gameObject.rotation);
+        this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);
+        this.quaternionInterpRange[1].setFromEuler(this.gameObject.rotation);
     }
 
-    update(): void
+    async onDespawn(): Promise<void>
+    {
+    }
+
+    update(deltaTime: number): void
     {
         const currTime = performance.now();
 
@@ -55,7 +58,7 @@ export default class ObjectSyncReceiver
             this.quaternionInterpRange[0], this.quaternionInterpRange[1], interpProgressNormalized);
     }
 
-    resolveDesync(params: ObjectDesyncResolveParams): void
+    onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
     {
         const p = params.resolvedPos;
         vec3Temp.set(p.x, this.gameObject.position.y, p.y);
@@ -68,9 +71,9 @@ export default class ObjectSyncReceiver
         this.timeInterpRange = [currTime, currTime];
     }
 
-    onSyncReceived(params: ObjectSyncParams): void
+    onObjectSyncReceived(params: ObjectSyncParams): void
     {
-        //console.log(`(ObjectSyncReceiver) onSyncReceived :: ${JSON.stringify(params)}`);
+        //console.log(`(ObjectSyncReceiver) onObjectSyncReceived :: ${JSON.stringify(params)}`);
 
         if (this.gameObject.params.objectId != params.objectId)
         {

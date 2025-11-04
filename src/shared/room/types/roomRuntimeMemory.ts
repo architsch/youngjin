@@ -1,5 +1,5 @@
-import ObjectRuntimeMemory from "../object/objectRuntimeMemory";
-import Room from "./room";
+import ObjectRuntimeMemory from "../../object/types/objectRuntimeMemory";
+import Room from "../types/room";
 
 export default interface RoomRuntimeMemory
 {

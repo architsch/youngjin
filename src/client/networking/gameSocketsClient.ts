@@ -1,11 +1,11 @@
 import { io, Socket } from "socket.io-client";
-import ObjectMessageParams from "../../shared/object/objectMessageParams";
-import ObjectSyncParams from "../../shared/object/objectSyncParams";
-import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/object/objectDespawnParams";
-import ObjectDesyncResolveParams from "../../shared/object/objectDesyncResolveParams";
+import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
+import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
+import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
+import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import TextUtil from "../../shared/embeddedScripts/util/textUtil"
-import RoomRuntimeMemory from "../../shared/room/roomRuntimeMemory";
+import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "./thingsPoolEnv";
 import Observable from "../util/observable";
 import ObjectManager from "../object/objectManager";
@@ -19,6 +19,7 @@ const GameSocketsClient =
         socket = io(`${env.socket_server_url}/game_sockets`);
 
         socket.on("connect_error", (err) => {
+            console.error(`SocketIO connection error :: ${err}`);
             if (err.message.startsWith("http"))
                 (window as any).location.href = err.message;
             else if (env.mode == "dev")
@@ -115,8 +116,6 @@ const GameSocketsClient =
     },
 
     emitObjectSync: (params: ObjectSyncParams) => socket.emit("objectSync", params),
-    emitObjectSpawn: (params: ObjectSpawnParams) => socket.emit("objectSpawn", params),
-    emitObjectDespawn: (params: ObjectDespawnParams) => socket.emit("objectDespawn", params),
     emitObjectMessage: (params: ObjectMessageParams) => socket.emit("objectMessage", params),
 
     changeRoomObservable: new Observable<RoomRuntimeMemory>(),

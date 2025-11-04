@@ -1,23 +1,24 @@
 import GameObject from "../object/types/gameObject";
-import Updatable from "../object/interfaces/updatable";
 import GameSocketsClient from "../networking/gameSocketsClient";
-import ObjectSyncParams from "../../shared/object/objectSyncParams";
-import ObjectSpawnParams from "../../shared/object/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/object/objectDespawnParams";
-import NetworkObject from "../object/types/networkObject";
-import ObjectFactory from "../object/objectFactory";
-import Player from "../object/types/player";
-import ObjectMessageParams from "../../shared/object/objectMessageParams";
+import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
+import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
+import ObjectFactory from "./factories/objectFactory";
+import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import App from "../app";
-import VoxelObject from "./types/voxelObject";
-import RoomRuntimeMemory from "../../shared/room/roomRuntimeMemory";
-import ObjectDesyncResolveParams from "../../shared/object/objectDesyncResolveParams";
+import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
+import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import MaterialParams from "../graphics/types/materialParams";
-import VoxelGrid from "../../shared/voxel/voxelGrid";
+import VoxelGrid from "../../shared/voxel/types/voxelGrid";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import PersistentObject from "../../shared/object/types/persistentObject";
+import VoxelObject from "./components/voxelObject";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
-const updatableGameObjects: {[objectId: string]: Updatable} = {};
-const players: {[userName: string]: Player} = {};
+const updatableGameObjects: {[objectId: string]: GameObject} = {};
+const players: {[userName: string]: GameObject} = {};
+
+const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
 const ObjectManager =
 {
@@ -25,36 +26,63 @@ const ObjectManager =
     {
         return gameObjects[objectId];
     },
-    getMyPlayer: (): Player | undefined =>
+    getMyPlayer: (): GameObject | undefined =>
     {
-        return players[App.getEnv().user.userName];
+        const env = App.getEnv();
+        if (env && env.user)
+            return players[App.getEnv().user.userName];
+        console.error(`Failed to fetch the user data (env = ${JSON.stringify(env)})`);
+        return undefined;
     },
     update: (deltaTime: number) =>
     {
         for (const updatableGameObject of Object.values(updatableGameObjects))
-            updatableGameObject.update(deltaTime);
+        {
+            for (const component of Object.values(updatableGameObject.components))
+            {
+                if (component.update)
+                    component.update(deltaTime);
+            }
+        }
     },
-    load: async (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid) =>
+    load: async (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid,
+        decodedPersistentObjects: PersistentObject[]) =>
     {
-        const materialParams: MaterialParams = {
-            type: "Regular",
-            additionalParam: roomRuntimeMemory.room.texturePackURL,
-        };
-
+        const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
         for (const voxel of decodedVoxelGrid.voxels)
         {
-            const gameObject = ObjectFactory.createClientSideObject("VoxelObject",
+            const gameObject = ObjectFactory.createClientSideObject(
+                voxelTypeIndex,
                 { // transform
                     x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5,
                     eulerX: 0, eulerY: 0, eulerZ: 0,
-                }, { // metadata
-                    geometryId: "VoxelQuad",
-                    materialParams,
-                    totalNumInstances: 8192,
                 });
-            (gameObject as VoxelObject).setVoxel(voxel);
+            const voxelObject = gameObject.components.voxelObject! as VoxelObject;
+            voxelObject.setVoxel(voxel);
             await ObjectManager.spawnObject(gameObject);
         };
+
+        // Load objects from decodedPersistentObjects
+        for (const po of decodedPersistentObjects)
+        {
+            // Let's assume that (+z) is the direction in which the 0 y-axis angle is pointing.
+            const angleY = (
+                (po.direction == "+z") ? 0 : (
+                    (po.direction == "+x") ? 0.5*Math.PI : (
+                        (po.direction == "-z") ? Math.PI : -0.5*Math.PI
+                    )
+                )
+            );
+            const objectSpawnParams: ObjectSpawnParams = {
+                sourceUserName: "", // Persistent objects are not directly owned by anyone.
+                objectTypeIndex: po.objectTypeIndex,
+                objectId: po.objectId,
+                transform: {x: po.x, y: po.y, z: po.z, eulerX: 0, eulerY: angleY, eulerZ: 0},
+                metadata: po.metadata,
+            };
+            const object = ObjectFactory.createServerSideObject(objectSpawnParams);
+            await ObjectManager.spawnObject(object);
+        }
 
         // Load objects from objectRuntimeMemories
         for (const objectRuntimeMemory of Object.values(roomRuntimeMemory.objectRuntimeMemories))
@@ -66,22 +94,24 @@ const ObjectManager =
         // Add listeners
         GameSocketsClient.objectSyncObservable.addListener("room", (params: ObjectSyncParams) => {
             const gameObject = gameObjects[params.objectId];
-            if (!gameObject)
+            if (gameObject == undefined)
             {
-                console.error(`Server-side GameObject not found (objectId = ${params.objectId})`);
+                console.error(`Object to be synced not found (params.objectId = ${params.objectId})`);
                 return;
             }
-            if ("onObjectSync" in gameObject)
-                (gameObject as NetworkObject).onObjectSync(params);
-            else
-                console.error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
+            for (const component of Object.values(gameObject.components))
+            {
+                if (component.onObjectSyncReceived)
+                    component.onObjectSyncReceived(params);
+            }
         });
         GameSocketsClient.objectDesyncResolveObservable.addListener("room", (params: ObjectDesyncResolveParams) => {
             const gameObject = gameObjects[params.objectId];
-            if ("onObjectDesyncResolve" in gameObject)
-                (gameObject as NetworkObject).onObjectDesyncResolve(params);
-            else
-                throw new Error(`GameObject is not a NetworkObject (${JSON.stringify(params)})`);
+            for (const component of Object.values(gameObject.components))
+            {
+                if (component.onObjectDesyncResolveReceived)
+                    component.onObjectDesyncResolveReceived(params);
+            }
         });
         GameSocketsClient.objectSpawnObservable.addListener("room", async (params: ObjectSpawnParams) => {
             if (gameObjects[params.objectId] != undefined)
@@ -99,9 +129,10 @@ const ObjectManager =
                 console.error(`Message sender object not found (params.senderObjectId = ${params.senderObjectId})`);
                 return;
             }
-            if ("onObjectMessageReceived" in gameObject)
+            for (const component of Object.values(gameObject.components))
             {
-                (gameObject as any).onObjectMessageReceived(params);
+                if (component.onObjectMessageReceived)
+                    component.onObjectMessageReceived(params);
             }
         });
     },
@@ -140,10 +171,17 @@ const ObjectManager =
         if (gameObjects[object.params.objectId] == undefined)
         {
             gameObjects[object.params.objectId] = object;
-            if ("update" in object)
-                updatableGameObjects[object.params.objectId] = object as Updatable;
-            if (object.params.objectType == "Player")
-                players[object.params.sourceUserName] = object as Player;
+
+            let updatable = false;
+            for (const component of Object.values(object.components))
+            {
+                if (component.update)
+                    updatable = true;
+            }
+            if (updatable)
+                updatableGameObjects[object.params.objectId] = object;
+            if (object.params.objectTypeIndex == playerTypeIndex) 
+                players[object.params.sourceUserName] = object;
             await object.onSpawn();
         }
         else

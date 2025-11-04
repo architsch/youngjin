@@ -4,6 +4,6 @@ export default interface Room
     roomName: string;
     ownerUserName: string;
     texturePackURL: string;
-    encodedVoxelGrid: string;
-    linkedRoomIDs: string; // A comma-separated list of roomIDs.
+    encodedVoxelGrid: ArrayBuffer;
+    encodedPersistentObjects: ArrayBuffer;
 }

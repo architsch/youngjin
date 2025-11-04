@@ -1,6 +1,6 @@
 import DB from "./db";
 import User from "../../shared/auth/user";
-import Room from "../../shared/room/room";
+import Room from "../../shared/room/types/room";
 import { Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();

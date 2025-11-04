@@ -1,62 +1,52 @@
-import Voxel from "./voxel";
-import VoxelGrid from "./voxelGrid";
-import VoxelQuad from "./voxelQuad";
-
-const unicodeShiftFactor = 0;
-
-let buffer = new Uint8Array(32768);
-let currBufferIndex = 0;
+import Voxel from "../types/voxel";
+import VoxelGrid from "../types/voxelGrid";
+import VoxelQuad from "../types/voxelQuad";
 
 const VoxelGridEncoding =
 {
-    encode: (voxelGrid: VoxelGrid): string =>
+    encode: (voxelGrid: VoxelGrid): ArrayBuffer =>
     {
-        currBufferIndex = 0;
-        buffer[currBufferIndex++] = voxelGrid.numGridRows;
-        buffer[currBufferIndex++] = voxelGrid.numGridCols;
+        let numBytesRequired = 2;
         for (const voxel of voxelGrid.voxels)
-            encodeVoxel(voxel, voxelGrid);
+            numBytesRequired += 1 + 2 * voxel.quads.length; // 1 Header Byte for each Voxel. 2 Quad Bytes for each Quad
+        const bufferState = { view: new Uint8Array(numBytesRequired), index: 0 };
 
-        const bufferLength = currBufferIndex;
-        const charArray = new Array<string>(bufferLength);
-        for (let i = 0; i < bufferLength; ++i)
-        {
-            charArray[i] = String.fromCharCode(buffer[i] + unicodeShiftFactor);
-        }
-        return charArray.join("");
+        bufferState.view[bufferState.index++] = voxelGrid.numGridRows;
+        bufferState.view[bufferState.index++] = voxelGrid.numGridCols;
+        for (const voxel of voxelGrid.voxels)
+            encodeVoxel(voxel, voxelGrid, bufferState);
+
+        const buffer = bufferState.view.buffer;
+        return buffer;
     },
-    decode: (encodedVoxelGrid: string): VoxelGrid =>
+    decode: (encodedVoxelGrid: ArrayBuffer): VoxelGrid =>
     {
-        currBufferIndex = 0;
-        for (let i = 0; i < encodedVoxelGrid.length; ++i)
-        {
-            const charCode = encodedVoxelGrid.charCodeAt(i);
-            buffer[currBufferIndex++] = charCode - unicodeShiftFactor;
-        }
+        const bufferState = { view: new Uint8Array(encodedVoxelGrid), index: 0 };
         
-        const bufferLength = currBufferIndex;
-        currBufferIndex = 0;
-        
-        const numGridRows = buffer[currBufferIndex++];
-        const numGridCols = buffer[currBufferIndex++];
-        const voxels = new Array<Voxel>(numGridRows * numGridCols);
+        const numGridRows = bufferState.view[bufferState.index++];
+        const numGridCols = bufferState.view[bufferState.index++];
+        const numVoxels = numGridRows * numGridCols;
+        const voxels = new Array<Voxel>(numVoxels);
         voxels.length = 0;
 
         const numGridColsInv = 1 / numGridCols;
         let voxelIndex = 0;
 
-        while (currBufferIndex < bufferLength)
+        while (bufferState.index < bufferState.view.length)
         {
+            if (voxelIndex >= numVoxels)
+                throw new Error(`Voxel index exceeded the supposed number of voxels (voxelIndex = ${voxelIndex}, numVoxels = ${numVoxels})`);
             const row = Math.floor(voxelIndex * numGridColsInv);
             const col = voxelIndex % numGridCols;
-            voxels.push(decodeVoxel(row, col));
-            ++voxelIndex;
+            if (row < 0 || col < 0 || row >= numGridRows || col >= numGridCols)
+                throw new Error(`Decoded voxel coordinates are out of range (row = ${row}, col = ${col}, numGridRows = ${numGridRows}, numGridCols = ${numGridCols})`);
+            voxels[voxelIndex++] = decodeVoxel(row, col, bufferState);
         }
         return { numGridRows, numGridCols, voxels };
     },
 }
 
-function encodeVoxel(voxel: Voxel, voxelGrid: VoxelGrid)
+function encodeVoxel(voxel: Voxel, voxelGrid: VoxelGrid, bufferState: { view: Uint8Array, index: number })
 {
     if (voxel.quads.length == 0)
         throw new Error(`Voxel has no quad in it (row = ${voxel.row}, col = ${voxel.col})`);
@@ -68,7 +58,7 @@ function encodeVoxel(voxel: Voxel, voxelGrid: VoxelGrid)
         throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${voxel.collisionLayerMask}, range = [${0b0000}:${0b1111}])`);
 
     // Header Byte
-    buffer[currBufferIndex++] =
+    bufferState.view[bufferState.index++] =
         ((voxel.collisionLayerMask & 0b1111) << 4) |
         ((voxel.quads.length-1) & 0b1111);
 
@@ -78,21 +68,21 @@ function encodeVoxel(voxel: Voxel, voxelGrid: VoxelGrid)
             throw new Error(`VoxelQuad's texture index is out of range (range = [0,63])`);
 
         // Quad Byte 1
-        buffer[currBufferIndex++] =
+        bufferState.view[bufferState.index++] =
             (((quad.facingAxis == "x") ? 0b00 : (quad.facingAxis == "y" ? 0b01 : 0b10)) << 6) |
             ((quad.orientation == "-" ? 0b0 : 0b1) << 5) |
             ((Math.round(quad.yOffset * 2) & 0b111) << 2);
         
         // Quad Byte 2
-        buffer[currBufferIndex++] =
+        bufferState.view[bufferState.index++] =
             ((quad.textureIndex & 0b111111) << 2);
     }
 }
 
-function decodeVoxel(row: number, col: number): Voxel
+function decodeVoxel(row: number, col: number, bufferState: { view: Uint8Array, index: number }): Voxel
 {
     // Header Byte
-    const headerByte = buffer[currBufferIndex++];
+    const headerByte = bufferState.view[bufferState.index++];
     const collisionLayerMask = (headerByte >> 4) & 0b1111;
     const numQuads = (headerByte & 0b1111) + 1;
 
@@ -100,7 +90,7 @@ function decodeVoxel(row: number, col: number): Voxel
     for (let i = 0; i < numQuads; ++i)
     {
         // Quad Byte 1
-        const quadByte1 = buffer[currBufferIndex++];
+        const quadByte1 = bufferState.view[bufferState.index++];
         const facingAxisRaw = (quadByte1 >> 6) & 0b11;
         const facingAxis = (facingAxisRaw == 0b00) ? "x" : (facingAxisRaw == 0b01 ? "y" : "z");
         const orientationRaw = (quadByte1 >> 5) & 0b1;
@@ -109,7 +99,7 @@ function decodeVoxel(row: number, col: number): Voxel
         const yOffset = yOffsetRaw * 0.5;
 
         // Quad Byte 2
-        const quadByte2 = buffer[currBufferIndex++];
+        const quadByte2 = bufferState.view[bufferState.index++];
         const textureIndex = (quadByte2 >> 2) & 0b111111;
 
         quads[i] = { facingAxis, orientation, yOffset, textureIndex };
@@ -124,12 +114,12 @@ function decodeVoxel(row: number, col: number): Voxel
 //
 // Layout: [Header Byte][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2]...
 //
-// (Header Byte):
+// [Header Byte]:
 //     4 bits for the voxel's collisionLayerMask
 //     4 bits for the number of quads in the voxel's mesh
 //         (binary range of [0000:1111] corresponds to the numerical range of [1:16])
 //
-// (Quad Byte 1):
+// [Quad Byte 1]:
 //     2 bits for the axis that the quad is facing
 //         (00 => x-axis, 01 => y-axis, 10 => z-axis)
 //     1 bit for whether the quad is facing the (-) or (+) direction of the axis
@@ -138,7 +128,7 @@ function decodeVoxel(row: number, col: number): Voxel
 //         (000 => 0.0, 001 => 0.5, 010 => 1.0, 011 => 1.5, 100 => 2.0, 101 => 2.5, 110 => 3.0, 111 => 3.5)
 //     2 bits left unused for now
 //
-// (Quad Byte 2):
+// [Quad Byte 2]:
 //     6 bits for the quad's texture index
 //     2 bits left unused for now
 //------------------------------------------------------------------------------

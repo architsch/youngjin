@@ -3,8 +3,8 @@ import ObjectTransform from "./objectTransform";
 export default interface ObjectSpawnParams
 {
     sourceUserName: string,
-    objectType: string,
+    objectTypeIndex: number,
     objectId: string,
     transform: ObjectTransform,
-    metadata: { [key: string]: any },
+    metadata: string,
 }

@@ -1,8 +1,8 @@
 import * as THREE from "three";
-import ObjectSyncParams from "../../../shared/object/objectSyncParams";
+import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import GameSocketsClient from "../../networking/gameSocketsClient";
-import GameObject from "../../object/types/gameObject";
-import ObjectDesyncResolveParams from "../../../shared/object/objectDesyncResolveParams";
+import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
+import GameObjectComponent from "./gameObjectComponent";
 
 const syncIntervalInMillis = 200;
 const minSyncDistSqr = 0.0001;
@@ -10,22 +10,24 @@ const minSyncAngle = 0.01;
 
 const vec3Temp = new THREE.Vector3();
 
-export default class ObjectSyncEmitter
+export default class ObjectSyncEmitter extends GameObjectComponent
 {
-    private gameObject: GameObject;
-    private lastSyncTime: number;
+    private lastSyncTime: number = 0;
     private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
     private lastSyncedRotation: THREE.Euler = new THREE.Euler();
 
-    constructor(gameObject: GameObject)
+    async onSpawn(): Promise<void>
     {
-        this.gameObject = gameObject;
+        if (!this.gameObject.isMine())
+            throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
+
+        this.gameObject = this.gameObject;
         this.lastSyncTime = performance.now();
-        this.lastSyncedPosition.copy(gameObject.position);
-        this.lastSyncedRotation.copy(gameObject.rotation);
+        this.lastSyncedPosition.copy(this.gameObject.position);
+        this.lastSyncedRotation.copy(this.gameObject.rotation);
     }
 
-    update(): void
+    update(deltaTime: number)
     {
         const currTime = performance.now();
         if (currTime - this.lastSyncTime > syncIntervalInMillis)
@@ -56,7 +58,7 @@ export default class ObjectSyncEmitter
         }
     }
 
-    resolveDesync(params: ObjectDesyncResolveParams): void
+    onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
     {
         const p = params.resolvedPos;
         vec3Temp.set(p.x, this.gameObject.position.y, p.y);

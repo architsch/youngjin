@@ -1,28 +1,34 @@
 import * as THREE from "three";
-import Circle2 from "../../../shared/math/types/circle2";
 import Vec2 from "../../../shared/math/types/vec2";
 import PhysicsManager from "../../../shared/physics/physicsManager";
-import GameObject from "../types/gameObject";
 import App from "../../app";
+import GameObjectComponent from "./gameObjectComponent";
+import AABB2 from "../../../shared/math/types/aabb2";
 
-export default class Collider
+const vec3Temp = new THREE.Vector3();
+
+export default class Collider extends GameObjectComponent
 {
-    private gameObject: GameObject;
-
-    constructor(gameObject: GameObject)
+    async onSpawn(): Promise<void>
     {
-        this.gameObject = gameObject;
+        const hitboxSize = this.componentConfig.hitboxSize;
 
-        const collisionShape: Circle2 = {
+        this.gameObject.obj.getWorldDirection(vec3Temp);
+        const moreAlignedToXAxis = Math.abs(vec3Temp.x) > Math.abs(vec3Temp.z);
+        const reorientedSizeX = moreAlignedToXAxis ? hitboxSize.sizeZ : hitboxSize.sizeX;
+        const reorientedSizeZ = moreAlignedToXAxis ? hitboxSize.sizeX : hitboxSize.sizeZ;
+        const hitbox: AABB2 = {
             x: this.gameObject.position.x,
             y: this.gameObject.position.z,
-            radius: 0.3,
+            halfSizeX: 0.5 * reorientedSizeX,
+            halfSizeY: 0.5 * reorientedSizeZ,
         };
 
-        PhysicsManager.addObject(App.getCurrentRoom()!.roomID, this.gameObject.params.objectId, collisionShape, 0);
+        PhysicsManager.addObject(App.getCurrentRoom()!.roomID, this.gameObject.params.objectId,
+            hitbox, this.componentConfig.collisionLayer);
     }
 
-    onDespawn(): void
+    async onDespawn(): Promise<void>
     {
         PhysicsManager.removeObject(App.getCurrentRoom()!.roomID, this.gameObject.params.objectId);
     }

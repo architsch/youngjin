@@ -1,19 +1,20 @@
-import RoomRuntimeMemory from "../room/roomRuntimeMemory";
-import Voxel from "./voxel";
-import VoxelGrid from "./voxelGrid";
-import VoxelGridEncoding from "./voxelGridEncoding";
+import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
+import Voxel from "./types/voxel";
+import VoxelGrid from "./types/voxelGrid";
+import VoxelGridEncoding from "./encoding/voxelGridEncoding";
 
 const voxelGrids: {[roomID: string]: VoxelGrid} = {};
-
 const voxelsTemp: Voxel[] = new Array<Voxel>(1024);
 
 const VoxelManager =
 {
-    loadRoom: (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid) =>
+    loadRoom: (roomRuntimeMemory: RoomRuntimeMemory): VoxelGrid =>
     {
+        const decodedVoxelGrid = VoxelGridEncoding.decode(roomRuntimeMemory.room.encodedVoxelGrid);
         if (voxelGrids[roomRuntimeMemory.room.roomID] != undefined)
             throw new Error(`VoxelGrid already exists (roomID = ${roomRuntimeMemory.room.roomID})`);
         voxelGrids[roomRuntimeMemory.room.roomID] = decodedVoxelGrid;
+        return decodedVoxelGrid;
     },
     unloadRoom: (roomID: string) =>
     {
@@ -21,10 +22,10 @@ const VoxelManager =
             throw new Error(`VoxelGrid doesn't exist (roomID = ${roomID})`);
         delete voxelGrids[roomID];
     },
-    getEncodedVoxelGrid: (roomID: string): string =>
+    getEncodedVoxelGrid: (roomID: string): ArrayBuffer =>
     {
         const voxelGrid = voxelGrids[roomID];
-        if (voxelGrids[roomID] == undefined)
+        if (voxelGrid == undefined)
             throw new Error(`VoxelGrid doesn't exist (roomID = ${roomID})`);
         return VoxelGridEncoding.encode(voxelGrid);
     },
@@ -32,7 +33,7 @@ const VoxelManager =
     {
         voxelsTemp.length = 0;
         const voxelGrid = voxelGrids[roomID];
-        if (voxelGrids[roomID] == undefined)
+        if (voxelGrid == undefined)
             throw new Error(`VoxelGrid doesn't exist (roomID = ${roomID})`);
 
         const row1 = Math.max(0, Math.floor(centerZ - radius));

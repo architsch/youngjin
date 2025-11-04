@@ -1,14 +1,13 @@
-import Circle2 from "../math/types/circle2";
 import Vec2 from "../math/types/vec2";
 import Geometry2D from "../math/util/geometry2D";
 import Vector2D from "../math/util/vector2D";
-import PhysicsObject from "./physicsObject";
-import PhysicsVoxel from "./physicsVoxel";
-import PhysicsPosUpdateResult from "./physicsPosUpdateResult";
-import RoomRuntimeMemory from "../room/roomRuntimeMemory";
-import PhysicsRoom from "./physicsRoom";
-import PhysicsHitState from "./physicsHitState";
-import VoxelGrid from "../voxel/voxelGrid";
+import PhysicsObject from "./types/physicsObject";
+import PhysicsVoxel from "./types/physicsVoxel";
+import PhysicsPosUpdateResult from "./types/physicsPosUpdateResult";
+import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
+import PhysicsRoom from "./types/physicsRoom";
+import PhysicsHitState from "./types/physicsHitState";
+import VoxelGrid from "../voxel/types/voxelGrid";
 import AABB2 from "../math/types/aabb2";
 
 const rooms: {[roomID: string]: PhysicsRoom} = {};
@@ -27,45 +26,24 @@ const PhysicsManager =
         if (rooms[roomRuntimeMemory.room.roomID] != undefined)
             throw new Error(`Physics-room already exists (roomID = ${roomRuntimeMemory.room.roomID})`);
 
-        const objectById: { [objectId: string]: PhysicsObject } = {};
-        for (const objectRuntimeMemory of Object.values(roomRuntimeMemory.objectRuntimeMemories))
-        {
-            const spawnParams = objectRuntimeMemory.objectSpawnParams;
-            const collisionShape: Circle2 = {
-                x: spawnParams.transform.x,
-                y: spawnParams.transform.z,
-                radius: 0.3,
-            };
-            const intersectingVoxels = new Array<PhysicsVoxel>(4);
-            intersectingVoxels.length = 0;
-
-            objectById[spawnParams.objectId] = {
-                objectId: spawnParams.objectId,
-                collisionLayer: 0,
-                collisionShape,
-                intersectingVoxels,
-            };
-        }
-
         rooms[roomRuntimeMemory.room.roomID] = {
             numGridRows: decodedVoxelGrid.numGridRows,
             numGridCols: decodedVoxelGrid.numGridCols,
             voxels: decodedVoxelGrid.voxels.map(voxel => {
                 const row = voxel.row;
                 const col = voxel.col;
-                const collisionShape = { x1: col, y1: row, x2: col+1, y2: row+1 };
                 const intersectingObjects = new Array<PhysicsObject>(4);
                 intersectingObjects.length = 0;
 
                 const physicsVoxel: PhysicsVoxel = {
                     row, col,
                     collisionLayerMask: voxel.collisionLayerMask,
-                    collisionShape,
+                    hitbox: {x: col+0.5, y: row+0.5, halfSizeX: 0.5, halfSizeY: 0.5},
                     intersectingObjects,
                 };
                 return physicsVoxel;
             }),
-            objectById
+            objectById: {},
         };
     },
     unloadRoom: (roomID: string) =>
@@ -78,7 +56,7 @@ const PhysicsManager =
     {
         return rooms[roomID] != undefined;
     },
-    addObject: (roomID: string, objectId: string, collisionShape: Circle2, collisionLayer: number) =>
+    addObject: (roomID: string, objectId: string, hitbox: AABB2, collisionLayer: number) =>
     {
         //console.log(`PhysicsManager.addObject :: roomID = ${roomID}, objectId = ${objectId}`);
         const room = rooms[roomID];
@@ -92,10 +70,10 @@ const PhysicsManager =
         }
         const intersectingVoxels = new Array<PhysicsVoxel>(4);
         intersectingVoxels.length = 0;
-        const newObject: PhysicsObject = { objectId, collisionLayer, collisionShape, intersectingVoxels };
+        const newObject: PhysicsObject = { objectId, collisionLayer, hitbox: hitbox, intersectingVoxels };
         room.objectById[objectId] = newObject;
 
-        setObjectPosition(roomID, objectId, { x: collisionShape.x, y: collisionShape.y });
+        setObjectPosition(roomID, objectId, { x: hitbox.x, y: hitbox.y });
     },
     removeObject: (roomID: string, objectId: string) =>
     {
@@ -121,7 +99,7 @@ const PhysicsManager =
         if (object == undefined)
             throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
 
-        let startPos: Vec2 = { x: object.collisionShape.x, y: object.collisionShape.y };
+        let startPos: Vec2 = { x: object.hitbox.x, y: object.hitbox.y };
 
         // Any attempt to move more for than the distance of 3 will force-sync the object back to its original location.
         const desyncDistSqr = Vector2D.distSqr(targetPos, startPos);
@@ -139,11 +117,10 @@ const PhysicsManager =
         const dir = Vector2D.normalize(Vector2D.subtract(targetPos, startPos));
         startPos = Vector2D.subtract(startPos, Vector2D.scale(dir, 0.01));
 
-        const radius = object.collisionShape.radius;
-        const minIntersectableX = Math.min(startPos.x, targetPos.x) - radius;
-        const maxIntersectableX = Math.max(startPos.x, targetPos.x) + radius;
-        const minIntersectableY = Math.min(startPos.y, targetPos.y) - radius;
-        const maxIntersectableY = Math.max(startPos.y, targetPos.y) + radius;
+        const minIntersectableX = Math.min(startPos.x, targetPos.x) - object.hitbox.halfSizeX;
+        const maxIntersectableX = Math.max(startPos.x, targetPos.x) + object.hitbox.halfSizeX;
+        const minIntersectableY = Math.min(startPos.y, targetPos.y) - object.hitbox.halfSizeY;
+        const maxIntersectableY = Math.max(startPos.y, targetPos.y) + object.hitbox.halfSizeY;
         const minCol = Math.floor(minIntersectableX);
         const maxCol = Math.floor(maxIntersectableX);
         const minRow = Math.floor(minIntersectableY);
@@ -165,11 +142,15 @@ const PhysicsManager =
             {
                 const voxel = room.voxels[row * room.numGridCols + col];
                 if (getVoxelCollisionLayer(roomID, row, col, object.collisionLayer) != 0)
-                    hitStateTemp = pushCircleAgainstBox(object.collisionShape, targetPos, voxel.collisionShape, hitStateTemp);
+                    pushBoxAgainstBox(object.hitbox, targetPos, voxel.hitbox, hitStateTemp);
             }
         }
-        // TODO: Also process collision with other objects (circles).
-        // ...
+        
+        for (const otherObject of Object.values(room.objectById))
+        {
+            if (object.objectId != otherObject.objectId && object.collisionLayer == otherObject.collisionLayer)
+                hitStateTemp = pushBoxAgainstBox(object.hitbox, targetPos, otherObject.hitbox, hitStateTemp);
+        }
 
         let resolvedPos = targetPos;
 
@@ -189,10 +170,11 @@ const PhysicsManager =
             const projectedHitToTarget = Vector2D.scale(hitTangent, dot / Vector2D.dot(hitTangent, hitTangent));
             const slidedHitPos = Vector2D.add(hitPos, projectedHitToTarget);
 
-            const voxelsHitOnSlide = getVoxelsInCircle(roomID, {
+            const voxelsHitOnSlide = getVoxelsInBox(roomID, {
                 x: slidedHitPos.x,
                 y: slidedHitPos.y,
-                radius: object.collisionShape.radius,
+                halfSizeX: object.hitbox.halfSizeX,
+                halfSizeY: object.hitbox.halfSizeY,
             });
             let slideBlocked = false;
             for (const voxel of voxelsHitOnSlide)
@@ -212,8 +194,9 @@ const PhysicsManager =
             }
         }
         
-        object.collisionShape.x = resolvedPos.x;
-        object.collisionShape.y = resolvedPos.y;
+        object.hitbox.x = resolvedPos.x;
+        object.hitbox.y = resolvedPos.y;
+
         return { resolvedPos, desyncDetected: false };
     },
     forceMoveObject: (roomID: string, objectId: string, targetPos: Vec2) =>
@@ -226,14 +209,14 @@ const PhysicsManager =
         if (object == undefined)
             throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
 
-        object.collisionShape.x = targetPos.x;
-        object.collisionShape.y = targetPos.y;
+        object.hitbox.x = targetPos.x;
+        object.hitbox.y = targetPos.y;
     },
 }
 
-function pushCircleAgainstBox(circle: Circle2, targetPos: Vec2, box: AABB2, hitState: PhysicsHitState): PhysicsHitState
+function pushBoxAgainstBox(sourceHitbox: AABB2, targetPos: Vec2, targetHitbox: AABB2, hitState: PhysicsHitState): PhysicsHitState
 {
-    const result = Geometry2D.circlecastToAABB(circle, targetPos, box);
+    const result = Geometry2D.castAABBAgainstAABB(sourceHitbox, targetPos, targetHitbox);
     if (result.hitRayScale <= hitState.minHitRayScale)
     {
         hitState.minHitRayScale = result.hitRayScale;
@@ -281,9 +264,9 @@ function setObjectPosition(roomID: string, objectId: string, pos: Vec2)
     if (object == undefined)
         throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
 
-    const voxels = getVoxelsInCircle(roomID, object.collisionShape);
-    object.collisionShape.x = pos.x;
-    object.collisionShape.y = pos.y;
+    const voxels = getVoxelsInBox(roomID, object.hitbox);
+    object.hitbox.x = pos.x;
+    object.hitbox.y = pos.y;
 
     removeObjectFromIntersectingVoxels(object);
     for (const voxel of voxels)
@@ -318,17 +301,17 @@ function removeObjectFromVoxel(object: PhysicsObject, voxel: PhysicsVoxel)
         console.error(`Object not found in voxel (object = ${JSON.stringify(object)}, voxel = ${JSON.stringify(voxel)})`);
 }
 
-function getVoxelsInCircle(roomID: string, circle: Circle2): PhysicsVoxel[]
+function getVoxelsInBox(roomID: string, box: AABB2): PhysicsVoxel[]
 {
     const room = rooms[roomID];
     if (rooms[roomID] == undefined)
         throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
 
     voxelsTemp.length = 0;
-    const row1 = Math.floor(circle.y - circle.radius);
-    const col1 = Math.floor(circle.x - circle.radius);
-    const row2 = Math.floor(circle.y + circle.radius);
-    const col2 = Math.floor(circle.x + circle.radius);
+    const row1 = Math.floor(box.y - box.halfSizeY);
+    const col1 = Math.floor(box.x - box.halfSizeX);
+    const row2 = Math.floor(box.y + box.halfSizeY);
+    const col2 = Math.floor(box.x + box.halfSizeX);
     for (let row = row1; row <= row2; ++row)
     {
         for (let col = col1; col <= col2; ++col)

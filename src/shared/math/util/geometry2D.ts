@@ -1,5 +1,4 @@
 import AABB2 from "../types/aabb2";
-import Circle2 from "../types/circle2";
 import Vec2 from "../types/vec2";
 import Vector2D from "./vector2D";
 import LineSegment2 from "../types/lineSegment2";
@@ -7,25 +6,29 @@ import RaycastHitResult2 from "../types/raycastHitResult2";
 
 const Geometry2D =
 {
-    // Returns the circle-casting ray's scale factor which, when applied to the ray,
-    // makes the circle up at the point of collision
+    // Returns the AABB-casting ray's scale factor which, when applied to the ray,
+    // pushes the source AABB to end up at the point of collision
     // between itself and the target AABB.
-    // (Returns 1 when the circle doesn't hit the AABB)
-    // (Warning: This function won't work 100% accurately near the corner of the AABB, where the circle will be treated like a square.)
-    circlecastToAABB: (circle: Circle2, circleEnd: Vec2, aabb: AABB2): RaycastHitResult2 =>
+    // (Returns 1 when the source AABB doesn't hit the target AABB)
+    castAABBAgainstAABB: (source: AABB2, destination: Vec2, target: AABB2): RaycastHitResult2 =>
     {
-        const bottomLeftCorner: Vec2 = { x: aabb.x1 - circle.radius, y: aabb.y1 - circle.radius };
-        const bottomRightCorner: Vec2 = { x: aabb.x2 + circle.radius, y: aabb.y1 - circle.radius };
-        const topLeftCorner: Vec2 = { x: aabb.x1 - circle.radius, y: aabb.y2 + circle.radius };
-        const topRightCorner: Vec2 = { x: aabb.x2 + circle.radius, y: aabb.y2 + circle.radius };
+        const x1 = target.x - target.halfSizeX - source.halfSizeX;
+        const y1 = target.y - target.halfSizeY - source.halfSizeY;
+        const x2 = target.x + target.halfSizeX + source.halfSizeX;
+        const y2 = target.y + target.halfSizeY + source.halfSizeY;
+
+        const bottomLeftCorner: Vec2 = { x: x1, y: y1 };
+        const bottomRightCorner: Vec2 = { x: x2, y: y1 };
+        const topLeftCorner: Vec2 = { x: x1, y: y2 };
+        const topRightCorner: Vec2 = { x: x2, y: y2 };
 
         const bottom: LineSegment2 = {start: bottomLeftCorner, end: bottomRightCorner};
         const right: LineSegment2 = {start: bottomRightCorner, end: topRightCorner};
         const top: LineSegment2 = {start: topRightCorner, end: topLeftCorner};
         const left: LineSegment2 = {start: topLeftCorner, end: bottomLeftCorner};
 
-        const circleStart: Vec2 = { x: circle.x, y: circle.y };
-        const ray: LineSegment2 = { start: circleStart, end: circleEnd };
+        const circleStart: Vec2 = { x: source.x, y: source.y };
+        const ray: LineSegment2 = { start: circleStart, end: destination };
         let minHitRayScale = 1;
         let hitRayScale: number;
         let hitLine: LineSegment2 | undefined;
