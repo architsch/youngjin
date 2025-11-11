@@ -30,13 +30,19 @@ const GameSockets =
             }
             socketUserContexts[user.userName] = socketUserContext;
 
-            socket.on("objectMessage", (params: ObjectMessageParams) => {
-                RoomManager.sendObjectMessage(socketUserContext, params);
-            });
-            socket.on("objectSync", (params: ObjectSyncParams) => {
+            socket.on("objectSync", (buffer: ArrayBuffer) => {
+                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const params = ObjectSyncParams.decode(bufferState) as ObjectSyncParams;
                 RoomManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
-            socket.on("roomChangeRequest", async (params: RoomChangeRequestParams) => {
+            socket.on("objectMessage", (buffer: ArrayBuffer) => {
+                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
+                RoomManager.sendObjectMessage(socketUserContext, params);
+            });
+            socket.on("roomChangeRequest", async (buffer: ArrayBuffer) => {
+                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const params = RoomChangeRequestParams.decode(bufferState) as RoomChangeRequestParams;
                 await RoomManager.changeUserRoom(socketUserContext, params.roomID, true);
             });
 
@@ -60,7 +66,7 @@ const GameSockets =
         signalProcessingInterval = setInterval(() => {
             for (const socketUserContext of Object.values(socketUserContexts))
             {
-                socketUserContext.processAllIncomingSignals();
+                socketUserContext.processAllPendingSignals();
             }
         }, 200);
     },

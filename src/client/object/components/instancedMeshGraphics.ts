@@ -7,8 +7,7 @@ import GraphicsManager from "../../graphics/graphicsManager";
 const pixelBleedingPreventionShift = 0.5 / 128;
 const textureGridCellScale = 0.125;
 const tempObj = new THREE.Object3D();
-const xAxis = new THREE.Vector3(1, 0, 0);
-const yAxis = new THREE.Vector3(0, 1, 0);
+const vec3Temp = new THREE.Vector3();
 
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
@@ -19,7 +18,7 @@ export default class InstancedMeshGraphics extends GameObjectComponent
     getNumInstancesToRent: (() => number) | undefined;
     getMeshInstanceInfo: ((indexInInstanceIdsArray: number)
         => { xOffset: number, yOffset: number, zOffset: number,
-            xAxisAngle: number, yAxisAngle: number, textureIndex: number }) | undefined;
+            dirX: number, dirY: number, dirZ: number, textureIndex: number }) | undefined;
 
     getMeshId(): string
     {
@@ -55,9 +54,15 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             const info = this.getMeshInstanceInfo!(i);
 
             tempObj.position.set(0, 0, 0);
-            tempObj.rotation.set(0, 0, 0);
-            tempObj.rotateOnAxis(yAxis, info.yAxisAngle);
-            tempObj.rotateOnAxis(xAxis, info.xAxisAngle);
+            
+            vec3Temp.set(
+                this.gameObject.position.x + info.dirX,
+                this.gameObject.position.y + info.dirY,
+                this.gameObject.position.z + info.dirZ
+            );
+            tempObj.lookAt(vec3Temp);
+            tempObj.getWorldDirection(vec3Temp);
+
             tempObj.position.set(info.xOffset, info.yOffset, info.zOffset);
             tempObj.updateMatrixWorld();
 

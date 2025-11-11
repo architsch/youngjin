@@ -8,17 +8,14 @@ import Vec2 from "../../shared/math/types/vec2";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
-import VoxelGridEncoding from "../../shared/voxel/encoding/voxelGridEncoding";
 import dotenv from "dotenv";
 import RoomGenerator from "../../shared/room/roomGenerator";
 import SocketUserContext from "../sockets/types/socketUserContext";
-import VoxelManager from "../../shared/voxel/voxelManager";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
-import PersistentObjectEncoding from "../../shared/object/encoding/persistentObjectEncoding";
-import PersistentObjectManager from "../../shared/object/persistentObjectManager";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import AABB2 from "../../shared/math/types/aabb2";
+import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 dotenv.config();
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
@@ -42,10 +39,11 @@ const RoomManager =
         addUserToRoom(socketUserContext, roomID, user.userName);
 
         const roomRuntimeMemory = roomRuntimeMemories[roomID];
-        roomRuntimeMemory.room.encodedVoxelGrid = VoxelManager.getEncodedVoxelGrid(roomID);
-        roomRuntimeMemory.room.encodedPersistentObjects = PersistentObjectManager.getEncodedPersistentObjects(roomID);
-
-        socketUserContext.socket.emit("changeRoom", roomRuntimeMemory);
+        const socketRoomContext = socketRoomContexts[roomID];
+        if (!socketRoomContext)
+            console.error(`RoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
+        else
+            socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.userName);
     },
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {
@@ -79,7 +77,7 @@ const RoomManager =
         if (!socketRoomContext)
             console.error(`RoomManager.sendObjectMessage :: SocketRoomContext not found (roomID = ${roomID})`);
         else
-            socketRoomContext.multicastSignal("objectMessage", params, user.userName);
+            socketRoomContext.multicastSignal("objectMessageParams", params, user.userName);
     },
     updateObjectTransform: (socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform) =>
     {
@@ -116,21 +114,21 @@ const RoomManager =
 
         if (result.desyncDetected)
         {
-            const params: ObjectDesyncResolveParams = { objectId, resolvedPos: result.resolvedPos };
+            const params = new ObjectDesyncResolveParams(objectId, result.resolvedPos);
             const socketRoomContext = socketRoomContexts[roomID];
             if (!socketRoomContext)
                 console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
             else
-                socketRoomContext.multicastSignal("objectDesyncResolve", params);
+                socketRoomContext.multicastSignal("objectDesyncResolveParams", params);
         }
         else
         {
-            const params: ObjectSyncParams = { objectId, transform };
+            const params = new ObjectSyncParams(objectId, transform);
             const socketRoomContext = socketRoomContexts[roomID];
             if (!socketRoomContext)
                 console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
             else
-                socketRoomContext.multicastSignal("objectSync", params, user.userName);
+                socketRoomContext.multicastSignal("objectSyncParams", params, user.userName);
         }
     },
 }
@@ -146,31 +144,25 @@ async function loadRoom(roomID: string): Promise<RoomRuntimeMemory>
     if (roomID.startsWith("s")) // static room (procedurally generated)
     {
         const roomData = RoomGenerator.generateEmptyRoom(roomID, 32, 32, 0, 1);
-        room = {
+        room = new Room(
             roomID,
-            roomName: roomID,
-            ownerUserName: "", // static room is not owned by anyone
-            texturePackURL: `${process.env.MODE == "dev" ? `http://localhost:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`,
-            encodedVoxelGrid: VoxelGridEncoding.encode(roomData.voxelGrid),
-            encodedPersistentObjects: PersistentObjectEncoding.encode(roomData.persistentObjects),
-        };
+            roomID, // roomName
+            "", // ownerUserName (static room is not owned by anyone)
+            `${process.env.MODE == "dev" ? `http://localhost:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`,
+            roomData.voxelGrid,
+            roomData.persistentObjects
+        );
     }
     else
     {
         throw new Error(`Fetching room from database is not supported yet (roomID = ${roomID})`);
     }
 
-    const roomRuntimeMemory: RoomRuntimeMemory = {
-        room,
-        participantUserNames: {},
-        objectRuntimeMemories: {},
-    };
+    const roomRuntimeMemory = new RoomRuntimeMemory(room, {}, {});
     roomRuntimeMemories[roomID] = roomRuntimeMemory;
     socketRoomContexts[roomID] = new SocketRoomContext();
 
-    const decodedVoxelGrid = VoxelManager.loadRoom(roomRuntimeMemory);
-    PhysicsManager.loadRoom(roomRuntimeMemory, decodedVoxelGrid);
-    const decodedPersistentObjects = PersistentObjectManager.loadRoom(roomRuntimeMemory);
+    PhysicsManager.load(roomRuntimeMemory);
     return roomRuntimeMemory;
 }
 
@@ -185,9 +177,7 @@ function unloadRoom(roomID: string)
     delete roomRuntimeMemories[roomID];
     delete socketRoomContexts[roomID];
 
-    PersistentObjectManager.unloadRoom(roomID);
-    PhysicsManager.unloadRoom(roomID);
-    VoxelManager.unloadRoom(roomID);
+    PhysicsManager.unload(roomID);
 }
 
 function addUserToRoom(socketUserContext: SocketUserContext, roomID: string, userName: string)
@@ -216,16 +206,16 @@ function addUserToRoom(socketUserContext: SocketUserContext, roomID: string, use
         socketRoomContext.addSocketUserContext(userName, socketUserContext);
 
     // Create the user's player object
-    addObject(socketUserContext, { objectSpawnParams: {
-        sourceUserName: user.userName,
-        objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
-        objectId: `#${++lastObjectIdNumber}`,
-        transform: {
-            x: 16, y: 0, z: 16,
-            eulerX: 0, eulerY: Math.PI, eulerZ: 0,
-        },
-        metadata: "",
-    } });
+    addObject(socketUserContext, new ObjectRuntimeMemory(new ObjectSpawnParams(
+        user.userName,
+        ObjectTypeConfigMap.getIndexByType("Player"),
+        `#${++lastObjectIdNumber}`,
+        new ObjectTransform(
+            16, 0, 16,
+            0, 0, 1
+        ),
+        ""
+     )));
 }
 
 function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean)
@@ -330,7 +320,7 @@ function addObject(socketUserContext: SocketUserContext, objectRuntimeMemory: Ob
     if (!socketRoomContext)
         console.error(`RoomManager.addObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
-        socketRoomContext.multicastSignal("objectSpawn", objectRuntimeMemory.objectSpawnParams, user.userName);
+        socketRoomContext.multicastSignal("objectSpawnParams", objectRuntimeMemory.objectSpawnParams, user.userName);
 }
 
 function removeObject(socketUserContext: SocketUserContext, objectId: string)
@@ -362,13 +352,13 @@ function removeObject(socketUserContext: SocketUserContext, objectId: string)
     if (colliderConfig)
         PhysicsManager.removeObject(roomID, objectId);
     
-    const despawnParams: ObjectDespawnParams = { objectId };
+    const despawnParams = new ObjectDespawnParams(objectId);
 
     const socketRoomContext = socketRoomContexts[roomID];
     if (!socketRoomContext)
         console.error(`RoomManager.removeObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
-        socketRoomContext.multicastSignal("objectDespawn", despawnParams, user.userName);
+        socketRoomContext.multicastSignal("objectDespawnParams", despawnParams, user.userName);
 }
 
 export default RoomManager;

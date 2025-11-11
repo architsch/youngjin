@@ -50,18 +50,18 @@ const RoomGenerator =
                 shift += 4;
                 const objectId = `p${x}-${y}-${z}`;
 
-                persistentObjects.push({
+                persistentObjects.push(new PersistentObject(
                     objectId,
                     objectTypeIndex,
-                    direction: "+z",
+                    "+z",
                     x, y, z,
-                    metadata: otherRoomID
-                });
+                    otherRoomID
+                ));
             }
         }*/
         
         return {
-            voxelGrid: { numGridRows, numGridCols, voxels },
+            voxelGrid: new VoxelGrid(numGridRows, numGridCols, voxels),
             persistentObjects,
         };
     },
@@ -105,7 +105,9 @@ function makeVoxel(voxels: Voxel[], numGridCols: number, row: number, col: numbe
     let collisionLayerMask = 0;
     for (const op of quadOperations)
         collisionLayerMask |= op(quads);
-    voxels[row * numGridCols + col] = { row, col, collisionLayerMask, quads };
+    const voxel = new Voxel(collisionLayerMask, quads);
+    voxel.setCoordinates(row, col);
+    voxels[row * numGridCols + col] = voxel;
 }
 
 //---------------------------------------------------------------------------
@@ -114,7 +116,7 @@ function makeVoxel(voxels: Voxel[], numGridCols: number, row: number, col: numbe
 
 function addFloorQuad(textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
 {
-    quads.push({facingAxis: "y", orientation: "+", yOffset: 0, textureIndex});
+    quads.push(new VoxelQuad("y", "+", 0, textureIndex));
     return 0b0000;
 }
 
@@ -122,7 +124,7 @@ function addWallQuads(facingAxis: "x" | "y" | "z", orientation: "-" | "+",
     textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
 {
     for (let yOffset = 0.5; yOffset <= 3.5; ++yOffset)
-        quads.push({facingAxis, orientation, yOffset, textureIndex});
+        quads.push(new VoxelQuad(facingAxis, orientation, yOffset, textureIndex));
     return 0b0001;
 }
 

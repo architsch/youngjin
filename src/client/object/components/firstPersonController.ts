@@ -5,7 +5,10 @@ import GameObjectComponent from "./gameObjectComponent";
 import VoxelObject from "./voxelObject";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
+const vec3Temp: THREE.Vector3 = new THREE.Vector3();
 const objTemp: THREE.Object3D = new THREE.Object3D();
+
+const yAxis = new THREE.Vector3(0, 1, 0);
 
 export default class FirstPersonController extends GameObjectComponent
 {
@@ -68,7 +71,7 @@ export default class FirstPersonController extends GameObjectComponent
             const dxWithSpeedLimit = Math.max(-1, Math.min(1, dx));
             const dyWithSpeedLimit = Math.max(-0.5, Math.min(0.5, dy));
             
-            this.gameObject.obj.rotateY(-3 * deltaTime * dxWithSpeedLimit);
+            this.gameObject.obj.rotateOnWorldAxis(yAxis, -3 * deltaTime * dxWithSpeedLimit);
 
             objTemp.copy(this.gameObject.obj, false);
             objTemp.translateZ(-12 * deltaTime * dyWithSpeedLimit);

@@ -9,8 +9,23 @@ import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "./thingsPoolEnv";
 import Observable from "../util/observable";
 import ObjectManager from "../object/objectManager";
+import Encoding from "../../shared/networking/encoding";
+import EncodableArray from "../../shared/networking/types/encodableArray";
+import EncodableRawByteNumber from "../../shared/networking/types/encodableRawByteNumber";
+import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
+import EncodableData from "../../shared/networking/types/encodableData";
+import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
 
 let socket: Socket;
+
+const signalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
+    "roomRuntimeMemory": (data: EncodableData) => GameSocketsClient.roomRuntimeMemoryObservable.broadcast(data as RoomRuntimeMemory),
+    "objectSyncParams": (data: EncodableData) => GameSocketsClient.objectSyncObservable.broadcast(data as ObjectSyncParams),
+    "objectDesyncResolveParams": (data: EncodableData) => GameSocketsClient.objectDesyncResolveObservable.broadcast(data as ObjectDesyncResolveParams),
+    "objectSpawnParams": (data: EncodableData) => GameSocketsClient.objectSpawnObservable.broadcast(data as ObjectSpawnParams),
+    "objectDespawnParams": (data: EncodableData) => GameSocketsClient.objectDespawnObservable.broadcast(data as ObjectDespawnParams),
+    "objectMessageParams": (data: EncodableData) => GameSocketsClient.objectMessageObservable.broadcast(data as ObjectMessageParams),
+}
 
 const GameSocketsClient =
 {
@@ -26,28 +41,28 @@ const GameSocketsClient =
                 (window as any).location.reload(true);
         });
 
-        socket.on("changeRoom", (roomRuntimeMemory: RoomRuntimeMemory) => {
-            GameSocketsClient.changeRoomObservable.broadcast(roomRuntimeMemory);
-        });
-        socket.on("objectSync", (arr: ObjectSyncParams[]) => {
-            for (let i = 0; i < arr.length; ++i)
-                GameSocketsClient.objectSyncObservable.broadcast(arr[i]);
-        });
-        socket.on("objectDesyncResolve", (arr: ObjectDesyncResolveParams[]) => {
-            for (let i = 0; i < arr.length; ++i)
-                GameSocketsClient.objectDesyncResolveObservable.broadcast(arr[i]);
-        });
-        socket.on("objectSpawn", (arr: ObjectSpawnParams[]) => {
-            for (let i = 0; i < arr.length; ++i)
-                GameSocketsClient.objectSpawnObservable.broadcast(arr[i]);
-        });
-        socket.on("objectDespawn", (arr: ObjectDespawnParams[]) => {
-            for (let i = 0; i < arr.length; ++i)
-                GameSocketsClient.objectDespawnObservable.broadcast(arr[i]);
-        });
-        socket.on("objectMessage", (arr: ObjectMessageParams[]) => {
-            for (let i = 0; i < arr.length; ++i)
-                GameSocketsClient.objectMessageObservable.broadcast(arr[i]);
+        socket.on("signalBatch", (buffer: ArrayBuffer) => {
+            //console.log(`signalBatch received - length = ${buffer.byteLength}`);
+            const bufferState = { view: new Uint8Array(buffer), index: 0 };
+            while (bufferState.index < bufferState.view.byteLength)
+            {
+                const signalTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+                const signalConfig = SignalTypeConfigMap.getConfigByIndex(signalTypeIndex);
+                if (!signalConfig)
+                {
+                    console.error(`Unknown signal type index: ${signalTypeIndex}`);
+                    return;
+                }
+                const signalHandler = signalHandlers[signalConfig.signalType];
+                if (!signalHandler)
+                {
+                    console.error(`Signal handler not found (signal type = ${signalConfig.signalType})`);
+                    return;
+                }
+                const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
+                for (const data of arr)
+                    signalHandler(data);
+            }
         });
 
         // temp UI
@@ -89,10 +104,10 @@ const GameSocketsClient =
                     console.error(`Player not found (userName = ${env.user.userName})`);
                     return;
                 }
-                const params: ObjectMessageParams = {
-                    senderObjectId: player.params.objectId,
-                    message,
-                };
+                const params = new ObjectMessageParams(
+                    player.params.objectId,
+                    message
+                );
                 GameSocketsClient.emitObjectMessage(params);
                 messageInput.value = "";
 
@@ -115,15 +130,24 @@ const GameSocketsClient =
         });
     },
 
-    emitObjectSync: (params: ObjectSyncParams) => socket.emit("objectSync", params),
-    emitObjectMessage: (params: ObjectMessageParams) => socket.emit("objectMessage", params),
+    emitObjectSync: (params: ObjectSyncParams) => sendEncodedSignal("objectSync", params),
+    emitObjectMessage: (params: ObjectMessageParams) => sendEncodedSignal("objectMessage", params),
+    emitRoomChangeRequest: (params: RoomChangeRequestParams) => sendEncodedSignal("roomChangeRequest", params),
 
-    changeRoomObservable: new Observable<RoomRuntimeMemory>(),
+    roomRuntimeMemoryObservable: new Observable<RoomRuntimeMemory>(),
     objectSyncObservable: new Observable<ObjectSyncParams>(),
     objectDesyncResolveObservable: new Observable<ObjectDesyncResolveParams>(),
     objectSpawnObservable: new Observable<ObjectSpawnParams>(),
     objectDespawnObservable: new Observable<ObjectDespawnParams>(),
     objectMessageObservable: new Observable<ObjectMessageParams>(),
+}
+
+function sendEncodedSignal(signalType: string, signalData: EncodableData)
+{
+    const bufferState = Encoding.startWrite();
+    signalData.encode(bufferState);
+    const subBuffer = Encoding.endWrite(bufferState);
+    socket.emit(signalType, subBuffer);
 }
 
 export default GameSocketsClient;

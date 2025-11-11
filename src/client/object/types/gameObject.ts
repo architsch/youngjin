@@ -7,6 +7,8 @@ import GameObjectComponent from "../components/gameObjectComponent";
 import ObjectComponentFactory from "../factories/objectComponentFactory";
 import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
+const vec3Temp = new THREE.Vector3();
+
 export default class GameObject
 {
     params: ObjectSpawnParams;
@@ -19,7 +21,12 @@ export default class GameObject
 
         GraphicsManager.addObjectToScene(this.obj);
         this.obj.position.set(this.params.transform.x, this.params.transform.y, this.params.transform.z);
-        this.obj.rotation.set(this.params.transform.eulerX, this.params.transform.eulerY, this.params.transform.eulerZ);
+        vec3Temp.set(
+            this.params.transform.x + this.params.transform.dirX,
+            this.params.transform.y + this.params.transform.dirY,
+            this.params.transform.z + this.params.transform.dirZ
+        );
+        this.obj.lookAt(vec3Temp);
         
         const config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
         for (const [spawnType, objectComponentGroupConfig] of Object.entries(config.components))

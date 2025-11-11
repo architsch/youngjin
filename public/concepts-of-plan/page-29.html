@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 23"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-29.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b351.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 23">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 23</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-29.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 23</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 23</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: November 11, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 23 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Relations</b></h3>
+<p>We have seen quite a number of examples so far, in the context of gameplay mechanics. We have seen how game characters are able to interact with one another by means of search protocols such as target-finding, collision detection, etc.</p>
+<p>The ultimate roots of such interactions are what we typically refer to as "relations".</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b351.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 1)">
+<p>The world is made up of things, and things are related to each other. If things weren't related to each other, no interaction would exist because everything would end up being a completely isolated singleton - a self-enclosed universe of its own.</p>
+<p>When a frog attacks another frog, we say that there is a relation called "attack" which involves one of them as the source, and the other one as the target.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b304.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 2)">
+<p>When a pair of circles collide, we say that there is a relation called "collision" which involves both of them, each of which is trying to push its opponent away by means of a mechanical force.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b331.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 3)">
+<p>Another example can be found in the concept of "inventory", which I introduced during the early part of this series. Inside a video game, we usually expect the player to have its own inventory, in which items can be stored and carried around.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b352.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 4)">
+<p>This, too, is an example of a relation. Each item in the inventory is "related" to the player in the sense that the player owns it. In other words, we can suppose that there is a relation called "ownership" which is made up of two constituents - the owner (i.e. player) and the thing that the owner owns (i.e. player's item).</p>
+<p>If there are 3 items in the player's inventory, therefore, we may as well claim that there are 3 instances of the "ownership" relation between these 3 items and their owner (i.e. player).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b353.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 5)">
+<p>Such a relation can be modeled as a column in our data table, like the one shown below:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b354.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 6)">
+<p>Here, the column labeled "Owner ID" is used for storing the ID of each item's owner. Since all 3 of the items (i.e. frog, diamond, and apple) are owned by the player in our example, their owner IDs are all set to the player's ID (which is 1). The owner ID of the player itself is empty (0), since the player itself is not owned by anybody.</p>
+<p>What happens when the player no longer owns the apple?</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b355.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 7)">
+<p>In this case, the apple's owner ID will be empty (0) as well because it is no longer owned by anyone.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b356.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 8)">
+<p>Now, here is another twist. What if the diamond is no longer owned by the player directly, but is owned by the frog, which is in turn owned by the player?</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b357.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 9)">
+<p>Oh, it's simple. The diamond's owner ID should be set to the frog's ID (which is 2) because it is now owned by the frog.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b358.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 10)">
+<p>As we can see in these short examples, relations can be modeled in terms of references.</p>
+<p>A "thing" can make a reference to another thing by means of an identifier, such as the ID of a row. And wherever there is a reference, it can be stated that there must be SOME relation between the thing that is being referenced, and the thing that is referencing it.</p>
+<hr>
+<h3><b>Reference by Group</b></h3>
+<p>Depending on what kind of gameplay mechanic we are looking for, though, there might be an issue of inconvenience with regard to the handling of multiple items. To demonstrate what I mean by this, I will revisit the earlier example in which all 3 of the items (i.e. frog, diamond, apple) are owned by the player,</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b353.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 11)">
+<p>which can be expressed by the following table.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b354.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 12)">
+<p>Here, what we are witnessing is the fact that we have to set the "owner ID" of all 3 of the items to the player's ID (which is 1), in order to be able to state that they are all owned by the player.</p>
+<p>This is hardly a hassle, but imagine a scenario in which the player happens to be carrying hundreds of items in the inventory. Do we really have to assign the player's ID to every single one of their "owner ID" slots, in order to express the idea that the player owns them all? I think not.</p>
+<p>Fortunately, there is a much more elegant way of handling ownership. First, think of the player's inventory as an item of its own, which occupies a row in the data table (just like the frog, diamond, and the apple).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b359.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 13)">
+<p>Then, instead of allowing the frog, diamond, and apple to be directly owned by the player, let us define them as things that are "contained" inside the player's inventory, whereas the inventory itself is owned by the player.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b360.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 14)">
+<p>In table form, this can be modeled as the following.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b361.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 15)">
+<p>Do you see the new column called "container ID"? The use of this is to indicate which items are contained by which. By looking at it, you will be able to tell that the frog, diamond, and apple are contained in the inventory (which is denoted by the brown suitcase), while the inventory itself is owned by the player.</p>
+<p>The practical implication of this is pretty self-explanatory. By modeling the player's inventory as a separate item and making it a container which holds all the items that the player owns, we are able to group multiple items together under the authority of a single entity. This lets us handle all of them at once, instead of having to deal with them individually.</p>
+<p>The major advantage of this new approach will be evident once you see the example below.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b362.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 16)">
+<p>Here, I just changed the owner of the 3 items (i.e. frog, diamond, apple) from the player to a monkey (Let's say that the monkey stole the suitcase from the player or something).</p>
+<p>How shall we represent this sort of situation? If we were to stick to our original method, we would have to modify the "owner ID" of every one of the 3 items in order to declare that their owner has changed. In our new method, on the other hand, all we need to do is simply change the "owner ID" of the inventory to the monkey's ID.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b363.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 17)">
+<p>Since the frog, diamond, and apple are all part of the inventory, changing the owner of the inventory alone will be sufficient to ensure a change in the owner of every one of them.</p>
+<hr>
+<h3><b>Abstract Relations</b></h3>
+<p>What we have seen so far is nothing more than the tip of the iceberg. One thing I want to emphasize is that pretty much ANY part of gameplay can be considered a relation. And this includes some of the most fundamental building blocks of game design such as state variables (e.g. stats).</p>
+<p>Imagine, for example, that besides owning an inventory of 3 items (i.e. frog, diamond, apple), the player also carries a health bar.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b364.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 18)">
+<p>Let us say that, according to the health bar, the player's current health is 76. How shall we express this fact?</p>
+<p>Oh, for sure, we can add an additional column called "health" to our data table, and fill its entry in the player's row with the number 76. This will clearly indicate that the player's health is 76.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b365.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 19)">
+<p>Here is something important to keep in mind. From a mathematical point of view, there is no fundamental difference between the player's health and what we've hitherto been referring to as "relations". That is, it is perfectly valid to say that "health" is just another type of relation.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b366.jpg" alt="Linear Algebra for Game Development - Part 23 (Figure 20)">
+<p>Just like the 3 items (i.e. frog, diamond, apple) are related to the inventory by the "contain" relation and the inventory itself is related to the player by the "own" relation, we can claim that the player is related to the number 76 by the "health" relation.</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-28.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>

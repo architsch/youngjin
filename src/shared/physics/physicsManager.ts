@@ -7,7 +7,6 @@ import PhysicsPosUpdateResult from "./types/physicsPosUpdateResult";
 import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
 import PhysicsRoom from "./types/physicsRoom";
 import PhysicsHitState from "./types/physicsHitState";
-import VoxelGrid from "../voxel/types/voxelGrid";
 import AABB2 from "../math/types/aabb2";
 
 const rooms: {[roomID: string]: PhysicsRoom} = {};
@@ -21,15 +20,17 @@ let hitStateTemp: PhysicsHitState = {
 
 const PhysicsManager =
 {
-    loadRoom: (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid) =>
+    load: (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
         if (rooms[roomRuntimeMemory.room.roomID] != undefined)
             throw new Error(`Physics-room already exists (roomID = ${roomRuntimeMemory.room.roomID})`);
 
+        const voxelGrid = roomRuntimeMemory.room.voxelGrid;
+
         rooms[roomRuntimeMemory.room.roomID] = {
-            numGridRows: decodedVoxelGrid.numGridRows,
-            numGridCols: decodedVoxelGrid.numGridCols,
-            voxels: decodedVoxelGrid.voxels.map(voxel => {
+            numGridRows: voxelGrid.numGridRows,
+            numGridCols: voxelGrid.numGridCols,
+            voxels: voxelGrid.voxels.map(voxel => {
                 const row = voxel.row;
                 const col = voxel.col;
                 const intersectingObjects = new Array<PhysicsObject>(4);
@@ -46,7 +47,7 @@ const PhysicsManager =
             objectById: {},
         };
     },
-    unloadRoom: (roomID: string) =>
+    unload: (roomID: string) =>
     {
         if (rooms[roomID] == undefined)
             throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);

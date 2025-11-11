@@ -8,11 +8,9 @@ import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
-import MaterialParams from "../graphics/types/materialParams";
-import VoxelGrid from "../../shared/voxel/types/voxelGrid";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
-import PersistentObject from "../../shared/object/types/persistentObject";
 import VoxelObject from "./components/voxelObject";
+import ObjectTransform from "../../shared/object/types/objectTransform";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -45,41 +43,45 @@ const ObjectManager =
             }
         }
     },
-    load: async (roomRuntimeMemory: RoomRuntimeMemory, decodedVoxelGrid: VoxelGrid,
-        decodedPersistentObjects: PersistentObject[]) =>
+    load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
         const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
-        for (const voxel of decodedVoxelGrid.voxels)
+        for (const voxel of roomRuntimeMemory.room.voxelGrid.voxels)
         {
             const gameObject = ObjectFactory.createClientSideObject(
                 voxelTypeIndex,
-                { // transform
-                    x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5,
-                    eulerX: 0, eulerY: 0, eulerZ: 0,
-                });
+                new ObjectTransform(
+                    voxel.col + 0.5, 0, voxel.row + 0.5,
+                    0, 0, 1
+                )
+            );
             const voxelObject = gameObject.components.voxelObject! as VoxelObject;
             voxelObject.setVoxel(voxel);
             await ObjectManager.spawnObject(gameObject);
         };
 
         // Load objects from decodedPersistentObjects
-        for (const po of decodedPersistentObjects)
+        for (const po of roomRuntimeMemory.room.persistentObjects)
         {
             // Let's assume that (+z) is the direction in which the 0 y-axis angle is pointing.
-            const angleY = (
-                (po.direction == "+z") ? 0 : (
-                    (po.direction == "+x") ? 0.5*Math.PI : (
-                        (po.direction == "-z") ? Math.PI : -0.5*Math.PI
-                    )
-                )
+            let dirX = 0, dirY = 0, dirZ = 0;
+            switch (po.direction)
+            {
+                case "+z": dirX = 0; dirY = 0; dirZ = 1; break;
+                case "-z": dirX = 0; dirY = 0; dirZ = -1; break;
+                case "+x": dirX = 1; dirY = 0; dirZ = 0; break;
+                case "-x": dirX = -1; dirY = 0; dirZ = 0; break;
+                default: throw new Error(`Unknown direction (${po.direction})`);
+            }
+            const objectSpawnParams = new ObjectSpawnParams(
+                "", // Persistent objects are not directly owned by anyone.
+                po.objectTypeIndex,
+                po.objectId,
+                new ObjectTransform(po.x, po.y, po.z, dirX, dirY, dirZ),
+                po.metadata
             );
-            const objectSpawnParams: ObjectSpawnParams = {
-                sourceUserName: "", // Persistent objects are not directly owned by anyone.
-                objectTypeIndex: po.objectTypeIndex,
-                objectId: po.objectId,
-                transform: {x: po.x, y: po.y, z: po.z, eulerX: 0, eulerY: angleY, eulerZ: 0},
-                metadata: po.metadata,
-            };
+            if (objectSpawnParams.objectTypeIndex == voxelTypeIndex)
+                throw new Error(`Voxel object is not allowed to spawn via persistentObjects.`);
             const object = ObjectFactory.createServerSideObject(objectSpawnParams);
             await ObjectManager.spawnObject(object);
         }
@@ -87,6 +89,8 @@ const ObjectManager =
         // Load objects from objectRuntimeMemories
         for (const objectRuntimeMemory of Object.values(roomRuntimeMemory.objectRuntimeMemories))
         {
+            if (objectRuntimeMemory.objectSpawnParams.objectTypeIndex == voxelTypeIndex)
+                throw new Error(`Voxel object is not allowed to spawn via objectRuntimeMemories.`);
             const object = ObjectFactory.createServerSideObject(objectRuntimeMemory.objectSpawnParams);
             await ObjectManager.spawnObject(object);
         }

@@ -3,6 +3,7 @@ import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import GameSocketsClient from "../../networking/gameSocketsClient";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
 
 const syncIntervalInMillis = 200;
 const minSyncDistSqr = 0.0001;
@@ -41,17 +42,19 @@ export default class ObjectSyncEmitter extends GameObjectComponent
                 this.lastSyncedPosition.copy(this.gameObject.position);
                 this.lastSyncedRotation.copy(this.gameObject.rotation);
 
-                const params: ObjectSyncParams = {
-                    objectId: this.gameObject.params.objectId,
-                    transform: {
-                        x: Math.floor(this.lastSyncedPosition.x * 100) * 0.01,
-                        y: Math.floor(this.lastSyncedPosition.y * 100) * 0.01,
-                        z: Math.floor(this.lastSyncedPosition.z * 100) * 0.01,
-                        eulerX: Math.floor(this.lastSyncedRotation.x * 100) * 0.01,
-                        eulerY: Math.floor(this.lastSyncedRotation.y * 100) * 0.01,
-                        eulerZ: Math.floor(this.lastSyncedRotation.z * 100) * 0.01,
-                    }
-                };
+                vec3Temp.setFromEuler(this.lastSyncedRotation).normalize();
+                this.gameObject.obj.getWorldDirection(vec3Temp);
+                const params = new ObjectSyncParams(
+                    this.gameObject.params.objectId,
+                    new ObjectTransform(
+                        this.lastSyncedPosition.x,
+                        this.lastSyncedPosition.y,
+                        this.lastSyncedPosition.z,
+                        vec3Temp.x,
+                        vec3Temp.y,
+                        vec3Temp.z
+                    )
+                );
                 GameSocketsClient.emitObjectSync(params);
                 //console.log(`(ObjectSyncEmitter) emitObjectSync :: ${JSON.stringify(params)}`);
             }

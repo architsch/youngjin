@@ -7,7 +7,9 @@ const syncIntervalInMillis = 200;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
 
 const vec3Temp = new THREE.Vector3();
-const eulerTemp = new THREE.Euler();
+
+const tempObj = new THREE.Object3D();
+tempObj.position.set(0, 0, 0);
 
 export default class ObjectSyncReceiver extends GameObjectComponent
 {
@@ -87,8 +89,10 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         this.positionInterpRange[0].copy(this.gameObject.position);
         this.positionInterpRange[1].set(params.transform.x, params.transform.y, params.transform.z);
 
-        eulerTemp.set(params.transform.eulerX, params.transform.eulerY, params.transform.eulerZ);
+        vec3Temp.set(params.transform.dirX, params.transform.dirY, params.transform.dirZ);
+        tempObj.lookAt(vec3Temp);
+
         this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);
-        this.quaternionInterpRange[1].setFromEuler(eulerTemp);
+        this.quaternionInterpRange[1].setFromEuler(tempObj.rotation);
     }
 }

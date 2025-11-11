@@ -14,7 +14,7 @@ export default class SocketRoomContext
         for (const [userName, socketUserContext] of Object.entries(this.socketUserContexts))
         {
             if (userName != userNameToExclude)
-                socketUserContext.addIncomingSignal(signalType, signalData);
+                socketUserContext.addPendingSignal(signalType, signalData);
         }
     }
 
@@ -26,7 +26,7 @@ export default class SocketRoomContext
             console.error(`SocketUserContext not found (targetUserName = ${targetUserName})`);
             return;
         }
-        socketUserContext.addIncomingSignal(signalType, signalData);
+        socketUserContext.addPendingSignal(signalType, signalData);
     }
 
     addSocketUserContext(userName: string, socketUserContext: SocketUserContext)

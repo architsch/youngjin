@@ -9,7 +9,7 @@ if (!(window as any).thingspool_loading)
 {
     (window as any).thingspool_loading_on();
 
-    GameSocketsClient.changeRoomObservable.addListener("init", async (roomRuntimeMemory: RoomRuntimeMemory) => {
+    GameSocketsClient.roomRuntimeMemoryObservable.addListener("init", async (roomRuntimeMemory: RoomRuntimeMemory) => {
         await App.changeRoom(roomRuntimeMemory);
         (window as any).thingspool_loading_off();
     });

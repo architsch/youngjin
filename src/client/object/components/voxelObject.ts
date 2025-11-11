@@ -56,45 +56,46 @@ export default class VoxelObject extends GameObjectComponent
         };
 
         this.instancedMeshGraphics.getMeshInstanceInfo = (indexInInstanceIdsArray: number)
-            : { xOffset: number, yOffset: number, zOffset: number, xAxisAngle: number, yAxisAngle: number, textureIndex: number } =>
+            : { xOffset: number, yOffset: number, zOffset: number, dirX: number, dirY: number, dirZ: number, textureIndex: number } =>
         {
             if (this.voxel == undefined)
                 throw new Error(`Voxel hasn't been defined yet.`);
             const quad = this.voxel.quads[indexInInstanceIdsArray];
 
-            let xOffset = 0, yOffset = quad.yOffset, zOffset = 0, xAxisAngle = 0, yAxisAngle = 0;
+            let xOffset = 0, yOffset = quad.yOffset, zOffset = 0, dirX = 0, dirY = 0, dirZ = 0;
             switch (quad.facingAxis)
             {
                 case "x":
                     if (quad.orientation == "+")
                     {
-                        yAxisAngle = 0.5*Math.PI;
+                        dirX = 1; dirY = 0; dirZ = 0;
                         xOffset = 0.5;
                     }
                     else
                     {
-                        yAxisAngle = -0.5*Math.PI;
+                        dirX = -1; dirY = 0; dirZ = 0;
                         xOffset = -0.5;
                     }
                     break;
                 case "y":
                     if (quad.orientation == "+")
                     {
-                        xAxisAngle = -0.5*Math.PI;
+                        dirX = 0; dirY = 1; dirZ = 0;
                     }
                     else
                     {
-                        xAxisAngle = 0.5*Math.PI;
+                        dirX = 0; dirY = -1; dirZ = 0;
                     }
                     break;
                 case "z":
                     if (quad.orientation == "+")
                     {
+                        dirX = 0; dirY = 0; dirZ = 1;
                         zOffset = 0.5;
                     }
                     else
                     {
-                        yAxisAngle = Math.PI;
+                        dirX = 0; dirY = 0; dirZ = -1;
                         zOffset = -0.5;
                     }
                     break;
@@ -102,7 +103,7 @@ export default class VoxelObject extends GameObjectComponent
                     throw new Error(`Unknown facingAxis (${quad.facingAxis})`);
             }
             return {
-                xOffset, yOffset, zOffset, xAxisAngle, yAxisAngle,
+                xOffset, yOffset, zOffset, dirX, dirY, dirZ,
                 textureIndex: quad.textureIndex,
             };
         };

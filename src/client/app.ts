@@ -1,11 +1,9 @@
 import ObjectManager from "./object/objectManager";
-import VoxelManager from "../shared/voxel/voxelManager";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "./networking/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
-import PersistentObjectManager from "../shared/object/persistentObjectManager";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -47,10 +45,8 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
     currentRoom = roomRuntimeMemory.room;
 
     await GraphicsManager.load(update);
-    const decodedVoxelGrid = VoxelManager.loadRoom(roomRuntimeMemory);
-    PhysicsManager.loadRoom(roomRuntimeMemory, decodedVoxelGrid);
-    const decodedPersistentObjects = PersistentObjectManager.loadRoom(roomRuntimeMemory);
-    await ObjectManager.load(roomRuntimeMemory, decodedVoxelGrid, decodedPersistentObjects);
+    PhysicsManager.load(roomRuntimeMemory);
+    await ObjectManager.load(roomRuntimeMemory);
 
     prevTime = performance.now() * 0.001;
     deltaTimePending = 0;
@@ -62,9 +58,7 @@ async function unloadCurrentRoom()
         throw new Error(`No room to unload.`);
 
     await ObjectManager.unload();
-    PersistentObjectManager.unloadRoom(currentRoom.roomID);
-    PhysicsManager.unloadRoom(currentRoom.roomID);
-    VoxelManager.unloadRoom(currentRoom.roomID);
+    PhysicsManager.unload(currentRoom.roomID);
     await GraphicsManager.unload();
 
     currentRoom = undefined;
