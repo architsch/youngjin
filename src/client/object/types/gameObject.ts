@@ -38,6 +38,8 @@ export default class GameObject
                     if (this.components[componentName] != undefined)
                         throw new Error(`Duplicate component found (objectId = ${params.objectId}, objectType = ${config.objectType}, componentName = ${componentName})`);
                     const component = ObjectComponentFactory.createComponent(this, componentName, componentConfig);
+                    if (!component.isSpawnTypeAllowed(spawnType as SpawnType))
+                        throw new Error(`SpawnType of "${spawnType}" is not allowed in the "${componentName}" component.`);
                     this.components[componentName] = component;
                 }
             }

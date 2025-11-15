@@ -4,11 +4,9 @@ import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
-import TextUtil from "../../shared/embeddedScripts/util/textUtil"
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "./thingsPoolEnv";
-import Observable from "../util/observable";
-import ObjectManager from "../object/objectManager";
+import Observable from "../../shared/util/observable";
 import Encoding from "../../shared/networking/encoding";
 import EncodableArray from "../../shared/networking/types/encodableArray";
 import EncodableRawByteNumber from "../../shared/networking/types/encodableRawByteNumber";
@@ -62,70 +60,6 @@ const GameSocketsClient =
                 const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
                 for (const data of arr)
                     signalHandler(data);
-            }
-        });
-
-        // temp UI
-
-        const uiRoot = document.getElementById("uiRoot") as HTMLElement;
-
-        const messageInput = document.createElement("input");
-        messageInput.type = "text";
-        messageInput.placeholder = "Your Message Here";
-        messageInput.style = "pointer-events:all; position:absolute; margin:0.25rem 0.25rem; padding:0.25rem 0.25rem; left:0; right:20%; bottom:0; height:1.5rem; text-size:1rem; line-height:1.5rem;";
-        messageInput.oninput = (ev: Event) => {
-            messageInput.value = messageInput.value.substring(0, 32);
-        };
-        uiRoot.appendChild(messageInput);
-
-        const sendButton = document.createElement("button");
-        sendButton.innerHTML = "Send";
-        sendButton.style = "pointer-events:all; position:absolute; margin:0.25rem 0.25rem; padding:0.25rem 0.25rem; left:80%; right:0%; bottom:0; height:2.25rem; text-size:1rem; line-height:1.5rem; background-color:green; color:white;"
-        sendButton.onclick = (ev: PointerEvent) => {
-            send();
-        };
-        uiRoot.appendChild(sendButton);
-
-        const myMessageDisplay = document.createElement("div");
-        myMessageDisplay.style = "position:absolute; left:0.25rem; margin:0 0; padding:0.25rem 0.25rem; bottom:2.8rem; height:1.5rem; text-size:1rem; line-height:1.5rem; background-color:rgba(0, 0, 0, 0.5); color:yellow;";
-        myMessageDisplay.style.display = "none";
-        uiRoot.appendChild(myMessageDisplay);
-
-        let myMessageTimeout: NodeJS.Timeout | undefined;
-
-        function send()
-        {
-            const message = messageInput.value.trim().substring(0, 32);
-            if (message.length > 0)
-            {
-                const player = ObjectManager.getMyPlayer();
-                if (!player)
-                {
-                    console.error(`Player not found (userName = ${env.user.userName})`);
-                    return;
-                }
-                const params = new ObjectMessageParams(
-                    player.params.objectId,
-                    message
-                );
-                GameSocketsClient.emitObjectMessage(params);
-                messageInput.value = "";
-
-                myMessageDisplay.innerHTML = "<font color='green'><b>My Message:</b></font> " + TextUtil.escapeHTMLChars(params.message);
-                myMessageDisplay.style.display = "block";
-                if (myMessageTimeout)
-                    clearTimeout(myMessageTimeout);
-                myMessageTimeout = setTimeout(() => {
-                    myMessageDisplay.innerHTML = "";
-                    myMessageDisplay.style.display = "none";
-                }, 5000);
-            }
-        }
-        addEventListener("keydown", (ev: KeyboardEvent) => {
-            if (ev.key == "Enter")
-            {
-                ev.preventDefault();
-                send();
             }
         });
     },

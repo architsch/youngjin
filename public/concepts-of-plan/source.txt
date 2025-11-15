@@ -3569,3 +3569,126 @@ Here is something important to keep in mind. From a mathematical point of view, 
 <b366>
 
 Just like the 3 items (i.e. frog, diamond, apple) are related to the inventory by the "contain" relation and the inventory itself is related to the player by the "own" relation, we can claim that the player is related to the number 76 by the "health" relation.
+
+
+
+
+
+
+
+
+
+:d:This article explains how to use linear algebra in the design and implementation of video games.
+:k:Linear Algebra, Matrix Algebra, Game Development, Game Design, Gameplay Systems, Game Engine, Technical Design, Numerical Methods, Scientific Computing, Gameplay Engineering
+:l:2025-11-15
+
+[Linear Algebra for Game Development - Part 24] November 15, 2025
+
+@@<hr>
+@@<h3><b>Before You Read</b></h3>
+
+This article is Part 24 of the series, "Linear Algebra for Game Development". If you haven't, please read {%a href="https://thingspool.net/concepts-of-plan/page-7.html"%}Part 1{%/a%} first.
+
+@@<hr>
+@@<h3><b>Relation as an Object</b></h3>
+
+A video game is made up of its own fictional universe. Inside this universe, there are many objects which are related to each other by means of what we call "relations".
+
+The example we saw in the previous article, which I am reproducing below as a reminder, precisely illustrates the role of relations. A relation is some kind of "bond" between multiple objects, which binds them together and provides a guidance on the manner in which they are supposed to interact.
+
+<b366>
+
+In our foregoing example, we saw that the frog, diamond, and apple are part of the inventory, which in turn is owned by the player, whose health is 76. These statements are all based upon relations, which in this case are denoted by descriptive words such as "contained", "owned", etc.
+
+There is something which bugs us, though. So far, we have only seen 3 types of relations (i.e. "contained by", "owned by", and "health is"). For every one of these types, we introduced a whole separate column in our data table for referencing purposes (See the picture below).
+
+<b365>
+
+This is obviously not scalable. What if there are hundreds or even thousands of types of relations in our game? It is not so elegant to have such a horrendous number of columns in our table just for the sake of depicting relations.
+
+Fortunately, there is an alternative representation of relations which we can leverage to mitigate this problem. Instead of creating a new column for every type of relation, we may as well simply treat each relation as an object.
+
+<b367>
+
+In this new model, the 3 relations (i.e. "contained by", "owned by", and "health is") are defined as 3 individual objects, just like the frog, diamond, apple, inventory, and the player are individual objects which are able to exist independently from one another.
+
+But of course, we still need some way of connecting relations with their associated objects; otherwise, how on earth shall we manage to figure out which things are related to which, and by which relations?
+
+Therefore, let us assign a property called "ref" (shorthand for "reference") to each one of our objects, including relations. Think of "ref" as a pointer (i.e. an arrow) which can point to any object.
+
+<b368>
+
+Here, you can clearly see the role of "ref". It tells us which things belong to which relations.
+
+The "ref" values of the frog, diamond, and apple all point to the "contained by" relation because all these 3 items are contained by something. The "ref" value of the "contained by" relation, in turn, points to the inventory because it indicates the fact that the items pointing this relation are "contained by the inventory".
+
+In our data table, such a schema can be expressed in the following manner.
+
+<b369>
+
+Here, the table is made up of two different kinds of rows - those which represent tangible objects such as the player, inventory (suitcase), items, and so on, besides those which represent relations. In this new model, each relation is a row which can be referenced by its ID.
+
+The "ref" value of the frog, diamond, and apple are all set to the ID of the "contained by" relation because they are all "contained by" something.
+
+Contained by what? Oh, the answer is found in the "ref" value of the "contained by" relation itself. Since it is set to the ID of the inventory, we know that anything which references this relation must be "contained by the inventory".
+
+@@<hr>
+@@<h3><b>Multiple References</b></h3>
+
+There could be situations, though, where a single "ref" value is just not enough. Consider the following scenario, for instance, in which we are trying to add a new relation called "like" to denote the fact that the player likes the frog.
+
+<b370>
+
+As you can see from the diagram above, the player now has two outgoing arrows, meaning that the player must reference two other things at once - the frog and the "health is" relation.
+
+How to put this in table form? For sure, we cannot get away with just a single "ref" value for the player because he/she needs to point to 2 other things simultaneously. This means that we ought to let the player have 2 separate "ref" values.
+
+<b371>
+
+We can achieve this by introducing yet another column in our table, thereby enabling us to assign up to 2 "ref" values to each row.
+
+<b372>
+
+@@<hr>
+@@<h3><b>Composite Relations</b></h3>
+
+With the ability to make multiple references, we are now able to devise more complex sorts of relations.
+
+Suppose, for instance, that the player likes not the frog itself, but the fact that the frog is contained by the inventory.
+
+<b373>
+
+In this case, it is not just a single, indivisle entity (e.g. frog) that the player likes. What the player really likes, is the relation which implies that the frog is contained by the inventory.
+
+How shall we express such a composite relation (i.e. "relation about a relation") in our data table? One faulty solution which may quickly cross one's mind is to simply let the "likes" relation point to the "contained by" relation instead of the frog.
+
+<b374>
+
+This, unfortunately, leads us to an erroneous interpretation. The "contained by" relation in this particular example refers to the much broader fact that all 3 of the items (i.e. frog, diamond, and apple) are contained by the inventory, not just the frog.
+
+So, if we let the "likes" relation point to the "contained by" relation directly, it will mean: "The player likes the fact that the frog, diamond, and apple are all contained by the inventory".
+
+We do not want this. What we really want is a more precise statement which says, "The player likes the fact that this specific item called 'frog' is contained by the inventory".
+
+In order to solve this problem, we might consider introducing a separate instance of the "contained by" relation which is only being referenced by the frog alone and nothing else. The "likes" relation, then, can point to this new instance.
+
+<b375>
+
+This fixes the problem, and now our "likes" relation accurately reflects the notion that it is the frog that the player likes being contained by the inventory, and not necessarily anything else being contained by the inventory.
+
+There is an alternative (and perhaps more elegant) approach, though. Instead of coming up with a brand new instance of the "contained by" relation, we might as well allow our "likes" relation to reference two other entities at once - the frog and the "contained by" relation.
+
+<b376>
+
+This pair of references, altogether, will carry enough information to express the following two statements simultaneously:
+
+(1) "The player likes the fact that SOMETHING is contained by the inventory."
+(2) "That SOMETHING is the frog."
+
+which, when combined, will be interpreted as: "The player likes the fact that the frog is contained by the inventory."
+
+<b377>
+
+This kind of double-referencing, of course, can be done by simply assigning the second reference (i.e. ID of the "contained by" relation) to the "likes" relation.
+
+<b378>

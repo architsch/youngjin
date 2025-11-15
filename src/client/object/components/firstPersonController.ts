@@ -3,9 +3,9 @@ import GraphicsManager from "../../graphics/graphicsManager";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GameObjectComponent from "./gameObjectComponent";
 import VoxelObject from "./voxelObject";
+import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
-const vec3Temp: THREE.Vector3 = new THREE.Vector3();
 const objTemp: THREE.Object3D = new THREE.Object3D();
 
 const yAxis = new THREE.Vector3(0, 1, 0);
@@ -18,7 +18,10 @@ export default class FirstPersonController extends GameObjectComponent
     private pointerPos: THREE.Vector2 = new THREE.Vector2();
     private raycaster: THREE.Raycaster = new THREE.Raycaster();
 
-    private pointerInstructionRemoved = false;
+    isSpawnTypeAllowed(spawnType: SpawnType): boolean
+    {
+        return spawnType == "spawnedByMe";
+    }
 
     async onSpawn(): Promise<void>
     {
@@ -104,15 +107,6 @@ export default class FirstPersonController extends GameObjectComponent
         if (this.pointerIsDown)
         {
             getNDC(ev, this.pointerDragPos);
-            if (!this.pointerInstructionRemoved)
-            {
-                setTimeout(() => {
-                    const pointerInputInstruction = document.getElementById("pointerInputInstruction");
-                    if (pointerInputInstruction)
-                        pointerInputInstruction.remove();
-                }, 500);
-                this.pointerInstructionRemoved = true;
-            }
         }
     }
 

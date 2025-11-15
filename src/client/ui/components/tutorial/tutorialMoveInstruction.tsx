@@ -1,0 +1,64 @@
+import * as THREE from "three";
+import { CSSProperties, useEffect } from "react";
+import ObjectManager from "../../../object/objectManager";
+
+const initialPlayerPos: THREE.Vector3 = new THREE.Vector3();
+const currPlayerPos: THREE.Vector3 = new THREE.Vector3();
+const initialPlayerDir: THREE.Vector3 = new THREE.Vector3();
+const currPlayerDir: THREE.Vector3 = new THREE.Vector3();
+
+export default function TutorialMoveInstruction({incrementTutorialStep}
+    : {incrementTutorialStep: () => void})
+{
+    useEffect(() => {
+        let firstTime = true;
+
+        const interval = setInterval(() => { // start the clock
+            const myPlayer = ObjectManager.getMyPlayer();
+            if (myPlayer)
+            {
+                currPlayerPos.copy(myPlayer.position);
+                myPlayer.obj.getWorldDirection(currPlayerDir);
+
+                if (firstTime)
+                {
+                    firstTime = false;
+                    initialPlayerPos.copy(currPlayerPos);
+                    initialPlayerDir.copy(currPlayerDir);
+                }
+                else if (currPlayerPos.distanceTo(initialPlayerPos) > 0.5 ||
+                    currPlayerDir.angleTo(initialPlayerDir) > 0.125 * Math.PI) // player moved
+                {
+                    clearInterval(interval);
+                    setTimeout(incrementTutorialStep, 500);
+                }
+            }
+            else
+            {
+                firstTime = true;
+            }
+        }, 100);
+
+        return () => clearInterval(interval); // stop the clock
+    }, []);
+
+    return <h1 style={style}>
+        <b>Drag to Move</b>
+    </h1>;
+}
+
+const style: CSSProperties = {
+    position: "absolute",
+    top: "0",
+    bottom: "0",
+    left: "0",
+    right: "0",
+    margin: "auto auto",
+    padding: "5vmin 5vmin",
+    width: "fit-content",
+    height: "fit-content",
+    textAlign: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    pointerEvents: "none",
+    borderRadius: "6vmin",
+};

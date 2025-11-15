@@ -4,6 +4,7 @@ import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MaterialParams from "../../graphics/types/materialParams";
 import App from "../../app";
 import GameObject from "../types/gameObject";
+import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 const voxelObjectByInstanceId: { [instanceId: number]: VoxelObject } = {};
 
@@ -107,6 +108,11 @@ export default class VoxelObject extends GameObjectComponent
                 textureIndex: quad.textureIndex,
             };
         };
+    }
+
+    isSpawnTypeAllowed(spawnType: SpawnType): boolean
+    {
+        return spawnType == "spawnedByAny";
     }
 
     async onSpawn(): Promise<void>

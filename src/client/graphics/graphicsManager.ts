@@ -65,7 +65,6 @@ const GraphicsManager =
     },
     load: async (updateCallback: XRFrameRequestCallback | null) =>
     {
-        console.log("Loading Scene...");
         gameCanvasRoot = document.getElementById("gameCanvasRoot") as HTMLElement;
         overlayCanvasRoot = document.getElementById("overlayCanvasRoot") as HTMLElement;
 
@@ -73,41 +72,6 @@ const GraphicsManager =
 
         ambLight = new THREE.AmbientLight(0xffffff, 0.15);
         scene.add(ambLight);
-
-        /*let pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
-        pointLight.position.set(16, 4, 16);
-        pointLight.castShadow = true;
-        scene.add(pointLight);
-
-        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
-        pointLight.position.set(8, 4, 8);
-        pointLight.castShadow = true;
-        scene.add(pointLight);
-
-        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
-        pointLight.position.set(24, 4, 24);
-        pointLight.castShadow = true;
-        scene.add(pointLight);
-
-        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
-        pointLight.position.set(8, 4, 24);
-        pointLight.castShadow = true;
-        scene.add(pointLight);
-
-        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
-        pointLight.position.set(24, 4, 8);
-        pointLight.castShadow = true;
-        scene.add(pointLight);
-
-        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
-        pointLight.position.set(26, 4, 4);
-        pointLight.castShadow = true;
-        scene.add(pointLight);
-
-        pointLight = new THREE.PointLight(0xffffff, 2.0, 12, 0.5);
-        pointLight.position.set(6, 4, 26);
-        pointLight.castShadow = true;
-        scene.add(pointLight);*/
 
         camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
@@ -124,20 +88,6 @@ const GraphicsManager =
             gameRenderer.domElement.style.right = "0";
             gameRenderer.domElement.style.touchAction = "none";
             gameCanvasRoot.appendChild(gameRenderer.domElement);
-
-            // temp UI
-            const wipIndicator = document.createElement("p");
-            wipIndicator.id = "wipIndicator";
-            wipIndicator.style = "position: absolute; top: 0; left: 0; right: 0; margin: 0 auto; text-align: center; background-color: black; color: white;";
-            wipIndicator.innerHTML = "<b>This page is under construction.</b>";
-            gameCanvasRoot.appendChild(wipIndicator);
-
-            // temp UI
-            const pointerInputInstruction = document.createElement("h1");
-            pointerInputInstruction.id = "pointerInputInstruction";
-            pointerInputInstruction.style = "position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto auto; padding: 5vmin 5vmin; width: fit-content; height: fit-content; text-align: center; background-color: rgba(0, 0, 0, 0.5); pointer-events: none; border-radius: 6vmin;";
-            pointerInputInstruction.innerHTML = "<b>Drag to Move</b>";
-            gameCanvasRoot.appendChild(pointerInputInstruction);
         }
 
         if (!overlayRenderer)

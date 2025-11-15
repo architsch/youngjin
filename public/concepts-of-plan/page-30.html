@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 24"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-30.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b366.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 24">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 24</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-30.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 24</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 24</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: November 15, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 24 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Relation as an Object</b></h3>
+<p>A video game is made up of its own fictional universe. Inside this universe, there are many objects which are related to each other by means of what we call "relations".</p>
+<p>The example we saw in the previous article, which I am reproducing below as a reminder, precisely illustrates the role of relations. A relation is some kind of "bond" between multiple objects, which binds them together and provides a guidance on the manner in which they are supposed to interact.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b366.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 1)">
+<p>In our foregoing example, we saw that the frog, diamond, and apple are part of the inventory, which in turn is owned by the player, whose health is 76. These statements are all based upon relations, which in this case are denoted by descriptive words such as "contained", "owned", etc.</p>
+<p>There is something which bugs us, though. So far, we have only seen 3 types of relations (i.e. "contained by", "owned by", and "health is"). For every one of these types, we introduced a whole separate column in our data table for referencing purposes (See the picture below).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b365.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 2)">
+<p>This is obviously not scalable. What if there are hundreds or even thousands of types of relations in our game? It is not so elegant to have such a horrendous number of columns in our table just for the sake of depicting relations.</p>
+<p>Fortunately, there is an alternative representation of relations which we can leverage to mitigate this problem. Instead of creating a new column for every type of relation, we may as well simply treat each relation as an object.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b367.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 3)">
+<p>In this new model, the 3 relations (i.e. "contained by", "owned by", and "health is") are defined as 3 individual objects, just like the frog, diamond, apple, inventory, and the player are individual objects which are able to exist independently from one another.</p>
+<p>But of course, we still need some way of connecting relations with their associated objects; otherwise, how on earth shall we manage to figure out which things are related to which, and by which relations?</p>
+<p>Therefore, let us assign a property called "ref" (shorthand for "reference") to each one of our objects, including relations. Think of "ref" as a pointer (i.e. an arrow) which can point to any object.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b368.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 4)">
+<p>Here, you can clearly see the role of "ref". It tells us which things belong to which relations.</p>
+<p>The "ref" values of the frog, diamond, and apple all point to the "contained by" relation because all these 3 items are contained by something. The "ref" value of the "contained by" relation, in turn, points to the inventory because it indicates the fact that the items pointing this relation are "contained by the inventory".</p>
+<p>In our data table, such a schema can be expressed in the following manner.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b369.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 5)">
+<p>Here, the table is made up of two different kinds of rows - those which represent tangible objects such as the player, inventory (suitcase), items, and so on, besides those which represent relations. In this new model, each relation is a row which can be referenced by its ID.</p>
+<p>The "ref" value of the frog, diamond, and apple are all set to the ID of the "contained by" relation because they are all "contained by" something.</p>
+<p>Contained by what? Oh, the answer is found in the "ref" value of the "contained by" relation itself. Since it is set to the ID of the inventory, we know that anything which references this relation must be "contained by the inventory".</p>
+<hr>
+<h3><b>Multiple References</b></h3>
+<p>There could be situations, though, where a single "ref" value is just not enough. Consider the following scenario, for instance, in which we are trying to add a new relation called "like" to denote the fact that the player likes the frog.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b370.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 6)">
+<p>As you can see from the diagram above, the player now has two outgoing arrows, meaning that the player must reference two other things at once - the frog and the "health is" relation.</p>
+<p>How to put this in table form? For sure, we cannot get away with just a single "ref" value for the player because he/she needs to point to 2 other things simultaneously. This means that we ought to let the player have 2 separate "ref" values.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b371.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 7)">
+<p>We can achieve this by introducing yet another column in our table, thereby enabling us to assign up to 2 "ref" values to each row.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b372.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 8)">
+<hr>
+<h3><b>Composite Relations</b></h3>
+<p>With the ability to make multiple references, we are now able to devise more complex sorts of relations.</p>
+<p>Suppose, for instance, that the player likes not the frog itself, but the fact that the frog is contained by the inventory.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b373.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 9)">
+<p>In this case, it is not just a single, indivisle entity (e.g. frog) that the player likes. What the player really likes, is the relation which implies that the frog is contained by the inventory.</p>
+<p>How shall we express such a composite relation (i.e. "relation about a relation") in our data table? One faulty solution which may quickly cross one's mind is to simply let the "likes" relation point to the "contained by" relation instead of the frog.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b374.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 10)">
+<p>This, unfortunately, leads us to an erroneous interpretation. The "contained by" relation in this particular example refers to the much broader fact that all 3 of the items (i.e. frog, diamond, and apple) are contained by the inventory, not just the frog.</p>
+<p>So, if we let the "likes" relation point to the "contained by" relation directly, it will mean: "The player likes the fact that the frog, diamond, and apple are all contained by the inventory".</p>
+<p>We do not want this. What we really want is a more precise statement which says, "The player likes the fact that this specific item called 'frog' is contained by the inventory".</p>
+<p>In order to solve this problem, we might consider introducing a separate instance of the "contained by" relation which is only being referenced by the frog alone and nothing else. The "likes" relation, then, can point to this new instance.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b375.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 11)">
+<p>This fixes the problem, and now our "likes" relation accurately reflects the notion that it is the frog that the player likes being contained by the inventory, and not necessarily anything else being contained by the inventory.</p>
+<p>There is an alternative (and perhaps more elegant) approach, though. Instead of coming up with a brand new instance of the "contained by" relation, we might as well allow our "likes" relation to reference two other entities at once - the frog and the "contained by" relation.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b376.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 12)">
+<p>This pair of references, altogether, will carry enough information to express the following two statements simultaneously:</p>
+<p>(1) "The player likes the fact that SOMETHING is contained by the inventory."<br>(2) "That SOMETHING is the frog."</p>
+<p>which, when combined, will be interpreted as: "The player likes the fact that the frog is contained by the inventory."</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b377.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 13)">
+<p>This kind of double-referencing, of course, can be done by simply assigning the second reference (i.e. ID of the "contained by" relation) to the "likes" relation.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b378.jpg" alt="Linear Algebra for Game Development - Part 24 (Figure 14)"><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-29.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>

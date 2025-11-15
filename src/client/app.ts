@@ -4,6 +4,7 @@ import ThingsPoolEnv from "./networking/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
+import UIManager from "./ui/uiManager";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -28,6 +29,10 @@ const App =
     {
         return env;
     },
+    getFPS(): number
+    {
+        return tickTimeQueue.length;
+    },
     getCurrentRoom: (): Room | undefined =>
     {
         return currentRoom;
@@ -47,6 +52,7 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
     await ObjectManager.load(roomRuntimeMemory);
+    UIManager.load(roomRuntimeMemory);
 
     prevTime = performance.now() * 0.001;
     deltaTimePending = 0;
@@ -57,6 +63,7 @@ async function unloadCurrentRoom()
     if (currentRoom == undefined)
         throw new Error(`No room to unload.`);
 
+    UIManager.unload();
     await ObjectManager.unload();
     PhysicsManager.unload(currentRoom.roomID);
     await GraphicsManager.unload();
@@ -75,7 +82,7 @@ function update()
         deltaTimePending -= deltaTime;
         
         ObjectManager.update(deltaTime);
-        GraphicsManager.update(getFPS());
+        GraphicsManager.update(App.getFPS());
 
         tickTimeQueue.push(currTime);
         while (tickTimeQueue[0] < currTime - 1)
@@ -84,31 +91,5 @@ function update()
 
     prevTime = currTime;
 }
-
-function getFPS(): number
-{
-    return tickTimeQueue.length;
-}
-
-// temp UI
-
-const uiRoot = document.getElementById("uiRoot") as HTMLElement;
-
-const fpsDisplay = document.createElement("div");
-fpsDisplay.style = "position:absolute; top:2rem; left:0.25rem; margin:0 0; padding:0.25rem 0.25rem; height:1.5rem; text-size:1rem; line-height:1.5rem; background-color:rgba(0, 0, 0, 0.5); color:red;";
-fpsDisplay.innerHTML = `FPS: ?, Position: (?, ?, ?)`;
-uiRoot.appendChild(fpsDisplay);
-
-setInterval(() => {
-    const myPlayer = ObjectManager.getMyPlayer();
-    let x = "?", y = "?", z = "?";
-    if (myPlayer)
-    {
-        x = myPlayer.position.x.toFixed(2);
-        y = myPlayer.position.y.toFixed(2);
-        z = myPlayer.position.z.toFixed(2);
-    }
-    fpsDisplay.innerHTML = `FPS: ${getFPS()}, Position: (${x}, ${y}, ${z})`;
-}, 250);
 
 export default App;

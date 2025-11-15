@@ -4,6 +4,7 @@ import GameObject from "../types/gameObject";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import Voxel from "../../../shared/voxel/types/voxel";
+import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 export default abstract class GameObjectComponent
 {
@@ -15,6 +16,8 @@ export default abstract class GameObjectComponent
         this.gameObject = gameObject;
         this.componentConfig = componentConfig;
     }
+
+    abstract isSpawnTypeAllowed(spawnType: SpawnType): boolean;
 
     async onSpawn?(): Promise<void>;
     async onDespawn?(): Promise<void>;

@@ -3,6 +3,7 @@ import GameObjectComponent from "./gameObjectComponent";
 import MaterialParams from "../../graphics/types/materialParams";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GraphicsManager from "../../graphics/graphicsManager";
+import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 const pixelBleedingPreventionShift = 0.5 / 128;
 const textureGridCellScale = 0.125;
@@ -19,6 +20,11 @@ export default class InstancedMeshGraphics extends GameObjectComponent
     getMeshInstanceInfo: ((indexInInstanceIdsArray: number)
         => { xOffset: number, yOffset: number, zOffset: number,
             dirX: number, dirY: number, dirZ: number, textureIndex: number }) | undefined;
+    
+    isSpawnTypeAllowed(spawnType: SpawnType): boolean
+    {
+        return spawnType == "spawnedByAny";
+    }
 
     getMeshId(): string
     {

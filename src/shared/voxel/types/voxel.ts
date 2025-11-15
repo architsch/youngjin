@@ -33,7 +33,7 @@ export default class Voxel extends EncodableData
         if (this.collisionLayerMask < 0 || this.collisionLayerMask > 0b1111)
             throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [${0b0000}:${0b1111}])`);
 
-        // Header Byte
+        // Voxel Byte
         bufferState.view[bufferState.index++] =
             ((this.collisionLayerMask & 0b1111) << 4) |
             ((this.quads.length-1) & 0b1111);
@@ -44,10 +44,10 @@ export default class Voxel extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
-        // Header Byte
-        const headerByte = bufferState.view[bufferState.index++];
-        const collisionLayerMask = (headerByte >> 4) & 0b1111;
-        const numQuads = (headerByte & 0b1111) + 1;
+        // Voxel Byte
+        const voxelByte = bufferState.view[bufferState.index++];
+        const collisionLayerMask = (voxelByte >> 4) & 0b1111;
+        const numQuads = (voxelByte & 0b1111) + 1;
 
         const quads = new Array<VoxelQuad>(numQuads);
         for (let i = 0; i < numQuads; ++i)
@@ -61,9 +61,9 @@ export default class Voxel extends EncodableData
 // Each Voxel's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Header Byte][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2]...
+// Layout: [Voxel Byte][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2]...
 //
-// [Header Byte]:
+// [Voxel Byte]:
 //     4 bits for the voxel's collisionLayerMask
 //     4 bits for the number of quads in the voxel's mesh
 //         (binary range of [0000:1111] corresponds to the numerical range of [1:16])
