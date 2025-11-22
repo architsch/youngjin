@@ -3,7 +3,6 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectMessageParams from "../../../shared/object/types/objectMessageParams";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 export default class SpeechBubble extends GameObjectComponent
 {
@@ -14,11 +13,6 @@ export default class SpeechBubble extends GameObjectComponent
 
     private vecTemp1 = new THREE.Vector3();
     private vecTemp2 = new THREE.Vector3();
-
-    isSpawnTypeAllowed(spawnType: SpawnType): boolean
-    {
-        return spawnType == "spawnedByOther";
-    }
 
     async onSpawn(): Promise<void>
     {

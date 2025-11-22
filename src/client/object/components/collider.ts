@@ -4,17 +4,11 @@ import PhysicsManager from "../../../shared/physics/physicsManager";
 import App from "../../app";
 import GameObjectComponent from "./gameObjectComponent";
 import AABB2 from "../../../shared/math/types/aabb2";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 const vec3Temp = new THREE.Vector3();
 
 export default class Collider extends GameObjectComponent
 {
-    isSpawnTypeAllowed(spawnType: SpawnType): boolean
-    {
-        return spawnType == "spawnedByAny";
-    }
-
     async onSpawn(): Promise<void>
     {
         const hitboxSize = this.componentConfig.hitboxSize;

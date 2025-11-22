@@ -143,7 +143,7 @@ async function loadRoom(roomID: string): Promise<RoomRuntimeMemory>
 
     if (roomID.startsWith("s")) // static room (procedurally generated)
     {
-        const roomData = RoomGenerator.generateEmptyRoom(roomID, 32, 32, 0, 1);
+        const roomData = RoomGenerator.generateRoom(roomID);
         room = new Room(
             roomID,
             roomID, // roomName

@@ -5,8 +5,12 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Voxel",
         components: {
             spawnedByAny: {
-                instancedMeshGraphics: {},
-                voxelObject: {},
+                instancedMeshGraphics: {
+                    instancedMeshConfigId: "Voxel",
+                    clickCallbackId: "Voxel.click",
+                    maxClickableDistance: 9,
+                },
+                voxelMeshInstancer: {},
             },
         },
     }],
@@ -33,6 +37,19 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 speechBubble: {
                     yOffset: 3,
                 },
+            },
+        },
+    }],
+    [2, {
+        objectType: "Door",
+        components: {
+            spawnedByAny: {
+                instancedMeshGraphics: {
+                    instancedMeshConfigId: "Door",
+                    clickCallbackId: "Door.click",
+                    maxClickableDistance: 4,
+                },
+                persistentObjectMeshInstancer: {textureIndex: 4},
             },
         },
     }],

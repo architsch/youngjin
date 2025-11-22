@@ -5,8 +5,9 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import ModelGraphics from "../components/modelGraphics";
 import ObjectSyncEmitter from "../components/objectSyncEmitter";
 import ObjectSyncReceiver from "../components/objectSyncReceiver";
+import PersistentObjectMeshInstancer from "../components/persistentObjectMeshInstancer";
 import SpeechBubble from "../components/speechBubble";
-import VoxelObject from "../components/voxelObject";
+import VoxelMeshInstancer from "../components/voxelMeshInstancer";
 import GameObject from "../types/gameObject";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
@@ -26,6 +27,8 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new ObjectSyncReceiver(parentObject, componentConfig),
     "speechBubble": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new SpeechBubble(parentObject, componentConfig),
-    "voxelObject": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new VoxelObject(parentObject, componentConfig),
+    "voxelMeshInstancer": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new VoxelMeshInstancer(parentObject, componentConfig),
+    "persistentObjectMeshInstancer": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new PersistentObjectMeshInstancer(parentObject, componentConfig),
 }

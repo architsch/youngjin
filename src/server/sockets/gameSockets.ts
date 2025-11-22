@@ -60,7 +60,7 @@ const GameSockets =
             });
 
             // A recently connected client should automatically join the default room.
-            await RoomManager.changeUserRoom(socketUserContext, "s1", false);
+            await RoomManager.changeUserRoom(socketUserContext, "s0", false);
         });
 
         signalProcessingInterval = setInterval(() => {

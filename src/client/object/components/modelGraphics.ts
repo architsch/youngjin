@@ -2,16 +2,10 @@ import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import ModelFactory from "../../graphics/factories/modelFactory";
 import App from "../../app";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 export default class ModelGraphics extends GameObjectComponent
 {
     private model: THREE.Group | undefined;
-
-    isSpawnTypeAllowed(spawnType: SpawnType): boolean
-    {
-        return true;
-    }
 
     async onSpawn(): Promise<void>
     {

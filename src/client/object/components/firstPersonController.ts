@@ -2,8 +2,8 @@ import * as THREE from "three";
 import GraphicsManager from "../../graphics/graphicsManager";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GameObjectComponent from "./gameObjectComponent";
-import VoxelObject from "./voxelObject";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
+import InstancedMeshGraphics from "./instancedMeshGraphics";
+import { ObjectCallbackMap } from "../maps/objectCallbackMap";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 const objTemp: THREE.Object3D = new THREE.Object3D();
@@ -17,11 +17,6 @@ export default class FirstPersonController extends GameObjectComponent
     private pointerDragPos: THREE.Vector2 = new THREE.Vector2();
     private pointerPos: THREE.Vector2 = new THREE.Vector2();
     private raycaster: THREE.Raycaster = new THREE.Raycaster();
-
-    isSpawnTypeAllowed(spawnType: SpawnType): boolean
-    {
-        return spawnType == "spawnedByMe";
-    }
 
     async onSpawn(): Promise<void>
     {
@@ -55,6 +50,15 @@ export default class FirstPersonController extends GameObjectComponent
 
     async onDespawn(): Promise<void>
     {
+        const canvas = GraphicsManager.getGameCanvas();
+        canvas.removeEventListener("pointerdown", this.onPointerPress);
+        canvas.removeEventListener("pointerup", this.onPointerRelease);
+        canvas.removeEventListener("pointercancel", this.onPointerRelease);
+        canvas.removeEventListener("pointerleave", this.onPointerRelease);
+        canvas.removeEventListener("pointerout", this.onPointerRelease);
+        canvas.removeEventListener("focusout", this.onFocusOut);
+        canvas.removeEventListener("pointermove", this.onPointerMove);
+        canvas.removeEventListener("click", this.onClick);
     }
 
     update(deltaTime: number): void
@@ -134,24 +138,35 @@ export default class FirstPersonController extends GameObjectComponent
 
         if (intersections.length > 0)
         {
-            const instanceId = intersections[0].instanceId;
-            
+            const intersection = intersections[0];
+            const instanceId = intersection.instanceId;
+
             if (instanceId != undefined)
             {
-                const voxelObject = VoxelObject.get(instanceId);
-                if (voxelObject != undefined)
+                const gameObject = InstancedMeshGraphics.findGameObject(instanceId);
+                if (gameObject != undefined)
                 {
-                    console.log(`Selected Voxel = ${JSON.stringify(voxelObject.getVoxel())}`);
+                    const instancedMeshGraphics = gameObject.components.instancedMeshGraphics;
+                    if (instancedMeshGraphics)
+                    {
+                        const componentConfig = instancedMeshGraphics.componentConfig;
+                        if (componentConfig.clickCallbackId)
+                        {
+                            const maxDist = componentConfig.maxClickableDistance ?? 1000000;
+                            const distSqr = this.gameObject.position.distanceToSquared(intersection.point);
+
+                            if (distSqr <= maxDist * maxDist)
+                                ObjectCallbackMap[componentConfig.clickCallbackId](gameObject, instanceId);
+                        }
+                    }
+                    else
+                        console.error(`InstancedMeshGraphics component not found (spawnParams = ${JSON.stringify(gameObject.params)}, instanceId = ${instanceId})`);
                 }
                 else
-                {
-                    console.error(`VoxelObject not found (instanceId = ${instanceId})`);
-                }
+                    console.error(`GameObject not found in InstancedMeshGraphics (instanceId = ${instanceId})`);
             }
             else
-            {
-                console.error(`InstanceId not found (object name = ${intersections[0].object.name})`);
-            }
+                console.error(`InstanceId not found (object name = ${intersection.object.name})`);
         }
     }
 }

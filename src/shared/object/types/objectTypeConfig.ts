@@ -1,10 +1,44 @@
-import ObjectComponentGroupConfig from "./objectComponentGroupConfig";
+import { HitboxSize } from "../../physics/types/hitboxSize";
 
 export type SpawnType = "spawnedByMe" | "spawnedByOther" | "spawnedByAny";
 
 export default interface ObjectTypeConfig
 {
     objectType: string;
-    components: {[spawnType in SpawnType]?:
-        ObjectComponentGroupConfig},
+    components: {
+        spawnedByAny?: {
+            collider?: {
+                collisionLayer: number,
+                hitboxSize: HitboxSize,
+            },
+            instancedMeshGraphics?: {
+                instancedMeshConfigId: string,
+                clickCallbackId?: string,
+                maxClickableDistance?: number,
+            },
+            voxelMeshInstancer?: {
+            },
+            persistentObjectMeshInstancer?: {
+                textureIndex: number,
+            },
+        },
+        spawnedByMe?: {
+            firstPersonController?: {
+            },
+            objectSyncEmitter?: {
+            },
+        },
+        spawnedByOther?: {
+            objectSyncReceiver?: {
+            },
+            speechBubble?: {
+                yOffset: number,
+            },
+            modelGraphics?: {
+                path: string,
+                localPosition: {x: number, y: number, z: number},
+                scale: {x: number, y: number, z: number},
+            },
+        },
+    },
 }

@@ -1,5 +1,4 @@
 import GameObject from "../object/types/gameObject";
-import GameSocketsClient from "../networking/gameSocketsClient";
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
@@ -9,8 +8,10 @@ import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
-import VoxelObject from "./components/voxelObject";
+import VoxelMeshInstancer from "./components/voxelMeshInstancer";
 import ObjectTransform from "../../shared/object/types/objectTransform";
+import PersistentObjectMeshInstancer from "./components/persistentObjectMeshInstancer";
+import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable } from "../system/observables";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -55,8 +56,8 @@ const ObjectManager =
                     0, 0, 1
                 )
             );
-            const voxelObject = gameObject.components.voxelObject! as VoxelObject;
-            voxelObject.setVoxel(voxel);
+            const voxelMeshInstancer = gameObject.components.voxelMeshInstancer! as VoxelMeshInstancer;
+            voxelMeshInstancer.setVoxel(voxel);
             await ObjectManager.spawnObject(gameObject);
         };
 
@@ -80,10 +81,16 @@ const ObjectManager =
                 new ObjectTransform(po.x, po.y, po.z, dirX, dirY, dirZ),
                 po.metadata
             );
-            if (objectSpawnParams.objectTypeIndex == voxelTypeIndex)
-                throw new Error(`Voxel object is not allowed to spawn via persistentObjects.`);
-            const object = ObjectFactory.createServerSideObject(objectSpawnParams);
-            await ObjectManager.spawnObject(object);
+            const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
+            if (!config)
+                throw new Error(`PersistentObject's object type config not found (objectTypeIndex = ${po.objectTypeIndex})`);
+            if (!config.components.spawnedByAny || !config.components.spawnedByAny.persistentObjectMeshInstancer)
+                throw new Error(`PersistentObjectMeshInstancer is missing from PersistentObject (objectTypeIndex = ${po.objectTypeIndex})`);
+
+            const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
+            const persistentObjectMeshInstancer = gameObject.components.persistentObjectMeshInstancer! as PersistentObjectMeshInstancer;
+            persistentObjectMeshInstancer.setPersistentObject(po);
+            await ObjectManager.spawnObject(gameObject);
         }
 
         // Load objects from objectRuntimeMemories
@@ -96,7 +103,7 @@ const ObjectManager =
         }
 
         // Add listeners
-        GameSocketsClient.objectSyncObservable.addListener("room", (params: ObjectSyncParams) => {
+        objectSyncObservable.addListener("room", (params: ObjectSyncParams) => {
             const gameObject = gameObjects[params.objectId];
             if (gameObject == undefined)
             {
@@ -109,7 +116,7 @@ const ObjectManager =
                     component.onObjectSyncReceived(params);
             }
         });
-        GameSocketsClient.objectDesyncResolveObservable.addListener("room", (params: ObjectDesyncResolveParams) => {
+        objectDesyncResolveObservable.addListener("room", (params: ObjectDesyncResolveParams) => {
             const gameObject = gameObjects[params.objectId];
             for (const component of Object.values(gameObject.components))
             {
@@ -117,16 +124,16 @@ const ObjectManager =
                     component.onObjectDesyncResolveReceived(params);
             }
         });
-        GameSocketsClient.objectSpawnObservable.addListener("room", async (params: ObjectSpawnParams) => {
+        objectSpawnObservable.addListener("room", async (params: ObjectSpawnParams) => {
             if (gameObjects[params.objectId] != undefined)
                 return;
             const gameObject = ObjectFactory.createServerSideObject(params);
             await ObjectManager.spawnObject(gameObject);
         });
-        GameSocketsClient.objectDespawnObservable.addListener("room", async (params: ObjectDespawnParams) => {
+        objectDespawnObservable.addListener("room", async (params: ObjectDespawnParams) => {
             await ObjectManager.despawnObject(params.objectId);
         });
-        GameSocketsClient.objectMessageObservable.addListener("room", (params: ObjectMessageParams) => {
+        objectMessageObservable.addListener("room", (params: ObjectMessageParams) => {
             const gameObject = gameObjects[params.senderObjectId];
             if (gameObject == undefined)
             {
@@ -165,10 +172,11 @@ const ObjectManager =
             delete players[key];
 
         // Remove listeners
-        GameSocketsClient.objectSyncObservable.removeListener("room");
-        GameSocketsClient.objectSpawnObservable.removeListener("room");
-        GameSocketsClient.objectDespawnObservable.removeListener("room");
-        GameSocketsClient.objectMessageObservable.removeListener("room");
+        objectSyncObservable.removeListener("room");
+        objectDesyncResolveObservable.removeListener("room");
+        objectSpawnObservable.removeListener("room");
+        objectDespawnObservable.removeListener("room");
+        objectMessageObservable.removeListener("room");
     },
     spawnObject: async (object: GameObject) =>
     {

@@ -5,30 +5,34 @@ import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import ThingsPoolEnv from "./thingsPoolEnv";
-import Observable from "../../shared/util/observable";
+import ThingsPoolEnv from "../system/types/thingsPoolEnv";
 import Encoding from "../../shared/networking/encoding";
 import EncodableArray from "../../shared/networking/types/encodableArray";
 import EncodableRawByteNumber from "../../shared/networking/types/encodableRawByteNumber";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../shared/networking/types/encodableData";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
+import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable } from "../system/observables";
+import { tryStartClientProcess } from "../system/types/clientProcess";
 
 let socket: Socket;
 
 const signalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
-    "roomRuntimeMemory": (data: EncodableData) => GameSocketsClient.roomRuntimeMemoryObservable.broadcast(data as RoomRuntimeMemory),
-    "objectSyncParams": (data: EncodableData) => GameSocketsClient.objectSyncObservable.broadcast(data as ObjectSyncParams),
-    "objectDesyncResolveParams": (data: EncodableData) => GameSocketsClient.objectDesyncResolveObservable.broadcast(data as ObjectDesyncResolveParams),
-    "objectSpawnParams": (data: EncodableData) => GameSocketsClient.objectSpawnObservable.broadcast(data as ObjectSpawnParams),
-    "objectDespawnParams": (data: EncodableData) => GameSocketsClient.objectDespawnObservable.broadcast(data as ObjectDespawnParams),
-    "objectMessageParams": (data: EncodableData) => GameSocketsClient.objectMessageObservable.broadcast(data as ObjectMessageParams),
+    "roomRuntimeMemory": (data: EncodableData) => roomRuntimeMemoryObservable.set(data as RoomRuntimeMemory),
+    "objectSyncParams": (data: EncodableData) => objectSyncObservable.set(data as ObjectSyncParams),
+    "objectDesyncResolveParams": (data: EncodableData) => objectDesyncResolveObservable.set(data as ObjectDesyncResolveParams),
+    "objectSpawnParams": (data: EncodableData) => objectSpawnObservable.set(data as ObjectSpawnParams),
+    "objectDespawnParams": (data: EncodableData) => objectDespawnObservable.set(data as ObjectDespawnParams),
+    "objectMessageParams": (data: EncodableData) => objectMessageObservable.set(data as ObjectMessageParams),
 }
 
 const GameSocketsClient =
 {
     init: (env: ThingsPoolEnv) =>
     {
+        if (!tryStartClientProcess("roomChange", 1, 0))
+            throw new Error("'roomChange' process is already ongoing.");
+
         socket = io(`${env.socket_server_url}/game_sockets`);
 
         socket.on("connect_error", (err) => {
@@ -66,14 +70,12 @@ const GameSocketsClient =
 
     emitObjectSync: (params: ObjectSyncParams) => sendEncodedSignal("objectSync", params),
     emitObjectMessage: (params: ObjectMessageParams) => sendEncodedSignal("objectMessage", params),
-    emitRoomChangeRequest: (params: RoomChangeRequestParams) => sendEncodedSignal("roomChangeRequest", params),
-
-    roomRuntimeMemoryObservable: new Observable<RoomRuntimeMemory>(),
-    objectSyncObservable: new Observable<ObjectSyncParams>(),
-    objectDesyncResolveObservable: new Observable<ObjectDesyncResolveParams>(),
-    objectSpawnObservable: new Observable<ObjectSpawnParams>(),
-    objectDespawnObservable: new Observable<ObjectDespawnParams>(),
-    objectMessageObservable: new Observable<ObjectMessageParams>(),
+    tryEmitRoomChangeRequest: (params: RoomChangeRequestParams) => {
+        if (tryStartClientProcess("roomChange", 1, 1))
+            sendEncodedSignal("roomChangeRequest", params);
+        else
+            console.warn("Cannot change room because 'roomChange' process is ongoing.");
+    },
 }
 
 function sendEncodedSignal(signalType: string, signalData: EncodableData)

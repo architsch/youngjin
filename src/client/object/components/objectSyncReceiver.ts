@@ -2,7 +2,6 @@ import * as THREE from "three";
 import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 const syncIntervalInMillis = 200;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
@@ -32,11 +31,6 @@ export default class ObjectSyncReceiver extends GameObjectComponent
 
         this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);
         this.quaternionInterpRange[1].setFromEuler(this.gameObject.rotation);
-    }
-
-    isSpawnTypeAllowed(spawnType: SpawnType): boolean
-    {
-        return spawnType == "spawnedByOther";
     }
 
     async onDespawn(): Promise<void>

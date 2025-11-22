@@ -1,48 +1,57 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
-import MaterialParams from "../../graphics/types/materialParams";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GraphicsManager from "../../graphics/graphicsManager";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
+import GameObject from "../types/gameObject";
+import InstancedMeshConfig from "../../graphics/types/instancedMeshConfig";
+import { InstancedMeshConfigMap } from "../../graphics/maps/instancedMeshConfigMap";
 
 const pixelBleedingPreventionShift = 0.5 / 128;
 const textureGridCellScale = 0.125;
 const tempObj = new THREE.Object3D();
 const vec3Temp = new THREE.Vector3();
 
+const objByInstanceId: { [instanceId: number]: GameObject } = {};
+
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
     instanceIds: number[] = [];
-    getMeshMaterialParams: (() => MaterialParams) | undefined;
-    getMeshGeometryId: (() => string) | undefined;
-    getTotalNumInstances: (() => number) | undefined;
-    getNumInstancesToRent: (() => number) | undefined;
-    getMeshInstanceInfo: ((indexInInstanceIdsArray: number)
-        => { xOffset: number, yOffset: number, zOffset: number,
-            dirX: number, dirY: number, dirZ: number, textureIndex: number }) | undefined;
-    
-    isSpawnTypeAllowed(spawnType: SpawnType): boolean
+
+    static findGameObject(instanceId: number): GameObject | undefined
     {
-        return spawnType == "spawnedByAny";
+        return objByInstanceId[instanceId];
     }
 
     getMeshId(): string
     {
-        const materialParams = this.getMeshMaterialParams!();
+        const config = this.getInstancedMeshConfig();
+        const materialParams = config.getMaterialParams(this.gameObject);
         const materialId = `${materialParams.type}-${materialParams.additionalParam}`;
-        return `${this.getMeshGeometryId!()}-${materialId}`;
+        return `${config.geometryId}-${materialId}`;
+    }
+
+    getInstancedMeshConfig(): InstancedMeshConfig
+    {
+        const id = this.componentConfig.instancedMeshConfigId;
+        return InstancedMeshConfigMap[id];
     }
 
     async onSpawn(): Promise<void>
     {
+        const config = this.getInstancedMeshConfig();
         const { instancedMesh, rentedInstanceIds } = await MeshFactory.loadInstancedMesh(
-            this.getMeshGeometryId!(),
-            this.getMeshMaterialParams!(),
-            this.getTotalNumInstances!(),
-            this.getNumInstancesToRent!()
+            config.geometryId,
+            config.getMaterialParams(this.gameObject),
+            config.totalNumInstances,
+            config.getNumInstancesToRent(this.gameObject)
         );
         for (const instanceId of rentedInstanceIds)
+        {
             this.instanceIds.push(instanceId);
+            if (objByInstanceId[instanceId] != undefined)
+                console.error(`InstanceId already exists in objByInstanceId (instanceId = ${instanceId})`);
+            objByInstanceId[instanceId] = this.gameObject;
+        }
 
         // Assign meshId to the mesh object's name.
         if (!instancedMesh.name)
@@ -57,19 +66,19 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         for (let i = 0; i < rentedInstanceIds.length; ++i)
         {
             const instanceId = rentedInstanceIds[i];
-            const info = this.getMeshInstanceInfo!(i);
+            const params = config.getMeshInstanceParams(this.gameObject, i);
 
             tempObj.position.set(0, 0, 0);
             
             vec3Temp.set(
-                this.gameObject.position.x + info.dirX,
-                this.gameObject.position.y + info.dirY,
-                this.gameObject.position.z + info.dirZ
+                this.gameObject.position.x + params.dirX,
+                this.gameObject.position.y + params.dirY,
+                this.gameObject.position.z + params.dirZ
             );
             tempObj.lookAt(vec3Temp);
             tempObj.getWorldDirection(vec3Temp);
 
-            tempObj.position.set(info.xOffset, info.yOffset, info.zOffset);
+            tempObj.position.set(params.xOffset, params.yOffset, params.zOffset);
             tempObj.updateMatrixWorld();
 
             instancedMesh.setMatrixAt(instanceId, tempObj.matrixWorld);
@@ -78,9 +87,9 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             instancedMesh.geometry.attributes.uvStart.setXY(
                 instanceId,
                 textureGridCellScale *
-                    (pixelBleedingPreventionShift + info.textureIndex % 8),
+                    (pixelBleedingPreventionShift + params.textureIndex % 8),
                 textureGridCellScale *
-                    (pixelBleedingPreventionShift + Math.floor(info.textureIndex * 0.125))
+                    (pixelBleedingPreventionShift + Math.floor(params.textureIndex * 0.125))
             );
             instancedMesh.geometry.attributes.uvStart.needsUpdate = true;
         }
@@ -91,5 +100,8 @@ export default class InstancedMeshGraphics extends GameObjectComponent
     async onDespawn(): Promise<void>
     {
         MeshFactory.unload(this.getMeshId(), this.instanceIds);
+
+        for (const instanceId of this.instanceIds)
+            delete objByInstanceId[instanceId];
     }
 }

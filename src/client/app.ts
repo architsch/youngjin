@@ -1,10 +1,10 @@
 import ObjectManager from "./object/objectManager";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
-import ThingsPoolEnv from "./networking/thingsPoolEnv";
+import ThingsPoolEnv from "./system/types/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
-import UIManager from "./ui/uiManager";
+import { endClientProcess } from "./system/types/clientProcess";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -41,7 +41,9 @@ const App =
     {
         if (currentRoom != undefined)
             await unloadCurrentRoom();
-        loadRoom(roomRuntimeMemory);
+        await loadRoom(roomRuntimeMemory);
+
+        endClientProcess("roomChange");
     },
 }
 
@@ -52,7 +54,6 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
     await ObjectManager.load(roomRuntimeMemory);
-    UIManager.load(roomRuntimeMemory);
 
     prevTime = performance.now() * 0.001;
     deltaTimePending = 0;
@@ -63,7 +64,6 @@ async function unloadCurrentRoom()
     if (currentRoom == undefined)
         throw new Error(`No room to unload.`);
 
-    UIManager.unload();
     await ObjectManager.unload();
     PhysicsManager.unload(currentRoom.roomID);
     await GraphicsManager.unload();

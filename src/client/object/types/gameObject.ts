@@ -5,7 +5,7 @@ import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import GameObjectComponent from "../components/gameObjectComponent";
 import ObjectComponentFactory from "../factories/objectComponentFactory";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
+import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -13,6 +13,7 @@ export default class GameObject
 {
     params: ObjectSpawnParams;
     obj: THREE.Object3D = new THREE.Object3D();
+    config: ObjectTypeConfig;
     components: {[componentName: string]: GameObjectComponent} = {};
 
     constructor(params: ObjectSpawnParams)
@@ -28,18 +29,16 @@ export default class GameObject
         );
         this.obj.lookAt(vec3Temp);
         
-        const config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
-        for (const [spawnType, objectComponentGroupConfig] of Object.entries(config.components))
+        this.config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
+        for (const [spawnType, componentConfigs] of Object.entries(this.config.components))
         {
             if (this.meetsSpawnCondition(spawnType as SpawnType))
             {
-                for (const [componentName, componentConfig] of Object.entries(objectComponentGroupConfig))
+                for (const [componentName, componentConfig] of Object.entries(componentConfigs))
                 {
                     if (this.components[componentName] != undefined)
-                        throw new Error(`Duplicate component found (objectId = ${params.objectId}, objectType = ${config.objectType}, componentName = ${componentName})`);
+                        throw new Error(`Duplicate component found (objectId = ${params.objectId}, objectType = ${this.config.objectType}, componentName = ${componentName})`);
                     const component = ObjectComponentFactory.createComponent(this, componentName, componentConfig);
-                    if (!component.isSpawnTypeAllowed(spawnType as SpawnType))
-                        throw new Error(`SpawnType of "${spawnType}" is not allowed in the "${componentName}" component.`);
                     this.components[componentName] = component;
                 }
             }

@@ -4,7 +4,6 @@ import GameSocketsClient from "../../networking/gameSocketsClient";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
-import { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 
 const syncIntervalInMillis = 200;
 const minSyncDistSqr = 0.0001;
@@ -17,11 +16,6 @@ export default class ObjectSyncEmitter extends GameObjectComponent
     private lastSyncTime: number = 0;
     private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
     private lastSyncedRotation: THREE.Euler = new THREE.Euler();
-
-    isSpawnTypeAllowed(spawnType: SpawnType): boolean
-    {
-        return spawnType == "spawnedByMe";
-    }
 
     async onSpawn(): Promise<void>
     {

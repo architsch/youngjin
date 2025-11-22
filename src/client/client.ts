@@ -1,21 +1,16 @@
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import GameSocketsClient from "./networking/gameSocketsClient";
 import App from "./app";
+import UIManager from "./ui/uiManager";
+import { roomRuntimeMemoryObservable } from "./system/observables";
 
 const env = (window as any).thingspool_env;
 App.setEnv(env);
 
-if (!(window as any).thingspool_loading)
-{
-    (window as any).thingspool_loading_on();
+UIManager.load();
 
-    GameSocketsClient.roomRuntimeMemoryObservable.addListener("init", async (roomRuntimeMemory: RoomRuntimeMemory) => {
-        await App.changeRoom(roomRuntimeMemory);
-        (window as any).thingspool_loading_off();
-    });
-    GameSocketsClient.init(env);
-}
-else
-{
-    console.error("Already loading.");
-}
+roomRuntimeMemoryObservable.addListener("init", async (roomRuntimeMemory: RoomRuntimeMemory) => {
+    await App.changeRoom(roomRuntimeMemory);
+});
+
+GameSocketsClient.init(env);

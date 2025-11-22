@@ -6,14 +6,19 @@ import VoxelQuad from "../voxel/types/voxelQuad";
 
 type CollisionLayerMask = number;
 
-const staticRoomIDs = ["s1", "s2", "s3", "s4"];
+const minRoomNumber = 0;
+const maxRoomNumber = 3;
 
 const RoomGenerator =
 {
-    generateEmptyRoom: (roomID: string, numGridRows: number, numGridCols: number,
-        floorTextureIndex: number, wallTextureIndex: number)
-        : {voxelGrid: VoxelGrid, persistentObjects: PersistentObject[]} =>
+    generateRoom: (roomID: string) : {voxelGrid: VoxelGrid, persistentObjects: PersistentObject[]} =>
     {
+        const numGridRows = 32;
+        const numGridCols = 32;
+        const roomNumber = parseInt(roomID.substring(1));
+        const floorTextureIndex = 8 * roomNumber;
+        const wallTextureIndex = 8 * roomNumber + 1;
+
         const voxels = new Array<Voxel>(numGridRows * numGridCols);
         for (let row = 0; row < numGridRows; ++row)
         {
@@ -38,27 +43,28 @@ const RoomGenerator =
 
         const persistentObjects: PersistentObject[] = [];
 
-        /*let shift = 12;
-        const objectTypeIndex = ObjectTypeConfigMap.getIndexByType("Portal");
-        for (const otherRoomID of staticRoomIDs)
+        let shift = 12;
+        for (let roomNumber = minRoomNumber; roomNumber <= maxRoomNumber; ++roomNumber)
         {
+            const otherRoomID = `s${roomNumber}`;
+
             if (otherRoomID != roomID)
             {
                 const x = shift;
-                const y = 0;
-                const z = 1.5;
+                const y = 2;
+                const z = 1;
                 shift += 4;
                 const objectId = `p${x}-${y}-${z}`;
 
                 persistentObjects.push(new PersistentObject(
                     objectId,
-                    objectTypeIndex,
+                    ObjectTypeConfigMap.getIndexByType("Door"),
                     "+z",
                     x, y, z,
                     otherRoomID
                 ));
             }
-        }*/
+        }
         
         return {
             voxelGrid: new VoxelGrid(numGridRows, numGridCols, voxels),
