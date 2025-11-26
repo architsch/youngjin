@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 26"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-32.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b381.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 26">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 26</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-32.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 26</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 26</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: November 27, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 26 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Relations in One Dimension</b></h3>
+<p>Okay, so we just saw the merits of handling data in one dimension.</p>
+<p>We should remind ourselves, though, that we have barely scratched the surface of what we are going to see next.</p>
+<p>Note that, in Part 23 and Part 24 of this series, I introduced the concept of relations as some of the most fundamental building blocks of gameplay. The thing is that, while describing the nature of relations, I never explaind a way to manipulate their states using linear algebra.</p>
+<p>Such omission was chiefly due to practical reasons. A two-dimensional table, composed of both rows and columns, is not so straightforward a model to handle relations by means of matrix multiplications. A one-dimensional (i.e. single-column) table fits such an objective more elegantly.</p>
+<p>Before learning how to use relations for gameplay purposes, therefore, we must first learn how to represent them one-dimensionally.</p>
+<p>Let us revisit our previous example in which there are two objects - the player and the apple. The player's energy level is 3, and the apple's energy level is 1. They are both listed inside a single column.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b381.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 1)">
+<p>A more pictorially enriched depiction of this scenario is shown below. Here, I am representing each energy level as a bar.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b392.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 2)">
+<p>While designing a video game, however, we often feel the necessity to add more types of numbers (i.e. state variables) to a game character. For instance, we may want the player to be equipped with not only energy, but also health and mana.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b393.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 3)">
+<p>Perhaps the most direct way of implementing these in our data table is to let each object have 2 additional slots - one for "health" and the other one for "mana".</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b394.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 4)">
+<p>This, of course, is not a scalable solution at all. Imagine that we decided to let the player have hundreds of numbers associated with him, while still requiring the apple to possess just a single number called "energy". This will force the apple's section of the table to carry hundreds of empty slots just to fill the gap.</p>
+<p>Fortunately, this kind of scaling issue can be avoided by using relations, such as the ones shown here:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b395.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 5)">
+<p>Here, we have a bunch of relations that are responsible for denoting the characteristics of both the player and apple. The "energy is" relation denotes the player's energy, for example.</p>
+<p>If we represent every one of these relations as an object, it will look something like this:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b396.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 6)">
+<p>Each object contains 3 reference slots, implying the capacity to point up to 3 other objects. As you can see, the player is pointing the 3 relations which describe his energy, health, and mana respectively. The apple, on the other hand, is pointing a single relation which describes its energy.</p>
+<p>This looks neat. But again, we ought to be aware of the problem of scalability. If we are to convert the above diagram into a one-dimensional table, we will have to come up with a quite undesirably long list of values, which begins like this:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b397.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 7)">
+<p>... and continues all the way down to:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b398.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 8)">
+<p>In this table, every object consists of 5 data entries (1 for ID + 1 for Type + 3 for references). Since every relation is an object and there are 4 of them (aside from the player and apple), we need 6x5 = 30 entries in our data table.</p>
+<p>This does not seem too much in our particular scenario. If we want each object to be able to bear an enormous number of properties, however, a great deal of wasted space will emerge.</p>
+<p>So, here is a better solution, Why don't we just tie up the player's relations as a single chain (as illustrated in the picture below)?</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b399.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 9)">
+<p>If we do it this way, we will be able to get away with just up to 2 references per relation. Inside each relation, the first reference will hold the value (e.g. energy, health, etc), while the second reference will be pointing the "next" relation in the chain.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b400.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 10)">
+<p>In table form, it can be written like the one shown below.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b401.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 11)">
+<hr>
+<h3><b>Relations with Multidimensional Data</b></h3>
+<p>Oh, but not every property can be represented as a single number. Some of them, such as position, velocity, and other multidimensional species of information, must be expressed in terms of vector quantities. For example, we might wish to record the player's current position as a 2D vector (a pair of numbers). How shall we implement that?</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b402.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 12)">
+<p>Okay, it is not that difficult. All we have to do is leverage a relation's first and second references as the two spatial coordinates (X and Y). Such a relation may be referred to as a "pair of" relation, since it relates a pair of numbers (X and Y) to the player's position.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b403.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 13)">
+<p>In terms of objects, it can be structured as the following:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b404.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 14)">
+<hr>
+<h3><b>Relations in Multiple Layers</b></h3>
+<p>There is yet another limit to the aforementioned solution, though. What if the player is associated with not just a single 2D vector, but multiple 2D vectors? For example, we could easily imagine a scenario in which we need to keep track of the player's velocity besides position.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b405.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 15)">
+<p>In case we encounter a situation like this, we will be unable to group all of the player's properties as a single chain of relations unless we let each object carry more than 2 references. So, shall we assign 3 references to each object instead of 2?</p>
+<p>But wait - hold on. We've got a much better way of handling this level of complexity.</p>
+<p>Here is a hint. Relations can come in multiple layers; that is, a relation can refer to other relations, which in turn can refer to yet another group of relations, and so on. It may as well be stated that there could be "relations about relations".</p>
+<p>This sounds confusing, so I will give you a concrete example to clarify things a bit. First off, if we express the above diagram as a single English sentence, it will be written like this:</p>
+<div class="snippet"><pre><code>The player has the energy of 3, the health of 45, the position which is a pair of (2, 7), and velocity which is a pair of (-1, 0.3).</code></pre></div>
+<p>Here, we are seeing different types of relations. Some of them simply describe properties that the player happens to possess (such as "energy of", "health of", "position which is", etc), while others play the role of joining such elementary relations with one another (such "has" and "and").</p>
+<p>Pictorially, the sentence written above can be structured in the following manner:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b406.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 16)">
+<p>The player still carries a chain of relation, which goes like: [has -&gt; and -&gt; and -&gt; and]. However, the chain itself branches out into more specific relations, some of which further branch themselves out to be able to hold multidimensional data (such as a pair of numbers).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b407.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 17)">
+<p>By letting relations refer to other relations, we are able to express pretty much any gameplay scenario without complicating things too much. For instance, imagine a case in which the player has 3 energy points and is able to eat the apple.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b408.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 18)">
+<p>This can be broken down to 4 relations in total - 2 for describing the player's characteristics (i.e. "how much energy he has", "what he can eat", etc), and the other 2 for binding these two relations to the player by means of conjunctions (e.g. the word "and").</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b409.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 19)">
+<p>And this, of course, translates to:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b410.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 20)">
+<p>Okay, here comes a more intellectually challenging example. Let's say that the player likes the fact that he can eat the apple. How shall we formulate this kind of situation in terms of relations?</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b411.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 21)">
+<p>Again, we should remind ourselves that a relation is capable of referencing another relation. So, all we need to do is simply let the player's "likes" relation point to the "can eat" relation.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b412.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 22)">
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b413.jpg" alt="Linear Algebra for Game Development - Part 26 (Figure 23)">
+<p>A plain English expression of this would be:</p>
+<div class="snippet"><pre><code>The player has the energy of 3, can eat the apple, and likes the fact that he can eat the apple.</code></pre></div><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-31.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>
