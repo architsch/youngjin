@@ -3,9 +3,12 @@ import GraphicsManager from "../../graphics/graphicsManager";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
-import { ObjectCallbackMap } from "../maps/objectCallbackMap";
+import { ObjectClickCallbackMap } from "../maps/objectClickCallbackMap";
+import GameObject from "../types/gameObject";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
+const vec3Temp = new THREE.Vector3();
+const vec3Temp2 = new THREE.Vector3();
 const objTemp: THREE.Object3D = new THREE.Object3D();
 
 const yAxis = new THREE.Vector3(0, 1, 0);
@@ -86,6 +89,37 @@ export default class FirstPersonController extends GameObjectComponent
         }
     }
 
+    objectIsInLineOfSight(lookTargetWorldPosition: THREE.Vector3, lookTargetObject: GameObject): boolean
+    {
+        const camera = GraphicsManager.getCamera();
+        camera.getWorldPosition(vec3Temp);
+        
+        vec3Temp2.copy(lookTargetWorldPosition);
+        vec3Temp2.sub(vec3Temp);
+        vec3Temp2.normalize();
+
+        this.raycaster.set(vec3Temp, vec3Temp2);
+        const intersections = this.raycaster.intersectObjects(MeshFactory.getMeshes());
+
+        if (intersections.length > 0)
+        {
+            const intersection = intersections[0];
+            const instanceId = intersection.instanceId;
+
+            if (instanceId != undefined)
+            {
+                const gameObject = InstancedMeshGraphics.findGameObject(intersection.object, instanceId);
+                if (gameObject != undefined)
+                    return gameObject == lookTargetObject;
+                else
+                    console.error(`GameObject not found in InstancedMeshGraphics (instanceId = ${instanceId})`);
+            }
+            else
+                console.error(`InstanceId not found (object name = ${intersection.object.name})`);
+        }
+        return false;
+    }
+
     private onPointerPress(ev: PointerEvent): void
     {
         //console.log("onPointerPress");
@@ -123,10 +157,10 @@ export default class FirstPersonController extends GameObjectComponent
     private onClick(ev: PointerEvent): void
     {
         ev.preventDefault();
-        this.raycastAt(ev);
+        this.clickRaycast(ev);
     }
 
-    private raycastAt(ev: PointerEvent): void
+    private clickRaycast(ev: PointerEvent): void
     {
         if (this.pointerDragPos.distanceToSquared(this.pointerDownPos) > 0.0009)
             return;
@@ -143,21 +177,15 @@ export default class FirstPersonController extends GameObjectComponent
 
             if (instanceId != undefined)
             {
-                const gameObject = InstancedMeshGraphics.findGameObject(instanceId);
+                const gameObject = InstancedMeshGraphics.findGameObject(intersection.object, instanceId);
                 if (gameObject != undefined)
                 {
                     const instancedMeshGraphics = gameObject.components.instancedMeshGraphics;
                     if (instancedMeshGraphics)
                     {
-                        const componentConfig = instancedMeshGraphics.componentConfig;
-                        if (componentConfig.clickCallbackId)
-                        {
-                            const maxDist = componentConfig.maxClickableDistance ?? 1000000;
-                            const distSqr = this.gameObject.position.distanceToSquared(intersection.point);
-
-                            if (distSqr <= maxDist * maxDist)
-                                ObjectCallbackMap[componentConfig.clickCallbackId](gameObject, instanceId);
-                        }
+                        const clickCallback = ObjectClickCallbackMap[gameObject.config.objectType];
+                        if (clickCallback)
+                            clickCallback(gameObject, instanceId, intersection.point);
                     }
                     else
                         console.error(`InstancedMeshGraphics component not found (spawnParams = ${JSON.stringify(gameObject.params)}, instanceId = ${instanceId})`);

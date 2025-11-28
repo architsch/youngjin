@@ -1,5 +1,5 @@
 import GameObject from "../../object/types/gameObject";
-import MaterialParams from "./materialParams";
+import MaterialParams from "./material/materialParams";
 import MeshInstanceParams from "./meshInstanceParams";
 
 export default interface InstancedMeshConfig
@@ -8,5 +8,5 @@ export default interface InstancedMeshConfig
     geometryId: string;
     totalNumInstances: number;
     getNumInstancesToRent: (gameObject: GameObject) => number;
-    getMeshInstanceParams: (gameObject: GameObject, indexInInstanceIdsArray: number) => MeshInstanceParams;
+    getMeshInstanceParams: (gameObject: GameObject, instanceId: number, indexInInstanceIdsArray: number) => MeshInstanceParams;
 }

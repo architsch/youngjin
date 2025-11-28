@@ -4,8 +4,7 @@ import ChatSendButton from "./chatSendButton";
 import ChatSentMessage from "./chatSentMessage";
 import ObjectManager from "../../../object/objectManager";
 import App from "../../../app";
-import ObjectMessageParams from "../../../../shared/object/types/objectMessageParams";
-import GameSocketsClient from "../../../networking/gameSocketsClient";
+import SpeechBubble from "../../../object/components/speechBubble";
 
 let sentMessageTimeout: NodeJS.Timeout | undefined = undefined;
 
@@ -28,11 +27,9 @@ export default function Chat()
             console.error(`Player not found (userName = ${App.getEnv().user.userName})`);
             return;
         }
-        const params = new ObjectMessageParams(
-            player.params.objectId,
-            message
-        );
-        GameSocketsClient.emitObjectMessage(params);
+        
+        const speechBubble = player.components.speechBubble as SpeechBubble;
+        speechBubble.showMessage(message, false, true, 5000);
         setState({textInput: "", sentMessage: message});
 
     };

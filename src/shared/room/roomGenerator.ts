@@ -63,6 +63,8 @@ const RoomGenerator =
                     x, y, z,
                     otherRoomID
                 ));
+
+                //makePillarVoxel(voxels, numGridCols, z+1, x, wallTextureIndex);
             }
         }
         

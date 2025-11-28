@@ -29,6 +29,10 @@ const GraphicsManager =
     {
         return gameRenderer.domElement;
     },
+    getGameRenderer: (): THREE.WebGLRenderer =>
+    {
+        return gameRenderer;
+    },
     addObjectToScene: (obj: THREE.Object3D) =>
     {
         scene.add(obj);

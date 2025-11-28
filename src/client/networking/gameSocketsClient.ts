@@ -18,12 +18,24 @@ import { tryStartClientProcess } from "../system/types/clientProcess";
 let socket: Socket;
 
 const signalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
-    "roomRuntimeMemory": (data: EncodableData) => roomRuntimeMemoryObservable.set(data as RoomRuntimeMemory),
-    "objectSyncParams": (data: EncodableData) => objectSyncObservable.set(data as ObjectSyncParams),
-    "objectDesyncResolveParams": (data: EncodableData) => objectDesyncResolveObservable.set(data as ObjectDesyncResolveParams),
-    "objectSpawnParams": (data: EncodableData) => objectSpawnObservable.set(data as ObjectSpawnParams),
-    "objectDespawnParams": (data: EncodableData) => objectDespawnObservable.set(data as ObjectDespawnParams),
-    "objectMessageParams": (data: EncodableData) => objectMessageObservable.set(data as ObjectMessageParams),
+    "roomRuntimeMemory": (data: EncodableData) =>
+        roomRuntimeMemoryObservable.set(data as RoomRuntimeMemory),
+    "objectSyncParams": (data: EncodableData) => {
+        const params = data as ObjectSyncParams;
+        objectSyncObservable.set(params, params.objectId);
+    },
+    "objectDesyncResolveParams": (data: EncodableData) => {
+        const params = data as ObjectDesyncResolveParams;
+        objectDesyncResolveObservable.set(params, params.objectId);
+    },
+    "objectSpawnParams": (data: EncodableData) =>
+        objectSpawnObservable.set(data as ObjectSpawnParams),
+    "objectDespawnParams": (data: EncodableData) =>
+        objectDespawnObservable.set(data as ObjectDespawnParams),
+    "objectMessageParams": (data: EncodableData) => {
+        const params = data as ObjectMessageParams;
+        objectMessageObservable.set(params, params.senderObjectId);
+    },
 }
 
 const GameSocketsClient =

@@ -6,7 +6,7 @@ import VoxelQuad from "../../../shared/voxel/types/voxelQuad";
 
 export default class VoxelMeshInstancer extends GameObjectComponent
 {
-    instancedMeshGraphics: InstancedMeshGraphics | undefined;
+    instancedMeshGraphics: InstancedMeshGraphics;
 
     private voxel: Voxel | undefined;
 
@@ -14,10 +14,9 @@ export default class VoxelMeshInstancer extends GameObjectComponent
     {
         super(gameObject, componentConfig);
 
-        const instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics;
-        if (!instancedMeshGraphics)
+        this.instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;
+        if (!this.instancedMeshGraphics)
             throw new Error("VoxelMeshInstancer requires InstancedMeshGraphics component");
-        this.instancedMeshGraphics = instancedMeshGraphics as InstancedMeshGraphics;
     }
 
     async onSpawn(): Promise<void>

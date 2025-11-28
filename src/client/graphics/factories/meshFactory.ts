@@ -2,7 +2,8 @@ import * as THREE from "three";
 import GeometryFactory from "./geometryFactory";
 import MaterialFactory from "./materialFactory";
 import Pool from "../../../shared/system/types/pool";
-import MaterialParams from "../types/materialParams";
+import MaterialParams from "../types/material/materialParams";
+import GraphicsManager from "../graphicsManager";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
@@ -15,7 +16,7 @@ const MeshFactory =
     },
     loadMesh: async (geometryId: string, materialParams: MaterialParams): Promise<THREE.Mesh> =>
     {
-        const meshId = `${geometryId}-${materialParams.type}-${materialParams.additionalParam}`;
+        const meshId = `${geometryId}-${materialParams.getMaterialId()}`;
         const loadedMesh = loadedMeshes[meshId];
         if (loadedMesh != undefined)
             return loadedMesh;
@@ -31,7 +32,7 @@ const MeshFactory =
         totalNumInstances: number, numInstancesToRent: number)
         : Promise<{ instancedMesh: THREE.InstancedMesh, rentedInstanceIds: number[] }> =>
     {
-        const meshId = `${geometryId}-${materialParams.type}-${materialParams.additionalParam}`;
+        const meshId = `${geometryId}-${materialParams.getMaterialId()}`;
         const loadedMesh = loadedMeshes[meshId];
         if (loadedMesh != undefined)
         {
@@ -44,13 +45,16 @@ const MeshFactory =
                 rentedInstanceIds[i] = pool.rentItem();
             return { instancedMesh: loadedMesh as THREE.InstancedMesh, rentedInstanceIds };
         }
-        const geometry = await GeometryFactory.load(geometryId);
+        const geometryClone = (await GeometryFactory.load(geometryId)).clone();
         const material = await MaterialFactory.load(materialParams);
 
         const uvStartArray = new Float32Array(totalNumInstances * 2);
-        geometry.setAttribute("uvStart", new THREE.InstancedBufferAttribute(uvStartArray, 2));
+        const uvStartBufferAttrib = new THREE.InstancedBufferAttribute(uvStartArray, 2);
+        geometryClone.setAttribute("uvStart", uvStartBufferAttrib);
 
-        const newMesh = new THREE.InstancedMesh(geometry, material, totalNumInstances);
+        const newMesh = new THREE.InstancedMesh(geometryClone, material, totalNumInstances);
+        newMesh.frustumCulled = false;
+        GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
         loadedMeshes[meshId] = newMesh;
 
         if (instanceIdPools[meshId] != undefined)

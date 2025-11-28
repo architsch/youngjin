@@ -13,13 +13,17 @@ export default interface ObjectTypeConfig
             },
             instancedMeshGraphics?: {
                 instancedMeshConfigId: string,
-                clickCallbackId?: string,
-                maxClickableDistance?: number,
             },
             voxelMeshInstancer?: {
             },
             persistentObjectMeshInstancer?: {
-                textureIndex: number,
+            },
+            speechBubble?: {
+                yOffset: number,
+            },
+            playerProximityDetector?: {
+                maxDist: number,
+                maxLookAngle: number,
             },
         },
         spawnedByMe?: {
@@ -30,9 +34,6 @@ export default interface ObjectTypeConfig
         },
         spawnedByOther?: {
             objectSyncReceiver?: {
-            },
-            speechBubble?: {
-                yOffset: number,
             },
             modelGraphics?: {
                 path: string,

@@ -5,7 +5,7 @@ import PersistentObject from "../../../shared/object/types/persistentObject";
 
 export default class PersistentObjectMeshInstancer extends GameObjectComponent
 {
-    instancedMeshGraphics: InstancedMeshGraphics | undefined;
+    instancedMeshGraphics: InstancedMeshGraphics;
 
     private persistentObject: PersistentObject | undefined;
 
@@ -13,8 +13,8 @@ export default class PersistentObjectMeshInstancer extends GameObjectComponent
     {
         super(gameObject, componentConfig);
 
-        const instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics;
-        if (!instancedMeshGraphics)
+        this.instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;
+        if (!this.instancedMeshGraphics)
             throw new Error("PersistentObjectMeshInstancer requires InstancedMeshGraphics component");
     }
 

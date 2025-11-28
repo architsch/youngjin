@@ -1,17 +1,14 @@
 import GameObject from "../object/types/gameObject";
-import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectFactory from "./factories/objectFactory";
-import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import VoxelMeshInstancer from "./components/voxelMeshInstancer";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import PersistentObjectMeshInstancer from "./components/persistentObjectMeshInstancer";
-import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable } from "../system/observables";
+import { objectDespawnObservable, objectSpawnObservable } from "../system/observables";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -103,27 +100,6 @@ const ObjectManager =
         }
 
         // Add listeners
-        objectSyncObservable.addListener("room", (params: ObjectSyncParams) => {
-            const gameObject = gameObjects[params.objectId];
-            if (gameObject == undefined)
-            {
-                console.error(`Object to be synced not found (params.objectId = ${params.objectId})`);
-                return;
-            }
-            for (const component of Object.values(gameObject.components))
-            {
-                if (component.onObjectSyncReceived)
-                    component.onObjectSyncReceived(params);
-            }
-        });
-        objectDesyncResolveObservable.addListener("room", (params: ObjectDesyncResolveParams) => {
-            const gameObject = gameObjects[params.objectId];
-            for (const component of Object.values(gameObject.components))
-            {
-                if (component.onObjectDesyncResolveReceived)
-                    component.onObjectDesyncResolveReceived(params);
-            }
-        });
         objectSpawnObservable.addListener("room", async (params: ObjectSpawnParams) => {
             if (gameObjects[params.objectId] != undefined)
                 return;
@@ -132,19 +108,6 @@ const ObjectManager =
         });
         objectDespawnObservable.addListener("room", async (params: ObjectDespawnParams) => {
             await ObjectManager.despawnObject(params.objectId);
-        });
-        objectMessageObservable.addListener("room", (params: ObjectMessageParams) => {
-            const gameObject = gameObjects[params.senderObjectId];
-            if (gameObject == undefined)
-            {
-                console.error(`Message sender object not found (params.senderObjectId = ${params.senderObjectId})`);
-                return;
-            }
-            for (const component of Object.values(gameObject.components))
-            {
-                if (component.onObjectMessageReceived)
-                    component.onObjectMessageReceived(params);
-            }
         });
     },
     unload: async () =>
@@ -172,11 +135,8 @@ const ObjectManager =
             delete players[key];
 
         // Remove listeners
-        objectSyncObservable.removeListener("room");
-        objectDesyncResolveObservable.removeListener("room");
         objectSpawnObservable.removeListener("room");
         objectDespawnObservable.removeListener("room");
-        objectMessageObservable.removeListener("room");
     },
     spawnObject: async (object: GameObject) =>
     {

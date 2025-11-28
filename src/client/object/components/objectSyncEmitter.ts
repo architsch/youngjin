@@ -4,6 +4,8 @@ import GameSocketsClient from "../../networking/gameSocketsClient";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
+import GameObject from "../types/gameObject";
+import { objectDesyncResolveObservable } from "../../system/observables";
 
 const syncIntervalInMillis = 200;
 const minSyncDistSqr = 0.0001;
@@ -17,6 +19,12 @@ export default class ObjectSyncEmitter extends GameObjectComponent
     private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
     private lastSyncedRotation: THREE.Euler = new THREE.Euler();
 
+    constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
+    {
+        super(gameObject, componentConfig);
+        this.onObjectDesyncResolveReceived = this.onObjectDesyncResolveReceived.bind(this);
+    }
+
     async onSpawn(): Promise<void>
     {
         if (!this.gameObject.isMine())
@@ -26,6 +34,13 @@ export default class ObjectSyncEmitter extends GameObjectComponent
         this.lastSyncTime = performance.now();
         this.lastSyncedPosition.copy(this.gameObject.position);
         this.lastSyncedRotation.copy(this.gameObject.rotation);
+
+        objectDesyncResolveObservable.addListener(this.gameObject.params.objectId, this.onObjectDesyncResolveReceived);
+    }
+
+    async onDespawn(): Promise<void>
+    {
+        objectDesyncResolveObservable.removeListener(this.gameObject.params.objectId);
     }
 
     update(deltaTime: number)
@@ -61,7 +76,7 @@ export default class ObjectSyncEmitter extends GameObjectComponent
         }
     }
 
-    onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
+    private onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
     {
         const p = params.resolvedPos;
         vec3Temp.set(p.x, this.gameObject.position.y, p.y);

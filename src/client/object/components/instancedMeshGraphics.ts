@@ -1,72 +1,125 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import MeshFactory from "../../graphics/factories/meshFactory";
-import GraphicsManager from "../../graphics/graphicsManager";
 import GameObject from "../types/gameObject";
 import InstancedMeshConfig from "../../graphics/types/instancedMeshConfig";
 import { InstancedMeshConfigMap } from "../../graphics/maps/instancedMeshConfigMap";
+import TextureUtil from "../../graphics/util/textureUtil";
+import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
+import App from "../../app";
 
-const pixelBleedingPreventionShift = 0.5 / 128;
-const textureGridCellScale = 0.125;
 const tempObj = new THREE.Object3D();
 const vec3Temp = new THREE.Vector3();
 
-const objByInstanceId: { [instanceId: number]: GameObject } = {};
+const objMap: {[meshId: string] : { [instanceId: number]: GameObject }} = {};
 
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
     instanceIds: number[] = [];
+    instancedMesh: THREE.InstancedMesh | undefined;
+    instancedMeshConfig: InstancedMeshConfig;
 
-    static findGameObject(instanceId: number): GameObject | undefined
+    static findGameObject(instancedMeshObj: THREE.Object3D, instanceId: number): GameObject | undefined
     {
+        const objByInstanceId = objMap[instancedMeshObj.name];
+        if (objByInstanceId == undefined)
+        {
+            console.error(`MeshId doesn't exist in objMap (meshId = ${instancedMeshObj.name})`);
+            return undefined;
+        }
         return objByInstanceId[instanceId];
+    }
+
+    constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
+    {
+        super(gameObject, componentConfig);
+        this.instancedMeshConfig = InstancedMeshConfigMap[this.componentConfig.instancedMeshConfigId];
     }
 
     getMeshId(): string
     {
-        const config = this.getInstancedMeshConfig();
-        const materialParams = config.getMaterialParams(this.gameObject);
-        const materialId = `${materialParams.type}-${materialParams.additionalParam}`;
-        return `${config.geometryId}-${materialId}`;
+        const materialParams = this.instancedMeshConfig.getMaterialParams(this.gameObject);
+        const materialId = materialParams.getMaterialId();
+        return `${this.instancedMeshConfig.geometryId}-${materialId}`;
     }
 
-    getInstancedMeshConfig(): InstancedMeshConfig
+    async setInstanceTexture(instanceId: number, textureURL: string)
     {
-        const id = this.componentConfig.instancedMeshConfigId;
-        return InstancedMeshConfigMap[id];
+        const indexInInstanceIdsArray = this.instanceIds.indexOf(instanceId);
+        const meshInstanceParams = this.instancedMeshConfig.getMeshInstanceParams(this.gameObject, instanceId, indexInInstanceIdsArray);
+        const textureIndex = meshInstanceParams.textureIndex;
+
+        const materialParams = this.instancedMeshConfig.getMaterialParams(this.gameObject);
+        const texturePackMaterialParams = materialParams as TexturePackMaterialParams;
+        const w = texturePackMaterialParams.textureWidth;
+        const h = texturePackMaterialParams.textureHeight;
+        const cw = texturePackMaterialParams.textureGridCellWidth;
+        const ch = texturePackMaterialParams.textureGridCellHeight;
+
+        const textureGridCellWidthScale = cw / w;
+        const textureGridCellHeightScale = ch / h;
+        
+        const textureRow = Math.floor(textureIndex * textureGridCellWidthScale);
+        const textureCol = textureIndex % (1 / textureGridCellWidthScale);
+        const u1 = textureGridCellWidthScale * textureCol;
+        const u2 = u1 + textureGridCellWidthScale;
+        const v1 = textureGridCellHeightScale * textureRow;
+        const v2 = v1 + textureGridCellHeightScale;
+
+        const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
+        const rt = material.map!.renderTarget as THREE.WebGLRenderTarget;
+        await TextureUtil.drawTextureOnRenderTarget(textureURL, rt, u1, v1, u2, v2);
     }
 
     async onSpawn(): Promise<void>
     {
-        const config = this.getInstancedMeshConfig();
+        const materialParams = this.instancedMeshConfig.getMaterialParams(this.gameObject);
+
         const { instancedMesh, rentedInstanceIds } = await MeshFactory.loadInstancedMesh(
-            config.geometryId,
-            config.getMaterialParams(this.gameObject),
-            config.totalNumInstances,
-            config.getNumInstancesToRent(this.gameObject)
+            this.instancedMeshConfig.geometryId,
+            materialParams,
+            this.instancedMeshConfig.totalNumInstances,
+            this.instancedMeshConfig.getNumInstancesToRent(this.gameObject)
         );
+
+        if (!instancedMesh.name)
+            instancedMesh.name = this.getMeshId();
+            
+        this.instancedMesh = instancedMesh;
+
+        let objByInstanceId = objMap[instancedMesh.name];
+        if (objByInstanceId == undefined)
+        {
+            objByInstanceId = {};
+            objMap[instancedMesh.name] = objByInstanceId;
+        }
+
         for (const instanceId of rentedInstanceIds)
         {
             this.instanceIds.push(instanceId);
             if (objByInstanceId[instanceId] != undefined)
-                console.error(`InstanceId already exists in objByInstanceId (instanceId = ${instanceId})`);
+                console.error(`InstanceId already exists in objByInstanceId (instanceId = ${instanceId}, meshId = ${this.getMeshId()}, existingObjectId = ${objByInstanceId[instanceId].params.objectId}, newObjectId = ${this.gameObject.params.objectId})`);
             objByInstanceId[instanceId] = this.gameObject;
         }
-
-        // Assign meshId to the mesh object's name.
-        if (!instancedMesh.name)
-            instancedMesh.name = this.getMeshId();
-        instancedMesh.frustumCulled = false;
-
-        GraphicsManager.addObjectToSceneIfNotAlreadyAdded(instancedMesh);
 
         this.gameObject.obj.updateMatrixWorld();
         this.gameObject.obj.add(tempObj);
 
+        const texturePackMaterialParams = materialParams as TexturePackMaterialParams;
+        const w = texturePackMaterialParams.textureWidth;
+        const h = texturePackMaterialParams.textureHeight;
+        const cw = texturePackMaterialParams.textureGridCellWidth;
+        const ch = texturePackMaterialParams.textureGridCellHeight;
+
+        const textureGridCellWidthScale = cw / w;
+        const textureGridCellHeightScale = ch / h;
+
+        const uvStartBufferAttrib = instancedMesh.geometry.getAttribute("uvStart");
+
         for (let i = 0; i < rentedInstanceIds.length; ++i)
         {
             const instanceId = rentedInstanceIds[i];
-            const params = config.getMeshInstanceParams(this.gameObject, i);
+            const params = this.instancedMeshConfig.getMeshInstanceParams(this.gameObject, instanceId, i);
 
             tempObj.position.set(0, 0, 0);
             
@@ -84,24 +137,38 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             instancedMesh.setMatrixAt(instanceId, tempObj.matrixWorld);
             instancedMesh.instanceMatrix.needsUpdate = true;
 
-            instancedMesh.geometry.attributes.uvStart.setXY(
-                instanceId,
-                textureGridCellScale *
-                    (pixelBleedingPreventionShift + params.textureIndex % 8),
-                textureGridCellScale *
-                    (pixelBleedingPreventionShift + Math.floor(params.textureIndex * 0.125))
-            );
-            instancedMesh.geometry.attributes.uvStart.needsUpdate = true;
+            // (0.5 / cw) = pixel-bleeding prevention shift
+            const uStart = textureGridCellWidthScale * ((0.5 / cw) + params.textureIndex % (1 / textureGridCellWidthScale));
+
+            // (0.5 / ch) = pixel-bleeding prevention shift
+            const vStart = textureGridCellHeightScale * ((0.5 / ch) + Math.floor(params.textureIndex * textureGridCellWidthScale));
+            
+            uvStartBufferAttrib.setXY(instanceId, uStart, vStart);
+
+            // temp (for test)
+            if (this.gameObject.params.objectTypeIndex == 2)
+                this.setInstanceTexture(instanceId, `${App.getEnv().assets_url}/lenna.png`);
         }
+
+        uvStartBufferAttrib.needsUpdate = true;
 
         tempObj.removeFromParent();
     }
 
     async onDespawn(): Promise<void>
     {
-        MeshFactory.unload(this.getMeshId(), this.instanceIds);
+        const meshId = this.instancedMesh!.name;
+        MeshFactory.unload(meshId, this.instanceIds);
 
-        for (const instanceId of this.instanceIds)
-            delete objByInstanceId[instanceId];
+        let objByInstanceId = objMap[meshId];
+        if (objByInstanceId == undefined)
+        {
+            console.error(`MeshId doesn't exist in objMap (meshId = ${meshId})`);
+        }
+        else
+        {
+            for (const instanceId of this.instanceIds)
+                delete objByInstanceId[instanceId];
+        }
     }
 }

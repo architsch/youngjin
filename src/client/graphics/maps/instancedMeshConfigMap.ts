@@ -1,9 +1,9 @@
 import App from "../../app";
-import PersistentObjectMeshInstancer from "../../object/components/persistentObjectMeshInstancer";
 import VoxelMeshInstancer from "../../object/components/voxelMeshInstancer";
 import GameObject from "../../object/types/gameObject";
 import InstancedMeshConfig from "../types/instancedMeshConfig";
-import MaterialParams from "../types/materialParams";
+import MaterialParams from "../types/material/materialParams";
+import TexturePackMaterialParams from "../types/material/texturePackMaterialParams";
 import MeshInstanceParams from "../types/meshInstanceParams"
 
 export const InstancedMeshConfigMap: {[instancedMeshConfigId: string]: InstancedMeshConfig} =
@@ -15,10 +15,8 @@ export const InstancedMeshConfigMap: {[instancedMeshConfigId: string]: Instanced
             if (!currentRoom)
                 throw new Error(`Current room not found.`);
 
-            return {
-                type: "Regular",
-                additionalParam: currentRoom.texturePackURL,
-            };
+            return new TexturePackMaterialParams(currentRoom.texturePackURL,
+                1024, 1024, 128, 128, "staticImageFromURL");
         },
         geometryId: "Quad",
         totalNumInstances: 8192,
@@ -30,7 +28,7 @@ export const InstancedMeshConfigMap: {[instancedMeshConfigId: string]: Instanced
                 throw new Error(`Voxel hasn't been defined yet.`);
             return voxel.quads.length;
         },
-        getMeshInstanceParams: (gameObject: GameObject, indexInInstanceIdsArray: number): MeshInstanceParams =>
+        getMeshInstanceParams: (gameObject: GameObject, instanceId: number, indexInInstanceIdsArray: number): MeshInstanceParams =>
         {
             const instancer = gameObject.components.voxelMeshInstancer as VoxelMeshInstancer;
             const voxel = instancer.getVoxel();
@@ -87,14 +85,8 @@ export const InstancedMeshConfigMap: {[instancedMeshConfigId: string]: Instanced
     "Door": {
         getMaterialParams: (gameObject: GameObject): MaterialParams =>
         {
-            const currentRoom = App.getCurrentRoom();
-            if (!currentRoom)
-                throw new Error(`Current room not found.`);
-
-            return {
-                type: "Regular",
-                additionalParam: currentRoom.texturePackURL,
-            };
+            return new TexturePackMaterialParams("persistent_object_texture_pack",
+                2048, 2048, 256, 256, "dynamicEmpty");
         },
         geometryId: "Quad",
         totalNumInstances: 8192,
@@ -102,16 +94,12 @@ export const InstancedMeshConfigMap: {[instancedMeshConfigId: string]: Instanced
         {
             return 1;
         },
-        getMeshInstanceParams: (gameObject: GameObject, indexInInstanceIdsArray: number): MeshInstanceParams =>
+        getMeshInstanceParams: (gameObject: GameObject, instanceId: number, indexInInstanceIdsArray: number): MeshInstanceParams =>
         {
-            const instancer = gameObject.components.persistentObjectMeshInstancer as PersistentObjectMeshInstancer;
-            const persistentObject = instancer.getPersistentObject();
-            if (persistentObject == undefined)
-                throw new Error(`PersistentObject hasn't been defined yet.`);
             return {
                 xOffset: 0, yOffset: 0, zOffset: 0.01, // Slightly offset the quad in the z-direction to let it be rendered on top of its overlapping VoxelQuads.
                 dirX: 0, dirY: 0, dirZ: 1,
-                textureIndex: instancer.componentConfig.textureIndex,
+                textureIndex: instanceId % 64, // temp
             };
         },
     },

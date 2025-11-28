@@ -7,8 +7,6 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByAny: {
                 instancedMeshGraphics: {
                     instancedMeshConfigId: "Voxel",
-                    clickCallbackId: "Voxel.click",
-                    maxClickableDistance: 9,
                 },
                 voxelMeshInstancer: {},
             },
@@ -22,6 +20,9 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                     collisionLayer: 0,
                     hitboxSize: {sizeX: 0.6, sizeZ: 0.6},
                 },
+                speechBubble: {
+                    yOffset: 3,
+                },
             },
             spawnedByMe: {
                 firstPersonController: {},
@@ -34,9 +35,6 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                     scale: {x: 0.7, y: 0.7, z: 0.7},
                 },
                 objectSyncReceiver: {},
-                speechBubble: {
-                    yOffset: 3,
-                },
             },
         },
     }],
@@ -46,10 +44,16 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByAny: {
                 instancedMeshGraphics: {
                     instancedMeshConfigId: "Door",
-                    clickCallbackId: "Door.click",
-                    maxClickableDistance: 4,
                 },
-                persistentObjectMeshInstancer: {textureIndex: 4},
+                persistentObjectMeshInstancer: {
+                },
+                speechBubble: {
+                    yOffset: 0,
+                },
+                playerProximityDetector: {
+                    maxDist: 3,
+                    maxLookAngle: Math.PI * 0.25,
+                },
             },
         },
     }],
