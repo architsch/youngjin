@@ -2,7 +2,6 @@ import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import ObjectManager from "../objectManager";
-import { ObjectPlayerProximityCallbackMap } from "../maps/objectPlayerProximityCallbackMap";
 import FirstPersonController from "./firstPersonController";
 
 const vec3Temp = new THREE.Vector3();
@@ -12,8 +11,6 @@ export default class PlayerProximityDetector extends GameObjectComponent
     private maxDist: number;
     private maxLookAngle: number;
     private proximityOn: boolean;
-    private proximityStartCallback: (gameObject: GameObject) => void;
-    private proximityEndCallback: (gameObject: GameObject) => void;
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
@@ -21,10 +18,6 @@ export default class PlayerProximityDetector extends GameObjectComponent
         this.maxDist = componentConfig.maxDist;
         this.maxLookAngle = componentConfig.maxLookAngle;
         this.proximityOn = false;
-
-        const callbacks = ObjectPlayerProximityCallbackMap[gameObject.config.objectType];
-        this.proximityStartCallback = callbacks.proximityStart;
-        this.proximityEndCallback = callbacks.proximityEnd;
     }
 
     async onDespawn(): Promise<void>
@@ -37,18 +30,21 @@ export default class PlayerProximityDetector extends GameObjectComponent
         return this.proximityOn;
     }
 
-    update(deltaTime: number)
+    updateProximity(player: GameObject)
     { 
         let proximityShouldBeOn = false;
-        const player = ObjectManager.getMyPlayer();
 
-        if (player)
+        const offsetX = this.gameObject.position.x - player.position.x;
+        const offsetZ = this.gameObject.position.z - player.position.z;
+        const distSqr = offsetX*offsetX + offsetZ*offsetZ;
+
+        if (distSqr <= this.maxDist * this.maxDist)
         {
-            const offsetX = this.gameObject.position.x - player.position.x;
-            const offsetZ = this.gameObject.position.z - player.position.z;
-            const distSqr = offsetX*offsetX + offsetZ*offsetZ;
-
-            if (distSqr <= this.maxDist * this.maxDist)
+            if (this.maxLookAngle < 0)
+            {
+                proximityShouldBeOn = true;
+            }
+            else
             {
                 player.obj.getWorldDirection(vec3Temp);
                 const lookX = -vec3Temp.x;
@@ -94,7 +90,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
         if (this.proximityOn)
             return;
         this.proximityOn = true;
-        this.proximityStartCallback(this.gameObject);
+        this.gameObject.onPlayerProximityStart();
     }
 
     private turnProximityOff()
@@ -102,6 +98,6 @@ export default class PlayerProximityDetector extends GameObjectComponent
         if (!this.proximityOn)
             return;
         this.proximityOn = false;
-        this.proximityEndCallback(this.gameObject);
+        this.gameObject.onPlayerProximityEnd();
     }
 }

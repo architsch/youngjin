@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="This article explains how to use linear algebra in the design and implementation of video games.">
+<meta name="keywords" content="linear algebra, matrix algebra, game development, game design, gameplay systems, game engine, technical design, numerical methods, scientific computing, gameplay engineering">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Linear Algebra for Game Development - Part 27"/>
+<meta property="og:url" content="https://thingspool.net/concepts-of-plan/page-33.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="This article explains how to use linear algebra in the design and implementation of video games."/>
+<meta property="og:image" content="https://thingspool.net/concepts-of-plan/b414.jpg"/>
+<meta property="og:image:alt" content="Linear Algebra for Game Development - Part 27">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Linear Algebra for Game Development - Part 27</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+<link rel="canonical" href="https://thingspool.net/concepts-of-plan/page-33.html">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Library</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/concepts-of-plan/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Library</a>/<a href="https://thingspool.net/concepts-of-plan/list.html">Concepts of a Plan (2025)</a>/Linear Algebra for Game Development - Part 27</div>
+<div class="s_row"></div>
+
+<h1>Linear Algebra for Game Development - Part 27</h1>
+<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: November 30, 2025</p>
+<hr>
+<h3><b>Before You Read</b></h3>
+<p>This article is Part 27 of the series, "Linear Algebra for Game Development". If you haven't, please read <a href="https://thingspool.net/concepts-of-plan/page-7.html">Part 1</a> first.</p>
+<hr>
+<h3><b>Modifiable State</b></h3>
+<p>In the previous article, we looked at various methods of representing relations within a one-dimensional table. The main takeaway was to simply format each relation as an object which contains a pair of references. So far, so good.</p>
+<p>The issue, though, is that we haven't figured out yet how to update (modify) such relations for gameplay purposes.</p>
+<p>For obvious reasons, a game is a dynamic system which must be able to make changes to its own state as time passes by. If nothing changes no matter how much the player interacts, there won't be any reason to "play" such a game.</p>
+<p>Even the most idle-looking game, such as one which only involves a single player whose mission is to escape a completely static maze, still requires some kind of modifiable state (because the player's position is part of the state and it changes over time).</p>
+<p>Therefore, it is important for us to find out how to modify a relation's state, so as to leverage it as part of game mechanics.</p>
+<hr>
+<h3><b>Changing Relation</b></h3>
+<p>Let us begin with a super simple example. Suppose that the player has 3 energy points. What shall we do to express this in our data table?</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b414.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 1)">
+<p>As you may remember from the last article, it is advisable to model everything as an object with 2 reference slots. In our case, the player is an object, and he is associated with a relation which tells us how many energy points he has. This relation, too, is an object with 2 reference slots.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b415.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 2)">
+<p>In table form, each of these objects can be written down as a sequence of 4 data entries.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b416.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 3)">
+<p>Nothing new has been introduced so far; we already know how to format a relation inside a table. So, here comes something which hasn't yet been dealt with.</p>
+<p>Let us say, for instance, that he player's energy is supposed to diminish over time. This makes sense, doesn't it? Since the player is a biological being, he must keep spending his energy to stay alive.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b417.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 4)">
+<p>Here is how the nature of such gradual decay can be simulated. Let us assume that, after a bit of time delay, the player's energy decreased from 3 to 2. This will correspond to a change of value in the 7th data entry (See the table below).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b418.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 5)">
+<p>The way we can execute such a transformation is relatively straightforward, as long as we know the nature of linear algebra. First off, let us attach an extra "1" at the very bottom of the table. This number represents the rate of the player's energy consumption.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b419.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 6)">
+<p>Next, let us multiply this table by a matrix which copies the value of the table's last slot (which is 1) and subtracts it from the slot which contains the player's energy.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b420.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 7)">
+<p>And, boom! Here it goes. You can clearly see that this matrix multiplication just made the "energy is" relation point to number 2 instead of number 3. The player now has 2 energy points.</p>
+<hr>
+<h3><b>Executing a Transaction</b></h3>
+<p>Here is a slightly more complex example. Suppose that the player absorbed 1 energy point from the apple by eating it (See the picture below).</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b421.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 8)">
+<p>What shall we do to make this happen in our data table?</p>
+<p>In terms of objects and references, such a transformation can be depicted as shown below. The apple and its energy-specifying relation will simply disappear, and the apple's energy will be added to the player's energy.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b422.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 9)">
+<p>What about in table form? First of all, let us draw out our initial state as a one-dimensional data table, where both the player and the apple, as well as their respective relations, are gathered as parts of a single column.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b423.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 10)">
+<p>The transformation we desire in this model consists of a few simple modifications. First, we want the player's energy to change from 3 to 4, which can be done by simply modifying the 1st reference value of the player's relation from 3 to 4. Meanwhile, we also want to clear out the portions of the table which correspond to the apple and its relation.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b424.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 11)">
+<p>And the good news is that a single matrix multiplication will suffice in making such a set of changes. Take a look at the matrix shown below, which is responsible for simuntaneously carrying out 3 separate actions - (1) Adding the apple's energy to the player's energy, (2) Erasing the apple, and (3) Erasing the apple's energy.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b425.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 12)">
+<p>This is an example of a "transaction matrix", since it executes a transaction of multiple events. When you take the product between this matrix and our data table (as shown below), you will see that it yields the desired result.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b426.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 13)">
+<p>So, here we have it. We just proved that it is possible to manipulate multiple relations at once, for the sake of simulating innumerable kinds of gameplay interactions.</p>
+<hr>
+<h3><b>Partial Transfer</b></h3>
+<p>Some interactions, though, are not supposed to be black-and-white in nature.</p>
+<p>As you may have noticed, our previous example was quite black-and-white in the sense that the player just swallowed the entire apple all at once. This simplified the problem immensely; all we had to do was completely wipe the apple out of existence and add its energy to the player.</p>
+<p>A more realistic scenario, on the other hand, would rather be grayscale in nature; that is, it would let the player spend some time taking bites out of the apple instead just swallowing it instantly.</p>
+<p>Here, I will show you yet another example for demonstration purposes. Imagine that the player's initial energy is 1 and the apple's initial energy is 3.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b427.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 14)">
+<p>During the first step in time, the player absorbs 1 energy point from the apple by taking a bite of it, thereby increasing his energy level by 1 and decreasing the apple's energy level by 1. And during the second step in time, the player once again absorbs 1 energy point from the apple by taking a bite of it, thereby increasing his energy level by 1 and decreasing the apple's energy level by 1. And so on.</p>
+<p>If we express the first step in the language of relations, we will see something like this:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b428.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 15)">
+<p>In table form, such a transformation will be expressed in the following way:</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b429.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 16)">
+<p>As you can see, all we are doing here is simply add 1 to a data entry and subtract 1 from another data entry.</p>
+<p>One major difference here, in comparison with our previous example, is that we are not transferring ALL of the apple's energy to the player in this case; instead, we are just transferring a small portion of it (i.e. 1 out of 3 energy points).</p>
+<p>And the way we execute a transaction like this, once again, will only require a single matrix multiplication; only in this case we will need to do some additional tweak beforehand, since our aim is to change the energy levels by some fixed amount here. First, let us attach an additional "1" at the bottom of our table.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b430.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 17)">
+<p>This new element will serve as the "rate of energy transfer" in our scenario.</p>
+<p>With this extra piece of data, we are now able to construct our transaction matrix which, when applied to our data table, will increment the player's energy by 1 and decrement the apple's energy by 1. It is shown below.</p>
+<img class="l_image" src="https://thingspool.net/concepts-of-plan/b431.jpg" alt="Linear Algebra for Game Development - Part 27 (Figure 18)">
+<p>As it is clearly denoted, this matrix comprises two actions - one which increments the player's energy by adding the table's last element to it, and the other one which decrements the apple's energy by subtracting the table's last element from it.</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/concepts-of-plan/page-32.html">Previous Page</a>
+<div class="l_row"></div>
+<img class="s_image" src="https://thingspool.net/logo.png" alt="ThingsPool Logo">
+<p class="dim">&copy 2019-2025 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+</body>
+</html>

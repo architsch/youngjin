@@ -15,25 +15,18 @@ tempObj.position.set(0, 0, 0);
 
 export default class ObjectSyncReceiver extends GameObjectComponent
 {
-    private timeInterpRange: [number, number] = [0, 0];
+    private lastSyncTime: number = 0;
     private positionInterpRange: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3()];
     private quaternionInterpRange: [THREE.Quaternion, THREE.Quaternion] = [new THREE.Quaternion(), new THREE.Quaternion()];
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
         super(gameObject, componentConfig);
-        this.onObjectDesyncResolveReceived = this.onObjectDesyncResolveReceived.bind(this);
-        this.onObjectSyncReceived = this.onObjectSyncReceived.bind(this);
-    }
-    
-    async onSpawn(): Promise<void>
-    {
+
         if (this.gameObject.isMine())
             throw new Error("User's own object is not allowed to have the ObjectSyncEmitter component.");
 
-        const currTime = performance.now();
-        this.timeInterpRange[0] = currTime;
-        this.timeInterpRange[1] = currTime;
+        this.lastSyncTime = performance.now();
 
         this.positionInterpRange[0].copy(this.gameObject.position);
         this.positionInterpRange[1].copy(this.gameObject.position);
@@ -41,6 +34,12 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);
         this.quaternionInterpRange[1].setFromEuler(this.gameObject.rotation);
 
+        this.onObjectDesyncResolveReceived = this.onObjectDesyncResolveReceived.bind(this);
+        this.onObjectSyncReceived = this.onObjectSyncReceived.bind(this);
+    }
+
+    async onSpawn(): Promise<void>
+    {
         objectDesyncResolveObservable.addListener(this.gameObject.params.objectId, this.onObjectDesyncResolveReceived);
         objectSyncObservable.addListener(this.gameObject.params.objectId, this.onObjectSyncReceived);
     }
@@ -53,12 +52,10 @@ export default class ObjectSyncReceiver extends GameObjectComponent
 
     update(deltaTime: number): void
     {
-        const currTime = performance.now();
-
         const interpProgress =
             Math.min(
                 Math.max(
-                    currTime -  this.timeInterpRange[0],
+                    performance.now() -  this.lastSyncTime,
                     0
                 ),
                 syncIntervalInMillis
@@ -88,8 +85,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         this.positionInterpRange[0].copy(vec3Temp);
         this.positionInterpRange[1].copy(vec3Temp);
 
-        const currTime = performance.now();
-        this.timeInterpRange = [currTime, currTime];
+        this.lastSyncTime = performance.now();
     }
 
     private onObjectSyncReceived(params: ObjectSyncParams): void
@@ -101,8 +97,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
             console.error(`Object ID mismatch (this.gameObject.objectId = ${this.gameObject.params.objectId}, params.objectId = ${params.objectId})`);
             return;
         }
-        this.timeInterpRange[0] = performance.now();
-        this.timeInterpRange[1] = this.timeInterpRange[0] + syncIntervalInMillis;
+        this.lastSyncTime = performance.now();
 
         this.positionInterpRange[0].copy(this.gameObject.position);
         this.positionInterpRange[1].set(params.transform.x, params.transform.y, params.transform.z);

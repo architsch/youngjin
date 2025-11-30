@@ -1,0 +1,1 @@
+export const COLLISION_LAYER_SOLID = 0;

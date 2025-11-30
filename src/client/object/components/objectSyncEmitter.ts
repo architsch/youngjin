@@ -22,20 +22,20 @@ export default class ObjectSyncEmitter extends GameObjectComponent
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
         super(gameObject, componentConfig);
+
+        if (!this.gameObject.isMine())
+            throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
+
+        this.lastSyncTime = performance.now();
+        this.lastSyncedPosition.copy(this.gameObject.position);
+        this.lastSyncedRotation.copy(this.gameObject.rotation);
+
         this.onObjectDesyncResolveReceived = this.onObjectDesyncResolveReceived.bind(this);
     }
 
     async onSpawn(): Promise<void>
     {
-        if (!this.gameObject.isMine())
-            throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
-
-        this.gameObject = this.gameObject;
-        this.lastSyncTime = performance.now();
-        this.lastSyncedPosition.copy(this.gameObject.position);
-        this.lastSyncedRotation.copy(this.gameObject.rotation);
-
-        objectDesyncResolveObservable.addListener(this.gameObject.params.objectId, this.onObjectDesyncResolveReceived);
+        objectDesyncResolveObservable.addListener(this.gameObject.params.objectId, this.onObjectDesyncResolveReceived); 
     }
 
     async onDespawn(): Promise<void>

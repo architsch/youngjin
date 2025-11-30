@@ -26,4 +26,12 @@ export default class ModelGraphics extends GameObjectComponent
     {
         this.model?.removeFromParent();
     }
+
+    setVisible(visible: boolean)
+    {
+        if (this.model)
+            this.model.visible = visible;
+        else
+            console.error(`Model doesn't exist (objectId = ${this.gameObject.params.objectId})`);
+    }
 }

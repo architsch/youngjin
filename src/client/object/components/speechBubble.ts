@@ -43,7 +43,7 @@ export default class SpeechBubble extends GameObjectComponent
             this.speechBubbleHotspot.getWorldPosition(this.vecTemp1);
             GraphicsManager.getCamera().getWorldPosition(this.vecTemp2);
             const dist = this.vecTemp1.distanceTo(this.vecTemp2);
-            const scaleFactor = Math.max(0.3, 1.6 - 0.1 * dist);
+            const scaleFactor = Math.max(0.3, 1.6 - 0.2 * dist);
             const scaleFactorStr = `${scaleFactor.toFixed(2)}rem`;
             this.textElement.style.fontSize = scaleFactorStr;
         }

@@ -3,8 +3,11 @@ import GraphicsManager from "../../graphics/graphicsManager";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
-import { ObjectClickCallbackMap } from "../maps/objectClickCallbackMap";
 import GameObject from "../types/gameObject";
+import PhysicsManager from "../../../shared/physics/physicsManager";
+import App from "../../app";
+import ObjectManager from "../objectManager";
+import PlayerProximityDetector from "./playerProximityDetector";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 const vec3Temp = new THREE.Vector3();
@@ -12,6 +15,7 @@ const vec3Temp2 = new THREE.Vector3();
 const objTemp: THREE.Object3D = new THREE.Object3D();
 
 const yAxis = new THREE.Vector3(0, 1, 0);
+const maxProximityDetectionDist = 6;
 
 export default class FirstPersonController extends GameObjectComponent
 {
@@ -79,13 +83,38 @@ export default class FirstPersonController extends GameObjectComponent
             const dy = (this.pointerDragPos.y - this.pointerDownPos.y) * y_sensitivity;
 
             const dxWithSpeedLimit = Math.max(-1, Math.min(1, dx));
-            const dyWithSpeedLimit = Math.max(-0.5, Math.min(0.5, dy));
+            const dyWithSpeedLimit = Math.max(-0.4, Math.min(0.4, dy));
             
             this.gameObject.obj.rotateOnWorldAxis(yAxis, -3 * deltaTime * dxWithSpeedLimit);
 
             objTemp.copy(this.gameObject.obj, false);
-            objTemp.translateZ(-12 * deltaTime * dyWithSpeedLimit);
+            objTemp.translateZ(-9 * deltaTime * dyWithSpeedLimit);
             this.gameObject.trySetPosition(objTemp.position);
+        }
+
+        const currentRoom = App.getCurrentRoom();
+
+        if (currentRoom)
+        {
+            const physicsObjects = PhysicsManager.getObjectsInDist(currentRoom.roomID,
+                this.gameObject.position.x, this.gameObject.position.z, maxProximityDetectionDist);
+            
+            for (const physicsObject of physicsObjects)
+            {
+                const objectId = physicsObject.objectId;
+                const obj = ObjectManager.getObjectById(objectId);
+                if (obj != undefined)
+                {
+                    if (obj.spawnFinished)
+                    {
+                        const detector = obj.components.playerProximityDetector;
+                        if (detector != undefined)
+                            (detector as PlayerProximityDetector).updateProximity(this.gameObject);
+                    }
+                }
+                else
+                    console.error(`PhysicsObject with ID '${objectId}' not found in ObjectManager.`);
+            }
         }
     }
 
@@ -182,11 +211,7 @@ export default class FirstPersonController extends GameObjectComponent
                 {
                     const instancedMeshGraphics = gameObject.components.instancedMeshGraphics;
                     if (instancedMeshGraphics)
-                    {
-                        const clickCallback = ObjectClickCallbackMap[gameObject.config.objectType];
-                        if (clickCallback)
-                            clickCallback(gameObject, instanceId, intersection.point);
-                    }
+                        gameObject.onClick(instanceId, intersection.point);
                     else
                         console.error(`InstancedMeshGraphics component not found (spawnParams = ${JSON.stringify(gameObject.params)}, instanceId = ${instanceId})`);
                 }

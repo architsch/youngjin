@@ -9,19 +9,20 @@ import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/object
 
 const vec3Temp = new THREE.Vector3();
 
-export default class GameObject
+export default abstract class GameObject
 {
     params: ObjectSpawnParams;
     obj: THREE.Object3D = new THREE.Object3D();
     config: ObjectTypeConfig;
     components: {[componentName: string]: GameObjectComponent} = {};
+    spawnFinished: boolean = false;
 
     constructor(params: ObjectSpawnParams)
     {
         this.params = params;
 
         GraphicsManager.addObjectToScene(this.obj);
-        this.obj.position.set(this.params.transform.x, this.params.transform.y, this.params.transform.z);
+        this.position.set(this.params.transform.x, this.params.transform.y, this.params.transform.z);
         vec3Temp.set(
             this.params.transform.x + this.params.transform.dirX,
             this.params.transform.y + this.params.transform.dirY,
@@ -45,6 +46,11 @@ export default class GameObject
         }
     }
 
+    // Customizable callback functions
+    onClick(instanceId: number, hitPoint: THREE.Vector3) {}
+    onPlayerProximityStart() {}
+    onPlayerProximityEnd() {}
+
     async onSpawn(): Promise<void>
     {
         for (const component of Object.values(this.components))
@@ -52,6 +58,7 @@ export default class GameObject
             if (component.onSpawn)
                 await component.onSpawn();
         }
+        this.spawnFinished = true;
     }
 
     async onDespawn(): Promise<void>

@@ -1,3 +1,4 @@
+import { COLLISION_LAYER_SOLID } from "../../physics/types/collisionLayer";
 import ObjectTypeConfig from "../types/objectTypeConfig";
 
 const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
@@ -17,11 +18,15 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         components: {
             spawnedByAny: {
                 collider: {
-                    collisionLayer: 0,
+                    collisionLayer: COLLISION_LAYER_SOLID,
                     hitboxSize: {sizeX: 0.6, sizeZ: 0.6},
                 },
                 speechBubble: {
-                    yOffset: 3,
+                    yOffset: 2.4,
+                },
+                playerProximityDetector: {
+                    maxDist: 0.45,
+                    maxLookAngle: -1,
                 },
             },
             spawnedByMe: {
@@ -31,8 +36,8 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByOther: {
                 modelGraphics: {
                     path: "lowpolyghost/lowpolyghost.glb",
-                    localPosition: {x: 0, y: 0.13, z: 0},
-                    scale: {x: 0.7, y: 0.7, z: 0.7},
+                    localPosition: {x: 0, y: 1.22, z: 0},
+                    scale: {x: 0.3, y: 0.3, z: 0.3},
                 },
                 objectSyncReceiver: {},
             },
@@ -42,6 +47,10 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Door",
         components: {
             spawnedByAny: {
+                collider: {
+                    collisionLayer: COLLISION_LAYER_SOLID,
+                    hitboxSize: {sizeX: 0, sizeZ: 0},
+                },
                 instancedMeshGraphics: {
                     instancedMeshConfigId: "Door",
                 },

@@ -2,6 +2,8 @@ import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import GameObject from "../types/gameObject";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import App from "../../app";
+import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
+import { ObjectConstructorMap } from "../maps/objectConstructorMap";
 
 let lastObjectIdNumber = 0;
 
@@ -17,11 +19,13 @@ const ObjectFactory =
             transform,
             metadata,
         );
-        return new GameObject(params);
+        const objectType = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).objectType;
+        return ObjectConstructorMap[objectType](params);
     },
     createServerSideObject: (params: ObjectSpawnParams): GameObject =>
     {
-        return new GameObject(params);
+        const objectType = ObjectTypeConfigMap.getConfigByIndex(params.objectTypeIndex).objectType;
+        return ObjectConstructorMap[objectType](params);
     },
 }
 

@@ -1,5 +1,4 @@
 import Vec2 from "../math/types/vec2";
-import Geometry2D from "../math/util/geometry2D";
 import Vector2D from "../math/util/vector2D";
 import PhysicsObject from "./types/physicsObject";
 import PhysicsVoxel from "./types/physicsVoxel";
@@ -8,10 +7,11 @@ import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
 import PhysicsRoom from "./types/physicsRoom";
 import PhysicsHitState from "./types/physicsHitState";
 import AABB2 from "../math/types/aabb2";
+import { getObjectsInDist, removeObjectFromIntersectingVoxels, setObjectPosition } from "./util/physicsObjectUtil";
+import { getVoxelCollisionLayer, getVoxelsInBox } from "./util/physicsVoxelUtil";
+import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
 
 const rooms: {[roomID: string]: PhysicsRoom} = {};
-
-const voxelsTemp = new Array<PhysicsVoxel>();
 
 let hitStateTemp: PhysicsHitState = {
     minHitRayScale: 1,
@@ -28,6 +28,7 @@ const PhysicsManager =
         const voxelGrid = roomRuntimeMemory.room.voxelGrid;
 
         rooms[roomRuntimeMemory.room.roomID] = {
+            roomID: roomRuntimeMemory.room.roomID,
             numGridRows: voxelGrid.numGridRows,
             numGridCols: voxelGrid.numGridCols,
             voxels: voxelGrid.voxels.map(voxel => {
@@ -74,7 +75,7 @@ const PhysicsManager =
         const newObject: PhysicsObject = { objectId, collisionLayer, hitbox: hitbox, intersectingVoxels };
         room.objectById[objectId] = newObject;
 
-        setObjectPosition(roomID, objectId, { x: hitbox.x, y: hitbox.y });
+        setObjectPosition(room, objectId, { x: hitbox.x, y: hitbox.y });
     },
     removeObject: (roomID: string, objectId: string) =>
     {
@@ -137,20 +138,26 @@ const PhysicsManager =
         hitStateTemp.minHitRayScale = 1;
         hitStateTemp.hitLine = undefined;
 
+        // Process collision against voxels
         for (let row = minRow; row <= maxRow; ++row)
         {
             for (let col = minCol; col <= maxCol; ++col)
             {
                 const voxel = room.voxels[row * room.numGridCols + col];
-                if (getVoxelCollisionLayer(roomID, row, col, object.collisionLayer) != 0)
+                if (getVoxelCollisionLayer(room, row, col, object.collisionLayer) != 0)
                     pushBoxAgainstBox(object.hitbox, targetPos, voxel.hitbox, hitStateTemp);
             }
         }
         
+        // Process collision against other objects
         for (const otherObject of Object.values(room.objectById))
         {
-            if (object.objectId != otherObject.objectId && object.collisionLayer == otherObject.collisionLayer)
+            if (object.objectId != otherObject.objectId &&
+                (object.hitbox.halfSizeX > 0 || object.hitbox.halfSizeY > 0) &&
+                object.collisionLayer == otherObject.collisionLayer)
+            {
                 hitStateTemp = pushBoxAgainstBox(object.hitbox, targetPos, otherObject.hitbox, hitStateTemp);
+            }
         }
 
         let resolvedPos = targetPos;
@@ -171,7 +178,7 @@ const PhysicsManager =
             const projectedHitToTarget = Vector2D.scale(hitTangent, dot / Vector2D.dot(hitTangent, hitTangent));
             const slidedHitPos = Vector2D.add(hitPos, projectedHitToTarget);
 
-            const voxelsHitOnSlide = getVoxelsInBox(roomID, {
+            const voxelsHitOnSlide = getVoxelsInBox(room, {
                 x: slidedHitPos.x,
                 y: slidedHitPos.y,
                 halfSizeX: object.hitbox.halfSizeX,
@@ -180,7 +187,7 @@ const PhysicsManager =
             let slideBlocked = false;
             for (const voxel of voxelsHitOnSlide)
             {
-                if (getVoxelCollisionLayer(roomID, voxel.row, voxel.col, object.collisionLayer) != 0)
+                if (getVoxelCollisionLayer(room, voxel.row, voxel.col, object.collisionLayer) != 0)
                     slideBlocked = true;
             }
             if (slideBlocked)
@@ -213,142 +220,14 @@ const PhysicsManager =
         object.hitbox.x = targetPos.x;
         object.hitbox.y = targetPos.y;
     },
-}
-
-function pushBoxAgainstBox(sourceHitbox: AABB2, targetPos: Vec2, targetHitbox: AABB2, hitState: PhysicsHitState): PhysicsHitState
-{
-    const result = Geometry2D.castAABBAgainstAABB(sourceHitbox, targetPos, targetHitbox);
-    if (result.hitRayScale <= hitState.minHitRayScale)
+    getObjectsInDist: (roomID: string, centerX: number, centerY: number, dist: number): PhysicsObject[] =>
     {
-        hitState.minHitRayScale = result.hitRayScale;
-        hitState.hitLine = result.hitLine;
-    }
-    return hitState;
-}
+        const room = rooms[roomID];
+        if (rooms[roomID] == undefined)
+            throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
 
-function addObjectToVoxel(object: PhysicsObject, voxel: PhysicsVoxel)
-{
-    let alreadyAdded = false;
-    for (let i = 0; i < voxel.intersectingObjects.length; ++i)
-    {
-        const obj = voxel.intersectingObjects[i];
-        if (obj.objectId == object.objectId)
-        {
-            console.error(`Object already added to voxel (object = ${JSON.stringify(object)}, voxel = ${JSON.stringify(voxel)})`);
-            alreadyAdded = true;
-        }
-    }
-    if (!alreadyAdded)
-        voxel.intersectingObjects.push(object);
-
-    alreadyAdded = false;
-    for (let i = 0; i < object.intersectingVoxels.length; ++i)
-    {
-        const vox = object.intersectingVoxels[i];
-        if (vox == voxel)
-        {
-            console.error(`Voxel already added to object (object = ${JSON.stringify(object)}, voxel = ${JSON.stringify(voxel)})`);
-            alreadyAdded = true;
-        }
-    }
-    if (!alreadyAdded)
-        object.intersectingVoxels.push(voxel);
-};
-
-function setObjectPosition(roomID: string, objectId: string, pos: Vec2)
-{
-    const room = rooms[roomID];
-    if (rooms[roomID] == undefined)
-        throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
-
-    const object = room.objectById[objectId];
-    if (object == undefined)
-        throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
-
-    const voxels = getVoxelsInBox(roomID, object.hitbox);
-    object.hitbox.x = pos.x;
-    object.hitbox.y = pos.y;
-
-    removeObjectFromIntersectingVoxels(object);
-    for (const voxel of voxels)
-        addObjectToVoxel(object, voxel);
-}
-
-function removeObjectFromIntersectingVoxels(object: PhysicsObject)
-{
-    voxelsTemp.length = 0;
-    for (const voxel of object.intersectingVoxels)
-        voxelsTemp.push(voxel);
-    for (const voxel of voxelsTemp)
-        removeObjectFromVoxel(object, voxel);
-}
-
-function removeObjectFromVoxel(object: PhysicsObject, voxel: PhysicsVoxel)
-{
-    let removed = false;
-    const objs = voxel.intersectingObjects;
-    for (let i = 0; i < objs.length; ++i)
-    {
-        const obj = objs[i];
-        if (obj.objectId == object.objectId)
-        {
-            for (let j = i+1; j < objs.length; ++j)
-                objs[i] = objs[j];
-            --objs.length;
-            removed = true;
-        }
-    }
-    if (!removed)
-        console.error(`Object not found in voxel (object = ${JSON.stringify(object)}, voxel = ${JSON.stringify(voxel)})`);
-}
-
-function getVoxelsInBox(roomID: string, box: AABB2): PhysicsVoxel[]
-{
-    const room = rooms[roomID];
-    if (rooms[roomID] == undefined)
-        throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
-
-    voxelsTemp.length = 0;
-    const row1 = Math.floor(box.y - box.halfSizeY);
-    const col1 = Math.floor(box.x - box.halfSizeX);
-    const row2 = Math.floor(box.y + box.halfSizeY);
-    const col2 = Math.floor(box.x + box.halfSizeX);
-    for (let row = row1; row <= row2; ++row)
-    {
-        for (let col = col1; col <= col2; ++col)
-        {
-            voxelsTemp.push(room.voxels[row * room.numGridCols + col]);
-        }
-    }
-    return voxelsTemp;
-}
-
-function addVoxelCollisionLayer(roomID: string, row: number, col: number, collisionLayer: number)
-{
-    const room = rooms[roomID];
-    if (rooms[roomID] == undefined)
-        throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
-
-    room.voxels[row * room.numGridCols + col].collisionLayerMask |= (1 << collisionLayer);
-}
-
-function removeVoxelCollisionLayer(roomID: string, row: number, col: number, collisionLayer: number)
-{
-    const room = rooms[roomID];
-    if (rooms[roomID] == undefined)
-        throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
-
-    room.voxels[row * room.numGridCols + col].collisionLayerMask &= ~(1 << collisionLayer);
-}
-
-// Returns 1 if the layer exists, or 0 otherwise.
-function getVoxelCollisionLayer(roomID: string, row: number, col: number, collisionLayer: number): number
-{
-    const room = rooms[roomID];
-    if (rooms[roomID] == undefined)
-        throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
-
-    return (room.voxels[row * room.numGridCols + col].collisionLayerMask >> collisionLayer) & 1;
+        return getObjectsInDist(room, centerX, centerY, dist);
+    },
 }
 
 export default PhysicsManager;

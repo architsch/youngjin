@@ -3,7 +3,6 @@ import TextureFactory from "../factories/textureFactory";
 import GraphicsManager from "../graphicsManager";
 
 const vec2Temp = new THREE.Vector2();
-const vec4Temp = new THREE.Vector4();
 
 const TextureUtil =
 {
@@ -22,21 +21,37 @@ const TextureUtil =
         const x = targetTexWidth * targetU1;
         const y = targetTexHeight * targetV1;
 
-        renderer.getViewport(vec4Temp);
-        renderer.getSize(vec2Temp);
+        const x1 = -1 + 2 * targetU1;
+        const x2 = -1 + 2 * targetU2;
+        const y1 = -1 + 2 * targetV1;
+        const y2 = -1 + 2 * targetV2;
+        positionAttrib.setXYZ(0, x1, y2, 0);
+        positionAttrib.setXYZ(1, x1, y1, 0);
+        positionAttrib.setXYZ(2, x2, y1, 0);
+        positionAttrib.setXYZ(3, x2, y1, 0);
+        positionAttrib.setXYZ(4, x2, y2, 0);
+        positionAttrib.setXYZ(5, x1, y2, 0);
+        positionAttrib.needsUpdate = true;
+
+        // memorize the original settings
         const pr = renderer.getPixelRatio();
+        renderer.getSize(vec2Temp);
+        const autoClear = renderer.autoClear;
 
-        renderer.setViewport(x, y, w, h);
-        renderer.setSize(w, h);
+        // temporarily modify the settings
         renderer.setPixelRatio(1);
+        renderer.setSize(targetTexWidth, targetTexHeight);
+        renderer.autoClear = false;
 
+        // render
         renderer.setRenderTarget(renderTarget);
         renderer.render(mesh, camera);
         renderer.setRenderTarget(null);
 
+        // recover the original settings
         renderer.setPixelRatio(pr);
         renderer.setSize(vec2Temp.x, vec2Temp.y);
-        renderer.setViewport(vec4Temp);
+        renderer.autoClear = autoClear;
 
         TextureFactory.unload(textureURL);
     }
