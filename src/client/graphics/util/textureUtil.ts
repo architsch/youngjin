@@ -16,10 +16,6 @@ const TextureUtil =
         const renderer = GraphicsManager.getGameRenderer();
         const targetTexWidth = renderTarget.texture.width;
         const targetTexHeight = renderTarget.texture.height;
-        const w = targetTexWidth * (targetU2 - targetU1);
-        const h = targetTexHeight * (targetV2 - targetV1);
-        const x = targetTexWidth * targetU1;
-        const y = targetTexHeight * targetV1;
 
         const x1 = -1 + 2 * targetU1;
         const x2 = -1 + 2 * targetU2;

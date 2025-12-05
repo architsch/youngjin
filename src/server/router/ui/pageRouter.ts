@@ -41,6 +41,12 @@ if (process.env.MODE == "dev")
             gameEntries: ArcadeData.gameEntries
         });
     });
+
+    PageRouter.get("/tailwind_test", (req: Request, res: Response): void => {
+        EJSUtil.render(req, res, "page/development/tailwind_test", {
+            loginDestination: `${process.env.URL_DYNAMIC}/tailwind_test`,
+        });
+    });
 }
 else
 {

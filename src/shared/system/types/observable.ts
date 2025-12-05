@@ -29,7 +29,7 @@ export default class Observable<ValueType>
 
     change(changeFunc: (prevValue: ValueType) => ValueType, unicastKey?: string): void
     {
-        if (this.currValue == undefined)
+        if (this.currValue === undefined)
             throw new Error(`Tried to apply a change to an undefined currValue in an Observable.`);
         const newValue = changeFunc(this.currValue);
         this.set(newValue, unicastKey);
@@ -37,7 +37,7 @@ export default class Observable<ValueType>
 
     peek(): ValueType
     {
-        if (this.currValue == undefined)
+        if (this.currValue === undefined)
             throw new Error(`Tried to access an undefined currValue in an Observable.`);
         return this.currValue;
     }
@@ -51,7 +51,7 @@ export default class Observable<ValueType>
 
     removeListener(key: string): void
     {
-        if (this.listeners[key] == undefined)
+        if (this.listeners[key] === undefined)
             throw new Error(`Listener key doesn't exist (key = ${key})`);
         delete this.listeners[key];
     }

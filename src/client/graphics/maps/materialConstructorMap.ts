@@ -29,7 +29,7 @@ export const MaterialConstructorMap: { [materialType: string]:
     "Wireframe": async (params: MaterialParams) =>
     {
         const p = params as WireframeMaterialParams;
-        const newMaterial = new THREE.MeshBasicMaterial({ color: p.colorHex, wireframe: true });
+        const newMaterial = new THREE.MeshBasicMaterial({ color: p.colorHex, wireframe: true, depthTest: false });
         return newMaterial;
     },
 }

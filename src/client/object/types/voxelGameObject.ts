@@ -2,6 +2,7 @@ import * as THREE from "three";
 import GameObject from "./gameObject";
 import VoxelMeshInstancer from "../components/voxelMeshInstancer";
 import ObjectManager from "../objectManager";
+import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 
 export default class VoxelGameObject extends GameObject
 {
@@ -18,6 +19,9 @@ export default class VoxelGameObject extends GameObject
             return;
 
         const instancer = this.components.voxelMeshInstancer as VoxelMeshInstancer;
-        console.log(`Selected Voxel = ${JSON.stringify(instancer.getVoxel())}\nSelected VoxelQuad = ${JSON.stringify(instancer.getVoxelQuad(instanceId))}`);
+        const voxel = instancer.getVoxel();
+        const { voxelQuad, quadIndex } = instancer.getVoxelQuad(instanceId);
+
+        VoxelQuadSelection.trySelect(voxel, voxelQuad, quadIndex);
     }
 }

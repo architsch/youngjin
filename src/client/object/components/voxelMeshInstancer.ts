@@ -39,7 +39,7 @@ export default class VoxelMeshInstancer extends GameObjectComponent
         this.voxel = voxel;
     }
 
-    getVoxelQuad(instanceId: number): VoxelQuad
+    getVoxelQuad(instanceId: number): { voxelQuad: VoxelQuad, quadIndex: number }
     {
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
@@ -48,7 +48,7 @@ export default class VoxelMeshInstancer extends GameObjectComponent
         for (let quadIndex = 0; quadIndex < instanceIds.length; ++quadIndex)
         {
             if (instanceIds[quadIndex] == instanceId)
-                return this.voxel.quads[quadIndex];
+                return { voxelQuad: this.voxel.quads[quadIndex], quadIndex };
         }
         throw new Error(`VoxelQuad not found (instanceId = ${instanceId}, instanceIds = ${JSON.stringify(instanceIds)})`);
     }

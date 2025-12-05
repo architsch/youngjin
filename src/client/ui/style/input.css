@@ -1,0 +1,8 @@
+@import "tailwindcss" source(none);
+
+@source "../../../client/ui";
+@source "../../../../views";
+
+@theme {
+  --font-sans: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+}

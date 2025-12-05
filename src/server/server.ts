@@ -13,14 +13,17 @@ dotenv.config();
 async function Server(): Promise<void>
 {
     // SSG = "Static Site Generator"
-    if (process.env.MODE == "dev") // If you are in dev mode, rebuild the static pages on restart.
+    if (!process.env.SKIP_SSG)
     {
-        await SSG();
-    }
-    else if (process.env.MODE == "ssg") // If you are in ssg mode, just rebuild the static pages and quit immediately.
-    {
-        await SSG();
-        return;
+        if (process.env.MODE == "dev") // If you are in dev mode, rebuild the static pages on restart.
+        {
+            await SSG();
+        }
+        else if (process.env.MODE == "ssg") // If you are in ssg mode, just rebuild the static pages and quit immediately.
+        {
+            await SSG();
+            return;
+        }
     }
 
     // database initialization

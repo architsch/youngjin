@@ -6,13 +6,18 @@ import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Observable from "../../shared/system/types/observable";
 import ObservableMap from "../../shared/system/types/observableMap";
+import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ClientProcess from "./types/clientProcess";
 
-// Internal
+// Core
 
 export const ongoingProcessesObservable = new ObservableMap<ClientProcess>();
 
-// Socket Networking
+// Graphics & UI
+
+export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | null>(null);
+
+// Networking
 
 export const roomRuntimeMemoryObservable = new Observable<RoomRuntimeMemory>();
 export const objectSyncObservable = new Observable<ObjectSyncParams>();

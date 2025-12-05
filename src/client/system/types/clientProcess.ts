@@ -41,3 +41,14 @@ export function endClientProcess(name: string): void
     if (!updated)
         throw new Error(`Failed to end client process "${name}" because there was no ongoing process registered.`);
 }
+
+export function ongoingClientProcessExists(): boolean
+{
+    const processMap = ongoingProcessesObservable.peek();
+    for (const clientProcess of Object.values(processMap))
+    {
+        if (clientProcess.numOngoingProcesses > 0)
+            return true;
+    }
+    return false;
+}

@@ -8,6 +8,7 @@ import PhysicsManager from "../../../shared/physics/physicsManager";
 import App from "../../app";
 import ObjectManager from "../objectManager";
 import PlayerProximityDetector from "./playerProximityDetector";
+import { ongoingClientProcessExists } from "../../system/types/clientProcess";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 const vec3Temp = new THREE.Vector3();
@@ -70,6 +71,9 @@ export default class FirstPersonController extends GameObjectComponent
 
     update(deltaTime: number): void
     {
+        if (ongoingClientProcessExists())
+            return;
+        
         if (this.pointerIsDown)
         {
             const canvas = GraphicsManager.getGameCanvas();

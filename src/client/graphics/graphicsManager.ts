@@ -42,6 +42,10 @@ const GraphicsManager =
         if (obj.parent != scene)
             scene.add(obj);
     },
+    getScene: (): THREE.Scene =>
+    {
+        return scene;
+    },
     getCamera: (): THREE.PerspectiveCamera =>
     {
         return camera;
@@ -69,6 +73,8 @@ const GraphicsManager =
     },
     load: async (updateCallback: XRFrameRequestCallback | null) =>
     {
+        // Core elements
+
         gameCanvasRoot = document.getElementById("gameCanvasRoot") as HTMLElement;
         overlayCanvasRoot = document.getElementById("overlayCanvasRoot") as HTMLElement;
 
@@ -111,14 +117,19 @@ const GraphicsManager =
         updateRenderSizes();
 
         // Update Loop
+
         gameRenderer.setAnimationLoop(updateCallback);
     },
     unload: async () =>
     {
+        // Core elements
+
         scene.remove();
         camera.remove();
         window.removeEventListener("resize", onResize);
         gameRenderer.setAnimationLoop(null);
+
+        // Assets
 
         TextureFactory.unloadAll();
         MaterialFactory.unloadAll();
