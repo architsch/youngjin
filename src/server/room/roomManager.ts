@@ -9,8 +9,12 @@ import dotenv from "dotenv";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
+import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
+import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
+import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 import { addUserToRoom, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
+import { addVoxelCube, changeVoxelTexture, removeVoxelCube } from "./util/roomVoxelUtil";
 dotenv.config();
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
@@ -45,6 +49,18 @@ const RoomManager =
             console.error(`RoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
         else
             socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.userName);
+    },
+    addVoxelCube: (socketUserContext: SocketUserContext, params: VoxelCubeAddParams) =>
+    {
+        addVoxelCube(socketUserContext, params.row, params.col, params.yCenter, params.textureIndex);
+    },
+    removeVoxelCube: (socketUserContext: SocketUserContext, params: VoxelCubeRemoveParams) =>
+    {
+        removeVoxelCube(socketUserContext, params.row, params.col, params.yCenter);
+    },
+    changeVoxelTexture: (socketUserContext: SocketUserContext, params: VoxelTextureChangeParams) =>
+    {
+        changeVoxelTexture(socketUserContext, params.row, params.col, params.quadIndex, params.textureIndex);
     },
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {

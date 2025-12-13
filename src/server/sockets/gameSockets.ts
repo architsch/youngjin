@@ -6,6 +6,9 @@ import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestPa
 import User from "../../shared/auth/user";
 import RoomManager from "../room/roomManager";
 import SocketUserContext from "./types/socketUserContext";
+import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
+import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
+import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
@@ -39,6 +42,21 @@ const GameSockets =
                 const bufferState = { view: new Uint8Array(buffer), index: 0 };
                 const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
                 RoomManager.sendObjectMessage(socketUserContext, params);
+            });
+            socket.on("voxelCubeAdd", (buffer: ArrayBuffer) => {
+                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const params = VoxelCubeAddParams.decode(bufferState) as VoxelCubeAddParams;
+                RoomManager.addVoxelCube(socketUserContext, params);
+            });
+            socket.on("voxelCubeRemove", (buffer: ArrayBuffer) => {
+                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const params = VoxelCubeRemoveParams.decode(bufferState) as VoxelCubeRemoveParams;
+                RoomManager.removeVoxelCube(socketUserContext, params);
+            });
+            socket.on("voxelTextureChange", (buffer: ArrayBuffer) => {
+                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const params = VoxelTextureChangeParams.decode(bufferState) as VoxelTextureChangeParams;
+                RoomManager.changeVoxelTexture(socketUserContext, params);
             });
             socket.on("roomChangeRequest", async (buffer: ArrayBuffer) => {
                 const bufferState = { view: new Uint8Array(buffer), index: 0 };

@@ -8,7 +8,10 @@ import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import VoxelMeshInstancer from "./components/voxelMeshInstancer";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import PersistentObjectMeshInstancer from "./components/persistentObjectMeshInstancer";
-import { objectDespawnObservable, objectSpawnObservable } from "../system/observables";
+import { objectDespawnObservable, objectSpawnObservable, voxelCubeAddObservable } from "../system/observables";
+import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
+import RoomVoxelActions from "../../shared/room/roomVoxelActions";
+import Room from "../../shared/room/types/room";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -109,6 +112,18 @@ const ObjectManager =
         objectDespawnObservable.addListener("room", async (params: ObjectDespawnParams) => {
             await ObjectManager.despawnObject(params.objectId);
         });
+        /*voxelCubeAddObservable.addListener("room", async (params: VoxelCubeAddParams) => {
+            tryUpdateVoxel(params.row, params.col,
+                (room: Room): boolean => {
+                    return true;
+                },
+                (voxelGameObject: GameObject): boolean => {
+                    const instancer = voxelGameObject.components.voxelMeshInstancer as VoxelMeshInstancer;
+                    instancer.instancedMeshGraphics.
+                    return true;
+                },
+            )
+        });*/
     },
     unload: async () =>
     {
@@ -178,6 +193,36 @@ const ObjectManager =
             console.error(`Object (ID = ${objectId}) has already been despawned.`);
         }
     },
+}
+
+function tryUpdateVoxel(row: number, col: number,
+    voxelUpdateAction: (room: Room) => boolean,
+    voxelGameObjectUpdateAction: (voxelGameObject: GameObject) => boolean): boolean
+{
+    const room = App.getCurrentRoom();
+    if (!room)
+    {
+        console.error("Current room not found.");
+        return false;
+    }
+    const voxel = RoomVoxelActions.getVoxel(room, row, col);
+    if (!voxel)
+    {
+        console.error(`Voxel not found (row: ${row}, col: ${col})`);
+        return false;
+    }
+    const obj = ObjectManager.getObjectById(voxel.gameObjectId);
+    if (!obj)
+    {
+        console.error(`Voxel gameObject not found (row: ${row}, col: ${col})`);
+        return false;
+    }
+    if (!voxelUpdateAction(room))
+    {
+        console.warn(`Voxel update action failed (row: ${row}, col: ${col})`);
+        return false;
+    }
+    return voxelGameObjectUpdateAction(obj);
 }
 
 export default ObjectManager;

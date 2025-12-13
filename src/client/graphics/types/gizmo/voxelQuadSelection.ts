@@ -6,6 +6,7 @@ import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
+import TexturePackMaterialParams from "../material/texturePackMaterialParams";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -14,15 +15,17 @@ export default class VoxelQuadSelection
     voxel: Voxel;
     voxelQuad: VoxelQuad;
     quadIndex: number;
+    materialParams: TexturePackMaterialParams;
 
-    constructor(voxel: Voxel, voxelQuad: VoxelQuad, quadIndex: number)
+    constructor(voxel: Voxel, voxelQuad: VoxelQuad, quadIndex: number, materialParams: TexturePackMaterialParams)
     {
         this.voxel = voxel;
         this.voxelQuad = voxelQuad;
         this.quadIndex = quadIndex;
+        this.materialParams = materialParams;
     }
 
-    static trySelect(voxel: Voxel, voxelQuad: VoxelQuad, quadIndex: number)
+    static trySelect(voxel: Voxel, voxelQuad: VoxelQuad, quadIndex: number, materialParams: TexturePackMaterialParams)
     {
         if (!listenersInitialized)
             initListeners();
@@ -31,7 +34,7 @@ export default class VoxelQuadSelection
 
         if (existingSelection == null) // There was no selection before.
         {
-            voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, voxelQuad, quadIndex));
+            voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, voxelQuad, quadIndex, materialParams));
         }
         else
         {
@@ -41,7 +44,7 @@ export default class VoxelQuadSelection
             }
             else // Selected a different quad while another one was selected.
             {
-                voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, voxelQuad, quadIndex));
+                voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, voxelQuad, quadIndex, materialParams));
             }
         }
     }

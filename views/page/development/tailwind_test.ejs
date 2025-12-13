@@ -3,8 +3,24 @@
     useTailwindCSS: true,
 }) %>
 
-<div id="uiRoot" class="fixed w-screen h-screen m-0 bg-gray-800">
-    <div class="text-amber-300 text-6xl text-center align-middle">Test Text</div>
+<div id="uiRoot" class="fixed w-screen h-screen overflow-hidden font-mono bg-green-700">
+    <div id="bottom-panel" class="absolute inset-x-0 bottom-0 h-24 sm:h-20 md:h-14 bg-red-400">
+        <div id="carousel" class="flex flex-row flex-nowrap place-content-center-safe overflow-x-scroll bg-amber-300">
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-400">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-500">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-400">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-500">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-400">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-500">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-400">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-500">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-400">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-500">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-400">Item</div>
+            <div id="carousel-item" class="h-full aspect-square p-1 bg-purple-500">Item</div>
+        </div>
+    </div>
+    <div class="absolute m-auto p-6 text-amber-300 text-3xl text-center font-bold bg-amber-900">Middle Text</div>
 </div>
 
 <%- include(`${ejsPartialRootPath}/common/footer_min.ejs`, {

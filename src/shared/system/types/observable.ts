@@ -8,23 +8,33 @@ export default class Observable<ValueType>
         this.currValue = defaultValue;
     }
 
-    set(value: ValueType, unicastKey?: string): void
+    notify(unicastKey?: string): void
     {
-        this.currValue = value;
-
+        if (this.currValue === undefined)
+        {
+            console.error("Current value is undefined");
+            return;
+        }
+        
         if (unicastKey) // unicast
         {
             const listener = this.listeners[unicastKey];
             if (listener != undefined)
-                listener(value);
+                listener(this.currValue);
             else
                 console.error(`Unicast key not found in the map of listeners (key = ${unicastKey})`);
         }
         else // broadcast
         {
             for (const listener of Object.values(this.listeners))
-                listener(value);
+                listener(this.currValue);
         }
+    }
+
+    set(value: ValueType, unicastKey?: string): void
+    {
+        this.currValue = value;
+        this.notify();
     }
 
     change(changeFunc: (prevValue: ValueType) => ValueType, unicastKey?: string): void

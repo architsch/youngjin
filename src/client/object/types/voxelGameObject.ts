@@ -3,6 +3,7 @@ import GameObject from "./gameObject";
 import VoxelMeshInstancer from "../components/voxelMeshInstancer";
 import ObjectManager from "../objectManager";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
+import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 
 export default class VoxelGameObject extends GameObject
 {
@@ -21,7 +22,9 @@ export default class VoxelGameObject extends GameObject
         const instancer = this.components.voxelMeshInstancer as VoxelMeshInstancer;
         const voxel = instancer.getVoxel();
         const { voxelQuad, quadIndex } = instancer.getVoxelQuad(instanceId);
+        const instancedMeshConfig = instancer.instancedMeshGraphics.instancedMeshConfig;
 
-        VoxelQuadSelection.trySelect(voxel, voxelQuad, quadIndex);
+        VoxelQuadSelection.trySelect(voxel, voxelQuad, quadIndex,
+            instancedMeshConfig.getMaterialParams(this) as TexturePackMaterialParams);
     }
 }

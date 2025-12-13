@@ -51,8 +51,10 @@ export default function Chat()
     }, [state.sentMessage]);
 
     return <>
-        <ChatTextInput textInput={state.textInput} setTextInput={setTextInput}/>
-        <ChatSendButton textInput={state.textInput} sendMessage={sendMessage}/>
+        <div className="flex flex-row flex-wrap gap-x-1 gap-y-0 p-2 absolute w-full bottom-0">
+            <ChatTextInput textInput={state.textInput} setTextInput={setTextInput}/>
+            <ChatSendButton textInput={state.textInput} sendMessage={sendMessage}/>
+        </div>
         {state.sentMessage.length > 0 && <ChatSentMessage sentMessage={state.sentMessage}/>}
     </>;
 }

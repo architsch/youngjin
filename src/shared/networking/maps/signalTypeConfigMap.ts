@@ -5,6 +5,9 @@ import ObjectSpawnParams from "../../object/types/objectSpawnParams";
 import ObjectSyncParams from "../../object/types/objectSyncParams";
 import RoomChangeRequestParams from "../../room/types/roomChangeRequestParams";
 import RoomRuntimeMemory from "../../room/types/roomRuntimeMemory";
+import VoxelCubeAddParams from "../../voxel/types/voxelCubeAddParams";
+import VoxelCubeRemoveParams from "../../voxel/types/voxelCubeRemoveParams";
+import VoxelTextureChangeParams from "../../voxel/types/voxelTextureChangeParams";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
 
@@ -36,6 +39,18 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
     [6, {
         signalType: "roomRuntimeMemory",
         decode: (bufferState: BufferState) => RoomRuntimeMemory.decode(bufferState),
+    }],
+    [7, {
+        signalType: "voxelCubeAddParams",
+        decode: (bufferState: BufferState) => VoxelCubeAddParams.decode(bufferState),
+    }],
+    [8, {
+        signalType: "voxelCubeRemoveParams",
+        decode: (bufferState: BufferState) => VoxelCubeRemoveParams.decode(bufferState),
+    }],
+    [9, {
+        signalType: "voxelTextureChangeParams",
+        decode: (bufferState: BufferState) => VoxelTextureChangeParams.decode(bufferState),
     }],
 ];
 

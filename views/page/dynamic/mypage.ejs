@@ -1,14 +1,14 @@
 <%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {
     includeFullscreenPanel: false,
-    useTailwindCSS: false,
+    useTailwindCSS: true,
 }) %>
 
 <%_ if (isStaticPage) { _%>
     <h1>Server Not Available</h1>
 <%_ } else if (user) { _%>
-    <div id="gameCanvasRoot" style="position:absolute; margin:0 0; padding:0 0; left:0; right:0; top:0; bottom:0;"></div>
-    <div id="overlayCanvasRoot" style="pointer-events:none; position:absolute; margin:0 0; padding:0 0; left:0; right:0; top:0; bottom:0;"></div>
-    <div id="uiRoot" style="pointer-events:none; position:absolute; margin:0 0; padding:0 0; left:0; right:0; top:0; bottom:0;"></div>
+    <div id="gameCanvasRoot" class="fixed w-screen h-screen overflow-hidden font-mono pointer-events-auto"></div>
+    <div id="overlayCanvasRoot" class="fixed w-screen h-screen overflow-hidden font-mono pointer-events-none"></div>
+    <div id="uiRoot" class="fixed w-screen h-screen overflow-hidden font-mono pointer-events-none select-none"></div>
     <script type="text/javascript">
         window.thingspool_env = { // client-side environment variables
             mode: `<%- process.env.MODE %>`,

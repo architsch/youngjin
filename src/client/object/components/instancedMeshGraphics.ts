@@ -7,6 +7,7 @@ import { InstancedMeshConfigMap } from "../../graphics/maps/instancedMeshConfigM
 import TextureUtil from "../../graphics/util/textureUtil";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import App from "../../app";
+import MaterialParams from "../../graphics/types/material/materialParams";
 
 const tempObj = new THREE.Object3D();
 const vec3Temp = new THREE.Vector3();
@@ -16,6 +17,7 @@ const objMap: {[meshId: string] : { [instanceId: number]: GameObject }} = {};
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
     instanceIds: number[] = [];
+    materialParams: MaterialParams | undefined;
     instancedMesh: THREE.InstancedMesh | undefined;
     instancedMeshConfig: InstancedMeshConfig;
 
@@ -71,13 +73,36 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         await TextureUtil.drawTextureOnRenderTarget(textureURL, rt, u1, v1, u2, v2);
     }
 
+    setTextureIndex(instanceId: number, textureIndex: number)
+    {
+        const texturePackMaterialParams = this.materialParams as TexturePackMaterialParams;
+        const w = texturePackMaterialParams.textureWidth;
+        const h = texturePackMaterialParams.textureHeight;
+        const cw = texturePackMaterialParams.textureGridCellWidth;
+        const ch = texturePackMaterialParams.textureGridCellHeight;
+
+        const textureGridCellWidthScale = cw / w;
+        const textureGridCellHeightScale = ch / h;
+
+        const uvStartBufferAttrib = this.instancedMesh!.geometry.getAttribute("uvStart");
+
+        // (0.5 / cw) = pixel-bleeding prevention shift
+        const uStart = textureGridCellWidthScale * ((0.5 / cw) + textureIndex % (1 / textureGridCellWidthScale));
+
+        // (0.5 / ch) = pixel-bleeding prevention shift
+        const vStart = textureGridCellHeightScale * ((0.5 / ch) + Math.floor(textureIndex * textureGridCellWidthScale));
+        
+        uvStartBufferAttrib.setXY(instanceId, uStart, vStart);
+        uvStartBufferAttrib.needsUpdate = true;
+    }
+
     async onSpawn(): Promise<void>
     {
-        const materialParams = this.instancedMeshConfig.getMaterialParams(this.gameObject);
+        this.materialParams = this.instancedMeshConfig.getMaterialParams(this.gameObject);
 
         const { instancedMesh, rentedInstanceIds } = await MeshFactory.loadInstancedMesh(
             this.instancedMeshConfig.geometryId,
-            materialParams,
+            this.materialParams,
             this.instancedMeshConfig.totalNumInstances,
             this.instancedMeshConfig.getNumInstancesToRent(this.gameObject)
         );
@@ -105,17 +130,6 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         this.gameObject.obj.updateMatrixWorld();
         this.gameObject.obj.add(tempObj);
 
-        const texturePackMaterialParams = materialParams as TexturePackMaterialParams;
-        const w = texturePackMaterialParams.textureWidth;
-        const h = texturePackMaterialParams.textureHeight;
-        const cw = texturePackMaterialParams.textureGridCellWidth;
-        const ch = texturePackMaterialParams.textureGridCellHeight;
-
-        const textureGridCellWidthScale = cw / w;
-        const textureGridCellHeightScale = ch / h;
-
-        const uvStartBufferAttrib = instancedMesh.geometry.getAttribute("uvStart");
-
         for (let i = 0; i < rentedInstanceIds.length; ++i)
         {
             const instanceId = rentedInstanceIds[i];
@@ -137,20 +151,12 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             instancedMesh.setMatrixAt(instanceId, tempObj.matrixWorld);
             instancedMesh.instanceMatrix.needsUpdate = true;
 
-            // (0.5 / cw) = pixel-bleeding prevention shift
-            const uStart = textureGridCellWidthScale * ((0.5 / cw) + params.textureIndex % (1 / textureGridCellWidthScale));
-
-            // (0.5 / ch) = pixel-bleeding prevention shift
-            const vStart = textureGridCellHeightScale * ((0.5 / ch) + Math.floor(params.textureIndex * textureGridCellWidthScale));
-            
-            uvStartBufferAttrib.setXY(instanceId, uStart, vStart);
+            this.setTextureIndex(instanceId, params.textureIndex);
 
             // temp (for test)
             if (this.gameObject.params.objectTypeIndex == 2)
                 this.setInstanceTexture(instanceId, `${App.getEnv().assets_url}/lenna.png`);
         }
-
-        uvStartBufferAttrib.needsUpdate = true;
 
         tempObj.removeFromParent();
     }

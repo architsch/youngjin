@@ -37,6 +37,7 @@ export default class VoxelMeshInstancer extends GameObjectComponent
     setVoxel(voxel: Voxel): void
     {
         this.voxel = voxel;
+        voxel.setGameObjectId(this.gameObject.params.objectId);
     }
 
     getVoxelQuad(instanceId: number): { voxelQuad: VoxelQuad, quadIndex: number }

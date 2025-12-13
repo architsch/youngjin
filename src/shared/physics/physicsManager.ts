@@ -8,8 +8,9 @@ import PhysicsRoom from "./types/physicsRoom";
 import PhysicsHitState from "./types/physicsHitState";
 import AABB2 from "../math/types/aabb2";
 import { getObjectsInDist, removeObjectFromIntersectingVoxels, setObjectPosition } from "./util/physicsObjectUtil";
-import { getVoxelCollisionLayer, getVoxelsInBox } from "./util/physicsVoxelUtil";
+import { addVoxelCollisionLayer, getVoxelCollisionLayer, getVoxelsInBox, removeVoxelCollisionLayer } from "./util/physicsVoxelUtil";
 import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
+import { COLLISION_LAYER_SOLID } from "./types/collisionLayer";
 
 const rooms: {[roomID: string]: PhysicsRoom} = {};
 
@@ -57,6 +58,20 @@ const PhysicsManager =
     hasRoom: (roomID: string): boolean =>
     {
         return rooms[roomID] != undefined;
+    },
+    makeVoxelSolid: (roomID: string, row: number, col: number) =>
+    {
+        const room = rooms[roomID];
+        if (room == undefined)
+            throw new Error(`Physics-room doesn't exist (roomID = ${roomID}, row = ${row}, col = ${col})`);
+        addVoxelCollisionLayer(room, row, col, COLLISION_LAYER_SOLID);
+    },
+    makeVoxelUnsolid: (roomID: string, row: number, col: number) =>
+    {
+        const room = rooms[roomID];
+        if (room == undefined)
+            throw new Error(`Physics-room doesn't exist (roomID = ${roomID}, row = ${row}, col = ${col})`);
+        removeVoxelCollisionLayer(room, row, col, COLLISION_LAYER_SOLID);
     },
     addObject: (roomID: string, objectId: string, hitbox: AABB2, collisionLayer: number) =>
     {

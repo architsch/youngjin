@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import App from "../../../app";
 import ObjectManager from "../../../object/objectManager";
 import { voxelQuadSelectionObservable } from "../../../system/observables";
@@ -42,7 +42,7 @@ export default function DebugStats()
         ? <><br/>Selected Voxel Quad: {state.voxelQuadSelectionDesc}</>
         : null;
     
-    return <div style={style}>
+    return <div className="absolute top-0 left-0 w-fit h-fit m-0 p-1 text-xs text-gray-400 bg-black">
         FPS: {state.fpsDesc}
         <br/>Position: {state.playerPosDesc}
         {voxelQuadSelectionDescLine}
@@ -55,16 +55,3 @@ interface DebugStatsState
     playerPosDesc: string;
     voxelQuadSelectionDesc: string;
 }
-
-const style: CSSProperties = {
-    position: "absolute",
-    top: "0",
-    left: "0",
-    margin: "0 0",
-    padding: "4px 4px",
-    height: "auto",
-    fontSize: "10px",
-    lineHeight: "12px",
-    backgroundColor: "black",
-    color: "white",
-};

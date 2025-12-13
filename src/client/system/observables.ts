@@ -6,6 +6,9 @@ import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Observable from "../../shared/system/types/observable";
 import ObservableMap from "../../shared/system/types/observableMap";
+import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
+import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
+import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ClientProcess from "./types/clientProcess";
 
@@ -25,3 +28,6 @@ export const objectDesyncResolveObservable = new Observable<ObjectDesyncResolveP
 export const objectSpawnObservable = new Observable<ObjectSpawnParams>();
 export const objectDespawnObservable = new Observable<ObjectDespawnParams>();
 export const objectMessageObservable = new Observable<ObjectMessageParams>();
+export const voxelCubeAddObservable = new Observable<VoxelCubeAddParams>();
+export const voxelCubeRemoveObservable = new Observable<VoxelCubeRemoveParams>();
+export const voxelTextureChangeObservable = new Observable<VoxelTextureChangeParams>();

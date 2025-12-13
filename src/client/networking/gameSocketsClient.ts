@@ -12,8 +12,11 @@ import EncodableRawByteNumber from "../../shared/networking/types/encodableRawBy
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../shared/networking/types/encodableData";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
-import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable } from "../system/observables";
+import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, voxelCubeAddObservable, voxelCubeRemoveObservable, voxelTextureChangeObservable } from "../system/observables";
 import { tryStartClientProcess } from "../system/types/clientProcess";
+import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
+import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
+import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 
 let socket: Socket;
 
@@ -36,6 +39,12 @@ const signalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
         const params = data as ObjectMessageParams;
         objectMessageObservable.set(params, params.senderObjectId);
     },
+    "voxelCubeAddParams": (data: EncodableData) =>
+        voxelCubeAddObservable.set(data as VoxelCubeAddParams),
+    "voxelCubeRemoveParams": (data: EncodableData) =>
+        voxelCubeRemoveObservable.set(data as VoxelCubeRemoveParams),
+    "voxelTextureChangeParams": (data: EncodableData) =>
+        voxelTextureChangeObservable.set(data as VoxelTextureChangeParams),
 }
 
 const GameSocketsClient =
@@ -88,6 +97,9 @@ const GameSocketsClient =
         else
             console.warn("Cannot change room because 'roomChange' process is ongoing.");
     },
+    emitVoxelCubeAdd: (params: VoxelCubeAddParams) => sendEncodedSignal("voxelCubeAdd", params),
+    emitVoxelCubeRemove: (params: VoxelCubeRemoveParams) => sendEncodedSignal("voxelCubeRemove", params),
+    emitVoxelTextureChange: (params: VoxelTextureChangeParams) => sendEncodedSignal("voxelTextureChange", params),
 }
 
 function sendEncodedSignal(signalType: string, signalData: EncodableData)

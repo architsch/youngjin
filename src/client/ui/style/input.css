@@ -4,5 +4,14 @@
 @source "../../../../views";
 
 @theme {
-  --font-sans: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+  --font-mono: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ongoingProcessesObservable } from "../../../system/observables";
 import { ongoingClientProcessExists } from "../../../system/types/clientProcess";
+import ScreenCenterPopup from "../basic/screenCenterPopup";
 
 export default function Loading()
 {
@@ -15,9 +16,8 @@ export default function Loading()
 
     if (state.loading)
     {
-        return <div className="loadingScreen">
-            <div className="background"></div>
-            <div className="content">Loading...</div>
+        return <div className="w-full h-full z-900 bg-black/50">
+            <ScreenCenterPopup text="Loading..." customClassNames="text-amber-600 text-6xl bg-black"/>
         </div>;
     }
     else
@@ -30,29 +30,3 @@ interface LoadingState
 {
     loading: boolean;
 }
-
-/*
-.loadingScreen {
-	${fullscreen_whole_area}
-	${zero_spacing(landscape)}
-	z-index: 900;
-
-	.background {
-		${fullscreen_whole_area}
-		${zero_spacing(landscape)}
-		${loading_screen_background_frame}
-	}
-	.content {
-		position: absolute;
-		min-width: 50%;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		${xxl_bold_font}
-		${xl_spacing(landscape)}
-		${loading_screen_content_frame}
-		text-align: center;
-		z-index: 901;
-	}
-}
-*/

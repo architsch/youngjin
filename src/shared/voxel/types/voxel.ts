@@ -4,6 +4,7 @@ import EncodableData from "../../networking/types/encodableData"
 
 export default class Voxel extends EncodableData
 {
+    gameObjectId: string;
     row: number;
     col: number;
     collisionLayerMask: number;
@@ -12,10 +13,16 @@ export default class Voxel extends EncodableData
     constructor(collisionLayerMask: number, quads: VoxelQuad[])
     {
         super();
+        this.gameObjectId = ""; // This field must be manually set via the "setGameObjectId" method.
         this.row = -1; // This field must be manually set via the "setCoordinates" method.
         this.col = -1; // This field must be manually set via the "setCoordinates" method.
         this.collisionLayerMask = collisionLayerMask;
         this.quads = quads;
+    }
+
+    setGameObjectId(id: string)
+    {
+        this.gameObjectId = id;
     }
 
     setCoordinates(row: number, col: number)

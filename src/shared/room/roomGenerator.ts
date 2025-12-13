@@ -1,5 +1,6 @@
 import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
 import PersistentObject from "../object/types/persistentObject";
+import { COLLISION_LAYER_UNBREAKABLE } from "../physics/types/collisionLayer";
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
 import VoxelQuad from "../voxel/types/voxelQuad";
@@ -25,21 +26,21 @@ const RoomGenerator =
             for (let col = 0; col < numGridCols; ++col)
             {
                 if (row == 0)
-                    makeWallVoxel(voxels, numGridCols, row, col, wallTextureIndex, "z", "+");
+                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "z", "+");
                 else if (col == 0)
-                    makeWallVoxel(voxels, numGridCols, row, col, wallTextureIndex, "x", "+");
+                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "x", "+");
                 else if (row == numGridRows-1)
-                    makeWallVoxel(voxels, numGridCols, row, col, wallTextureIndex, "z", "-");
+                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "z", "-");
                 else if (col == numGridCols-1)
-                    makeWallVoxel(voxels, numGridCols, row, col, wallTextureIndex, "x", "-");
+                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "x", "-");
                 else
-                    makeFloorVoxel(voxels, numGridCols, row, col, floorTextureIndex);
+                    makeFloorVoxel(voxels, numGridRows, numGridCols, row, col, floorTextureIndex);
             }
         }
-        makePillarVoxel(voxels, numGridCols, 3, 3, wallTextureIndex);
-        makePillarVoxel(voxels, numGridCols, numGridRows-4, numGridCols-4, wallTextureIndex);
-        makePillarVoxel(voxels, numGridCols, 3, numGridCols-4, wallTextureIndex);
-        makePillarVoxel(voxels, numGridCols, numGridRows-4, 3, wallTextureIndex);
+        makePillarVoxel(voxels, numGridRows, numGridCols, 3, 3, wallTextureIndex);
+        makePillarVoxel(voxels, numGridRows, numGridCols, numGridRows-4, numGridCols-4, wallTextureIndex);
+        makePillarVoxel(voxels, numGridRows, numGridCols, 3, numGridCols-4, wallTextureIndex);
+        makePillarVoxel(voxels, numGridRows, numGridCols, numGridRows-4, 3, wallTextureIndex);
 
         const persistentObjects: PersistentObject[] = [];
 
@@ -79,10 +80,10 @@ const RoomGenerator =
 // Voxel Operations
 //---------------------------------------------------------------------------
 
-function makePillarVoxel(voxels: Voxel[], numGridCols: number, row: number, col: number,
-    textureIndex: number)
+function makePillarVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
+    textureIndex: number): Voxel
 {
-    makeVoxel(voxels, numGridCols, row, col, [
+    return makeVoxel(voxels, numGridRows, numGridCols, row, col, [
         quads => addWallQuads("x", "+", textureIndex, quads),
         quads => addWallQuads("x", "-", textureIndex, quads),
         quads => addWallQuads("z", "+", textureIndex, quads),
@@ -90,24 +91,27 @@ function makePillarVoxel(voxels: Voxel[], numGridCols: number, row: number, col:
     ]);
 }
 
-function makeFloorVoxel(voxels: Voxel[], numGridCols: number, row: number, col: number,
-    textureIndex: number)
+function makeFloorVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
+    textureIndex: number): Voxel
 {
-    makeVoxel(voxels, numGridCols, row, col, [
+    return makeVoxel(voxels, numGridRows, numGridCols, row, col, [
         quads => addFloorQuad(textureIndex, quads),
     ]);
 }
 
-function makeWallVoxel(voxels: Voxel[], numGridCols: number, row: number, col: number,
-    textureIndex: number, facingAxis: "x" | "z", orientation: "-" | "+")
+function makeWallVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
+    textureIndex: number, facingAxis: "x" | "z", orientation: "-" | "+"): Voxel
 {
-    makeVoxel(voxels, numGridCols, row, col, [
+    const voxel = makeVoxel(voxels, numGridRows, numGridCols, row, col, [
         quads => addWallQuads(facingAxis, orientation, textureIndex, quads),
     ]);
+    if (row == 0 || row == numGridRows-1 || col == 0 || col == numGridCols-1)
+        voxel.collisionLayerMask |= (1 << COLLISION_LAYER_UNBREAKABLE); // Boundary voxels are unbreakable
+    return voxel;
 }
 
-function makeVoxel(voxels: Voxel[], numGridCols: number, row: number, col: number,
-    quadOperations: ((quads: VoxelQuad[]) => CollisionLayerMask)[])
+function makeVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
+    quadOperations: ((quads: VoxelQuad[]) => CollisionLayerMask)[]): Voxel
 {
     const quads: VoxelQuad[] = [];
     let collisionLayerMask = 0;
@@ -116,6 +120,7 @@ function makeVoxel(voxels: Voxel[], numGridCols: number, row: number, col: numbe
     const voxel = new Voxel(collisionLayerMask, quads);
     voxel.setCoordinates(row, col);
     voxels[row * numGridCols + col] = voxel;
+    return voxel;
 }
 
 //---------------------------------------------------------------------------

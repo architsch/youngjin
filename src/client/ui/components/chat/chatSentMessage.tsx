@@ -1,22 +1,7 @@
-import { CSSProperties } from "react";
-
 export default function ChatSentMessage({sentMessage}
     : {sentMessage: string})
 {
-    return <div style={style}>
-        <b style={{color: "green"}}>My Message:</b> {sentMessage}
+    return <div className="absolute left-3 bottom-14 w-fit h-fit p-1 text-base text-yellow-300 bg-black/50">
+        <span className="text-green-600 font-bold">My Message:</span> {sentMessage}
     </div>;
 }
-
-const style: CSSProperties = {
-    position: "absolute",
-    left: "0.25rem",
-    margin: "0 0",
-    padding: "0.25rem 0.25rem",
-    bottom: "2.8rem",
-    height: "1.5rem",
-    fontSize: "1rem",
-    lineHeight: "1.5rem",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    color: "yellow",
-};
