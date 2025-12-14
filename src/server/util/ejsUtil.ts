@@ -5,6 +5,7 @@ import TextUtil from "../../shared/embeddedScripts/util/textUtil";
 import ejs from "ejs";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
+import NetworkUtil from "./networkUtil";
 dotenv.config();
 
 const ejsPartialRootPath = `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/partial`;
@@ -42,12 +43,13 @@ const EJSUtil =
     postProcessHTML: (html: string): string => {
         if (process.env.MODE == "dev")
         {
+            const ip = NetworkUtil.getLocalIpAddress();
             html = html
                 .replaceAll("\n", "!*NEW_LINE*!")
                 .replace(/(PROD_CODE_BEGIN).*?(PROD_CODE_END)/g, "REMOVED_PROD_CODE")
                 .replaceAll("!*NEW_LINE*!", "\n")
-                .replaceAll(process.env.URL_STATIC as string, `http://localhost:${process.env.PORT}`) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
-                .replaceAll(process.env.URL_DYNAMIC as string, `http://localhost:${process.env.PORT}`);
+                .replaceAll(process.env.URL_STATIC as string, `http://${ip}:${process.env.PORT}`) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
+                .replaceAll(process.env.URL_DYNAMIC as string, `http://${ip}:${process.env.PORT}`);
             return html;
         }
         else

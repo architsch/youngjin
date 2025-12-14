@@ -6,15 +6,15 @@
 <%_ if (isStaticPage) { _%>
     <h1>Server Not Available</h1>
 <%_ } else if (user) { _%>
-    <div id="gameCanvasRoot" class="fixed w-screen h-screen overflow-hidden font-mono pointer-events-auto"></div>
-    <div id="overlayCanvasRoot" class="fixed w-screen h-screen overflow-hidden font-mono pointer-events-none"></div>
-    <div id="uiRoot" class="fixed w-screen h-screen overflow-hidden font-mono pointer-events-none select-none"></div>
+    <div id="gameCanvasRoot" class="fixed w-full h-full overflow-hidden font-mono pointer-events-auto"></div>
+    <div id="overlayCanvasRoot" class="fixed w-full h-full overflow-hidden font-mono pointer-events-none"></div>
+    <div id="uiRoot" class="fixed w-full h-full overflow-hidden font-mono pointer-events-none select-none"></div>
     <script type="text/javascript">
         window.thingspool_env = { // client-side environment variables
             mode: `<%- process.env.MODE %>`,
             user: JSON.parse(`<%- JSON.stringify(user) %>`),
-            socket_server_url: "<%= (process.env.MODE == `dev`) ? `http://localhost:${process.env.PORT}` : process.env.URL_DYNAMIC %>",
-            assets_url: "<%= (process.env.MODE == `dev`) ? `http://localhost:${process.env.PORT}` : process.env.URL_STATIC %>/app/assets",
+            socket_server_url: "<%= process.env.URL_DYNAMIC %>",
+            assets_url: "<%= process.env.URL_STATIC %>/app/assets",
         };
     </script>
     <script type="text/javascript" src="<%= process.env.URL_STATIC %>/app/bundle.js"></script>
