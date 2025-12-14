@@ -16,13 +16,12 @@ export async function loadRoom(roomID: string): Promise<RoomRuntimeMemory>
 
     if (roomID.startsWith("s")) // static room (procedurally generated)
     {
-        const ip = NetworkUtil.getLocalIpAddress();
         const roomData = RoomGenerator.generateRoom(roomID);
         room = new Room(
             roomID,
             roomID, // roomName
             "", // ownerUserName (static room is not owned by anyone)
-            `${process.env.MODE == "dev" ? `http://${ip}:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`,
+            `${process.env.MODE == "dev" ? `http://${NetworkUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`,
             roomData.voxelGrid,
             roomData.persistentObjects
         );
