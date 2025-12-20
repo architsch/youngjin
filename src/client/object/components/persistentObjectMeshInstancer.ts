@@ -22,6 +22,11 @@ export default class PersistentObjectMeshInstancer extends GameObjectComponent
     {        
         if (this.persistentObject == undefined)
             throw new Error(`PersistentObject hasn't been defined yet.`);
+
+        const instanceId = await this.instancedMeshGraphics.loadInstance();
+
+        this.instancedMeshGraphics.updateInstanceTransform(instanceId, 0, 0, 0.01, 0, 0, 1);
+        this.instancedMeshGraphics.updateInstanceTextureIndex(instanceId, instanceId % 64);
     }
 
     getPersistentObject(): PersistentObject

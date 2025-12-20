@@ -7,7 +7,7 @@ export default function AtlasCellSprite(props: {
         atlasCellRow: number, atlasCellCol: number,
         highlight: boolean, autoScrollToHighlight: boolean,
         additionalClassNames: string,
-        onClick?: () => void,
+        onClick?: () => void | Promise<void>,
     })
 {
     const numCols = Math.floor(props.atlasWidth / props.atlasCellWidth);

@@ -25,6 +25,6 @@ export default class VoxelGameObject extends GameObject
         const instancedMeshConfig = instancer.instancedMeshGraphics.instancedMeshConfig;
 
         VoxelQuadSelection.trySelect(voxel, voxelQuad, quadIndex,
-            instancedMeshConfig.getMaterialParams(this) as TexturePackMaterialParams);
+            instancedMeshConfig.getMaterialParams() as TexturePackMaterialParams);
     }
 }

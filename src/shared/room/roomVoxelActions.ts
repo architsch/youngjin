@@ -3,13 +3,33 @@ import Voxel from "../voxel/types/voxel";
 import VoxelQuad from "../voxel/types/voxelQuad";
 import Room from "./types/room";
 import PhysicsManager from "../physics/physicsManager";
+import VoxelQuadChange from "../voxel/types/voxelQuadChange";
+
+let debugEnabled = false;
 
 const cameraY = 2;
 
+const recentChanges: VoxelQuadChange[] = [];
+
 const RoomVoxelActions =
 {
+    setDebugEnabled(enabled: boolean)
+    {
+        debugEnabled = enabled;
+    },
+    getRecentChanges(): VoxelQuadChange[]
+    {
+        return recentChanges;
+    },
+    flushRecentChanges()
+    {
+        recentChanges.length = 0;
+    },
     addCube(room: Room, row: number, col: number, yCenter: number, textureIndex: number): boolean
     {
+        if (debugEnabled)
+            console.log(`START - addCube - row: ${row}, col: ${col}, yCenter: ${yCenter}, textureIndex: ${textureIndex}`);
+
         const voxel = RoomVoxelActions.getVoxel(room, row, col);
         if (!voxel)
         {
@@ -49,7 +69,7 @@ const RoomVoxelActions =
         tryRemoveVoxelQuad(voxel, "y", "-", yCenter+0.5);
         tryRemoveVoxelQuad(voxel, "y", "+", yCenter-0.5);
 
-        if (yCenter-0.5 > cameraY && yCenter+0.5 <= 3.5) // 3.5 = maximum allowed yOffset of a VoxelQuad
+        if (yCenter-0.5 > cameraY)
             tryAddVoxelQuad(voxel, "y", "-", yCenter-0.5, textureIndex);
         if (yCenter+0.5 < cameraY && yCenter-0.5 >= 0) // 0 = minimum allowed yOffset of a VoxelQuad
             tryAddVoxelQuad(voxel, "y", "+", yCenter+0.5, textureIndex);
@@ -63,6 +83,12 @@ const RoomVoxelActions =
 
     removeCube(room: Room, row: number, col: number, yCenter: number): boolean
     {
+        if (debugEnabled)
+            console.log(`START - removeCube - row: ${row}, col: ${col}, yCenter: ${yCenter}`);
+
+        if (yCenter < 0.5) // floor should not be removed.
+            return false;
+
         const voxel = RoomVoxelActions.getVoxel(room, row, col);
         if (!voxel)
         {
@@ -71,8 +97,15 @@ const RoomVoxelActions =
         }
         if (isUnbreakableVoxel(room, row, col)) // cannot remove anything from an unbreakable voxel.
             return false;
-        
+
         const textureIndex = voxel.quads[0].textureIndex;
+
+        tryRemoveVoxelQuad(voxel, "x", "-", yCenter);
+        tryRemoveVoxelQuad(voxel, "x", "+", yCenter);
+        tryRemoveVoxelQuad(voxel, "y", "-", yCenter-0.5);
+        tryRemoveVoxelQuad(voxel, "y", "+", yCenter+0.5);
+        tryRemoveVoxelQuad(voxel, "z", "-", yCenter);
+        tryRemoveVoxelQuad(voxel, "z", "+", yCenter);
 
         let adjVoxel = RoomVoxelActions.getVoxel(room, row-1, col);
         if (adjVoxel && isVoxelYRangeOccupied(adjVoxel, yCenter-0.5, yCenter+0.5))
@@ -90,7 +123,7 @@ const RoomVoxelActions =
         
         if (yCenter+0.5 > cameraY && isVoxelYRangeOccupied(voxel, yCenter+0.5, yCenter+1.5))
             tryAddVoxelQuad(voxel, "y", "-", yCenter+0.5, textureIndex);
-        if (yCenter-0.5 < cameraY && isVoxelYRangeOccupied(voxel, yCenter-1.5, yCenter-0.5))
+        if (yCenter-0.5 < cameraY && (yCenter <= 0.5 || isVoxelYRangeOccupied(voxel, yCenter-1.5, yCenter-0.5)))
             tryAddVoxelQuad(voxel, "y", "+", yCenter-0.5, textureIndex);
 
         // [y=0.6, y=2.9] is the interval which needs to be cleared out in order to
@@ -102,6 +135,9 @@ const RoomVoxelActions =
 
     changeVoxelTexture(room: Room, row: number, col: number, quadIndex: number, textureIndex: number): boolean
     {
+        if (debugEnabled)
+            console.log(`START - changeVoxelTexture - row: ${row}, col: ${col}, quadIndex: ${quadIndex}, textureIndex: ${textureIndex}`);
+
         const voxel = RoomVoxelActions.getVoxel(room, row, col);
         if (!voxel)
         {
@@ -115,6 +151,18 @@ const RoomVoxelActions =
         }
         const voxelQuad = voxel.quads[quadIndex]!;
         voxelQuad.textureIndex = textureIndex;
+
+        const change = new VoxelQuadChange(
+            "changeTexture",
+            voxel.row,
+            voxel.col,
+            quadIndex,
+            voxelQuad.facingAxis,
+            voxelQuad.orientation,
+            voxelQuad.yOffset,
+            voxelQuad.textureIndex,
+        );
+        pushChange(voxel, change);
         return true;
     },
 
@@ -202,6 +250,18 @@ function tryAddVoxelQuad(voxel: Voxel,
             return false; // quad already exists
     }
     voxel.quads.push(new VoxelQuad(facingAxis, orientation, yOffset, textureIndex));
+
+    const change = new VoxelQuadChange(
+        "add",
+        voxel.row,
+        voxel.col,
+        voxel.quads.length-1,
+        facingAxis,
+        orientation,
+        yOffset,
+        textureIndex,
+    );
+    pushChange(voxel, change);
     return true;
 }
 
@@ -223,9 +283,33 @@ function tryRemoveVoxelQuad(voxel: Voxel,
         for (let i = quadIndex + 1; i < voxel.quads.length; ++i)
             voxel.quads[i-1] = voxel.quads[i];
         voxel.quads.length = voxel.quads.length - 1;
+
+        const change = new VoxelQuadChange(
+            "remove",
+            voxel.row,
+            voxel.col,
+            quadIndex,
+            facingAxis,
+            orientation,
+            yOffset,
+            -1,
+        );
+        pushChange(voxel, change);
         return true;
     }
     return false;
+}
+
+function pushChange(voxel: Voxel, change: VoxelQuadChange)
+{
+    if (debugEnabled)
+    {
+        const snapshot: VoxelQuad[] = [];
+        for (const quad of voxel.quads)
+            snapshot.push({...quad} as VoxelQuad);
+        change.voxelQuadsResultSnapshot = snapshot;
+    }
+    recentChanges.push(change);
 }
 
 export default RoomVoxelActions;

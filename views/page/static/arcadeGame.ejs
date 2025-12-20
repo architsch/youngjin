@@ -3,13 +3,13 @@
     desc: description,
     keywords: keywords,
     url: `${process.env.URL_STATIC}/${relativeURL}`,
-    pageName: "arcade",
+    pageName: "library",
     pagePathList: [
         {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
-        {title: UIConfig.displayText.pageName["arcade"], url: `${process.env.URL_STATIC}/arcade.html`},
+        {title: UIConfig.displayText.pageName["library"], url: `${process.env.URL_STATIC}/library.html`},
         {title: entry.title, url: undefined},
     ],
-    backDestination_href: `${process.env.URL_STATIC}/arcade.html`,
+    backDestination_href: `${process.env.URL_STATIC}/library.html`,
 }) %>
 <h1><%= entry.title %></h1>
 <a class="noTextDeco" target="_blank" href="<%= entry.playLinkURL %>">

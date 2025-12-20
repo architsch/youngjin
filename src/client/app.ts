@@ -1,4 +1,5 @@
 import ObjectManager from "./object/objectManager";
+import VoxelManager from "./voxel/voxelManager";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "./system/types/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
@@ -54,6 +55,7 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
     await ObjectManager.load(roomRuntimeMemory);
+    await VoxelManager.load(roomRuntimeMemory);
 
     prevTime = performance.now() * 0.001;
     deltaTimePending = 0;
@@ -64,6 +66,7 @@ async function unloadCurrentRoom()
     if (currentRoom == undefined)
         throw new Error(`No room to unload.`);
 
+    await VoxelManager.unload();
     await ObjectManager.unload();
     PhysicsManager.unload(currentRoom.roomID);
     await GraphicsManager.unload();

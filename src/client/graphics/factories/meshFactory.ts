@@ -4,6 +4,7 @@ import MaterialFactory from "./materialFactory";
 import Pool from "../../../shared/system/types/pool";
 import MaterialParams from "../types/material/materialParams";
 import GraphicsManager from "../graphicsManager";
+import InstancedMeshConfig from "../types/instancedMeshConfig";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
@@ -28,9 +29,9 @@ const MeshFactory =
         loadedMeshes[meshId] = newMesh;
         return newMesh;
     },
-    loadInstancedMesh: async (geometryId: string, materialParams: MaterialParams,
-        totalNumInstances: number, numInstancesToRent: number)
-        : Promise<{ instancedMesh: THREE.InstancedMesh, rentedInstanceIds: number[] }> =>
+    loadMeshInstance: async (geometryId: string, materialParams: MaterialParams,
+        instancedMeshConfig: InstancedMeshConfig)
+        : Promise<{ instancedMesh: THREE.InstancedMesh, instanceId: number }> =>
     {
         const meshId = `${geometryId}-${materialParams.getMaterialId()}`;
         const loadedMesh = loadedMeshes[meshId];
@@ -39,20 +40,16 @@ const MeshFactory =
             const pool = instanceIdPools[meshId];
             if (pool == undefined)
                 throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
-
-            const rentedInstanceIds = new Array<number>(numInstancesToRent);
-            for (let i = 0; i < numInstancesToRent; ++i)
-                rentedInstanceIds[i] = pool.rentItem();
-            return { instancedMesh: loadedMesh as THREE.InstancedMesh, rentedInstanceIds };
+            return { instancedMesh: loadedMesh as THREE.InstancedMesh, instanceId: pool.rentItem() };
         }
         const geometryClone = (await GeometryFactory.load(geometryId)).clone();
         const material = await MaterialFactory.load(materialParams);
 
-        const uvStartArray = new Float32Array(totalNumInstances * 2);
+        const uvStartArray = new Float32Array(instancedMeshConfig.maxNumInstances * 2);
         const uvStartBufferAttrib = new THREE.InstancedBufferAttribute(uvStartArray, 2);
         geometryClone.setAttribute("uvStart", uvStartBufferAttrib);
 
-        const newMesh = new THREE.InstancedMesh(geometryClone, material, totalNumInstances);
+        const newMesh = new THREE.InstancedMesh(geometryClone, material, instancedMeshConfig.maxNumInstances);
         newMesh.frustumCulled = false;
         GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
         loadedMeshes[meshId] = newMesh;
@@ -60,13 +57,10 @@ const MeshFactory =
         if (instanceIdPools[meshId] != undefined)
             throw new Error(`Instance ID pool already exists (meshId = ${meshId})`);
 
-        const pool = new Pool<number>(totalNumInstances, (index: number) => totalNumInstances - index - 1);
+        const pool = new Pool<number>(instancedMeshConfig.maxNumInstances,
+            (index: number) => instancedMeshConfig.maxNumInstances - index - 1);
         instanceIdPools[meshId] = pool;
-
-        const rentedInstanceIds = new Array<number>(numInstancesToRent);
-        for (let i = 0; i < numInstancesToRent; ++i)
-            rentedInstanceIds[i] = pool.rentItem();
-        return { instancedMesh: newMesh as THREE.InstancedMesh, rentedInstanceIds };
+        return { instancedMesh: newMesh as THREE.InstancedMesh, instanceId: pool.rentItem() };
     },
     unloadAll: (): void =>
     {
