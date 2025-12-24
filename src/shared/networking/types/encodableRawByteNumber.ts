@@ -18,13 +18,13 @@ export default class EncodableRawByteNumber extends EncodableData
         if (Math.floor(this.n) != this.n)
             console.error(`Number is not an integer (n = ${this.n})`);
         const n = Math.min(255, Math.max(0, Math.floor(this.n)));
-        bufferState.view[bufferState.index++] = n;
+        bufferState.view[bufferState.byteIndex++] = n;
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
         return new EncodableRawByteNumber(
-            bufferState.view[bufferState.index++]
+            bufferState.view[bufferState.byteIndex++]
         );
     }
 }

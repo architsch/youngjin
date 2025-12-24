@@ -17,6 +17,7 @@ import { tryStartClientProcess } from "../system/types/clientProcess";
 import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
 import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
 import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
+import BufferState from "../../shared/networking/types/bufferState";
 
 let socket: Socket;
 
@@ -66,8 +67,8 @@ const GameSocketsClient =
 
         socket.on("signalBatch", (buffer: ArrayBuffer) => {
             //console.log(`signalBatch received - length = ${buffer.byteLength}`);
-            const bufferState = { view: new Uint8Array(buffer), index: 0 };
-            while (bufferState.index < bufferState.view.byteLength)
+            const bufferState = new BufferState(new Uint8Array(buffer));
+            while (bufferState.byteIndex < bufferState.view.byteLength)
             {
                 const signalTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
                 const signalConfig = SignalTypeConfigMap.getConfigByIndex(signalTypeIndex);

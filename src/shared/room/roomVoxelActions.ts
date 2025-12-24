@@ -4,10 +4,9 @@ import VoxelQuad from "../voxel/types/voxelQuad";
 import Room from "./types/room";
 import PhysicsManager from "../physics/physicsManager";
 import VoxelQuadChange from "../voxel/types/voxelQuadChange";
+import Num from "../math/util/num";
 
 let debugEnabled = false;
-
-const cameraY = 2;
 
 const recentChanges: VoxelQuadChange[] = [];
 
@@ -30,6 +29,12 @@ const RoomVoxelActions =
         if (debugEnabled)
             console.log(`START - addCube - row: ${row}, col: ${col}, yCenter: ${yCenter}, textureIndex: ${textureIndex}`);
 
+        if (yCenter < 0 || yCenter > 4.0)
+        {
+            console.error(`yCenter of the cube is out of range (yCenter = ${yCenter})`);
+            return false;
+        }
+        
         const voxel = RoomVoxelActions.getVoxel(room, row, col);
         if (!voxel)
         {
@@ -37,46 +42,75 @@ const RoomVoxelActions =
             return false;
         }
         // Do not add if the maximum number of quads have been reached.
-        if (voxel.quads.length >= 16)
+        if (voxel.quads.length >= 31)
             return false;
         
-        // Do not add if the cube penetrates through any existing volume.
+        // Do not add if the cube penetrates through any existing volume (within the same voxel).
         for (let i = 0; i < voxel.quads.length; ++i)
         {
             const quad = voxel.quads[i];
             if (quad.facingAxis != "y" && Math.abs(quad.yOffset - yCenter) < 1)
+            {
                 return false;
-            if (quad.facingAxis == "y" && Math.abs(quad.yOffset - yCenter) < 0.5)
+            }
+            if (quad.facingAxis == "y" && quad.yOffset > 0 && quad.yOffset < 4 &&
+                Math.abs(quad.yOffset - yCenter) < 0.5)
+            {
                 return false;
+            }
         }
         
         // Remove quads that are to be hidden, and add quads that are to be exposed.
 
         let adjVoxel = RoomVoxelActions.getVoxel(room, row-1, col);
-        if (!adjVoxel || !tryRemoveVoxelQuad(adjVoxel, "z", "+", yCenter))
-            tryAddVoxelQuad(voxel, "z", "-", yCenter, textureIndex);
+        if (adjVoxel)
+        {
+            if (isVoxelYOccupied(adjVoxel, yCenter, true))
+                tryRemoveVoxelQuad(adjVoxel, "z", "+", yCenter);
+            else
+                tryAddVoxelQuad(voxel, "z", "-", yCenter, textureIndex);
+        }
+
         adjVoxel = RoomVoxelActions.getVoxel(room, row+1, col);
-        if (!adjVoxel || !tryRemoveVoxelQuad(adjVoxel, "z", "-", yCenter))
-            tryAddVoxelQuad(voxel, "z", "+", yCenter, textureIndex);
+        if (adjVoxel)
+        {
+            if (isVoxelYOccupied(adjVoxel, yCenter, true))
+                tryRemoveVoxelQuad(adjVoxel, "z", "-", yCenter);
+            else
+                tryAddVoxelQuad(voxel, "z", "+", yCenter, textureIndex);
+        }
 
         adjVoxel = RoomVoxelActions.getVoxel(room, row, col-1);
-        if (!adjVoxel || !tryRemoveVoxelQuad(adjVoxel, "x", "+", yCenter))
-            tryAddVoxelQuad(voxel, "x", "-", yCenter, textureIndex);
+        if (adjVoxel)
+        {
+            if (isVoxelYOccupied(adjVoxel, yCenter, true))
+                tryRemoveVoxelQuad(adjVoxel, "x", "+", yCenter);
+            else
+                tryAddVoxelQuad(voxel, "x", "-", yCenter, textureIndex);
+        }
+
         adjVoxel = RoomVoxelActions.getVoxel(room, row, col+1);
-        if (!adjVoxel || !tryRemoveVoxelQuad(adjVoxel, "x", "-", yCenter))
-            tryAddVoxelQuad(voxel, "x", "+", yCenter, textureIndex);
+        if (adjVoxel)
+        {
+            if (isVoxelYOccupied(adjVoxel, yCenter, true))
+                tryRemoveVoxelQuad(adjVoxel, "x", "-", yCenter);
+            else
+                tryAddVoxelQuad(voxel, "x", "+", yCenter, textureIndex);
+        }
 
-        tryRemoveVoxelQuad(voxel, "y", "-", yCenter+0.5);
-        tryRemoveVoxelQuad(voxel, "y", "+", yCenter-0.5);
-
-        if (yCenter-0.5 > cameraY)
+        if (isVoxelYOccupied(voxel, yCenter-0.5, true))
+            tryRemoveVoxelQuad(voxel, "y", "+", yCenter-0.5);
+        else
             tryAddVoxelQuad(voxel, "y", "-", yCenter-0.5, textureIndex);
-        if (yCenter+0.5 < cameraY && yCenter-0.5 >= 0) // 0 = minimum allowed yOffset of a VoxelQuad
+
+        if (isVoxelYOccupied(voxel, yCenter+0.5, true))
+            tryRemoveVoxelQuad(voxel, "y", "-", yCenter+0.5);
+        else
             tryAddVoxelQuad(voxel, "y", "+", yCenter+0.5, textureIndex);
         
-        // [y=0.6, y=2.9] is the interval which needs to be cleared out in order to
+        // [y=0.5, y=3] is the interval which needs to be cleared out in order to
         // allow the player character to pass through the voxel.
-        if (isVoxelYRangeOccupied(voxel, 0.6, 2.9))
+        if (isVoxelYRangeOccupied(voxel, 0.5, 3, true))
             PhysicsManager.makeVoxelSolid(room.roomID, row, col);
         return true;
     },
@@ -86,8 +120,11 @@ const RoomVoxelActions =
         if (debugEnabled)
             console.log(`START - removeCube - row: ${row}, col: ${col}, yCenter: ${yCenter}`);
 
-        if (yCenter < 0.5) // floor should not be removed.
+        if (yCenter < 0 || yCenter > 4.0)
+        {
+            console.error(`yCenter of the cube is out of range (yCenter = ${yCenter})`);
             return false;
+        }
 
         const voxel = RoomVoxelActions.getVoxel(room, row, col);
         if (!voxel)
@@ -107,28 +144,19 @@ const RoomVoxelActions =
         tryRemoveVoxelQuad(voxel, "z", "-", yCenter);
         tryRemoveVoxelQuad(voxel, "z", "+", yCenter);
 
-        let adjVoxel = RoomVoxelActions.getVoxel(room, row-1, col);
-        if (adjVoxel && isVoxelYRangeOccupied(adjVoxel, yCenter-0.5, yCenter+0.5))
-            tryAddVoxelQuad(adjVoxel, "z", "+", yCenter, textureIndex);
-        adjVoxel = RoomVoxelActions.getVoxel(room, row+1, col);
-        if (adjVoxel && isVoxelYRangeOccupied(adjVoxel, yCenter-0.5, yCenter+0.5))
-            tryAddVoxelQuad(adjVoxel, "z", "-", yCenter, textureIndex);
-
-        adjVoxel = RoomVoxelActions.getVoxel(room, row, col-1);
-        if (adjVoxel && isVoxelYRangeOccupied(adjVoxel, yCenter-0.5, yCenter+0.5))
-            tryAddVoxelQuad(adjVoxel, "x", "+", yCenter, textureIndex);
-        adjVoxel = RoomVoxelActions.getVoxel(room, row, col+1);
-        if (adjVoxel && isVoxelYRangeOccupied(adjVoxel, yCenter-0.5, yCenter+0.5))
-            tryAddVoxelQuad(adjVoxel, "x", "-", yCenter, textureIndex);
+        recoverExposedAdjVoxelSide(room, row, col, -1, 0, yCenter, textureIndex);
+        recoverExposedAdjVoxelSide(room, row, col, 1, 0, yCenter, textureIndex);
+        recoverExposedAdjVoxelSide(room, row, col, 0, -1, yCenter, textureIndex);
+        recoverExposedAdjVoxelSide(room, row, col, 0, 1, yCenter, textureIndex);
         
-        if (yCenter+0.5 > cameraY && isVoxelYRangeOccupied(voxel, yCenter+0.5, yCenter+1.5))
+        if (yCenter >= 3.5 || hasCubeWithCenter(voxel, yCenter+1))
             tryAddVoxelQuad(voxel, "y", "-", yCenter+0.5, textureIndex);
-        if (yCenter-0.5 < cameraY && (yCenter <= 0.5 || isVoxelYRangeOccupied(voxel, yCenter-1.5, yCenter-0.5)))
+        if (yCenter <= 0.5 || hasCubeWithCenter(voxel, yCenter-1))
             tryAddVoxelQuad(voxel, "y", "+", yCenter-0.5, textureIndex);
 
-        // [y=0.6, y=2.9] is the interval which needs to be cleared out in order to
+        // [y=0.5, y=3] is the interval which needs to be cleared out in order to
         // allow the player character to pass through the voxel.
-        if (!isVoxelYRangeOccupied(voxel, 0.6, 2.9))
+        if (!isVoxelYRangeOccupied(voxel, 0.5, 3, true))
             PhysicsManager.makeVoxelUnsolid(room.roomID, row, col);
         return true;
     },
@@ -176,6 +204,51 @@ const RoomVoxelActions =
     }
 }
 
+function recoverExposedAdjVoxelSide(room: Room, row: number, col: number,
+    rowOffset: number, colOffset: number, yCenter: number, textureIndex: number)
+{
+    let facingAxis: "x" | "z";
+    const fromOrientation = (rowOffset > 0 || colOffset > 0) ? "-" : "+";
+    if (rowOffset != 0 && colOffset == 0)
+        facingAxis = "z";
+    else if (rowOffset == 0 && colOffset != 0)
+        facingAxis = "x";
+    else
+        throw new Error(`No valid facingAxis for offset: (rowOffset = ${rowOffset}, colOffset = ${colOffset})`);
+
+    const adjVoxel = RoomVoxelActions.getVoxel(room, row+rowOffset, col+colOffset);
+    if (adjVoxel)
+    {
+        if (hasCubeWithCenter(adjVoxel, yCenter))
+            tryAddVoxelQuad(adjVoxel, facingAxis, fromOrientation, yCenter, textureIndex);
+        if (hasCubeWithCenter(adjVoxel, yCenter-0.5))
+            tryAddVoxelQuad(adjVoxel, facingAxis, fromOrientation, yCenter-0.5, textureIndex);
+        if (hasCubeWithCenter(adjVoxel, yCenter+0.5))
+            tryAddVoxelQuad(adjVoxel, facingAxis, fromOrientation, yCenter+0.5, textureIndex);
+    }
+}
+
+function hasCubeWithCenter(voxel: Voxel, yCenter: number): boolean
+{
+    for (let i = 0; i < voxel.quads.length; ++i)
+    {
+        const quad = voxel.quads[i];
+        if (quad.facingAxis != "y") // "x" or "z"
+        {
+            if (quad.yOffset == yCenter)
+                return true;
+        }
+        else // "y"
+        {
+            if (quad.orientation == "-" && quad.yOffset == yCenter-0.5)
+                return true;
+            if (quad.orientation == "+" && quad.yOffset == yCenter+0.5)
+                return true;
+        }
+    }
+    return false;
+}
+
 function isUnbreakableVoxel(room: Room, row: number, col: number): boolean
 {
     const numGridCols = room.voxelGrid.numGridCols;
@@ -208,21 +281,67 @@ function getVoxelCollisionLayer(room: Room, row: number, col: number, collisionL
     return (RoomVoxelActions.getVoxel(room, row, col)!.collisionLayerMask >> collisionLayer) & 1;
 }
 
-function isVoxelYRangeOccupied(voxel: Voxel, yOffsetMin: number, yOffsetMax: number): boolean
+function isVoxelYOccupied(voxel: Voxel, yOffset: number, comparisonIsExclusive: boolean): boolean
 {
+    if (Num.numberIsInRange(yOffset, -9999, 0, comparisonIsExclusive)) // beneath the floor
+        return true;
+    if (Num.numberIsInRange(yOffset, 4, 9999, comparisonIsExclusive)) // above the ceiling
+        return true;
+
     for (let i = 0; i < voxel.quads.length; ++i)
     {
         const quad = voxel.quads[i];
-        if (quad.facingAxis == "y" && (quad.yOffset > yOffsetMin && quad.yOffset < yOffsetMax))
+        if (quad.facingAxis == "y")
         {
-            return true;
+            if (quad.orientation == "-")
+            {
+                if (Num.numberIsInRange(yOffset, quad.yOffset, quad.yOffset + 1, comparisonIsExclusive))
+                    return true;
+            }
+            else // "+"
+            {
+                if (Num.numberIsInRange(yOffset, quad.yOffset - 1, quad.yOffset, comparisonIsExclusive))
+                    return true;
+            }
         }
-        if (quad.facingAxis != "y" && (
-                (quad.yOffset-0.5 >= yOffsetMin && quad.yOffset-0.5 <= yOffsetMax) ||
-                (quad.yOffset+0.5 >= yOffsetMin && quad.yOffset+0.5 <= yOffsetMax)
-            ))
+        else // "x" or "z"
         {
-            return true;
+            if (Num.numberIsInRange(yOffset, quad.yOffset - 0.5, quad.yOffset + 0.5, comparisonIsExclusive))
+                return true;
+        }
+    }
+    return false;
+}
+
+function isVoxelYRangeOccupied(voxel: Voxel, yOffsetMin: number, yOffsetMax: number,
+    comparisonIsExclusive: boolean
+): boolean
+{
+    if (Num.rangesOverlap(yOffsetMin, yOffsetMax, -9999, 0, comparisonIsExclusive)) // beneath the floor
+        return true;
+    if (Num.rangesOverlap(yOffsetMin, yOffsetMax, 4, 9999, comparisonIsExclusive)) // above the ceiling
+        return true;
+
+    for (let i = 0; i < voxel.quads.length; ++i)
+    {
+        const quad = voxel.quads[i];
+        if (quad.facingAxis == "y")
+        {
+            if (quad.orientation == "-")
+            {
+                if (Num.rangesOverlap(yOffsetMin, yOffsetMax, quad.yOffset, quad.yOffset + 1, comparisonIsExclusive))
+                    return true;
+            }
+            else // "+"
+            {
+                if (Num.rangesOverlap(yOffsetMin, yOffsetMax, quad.yOffset - 1, quad.yOffset, comparisonIsExclusive))
+                    return true;
+            }
+        }
+        else // "x" or "z"
+        {
+            if (Num.rangesOverlap(yOffsetMin, yOffsetMax, quad.yOffset - 0.5, quad.yOffset + 0.5, comparisonIsExclusive))
+                return true;
         }
     }
     return false;

@@ -21,7 +21,7 @@ export default class EncodableByteNumber extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        bufferState.view[bufferState.index++] = Math.floor(Num.normalizeInRange(this.n, this.min, this.max) * 255.9999);
+        bufferState.view[bufferState.byteIndex++] = Math.floor(Num.normalizeInRange(this.n, this.min, this.max) * 255.9999);
     }
 
     static decodeWithParams(bufferState: BufferState, min: number, max: number): EncodableData
@@ -34,7 +34,7 @@ export default class EncodableByteNumber extends EncodableData
     static decode(bufferState: BufferState): EncodableData
     {
         return new EncodableByteNumber(
-            temp_min + bufferState.view[bufferState.index++] * (temp_max - temp_min) / 255.9999,
+            temp_min + bufferState.view[bufferState.byteIndex++] * (temp_max - temp_min) / 255.9999,
             temp_min,
             temp_max
         );

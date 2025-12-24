@@ -52,9 +52,9 @@ export default class SocketUserContext
         }
 
         const subBuffer = Encoding.endWrite(bufferState);
-        if (bufferState.index > 0)
+        if (bufferState.byteIndex > 0)
         {
-            //console.log(`signalBatch sent :: ${bufferState.index}`);
+            //console.log(`signalBatch sent :: ${bufferState.byteIndex}`);
             this.socket.emit("signalBatch", subBuffer);
         }
     }

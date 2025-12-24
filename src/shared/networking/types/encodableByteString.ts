@@ -21,17 +21,17 @@ export default class EncodableByteString extends EncodableData
                 console.error(`Char code is out of the 8-bit range (code = ${code}, string = ${this.str}, index = ${i})`);
                 code = "?".charCodeAt(0);
             }
-            bufferState.view[bufferState.index++] = code;
+            bufferState.view[bufferState.byteIndex++] = code;
         }
-        bufferState.view[bufferState.index++] = 0; // null character (to mark the end of the string)
+        bufferState.view[bufferState.byteIndex++] = 0; // null character (to mark the end of the string)
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
         const decodedChars: string[] = [];
         let code: number;
-        while (bufferState.index < bufferState.view.length &&
-            (code = bufferState.view[bufferState.index++]) != 0) // scan until you hit the null character (which marks the end of the string)
+        while (bufferState.byteIndex < bufferState.view.length &&
+            (code = bufferState.view[bufferState.byteIndex++]) != 0) // scan until you hit the null character (which marks the end of the string)
         {
             decodedChars.push(String.fromCharCode(code));
         }

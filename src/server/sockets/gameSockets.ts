@@ -9,6 +9,7 @@ import SocketUserContext from "./types/socketUserContext";
 import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
 import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
 import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
+import BufferState from "../../shared/networking/types/bufferState";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
@@ -34,32 +35,32 @@ const GameSockets =
             socketUserContexts[user.userName] = socketUserContext;
 
             socket.on("objectSync", (buffer: ArrayBuffer) => {
-                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectSyncParams.decode(bufferState) as ObjectSyncParams;
                 RoomManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
             socket.on("objectMessage", (buffer: ArrayBuffer) => {
-                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
                 RoomManager.sendObjectMessage(socketUserContext, params);
             });
             socket.on("voxelCubeAdd", (buffer: ArrayBuffer) => {
-                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = VoxelCubeAddParams.decode(bufferState) as VoxelCubeAddParams;
                 RoomManager.addVoxelCube(socketUserContext, params);
             });
             socket.on("voxelCubeRemove", (buffer: ArrayBuffer) => {
-                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = VoxelCubeRemoveParams.decode(bufferState) as VoxelCubeRemoveParams;
                 RoomManager.removeVoxelCube(socketUserContext, params);
             });
             socket.on("voxelTextureChange", (buffer: ArrayBuffer) => {
-                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = VoxelTextureChangeParams.decode(bufferState) as VoxelTextureChangeParams;
                 RoomManager.changeVoxelTexture(socketUserContext, params);
             });
             socket.on("roomChangeRequest", async (buffer: ArrayBuffer) => {
-                const bufferState = { view: new Uint8Array(buffer), index: 0 };
+                const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RoomChangeRequestParams.decode(bufferState) as RoomChangeRequestParams;
                 await RoomManager.changeUserRoom(socketUserContext, params.roomID, true);
             });

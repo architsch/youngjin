@@ -5,6 +5,7 @@
 		"devcss": "SKIP_CLIENT_COMPILE=true SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devclient": "SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devserver": "SKIP_CSS_COMPILE=true SKIP_CLIENT_COMPILE=true SKIP_SSG=true npm run dev",
+		"devdynamic": "SKIP_SSG=true npm run dev",
 		"build": "npm run compileCSS && webpack --config build/webpack.config.server.js && webpack --config build/webpack.config.client.js && MODE=ssg node dist/server/bundle.js",
 		"buildAndTest": "npm run build && MODE=dev pm2 start dist/server/bundle.js --name=test",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style.css",

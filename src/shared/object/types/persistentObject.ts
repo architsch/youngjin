@@ -36,7 +36,7 @@ export default class PersistentObject extends EncodableData
         if (this.y < 0 || this.y > 4)
             throw new Error(`Object y out of range (y = ${this.y})`);
 
-        bufferState.view[bufferState.index++] = (this.objectTypeIndex << 2) | (
+        bufferState.view[bufferState.byteIndex++] = (this.objectTypeIndex << 2) | (
             (this.direction == "+z") ? 0b00 : (
                 (this.direction == "+x") ? 0b01 : (
                     (this.direction == "-z") ? 0b10 : 0b11
@@ -46,27 +46,27 @@ export default class PersistentObject extends EncodableData
         const yRaw = Math.floor(4 * this.y);
         const yRawFirstHalf = (yRaw & 0b1100) >> 2;
         const yRawSecondHalf = (yRaw & 0b0011);
-        bufferState.view[bufferState.index++] = (Math.floor(2 * this.x) << 2 | yRawFirstHalf);
-        bufferState.view[bufferState.index++] = (Math.floor(2 * this.z) << 2 | yRawSecondHalf);
+        bufferState.view[bufferState.byteIndex++] = (Math.floor(2 * this.x) << 2 | yRawFirstHalf);
+        bufferState.view[bufferState.byteIndex++] = (Math.floor(2 * this.z) << 2 | yRawSecondHalf);
 
         new EncodableByteString(this.metadata).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const mainByte1 = bufferState.view[bufferState.index++];
+        const mainByte1 = bufferState.view[bufferState.byteIndex++];
         const objectTypeIndex = (mainByte1 >> 2) & 0b111111;
         const directionRaw = (mainByte1 & 0b11);
         const direction = (directionRaw <= 1)
             ? ((directionRaw == 0) ? "+z" : "+x")
             : ((directionRaw == 2) ? "-z" : "-x");
 
-        const mainByte2 = bufferState.view[bufferState.index++];
+        const mainByte2 = bufferState.view[bufferState.byteIndex++];
         const xRaw = (mainByte2 >> 2) & 0b111111;
         const x = 0.5 * xRaw;
         const yRawFirstHalf = (mainByte2 & 0b11);
 
-        const mainByte3 = bufferState.view[bufferState.index++];
+        const mainByte3 = bufferState.view[bufferState.byteIndex++];
         const zRaw = (mainByte3 >> 2) & 0b111111;
         const z = 0.5 * zRaw;
         const yRawSecondHalf = (mainByte3 & 0b11);

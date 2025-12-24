@@ -24,8 +24,8 @@ export default class Encodable2ByteNumber extends EncodableData
         const n = Math.floor(Num.normalizeInRange(this.n, this.min, this.max) * 65535.9999);
         const firstHalf = ((n >> 8) & 0b11111111);
         const secondHalf = (n & 0b11111111);
-        bufferState.view[bufferState.index++] = firstHalf;
-        bufferState.view[bufferState.index++] = secondHalf;
+        bufferState.view[bufferState.byteIndex++] = firstHalf;
+        bufferState.view[bufferState.byteIndex++] = secondHalf;
     }
 
     static decodeWithParams(bufferState: BufferState, min: number, max: number): EncodableData
@@ -37,8 +37,8 @@ export default class Encodable2ByteNumber extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const firstHalf = bufferState.view[bufferState.index++];
-        const secondHalf = bufferState.view[bufferState.index++];
+        const firstHalf = bufferState.view[bufferState.byteIndex++];
+        const secondHalf = bufferState.view[bufferState.byteIndex++];
         return new Encodable2ByteNumber(
             temp_min + ((firstHalf << 8) | secondHalf) * (temp_max - temp_min) / 65535.9999,
             temp_min,

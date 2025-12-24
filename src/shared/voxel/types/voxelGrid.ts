@@ -18,16 +18,16 @@ export default class VoxelGrid extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        bufferState.view[bufferState.index++] = this.numGridRows;
-        bufferState.view[bufferState.index++] = this.numGridCols;
+        bufferState.view[bufferState.byteIndex++] = this.numGridRows;
+        bufferState.view[bufferState.byteIndex++] = this.numGridCols;
         for (const voxel of this.voxels)
             voxel.encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const numGridRows = bufferState.view[bufferState.index++];
-        const numGridCols = bufferState.view[bufferState.index++];
+        const numGridRows = bufferState.view[bufferState.byteIndex++];
+        const numGridCols = bufferState.view[bufferState.byteIndex++];
         const numVoxels = numGridRows * numGridCols;
         const voxels = new Array<Voxel>(numVoxels);
         voxels.length = 0;

@@ -1,5 +1,11 @@
-export default interface BufferState
+export default class BufferState
 {
     view: Uint8Array;
-    index: number;
+    byteIndex: number;
+
+    constructor(view: Uint8Array)
+    {
+        this.view = view;
+        this.byteIndex = 0;
+    }
 }

@@ -1,6 +1,6 @@
 import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
 import PersistentObject from "../object/types/persistentObject";
-import { COLLISION_LAYER_UNBREAKABLE } from "../physics/types/collisionLayer";
+import { COLLISION_LAYER_SOLID, COLLISION_LAYER_UNBREAKABLE } from "../physics/types/collisionLayer";
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
 import VoxelQuad from "../voxel/types/voxelQuad";
@@ -34,7 +34,7 @@ const RoomGenerator =
                 else if (col == numGridCols-1)
                     makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "x", "-");
                 else
-                    makeFloorVoxel(voxels, numGridRows, numGridCols, row, col, floorTextureIndex);
+                    makeEmptyVoxel(voxels, numGridRows, numGridCols, row, col, floorTextureIndex);
             }
         }
         makePillarVoxel(voxels, numGridRows, numGridCols, 3, 3, wallTextureIndex);
@@ -91,11 +91,12 @@ function makePillarVoxel(voxels: Voxel[], numGridRows: number, numGridCols: numb
     ]);
 }
 
-function makeFloorVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
+function makeEmptyVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
     textureIndex: number): Voxel
 {
     return makeVoxel(voxels, numGridRows, numGridCols, row, col, [
         quads => addFloorQuad(textureIndex, quads),
+        quads => addCeilingQuad(textureIndex, quads),
     ]);
 }
 
@@ -130,7 +131,13 @@ function makeVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, ro
 function addFloorQuad(textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
 {
     quads.push(new VoxelQuad("y", "+", 0, textureIndex));
-    return 0b0000;
+    return 0;
+}
+
+function addCeilingQuad(textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
+{
+    quads.push(new VoxelQuad("y", "-", 4, textureIndex));
+    return 0;
 }
 
 function addWallQuads(facingAxis: "x" | "y" | "z", orientation: "-" | "+",
@@ -138,7 +145,7 @@ function addWallQuads(facingAxis: "x" | "y" | "z", orientation: "-" | "+",
 {
     for (let yOffset = 0.5; yOffset <= 3.5; ++yOffset)
         quads.push(new VoxelQuad(facingAxis, orientation, yOffset, textureIndex));
-    return 0b0001;
+    return (1 << COLLISION_LAYER_SOLID);
 }
 
 //---------------------------------------------------------------------------

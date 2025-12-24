@@ -20,14 +20,14 @@ export default class EncodableRaw2ByteNumber extends EncodableData
         const n = Math.min(65535, Math.max(0, Math.floor(this.n)));
         const firstHalf = ((n >> 8) & 0b11111111);
         const secondHalf = (n & 0b11111111);
-        bufferState.view[bufferState.index++] = firstHalf;
-        bufferState.view[bufferState.index++] = secondHalf;
+        bufferState.view[bufferState.byteIndex++] = firstHalf;
+        bufferState.view[bufferState.byteIndex++] = secondHalf;
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const firstHalf = bufferState.view[bufferState.index++];
-        const secondHalf = bufferState.view[bufferState.index++];
+        const firstHalf = bufferState.view[bufferState.byteIndex++];
+        const secondHalf = bufferState.view[bufferState.byteIndex++];
         return new EncodableRaw2ByteNumber(
             (firstHalf << 8) | secondHalf
         );

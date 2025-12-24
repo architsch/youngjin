@@ -33,32 +33,75 @@ export default class Voxel extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        if (this.quads.length == 0)
-            throw new Error(`Voxel has no quad in it (row = ${this.row}, col = ${this.col})`);
-        if (this.quads.length > 16)
-            throw new Error(`No more than 16 quads are allowed in a voxel (row = ${this.row}, col = ${this.col}, number of quads detected = ${this.quads.length})`);
-        if (this.collisionLayerMask < 0 || this.collisionLayerMask > 0b1111)
-            throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [${0b0000}:${0b1111}])`);
+        if (this.quads.length > 31)
+            throw new Error(`No more than 31 quads are allowed in a voxel (row = ${this.row}, col = ${this.col}, number of quads detected = ${this.quads.length})`);
+        if (this.collisionLayerMask < 0 || this.collisionLayerMask > 255)
+            throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [0:255])`);
 
-        // Voxel Byte
-        bufferState.view[bufferState.index++] =
-            ((this.collisionLayerMask & 0b1111) << 4) |
-            ((this.quads.length-1) & 0b1111);
+        // Voxel Byte 1
+        bufferState.view[bufferState.byteIndex++] = this.collisionLayerMask;
 
-        for (const quad of this.quads)
-            quad.encode(bufferState);
+        // Voxel Byte 2
+        bufferState.view[bufferState.byteIndex++] = this.quads.length;
+
+        const numQuads = this.quads.length;
+        for (let i = 0; i < numQuads; ++i)
+        {
+            const quad = this.quads[i];
+            const facingAxisCode = (quad.facingAxis == "x") ? 0 : ((quad.facingAxis == "y") ? 1 : 2);
+            const dimensions = 6 * (quad.yOffset * 2) + 2 * facingAxisCode + (quad.orientation == "-" ? 0 : 1);
+            if (i % 2 == 0)
+            {
+                bufferState.view[bufferState.byteIndex++] = (dimensions << 2) | (quad.textureIndex >> 4);
+                bufferState.view[bufferState.byteIndex] = (quad.textureIndex & 0b1111) << 4;
+            }
+            else
+            {
+                bufferState.view[bufferState.byteIndex++] |= (dimensions >> 2);
+                bufferState.view[bufferState.byteIndex++] = ((dimensions & 0b11) << 6) | quad.textureIndex;
+            }
+        }
+        if (numQuads % 2 == 1)
+            bufferState.byteIndex++;
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        // Voxel Byte
-        const voxelByte = bufferState.view[bufferState.index++];
-        const collisionLayerMask = (voxelByte >> 4) & 0b1111;
-        const numQuads = (voxelByte & 0b1111) + 1;
+        // Voxel Byte 1
+        const voxelByte1 = bufferState.view[bufferState.byteIndex++];
+        const collisionLayerMask = voxelByte1;
+
+        // Voxel Byte 2
+        const voxelByte2 = bufferState.view[bufferState.byteIndex++];
+        const numQuads = voxelByte2 & 0b11111;
 
         const quads = new Array<VoxelQuad>(numQuads);
+        let byte1: number, byte2: number, dimensions: number, textureIndex: number;
         for (let i = 0; i < numQuads; ++i)
-            quads[i] = VoxelQuad.decode(bufferState) as VoxelQuad;
+        {
+            if (i % 2 == 0)
+            {
+                byte1 = bufferState.view[bufferState.byteIndex++];
+                byte2 = bufferState.view[bufferState.byteIndex];
+                dimensions = (byte1 >> 2);
+                textureIndex = ((byte1 & 0b11) << 4) | (byte2 >> 4);
+            }
+            else
+            {
+                byte1 = bufferState.view[bufferState.byteIndex++];
+                byte2 = bufferState.view[bufferState.byteIndex++];
+                dimensions = ((byte1 & 0b1111) << 2) | (byte2 >> 6);
+                textureIndex = (byte2 & 0b111111);
+            }
+
+            const yOffset = Math.floor(dimensions / 6) * 0.5;
+            const orientation = (dimensions % 2 == 0) ? "-" : "+";
+            const facingAxisCode = Math.floor(dimensions / 2) % 3;
+            const facingAxis = (facingAxisCode == 0) ? "x" : ((facingAxisCode == 1) ? "y" : "z");
+            quads[i] = new VoxelQuad(facingAxis, orientation, yOffset, textureIndex);
+        }
+        if (numQuads % 2 == 1)
+            bufferState.byteIndex++;
 
         return new Voxel(collisionLayerMask, quads);
     }
@@ -68,23 +111,34 @@ export default class Voxel extends EncodableData
 // Each Voxel's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Voxel Byte][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2][Quad Byte 1][Quad Byte 2]...
+// Layout: [Voxel Byte 1][Voxel Byte 2][Quad 1.5Byte][Quad 1.5Byte][Quad 1.5Byte][Quad 1.5Byte]...
 //
-// [Voxel Byte]:
-//     4 bits for the voxel's collisionLayerMask
-//     4 bits for the number of quads in the voxel's mesh
-//         (binary range of [0000:1111] corresponds to the numerical range of [1:16])
+// [Voxel Byte 1]:
+//     8 bits for the voxel's collisionLayerMask
 //
-// [Quad Byte 1]:
-//     2 bits for the axis that the quad is facing
-//         (00 => x-axis, 01 => y-axis, 10 => z-axis)
-//     1 bit for whether the quad is facing the (-) or (+) direction of the axis
-//         (0 => (-), 1 => (+))
-//     3 bits for the y-offset of the quad's center position
-//         (000 => 0.0, 001 => 0.5, 010 => 1.0, 011 => 1.5, 100 => 2.0, 101 => 2.5, 110 => 3.0, 111 => 3.5)
-//     2 bits left unused for now
+// [Voxel Byte 2]:
+//     3 unused bits
+//     5 bits for the number of quads in the voxel
 //
-// [Quad Byte 2]:
+// [Quad 1.5Byte]:
+//     6 bits for the quad's dimensions (facingAxis, orientation, yOffset)
+//         (See "Appendix A" for details)
 //     6 bits for the quad's texture index
-//     2 bits left unused for now
+//
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Appendix A:
+//------------------------------------------------------------------------------
+// VoxelQuad's dimension encoding pattern:
+//
+// yOffset:        0.0  0.0  0.0  0.0  0.0  0.0  0.5  0.5  0.5  0.5  0.5  0.5  1.0  1.0  1.0  1.0  1.0  1.0 ... 4.0
+// direction:      -x   +x   -y   +y   -z   +z   -x   +x   -y   +y   -z   +z   -x   +x   -y   +y   -z   +z  ... +z
+// encoded value:   0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17  ... 53
+//
+// If we suppose that (encoded value = N), then:
+//
+// floor(N / 6) * 0.5 = yOffset
+// N % 2 = orientation (0 for "-", 1 for "+")
+// floor(N / 2) % 3 = facingAxis (0 for "x", 1 for "y", 2 for "z")
 //------------------------------------------------------------------------------
