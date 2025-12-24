@@ -1,2 +1,1 @@
 export const COLLISION_LAYER_SOLID = 0;
-export const COLLISION_LAYER_UNBREAKABLE = 1;

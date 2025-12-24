@@ -1,6 +1,6 @@
 import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
 import PersistentObject from "../object/types/persistentObject";
-import { COLLISION_LAYER_SOLID, COLLISION_LAYER_UNBREAKABLE } from "../physics/types/collisionLayer";
+import { COLLISION_LAYER_SOLID } from "../physics/types/collisionLayer";
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
 import VoxelQuad from "../voxel/types/voxelQuad";
@@ -106,8 +106,6 @@ function makeWallVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number
     const voxel = makeVoxel(voxels, numGridRows, numGridCols, row, col, [
         quads => addWallQuads(facingAxis, orientation, textureIndex, quads),
     ]);
-    if (row == 0 || row == numGridRows-1 || col == 0 || col == numGridCols-1)
-        voxel.collisionLayerMask |= (1 << COLLISION_LAYER_UNBREAKABLE); // Boundary voxels are unbreakable
     return voxel;
 }
 
