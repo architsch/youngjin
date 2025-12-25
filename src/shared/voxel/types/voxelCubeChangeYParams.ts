@@ -2,20 +2,20 @@ import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 
-export default class VoxelCubeAddParams extends EncodableData
+export default class VoxelCubeChangeYParams extends EncodableData
 {
     row: number;
     col: number;
     yCenter: number;
-    textureIndex: number;
+    moveUp: boolean;
 
-    constructor(row: number, col: number, yCenter: number, textureIndex: number)
+    constructor(row: number, col: number, yCenter: number, moveUp: boolean)
     {
         super();
         this.row = row;
         this.col = col;
         this.yCenter = yCenter;
-        this.textureIndex = textureIndex;
+        this.moveUp = moveUp;
     }
 
     encode(bufferState: BufferState)
@@ -23,7 +23,7 @@ export default class VoxelCubeAddParams extends EncodableData
         new EncodableRawByteNumber(this.row).encode(bufferState);
         new EncodableRawByteNumber(this.col).encode(bufferState);
         new EncodableRawByteNumber(this.yCenter * 2).encode(bufferState);
-        new EncodableRawByteNumber(this.textureIndex).encode(bufferState);
+        new EncodableRawByteNumber(this.moveUp ? 1 : 0).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
@@ -31,7 +31,7 @@ export default class VoxelCubeAddParams extends EncodableData
         const row = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const col = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const yCenter = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n * 0.5;
-        const textureIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        return new VoxelCubeAddParams(row, col, yCenter, textureIndex);
+        const moveUp = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n == 0 ? false : true;
+        return new VoxelCubeChangeYParams(row, col, yCenter, moveUp);
     }
 }

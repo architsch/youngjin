@@ -1,6 +1,6 @@
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import VoxelMeshInstancer from "../object/components/voxelMeshInstancer";
-import { voxelCubeAddObservable, voxelCubeRemoveObservable, voxelTextureChangeObservable } from "../system/observables";
+import { voxelCubeAddObservable, voxelCubeChangeYObservable, voxelCubeRemoveObservable, voxelTextureChangeObservable } from "../system/observables";
 import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
 import RoomVoxelActions from "../../shared/room/roomVoxelActions";
 import Room from "../../shared/room/types/room";
@@ -8,6 +8,8 @@ import ObjectManager from "../object/objectManager";
 import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
 import App from "../app";
+import VoxelCubeChangeYParams from "../../shared/voxel/types/voxelCubeChangeYParams";
+import { VoxelCubeTextureIndexMap } from "../../shared/voxel/types/voxelCubeTextureIndexMap";
 
 const VoxelManager =
 {
@@ -17,6 +19,9 @@ const VoxelManager =
         RoomVoxelActions.setDebugEnabled(App.getEnv().mode == "dev");
 
         // Add listeners
+        voxelCubeChangeYObservable.addListener("room", async (params: VoxelCubeChangeYParams) => {
+            await VoxelManager.changeVoxelCubeYOnClientSide(room, params);
+        });
         voxelCubeAddObservable.addListener("room", async (params: VoxelCubeAddParams) => {
             await VoxelManager.addVoxelCubeOnClientSide(room, params);
         });
@@ -30,14 +35,28 @@ const VoxelManager =
     unload: async () =>
     {
         // Remove listeners
+        voxelCubeChangeYObservable.removeListener("room");
         voxelCubeAddObservable.removeListener("room");
         voxelCubeRemoveObservable.removeListener("room");
         voxelTextureChangeObservable.removeListener("room");
     },
-    addVoxelCubeOnClientSide: async (room: Room, params: VoxelCubeAddParams): Promise<boolean> =>
+    changeVoxelCubeYOnClientSide: async (room: Room, params: VoxelCubeChangeYParams): Promise<boolean> =>
     {
         return await tryUpdateVoxelOnClientSide(room, params.row, params.col, (room: Room): boolean =>
-            RoomVoxelActions.addCube(room, params.row, params.col, params.yCenter, params.textureIndex));
+            RoomVoxelActions.changeCubeY(room, params.row, params.col, params.yCenter, params.moveUp ? 0.5 : -0.5));
+    },
+    addVoxelCubeOnClientSide: async (room: Room, params: VoxelCubeAddParams): Promise<boolean> =>
+    {
+        const textureIndexMap: VoxelCubeTextureIndexMap = {
+            "x-": params.textureIndex,
+            "x+": params.textureIndex,
+            "y-": params.textureIndex,
+            "y+": params.textureIndex,
+            "z-": params.textureIndex,
+            "z+": params.textureIndex,
+        };
+        return await tryUpdateVoxelOnClientSide(room, params.row, params.col, (room: Room): boolean =>
+            RoomVoxelActions.addCube(room, params.row, params.col, params.yCenter, textureIndexMap));
     },
     removeVoxelCubeOnClientSide: async (room: Room, params: VoxelCubeRemoveParams): Promise<boolean> =>
     {

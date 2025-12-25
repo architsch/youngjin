@@ -10,6 +10,7 @@ import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
 import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
 import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 import BufferState from "../../shared/networking/types/bufferState";
+import VoxelCubeChangeYParams from "../../shared/voxel/types/voxelCubeChangeYParams";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
@@ -43,6 +44,11 @@ const GameSockets =
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
                 RoomManager.sendObjectMessage(socketUserContext, params);
+            });
+            socket.on("voxelCubeChangeY", (buffer: ArrayBuffer) => {
+                const bufferState = new BufferState(new Uint8Array(buffer));
+                const params = VoxelCubeChangeYParams.decode(bufferState) as VoxelCubeChangeYParams;
+                RoomManager.changeVoxelCubeY(socketUserContext, params);
             });
             socket.on("voxelCubeAdd", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));

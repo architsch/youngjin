@@ -20,20 +20,14 @@ export default class VoxelCubeRemoveParams extends EncodableData
     {
         new EncodableRawByteNumber(this.row).encode(bufferState);
         new EncodableRawByteNumber(this.col).encode(bufferState);
-
-        // 3 bits for yCenter (i.e. cube's center position)
-        // (000 => 0.0, 001 => 0.5, 010 => 1.0, 011 => 1.5, 100 => 2.0, 101 => 2.5, 110 => 3.0, 111 => 3.5)
-        bufferState.view[bufferState.byteIndex++] = (Math.round(this.yCenter * 2) & 0b111);
+        new EncodableRawByteNumber(this.yCenter * 2).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
         const row = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const col = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-
-        // 3 bits for yCenter (i.e. cube's center position)
-        // (000 => 0.0, 001 => 0.5, 010 => 1.0, 011 => 1.5, 100 => 2.0, 101 => 2.5, 110 => 3.0, 111 => 3.5)
-        const yCenter = bufferState.view[bufferState.byteIndex++] * 0.5;
+        const yCenter = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n * 0.5;
 
         return new VoxelCubeRemoveParams(row, col, yCenter);
     }
