@@ -2,7 +2,14 @@ import * as THREE from "three";
 
 export const GeometryConstructorMap: { [geometryId: string]: () => THREE.BufferGeometry } =
 {
-    "Quad": () =>
+    "VoxelQuad": () =>
+    {
+        clear();
+        writeZFacingUnitQuad();
+        scale(6, 1, 0.5, 1);
+        return makeGeometry();
+    },
+    "Square": () =>
     {
         clear();
         writeZFacingUnitQuad();
@@ -93,6 +100,12 @@ function translate(numRecentlyAddedVerticesToTransform: number, x: number, y: nu
 function rotate(numRecentlyAddedVerticesToTransform: number, axis: THREE.Vector3, angleInDeg: number)
 {
     mat4Temp.makeRotationAxis(axis, angleInDeg * 0.01745329);
+    transformVertices(numRecentlyAddedVerticesToTransform);
+}
+
+function scale(numRecentlyAddedVerticesToTransform: number, x: number, y: number, z: number)
+{
+    mat4Temp.makeScale(x, y, z);
     transformVertices(numRecentlyAddedVerticesToTransform);
 }
 

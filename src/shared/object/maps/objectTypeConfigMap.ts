@@ -1,4 +1,3 @@
-import { COLLISION_LAYER_SOLID } from "../../physics/types/collisionLayer";
 import ObjectTypeConfig from "../types/objectTypeConfig";
 
 const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
@@ -6,9 +5,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Voxel",
         components: {
             spawnedByAny: {
-                instancedMeshGraphics: {
-                    instancedMeshConfigId: "Voxel",
-                },
+                instancedMeshGraphics: {},
                 voxelMeshInstancer: {},
             },
         },
@@ -18,7 +15,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         components: {
             spawnedByAny: {
                 collider: {
-                    collisionLayer: COLLISION_LAYER_SOLID,
+                    collisionLayer: 2,
                     hitboxSize: {sizeX: 0.6, sizeZ: 0.6},
                 },
                 speechBubble: {
@@ -48,12 +45,10 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         components: {
             spawnedByAny: {
                 collider: {
-                    collisionLayer: COLLISION_LAYER_SOLID,
+                    collisionLayer: 2,
                     hitboxSize: {sizeX: 0, sizeZ: 0},
                 },
-                instancedMeshGraphics: {
-                    instancedMeshConfigId: "Door",
-                },
+                instancedMeshGraphics: {},
                 persistentObjectMeshInstancer: {
                 },
                 speechBubble: {

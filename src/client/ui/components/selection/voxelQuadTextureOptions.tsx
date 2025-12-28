@@ -4,9 +4,11 @@ import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection
 import AtlasCellSprite from "../basic/atlasCellSprite";
 import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import GameSocketsClient from "../../../networking/gameSocketsClient";
-import VoxelTextureChangeParams from "../../../../shared/voxel/types/voxelTextureChangeParams";
+import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import VoxelManager from "../../../voxel/voxelManager";
 import App from "../../../app";
+import VoxelQuadIdentifiers from "../../../../shared/voxel/types/voxelQuadIdentifiers";
+import VoxelMeshInstancer from "../../../object/components/voxelMeshInstancer";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
@@ -16,13 +18,12 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
     }, []);
 
     const selectedVoxel = props.selection.voxel;
-    const selectedVoxelQuad = props.selection.voxelQuad;
     const selectedQuadIndex = props.selection.quadIndex;
-    const selectedTextureIndex = selectedVoxelQuad.textureIndex;
+    const selectedTextureIndex = selectedVoxel.quads[selectedQuadIndex] & 0b01111111;
 
-    const materialParams = props.selection.materialParams;
+    const materialParams = VoxelMeshInstancer.latestMaterialParams;
     const numCols = materialParams.textureWidth / materialParams.textureGridCellWidth;
-    const numRows = materialParams.textureHeight / materialParams.textureGridCellHeight;
+    const numRows = materialParams.textureHeight / (materialParams.textureGridCellHeight*2);
     const selectedTextureCol = selectedTextureIndex % numCols;
     const selectedTextureRow = Math.floor(selectedTextureIndex / numCols);
 
@@ -43,11 +44,12 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     console.error("Current room not found.");
                     return;
                 }
-                const params = new VoxelTextureChangeParams(selectedVoxel.row, selectedVoxel.col, selectedQuadIndex, textureIndex);
-                if (await VoxelManager.changeVoxelTextureOnClientSide(room, params))
+                const quadId = new VoxelQuadIdentifiers(selectedVoxel.row, selectedVoxel.col, selectedQuadIndex);
+                const params = new SetVoxelQuadTextureParams(quadId, textureIndex);
+                if (await VoxelManager.setVoxelQuadTextureOnClientSide(room, params))
                 {
                     voxelQuadSelectionObservable.notify();
-                    GameSocketsClient.emitVoxelTextureChange(params);
+                    GameSocketsClient.emitSetVoxelQuadTexture(params);
                 }
             };
             return <AtlasCellSprite
@@ -56,7 +58,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                 atlasWidth={materialParams.textureWidth}
                 atlasHeight={materialParams.textureHeight}
                 atlasCellWidth={materialParams.textureGridCellWidth}
-                atlasCellHeight={materialParams.textureGridCellHeight}
+                atlasCellHeight={materialParams.textureGridCellHeight*2}
                 atlasCellCol={col}
                 atlasCellRow={row}
                 highlight={col == selectedTextureCol && row == selectedTextureRow}

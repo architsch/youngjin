@@ -35,6 +35,27 @@ export default class SocketUserContext
         pendingSignals.push(signalData);
     }
 
+    tryUpdateLatestPendingSignal(signalType: string, signalDataUpdateMethod: (signal: EncodableData) => void): boolean
+    {
+        const typeIndex = SignalTypeConfigMap.getIndexByType(signalType);
+        if (typeIndex == undefined)
+        {
+            console.error(`Failed to add the incoming signal. The signal's type is unknown (signalType = ${signalType})`);
+            return false;
+        }
+
+        let pendingSignals = this.pendingSignalsByTypeIndex[typeIndex];
+        if (pendingSignals == undefined)
+            return false;
+
+        const lastIndex = pendingSignals.length-1;
+        if (lastIndex < 0)
+            return false;
+        
+        signalDataUpdateMethod(pendingSignals[lastIndex]);
+        return true;
+    }
+
     processAllPendingSignals()
     {
         const bufferState = Encoding.startWrite();

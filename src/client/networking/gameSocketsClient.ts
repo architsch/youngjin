@@ -12,13 +12,14 @@ import EncodableRawByteNumber from "../../shared/networking/types/encodableRawBy
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../shared/networking/types/encodableData";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
-import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, voxelCubeAddObservable, voxelCubeChangeYObservable, voxelCubeRemoveObservable, voxelTextureChangeObservable } from "../system/observables";
+import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../system/observables";
 import { tryStartClientProcess } from "../system/types/clientProcess";
-import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
-import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
-import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 import BufferState from "../../shared/networking/types/bufferState";
-import VoxelCubeChangeYParams from "../../shared/voxel/types/voxelCubeChangeYParams";
+import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
+import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
+import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
+import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
+import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
 
 let socket: Socket;
 
@@ -41,14 +42,8 @@ const signalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
         const params = data as ObjectMessageParams;
         objectMessageObservable.set(params, params.senderObjectId);
     },
-    "voxelCubeChangeYParams": (data: EncodableData) =>
-        voxelCubeChangeYObservable.set(data as VoxelCubeChangeYParams),
-    "voxelCubeAddParams": (data: EncodableData) =>
-        voxelCubeAddObservable.set(data as VoxelCubeAddParams),
-    "voxelCubeRemoveParams": (data: EncodableData) =>
-        voxelCubeRemoveObservable.set(data as VoxelCubeRemoveParams),
-    "voxelTextureChangeParams": (data: EncodableData) =>
-        voxelTextureChangeObservable.set(data as VoxelTextureChangeParams),
+    "updateVoxelGridParams": (data: EncodableData) =>
+        updateVoxelGridObservable.set(data as UpdateVoxelGridParams),
 }
 
 const GameSocketsClient =
@@ -101,10 +96,14 @@ const GameSocketsClient =
         else
             console.warn("Cannot change room because 'roomChange' process is ongoing.");
     },
-    emitVoxelCubeChangeY: (params: VoxelCubeChangeYParams) => sendEncodedSignal("voxelCubeChangeY", params),
-    emitVoxelCubeAdd: (params: VoxelCubeAddParams) => sendEncodedSignal("voxelCubeAdd", params),
-    emitVoxelCubeRemove: (params: VoxelCubeRemoveParams) => sendEncodedSignal("voxelCubeRemove", params),
-    emitVoxelTextureChange: (params: VoxelTextureChangeParams) => sendEncodedSignal("voxelTextureChange", params),
+    emitMoveVoxelBlock: (params: MoveVoxelBlockParams) =>
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params], [], [], [])),
+    emitAddVoxelBlock: (params: AddVoxelBlockParams) =>
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([], [params], [], [])),
+    emitRemoveVoxelBlock: (params: RemoveVoxelBlockParams) =>
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([], [], [params], [])),
+    emitSetVoxelQuadTexture: (params: SetVoxelQuadTextureParams) =>
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([], [], [], [params])),
 }
 
 function sendEncodedSignal(signalType: string, signalData: EncodableData)

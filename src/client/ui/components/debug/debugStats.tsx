@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import App from "../../../app";
 import ObjectManager from "../../../object/objectManager";
 import { voxelQuadSelectionObservable } from "../../../system/observables";
+import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
 
 export default function DebugStats()
 {
@@ -28,8 +29,16 @@ export default function DebugStats()
             if (voxelQuadSelection)
             {
                 const v = voxelQuadSelection.voxel;
-                const q = voxelQuadSelection.voxelQuad;
-                voxelQuadSelectionDesc = `(row: ${v.row}, col: ${v.col}, quad: (${q.facingAxis}${q.orientation} at y=${q.yOffset}), texture: ${q.textureIndex})`;
+                const quadIndex = voxelQuadSelection.quadIndex;
+                const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+                const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
+                const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(v.collisionLayerMask, quadIndex);
+
+                const quad = v.quads[quadIndex];
+                const showQuad = (quad & 0b10000000) != 0;
+                const textureIndex = quad & 0b01111111;
+
+                voxelQuadSelectionDesc = `(row: ${v.row}, col: ${v.col}, quad: (${orientation}${facingAxis} at layer ${collisionLayer}), texture: ${textureIndex} (${showQuad ? "shown" : "hidden"}))`;
             }
 
             setState({fpsDesc, playerPosDesc, voxelQuadSelectionDesc});

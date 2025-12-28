@@ -4,7 +4,6 @@ import MaterialFactory from "./materialFactory";
 import Pool from "../../../shared/system/types/pool";
 import MaterialParams from "../types/material/materialParams";
 import GraphicsManager from "../graphicsManager";
-import InstancedMeshConfig from "../types/instancedMeshConfig";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
@@ -29,8 +28,7 @@ const MeshFactory =
         loadedMeshes[meshId] = newMesh;
         return newMesh;
     },
-    loadMeshInstance: async (geometryId: string, materialParams: MaterialParams,
-        instancedMeshConfig: InstancedMeshConfig)
+    loadMeshInstance: async (geometryId: string, materialParams: MaterialParams, maxNumInstances: number)
         : Promise<{ instancedMesh: THREE.InstancedMesh, instanceId: number }> =>
     {
         const meshId = `${geometryId}-${materialParams.getMaterialId()}`;
@@ -45,11 +43,11 @@ const MeshFactory =
         const geometryClone = (await GeometryFactory.load(geometryId)).clone();
         const material = await MaterialFactory.load(materialParams);
 
-        const uvStartArray = new Float32Array(instancedMeshConfig.maxNumInstances * 2);
+        const uvStartArray = new Float32Array(maxNumInstances * 2);
         const uvStartBufferAttrib = new THREE.InstancedBufferAttribute(uvStartArray, 2);
         geometryClone.setAttribute("uvStart", uvStartBufferAttrib);
 
-        const newMesh = new THREE.InstancedMesh(geometryClone, material, instancedMeshConfig.maxNumInstances);
+        const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
         newMesh.frustumCulled = false;
         GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
         loadedMeshes[meshId] = newMesh;
@@ -57,8 +55,8 @@ const MeshFactory =
         if (instanceIdPools[meshId] != undefined)
             throw new Error(`Instance ID pool already exists (meshId = ${meshId})`);
 
-        const pool = new Pool<number>(instancedMeshConfig.maxNumInstances,
-            (index: number) => instancedMeshConfig.maxNumInstances - index - 1);
+        const pool = new Pool<number>(maxNumInstances,
+            (index: number) => maxNumInstances - index - 1);
         instanceIdPools[meshId] = pool;
         return { instancedMesh: newMesh as THREE.InstancedMesh, instanceId: pool.rentItem() };
     },

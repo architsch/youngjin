@@ -6,11 +6,8 @@ import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestPa
 import User from "../../shared/auth/user";
 import RoomManager from "../room/roomManager";
 import SocketUserContext from "./types/socketUserContext";
-import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
-import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
-import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 import BufferState from "../../shared/networking/types/bufferState";
-import VoxelCubeChangeYParams from "../../shared/voxel/types/voxelCubeChangeYParams";
+import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
@@ -45,25 +42,10 @@ const GameSockets =
                 const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
                 RoomManager.sendObjectMessage(socketUserContext, params);
             });
-            socket.on("voxelCubeChangeY", (buffer: ArrayBuffer) => {
+            socket.on("updateVoxelGrid", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = VoxelCubeChangeYParams.decode(bufferState) as VoxelCubeChangeYParams;
-                RoomManager.changeVoxelCubeY(socketUserContext, params);
-            });
-            socket.on("voxelCubeAdd", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = VoxelCubeAddParams.decode(bufferState) as VoxelCubeAddParams;
-                RoomManager.addVoxelCube(socketUserContext, params);
-            });
-            socket.on("voxelCubeRemove", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = VoxelCubeRemoveParams.decode(bufferState) as VoxelCubeRemoveParams;
-                RoomManager.removeVoxelCube(socketUserContext, params);
-            });
-            socket.on("voxelTextureChange", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = VoxelTextureChangeParams.decode(bufferState) as VoxelTextureChangeParams;
-                RoomManager.changeVoxelTexture(socketUserContext, params);
+                const params = UpdateVoxelGridParams.decode(bufferState) as UpdateVoxelGridParams;
+                RoomManager.updateVoxelGrid(socketUserContext, params);
             });
             socket.on("roomChangeRequest", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));

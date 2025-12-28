@@ -9,13 +9,10 @@ import dotenv from "dotenv";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
-import VoxelCubeAddParams from "../../shared/voxel/types/voxelCubeAddParams";
-import VoxelCubeRemoveParams from "../../shared/voxel/types/voxelCubeRemoveParams";
-import VoxelTextureChangeParams from "../../shared/voxel/types/voxelTextureChangeParams";
 import { addUserToRoom, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
-import { addVoxelCube, changeVoxelCubeY, changeVoxelTexture, removeVoxelCube } from "./util/roomVoxelUtil";
-import VoxelCubeChangeYParams from "../../shared/voxel/types/voxelCubeChangeYParams";
+import { updateVoxelGrid } from "./util/roomVoxelUtil";
+import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 dotenv.config();
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
@@ -51,21 +48,9 @@ const RoomManager =
         else
             socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.userName);
     },
-    changeVoxelCubeY: (socketUserContext: SocketUserContext, params: VoxelCubeChangeYParams) =>
+    updateVoxelGrid: (socketUserContext: SocketUserContext, params: UpdateVoxelGridParams) =>
     {
-        changeVoxelCubeY(socketUserContext, params.row, params.col, params.yCenter, params.moveUp);
-    },
-    addVoxelCube: (socketUserContext: SocketUserContext, params: VoxelCubeAddParams) =>
-    {
-        addVoxelCube(socketUserContext, params.row, params.col, params.yCenter, params.textureIndex);
-    },
-    removeVoxelCube: (socketUserContext: SocketUserContext, params: VoxelCubeRemoveParams) =>
-    {
-        removeVoxelCube(socketUserContext, params.row, params.col, params.yCenter);
-    },
-    changeVoxelTexture: (socketUserContext: SocketUserContext, params: VoxelTextureChangeParams) =>
-    {
-        changeVoxelTexture(socketUserContext, params.row, params.col, params.quadIndex, params.textureIndex);
+        updateVoxelGrid(socketUserContext, params);
     },
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {

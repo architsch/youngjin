@@ -2,6 +2,7 @@ import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import GameObject from "../types/gameObject";
 import PersistentObject from "../../../shared/object/types/persistentObject";
+import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 
 export default class PersistentObjectMeshInstancer extends GameObjectComponent
 {
@@ -16,6 +17,11 @@ export default class PersistentObjectMeshInstancer extends GameObjectComponent
         this.instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;
         if (!this.instancedMeshGraphics)
             throw new Error("PersistentObjectMeshInstancer requires InstancedMeshGraphics component");
+
+        const materialParams = new TexturePackMaterialParams("persistent_object_texture_pack",
+            2048, 2048, 256, 256, "dynamicEmpty");
+        this.instancedMeshGraphics.setInstancingProperties(materialParams,
+            "Square", 8192);
     }
 
     async onSpawn(): Promise<void>

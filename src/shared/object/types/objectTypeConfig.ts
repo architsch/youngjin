@@ -12,7 +12,6 @@ export default interface ObjectTypeConfig
                 hitboxSize: HitboxSize,
             },
             instancedMeshGraphics?: {
-                instancedMeshConfigId: string,
             },
             voxelMeshInstancer?: {
             },

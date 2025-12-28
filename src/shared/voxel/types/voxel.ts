@@ -1,6 +1,7 @@
-import VoxelQuad from "./voxelQuad";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
+import { COLLISION_LAYER_FLOOR_AND_CEILING } from "../../physics/types/collisionLayer";
+import { getVoxelQuad } from "../util/voxelQueryUtil";
 
 export default class Voxel extends EncodableData
 {
@@ -8,9 +9,9 @@ export default class Voxel extends EncodableData
     row: number;
     col: number;
     collisionLayerMask: number;
-    quads: VoxelQuad[];
+    quads: Uint8Array;
 
-    constructor(collisionLayerMask: number, quads: VoxelQuad[])
+    constructor(collisionLayerMask: number, quads: Uint8Array)
     {
         super();
         this.gameObjectId = ""; // This field must be manually set via the "setGameObjectId" method.
@@ -33,75 +34,73 @@ export default class Voxel extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        if (this.quads.length > 31)
-            throw new Error(`No more than 31 quads are allowed in a voxel (row = ${this.row}, col = ${this.col}, number of quads detected = ${this.quads.length})`);
         if (this.collisionLayerMask < 0 || this.collisionLayerMask > 255)
             throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [0:255])`);
 
-        // Voxel Byte 1
+        // Floor Byte
+        bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "y", "+", COLLISION_LAYER_FLOOR_AND_CEILING);
+
+        // Ceiling Byte
+        bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "y", "-", COLLISION_LAYER_FLOOR_AND_CEILING);
+
+        // CollisionLayerMask Byte
         bufferState.view[bufferState.byteIndex++] = this.collisionLayerMask;
 
-        // Voxel Byte 2
-        bufferState.view[bufferState.byteIndex++] = this.quads.length;
-
-        const numQuads = this.quads.length;
-        for (let i = 0; i < numQuads; ++i)
+        // 6-Byte CollisionLayer Contents
+        let collisionLayer = 0;
+        while (collisionLayer < COLLISION_LAYER_FLOOR_AND_CEILING)
         {
-            const quad = this.quads[i];
-            const facingAxisCode = (quad.facingAxis == "x") ? 0 : ((quad.facingAxis == "y") ? 1 : 2);
-            const dimensions = 6 * (quad.yOffset * 2) + 2 * facingAxisCode + (quad.orientation == "-" ? 0 : 1);
-            if (i % 2 == 0)
+            if (((1 << collisionLayer) & this.collisionLayerMask) != 0)
             {
-                bufferState.view[bufferState.byteIndex++] = (dimensions << 2) | (quad.textureIndex >> 4);
-                bufferState.view[bufferState.byteIndex] = (quad.textureIndex & 0b1111) << 4;
+                bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "y", "-", collisionLayer);
+                bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "y", "+", collisionLayer);
+                bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "x", "-", collisionLayer);
+                bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "x", "+", collisionLayer);
+                bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "z", "-", collisionLayer);
+                bufferState.view[bufferState.byteIndex++] = getVoxelQuad(this, "z", "+", collisionLayer);
             }
-            else
-            {
-                bufferState.view[bufferState.byteIndex++] |= (dimensions >> 2);
-                bufferState.view[bufferState.byteIndex++] = ((dimensions & 0b11) << 6) | quad.textureIndex;
-            }
+            collisionLayer++;
         }
-        if (numQuads % 2 == 1)
-            bufferState.byteIndex++;
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        // Voxel Byte 1
-        const voxelByte1 = bufferState.view[bufferState.byteIndex++];
-        const collisionLayerMask = voxelByte1;
+        // Floor Byte
+        const floor = bufferState.view[bufferState.byteIndex++];
 
-        // Voxel Byte 2
-        const voxelByte2 = bufferState.view[bufferState.byteIndex++];
-        const numQuads = voxelByte2 & 0b11111;
+        // Ceiling Byte
+        const ceiling = bufferState.view[bufferState.byteIndex++];
 
-        const quads = new Array<VoxelQuad>(numQuads);
-        let byte1: number, byte2: number, dimensions: number, textureIndex: number;
-        for (let i = 0; i < numQuads; ++i)
+        // CollisionLayerMask Byte
+        const collisionLayerMask = bufferState.view[bufferState.byteIndex++];
+
+        let numCollisionLayers = 0;
+        let collisionLayerMaskCopy = collisionLayerMask;
+        while (collisionLayerMaskCopy != 0) // Count the number of 1s in collisionLayerMask's binary representation.
         {
-            if (i % 2 == 0)
-            {
-                byte1 = bufferState.view[bufferState.byteIndex++];
-                byte2 = bufferState.view[bufferState.byteIndex];
-                dimensions = (byte1 >> 2);
-                textureIndex = ((byte1 & 0b11) << 4) | (byte2 >> 4);
-            }
-            else
-            {
-                byte1 = bufferState.view[bufferState.byteIndex++];
-                byte2 = bufferState.view[bufferState.byteIndex++];
-                dimensions = ((byte1 & 0b1111) << 2) | (byte2 >> 6);
-                textureIndex = (byte2 & 0b111111);
-            }
-
-            const yOffset = Math.floor(dimensions / 6) * 0.5;
-            const orientation = (dimensions % 2 == 0) ? "-" : "+";
-            const facingAxisCode = Math.floor(dimensions / 2) % 3;
-            const facingAxis = (facingAxisCode == 0) ? "x" : ((facingAxisCode == 1) ? "y" : "z");
-            quads[i] = new VoxelQuad(facingAxis, orientation, yOffset, textureIndex);
+            numCollisionLayers++;
+            collisionLayerMaskCopy >>= 1;
         }
-        if (numQuads % 2 == 1)
-            bufferState.byteIndex++;
+
+        // 6-Byte CollisionLayer Contents
+        const quads = new Uint8Array(6 * numCollisionLayers + 2); // 2 is for floor and ceiling
+        let quadIndex = 0;
+        let collisionLayer = 0;
+        while (collisionLayer < COLLISION_LAYER_FLOOR_AND_CEILING)
+        {
+            if (((1 << collisionLayer) & collisionLayerMask) != 0)
+            {
+                quads[quadIndex++] = bufferState.view[bufferState.byteIndex++];
+                quads[quadIndex++] = bufferState.view[bufferState.byteIndex++];
+                quads[quadIndex++] = bufferState.view[bufferState.byteIndex++];
+                quads[quadIndex++] = bufferState.view[bufferState.byteIndex++];
+                quads[quadIndex++] = bufferState.view[bufferState.byteIndex++];
+                quads[quadIndex++] = bufferState.view[bufferState.byteIndex++];
+            }
+            collisionLayer++;
+        }
+        quads[quadIndex++] = ceiling; // -y
+        quads[quadIndex++] = floor; // +y
 
         return new Voxel(collisionLayerMask, quads);
     }
@@ -111,34 +110,38 @@ export default class Voxel extends EncodableData
 // Each Voxel's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Voxel Byte 1][Voxel Byte 2][Quad 1.5Byte][Quad 1.5Byte][Quad 1.5Byte][Quad 1.5Byte]...
+// Layout: [Floor Byte][Ceiling Byte][CollisionLayerMask Byte][6-Byte CollisionLayer Content][6-Byte CollisionLayer Content]...
 //
-// [Voxel Byte 1]:
-//     8 bits for the voxel's collisionLayerMask
+// [Floor Byte]:
+//     8 bits for the floor's (+y) facing quad
 //
-// [Voxel Byte 2]:
-//     3 unused bits
-//     5 bits for the number of quads in the voxel
+// [Ceiling Byte]:
+//     8 bits for the ceiling's (-y) facing quad
 //
-// [Quad 1.5Byte]:
-//     6 bits for the quad's dimensions (facingAxis, orientation, yOffset)
-//         (See "Appendix A" for details)
-//     6 bits for the quad's texture index
+// [CollisionLayerMask Byte]:
+//     8 bits for the voxel's collisionLayerMask (e.g. Least significant bit represents whether the range y=[0,0.5] is occupied, second least significant bit represents whether the range y=[0.5,1] is occupied, and so on)
+//     Subsequent 6-byte chunks will correspond to the consecutive "1"s in the collisionLayerMask.
+//     e.g. If the collisionLayerMask is 10000101:
+//         (1) The 1st subsequent 6-byte chunk will correspond to the quads surrounding the volume in y=[0,0.5] (= 1st layer from y=0)
+//         (2) The 2nd subsequent 6-byte chunk will correspond to the quads surrounding the volume in y=[1,1.5] (= 3rd layer from y=0)
+//         (3) The 3rd subsequent 6-byte chunk will correspond to the quads surrounding the volume in y=[3.5,4] (= 8th layer from y=0)
 //
+// [6-Byte CollisionLayer Content]:
+//     8 bits for the (-y) facing quad
+//     8 bits for the (+y) facing quad
+//     8 bits for the (-x) facing quad
+//     8 bits for the (+x) facing quad
+//     8 bits for the (-z) facing quad
+//     8 bits for the (+z) facing quad
+//
+// Note: (Maximum memory size of a room's voxelGrid) = about 50KB
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Appendix A:
+// Each Voxel-Quad's Binary-Encoded Format:
 //------------------------------------------------------------------------------
-// VoxelQuad's dimension encoding pattern:
 //
-// yOffset:        0.0  0.0  0.0  0.0  0.0  0.0  0.5  0.5  0.5  0.5  0.5  0.5  1.0  1.0  1.0  1.0  1.0  1.0 ... 4.0
-// direction:      -x   +x   -y   +y   -z   +z   -x   +x   -y   +y   -z   +z   -x   +x   -y   +y   -z   +z  ... +z
-// encoded value:   0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17  ... 53
+// 1 bit to indicate whether the quad is shown or hidden (1 = shown, 0 = hidden)
+// 7 bits for the quad's textureIndex
 //
-// If we suppose that (encoded value = N), then:
-//
-// floor(N / 6) * 0.5 = yOffset
-// N % 2 = orientation (0 for "-", 1 for "+")
-// floor(N / 2) % 3 = facingAxis (0 for "x", 1 for "y", 2 for "z")
 //------------------------------------------------------------------------------

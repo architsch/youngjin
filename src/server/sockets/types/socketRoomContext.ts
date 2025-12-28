@@ -1,3 +1,4 @@
+import EncodableData from "../../../shared/networking/types/encodableData";
 import SocketUserContext from "./socketUserContext";
 
 export default class SocketRoomContext
@@ -9,7 +10,12 @@ export default class SocketRoomContext
         this.socketUserContexts = {};
     }
 
-    multicastSignal(signalType: string, signalData: any, userNameToExclude: string | undefined = undefined)
+    getUserContexts(): {[userName: string]: SocketUserContext}
+    {
+        return this.socketUserContexts;
+    }
+
+    multicastSignal(signalType: string, signalData: EncodableData, userNameToExclude: string | undefined = undefined)
     {
         for (const [userName, socketUserContext] of Object.entries(this.socketUserContexts))
         {
@@ -18,7 +24,7 @@ export default class SocketRoomContext
         }
     }
 
-    unicastSignal(signalType: string, signalData: any, targetUserName: string)
+    unicastSignal(signalType: string, signalData: EncodableData, targetUserName: string)
     {
         const socketUserContext = this.socketUserContexts[targetUserName];
         if (socketUserContext == undefined)

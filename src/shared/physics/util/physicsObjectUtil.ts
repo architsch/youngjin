@@ -7,9 +7,9 @@ import { getVoxelsInBox } from "./physicsVoxelUtil";
 const voxelsTemp = new Array<PhysicsVoxel>();
 const objsTemp = new Array<PhysicsObject>();
 
-export function getObjectsInDist(room: PhysicsRoom, centerX: number, centerY: number, dist: number): PhysicsObject[]
+export function getObjectsInDist(physicsRoom: PhysicsRoom, centerX: number, centerY: number, dist: number): PhysicsObject[]
 {
-    const voxels = getVoxelsInBox(room, {
+    const voxels = getVoxelsInBox(physicsRoom, {
         x: centerX,
         y: centerY,
         halfSizeX: dist,
@@ -59,13 +59,13 @@ export function addObjectToVoxel(object: PhysicsObject, voxel: PhysicsVoxel)
         object.intersectingVoxels.push(voxel);
 }
 
-export function setObjectPosition(room: PhysicsRoom, objectId: string, pos: Vec2)
+export function setObjectPosition(physicsRoom: PhysicsRoom, objectId: string, pos: Vec2)
 {
-    const object = room.objectById[objectId];
+    const object = physicsRoom.objectById[objectId];
     if (object == undefined)
         throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
 
-    const voxels = getVoxelsInBox(room, object.hitbox);
+    const voxels = getVoxelsInBox(physicsRoom, object.hitbox);
     object.hitbox.x = pos.x;
     object.hitbox.y = pos.y;
 

@@ -16,7 +16,7 @@ export async function loadRoom(roomID: string): Promise<RoomRuntimeMemory>
 
     if (roomID.startsWith("s")) // static room (procedurally generated)
     {
-        const roomData = RoomGenerator.generateRoom(roomID);
+        const roomData = await RoomGenerator.generateRoom(roomID);
         room = new Room(
             roomID,
             roomID, // roomName

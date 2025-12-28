@@ -2,8 +2,6 @@ import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import MeshFactory from "../../graphics/factories/meshFactory";
 import GameObject from "../types/gameObject";
-import InstancedMeshConfig from "../../graphics/types/instancedMeshConfig";
-import { InstancedMeshConfigMap } from "../../graphics/maps/instancedMeshConfigMap";
 import TextureUtil from "../../graphics/util/textureUtil";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import App from "../../app";
@@ -17,9 +15,10 @@ const objMap: {[meshId: string] : { [instanceId: number]: GameObject }} = {};
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
     instanceIds: number[] = [];
-    materialParams: MaterialParams;
+    materialParams: MaterialParams | undefined; // must be set by an instancer component
+    geometryId: string = ""; // must be set by an instancer component
+    maxNumInstances: number = 0; // must be set by an instancer component
     instancedMesh: THREE.InstancedMesh | undefined;
-    instancedMeshConfig: InstancedMeshConfig;
 
     static findGameObject(instancedMeshObj: THREE.Object3D, instanceId: number): GameObject | undefined
     {
@@ -32,11 +31,11 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         return objByInstanceId[instanceId];
     }
 
-    constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
+    setInstancingProperties(materialParams: MaterialParams, geometryId: string, maxNumInstances: number)
     {
-        super(gameObject, componentConfig);
-        this.instancedMeshConfig = InstancedMeshConfigMap[this.componentConfig.instancedMeshConfigId];
-        this.materialParams = this.instancedMeshConfig.getMaterialParams();
+        this.materialParams = materialParams;
+        this.geometryId = geometryId;
+        this.maxNumInstances = maxNumInstances;
     }
 
     async onDespawn(): Promise<void>
@@ -57,16 +56,20 @@ export default class InstancedMeshGraphics extends GameObjectComponent
 
     getMeshId(): string
     {
+        if (!this.materialParams)
+            throw new Error("MaterialParams hasn't been set yet.");
         const materialId = this.materialParams.getMaterialId();
-        return `${this.instancedMeshConfig.geometryId}-${materialId}`;
+        return `${this.geometryId}-${materialId}`;
     }
 
     async loadInstance(): Promise<number> // Returns the loaded instance's instanceId
     {
+        if (!this.materialParams)
+            throw new Error("MaterialParams hasn't been set yet.");
         const { instancedMesh, instanceId } = await MeshFactory.loadMeshInstance(
-            this.instancedMeshConfig.geometryId,
+            this.geometryId,
             this.materialParams,
-            this.instancedMeshConfig
+            this.maxNumInstances
         );
         if (!instancedMesh.name)
             instancedMesh.name = this.getMeshId();

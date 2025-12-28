@@ -1,46 +1,70 @@
 import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
 import PersistentObject from "../object/types/persistentObject";
-import { COLLISION_LAYER_SOLID } from "../physics/types/collisionLayer";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../physics/types/collisionLayer";
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
-import VoxelQuad from "../voxel/types/voxelQuad";
-
-type CollisionLayerMask = number;
+import { setAndShowVoxelQuadTexture } from "../voxel/util/voxelQuadUpdateUtil";
 
 const minRoomNumber = 0;
 const maxRoomNumber = 3;
 
 const RoomGenerator =
 {
-    generateRoom: (roomID: string) : {voxelGrid: VoxelGrid, persistentObjects: PersistentObject[]} =>
+    generateRoom: async (roomID: string): Promise<{voxelGrid: VoxelGrid, persistentObjects: PersistentObject[]}> =>
     {
         const numGridRows = 32;
         const numGridCols = 32;
         const roomNumber = parseInt(roomID.substring(1));
-        const floorTextureIndex = 8 * roomNumber;
+        const floorAndCeilingTextureIndex = 8 * roomNumber;
         const wallTextureIndex = 8 * roomNumber + 1;
 
         const voxels = new Array<Voxel>(numGridRows * numGridCols);
-        for (let row = 0; row < numGridRows; ++row)
+
+        // Initialize corner voxels
+        voxels[0] = new Voxel(0b00000000, new Uint8Array(2).fill(0b00000000));
+        voxels[numGridCols-1] = new Voxel(0b00000000, new Uint8Array(2).fill(0b00000000));
+        voxels[(numGridRows-1) * numGridCols] = new Voxel(0b00000000, new Uint8Array(2).fill(0b00000000));
+        voxels[(numGridRows-1) * numGridCols + (numGridCols-1)] = new Voxel(0b00000000, new Uint8Array(2).fill(0b00000000));
+
+        // Initialize floor and ceiling quads
+        for (let row = 1; row < numGridRows-1; ++row)
         {
-            for (let col = 0; col < numGridCols; ++col)
+            for (let col = 1; col < numGridRows-1; ++col)
             {
-                if (row == 0)
-                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "z", "+");
-                else if (col == 0)
-                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "x", "+");
-                else if (row == numGridRows-1)
-                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "z", "-");
-                else if (col == numGridCols-1)
-                    makeWallVoxel(voxels, numGridRows, numGridCols, row, col, wallTextureIndex, "x", "-");
-                else
-                    makeEmptyVoxel(voxels, numGridRows, numGridCols, row, col, floorTextureIndex);
+                voxels[row * numGridCols + col] = new Voxel(0b00000000,
+                    new Uint8Array(2).fill(0b10000000 + floorAndCeilingTextureIndex));
             }
         }
-        makePillarVoxel(voxels, numGridRows, numGridCols, 3, 3, wallTextureIndex);
-        makePillarVoxel(voxels, numGridRows, numGridCols, numGridRows-4, numGridCols-4, wallTextureIndex);
-        makePillarVoxel(voxels, numGridRows, numGridCols, 3, numGridCols-4, wallTextureIndex);
-        makePillarVoxel(voxels, numGridRows, numGridCols, numGridRows-4, 3, wallTextureIndex);
+        
+        // Initialize boundary wall quads
+        for (let col = 1; col < numGridRows-1; ++col)
+        {
+            voxels[col] = new Voxel(0, new Uint8Array(2));
+            voxels[(numGridRows-1) * numGridCols + col] = new Voxel(0, new Uint8Array(2));
+            const voxelAtMinRow = voxels[col];
+            const voxelAtMaxRow = voxels[(numGridRows-1) * numGridCols + col];
+            voxelAtMinRow.quads = new Uint8Array(2).fill(0);
+            voxelAtMaxRow.quads = new Uint8Array(2).fill(0);
+            for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
+            {
+                setAndShowVoxelQuadTexture(voxelAtMinRow, "z", "+", collisionLayer, wallTextureIndex, false);
+                setAndShowVoxelQuadTexture(voxelAtMaxRow, "z", "-", collisionLayer, wallTextureIndex, false);
+            }
+        }
+        for (let row = 1; row < numGridRows-1; ++row)
+        {
+            voxels[row * numGridCols] = new Voxel(0, new Uint8Array(2));
+            voxels[row * numGridCols + numGridCols-1] = new Voxel(0, new Uint8Array(2));
+            const voxelAtMinCol = voxels[row * numGridCols];
+            const voxelAtMaxCol = voxels[row * numGridCols + numGridCols-1];
+            voxelAtMinCol.quads = new Uint8Array(2).fill(0);
+            voxelAtMaxCol.quads = new Uint8Array(2).fill(0);
+            for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
+            {
+                setAndShowVoxelQuadTexture(voxelAtMinCol, "x", "+", collisionLayer, wallTextureIndex, false);
+                setAndShowVoxelQuadTexture(voxelAtMaxCol, "x", "-", collisionLayer, wallTextureIndex, false);
+            }
+        }
 
         const persistentObjects: PersistentObject[] = [];
 
@@ -64,8 +88,6 @@ const RoomGenerator =
                     x, y, z,
                     otherRoomID
                 ));
-
-                //makePillarVoxel(voxels, numGridCols, z+1, x, wallTextureIndex);
             }
         }
         
@@ -75,79 +97,5 @@ const RoomGenerator =
         };
     },
 }
-
-//---------------------------------------------------------------------------
-// Voxel Operations
-//---------------------------------------------------------------------------
-
-function makePillarVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
-    textureIndex: number): Voxel
-{
-    return makeVoxel(voxels, numGridRows, numGridCols, row, col, [
-        quads => addWallQuads("x", "+", textureIndex, quads),
-        quads => addWallQuads("x", "-", textureIndex, quads),
-        quads => addWallQuads("z", "+", textureIndex, quads),
-        quads => addWallQuads("z", "-", textureIndex, quads),
-    ]);
-}
-
-function makeEmptyVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
-    textureIndex: number): Voxel
-{
-    return makeVoxel(voxels, numGridRows, numGridCols, row, col, [
-        quads => addFloorQuad(textureIndex, quads),
-        quads => addCeilingQuad(textureIndex, quads),
-    ]);
-}
-
-function makeWallVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
-    textureIndex: number, facingAxis: "x" | "z", orientation: "-" | "+"): Voxel
-{
-    const voxel = makeVoxel(voxels, numGridRows, numGridCols, row, col, [
-        quads => addWallQuads(facingAxis, orientation, textureIndex, quads),
-    ]);
-    return voxel;
-}
-
-function makeVoxel(voxels: Voxel[], numGridRows: number, numGridCols: number, row: number, col: number,
-    quadOperations: ((quads: VoxelQuad[]) => CollisionLayerMask)[]): Voxel
-{
-    const quads: VoxelQuad[] = [];
-    let collisionLayerMask = 0;
-    for (const op of quadOperations)
-        collisionLayerMask |= op(quads);
-    const voxel = new Voxel(collisionLayerMask, quads);
-    voxel.setCoordinates(row, col);
-    voxels[row * numGridCols + col] = voxel;
-    return voxel;
-}
-
-//---------------------------------------------------------------------------
-// VoxelQuad Operations
-//---------------------------------------------------------------------------
-
-function addFloorQuad(textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
-{
-    quads.push(new VoxelQuad("y", "+", 0, textureIndex));
-    return 0;
-}
-
-function addCeilingQuad(textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
-{
-    quads.push(new VoxelQuad("y", "-", 4, textureIndex));
-    return 0;
-}
-
-function addWallQuads(facingAxis: "x" | "y" | "z", orientation: "-" | "+",
-    textureIndex: number, quads: VoxelQuad[]): CollisionLayerMask
-{
-    for (let yOffset = 0.5; yOffset <= 3.5; ++yOffset)
-        quads.push(new VoxelQuad(facingAxis, orientation, yOffset, textureIndex));
-    return (1 << COLLISION_LAYER_SOLID);
-}
-
-//---------------------------------------------------------------------------
-// PersistentObject Operations
-//---------------------------------------------------------------------------
 
 export default RoomGenerator;
