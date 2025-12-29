@@ -1,7 +1,7 @@
 export default class Pool<T>
 {
-    private size: number;
-    private freeItems: T[];
+    protected size: number;
+    protected freeItems: T[];
 
     constructor(size: number, itemConstructor: (index: number) => T)
     {

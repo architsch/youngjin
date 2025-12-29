@@ -1,31 +1,33 @@
-import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../util/voxelQueryUtil";
-
 export default class VoxelQuadChange
 {
     row: number;
     col: number;
-    newCollisionLayerMask: number;
-    quadIndex: number;
+    facingAxis: "x" | "y" | "z";
+    orientation: "-" | "+";
+    collisionLayer: number;
+    oldQuad: number;
     newQuad: number;
     voxelQuadsResultSnapshot?: string[];
 
-    constructor(row: number, col: number, newCollisionLayerMask: number, quadIndex: number, newQuad: number)
+    constructor(row: number, col: number, facingAxis: "x" | "y" | "z", orientation: "-" | "+",
+        collisionLayer: number, oldQuad: number, newQuad: number)
     {
         this.row = row;
         this.col = col;
-        this.newCollisionLayerMask = newCollisionLayerMask;
-        this.quadIndex = quadIndex;
+        this.facingAxis = facingAxis;
+        this.orientation = orientation;
+        this.collisionLayer = collisionLayer;
+        this.oldQuad = oldQuad;
         this.newQuad = newQuad;
     }
 
     toString(): string
     {
-        const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(this.quadIndex);
-        const orientation = getVoxelQuadOrientationFromQuadIndex(this.quadIndex);
-        const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(this.newCollisionLayerMask, this.quadIndex);
-        const showQuad = (this.newQuad & 0b10000000) != 0;
-        const textureIndex = this.newQuad & 0b01111111;
-        return `[(row:${this.row}, col:${this.col}, ind:${this.quadIndex}) -> ${orientation}${facingAxis}.${collisionLayer} (${showQuad ? "show" : "hide"} ${textureIndex})]
+        const showQuadOld = (this.oldQuad & 0b10000000) != 0;
+        const textureIndexOld = this.oldQuad & 0b01111111;
+        const showQuadNew = (this.newQuad & 0b10000000) != 0;
+        const textureIndexNew = this.newQuad & 0b01111111;
+        return `[(row:${this.row}, col:${this.col}) ${this.orientation}${this.facingAxis}.${this.collisionLayer} (${showQuadOld ? "show" : "hide"} ${textureIndexOld} -> ${showQuadNew ? "show" : "hide"} ${textureIndexNew})]
     -> Result: ${JSON.stringify(this.voxelQuadsResultSnapshot)}`;
     }
 }

@@ -61,7 +61,7 @@ function initListeners()
         {
             if (voxelQuadSelectionMeshClone == null)
             {
-                const mesh = await MeshFactory.loadMesh("VoxelQuad", new WireframeMaterialParams("#00ff00"));
+                const mesh = await MeshFactory.loadMesh("Square", new WireframeMaterialParams("#00ff00"));
                 voxelQuadSelectionMeshClone = mesh.clone();
                 GraphicsManager.getScene().add(voxelQuadSelectionMeshClone);
             }
@@ -96,6 +96,8 @@ function initListeners()
                 default:
                     throw new Error(`Unknown facingAxis value :: ${facingAxis}`);
             }
+
+            voxelQuadSelectionMeshClone!.scale.set(1, (facingAxis == "y") ? 1 : 0.5, 1);
 
             voxelQuadSelectionMeshClone!.position.set(
                 centerX + offsetX, centerY, centerZ + offsetZ);

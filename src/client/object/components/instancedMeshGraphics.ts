@@ -62,14 +62,17 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         return `${this.geometryId}-${materialId}`;
     }
 
-    async loadInstance(): Promise<number> // Returns the loaded instance's instanceId
+    // Returns the loaded instance's instanceId
+    // If desiredInstanceId == -1, the instance's ID will be dynamically determined by the pool.
+    async loadInstance(desiredInstanceId: number = -1): Promise<number>
     {
         if (!this.materialParams)
             throw new Error("MaterialParams hasn't been set yet.");
         const { instancedMesh, instanceId } = await MeshFactory.loadMeshInstance(
             this.geometryId,
             this.materialParams,
-            this.maxNumInstances
+            this.maxNumInstances,
+            desiredInstanceId
         );
         if (!instancedMesh.name)
             instancedMesh.name = this.getMeshId();
@@ -91,7 +94,8 @@ export default class InstancedMeshGraphics extends GameObjectComponent
 
     updateInstanceTransform(instanceId: number,
         xOffset: number, yOffset: number, zOffset: number,
-        dirX: number, dirY: number, dirZ: number)
+        dirX: number, dirY: number, dirZ: number,
+        xScale: number = 1, yScale: number = 1, zScale: number = 1)
     {
         if (!this.instancedMesh)
         {
@@ -100,6 +104,8 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         }
         this.gameObject.obj.updateMatrixWorld();
         this.gameObject.obj.add(tempObj);
+
+        tempObj.scale.set(xScale, yScale, zScale);
 
         tempObj.position.set(0, 0, 0);
         vec3Temp.set(
@@ -119,7 +125,10 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         tempObj.removeFromParent();
     }
 
-    updateInstanceTextureIndex(instanceId: number, textureIndex: number)
+    // Sample offsets and scales are normalized numbers in range [0,1], corresponding to the full range of pixels covered by the texture's sampling window.
+    updateInstanceTextureUV(instanceId: number, textureIndex: number,
+        sampleOffsetX: number = 0, sampleOffsetY: number = 0,
+        sampleScaleX: number = 1, sampleScaleY: number = 1)
     {
         if (!this.instancedMesh)
         {
@@ -136,15 +145,18 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         const textureGridCellHeightScale = ch / h;
 
         const uvStartBufferAttrib = this.instancedMesh.geometry.getAttribute("uvStart");
-
         // (0.5 / cw) = pixel-bleeding prevention shift
-        const uStart = textureGridCellWidthScale * ((0.5 / cw) + textureIndex % (1 / textureGridCellWidthScale));
-
+        const uStart = textureGridCellWidthScale
+            * ((0.5 / cw) + textureIndex % (1 / textureGridCellWidthScale) + sampleOffsetX);
         // (0.5 / ch) = pixel-bleeding prevention shift
-        const vStart = textureGridCellHeightScale * ((0.5 / ch) + Math.floor(textureIndex * textureGridCellWidthScale));
-        
+        const vStart = textureGridCellHeightScale
+            * ((0.5 / ch) + Math.floor(textureIndex * textureGridCellWidthScale) + sampleOffsetY);
         uvStartBufferAttrib.setXY(instanceId, uStart, vStart);
         uvStartBufferAttrib.needsUpdate = true;
+
+        const uvSampleSizeBufferAttrib = this.instancedMesh.geometry.getAttribute("uvSampleSize");
+        uvSampleSizeBufferAttrib.setXY(instanceId, sampleScaleX, sampleScaleY);
+        uvSampleSizeBufferAttrib.needsUpdate = true;
 
         // temp (for test)
         if (this.gameObject.params.objectTypeIndex == 2)

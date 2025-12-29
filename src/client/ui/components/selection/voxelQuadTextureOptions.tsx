@@ -23,7 +23,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
 
     const materialParams = VoxelMeshInstancer.latestMaterialParams;
     const numCols = materialParams.textureWidth / materialParams.textureGridCellWidth;
-    const numRows = materialParams.textureHeight / (materialParams.textureGridCellHeight*2);
+    const numRows = materialParams.textureHeight / materialParams.textureGridCellHeight;
     const selectedTextureCol = selectedTextureIndex % numCols;
     const selectedTextureRow = Math.floor(selectedTextureIndex / numCols);
 
@@ -58,7 +58,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                 atlasWidth={materialParams.textureWidth}
                 atlasHeight={materialParams.textureHeight}
                 atlasCellWidth={materialParams.textureGridCellWidth}
-                atlasCellHeight={materialParams.textureGridCellHeight*2}
+                atlasCellHeight={materialParams.textureGridCellHeight}
                 atlasCellCol={col}
                 atlasCellRow={row}
                 highlight={col == selectedTextureCol && row == selectedTextureRow}

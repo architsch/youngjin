@@ -5,7 +5,7 @@ import GameObject from "../types/gameObject";
 import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
-import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
+import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../../shared/physics/types/collisionLayer";
 
 let isDevMode: boolean | undefined;
@@ -36,12 +36,13 @@ export default class VoxelMeshInstancer extends GameObjectComponent
         if (VoxelMeshInstancer.latestMaterialParamsSyncedRoomID != currentRoom.roomID)
         {
             const materialParams = new TexturePackMaterialParams(currentRoom.texturePackURL,
-                1024, 1024, 128, 64, "staticImageFromURL");
+                1024, 1024, 128, 128, "staticImageFromURL");
             VoxelMeshInstancer.latestMaterialParams = materialParams;
             VoxelMeshInstancer.latestMaterialParamsSyncedRoomID = currentRoom.roomID;
         }
+        // 51200 = (1024 voxels) * (((8 collisionLayers per voxel) * (6 quads per collisionLayer)) + (1 quad for floor) + (1 quad for ceiling))
         this.instancedMeshGraphics.setInstancingProperties(VoxelMeshInstancer.latestMaterialParams,
-            "VoxelQuad", 17408);
+            "Square", 51200);
     }
 
     async onSpawn(): Promise<void>
@@ -50,11 +51,15 @@ export default class VoxelMeshInstancer extends GameObjectComponent
             throw new Error(`Voxel hasn't been defined yet.`);
 
         const quads = this.voxel.quads;
-        for (let i = 0; i < quads.length; ++i)
+        for (let quadIndex = 0; quadIndex < quads.length; ++quadIndex)
         {
-            const quad = quads[i];
-            const instanceId = await this.instancedMeshGraphics.loadInstance();
-            this.updateVoxelQuadInstance(instanceId, quad);
+            const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+            const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
+            const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(this.voxel.collisionLayerMask, quadIndex);
+            const instanceId = getVoxelQuadInstanceId(
+                32, this.voxel.row, this.voxel.col, facingAxis, orientation, collisionLayer);
+            await this.instancedMeshGraphics.loadInstance(instanceId);
+            this.updateVoxelQuadInstance(instanceId, facingAxis, orientation, collisionLayer, quads[quadIndex]);
         }
     }
 
@@ -75,14 +80,18 @@ export default class VoxelMeshInstancer extends GameObjectComponent
     {
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
-        const instanceIds = this.instancedMeshGraphics!.instanceIds;
 
-        for (let quadIndex = 0; quadIndex < instanceIds.length; ++quadIndex)
-        {
-            if (instanceIds[quadIndex] == instanceId)
-                return quadIndex;
-        }
-        throw new Error(`VoxelQuad not found (instanceId = ${instanceId}, instanceIds = ${JSON.stringify(instanceIds)})`);
+        // instanceId = 50 * voxelIndex + 6 * collisionLayer + 2 * facingAxisCode + orientationCode
+        const voxelIndex = Math.floor(instanceId / 50);
+        if ((voxelIndex - this.voxel.col) / 32 != this.voxel.row)
+            throw new Error(`Voxel index mismatch (voxelIndex = ${voxelIndex}, row = ${this.voxel.row}, col = ${this.voxel.col})`);
+        
+        const quadIndexOffsetInVoxel = instanceId - 50 * voxelIndex;
+        const collisionLayer = Math.floor(quadIndexOffsetInVoxel / 6);
+        const facingAxisCode = Math.floor((quadIndexOffsetInVoxel % 6) * 0.5);
+        const facingAxis = facingAxisCode == 0 ? "y" : (facingAxisCode == 1 ? "x" : "z");
+        const orientation = (quadIndexOffsetInVoxel % 2 == 0) ? "-" : "+";
+        return getVoxelQuadIndex(this.voxel.collisionLayerMask, facingAxis, orientation, collisionLayer);
     }
 
     async applyVoxelQuadChange(voxelQuadChange: VoxelQuadChange)
@@ -94,57 +103,45 @@ export default class VoxelMeshInstancer extends GameObjectComponent
             console.error(`InstancedMeshGraphics is not set (voxelQuadChange: ${JSON.stringify(voxelQuadChange)})`);
             return;
         }
-        const instanceIds = this.instancedMeshGraphics.instanceIds;
         if (isDevMode)
             debug_str = `${String(voxelQuadChange)}\n    -> `;
 
-        const quadIndex = voxelQuadChange.quadIndex;
-        const oldQuad = this.voxel.quads[quadIndex];
+        const oldQuad = voxelQuadChange.oldQuad;
         const newQuad = voxelQuadChange.newQuad;
-
         const showOldQuad = (oldQuad & 0b10000000) != 0;
         const showNewQuad = (newQuad & 0b10000000) != 0;
 
+        const instanceId = getVoxelQuadInstanceId(32, this.voxel.row, this.voxel.col,
+            voxelQuadChange.facingAxis, voxelQuadChange.orientation, voxelQuadChange.collisionLayer);
+
         if (!showOldQuad && showNewQuad) // rent quad instance
         {
-            const newInstanceId = await this.instancedMeshGraphics.loadInstance();
-            this.updateVoxelQuadInstance(newInstanceId, quadIndex);
+            this.updateVoxelQuadInstance(instanceId, voxelQuadChange.facingAxis, voxelQuadChange.orientation, voxelQuadChange.collisionLayer, newQuad);
             if (isDevMode)
-                debug_str += `(Add Quad) newInstanceId: ${newInstanceId} -> instanceIds: ${instanceIds}`;
+                debug_str += `(Add Quad) newInstanceId: ${instanceId}`;
         }
         else if (!showOldQuad && showNewQuad) // return quad instance
         {
-            const oldInstanceId = instanceIds[voxelQuadChange.quadIndex];
-            this.instancedMeshGraphics.unloadInstance(oldInstanceId);
+            this.instancedMeshGraphics.unloadInstance(instanceId);
             if (isDevMode)
-                debug_str += `(Remove Quad) oldInstanceId: ${oldInstanceId} -> instanceIds: ${instanceIds}`;
+                debug_str += `(Remove Quad) oldInstanceId: ${instanceId}`;
         }
         else // keep the current quad instance and only update the texture
         {
-            const existingInstanceId = instanceIds[voxelQuadChange.quadIndex];
-            this.instancedMeshGraphics.updateInstanceTextureIndex(existingInstanceId, newQuad & 0b01111111);
+            this.updateTextureUV(instanceId, newQuad, voxelQuadChange.facingAxis, voxelQuadChange.collisionLayer);
             if (isDevMode)
-                debug_str += `(Update Quad) existingInstanceId: ${existingInstanceId} -> instanceIds: ${instanceIds}`;
+                debug_str += `(Update Quad) existingInstanceId: ${instanceId}`;
         }
 
         if (isDevMode)
             console.log(debug_str);
     }
 
-    private updateVoxelQuadInstance(instanceId: number, quadIndex: number)
+    private updateVoxelQuadInstance(instanceId: number,
+        facingAxis: "x" | "y" | "z", orientation: "-" | "+", collisionLayer: number, quad: number)
     {
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
-        const quad = this.voxel.quads[quadIndex];
-        const textureIndex = quad & 0b01111111;
-        const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-        const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-        const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(this.voxel.collisionLayerMask, quadIndex);
-
-        // The texture of each quad instance (whose height captures only half of that of each texture sample in the atlas)
-        // should alternate its UV coordinates between the upper and lower halves of the given textureIndex's texture sample
-        // each time the collisionLayer increments.
-        const instanceTextureIndex = textureIndex * 2 + (collisionLayer % 2);
 
         let xOffset = 0, yOffset = 0.25 + 0.5 * collisionLayer, zOffset = 0, dirX = 0, dirY = 0, dirZ = 0;
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
@@ -153,43 +150,52 @@ export default class VoxelMeshInstancer extends GameObjectComponent
         switch (facingAxis)
         {
             case "x":
-                if (orientation == "+")
-                {
-                    dirX = 1; dirY = 0; dirZ = 0;
-                    xOffset = 0.5;
-                }
-                else
-                {
-                    dirX = -1; dirY = 0; dirZ = 0;
-                    xOffset = -0.5;
-                }
+                if (orientation == "+") { dirX = 1; dirY = 0; dirZ = 0; xOffset = 0.5; }
+                else { dirX = -1; dirY = 0; dirZ = 0; xOffset = -0.5; }
                 break;
             case "y":
-                if (orientation == "+")
-                {
-                    dirX = 0; dirY = 1; dirZ = 0;
-                }
-                else
-                {
-                    dirX = 0; dirY = -1; dirZ = 0;
-                }
+                if (orientation == "+") { dirX = 0; dirY = 1; dirZ = 0; }
+                else { dirX = 0; dirY = -1; dirZ = 0; }
                 break;
             case "z":
-                if (orientation == "+")
-                {
-                    dirX = 0; dirY = 0; dirZ = 1;
-                    zOffset = 0.5;
-                }
-                else
-                {
-                    dirX = 0; dirY = 0; dirZ = -1;
-                    zOffset = -0.5;
-                }
+                if (orientation == "+") { dirX = 0; dirY = 0; dirZ = 1; zOffset = 0.5; }
+                else { dirX = 0; dirY = 0; dirZ = -1; zOffset = -0.5; }
                 break;
             default:
                 throw new Error(`Unknown facingAxis (${facingAxis})`);
         }
-        this.instancedMeshGraphics.updateInstanceTransform(instanceId, xOffset, yOffset, zOffset, dirX, dirY, dirZ);
-        this.instancedMeshGraphics.updateInstanceTextureIndex(instanceId, instanceTextureIndex);
+        this.instancedMeshGraphics.updateInstanceTransform(instanceId,
+            xOffset, yOffset, zOffset,
+            dirX, dirY, dirZ,
+            1, (facingAxis == "y") ? 1 : 0.5, 1);
+        this.updateTextureUV(instanceId, quad, facingAxis, collisionLayer);
     }
+
+    private updateTextureUV(instanceId: number, quad: number, facingAxis: "x" | "y" | "z",
+        collisionLayer: number)
+    {
+        let sampleOffsetX = 0; // [0,1]
+        let sampleOffsetY = 0; // [0,1]
+        let sampleScaleX = 1; // [0,1]
+        let sampleScaleY = 1; // [0,1]
+        if (facingAxis != "y")
+        {
+            sampleScaleY = 0.5;
+            if (collisionLayer % 2 == 0)
+                sampleOffsetY = 0.5;
+        }
+        this.instancedMeshGraphics.updateInstanceTextureUV(instanceId,
+            quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
+    }
+}
+
+function getVoxelQuadInstanceId(numGridCols: number, row: number, col: number,
+    facingAxis: "x" | "y" | "z", orientation: "-" | "+", collisionLayer: number): number
+{
+    const voxelIndex = row * numGridCols + col;
+    const facingAxisCode = facingAxis == "y" ? 0 : (facingAxis == "x" ? 1 : 2);
+    const orientationCode = orientation == "-" ? 0 : 1;
+    // There are up to 50 quads per voxel
+    // ((8 layers * (6 quads per layer)) + 1 quad for floor + 1 quad for ceiling)
+    return 50 * voxelIndex + 6 * collisionLayer + 2 * facingAxisCode + orientationCode;
 }

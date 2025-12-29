@@ -1,7 +1,7 @@
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../physics/types/collisionLayer";
 import Room from "../../room/types/room";
 import { hideVoxelQuadTexture, setAndShowVoxelQuadTexture, showVoxelQuadTexture } from "./voxelQuadUpdateUtil";
-import { getVoxel, getVoxelQuadIndexWithinLayer, isVoxelCollisionLayerOccupied } from "./voxelQueryUtil";
+import { getVoxel, getVoxelQuadIndexOffsetInsideLayer, isVoxelCollisionLayerOccupied } from "./voxelQueryUtil";
 
 let debugEnabled = false;
 
@@ -67,22 +67,22 @@ export function addVoxelBlock(room: Room, row: number, col: number, collisionLay
     // (2) Show quads which comprise the exposed sides of the new block
 
     if (!hideVoxelQuadTexture(voxel, "y", "+", collisionLayer-1))
-        setAndShowVoxelQuadTexture(voxel, "y", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexWithinLayer("y", "-")]);
+        setAndShowVoxelQuadTexture(voxel, "y", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("y", "-")]);
     
     if (!hideVoxelQuadTexture(voxel, "y", "+", collisionLayer+1))
-        setAndShowVoxelQuadTexture(voxel, "y", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexWithinLayer("y", "+")]);
+        setAndShowVoxelQuadTexture(voxel, "y", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("y", "+")]);
 
     if (!hideVoxelQuadTexture(getVoxel(room, row, col-1), "x", "+", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "x", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexWithinLayer("x", "-")]);
+        setAndShowVoxelQuadTexture(voxel, "x", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("x", "-")]);
 
     if (!hideVoxelQuadTexture(getVoxel(room, row, col+1), "x", "-", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "x", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexWithinLayer("x", "+")]);
+        setAndShowVoxelQuadTexture(voxel, "x", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("x", "+")]);
 
     if (!hideVoxelQuadTexture(getVoxel(room, row-1, col), "z", "+", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "z", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexWithinLayer("z", "-")]);
+        setAndShowVoxelQuadTexture(voxel, "z", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("z", "-")]);
 
     if (!hideVoxelQuadTexture(getVoxel(room, row+1, col), "z", "-", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "z", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexWithinLayer("z", "+")]);
+        setAndShowVoxelQuadTexture(voxel, "z", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("z", "+")]);
 
     if (debugEnabled)
         console.log(`END - addBlock - row: ${row}, col: ${col}, collisionLayer: ${collisionLayer}, quadTextureIndicesWithinLayer: ${JSON.stringify(quadTextureIndicesWithinLayer)}`);

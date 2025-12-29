@@ -23,20 +23,24 @@ export function getVoxelQuad(voxel: Voxel, facingAxis: "x" | "y" | "z", orientat
     return voxel.quads[getVoxelQuadIndex(voxel.collisionLayerMask, facingAxis, orientation, collisionLayer)];
 }
 
-export function getVoxelQuadIndex(collisionLayerMask: number, facingAxis: "x" | "y" | "z", orientation: "-" | "+", collisionLayer: number): number
+export function getVoxelQuadIndex(collisionLayerMask: number, facingAxis: "x" | "y" | "z", orientation: "-" | "+",
+    collisionLayer: number): number
+{
+    return getFirstVoxelQuadIndexInLayer(collisionLayerMask, collisionLayer) +
+        getVoxelQuadIndexOffsetInsideLayer(facingAxis, orientation);
+}
+
+export function getFirstVoxelQuadIndexInLayer(collisionLayerMask: number, collisionLayer: number): number
 {
     if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
         collisionLayer = COLLISION_LAYER_FLOOR_AND_CEILING;
     let startIndex = 0;
     for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
         startIndex += (((collisionLayerMask >> layer) & 1) != 0) ? 6 : 0;
-
-    return startIndex +
-        2 * (facingAxis == "y" ? 0 : (facingAxis == "x" ? 1 : 2)) +
-        (orientation == "-" ? 0 : 1);
+    return startIndex;
 }
 
-export function getVoxelQuadIndexWithinLayer(facingAxis: "x" | "y" | "z", orientation: "-" | "+"): number
+export function getVoxelQuadIndexOffsetInsideLayer(facingAxis: "x" | "y" | "z", orientation: "-" | "+"): number
 {
     return 2 * (facingAxis == "y" ? 0 : (facingAxis == "x" ? 1 : 2)) +
         (orientation == "-" ? 0 : 1);

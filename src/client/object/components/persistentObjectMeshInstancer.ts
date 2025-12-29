@@ -32,7 +32,7 @@ export default class PersistentObjectMeshInstancer extends GameObjectComponent
         const instanceId = await this.instancedMeshGraphics.loadInstance();
 
         this.instancedMeshGraphics.updateInstanceTransform(instanceId, 0, 0, 0.01, 0, 0, 1);
-        this.instancedMeshGraphics.updateInstanceTextureIndex(instanceId, instanceId % 64);
+        this.instancedMeshGraphics.updateInstanceTextureUV(instanceId, instanceId % 64);
     }
 
     getPersistentObject(): PersistentObject

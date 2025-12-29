@@ -57,13 +57,17 @@ function createTexturePackMaterial(texture: THREE.Texture,
     newMaterial.onBeforeCompile = (shader) => {
         shader.vertexShader = `
             attribute vec2 uvStart;
+            attribute vec2 uvSampleSize;
             ${shader.vertexShader}
         `;
         shader.vertexShader = shader.vertexShader.replace(
             "#include <uv_vertex>",
             `
             #include <uv_vertex>
-            vMapUv = uvStart + vec2(${uvScales[0].toFixed(7)} * vMapUv[0], ${uvScales[1].toFixed(7)} * vMapUv[1]);
+            vMapUv = uvStart + vec2(
+                uvSampleSize[0] * vMapUv[0] * ${uvScales[0].toFixed(7)},
+                uvSampleSize[1] * vMapUv[1] * ${uvScales[1].toFixed(7)}
+            );
             `
         );
     };

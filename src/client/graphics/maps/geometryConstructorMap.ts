@@ -2,13 +2,6 @@ import * as THREE from "three";
 
 export const GeometryConstructorMap: { [geometryId: string]: () => THREE.BufferGeometry } =
 {
-    "VoxelQuad": () =>
-    {
-        clear();
-        writeZFacingUnitQuad();
-        scale(6, 1, 0.5, 1);
-        return makeGeometry();
-    },
     "Square": () =>
     {
         clear();

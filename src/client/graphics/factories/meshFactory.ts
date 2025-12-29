@@ -28,17 +28,25 @@ const MeshFactory =
         loadedMeshes[meshId] = newMesh;
         return newMesh;
     },
-    loadMeshInstance: async (geometryId: string, materialParams: MaterialParams, maxNumInstances: number)
-        : Promise<{ instancedMesh: THREE.InstancedMesh, instanceId: number }> =>
+    loadMeshInstance: async (geometryId: string, materialParams: MaterialParams,
+            maxNumInstances: number, desiredInstanceId: number = -1 // If desiredInstanceId == -1, the instance's ID will be dynamically determined by the pool.
+        ): Promise<{ instancedMesh: THREE.InstancedMesh, instanceId: number }> =>
     {
         const meshId = `${geometryId}-${materialParams.getMaterialId()}`;
         const loadedMesh = loadedMeshes[meshId];
         if (loadedMesh != undefined)
         {
-            const pool = instanceIdPools[meshId];
-            if (pool == undefined)
-                throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
-            return { instancedMesh: loadedMesh as THREE.InstancedMesh, instanceId: pool.rentItem() };
+            if (desiredInstanceId < 0) // Use pooling
+            {
+                const pool = instanceIdPools[meshId];
+                if (pool == undefined)
+                    throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
+                return { instancedMesh: loadedMesh as THREE.InstancedMesh, instanceId: pool.rentItem() };
+            }
+            else
+            {
+                return { instancedMesh: loadedMesh as THREE.InstancedMesh, instanceId: desiredInstanceId };
+            }
         }
         const geometryClone = (await GeometryFactory.load(geometryId)).clone();
         const material = await MaterialFactory.load(materialParams);
@@ -47,26 +55,37 @@ const MeshFactory =
         const uvStartBufferAttrib = new THREE.InstancedBufferAttribute(uvStartArray, 2);
         geometryClone.setAttribute("uvStart", uvStartBufferAttrib);
 
+        const uvSampleSizeArray = new Float32Array(maxNumInstances * 2);
+        const uvSampleSizeBufferAttrib = new THREE.InstancedBufferAttribute(uvSampleSizeArray, 2);
+        geometryClone.setAttribute("uvSampleSize", uvSampleSizeBufferAttrib);
+
         const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
         newMesh.frustumCulled = false;
         GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
         loadedMeshes[meshId] = newMesh;
 
-        if (instanceIdPools[meshId] != undefined)
-            throw new Error(`Instance ID pool already exists (meshId = ${meshId})`);
-
-        const pool = new Pool<number>(maxNumInstances,
-            (index: number) => maxNumInstances - index - 1);
-        instanceIdPools[meshId] = pool;
-        return { instancedMesh: newMesh as THREE.InstancedMesh, instanceId: pool.rentItem() };
+        if (desiredInstanceId < 0) // Use pooling
+        {
+            let pool = instanceIdPools[meshId];
+            if (!pool)
+            {
+                pool = new Pool<number>(maxNumInstances, (index: number) => maxNumInstances - index - 1);
+                instanceIdPools[meshId] = pool;
+            }
+            return { instancedMesh: newMesh as THREE.InstancedMesh, instanceId: pool.rentItem() };
+        }
+        else
+        {
+            return { instancedMesh: newMesh as THREE.InstancedMesh, instanceId: desiredInstanceId };
+        }
     },
     unloadAll: (): void =>
     {
         const idsTemp: string[] = [];
-        for (const url of Object.keys(loadedMeshes))
-            idsTemp.push(url);
-        for (const url of idsTemp)
-            MeshFactory.unload(url);
+        for (const id of Object.keys(loadedMeshes))
+            idsTemp.push(id);
+        for (const id of idsTemp)
+            MeshFactory.unload(id);
     },
     unload: (meshId: string, instanceIds: number[] = []): void =>
     {
@@ -80,18 +99,10 @@ const MeshFactory =
         if (instanceIds.length > 0) // This is an instanced mesh
         {
             const pool = instanceIdPools[meshId];
-            if (pool == undefined)
-                throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
-            for (const instanceId of instanceIds)
-                pool.returnItem(instanceId);
-            
-            if (pool.allItemsAreFree())
+            if (pool)
             {
-                const instancedMesh = loadedMeshes[meshId] as THREE.InstancedMesh;
-                instancedMesh.removeFromParent();
-                instancedMesh.dispose();
-                delete loadedMeshes[meshId];
-                delete instanceIdPools[meshId];
+                for (const instanceId of instanceIds)
+                    pool.returnItem(instanceId);
             }
         }
         else // This is NOT an instanced mesh
