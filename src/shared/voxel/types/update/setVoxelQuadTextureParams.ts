@@ -1,30 +1,30 @@
 import BufferState from "../../../networking/types/bufferState";
 import EncodableData from "../../../networking/types/encodableData";
+import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
-import VoxelQuadIdentifiers from "../voxelQuadIdentifiers";
 
 export default class SetVoxelQuadTextureParams extends EncodableData
 {
-    voxelQuadIdentifiers: VoxelQuadIdentifiers;
+    quadIndex: number;
     textureIndex: number;
 
-    constructor(voxelQuadIdentifiers: VoxelQuadIdentifiers, textureIndex: number)
+    constructor(quadIndex: number, textureIndex: number)
     {
         super();
-        this.voxelQuadIdentifiers = voxelQuadIdentifiers;
+        this.quadIndex = quadIndex;
         this.textureIndex = textureIndex;
     }
 
     encode(bufferState: BufferState)
     {
-        this.voxelQuadIdentifiers.encode(bufferState);
+        new EncodableRaw2ByteNumber(this.quadIndex).encode(bufferState);
         new EncodableRawByteNumber(this.textureIndex).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const voxelQuadIdentifiers = (VoxelQuadIdentifiers.decode(bufferState) as VoxelQuadIdentifiers);
+        const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
         const textureIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        return new SetVoxelQuadTextureParams(voxelQuadIdentifiers, textureIndex);
+        return new SetVoxelQuadTextureParams(quadIndex, textureIndex);
     }
 }

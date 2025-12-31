@@ -8,6 +8,7 @@ export default class PersistentObjectMeshInstancer extends GameObjectComponent
 {
     instancedMeshGraphics: InstancedMeshGraphics;
 
+    private instanceId: number = -1;
     private persistentObject: PersistentObject | undefined;
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
@@ -29,10 +30,19 @@ export default class PersistentObjectMeshInstancer extends GameObjectComponent
         if (this.persistentObject == undefined)
             throw new Error(`PersistentObject hasn't been defined yet.`);
 
-        const instanceId = await this.instancedMeshGraphics.loadInstance();
+        await this.instancedMeshGraphics.loadInstancedMesh();
+        this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool();
 
-        this.instancedMeshGraphics.updateInstanceTransform(instanceId, 0, 0, 0.01, 0, 0, 1);
-        this.instancedMeshGraphics.updateInstanceTextureUV(instanceId, instanceId % 64);
+        this.instancedMeshGraphics.updateInstanceTransform(this.instanceId, 0, 0, 0.01, 0, 0, 1);
+        this.instancedMeshGraphics.updateInstanceTextureUV(this.instanceId, this.instanceId % 64);
+    }
+
+    async onDespawn(): Promise<void>
+    {        
+        if (this.persistentObject == undefined)
+            throw new Error(`PersistentObject hasn't been defined yet.`);
+
+        this.instancedMeshGraphics.returnInstanceToPool(this.instanceId);
     }
 
     getPersistentObject(): PersistentObject

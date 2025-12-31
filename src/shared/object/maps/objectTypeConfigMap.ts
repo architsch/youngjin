@@ -5,7 +5,9 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Voxel",
         components: {
             spawnedByAny: {
-                instancedMeshGraphics: {},
+                instancedMeshGraphics: {
+                    createInstanceIdPool: false,
+                },
                 voxelMeshInstancer: {},
             },
         },
@@ -48,7 +50,9 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                     collisionLayer: 2,
                     hitboxSize: {sizeX: 0, sizeZ: 0},
                 },
-                instancedMeshGraphics: {},
+                instancedMeshGraphics: {
+                    createInstanceIdPool: true,
+                },
                 persistentObjectMeshInstancer: {
                 },
                 speechBubble: {

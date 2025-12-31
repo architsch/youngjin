@@ -20,7 +20,6 @@ export default class VoxelGameObject extends GameObject
 
         const instancer = this.components.voxelMeshInstancer as VoxelMeshInstancer;
         const voxel = instancer.getVoxel();
-        const quadIndex = instancer.getVoxelQuadIndexAtInstance(instanceId);
-        VoxelQuadSelection.trySelect(voxel, quadIndex);
+        VoxelQuadSelection.trySelect(voxel, instanceId);
     }
 }

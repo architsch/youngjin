@@ -5,8 +5,7 @@ import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
-import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../../../shared/physics/types/collisionLayer";
+import { getVoxelQuadTransformDimensions } from "../../../../shared/voxel/util/voxelQueryUtil";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -35,13 +34,9 @@ export default class VoxelQuadSelection
         else
         {
             if (existingSelection.voxel == voxel && existingSelection.quadIndex == quadIndex) // Selected the same quad twice -> should deselect it.
-            {
                 voxelQuadSelectionObservable.set(null);
-            }
             else // Selected a different quad while another one was selected.
-            {
                 voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, quadIndex));
-            }
         }
     }
 
@@ -65,42 +60,15 @@ function initListeners()
                 voxelQuadSelectionMeshClone = mesh.clone();
                 GraphicsManager.getScene().add(voxelQuadSelectionMeshClone);
             }
-            const quadIndex = selection.quadIndex;
-            const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(selection.voxel.collisionLayerMask, quadIndex);
+            const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
+                getVoxelQuadTransformDimensions(selection.quadIndex);
 
-            const centerX = selection.voxel.col + 0.5;
-            const centerZ = selection.voxel.row + 0.5;
-            let offsetX = 0, offsetZ = 0;
-            let dirX = 0, dirY = 0, dirZ = 0;
-
-            const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-            const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-
-            let centerY = 0.25 + 0.5 * collisionLayer;
-            if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-                centerY = (orientation == "+") ? 0 : 4;
-
-            switch (facingAxis)
-            {
-                case "x":
-                    offsetX = (orientation == "+") ? 0.5 : -0.5;
-                    dirX = (orientation == "+") ? 1 : -1;
-                    break;
-                case "y":
-                    dirY = (orientation == "+") ? 1 : -1;
-                    break;
-                case "z":
-                    offsetZ = (orientation == "+") ? 0.5 : -0.5;
-                    dirZ = (orientation == "+") ? 1 : -1;
-                    break;
-                default:
-                    throw new Error(`Unknown facingAxis value :: ${facingAxis}`);
-            }
-
-            voxelQuadSelectionMeshClone!.scale.set(1, (facingAxis == "y") ? 1 : 0.5, 1);
-
+            voxelQuadSelectionMeshClone!.scale.set(scaleX, scaleY, scaleZ);
             voxelQuadSelectionMeshClone!.position.set(
-                centerX + offsetX, centerY, centerZ + offsetZ);
+                selection.voxel.col + 0.5 + offsetX,
+                offsetY,
+                selection.voxel.row + 0.5 + offsetZ
+            );
 
             const p = voxelQuadSelectionMeshClone!.position;
             vec3Temp.set(p.x + dirX, p.y + dirY, p.z + dirZ);

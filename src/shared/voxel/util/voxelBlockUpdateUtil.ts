@@ -1,7 +1,8 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../physics/types/collisionLayer";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_GRID_COLS, NUM_GRID_ROWS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../system/constants";
 import Room from "../../room/types/room";
-import { hideVoxelQuadTexture, setAndShowVoxelQuadTexture, showVoxelQuadTexture } from "./voxelQuadUpdateUtil";
-import { getVoxel, getVoxelQuadIndexOffsetInsideLayer, isVoxelCollisionLayerOccupied } from "./voxelQueryUtil";
+import { hideVoxelQuad, showVoxelQuad } from "./voxelQuadUpdateUtil";
+import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadIndex, getVoxelQuadIndexOffsetInsideLayer, getVoxelRowFromQuadIndex, isVoxelCollisionLayerOccupied } from "./voxelQueryUtil";
+import { voxelQuadsBuffer } from "../types/voxel";
 
 let debugEnabled = false;
 
@@ -10,9 +11,13 @@ export function setVoxelBlockUpdateUtilDebugEnabled(enabled: boolean)
     debugEnabled = enabled;
 }
 
-export function moveVoxelBlock(room: Room, row: number, col: number, collisionLayer: number,
+export function moveVoxelBlock(room: Room, quadIndex: number,
     rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
 {
+    const row = getVoxelRowFromQuadIndex(quadIndex);
+    const col = getVoxelColFromQuadIndex(quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
     if (debugEnabled)
         console.log(`START - moveBlock - row: ${row}, col: ${col}, collisionLayer: ${collisionLayer}, rowOffset: ${rowOffset}, colOffset: ${colOffset}, collisionLayerOffset: ${collisionLayerOffset}`);
 
@@ -22,21 +27,28 @@ export function moveVoxelBlock(room: Room, row: number, col: number, collisionLa
         console.error(`No voxel found in (row: ${row}, col: ${col})`);
         return false;
     }
-    const quadTextureIndicesWithinLayer: number[] = Array.from(voxel.quads)
-        .slice(6 * collisionLayer, 6 * (collisionLayer+1)) // Sample the quads within the given collisionLayer
-        .map(quad => quad & 0b01111111); // Extract the textureIndex part from the quad
+    const quadTextureIndicesWithinLayer: number[] = [];
+    const startIndex = getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
+    for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+        quadTextureIndicesWithinLayer.push(voxelQuadsBuffer[i] & 0b01111111);
 
-    const success = addVoxelBlock(room, row + rowOffset, col + colOffset, collisionLayer + collisionLayerOffset, quadTextureIndicesWithinLayer)
-        && removeVoxelBlock(room, row, col, collisionLayer);
+    const targetQuadIndex = getVoxelQuadIndex(row + rowOffset, col + colOffset, "y", "-",
+        collisionLayer + collisionLayerOffset);
+    const success = addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer)
+        && removeVoxelBlock(room, quadIndex);
 
     if (debugEnabled)
         console.log(`END - moveBlock - row: ${row}, col: ${col}, collisionLayer: ${collisionLayer}, rowOffset: ${rowOffset}, colOffset: ${colOffset}, collisionLayerOffset: ${collisionLayerOffset}`);
     return success;
 }
 
-export function addVoxelBlock(room: Room, row: number, col: number, collisionLayer: number,
+export function addVoxelBlock(room: Room, quadIndex: number,
     quadTextureIndicesWithinLayer: number[]): boolean
 {
+    const row = getVoxelRowFromQuadIndex(quadIndex);
+    const col = getVoxelColFromQuadIndex(quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
     if (debugEnabled)
         console.log(`START - addBlock - row: ${row}, col: ${col}, collisionLayer: ${collisionLayer}, quadTextureIndicesWithinLayer: ${JSON.stringify(quadTextureIndicesWithinLayer)}`);
 
@@ -45,7 +57,7 @@ export function addVoxelBlock(room: Room, row: number, col: number, collisionLay
         console.error(`collisionLayerNew is out of range (row: ${row}, col: ${col}, collisionLayer = ${collisionLayer})`);
         return false;
     }
-    if (row <= 0 || col <= 0 || row >= room.voxelGrid.numGridRows-1 || col >= room.voxelGrid.numGridCols-1)
+    if (row <= 0 || col <= 0 || row >= NUM_GRID_ROWS-1 || col >= NUM_GRID_COLS-1)
     {
         console.error(`Cannot change a boundary voxel. (row: ${row}, col: ${col}, collisionLayer = ${collisionLayer})`);
         return false;
@@ -66,31 +78,35 @@ export function addVoxelBlock(room: Room, row: number, col: number, collisionLay
     // (1) Hide quads that are concealed by the new block
     // (2) Show quads which comprise the exposed sides of the new block
 
-    if (!hideVoxelQuadTexture(voxel, "y", "+", collisionLayer-1))
-        setAndShowVoxelQuadTexture(voxel, "y", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("y", "-")]);
+    if (!hideVoxelQuad(voxel, "y", "+", collisionLayer-1))
+        showVoxelQuad(voxel, "y", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("y", "-")]);
     
-    if (!hideVoxelQuadTexture(voxel, "y", "+", collisionLayer+1))
-        setAndShowVoxelQuadTexture(voxel, "y", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("y", "+")]);
+    if (!hideVoxelQuad(voxel, "y", "+", collisionLayer+1))
+        showVoxelQuad(voxel, "y", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("y", "+")]);
 
-    if (!hideVoxelQuadTexture(getVoxel(room, row, col-1), "x", "+", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "x", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("x", "-")]);
+    if (!hideVoxelQuad(getVoxel(room, row, col-1), "x", "+", collisionLayer))
+        showVoxelQuad(voxel, "x", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("x", "-")]);
 
-    if (!hideVoxelQuadTexture(getVoxel(room, row, col+1), "x", "-", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "x", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("x", "+")]);
+    if (!hideVoxelQuad(getVoxel(room, row, col+1), "x", "-", collisionLayer))
+        showVoxelQuad(voxel, "x", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("x", "+")]);
 
-    if (!hideVoxelQuadTexture(getVoxel(room, row-1, col), "z", "+", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "z", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("z", "-")]);
+    if (!hideVoxelQuad(getVoxel(room, row-1, col), "z", "+", collisionLayer))
+        showVoxelQuad(voxel, "z", "-", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("z", "-")]);
 
-    if (!hideVoxelQuadTexture(getVoxel(room, row+1, col), "z", "-", collisionLayer))
-        setAndShowVoxelQuadTexture(voxel, "z", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("z", "+")]);
+    if (!hideVoxelQuad(getVoxel(room, row+1, col), "z", "-", collisionLayer))
+        showVoxelQuad(voxel, "z", "+", collisionLayer, quadTextureIndicesWithinLayer[getVoxelQuadIndexOffsetInsideLayer("z", "+")]);
 
     if (debugEnabled)
         console.log(`END - addBlock - row: ${row}, col: ${col}, collisionLayer: ${collisionLayer}, quadTextureIndicesWithinLayer: ${JSON.stringify(quadTextureIndicesWithinLayer)}`);
     return true;
 }
 
-export function removeVoxelBlock(room: Room, row: number, col: number, collisionLayer: number): boolean
+export function removeVoxelBlock(room: Room, quadIndex: number): boolean
 {
+    const row = getVoxelRowFromQuadIndex(quadIndex);
+    const col = getVoxelColFromQuadIndex(quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
     if (debugEnabled)
         console.log(`START - removeBlock - row: ${row}, col: ${col}, collisionLayer: ${collisionLayer}`);
 
@@ -99,7 +115,7 @@ export function removeVoxelBlock(room: Room, row: number, col: number, collision
         console.error(`collisionLayerNew is out of range (row: ${row}, col: ${col}, collisionLayer = ${collisionLayer})`);
         return false;
     }
-    if (row <= 0 || col <= 0 || row >= room.voxelGrid.numGridRows-1 || col >= room.voxelGrid.numGridCols-1)
+    if (row <= 0 || col <= 0 || row >= NUM_GRID_ROWS-1 || col >= NUM_GRID_COLS-1)
     {
         console.error(`Cannot change a boundary voxel. (row: ${row}, col: ${col}, collisionLayer = ${collisionLayer})`);
         return false;
@@ -112,26 +128,26 @@ export function removeVoxelBlock(room: Room, row: number, col: number, collision
     }
 
     // Hide the removed block's quads
-    hideVoxelQuadTexture(voxel, "x", "-", collisionLayer);
-    hideVoxelQuadTexture(voxel, "x", "+", collisionLayer);
-    hideVoxelQuadTexture(voxel, "y", "-", collisionLayer);
-    hideVoxelQuadTexture(voxel, "y", "+", collisionLayer);
-    hideVoxelQuadTexture(voxel, "z", "-", collisionLayer);
-    hideVoxelQuadTexture(voxel, "z", "+", collisionLayer);
+    hideVoxelQuad(voxel, "x", "-", collisionLayer);
+    hideVoxelQuad(voxel, "x", "+", collisionLayer);
+    hideVoxelQuad(voxel, "y", "-", collisionLayer);
+    hideVoxelQuad(voxel, "y", "+", collisionLayer);
+    hideVoxelQuad(voxel, "z", "-", collisionLayer);
+    hideVoxelQuad(voxel, "z", "+", collisionLayer);
 
     // Recover the adjacent block' quads that are newly exposed after the removal
     if (isVoxelCollisionLayerOccupied(voxel, collisionLayer+1))
-        showVoxelQuadTexture(voxel, "y", "-", collisionLayer+1);
+        showVoxelQuad(voxel, "y", "-", collisionLayer+1);
     if (isVoxelCollisionLayerOccupied(voxel, collisionLayer-1))
-        showVoxelQuadTexture(voxel, "y", "+", collisionLayer-1);
+        showVoxelQuad(voxel, "y", "+", collisionLayer-1);
     if (isVoxelCollisionLayerOccupied(getVoxel(room, row+1, col), collisionLayer))
-        showVoxelQuadTexture(getVoxel(room, row+1, col), "z", "-", collisionLayer);
+        showVoxelQuad(getVoxel(room, row+1, col), "z", "-", collisionLayer);
     if (isVoxelCollisionLayerOccupied(getVoxel(room, row-1, col), collisionLayer))
-        showVoxelQuadTexture(getVoxel(room, row-1, col), "z", "+", collisionLayer);
+        showVoxelQuad(getVoxel(room, row-1, col), "z", "+", collisionLayer);
     if (isVoxelCollisionLayerOccupied(getVoxel(room, row, col+1), collisionLayer))
-        showVoxelQuadTexture(getVoxel(room, row, col+1), "x", "-", collisionLayer);
+        showVoxelQuad(getVoxel(room, row, col+1), "x", "-", collisionLayer);
     if (isVoxelCollisionLayerOccupied(getVoxel(room, row, col-1), collisionLayer))
-        showVoxelQuadTexture(getVoxel(room, row, col-1), "x", "+", collisionLayer);
+        showVoxelQuad(getVoxel(room, row, col-1), "x", "+", collisionLayer);
 
     if (debugEnabled)
         console.log(`END - removeBlock - row: ${row}, col: ${col}, collisionLayer: ${collisionLayer}`);

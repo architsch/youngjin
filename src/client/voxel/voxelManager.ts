@@ -6,9 +6,9 @@ import Room from "../../shared/room/types/room";
 import ObjectManager from "../object/objectManager";
 import App from "../app";
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock, setVoxelBlockUpdateUtilDebugEnabled } from "../../shared/voxel/util/voxelBlockUpdateUtil";
-import { flushRecentVoxelQuadChanges, getRecentVoxelQuadChanges, setVoxelQuadTexture, setVoxelQuadUpdateUtilDebugEnabled } from "../../shared/voxel/util/voxelQuadUpdateUtil";
+import { flushRecentVoxelQuadChanges, getRecentVoxelQuadChanges, setVoxelQuadUpdateUtilDebugEnabled, showVoxelQuad } from "../../shared/voxel/util/voxelQuadUpdateUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
-import { getVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../shared/voxel/util/voxelQueryUtil";
+import { getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
 import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
@@ -42,54 +42,53 @@ const VoxelManager =
     },
     moveVoxelBlockOnClientSide: async (room: Room, params: MoveVoxelBlockParams): Promise<boolean> =>
     {
-        const blockId = params.voxelBlockIdentifiers;
-        return await tryUpdateVoxelOnClientSide(room, blockId.row, blockId.col, (room: Room): boolean =>
-            moveVoxelBlock(room, blockId.row, blockId.col, blockId.collisionLayer,
-                params.rowOffset, params.colOffset, params.collisionLayerOffset));
+        return await tryUpdateVoxelOnClientSide(room, params.quadIndex, (room: Room): boolean =>
+            moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset));
     },
     addVoxelBlockOnClientSide: async (room: Room, params: AddVoxelBlockParams): Promise<boolean> =>
     {
-        const blockId = params.voxelBlockIdentifiers;
-        return await tryUpdateVoxelOnClientSide(room, blockId.row, blockId.col, (room: Room): boolean =>
-            addVoxelBlock(room, blockId.row, blockId.col, blockId.collisionLayer,
-                params.quadTextureIndicesWithinLayer));
+        return await tryUpdateVoxelOnClientSide(room, params.quadIndex, (room: Room): boolean =>
+            addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer));
     },
     removeVoxelBlockOnClientSide: async (room: Room, params: RemoveVoxelBlockParams): Promise<boolean> =>
     {
-        const blockId = params.voxelBlockIdentifiers;
-        return await tryUpdateVoxelOnClientSide(room, blockId.row, blockId.col, (room: Room): boolean =>
-            removeVoxelBlock(room, blockId.row, blockId.col, blockId.collisionLayer));
+        return await tryUpdateVoxelOnClientSide(room, params.quadIndex, (room: Room): boolean =>
+            removeVoxelBlock(room, params.quadIndex));
     },
     setVoxelQuadTextureOnClientSide: async (room: Room, params: SetVoxelQuadTextureParams): Promise<boolean> =>
     {
-        const quadId = params.voxelQuadIdentifiers;
-        const quadIndex = quadId.quadIndex;
+        const quadIndex = params.quadIndex;
         const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-        const voxel = getVoxel(room, quadId.row, quadId.col);
+        const row = getVoxelRowFromQuadIndex(quadIndex);
+        const col = getVoxelColFromQuadIndex(quadIndex);
+        const voxel = getVoxel(room, row, col);
         if (!voxel)
         {
             console.error(`Voxel update failed (setVoxelQuadTextureOnClientSide) - voxel not found - params: ${JSON.stringify(params)}`);
             return false;
         }
-        const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(voxel.collisionLayerMask, quadIndex);
-        return await tryUpdateVoxelOnClientSide(room, quadId.row, quadId.col, (room: Room): boolean =>
-            setVoxelQuadTexture(voxel, facingAxis, orientation, collisionLayer, params.textureIndex));
+        const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        return await tryUpdateVoxelOnClientSide(room, quadIndex, (room: Room): boolean =>
+            showVoxelQuad(voxel, facingAxis, orientation, collisionLayer, params.textureIndex));
     },
 }
 
-async function tryUpdateVoxelOnClientSide(room: Room, row: number, col: number, voxelUpdateAction: (room: Room) => boolean): Promise<boolean>
+async function tryUpdateVoxelOnClientSide(room: Room, quadIndex: number, voxelUpdateAction: (room: Room) => boolean): Promise<boolean>
 {
     if (!voxelUpdateAction(room))
     {
-        console.warn(`Voxel update action failed (row: ${row}, col: ${col})`);
+        console.warn(`Voxel update action failed (quadIndex: ${quadIndex})`);
         return false;
     }
 
     const recentChanges = getRecentVoxelQuadChanges();
     for (const change of recentChanges)
     {
-        const instancer = getVoxelMeshInstancer(room, change.row, change.col);
+        const quadIndex = change.quadIndex;
+        const row = getVoxelRowFromQuadIndex(quadIndex);
+        const col = getVoxelColFromQuadIndex(quadIndex);
+        const instancer = getVoxelMeshInstancer(room, row, col);
         if (instancer)
             await instancer.applyVoxelQuadChange(change);
     }

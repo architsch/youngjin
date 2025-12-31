@@ -7,8 +7,8 @@ import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVox
 import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../shared/voxel/util/voxelBlockUpdateUtil";
-import { setVoxelQuadTexture } from "../../../shared/voxel/util/voxelQuadUpdateUtil";
-import { getVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
+import { showVoxelQuad } from "../../../shared/voxel/util/voxelQuadUpdateUtil";
+import { getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 
@@ -26,10 +26,8 @@ export function updateVoxelGrid(socketUserContext: SocketUserContext, params: Up
 
 function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVoxelBlockParams)
 {
-    const blockId = params.voxelBlockIdentifiers;
     const room = getRoom(socketUserContext);
-    if (!room || !moveVoxelBlock(room, blockId.row, blockId.col, blockId.collisionLayer,
-        params.rowOffset, params.colOffset, params.collisionLayerOffset))
+    if (!room || !moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
     {
         console.error(`Voxel update failed (moveVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         return;
@@ -39,10 +37,8 @@ function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVo
 
 function addVoxelBlockTask(socketUserContext: SocketUserContext, params: AddVoxelBlockParams)
 {
-    const blockId = params.voxelBlockIdentifiers;
     const room = getRoom(socketUserContext);
-    if (!room || !addVoxelBlock(room, blockId.row, blockId.col, blockId.collisionLayer,
-        params.quadTextureIndicesWithinLayer))
+    if (!room || !addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
     {
         console.error(`Voxel update failed (addVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         return;
@@ -52,9 +48,8 @@ function addVoxelBlockTask(socketUserContext: SocketUserContext, params: AddVoxe
 
 function removeVoxelBlockTask(socketUserContext: SocketUserContext, params: RemoveVoxelBlockParams)
 {
-    const blockId = params.voxelBlockIdentifiers;
     const room = getRoom(socketUserContext);
-    if (!room || !removeVoxelBlock(room, blockId.row, blockId.col, blockId.collisionLayer))
+    if (!room || !removeVoxelBlock(room, params.quadIndex))
     {
         console.error(`Voxel update failed (removeVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         return;
@@ -64,25 +59,25 @@ function removeVoxelBlockTask(socketUserContext: SocketUserContext, params: Remo
 
 function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: SetVoxelQuadTextureParams)
 {
-    const quadId = params.voxelQuadIdentifiers;
     const room = getRoom(socketUserContext);
     if (!room)
     {
         console.error(`Voxel update failed (setVoxelQuadTextureTask) - room not found - params: ${JSON.stringify(params)}`);
         return;
     }
-    const voxel = getVoxel(room, quadId.row, quadId.col);
+    const quadIndex = params.quadIndex;
+    const row = getVoxelRowFromQuadIndex(quadIndex);
+    const col = getVoxelColFromQuadIndex(quadIndex);
+    const voxel = getVoxel(room, row, col);
     if (!voxel)
     {
         console.error(`Voxel update failed (setVoxelQuadTextureTask) - voxel not found - params: ${JSON.stringify(params)}`);
         return;
     }
-    
-    const quadIndex = quadId.quadIndex;
     const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
     const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(voxel.collisionLayerMask, quadIndex);
-    if (!setVoxelQuadTexture(voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    if (!showVoxelQuad(voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
     {
         console.error(`Voxel update failed (setVoxelQuadTextureTask) - params: ${JSON.stringify(params)}`);
         return;

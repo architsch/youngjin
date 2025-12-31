@@ -7,8 +7,8 @@ import GameSocketsClient from "../../../networking/gameSocketsClient";
 import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import VoxelManager from "../../../voxel/voxelManager";
 import App from "../../../app";
-import VoxelQuadIdentifiers from "../../../../shared/voxel/types/voxelQuadIdentifiers";
 import VoxelMeshInstancer from "../../../object/components/voxelMeshInstancer";
+import { voxelQuadsBuffer } from "../../../../shared/voxel/types/voxel";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
@@ -17,9 +17,8 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
             enableHorizontalDragScroll(node as HTMLElement);
     }, []);
 
-    const selectedVoxel = props.selection.voxel;
-    const selectedQuadIndex = props.selection.quadIndex;
-    const selectedTextureIndex = selectedVoxel.quads[selectedQuadIndex] & 0b01111111;
+    const quadIndex = props.selection.quadIndex;
+    const selectedTextureIndex = voxelQuadsBuffer[quadIndex] & 0b01111111;
 
     const materialParams = VoxelMeshInstancer.latestMaterialParams;
     const numCols = materialParams.textureWidth / materialParams.textureGridCellWidth;
@@ -44,8 +43,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     console.error("Current room not found.");
                     return;
                 }
-                const quadId = new VoxelQuadIdentifiers(selectedVoxel.row, selectedVoxel.col, selectedQuadIndex);
-                const params = new SetVoxelQuadTextureParams(quadId, textureIndex);
+                const params = new SetVoxelQuadTextureParams(quadIndex, textureIndex);
                 if (await VoxelManager.setVoxelQuadTextureOnClientSide(room, params))
                 {
                     voxelQuadSelectionObservable.notify();

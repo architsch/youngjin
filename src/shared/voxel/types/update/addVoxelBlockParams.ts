@@ -1,23 +1,23 @@
 import BufferState from "../../../networking/types/bufferState";
 import EncodableData from "../../../networking/types/encodableData";
+import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
-import VoxelBlockIdentifiers from "../voxelBlockIdentifiers";
 
 export default class AddVoxelBlockParams extends EncodableData
 {
-    voxelBlockIdentifiers: VoxelBlockIdentifiers;
+    quadIndex: number;
     quadTextureIndicesWithinLayer: number[];
 
-    constructor(voxelBlockIdentifiers: VoxelBlockIdentifiers, quadTextureIndicesWithinLayer: number[])
+    constructor(quadIndex: number, quadTextureIndicesWithinLayer: number[])
     {
         super();
-        this.voxelBlockIdentifiers = voxelBlockIdentifiers;
+        this.quadIndex = quadIndex;
         this.quadTextureIndicesWithinLayer = quadTextureIndicesWithinLayer;
     }
 
     encode(bufferState: BufferState)
     {
-        this.voxelBlockIdentifiers.encode(bufferState);
+        new EncodableRaw2ByteNumber(this.quadIndex).encode(bufferState);
         new EncodableRawByteNumber(this.quadTextureIndicesWithinLayer.length).encode(bufferState);
         for (const index of this.quadTextureIndicesWithinLayer)
             new EncodableRawByteNumber(index).encode(bufferState);
@@ -25,12 +25,12 @@ export default class AddVoxelBlockParams extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const voxelBlockIdentifiers = (VoxelBlockIdentifiers.decode(bufferState) as VoxelBlockIdentifiers);
+        const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
         const numTextureIndices = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const quadTextureIndicesWithinLayer = new Array<number>(numTextureIndices);
         for (let i = 0; i < numTextureIndices; ++i)
             quadTextureIndicesWithinLayer[i] = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
 
-        return new AddVoxelBlockParams(voxelBlockIdentifiers, quadTextureIndicesWithinLayer);
+        return new AddVoxelBlockParams(quadIndex, quadTextureIndicesWithinLayer);
     }
 }

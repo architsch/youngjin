@@ -1,25 +1,25 @@
 import BufferState from "../../../networking/types/bufferState";
 import EncodableData from "../../../networking/types/encodableData";
-import VoxelBlockIdentifiers from "../voxelBlockIdentifiers";
+import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 
 export default class RemoveVoxelBlockParams extends EncodableData
 {
-    voxelBlockIdentifiers: VoxelBlockIdentifiers;
+    quadIndex: number;
 
-    constructor(voxelBlockIdentifiers: VoxelBlockIdentifiers)
+    constructor(quadIndex: number)
     {
         super();
-        this.voxelBlockIdentifiers = voxelBlockIdentifiers;
+        this.quadIndex = quadIndex;
     }
 
     encode(bufferState: BufferState)
     {
-        this.voxelBlockIdentifiers.encode(bufferState);
+        new EncodableRaw2ByteNumber(this.quadIndex).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const voxelBlockIdentifiers = (VoxelBlockIdentifiers.decode(bufferState) as VoxelBlockIdentifiers);
-        return new RemoveVoxelBlockParams(voxelBlockIdentifiers);
+        const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
+        return new RemoveVoxelBlockParams(quadIndex);
     }
 }

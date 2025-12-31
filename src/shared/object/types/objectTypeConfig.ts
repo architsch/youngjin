@@ -12,6 +12,7 @@ export default interface ObjectTypeConfig
                 hitboxSize: HitboxSize,
             },
             instancedMeshGraphics?: {
+                createInstanceIdPool: boolean,
             },
             voxelMeshInstancer?: {
             },

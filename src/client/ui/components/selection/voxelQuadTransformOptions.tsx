@@ -6,8 +6,9 @@ import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection
 import GameSocketsClient from "../../../networking/gameSocketsClient";
 import VoxelManager from "../../../voxel/voxelManager";
 import Button from "../basic/button";
-import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
-import VoxelBlockIdentifiers from "../../../../shared/voxel/types/voxelBlockIdentifiers";
+import { getFirstVoxelQuadIndexInLayer, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
+import { voxelQuadsBuffer } from "../../../../shared/voxel/types/voxel";
+import { NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/constants";
 
 export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSelection})
 {
@@ -27,12 +28,8 @@ async function moveVoxelBlock(selection: VoxelQuadSelection, collisionLayerOffse
         console.error("Current room not found.");
         return;
     }
-    const voxel = selection.voxel;
     const quadIndex = selection.quadIndex;
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(voxel.collisionLayerMask, quadIndex);
-    const blockId = new VoxelBlockIdentifiers(voxel.row, voxel.col, collisionLayer);
-
-    const params = new MoveVoxelBlockParams(blockId, 0, 0, collisionLayerOffset);
+    const params = new MoveVoxelBlockParams(quadIndex, 0, 0, collisionLayerOffset);
     if (await VoxelManager.moveVoxelBlockOnClientSide(room, params))
     {
         VoxelQuadSelection.unselect();
@@ -52,7 +49,7 @@ async function addVoxelBlock(selection: VoxelQuadSelection)
     const quadIndex = selection.quadIndex;
     const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
     const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(voxel.collisionLayerMask, quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
     let newRow = voxel.row;
     let newCol = voxel.col;
@@ -65,12 +62,13 @@ async function addVoxelBlock(selection: VoxelQuadSelection)
     if (facingAxis == "y")
         newCollisionLayer += (orientation == "+") ? 1 : -1;
 
-    const blockId = new VoxelBlockIdentifiers(newRow, newCol, newCollisionLayer);
-    const quadTextureIndicesWithinLayer: number[] = Array.from(voxel.quads)
-        .slice(6 * collisionLayer, 6 * (collisionLayer+1)) // Sample the quads within the given collisionLayer
-        .map(quad => quad & 0b01111111); // Extract the textureIndex part from the quad
+    const quadTextureIndicesWithinLayer: number[] = [];
+    const startIndex = getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, collisionLayer);
+    for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+        quadTextureIndicesWithinLayer.push(voxelQuadsBuffer[i] & 0b01111111);
 
-    const params = new AddVoxelBlockParams(blockId, quadTextureIndicesWithinLayer);
+    const targetQuadIndex = getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
+    const params = new AddVoxelBlockParams(targetQuadIndex, quadTextureIndicesWithinLayer);
     if (await VoxelManager.addVoxelBlockOnClientSide(room, params))
     {
         VoxelQuadSelection.unselect();
@@ -86,12 +84,8 @@ async function removeVoxelBlock(selection: VoxelQuadSelection)
         console.error("Current room not found.");
         return;
     }
-    const voxel = selection.voxel;
-    const quadIndex = selection.quadIndex;
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(voxel.collisionLayerMask, quadIndex);
-    const blockId = new VoxelBlockIdentifiers(voxel.row, voxel.col, collisionLayer);
 
-    const params = new RemoveVoxelBlockParams(blockId);
+    const params = new RemoveVoxelBlockParams(selection.quadIndex);
     if (await VoxelManager.removeVoxelBlockOnClientSide(room, params))
     {
         VoxelQuadSelection.unselect();

@@ -11,6 +11,7 @@ import { getObjectsInDist, removeObjectFromIntersectingVoxels, setObjectPosition
 import { getVoxelsInBox } from "./util/physicsVoxelUtil";
 import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
 import { isVoxelCollisionLayerOccupied } from "../voxel/util/voxelQueryUtil";
+import { NUM_GRID_COLS, NUM_GRID_ROWS } from "../system/constants";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
 
@@ -127,7 +128,7 @@ const PhysicsManager =
         const maxRow = Math.floor(maxIntersectableY);
 
         // Detect the out-of-boundary conditions.
-        if (minCol < 0 || minRow < 0 || maxCol >= physicsRoom.room.voxelGrid.numGridCols || maxRow >= physicsRoom.room.voxelGrid.numGridRows)
+        if (minCol < 0 || minRow < 0 || maxCol >= NUM_GRID_COLS || maxRow >= NUM_GRID_ROWS)
         {
             console.warn(`Physics-position desync due to room boundary limit (startPos = (${startPos.x.toFixed(3)}, ${startPos.y.toFixed(3)}), targetPos = (${targetPos.x.toFixed(3)}, ${targetPos.y.toFixed(3)}, minCol = ${minCol}, minRow = ${minRow}, maxCol = ${maxCol}, maxRow = ${maxRow}))`);
             return { resolvedPos: startPos, desyncDetected: true };
@@ -141,7 +142,7 @@ const PhysicsManager =
         {
             for (let col = minCol; col <= maxCol; ++col)
             {
-                const physicsVoxel = physicsRoom.voxels[row * physicsRoom.room.voxelGrid.numGridCols + col];
+                const physicsVoxel = physicsRoom.voxels[row * NUM_GRID_COLS + col];
                 if (isVoxelCollisionLayerOccupied(physicsVoxel.voxel, object.collisionLayer))
                     pushBoxAgainstBox(object.hitbox, targetPos, physicsVoxel.hitbox, hitStateTemp);
             }

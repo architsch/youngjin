@@ -3,6 +3,7 @@ import App from "../../../app";
 import ObjectManager from "../../../object/objectManager";
 import { voxelQuadSelectionObservable } from "../../../system/observables";
 import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
+import { voxelQuadsBuffer } from "../../../../shared/voxel/types/voxel";
 
 export default function DebugStats()
 {
@@ -32,9 +33,9 @@ export default function DebugStats()
                 const quadIndex = voxelQuadSelection.quadIndex;
                 const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
                 const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-                const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(v.collisionLayerMask, quadIndex);
+                const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-                const quad = v.quads[quadIndex];
+                const quad = voxelQuadsBuffer[quadIndex];
                 const showQuad = (quad & 0b10000000) != 0;
                 const textureIndex = quad & 0b01111111;
 

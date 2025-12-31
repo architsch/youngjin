@@ -1,20 +1,20 @@
 import BufferState from "../../../networking/types/bufferState";
 import EncodableData from "../../../networking/types/encodableData";
+import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
-import VoxelBlockIdentifiers from "../voxelBlockIdentifiers";
 
 export default class MoveVoxelBlockParams extends EncodableData
 {
-    voxelBlockIdentifiers: VoxelBlockIdentifiers;
+    quadIndex: number;
     rowOffset: number;
     colOffset: number;
     collisionLayerOffset: number;
 
-    constructor(voxelBlockIdentifiers: VoxelBlockIdentifiers,
+    constructor(quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number)
     {
         super();
-        this.voxelBlockIdentifiers = voxelBlockIdentifiers;
+        this.quadIndex = quadIndex;
         this.rowOffset = rowOffset;
         this.colOffset = colOffset;
         this.collisionLayerOffset = collisionLayerOffset;
@@ -22,7 +22,7 @@ export default class MoveVoxelBlockParams extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        this.voxelBlockIdentifiers.encode(bufferState);
+        new EncodableRaw2ByteNumber(this.quadIndex).encode(bufferState);
         new EncodableRawByteNumber(this.rowOffset).encode(bufferState);
         new EncodableRawByteNumber(this.colOffset).encode(bufferState);
         new EncodableRawByteNumber(this.collisionLayerOffset).encode(bufferState);
@@ -30,10 +30,10 @@ export default class MoveVoxelBlockParams extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const voxelBlockIdentifiers = (VoxelBlockIdentifiers.decode(bufferState) as VoxelBlockIdentifiers);
+        const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
         const rowOffset = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const colOffset = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const collisionLayerOffset = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        return new MoveVoxelBlockParams(voxelBlockIdentifiers, rowOffset, colOffset, collisionLayerOffset);
+        return new MoveVoxelBlockParams(quadIndex, rowOffset, colOffset, collisionLayerOffset);
     }
 }

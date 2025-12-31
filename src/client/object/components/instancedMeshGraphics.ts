@@ -14,7 +14,6 @@ const objMap: {[meshId: string] : { [instanceId: number]: GameObject }} = {};
 
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
-    instanceIds: number[] = [];
     materialParams: MaterialParams | undefined; // must be set by an instancer component
     geometryId: string = ""; // must be set by an instancer component
     maxNumInstances: number = 0; // must be set by an instancer component
@@ -38,62 +37,88 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         this.maxNumInstances = maxNumInstances;
     }
 
-    async onDespawn(): Promise<void>
-    {
-        const meshId = this.instancedMesh!.name;
-        MeshFactory.unload(meshId, this.instanceIds);
-
-        let objByInstanceId = objMap[meshId];
-        if (objByInstanceId == undefined)
-            console.error(`MeshId doesn't exist in objMap (meshId = ${meshId})`);
-        else
-        {
-            for (const instanceId of this.instanceIds)
-                delete objByInstanceId[instanceId];
-        }
-        this.instanceIds.length = 0;
-    }
-
     getMeshId(): string
     {
+        if (this.instancedMesh) // If instancedMesh is already loaded, just grab the meshId from its name.
+            return this.instancedMesh.name;
+
         if (!this.materialParams)
             throw new Error("MaterialParams hasn't been set yet.");
         const materialId = this.materialParams.getMaterialId();
         return `${this.geometryId}-${materialId}`;
     }
 
-    // Returns the loaded instance's instanceId
-    // If desiredInstanceId == -1, the instance's ID will be dynamically determined by the pool.
-    async loadInstance(desiredInstanceId: number = -1): Promise<number>
+    async loadInstancedMesh(): Promise<void>
     {
+        if (this.instancedMesh) // instancedMesh is already loaded
+            return;
         if (!this.materialParams)
             throw new Error("MaterialParams hasn't been set yet.");
-        const { instancedMesh, instanceId } = await MeshFactory.loadMeshInstance(
+
+        const instancedMesh = await MeshFactory.loadInstancedMesh(
             this.geometryId,
             this.materialParams,
             this.maxNumInstances,
-            desiredInstanceId
+            this.componentConfig.createInstanceIdPool
         );
         if (!instancedMesh.name)
             instancedMesh.name = this.getMeshId();
         this.instancedMesh = instancedMesh;
 
-        let objByInstanceId = objMap[instancedMesh.name];
-        if (objByInstanceId == undefined)
-        {
-            objByInstanceId = {};
-            objMap[instancedMesh.name] = objByInstanceId;
-        }
+        if (objMap[instancedMesh.name] == undefined)
+            objMap[instancedMesh.name] = {};
+    }
 
-        this.instanceIds.push(instanceId);
+    reserveInstance(instanceId: number)
+    {
+        if (!this.instancedMesh)
+            throw new Error("InstancedMesh hasn't been loaded yet.");
+
+        const objByInstanceId = objMap[this.getMeshId()];
         if (objByInstanceId[instanceId] != undefined)
-            console.error(`rentedInstanceId already exists in objByInstanceId (rentedInstanceId = ${instanceId}, meshId = ${this.getMeshId()}, existingObjectId = ${objByInstanceId[instanceId].params.objectId}, newObjectId = ${this.gameObject.params.objectId})`);
+            console.error(`instanceId already exists in objByInstanceId (instanceId = ${instanceId}, meshId = ${this.getMeshId()}, existingObjectId = ${objByInstanceId[instanceId].params.objectId}, objectId = ${this.gameObject.params.objectId})`);
         objByInstanceId[instanceId] = this.gameObject;
+    }
+
+    // Returns the rented instance's instanceId
+    rentInstanceFromPool(): number
+    {
+        if (!this.instancedMesh)
+            throw new Error("InstancedMesh hasn't been loaded yet.");
+        if (!this.componentConfig.createInstanceIdPool)
+            throw new Error("You cannot rent an instance without an instanceId pool.");
+
+        const instanceId = MeshFactory.rentInstanceId(this.getMeshId());
+        this.reserveInstance(instanceId);
         return instanceId;
     }
 
+    unreserveInstance(instanceId: number)
+    {
+        if (!this.instancedMesh)
+            throw new Error("InstancedMesh hasn't been loaded yet.");
+
+        const objByInstanceId = objMap[this.getMeshId()];
+        if (objByInstanceId[instanceId] == undefined)
+            console.error(`instanceId doesn't exist in objByInstanceId (instanceId = ${instanceId}, meshId = ${this.getMeshId()}, objectId = ${this.gameObject.params.objectId})`);
+        delete objByInstanceId[instanceId];
+
+        this.updateInstanceTransform(instanceId, 0, -9999, 0, 0, -1, 0);
+    }
+
+    returnInstanceToPool(instanceId: number)
+    {
+        if (!this.instancedMesh)
+            throw new Error("InstancedMesh hasn't been loaded yet.");
+        if (!this.componentConfig.createInstanceIdPool)
+            throw new Error("You cannot return an instance without an instanceId pool.");
+
+        MeshFactory.returnInstanceId(this.getMeshId(), instanceId);
+        this.unreserveInstance(instanceId);
+    }
+
     updateInstanceTransform(instanceId: number,
-        xOffset: number, yOffset: number, zOffset: number,
+        offsetX: number, offsetY: number, offsetZ: number,
         dirX: number, dirY: number, dirZ: number,
         xScale: number = 1, yScale: number = 1, zScale: number = 1)
     {
@@ -116,7 +141,7 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         tempObj.lookAt(vec3Temp);
         tempObj.getWorldDirection(vec3Temp);
 
-        tempObj.position.set(xOffset, yOffset, zOffset);
+        tempObj.position.set(offsetX, offsetY, offsetZ);
         tempObj.updateMatrixWorld();
 
         this.instancedMesh.setMatrixAt(instanceId, tempObj.matrixWorld);
@@ -161,29 +186,6 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         // temp (for test)
         if (this.gameObject.params.objectTypeIndex == 2)
             this.drawTextureAtIndex(instanceId % 64, `${App.getEnv().assets_url}/lenna.png`);
-    }
-
-    unloadInstance(instanceId: number)
-    {
-        const meshId = this.instancedMesh!.name;
-        MeshFactory.unload(meshId, [instanceId]);
-        this.updateInstanceTransform(instanceId, 0, -9999, 0, 0, -1, 0);
-
-        let objByInstanceId = objMap[meshId];
-        if (objByInstanceId == undefined)
-            console.error(`MeshId doesn't exist in objMap (meshId = ${meshId})`);
-        else
-            delete objByInstanceId[instanceId];
-
-        const index = this.instanceIds.indexOf(instanceId);
-        if (index < 0)
-            console.error(`InstanceId not found in instanceIds array (instanceId = ${instanceId}, this.instanceIds = ${JSON.stringify(this.instanceIds)})`)
-        else
-        {
-            for (let i = index + 1; i < this.instanceIds.length; ++i)
-                this.instanceIds[i-1] = this.instanceIds[i];
-            this.instanceIds.length--;
-        }
     }
 
     async drawTextureAtIndex(textureIndex: number, textureURL: string)
