@@ -1,5 +1,5 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../system/constants";
-import Voxel, { voxelQuadsBuffer } from "../types/voxel";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../system/constants";
+import Voxel from "../types/voxel";
 import VoxelQuadChange from "../types/voxelQuadChange";
 import { getFirstVoxelQuadIndexInLayer, getVoxelQuadIndex } from "./voxelQueryUtil";
 
@@ -27,7 +27,7 @@ export function showVoxelQuad(voxel: Voxel,
     shouldPushChange: boolean = true): boolean
 {
     const quadIndex = getVoxelQuadIndex(voxel.row, voxel.col, facingAxis, orientation, collisionLayer);
-    const oldQuad = voxelQuadsBuffer[quadIndex];
+    const oldQuad = voxel.quadsMem.quads[quadIndex];
     const newTextureIndex = (textureIndex >= 0) ? textureIndex : (oldQuad & 0b01111111);
     const newQuad = (newTextureIndex & 0b01111111) | 0b10000000;
     return setVoxelQuad(voxel, quadIndex, oldQuad, newQuad, collisionLayer, shouldPushChange);
@@ -38,8 +38,8 @@ export function hideVoxelQuad(voxel: Voxel,
     shouldPushChange: boolean = true): boolean
 {
     const quadIndex = getVoxelQuadIndex(voxel.row, voxel.col, facingAxis, orientation, collisionLayer);
-    const oldQuad = voxelQuadsBuffer[quadIndex];
-    return setVoxelQuad(voxel, quadIndex, oldQuad, 0, collisionLayer, shouldPushChange);
+    const oldQuad = voxel.quadsMem.quads[quadIndex];
+    return setVoxelQuad(voxel, quadIndex, oldQuad, oldQuad & 0b01111111, collisionLayer, shouldPushChange);
 }
 
 function setVoxelQuad(voxel: Voxel, quadIndex: number, oldQuad: number, newQuad: number,
@@ -51,9 +51,10 @@ function setVoxelQuad(voxel: Voxel, quadIndex: number, oldQuad: number, newQuad:
     const showQuadOld = (oldQuad & 0b10000000) != 0;
     const showQuadNew = (newQuad & 0b10000000) != 0;
 
-    voxelQuadsBuffer[quadIndex] = newQuad;
+    voxel.quadsMem.quads[quadIndex] = newQuad;
 
-    if (collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX)
+    if (collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX &&
+        voxel.row > 0 && voxel.row < NUM_VOXEL_ROWS-1 && voxel.col > 0 && voxel.col < NUM_VOXEL_COLS-1)
     {
         if (!showQuadOld && showQuadNew)
         {
@@ -65,7 +66,7 @@ function setVoxelQuad(voxel: Voxel, quadIndex: number, oldQuad: number, newQuad:
             let quadCount = 0;
             const startIndex = getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, collisionLayer);
             for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-                quadCount += ((voxelQuadsBuffer[i] & 0b10000000) != 0) ? 1 : 0;
+                quadCount += ((voxel.quadsMem.quads[i] & 0b10000000) != 0) ? 1 : 0;
             if (quadCount == 0)
                 voxel.collisionLayerMask &= ~(1 << collisionLayer);
         }

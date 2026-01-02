@@ -97,13 +97,13 @@ const GameSocketsClient =
             console.warn("Cannot change room because 'roomChange' process is ongoing.");
     },
     emitMoveVoxelBlock: (params: MoveVoxelBlockParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params], [], [], [])),
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
     emitAddVoxelBlock: (params: AddVoxelBlockParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([], [params], [], [])),
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
     emitRemoveVoxelBlock: (params: RemoveVoxelBlockParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([], [], [params], [])),
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
     emitSetVoxelQuadTexture: (params: SetVoxelQuadTextureParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([], [], [], [params])),
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
 }
 
 function sendEncodedSignal(signalType: string, signalData: EncodableData)

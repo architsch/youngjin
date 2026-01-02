@@ -1,11 +1,13 @@
 import User from "../../../shared/auth/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import Room from "../../../shared/room/types/room";
+import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../shared/system/constants";
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
 import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
+import UpdateVoxelGridTaskParams from "../../../shared/voxel/types/update/updateVoxelGridTaskParams";
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../shared/voxel/util/voxelBlockUpdateUtil";
 import { showVoxelQuad } from "../../../shared/voxel/util/voxelQuadUpdateUtil";
 import { getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
@@ -14,14 +16,27 @@ import RoomManager from "../roomManager";
 
 export function updateVoxelGrid(socketUserContext: SocketUserContext, params: UpdateVoxelGridParams)
 {
-    for (const taskParams of params.moveVoxelBlockTasks)
-        moveVoxelBlockTask(socketUserContext, taskParams);
-    for (const taskParams of params.addVoxelBlockTasks)
-        addVoxelBlockTask(socketUserContext, taskParams);
-    for (const taskParams of params.removeVoxelBlockTasks)
-        removeVoxelBlockTask(socketUserContext, taskParams);
-    for (const taskParams of params.setVoxelQuadTextureTasks)
-        setVoxelQuadTextureTask(socketUserContext, taskParams);
+    for (const task of params.tasks)
+    {
+        switch (task.type)
+        {
+            case VOXEL_GRID_TASK_TYPE_MOVE:
+                moveVoxelBlockTask(socketUserContext, task as MoveVoxelBlockParams);
+                break;
+            case VOXEL_GRID_TASK_TYPE_ADD:
+                addVoxelBlockTask(socketUserContext, task as AddVoxelBlockParams);
+                break;
+            case VOXEL_GRID_TASK_TYPE_REMOVE:
+                removeVoxelBlockTask(socketUserContext, task as RemoveVoxelBlockParams);
+                break;
+            case VOXEL_GRID_TASK_TYPE_TEX:
+                setVoxelQuadTextureTask(socketUserContext, task as SetVoxelQuadTextureParams);
+                break;
+            default:
+                console.error(`Unknown task type :: ${task.type}`);
+                break;
+        }
+    }
 }
 
 function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVoxelBlockParams)
@@ -98,25 +113,14 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
             if (user.userName != kvp[0])
             {
                 const ctx = kvp[1];
-                const success = ctx.tryUpdateLatestPendingSignal("updateVoxelGrid", (existingSignal: EncodableData) => {
+                const success = ctx.tryUpdateLatestPendingSignal("updateVoxelGridParams", (existingSignal: EncodableData) => {
                     const updateVoxelGridParams = existingSignal as UpdateVoxelGridParams;
-                    switch (updateType)
-                    {
-                        case "moveVoxelBlock": updateVoxelGridParams.moveVoxelBlockTasks.push(signal as MoveVoxelBlockParams); break;
-                        case "addVoxelBlock": updateVoxelGridParams.addVoxelBlockTasks.push(signal as AddVoxelBlockParams); break;
-                        case "removeVoxelBlock": updateVoxelGridParams.removeVoxelBlockTasks.push(signal as RemoveVoxelBlockParams); break;
-                        case "setVoxelQuadTexture": updateVoxelGridParams.setVoxelQuadTextureTasks.push(signal as SetVoxelQuadTextureParams); break;
-                        default: throw new Error(`Unknown updateType :: ${updateType}`);
-                    }
+                    updateVoxelGridParams.tasks.push(signal as UpdateVoxelGridTaskParams);
                 });
                 if (!success)
                 {
-                    ctx.addPendingSignal("updateVoxelGrid", new UpdateVoxelGridParams(
-                        updateType == "moveVoxelBlock" ? [signal as MoveVoxelBlockParams] : [],
-                        updateType == "addVoxelBlock" ? [signal as AddVoxelBlockParams] : [],
-                        updateType == "removeVoxelBlock" ? [signal as RemoveVoxelBlockParams] : [],
-                        updateType == "setVoxelQuadTexture" ? [signal as SetVoxelQuadTextureParams] : []
-                    ));
+                    ctx.addPendingSignal("updateVoxelGridParams",
+                        new UpdateVoxelGridParams([signal as UpdateVoxelGridTaskParams]));
                 }
             }
         });

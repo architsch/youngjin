@@ -17,7 +17,7 @@ export default function Loading()
     if (state.loading)
     {
         return <div className="w-full h-full z-900 bg-black/50">
-            <ScreenCenterPopup text="Loading..." customClassNames="text-amber-600 text-6xl bg-black"/>
+            <ScreenCenterPopup text="Loading..." customClassNames="text-amber-600 text-4xl bg-black"/>
         </div>;
     }
     else

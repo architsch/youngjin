@@ -38,6 +38,10 @@ const App =
     {
         return currentRoom;
     },
+    getVoxelQuads: (): Uint8Array =>
+    {
+        return currentRoom!.voxelGrid.quadsMem.quads;
+    },
     changeRoom: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
         if (currentRoom != undefined)

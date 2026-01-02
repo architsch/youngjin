@@ -12,6 +12,8 @@ import { getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadI
 import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
 import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
+import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../shared/system/constants";
+import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const VoxelManager =
 {
@@ -25,14 +27,28 @@ const VoxelManager =
 
         // Add listeners
         updateVoxelGridObservable.addListener("room", async (params: UpdateVoxelGridParams) => {
-            for (const taskParams of params.moveVoxelBlockTasks)
-                await VoxelManager.moveVoxelBlockOnClientSide(room, taskParams);
-            for (const taskParams of params.addVoxelBlockTasks)
-                await VoxelManager.addVoxelBlockOnClientSide(room, taskParams);
-            for (const taskParams of params.removeVoxelBlockTasks)
-                await VoxelManager.removeVoxelBlockOnClientSide(room, taskParams);
-            for (const taskParams of params.setVoxelQuadTextureTasks)
-                await VoxelManager.setVoxelQuadTextureOnClientSide(room, taskParams);
+            for (const task of params.tasks)
+            {
+                switch (task.type)
+                {
+                    case VOXEL_GRID_TASK_TYPE_MOVE:
+                        await VoxelManager.moveVoxelBlockOnClientSide(room, task as MoveVoxelBlockParams);
+                        break;
+                    case VOXEL_GRID_TASK_TYPE_ADD:
+                        await VoxelManager.addVoxelBlockOnClientSide(room, task as AddVoxelBlockParams);
+                        break;
+                    case VOXEL_GRID_TASK_TYPE_REMOVE:
+                        await VoxelManager.removeVoxelBlockOnClientSide(room, task as RemoveVoxelBlockParams);
+                        break;
+                    case VOXEL_GRID_TASK_TYPE_TEX:
+                        await VoxelManager.setVoxelQuadTextureOnClientSide(room, task as SetVoxelQuadTextureParams);
+                        break;
+                    default:
+                        console.error(`Unknown task type :: ${task.type}`);
+                        break;
+                }
+            }
+            VoxelQuadSelection.refresh();
         });
     },
     unload: async () =>

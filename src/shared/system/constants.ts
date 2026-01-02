@@ -15,13 +15,20 @@ export const COLLISION_LAYER_NULL = 8;
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
 
-// Voxel Grid
+// Voxel Grid Dimensions
 
-export const NUM_GRID_ROWS = 32;
-export const NUM_GRID_COLS = 32;
+export const NUM_VOXEL_ROWS = 32;
+export const NUM_VOXEL_COLS = 32;
 
 export const NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6; // corresponding to 6 sides of a 3D box: [-y, +y, -x, +x, -z, +z]
 export const NUM_VOXEL_QUADS_PER_VOXEL =
     (NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS) + 2; // 2 is for the floor and ceiling quads, which sit outside of the collision layers (They belong to "COLLISION_LAYER_NULL").
 
-export const TOTAL_NUM_VOXEL_QUADS = NUM_VOXEL_QUADS_PER_VOXEL * NUM_GRID_ROWS * NUM_GRID_COLS; // 51200
+export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 51200
+
+// Voxel Grid Tasks
+
+export const VOXEL_GRID_TASK_TYPE_MOVE = 0;
+export const VOXEL_GRID_TASK_TYPE_ADD = 1;
+export const VOXEL_GRID_TASK_TYPE_REMOVE = 2;
+export const VOXEL_GRID_TASK_TYPE_TEX = 3;

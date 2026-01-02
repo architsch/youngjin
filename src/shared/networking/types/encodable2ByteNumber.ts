@@ -21,7 +21,7 @@ export default class Encodable2ByteNumber extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        const n = Math.floor(Num.normalizeInRange(this.n, this.min, this.max) * 65535.9999);
+        const n = Math.floor(Num.normalizeInRangeWithWarning(this.n, this.min, this.max) * 65535.9999);
         const firstHalf = ((n >> 8) & 0b11111111);
         const secondHalf = (n & 0b11111111);
         bufferState.view[bufferState.byteIndex++] = firstHalf;

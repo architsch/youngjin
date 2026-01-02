@@ -6,27 +6,17 @@ const Num =
     },
     clampInRange: (n: number, min: number, max: number): number =>
     {
-        if (n < min || n > max)
-            console.error(`'n' is out of its expected range (n = ${n}, min = ${min}, max = ${max})`);
         return Math.max(min, Math.min(max, n));
     },
-    numberIsInRange: (num: number, range_min: number, range_max: number,
-        comparisonIsExclusive: boolean = false
-    ): boolean =>
+    normalizeInRangeWithWarning: (n: number, min: number, max: number): number =>
     {
-        if (comparisonIsExclusive)
-            return num > range_min && num < range_max;
-        else
-            return num >= range_min && num <= range_max;
+        return (Num.clampInRangeWithWarning(n, min, max) - min) / (max - min);
     },
-    rangesOverlap: (range1_min: number, range1_max: number, range2_min: number, range2_max: number,
-        comparisonIsExclusive: boolean = false
-    ): boolean =>
+    clampInRangeWithWarning: (n: number, min: number, max: number): number =>
     {
-        if (comparisonIsExclusive)
-            return range1_min < range2_max && range2_min < range1_max;
-        else
-            return range1_min <= range2_max && range2_min <= range1_max;
+        if (n < min || n > max)
+            console.warn(`'n' is out of its expected range (n = ${n}, min = ${min}, max = ${max})`);
+        return Math.max(min, Math.min(max, n));
     },
 }
 

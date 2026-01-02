@@ -8,7 +8,6 @@ import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/set
 import VoxelManager from "../../../voxel/voxelManager";
 import App from "../../../app";
 import VoxelMeshInstancer from "../../../object/components/voxelMeshInstancer";
-import { voxelQuadsBuffer } from "../../../../shared/voxel/types/voxel";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
@@ -18,7 +17,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
     }, []);
 
     const quadIndex = props.selection.quadIndex;
-    const selectedTextureIndex = voxelQuadsBuffer[quadIndex] & 0b01111111;
+    const selectedTextureIndex = App.getVoxelQuads()[quadIndex] & 0b01111111;
 
     const materialParams = VoxelMeshInstancer.latestMaterialParams;
     const numCols = materialParams.textureWidth / materialParams.textureGridCellWidth;

@@ -26,6 +26,11 @@ export default class Room extends EncodableData
         this.persistentObjects = persistentObjects;
     }
 
+    get voxelQuads(): Uint8Array
+    {
+        return this.voxelGrid.quadsMem.quads;
+    }
+
     encode(bufferState: BufferState)
     {
         new EncodableByteString(this.roomID).encode(bufferState);

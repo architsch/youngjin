@@ -17,6 +17,7 @@ export const ongoingProcessesObservable = new ObservableMap<ClientProcess>();
 // Graphics & UI
 
 export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | null>(null);
+export const numActiveTextInputsObservable = new Observable<number>(0);
 
 // Networking
 

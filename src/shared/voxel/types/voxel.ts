@@ -1,26 +1,26 @@
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_VOXEL, TOTAL_NUM_VOXEL_QUADS } from "../../system/constants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_VOXEL } from "../../system/constants";
 import { getFirstVoxelQuadIndexInLayer, getFirstVoxelQuadIndexInVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../util/voxelQueryUtil";
+import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 
-// This is the global storage of all voxel-quads in the current room.
-// Each voxel-quad should be accessed through its unique quadIndex.
-export const voxelQuadsBuffer = new Uint8Array(TOTAL_NUM_VOXEL_QUADS);
-
+let temp_quadsMem: VoxelQuadsRuntimeMemory;
 let temp_row = -1;
 let temp_col = -1;
 
 export default class Voxel extends EncodableData
 {
-    gameObjectId: string;
+    quadsMem: VoxelQuadsRuntimeMemory;
+    gameObjectId: string; // This field must be manually set via the "setGameObjectId" method.
     row: number;
     col: number;
     collisionLayerMask: number;
 
-    constructor(row: number, col: number, collisionLayerMask: number)
+    constructor(quadsMem: VoxelQuadsRuntimeMemory, row: number, col: number, collisionLayerMask: number)
     {
         super();
-        this.gameObjectId = ""; // This field must be manually set via the "setGameObjectId" method.
+        this.quadsMem = quadsMem;
+        this.gameObjectId = "";
         this.row = row;
         this.col = col;
         this.collisionLayerMask = collisionLayerMask;
@@ -36,12 +36,13 @@ export default class Voxel extends EncodableData
         if (this.collisionLayerMask < 0 || this.collisionLayerMask > 255)
             throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [0:255])`);
 
+        const quads = this.quadsMem.quads;
         const startIndex = getFirstVoxelQuadIndexInVoxel(this.row, this.col);
         
         bufferState.view[bufferState.byteIndex++] =
-            voxelQuadsBuffer[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2]; // Floor Byte (= second last quad of the voxel)
+            quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2]; // Floor Byte (= second last quad of the voxel)
         bufferState.view[bufferState.byteIndex++] =
-            voxelQuadsBuffer[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1]; // Ceiling Byte (= last quad of the voxel)
+            quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1]; // Ceiling Byte (= last quad of the voxel)
 
         // CollisionLayerMask Byte
         bufferState.view[bufferState.byteIndex++] = this.collisionLayerMask;
@@ -54,14 +55,15 @@ export default class Voxel extends EncodableData
             {
                 const startIndex = getFirstVoxelQuadIndexInLayer(this.row, this.col, collisionLayer);
                 for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-                    bufferState.view[bufferState.byteIndex++] = voxelQuadsBuffer[i];
+                    bufferState.view[bufferState.byteIndex++] = quads[i];
             }
             collisionLayer++;
         }
     }
 
-    static decodeWithParams(bufferState: BufferState, row: number, col: number): EncodableData
+    static decodeWithParams(bufferState: BufferState, quadsMem: VoxelQuadsRuntimeMemory, row: number, col: number): EncodableData
     {
+        temp_quadsMem = quadsMem;
         temp_row = row;
         temp_col = col;
         return Voxel.decode(bufferState);
@@ -69,11 +71,12 @@ export default class Voxel extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
+        const quads = temp_quadsMem.quads;
         const startIndex = getFirstVoxelQuadIndexInVoxel(temp_row, temp_col);
 
-        voxelQuadsBuffer[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2] =
+        quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2] =
             bufferState.view[bufferState.byteIndex++]; // Floor Byte (= second last quad of the voxel)
-        voxelQuadsBuffer[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1] =
+        quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1] =
             bufferState.view[bufferState.byteIndex++]; // Ceiling Byte (= last quad of the voxel)
 
         // CollisionLayerMask Byte
@@ -95,21 +98,22 @@ export default class Voxel extends EncodableData
             if (((1 << collisionLayer) & collisionLayerMask) != 0) // Layer is occupied
             {               
                 for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-                    voxelQuadsBuffer[i] = bufferState.view[bufferState.byteIndex++];
+                    quads[i] = bufferState.view[bufferState.byteIndex++];
             }
             else // Layer is NOT occupied
             {
                 for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-                    voxelQuadsBuffer[i] = 0;
+                    quads[i] = 0;
             }
             collisionLayer++;
         }
 
-        return new Voxel(temp_row, temp_col, collisionLayerMask);
+        return new Voxel(temp_quadsMem, temp_row, temp_col, collisionLayerMask);
     }
 
     toString(): string
     {
+        const quads = this.quadsMem.quads;
         const quadStrs: string[] = [`(${this.row},${this.col}):`];
         const firstIndex = getFirstVoxelQuadIndexInVoxel(this.row, this.col);
         for (let quadIndex = firstIndex; quadIndex < firstIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
@@ -117,7 +121,7 @@ export default class Voxel extends EncodableData
             const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
             const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
             const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-            const quad = voxelQuadsBuffer[quadIndex];
+            const quad = quads[quadIndex];
             const showQuad = (quad & 0b10000000) != 0;
             const textureIndex = quad & 0b01111111;
             if (showQuad)

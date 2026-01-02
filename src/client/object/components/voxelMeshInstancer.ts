@@ -1,12 +1,12 @@
 import GameObjectComponent from "./gameObjectComponent";
-import Voxel, { voxelQuadsBuffer } from "../../../shared/voxel/types/voxel";
+import Voxel from "../../../shared/voxel/types/voxel";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import GameObject from "../types/gameObject";
 import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
-import { getFirstVoxelQuadIndexInVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelQuadTransformDimensions } from "../../../shared/voxel/util/voxelQueryUtil";
-import { NUM_VOXEL_QUADS_PER_VOXEL, TOTAL_NUM_VOXEL_QUADS } from "../../../shared/system/constants";
+import { getFirstVoxelQuadIndexInVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadTransformDimensions } from "../../../shared/voxel/util/voxelQueryUtil";
+import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM } from "../../../shared/system/constants";
 
 let isDevMode: boolean | undefined;
 
@@ -40,7 +40,7 @@ export default class VoxelMeshInstancer extends GameObjectComponent
             VoxelMeshInstancer.latestMaterialParamsSyncedRoomID = currentRoom.roomID;
         }
         this.instancedMeshGraphics.setInstancingProperties(VoxelMeshInstancer.latestMaterialParams,
-            "Square", TOTAL_NUM_VOXEL_QUADS);
+            "Square", NUM_VOXEL_QUADS_PER_ROOM);
     }
 
     async onSpawn(): Promise<void>
@@ -102,14 +102,14 @@ export default class VoxelMeshInstancer extends GameObjectComponent
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
 
-        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = getVoxelQuadTransformDimensions(quadIndex);
+        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = getVoxelQuadTransformDimensions(this.voxel, quadIndex);
         this.instancedMeshGraphics.updateInstanceTransform(quadIndex, offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex);
     }
 
     private updateTextureUV(quadIndex: number)
     {
-        const quad = voxelQuadsBuffer[quadIndex];
+        const quad = App.getVoxelQuads()[quadIndex];
         const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
