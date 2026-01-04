@@ -2,6 +2,10 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROW
 import Room from "../../room/types/room";
 import Voxel from "../types/voxel";
 
+//-------------------------------------------------------------------------------------
+// Basic
+//-------------------------------------------------------------------------------------
+
 export function getVoxel(room: Room, row: number, col: number): Voxel
 {
     if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
@@ -9,11 +13,30 @@ export function getVoxel(room: Room, row: number, col: number): Voxel
     return room.voxelGrid.voxels[row * NUM_VOXEL_COLS + col];
 }
 
+//-------------------------------------------------------------------------------------
+// Physics
+//-------------------------------------------------------------------------------------
+
 export function isVoxelCollisionLayerOccupied(voxel: Voxel, collisionLayer: number): boolean
 {
     if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
         return true;
     return (voxel.collisionLayerMask & (1 << collisionLayer)) != 0;
+}
+
+// Returns COLLISION_LAYER_NULL if no layer is occupied
+export function getHighestOccupiedVoxelCollisionLayer(voxel: Voxel): number
+{
+    let layer = COLLISION_LAYER_MAX;
+    let maskTemp = voxel.collisionLayerMask;
+    while ((maskTemp & 0b10000000) == 0)
+    {
+        maskTemp <<= 1;
+        if (maskTemp == 0)
+            return COLLISION_LAYER_NULL;
+        layer--;
+    }
+    return layer;
 }
 
 //-------------------------------------------------------------------------------------

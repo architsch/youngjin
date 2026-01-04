@@ -1,4 +1,5 @@
 import Vec2 from "../../math/types/vec2";
+import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL } from "../../system/constants";
 import PhysicsObject from "../types/physicsObject";
 import PhysicsRoom from "../types/physicsRoom";
 import PhysicsVoxel from "../types/physicsVoxel";
@@ -6,6 +7,28 @@ import { getVoxelsInBox } from "./physicsVoxelUtil";
 
 const voxelsTemp = new Array<PhysicsVoxel>();
 const objsTemp = new Array<PhysicsObject>();
+
+export function canObjectCollideWithLayer(object: PhysicsObject, collisionLayer: number,
+    levelShiftInObject: number = 0): boolean
+{
+    const currMask = object.collisionLayerMaskAtGroundLevel << (object.level + levelShiftInObject);
+    return (currMask & (1 << collisionLayer)) != 0;
+}
+
+// Returns COLLISION_LAYER_NULL if no layer is occupied
+export function getLowestObjectCollisionLayer(object: PhysicsObject): number
+{
+    let layer = COLLISION_LAYER_MIN;
+    let maskTemp = object.collisionLayerMaskAtGroundLevel << object.level;
+    while ((maskTemp & 0b00000001) == 0)
+    {
+        maskTemp >>= 1;
+        if (maskTemp == 0)
+            return COLLISION_LAYER_NULL;
+        layer++;
+    }
+    return layer;
+}
 
 export function getObjectsInDist(physicsRoom: PhysicsRoom, centerX: number, centerY: number, dist: number): PhysicsObject[]
 {

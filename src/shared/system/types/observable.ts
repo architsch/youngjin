@@ -34,7 +34,7 @@ export default class Observable<ValueType>
     set(value: ValueType, unicastKey?: string): void
     {
         this.currValue = value;
-        this.notify();
+        this.notify(unicastKey);
     }
 
     change(changeFunc: (prevValue: ValueType) => ValueType, unicastKey?: string): void

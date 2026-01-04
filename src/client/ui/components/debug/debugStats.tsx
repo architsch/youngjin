@@ -3,14 +3,17 @@ import App from "../../../app";
 import ObjectManager from "../../../object/objectManager";
 import { voxelQuadSelectionObservable } from "../../../system/observables";
 import { getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
+import Button from "../basic/button";
 
 export default function DebugStats()
 {
     const [state, setState] = useState<DebugStatsState>({
-        fpsDesc: "?", playerPosDesc: "?", voxelDesc: "", voxelQuadSelectionDesc: "",
+        display: false, fpsDesc: "?", playerPosDesc: "?", voxelDesc: "", voxelQuadSelectionDesc: "",
     });
 
     useEffect(() => {
+        if (!state.display)
+            return;
         const interval = setInterval(() => { // start the clock
             const fpsDesc = App.getFPS().toString();
 
@@ -43,12 +46,11 @@ export default function DebugStats()
                 voxelDesc = `(row: ${v.row}, col: ${v.col}, collisionLayerMask: ${v.collisionLayerMask.toString(2)})`;
                 voxelQuadSelectionDesc = `(row: ${row}, col: ${col}, quad: (${orientation}${facingAxis} at layer ${collisionLayer}), texture: ${textureIndex})`;
             }
-
-            setState({fpsDesc, playerPosDesc, voxelDesc, voxelQuadSelectionDesc});
+            setState({...state, fpsDesc, playerPosDesc, voxelDesc, voxelQuadSelectionDesc});
         }, 250);
 
         return () => clearInterval(interval); // stop the clock
-    }, []);
+    }, [state.display]);
 
     const voxelDescLine = (state.voxelDesc.length > 0)
         ? <><br/>Selected Voxel: {state.voxelDesc}</>
@@ -58,16 +60,24 @@ export default function DebugStats()
         ? <><br/>Selected Voxel Quad: {state.voxelQuadSelectionDesc}</>
         : null;
     
-    return <div className="absolute top-0 left-0 w-fit h-fit m-0 p-1 text-xs text-gray-400 bg-black">
-        FPS: {state.fpsDesc}
-        <br/>Position: {state.playerPosDesc}
-        {voxelDescLine}
-        {voxelQuadSelectionDescLine}
+    return <div className="flex flex-col absolute left-0 top-0">
+        <Button
+            name={state.display ? "Hide Stats" : "Show Stats"}
+            size="xs"
+            onClick={() => setState({...state, display: !state.display})}
+        />
+        {state.display && <div className="w-fit h-fit m-0 p-1 text-xs text-gray-400 bg-black/50">
+            FPS: {state.fpsDesc}
+            <br/>Position: {state.playerPosDesc}
+            {voxelDescLine}
+            {voxelQuadSelectionDescLine}
+        </div>}
     </div>;
 }
 
 interface DebugStatsState
 {
+    display: boolean;
     fpsDesc: string;
     playerPosDesc: string;
     voxelDesc: string;

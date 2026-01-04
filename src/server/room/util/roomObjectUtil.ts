@@ -46,7 +46,7 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
             halfSizeX,
             halfSizeY,
         };
-        PhysicsManager.addObject(roomID, objectId, hitbox, colliderConfig.collisionLayer);
+        PhysicsManager.addObject(roomID, objectId, hitbox, colliderConfig.collisionLayerMaskAtGroundLevel);
     }
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];

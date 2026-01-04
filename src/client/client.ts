@@ -7,10 +7,9 @@ import { roomRuntimeMemoryObservable } from "./system/observables";
 const env = (window as any).thingspool_env;
 App.setEnv(env);
 
-UIManager.load();
-
 roomRuntimeMemoryObservable.addListener("init", async (roomRuntimeMemory: RoomRuntimeMemory) => {
     await App.changeRoom(roomRuntimeMemory);
 });
 
 GameSocketsClient.init(env);
+UIManager.load();

@@ -1,20 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TutorialMoveInstruction from "./tutorialMoveInstruction";
+import { ongoingClientProcessExists } from "../../../system/types/clientProcess";
+import { ongoingProcessesObservable } from "../../../system/observables";
 
 export default function Tutorial()
 {
-    const [state, setState] = useState<TutorialState>({step: 0});
+    const [state, setState] = useState<TutorialState>({loading: true, step: 0});
+
+    useEffect(() => {
+        ongoingProcessesObservable.addListener("ui.tutorial", _ => setState({
+            ...state,
+            loading: ongoingClientProcessExists()
+        }));
+        return () => {
+            ongoingProcessesObservable.removeListener("ui.tutorial");
+        };
+    }, []);
 
     const incrementTutorialStep = () => {
-        setState({step: state.step + 1});
+        setState({...state, step: state.step + 1});
     };
 
     return <>
-        {state.step == 0 && <TutorialMoveInstruction incrementTutorialStep={incrementTutorialStep}/>}
+        {!state.loading && state.step == 0 &&
+            <TutorialMoveInstruction incrementTutorialStep={incrementTutorialStep}/>}
     </>;
 }
 
 interface TutorialState
 {
+    loading: boolean;
     step: number;
 }

@@ -17,7 +17,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         components: {
             spawnedByAny: {
                 collider: {
-                    collisionLayer: 2,
+                    collisionLayerMaskAtGroundLevel: 0b00011111,
                     hitboxSize: {sizeX: 0.6, sizeZ: 0.6},
                 },
                 speechBubble: {
@@ -47,7 +47,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         components: {
             spawnedByAny: {
                 collider: {
-                    collisionLayer: 2,
+                    collisionLayerMaskAtGroundLevel: 0b00000000,
                     hitboxSize: {sizeX: 0, sizeZ: 0},
                 },
                 instancedMeshGraphics: {

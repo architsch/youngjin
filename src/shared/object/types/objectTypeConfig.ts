@@ -8,7 +8,7 @@ export default interface ObjectTypeConfig
     components: {
         spawnedByAny?: {
             collider?: {
-                collisionLayer: number,
+                collisionLayerMaskAtGroundLevel: number,
                 hitboxSize: HitboxSize,
             },
             instancedMeshGraphics?: {

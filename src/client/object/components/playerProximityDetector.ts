@@ -1,8 +1,7 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
-import ObjectManager from "../objectManager";
-import FirstPersonController from "./firstPersonController";
+import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProximityDetection";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -30,7 +29,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
         return this.proximityOn;
     }
 
-    updateProximity(player: GameObject)
+    updateProximity(player: GameObject, firstPersonProximityDetection: FirstPersonProximityDetection)
     { 
         let proximityShouldBeOn = false;
 
@@ -71,8 +70,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
 
                     if (lookAngle <= this.maxLookAngle)
                     {
-                        const controller = player.components.firstPersonController as FirstPersonController;
-                        if (controller.objectIsInLineOfSight(this.gameObject.position, this.gameObject))
+                        if (firstPersonProximityDetection.objectIsInLineOfSight(this.gameObject.position, this.gameObject))
                             proximityShouldBeOn = true;
                     }
                 }

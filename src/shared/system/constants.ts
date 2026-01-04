@@ -1,4 +1,8 @@
-// Collision Layer
+// Math
+
+export const NEAR_EPSILON = 0.000000001;
+
+// Physics
 
 export const NUM_COLLISION_LAYERS = 8;
 
@@ -14,6 +18,8 @@ export const COLLISION_LAYER_NULL = 8;
 
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
+
+export const MIN_OBJECT_LEVEL_CHANGE_INTERVAL = 0.2;
 
 // Voxel Grid Dimensions
 

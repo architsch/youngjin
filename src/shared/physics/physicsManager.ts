@@ -7,11 +7,11 @@ import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
 import PhysicsRoom from "./types/physicsRoom";
 import PhysicsHitState from "./types/physicsHitState";
 import AABB2 from "../math/types/aabb2";
-import { getObjectsInDist, removeObjectFromIntersectingVoxels, setObjectPosition } from "./util/physicsObjectUtil";
+import { getLowestObjectCollisionLayer, getObjectsInDist, removeObjectFromIntersectingVoxels, setObjectPosition } from "./util/physicsObjectUtil";
 import { getVoxelsInBox } from "./util/physicsVoxelUtil";
 import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
-import { isVoxelCollisionLayerOccupied } from "../voxel/util/voxelQueryUtil";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/constants";
+import { getHighestOccupiedVoxelCollisionLayer, isVoxelCollisionLayerOccupied } from "../voxel/util/voxelQueryUtil";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/constants";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
 
@@ -57,7 +57,7 @@ const PhysicsManager =
     {
         return physicsRooms[roomID] != undefined;
     },
-    addObject: (roomID: string, objectId: string, hitbox: AABB2, collisionLayer: number) =>
+    addObject: (roomID: string, objectId: string, hitbox: AABB2, collisionLayerMaskAtGroundLevel: number): PhysicsObject =>
     {
         //console.log(`PhysicsManager.addObject :: roomID = ${roomID}, objectId = ${objectId}`);
         const physicsRoom = physicsRooms[roomID];
@@ -67,14 +67,25 @@ const PhysicsManager =
         if (physicsRoom.objectById[objectId] != undefined) // already added
         {
             console.warn(`PhysicsObjct is already added (roomID = ${roomID}, objectId = ${objectId})`);
-            return;
+            return physicsRoom.objectById[objectId];
         }
+        const currVoxel = physicsRoom.voxels[Math.floor(hitbox.y) * NUM_VOXEL_COLS + Math.floor(hitbox.x)].voxel;
+        const highestLayer = getHighestOccupiedVoxelCollisionLayer(currVoxel);
         const intersectingVoxels = new Array<PhysicsVoxel>(4);
         intersectingVoxels.length = 0;
-        const newObject: PhysicsObject = { objectId, collisionLayer, hitbox: hitbox, intersectingVoxels };
+
+        const newObject: PhysicsObject = {
+            objectId,
+            collisionLayerMaskAtGroundLevel,
+            level: (highestLayer != COLLISION_LAYER_NULL) ? highestLayer : COLLISION_LAYER_MIN,
+            lastLevelChangeTime: performance.now() * 0.001,
+            hitbox,
+            intersectingVoxels
+        };
         physicsRoom.objectById[objectId] = newObject;
 
         setObjectPosition(physicsRoom, objectId, { x: hitbox.x, y: hitbox.y });
+        return newObject;
     },
     removeObject: (roomID: string, objectId: string) =>
     {
@@ -136,6 +147,12 @@ const PhysicsManager =
 
         hitStateTemp.minHitRayScale = 1;
         hitStateTemp.hitLine = undefined;
+        
+        const currTime = performance.now() * 0.001;
+        const currVoxel = physicsRoom.voxels[Math.floor(startPos.y) * NUM_VOXEL_COLS + Math.floor(startPos.x)].voxel;
+        let objectMask = object.collisionLayerMaskAtGroundLevel << object.level;
+        const objectMaskAfterShift = object.collisionLayerMaskAtGroundLevel << (object.level + 1);
+        let maxLayerAmongOverlappingVoxels = -9999;
 
         // Process collision against voxels
         for (let row = minRow; row <= maxRow; ++row)
@@ -143,17 +160,52 @@ const PhysicsManager =
             for (let col = minCol; col <= maxCol; ++col)
             {
                 const physicsVoxel = physicsRoom.voxels[row * NUM_VOXEL_COLS + col];
-                if (isVoxelCollisionLayerOccupied(physicsVoxel.voxel, object.collisionLayer))
-                    pushBoxAgainstBox(object.hitbox, targetPos, physicsVoxel.hitbox, hitStateTemp);
+                const targetVoxel = physicsVoxel.voxel;
+
+                if ((targetVoxel.collisionLayerMask & objectMask) != 0)
+                {
+                    const canJumpOverToTargetVoxel =
+                        currTime >= object.lastLevelChangeTime + MIN_OBJECT_LEVEL_CHANGE_INTERVAL && // It's been long enough since the last time the object's level changed.
+                        (objectMask & 0b10000000) == 0 && // Object is not touching the ceiling
+                        (currVoxel.collisionLayerMask & objectMaskAfterShift) == 0 && // There is space for the object to jump within the current voxel
+                        (targetVoxel.collisionLayerMask & objectMaskAfterShift) == 0; // There is space for the object to occupy after the jump (in the target voxel)
+
+                    if (canJumpOverToTargetVoxel)
+                    {
+                        object.level++;
+                        objectMask = object.collisionLayerMaskAtGroundLevel << object.level;
+                        object.lastLevelChangeTime = currTime;
+                    }
+                    else
+                    {
+                        pushBoxAgainstBox(object.hitbox, targetPos, physicsVoxel.hitbox, hitStateTemp);
+                    }
+                }
+
+                const highestLayer = getHighestOccupiedVoxelCollisionLayer(targetVoxel);
+                if (highestLayer != COLLISION_LAYER_NULL && highestLayer > maxLayerAmongOverlappingVoxels)
+                    maxLayerAmongOverlappingVoxels = highestLayer;
             }
+        }
+
+        // Object should fall down if it is suspended in thin air
+        if (object.level > 0 &&
+            currTime >= object.lastLevelChangeTime + MIN_OBJECT_LEVEL_CHANGE_INTERVAL &&
+            getLowestObjectCollisionLayer(object) > maxLayerAmongOverlappingVoxels+1)
+        {
+            object.level--;
+            objectMask = object.collisionLayerMaskAtGroundLevel << object.level;
+            object.lastLevelChangeTime = currTime;
         }
         
         // Process collision against other objects
         for (const otherObject of Object.values(physicsRoom.objectById))
         {
+            const otherObjectMask = otherObject.collisionLayerMaskAtGroundLevel << otherObject.level;
+
             if (object.objectId != otherObject.objectId &&
                 (object.hitbox.halfSizeX > 0 || object.hitbox.halfSizeY > 0) &&
-                object.collisionLayer == otherObject.collisionLayer)
+                (objectMask & otherObjectMask) != 0)
             {
                 hitStateTemp = pushBoxAgainstBox(object.hitbox, targetPos, otherObject.hitbox, hitStateTemp);
             }
@@ -186,7 +238,7 @@ const PhysicsManager =
             let slideBlocked = false;
             for (const physicsVoxel of voxelsHitOnSlide)
             {
-                if (isVoxelCollisionLayerOccupied(physicsVoxel.voxel, object.collisionLayer))
+                if ((physicsVoxel.voxel.collisionLayerMask & objectMask) != 0)
                     slideBlocked = true;
             }
             if (slideBlocked)
