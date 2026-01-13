@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { roomRuntimeMemoryObservable, voxelQuadSelectionObservable } from "../../../system/observables";
+import { roomRuntimeMemoryObservable, updateVoxelGridObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
@@ -67,30 +67,30 @@ export default class VoxelQuadSelection
     {
         voxelQuadSelectionObservable.set(null);
     }
+}
 
-    static refresh()
+function refresh()
+{
+    if (!listenersInitialized)
+        initListeners();
+
+    const existingSelection = voxelQuadSelectionObservable.peek();
+    
+    if (existingSelection != null)
     {
-        if (!listenersInitialized)
-            initListeners();
+        const quadIndex = existingSelection.quadIndex;
 
-        const existingSelection = voxelQuadSelectionObservable.peek();
-        
-        if (existingSelection != null)
-        {
-            const quadIndex = existingSelection.quadIndex;
+        // If the quadIndex doesn't even make sense, just unselect.
+        if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
+            voxelQuadSelectionObservable.set(null);
 
-            // If the quadIndex doesn't even make sense, just unselect.
-            if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
-                voxelQuadSelectionObservable.set(null);
+        // If the quad is hidden, just unselect.
+        const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
+        if ((quad & 0b10000000) == 0)
+            voxelQuadSelectionObservable.set(null);
 
-            // If the quad is hidden, just unselect.
-            const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
-            if ((quad & 0b10000000) == 0)
-                voxelQuadSelectionObservable.set(null);
-
-            // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
-            voxelQuadSelectionObservable.notify();
-        }
+        // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
+        voxelQuadSelectionObservable.notify();
     }
 }
 
@@ -133,6 +133,8 @@ function initListeners()
         }
     });
 
+    updateVoxelGridObservable.addListener("voxelQuadSelection", refresh);
+
     roomRuntimeMemoryObservable.addListener("voxelQuadSelection", async (roomRuntimeMemory: RoomRuntimeMemory) => {
         VoxelQuadSelection.unselect();
 
@@ -142,6 +144,7 @@ function initListeners()
             voxelQuadSelectionMeshClone = null;
         }
         voxelQuadSelectionObservable.removeListener("voxelQuadSelection");
+        updateVoxelGridObservable.removeListener("voxelQuadSelection");
         roomRuntimeMemoryObservable.removeListener("voxelQuadSelection");
         listenersInitialized = false;
     });

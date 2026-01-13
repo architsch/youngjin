@@ -4,10 +4,11 @@ import ConsoleSockets from "./consoleSockets";
 import GameSockets from "./gameSockets";
 import dotenv from "dotenv";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import User from "../../shared/auth/user";
+import User from "../../shared/auth/types/user";
 import AuthUtil from "../util/authUtil";
 import NetworkUtil from "../util/networkUtil";
 import * as cookie from "cookie";
+import { AUTH_TOKEN_NAME } from "../../shared/system/constants";
 dotenv.config();
 
 const connectedUserNames = new Set<string>();
@@ -39,7 +40,7 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
             return;
         }
         const cookieMap = cookie.parse(cookieStr);
-        const token = cookieMap["thingspool_token"];
+        const token = cookieMap[AUTH_TOKEN_NAME];
         if (!token)
         {
             next(new Error(NetworkUtil.getErrorPageURL("auth-failure")));

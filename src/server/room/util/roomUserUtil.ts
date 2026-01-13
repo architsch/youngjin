@@ -1,4 +1,4 @@
-import User from "../../../shared/auth/user";
+import User from "../../../shared/auth/types/user";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectRuntimeMemory from "../../../shared/object/types/objectRuntimeMemory";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
@@ -6,7 +6,7 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
-import { unloadRoom } from "./roomCoreUtil";
+//import { unloadRoom } from "./roomCoreUtil";
 import { addObject, removeObject } from "./roomObjectUtil";
 
 let lastObjectIdNumber = 0;
@@ -78,11 +78,12 @@ export function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoo
     else
         socketRoomContext.removeSocketUserContext(user.userName);
 
-    if (Object.keys(roomRuntimeMemory.participantUserNames).length == 0)
-        unloadRoom(roomID);
+    // NOTE: For now, don't unload a room even if there's no user left in it.
+    //if (Object.keys(roomRuntimeMemory.participantUserNames).length == 0)
+    //    unloadRoom(roomID);
 }
 
-export function getIdsOfObjectsSpawnedByUser(roomID: string, userName: string): string[]
+export function getIdsOfObjectsSpawnedByUser(roomID: number, userName: string): string[]
 {
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
     if (roomRuntimeMemory == undefined)

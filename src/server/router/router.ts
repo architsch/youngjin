@@ -2,7 +2,6 @@ import { Express, Request, Response } from "express";
 import PageRouter from "./ui/pageRouter";
 import AuthRouter from "./api/authRouter";
 //import RoomRouter from "./api/roomRouter";
-//import AdminRouter from "./api/adminRouter";
 //import SearchRouter from "./api/searchRouter";
 import FileUtil from "../util/fileUtil";
 import EJSUtil from "../util/ejsUtil";
@@ -34,6 +33,5 @@ export default function Router(app: Express): void
     app.use("/api/auth", AuthRouter);
     //app.use("/api/search", SearchRouter);
     //app.use("/api/room", RoomRouter);
-    //app.use("/api/admin", AdminRouter);
     app.use("/", PageRouter);
 }

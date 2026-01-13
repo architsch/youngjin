@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { useEffect } from "react";
 import ObjectManager from "../../../object/objectManager";
-import ScreenCenterPopup from "../basic/screenCenterPopup";
+import ScreenCenterText from "../basic/screenCenterText";
+import { Z_INDEX_INSTRUCTION } from "../../../../shared/system/constants";
 
 const initialPlayerPos: THREE.Vector3 = new THREE.Vector3();
 const currPlayerPos: THREE.Vector3 = new THREE.Vector3();
@@ -43,5 +44,7 @@ export default function TutorialMoveInstruction({incrementTutorialStep}
         return () => clearInterval(interval); // stop the clock
     }, []);
 
-    return <ScreenCenterPopup text="Drag to Move" customClassNames="text-amber-300 text-4xl bg-black/50"/>;
+    return <ScreenCenterText text="Drag to Move" customClassNames={className}/>;
 }
+
+const className = `text-amber-300 text-4xl bg-black/50 ${Z_INDEX_INSTRUCTION}`;

@@ -8,6 +8,9 @@ import DB from "./db/db";
 import Router from "./router/router";
 import Sockets from "./sockets/sockets";
 import dotenv from "dotenv";
+import RoomDB from "./db/roomDB";
+import NetworkUtil from "./util/networkUtil";
+import dbTask_init from "./db/tasks/dbTask_init";
 dotenv.config();
 
 async function Server(): Promise<void>
@@ -27,8 +30,33 @@ async function Server(): Promise<void>
     }
 
     // database initialization
-    await DB.runSQLFile("clear.sql"); // <--- TODO: Remove this once the data migration system gets implemented.
-    await DB.runSQLFile("init.sql");
+
+    if (!(await DB.runQuery(`DROP DATABASE IF EXISTS main;`)).success) return; // <--- Reset the DB every time the server restarts (TODO: Remove this once the DB system gets fully stabilized.)
+    if (!(await DB.runQuery(`CREATE DATABASE IF NOT EXISTS main;`)).success) return;
+    if (!(await DB.runQuery(`USE main;`)).success) return;
+    if (!(await DB.runQuery(`CREATE TABLE IF NOT EXISTS globalData (dbVersion INT NOT NULL);`)).success) return;
+    
+    let result = await DB.runQuery<number>(`SELECT dbVersion FROM globalData;`);
+    if (!result.success)
+        return;
+
+    if (!result.data || result.data.length == 0) // dbVersion doesn't exist yet. (i.e. This is the first-time setup)
+    {
+        if (!(await dbTask_init())) return;
+    }
+    else // dbVersion already exists. (i.e. This is either an up-to-date or outdated DB)
+    {
+        let dbVersion = result.data[0];
+        console.log(`Current DB Version: ${dbVersion}`);
+
+        // Implement version migration routines here:
+        // if (dbVersion == 0)
+        // ...
+    }
+    
+    let success = await RoomDB.createRoom("entrypoint", "", 0, 1, 2, `${process.env.MODE == "dev" ? `http://${NetworkUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`);
+    if (!success)
+        return;
 
     // express app
     const app = express();
@@ -57,3 +85,7 @@ async function Server(): Promise<void>
 }
 
 Server();
+
+// Prevent automatic restart when the server app crashes (only on dev mode)
+if (process.env.MODE == "dev")
+    setInterval(() => {}, 36000000);

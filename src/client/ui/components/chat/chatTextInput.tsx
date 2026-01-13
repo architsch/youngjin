@@ -1,5 +1,5 @@
 import { FormEvent, FormEventHandler, useEffect, useRef } from "react";
-import { numActiveTextInputsObservable } from "../../../system/observables";
+import { numActiveTextInputsObservable } from "../../../system/clientObservables";
 
 export default function ChatTextInput({textInput, setTextInput}
     : {textInput: string, setTextInput: (newTextInput: string) => void})

@@ -18,14 +18,6 @@
         };
     </script>
     <script type="text/javascript" src="<%= process.env.URL_STATIC %>/app/bundle.js"></script>
-    <!--
-    <%_ if (user.userType == "guest") { _%>
-        <div class="s_row"></div>
-        <div class="inlineLabel">Already have an account?</div><a class="inlineButton" href="<%= process.env.URL_DYNAMIC %>/login"><%= UIConfig.displayText.pageName["login"] %></a>
-        <div class="zero_row"></div>
-        <div class="inlineLabel">Don't have an account yet?</div><a class="inlineButton" href="<%= process.env.URL_DYNAMIC %>/register"><%= UIConfig.displayText.pageName["register"] %></a>
-    <%_ } _%>
-    -->
 <%_ } else { _%>
     <h3>Error: No user found</h3>
 <%_ } _%>

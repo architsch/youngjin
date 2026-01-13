@@ -4,23 +4,24 @@ import RemoveVoxelBlockParams from "../../../../shared/voxel/types/update/remove
 import App from "../../../app";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import GameSocketsClient from "../../../networking/gameSocketsClient";
-import VoxelManager from "../../../voxel/voxelManager";
 import Button from "../basic/button";
 import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerAfterOffset, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex, isVoxelCollisionLayerOccupied } from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/constants";
 import Room from "../../../../shared/room/types/room";
+import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../../shared/voxel/util/voxelBlockUpdateUtil";
 
 export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSelection})
 {
     return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
-        <Button name="Add Block" onClick={() => addVoxelBlock(props.selection)}/>
-        <Button name="Remove Block" onClick={() => removeVoxelBlock(props.selection)}/>
-        <Button name="Move Up" onClick={() => moveVoxelBlock(props.selection, 0, 0, 1)}/>
-        <Button name="Move Down" onClick={() => moveVoxelBlock(props.selection, 0, 0, -1)}/>
+        <Button name="Add Block" size="sm" onClick={() => addVoxelBlockOption(props.selection)}/>
+        <Button name="Remove Block" size="sm" onClick={() => removeVoxelBlockOption(props.selection)}/>
+        <Button name="Move Up" size="sm" onClick={() => moveVoxelBlockOption(props.selection, 0, 0, 1)}/>
+        <Button name="Move Down" size="sm" onClick={() => moveVoxelBlockOption(props.selection, 0, 0, -1)}/>
+        {/*<Button name="Shrink/Expand" size="sm" onClick={() => shrinkOrExpandVoxelBlockOption(props.selection)}/>*/}
     </div>;
 }
 
-async function moveVoxelBlock(selection: VoxelQuadSelection, rowOffset: number, colOffset: number, collisionLayerOffset: number)
+/*function shrinkOrExpandVoxelBlockOption(selection: VoxelQuadSelection)
 {
     const room = App.getCurrentRoom();
     if (!room)
@@ -29,8 +30,23 @@ async function moveVoxelBlock(selection: VoxelQuadSelection, rowOffset: number, 
         return;
     }
     const quadIndex = selection.quadIndex;
-    const params = new MoveVoxelBlockParams(quadIndex, rowOffset, colOffset, collisionLayerOffset);
-    if (await VoxelManager.moveVoxelBlockOnClientSide(room, params))
+    if (shrinkOrExpandVoxelBlock(room, quadIndex))
+    {
+        voxelQuadSelectionObservable.notify();
+        GameSocketsClient.emitShrinkOrExpandVoxelBlock(new ShrinkOrExpandVoxelBlockParams(quadIndex));
+    }
+}*/
+
+function moveVoxelBlockOption(selection: VoxelQuadSelection, rowOffset: number, colOffset: number, collisionLayerOffset: number)
+{
+    const room = App.getCurrentRoom();
+    if (!room)
+    {
+        console.error("Current room not found.");
+        return;
+    }
+    const quadIndex = selection.quadIndex;
+    if (moveVoxelBlock(room, quadIndex, rowOffset, colOffset, collisionLayerOffset))
     {
         const v = selection.voxel;
         const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
@@ -46,11 +62,11 @@ async function moveVoxelBlock(selection: VoxelQuadSelection, rowOffset: number, 
             VoxelQuadSelection.trySelect(selection.voxel,
                 getVoxelQuadIndex(newRow, newCol, facingAxis, (orientation == "-") ? "+" : "-", newCollisionLayer));
         }
-        GameSocketsClient.emitMoveVoxelBlock(params);
+        GameSocketsClient.emitMoveVoxelBlock(new MoveVoxelBlockParams(quadIndex, rowOffset, colOffset, collisionLayerOffset));
     }
 }
 
-async function addVoxelBlock(selection: VoxelQuadSelection)
+function addVoxelBlockOption(selection: VoxelQuadSelection)
 {
     const room = App.getCurrentRoom();
     if (!room)
@@ -63,6 +79,9 @@ async function addVoxelBlock(selection: VoxelQuadSelection)
     const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
     const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
     const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
+    /*const xShrink = (voxel.xShrinkMask & (1 << collisionLayer)) != 0;
+    const zShrink = (voxel.zShrinkMask & (1 << collisionLayer)) != 0;*/
 
     let newRow = voxel.row;
     let newCol = voxel.col;
@@ -86,15 +105,15 @@ async function addVoxelBlock(selection: VoxelQuadSelection)
         quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
 
     const targetQuadIndex = getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    const params = new AddVoxelBlockParams(targetQuadIndex, quadTextureIndicesWithinLayer);
-    if (await VoxelManager.addVoxelBlockOnClientSide(room, params))
+    if (addVoxelBlock(room, targetQuadIndex, /*xShrink, zShrink,*/ quadTextureIndicesWithinLayer))
     {
         VoxelQuadSelection.trySelect(getVoxel(room, newRow, newCol), targetQuadIndex);
-        GameSocketsClient.emitAddVoxelBlock(params);
+        GameSocketsClient.emitAddVoxelBlock(new AddVoxelBlockParams(targetQuadIndex,
+            /*xShrink, zShrink,*/ quadTextureIndicesWithinLayer));
     }
 }
 
-async function removeVoxelBlock(selection: VoxelQuadSelection)
+function removeVoxelBlockOption(selection: VoxelQuadSelection)
 {
     const room = App.getCurrentRoom();
     if (!room)
@@ -102,11 +121,9 @@ async function removeVoxelBlock(selection: VoxelQuadSelection)
         console.error("Current room not found.");
         return;
     }
-    const voxel = selection.voxel;
     const quadIndex = selection.quadIndex;
 
-    const params = new RemoveVoxelBlockParams(quadIndex);
-    if (await VoxelManager.removeVoxelBlockOnClientSide(room, params))
+    if (removeVoxelBlock(room, quadIndex))
     {
         const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
@@ -132,7 +149,7 @@ async function removeVoxelBlock(selection: VoxelQuadSelection)
             dirIndex = (dirIndex + 1) % quadDirections.length;
         }
 
-        GameSocketsClient.emitRemoveVoxelBlock(params);
+        GameSocketsClient.emitRemoveVoxelBlock(new RemoveVoxelBlockParams(quadIndex));
     }
 }
 

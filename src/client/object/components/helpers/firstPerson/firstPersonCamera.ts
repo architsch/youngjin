@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import FirstPersonController from "../../firstPersonController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { playerViewTargetPosObservable } from "../../../../system/observables";
+import { playerViewTargetPosObservable } from "../../../../system/clientObservables";
 import GameObject from "../../../types/gameObject";
 import Num from "../../../../../shared/math/util/num";
 import { NEAR_EPSILON } from "../../../../../shared/system/constants";
@@ -51,7 +51,7 @@ export default class FirstPersonCamera
     private updateTargetPitch(): void
     {
         const angleForViewTarget = this.processViewTarget(playerViewTargetPosObservable.peek());
-        const angleForAltitude = -0.3 * this.player!.position.y;
+        const angleForAltitude = -0.4 * this.player!.position.y;
         const desiredAngle = Math.abs(angleForViewTarget) > Math.abs(angleForAltitude)
             ? angleForViewTarget : angleForAltitude;
 
@@ -87,7 +87,7 @@ export default class FirstPersonCamera
 
         const verticalAngleForViewTarget = Num.clampInRange(
             0.5 * playerForwardDir.angleTo(viewDirOnVerticalPlane) * (viewDirOnVerticalPlane.y > 0 ? 1 : -1),
-            -0.5, 0.5
+            -0.6, 0.6
         );
         return verticalAngleForViewTarget;
     }

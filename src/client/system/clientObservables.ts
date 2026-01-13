@@ -14,7 +14,7 @@ import { getVoxelQuadTransformDimensions } from "../../shared/voxel/util/voxelQu
 
 // Core
 
-export const ongoingProcessesObservable = new ObservableMap<ClientProcess>();
+export const ongoingClientProcessesObservable = new ObservableMap<ClientProcess>();
 
 // Graphics & UI
 

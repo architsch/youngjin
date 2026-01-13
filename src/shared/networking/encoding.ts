@@ -2,22 +2,25 @@ import BufferState from "./types/bufferState";
 
 const writeBuffer = new ArrayBuffer(65536);
 let writeBufferReserved = false;
+let startByteIndex = 0;
 
 const Encoding =
 {
-    startWrite: (): BufferState =>
+    startWrite: (byteIndex: number = 0): BufferState =>
     {
         if (writeBufferReserved)
             throw new Error("WriteBuffer is already reserved.");
         writeBufferReserved = true;
-        return new BufferState(new Uint8Array(writeBuffer));
+        startByteIndex = byteIndex;
+        return new BufferState(new Uint8Array(writeBuffer, byteIndex));
     },
     endWrite: (bufferState: BufferState): ArrayBuffer =>
     {
         if (!writeBufferReserved)
             console.error("WriteBuffer is already free.");
         writeBufferReserved = false;
-        const subBuffer = bufferState.view.buffer.slice(0, bufferState.byteIndex) as ArrayBuffer;
+        const subBuffer = bufferState.view.buffer.slice(startByteIndex, bufferState.byteIndex) as ArrayBuffer;
+        startByteIndex = 0;
         return subBuffer;
     },
 }

@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import TutorialMoveInstruction from "./tutorialMoveInstruction";
 import { ongoingClientProcessExists } from "../../../system/types/clientProcess";
-import { ongoingProcessesObservable } from "../../../system/observables";
+import { ongoingClientProcessesObservable } from "../../../system/clientObservables";
 
 export default function Tutorial()
 {
     const [state, setState] = useState<TutorialState>({loading: true, step: 0});
 
     useEffect(() => {
-        ongoingProcessesObservable.addListener("ui.tutorial", _ => setState({
+        ongoingClientProcessesObservable.addListener("ui.tutorial", _ => setState({
             ...state,
             loading: ongoingClientProcessExists()
         }));
         return () => {
-            ongoingProcessesObservable.removeListener("ui.tutorial");
+            ongoingClientProcessesObservable.removeListener("ui.tutorial");
         };
     }, []);
 

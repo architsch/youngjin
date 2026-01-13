@@ -5,6 +5,7 @@ import ChatSentMessage from "./chatSentMessage";
 import ObjectManager from "../../../object/objectManager";
 import App from "../../../app";
 import SpeechBubble from "../../../object/components/speechBubble";
+import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/constants";
 
 let sentMessageTimeout: NodeJS.Timeout | undefined = undefined;
 
@@ -51,13 +52,15 @@ export default function Chat()
     }, [state.sentMessage]);
 
     return <>
-        <div className="flex flex-row flex-wrap gap-x-1 gap-y-0 p-2 absolute w-full bottom-0">
+        <div className={className}>
             <ChatTextInput textInput={state.textInput} setTextInput={setTextInput}/>
             <ChatSendButton textInput={state.textInput} sendMessage={sendMessage}/>
         </div>
         {state.sentMessage.length > 0 && <ChatSentMessage sentMessage={state.sentMessage}/>}
     </>;
 }
+
+const className = `flex flex-row flex-wrap gap-x-1 gap-y-0 p-2 absolute w-full bottom-0 ${Z_INDEX_HUD_MAIN}`;
 
 interface ChatState
 {

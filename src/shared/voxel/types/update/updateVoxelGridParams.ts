@@ -48,6 +48,9 @@ export default class UpdateVoxelGridParams extends EncodableData
                 case VOXEL_GRID_TASK_TYPE_TEX:
                     tasks.push(SetVoxelQuadTextureParams.decode(bufferState) as SetVoxelQuadTextureParams);
                     break;
+                /*case VOXEL_GRID_TASK_TYPE_SHRINK_OR_EXPAND:
+                    tasks.push(ShrinkOrExpandVoxelBlockParams.decode(bufferState) as ShrinkOrExpandVoxelBlockParams);
+                    break;*/
                 default:
                     console.error(`Unknown task type :: ${taskType}`);
                     break;

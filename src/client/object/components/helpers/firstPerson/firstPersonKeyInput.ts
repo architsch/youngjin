@@ -1,4 +1,4 @@
-import { numActiveTextInputsObservable } from "../../../../system/observables";
+import { numActiveTextInputsObservable } from "../../../../system/clientObservables";
 import FirstPersonController from "../../firstPersonController";
 
 export default class FirstPersonKeyInput

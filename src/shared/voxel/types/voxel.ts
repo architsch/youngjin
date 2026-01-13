@@ -14,15 +14,20 @@ export default class Voxel extends EncodableData
     gameObjectId: string; // This field must be manually set via the "setGameObjectId" method.
     row: number;
     col: number;
+    /*xShrinkMask: number;
+    zShrinkMask: number;*/
     collisionLayerMask: number;
 
-    constructor(quadsMem: VoxelQuadsRuntimeMemory, row: number, col: number, collisionLayerMask: number)
+    constructor(quadsMem: VoxelQuadsRuntimeMemory, row: number, col: number,
+        /*xShrinkMask: number, zShrinkMask: number,*/ collisionLayerMask: number)
     {
         super();
         this.quadsMem = quadsMem;
         this.gameObjectId = "";
         this.row = row;
         this.col = col;
+        /*this.xShrinkMask = xShrinkMask;
+        this.zShrinkMask = zShrinkMask;*/
         this.collisionLayerMask = collisionLayerMask;
     }
 
@@ -33,8 +38,18 @@ export default class Voxel extends EncodableData
 
     encode(bufferState: BufferState)
     {
+        /*if (this.xShrinkMask < 0 || this.xShrinkMask > 255)
+            throw new Error(`Voxel's xShrinkMask is out of its range (value found = ${this.xShrinkMask}, range = [0:255])`);
+        if (this.zShrinkMask < 0 || this.zShrinkMask > 255)
+            throw new Error(`Voxel's zShrinkMask is out of its range (value found = ${this.zShrinkMask}, range = [0:255])`);*/
         if (this.collisionLayerMask < 0 || this.collisionLayerMask > 255)
             throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [0:255])`);
+
+        /*// X-Shrink Byte
+        bufferState.view[bufferState.byteIndex++] = this.xShrinkMask;
+
+        // Z-Shrink Byte
+        bufferState.view[bufferState.byteIndex++] = this.zShrinkMask;*/
 
         const quads = this.quadsMem.quads;
         const startIndex = getFirstVoxelQuadIndexInVoxel(this.row, this.col);
@@ -71,6 +86,12 @@ export default class Voxel extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
+        /*// X-Shrink Byte
+        const xShrinkMask = bufferState.view[bufferState.byteIndex++];
+
+        // Z-Shrink Byte
+        const zShrinkMask = bufferState.view[bufferState.byteIndex++];*/
+
         const quads = temp_quadsMem.quads;
         const startIndex = getFirstVoxelQuadIndexInVoxel(temp_row, temp_col);
 
@@ -108,7 +129,7 @@ export default class Voxel extends EncodableData
             collisionLayer++;
         }
 
-        return new Voxel(temp_quadsMem, temp_row, temp_col, collisionLayerMask);
+        return new Voxel(temp_quadsMem, temp_row, temp_col, /*xShrinkMask, zShrinkMask,*/ collisionLayerMask);
     }
 
     toString(): string
@@ -135,7 +156,13 @@ export default class Voxel extends EncodableData
 // Each Voxel's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Floor Byte][Ceiling Byte][CollisionLayerMask Byte][6-Byte CollisionLayer Content][6-Byte CollisionLayer Content]...
+// Layout: [X-Shrink Byte][Z-Shrink Byte][Floor Byte][Ceiling Byte][CollisionLayerMask Byte][6-Byte CollisionLayer Content][6-Byte CollisionLayer Content]...
+//
+// [X-Shrink Byte]:
+//     8-bit binary mask to indicate whether to shrink each collisionLayer's block in the X direction (to a fraction of the full block size).
+//
+// [Z-Shrink Byte]:
+//     8-bit binary mask to indicate whether to shrink each collisionLayer's block in the Z direction (to a fraction of the full block size).
 //
 // [Floor Byte]:
 //     8 bits for the floor's (+y) facing quad
@@ -159,7 +186,7 @@ export default class Voxel extends EncodableData
 //     8 bits for the (-z) facing quad
 //     8 bits for the (+z) facing quad
 //
-// Note: (Maximum memory size of a room's voxelGrid) = about 50KB
+// Note: (Maximum memory size of a room's voxelGrid) = about 52KB
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------

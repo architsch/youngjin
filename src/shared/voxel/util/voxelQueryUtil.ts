@@ -131,9 +131,27 @@ export function getVoxelQuadTransformDimensions(voxel: Voxel, quadIndex: number)
     const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
     const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
+    /*const xShrink = (voxel.xShrinkMask & (1 << collisionLayer)) != 0;
+    const zShrink = (voxel.zShrinkMask & (1 << collisionLayer)) != 0;*/
+
     let offsetX = 0, offsetY = 0, offsetZ = 0,
-        dirX = 0, dirY = 0, dirZ = 0,
-        scaleX = 1, scaleY = (facingAxis == "y") ? 1 : 0.5, scaleZ = 1;
+        dirX = 0, dirY = 0, dirZ = 0, scaleX = 1, scaleY = 0.5, scaleZ = 1;
+
+    if (facingAxis == "y")
+        scaleY = 1;
+    /*switch (facingAxis)
+    {
+        case "y":
+            scaleX = xShrink ? 0.5 : 1;
+            scaleY = zShrink ? 0.5 : 1;
+            break;
+        case "x":
+            scaleX = zShrink ? 0.5 : 1;
+            break;
+        case "z":
+            scaleX = xShrink ? 0.5 : 1;
+            break;
+    }*/
 
     if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
     {
@@ -164,5 +182,22 @@ export function getVoxelQuadTransformDimensions(voxel: Voxel, quadIndex: number)
         default:
             throw new Error(`Unknown facingAxis (${facingAxis})`);
     }
+    /*switch (facingAxis)
+    {
+        case "x":
+            if (orientation == "+") { dirX = 1; dirY = 0; dirZ = 0; offsetX += xShrink ? 0.25 : 0.5; }
+            else { dirX = -1; dirY = 0; dirZ = 0; offsetX -= xShrink ? 0.25 : 0.5; }
+            break;
+        case "y":
+            if (orientation == "+") { dirX = 0; dirY = 1; dirZ = 0; }
+            else { dirX = 0; dirY = -1; dirZ = 0; }
+            break;
+        case "z":
+            if (orientation == "+") { dirX = 0; dirY = 0; dirZ = 1; offsetZ += zShrink ? 0.25 : 0.5; }
+            else { dirX = 0; dirY = 0; dirZ = -1; offsetZ -= zShrink ? 0.25 : 0.5; }
+            break;
+        default:
+            throw new Error(`Unknown facingAxis (${facingAxis})`);
+    }*/
     return { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ };
 }

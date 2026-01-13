@@ -1,0 +1,1 @@
+export type PopupType = "none" | "register" | "login";

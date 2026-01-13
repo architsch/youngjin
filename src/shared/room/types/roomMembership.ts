@@ -1,6 +1,6 @@
 export default interface RoomMembership
 {
-    roomID: string;
+    roomID: number;
     userID: string;
     userStatus: string; // "owner" | "member" | "invited" | "requested"
 }

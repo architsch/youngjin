@@ -1,3 +1,7 @@
+// Networking
+
+export const AUTH_TOKEN_NAME = "thingspool_token_v3";
+
 // Math
 
 export const NEAR_EPSILON = 0.000000001;
@@ -38,3 +42,13 @@ export const VOXEL_GRID_TASK_TYPE_MOVE = 0;
 export const VOXEL_GRID_TASK_TYPE_ADD = 1;
 export const VOXEL_GRID_TASK_TYPE_REMOVE = 2;
 export const VOXEL_GRID_TASK_TYPE_TEX = 3;
+/*export const VOXEL_GRID_TASK_TYPE_SHRINK_OR_EXPAND = 4;*/
+
+// UI
+
+export const Z_INDEX_LOADING_SCREEN = "z-100"; // e.g. full-screen indicator that the whole app is transitioning to another state.
+export const Z_INDEX_NOTIFICATION = "z-80"; // e.g. toast message
+export const Z_INDEX_POPUP = "z-70"; // e.g. error popup, confirmation dialog window, form to fill out and submit
+export const Z_INDEX_INSTRUCTION = "z-60"; // e.g. tutorial's on-screen instruction
+export const Z_INDEX_HUD_OVERLAY = "z-55"; // e.g. tooltip text, temporary debug panel
+export const Z_INDEX_HUD_MAIN = "z-50"; // e.g. menu, editor panel

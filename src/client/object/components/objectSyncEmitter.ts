@@ -5,7 +5,7 @@ import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesync
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
-import { objectDesyncResolveObservable } from "../../system/observables";
+import { objectDesyncResolveObservable } from "../../system/clientObservables";
 
 const syncIntervalInMillis = 200;
 const minSyncDistSqr = 0.0001;

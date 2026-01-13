@@ -1,4 +1,4 @@
-import { ongoingProcessesObservable } from "../observables";
+import { ongoingClientProcessesObservable } from "../clientObservables";
 
 export default interface ClientProcess
 {
@@ -11,10 +11,10 @@ export function tryStartClientProcess(name: string,
 {
     const currTime = performance.now() * 0.001;
 
-    return ongoingProcessesObservable.tryAdd(name, {
+    return ongoingClientProcessesObservable.tryAdd(name, {
             numOngoingProcesses: 1, lastProcessStartTime: currTime
         }) ||
-        ongoingProcessesObservable.tryUpdate(name,
+        ongoingClientProcessesObservable.tryUpdate(name,
             (existingProcess) => {
                 existingProcess.numOngoingProcesses++;
                 existingProcess.lastProcessStartTime = currTime;
@@ -29,7 +29,7 @@ export function tryStartClientProcess(name: string,
 
 export function endClientProcess(name: string): void
 {
-    const updated = ongoingProcessesObservable.tryUpdate(name,
+    const updated = ongoingClientProcessesObservable.tryUpdate(name,
             (existingProcess) => {
                 existingProcess.numOngoingProcesses--;
                 return existingProcess;
@@ -44,7 +44,7 @@ export function endClientProcess(name: string): void
 
 export function ongoingClientProcessExists(): boolean
 {
-    const processMap = ongoingProcessesObservable.peek();
+    const processMap = ongoingClientProcessesObservable.peek();
     for (const clientProcess of Object.values(processMap))
     {
         if (clientProcess.numOngoingProcesses > 0)

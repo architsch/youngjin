@@ -6,7 +6,7 @@ import PlayerProximityDetector from "../components/playerProximityDetector";
 import PersistentObjectMeshInstancer from "../components/persistentObjectMeshInstancer";
 import SpeechBubble from "../components/speechBubble";
 
-export default class DoorGameObject extends GameObject
+export default class CanvasGameObject extends GameObject
 {
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
@@ -18,8 +18,8 @@ export default class DoorGameObject extends GameObject
         const po = instancer.getPersistentObject();
         console.log(`Selected PersistentObject = ${JSON.stringify(po)}`);
         
-        const destinationRoomID = po.metadata;
-        GameSocketsClient.tryEmitRoomChangeRequest(new RoomChangeRequestParams(destinationRoomID));
+        //const destinationRoomID = po.metadata;
+        //GameSocketsClient.tryEmitRoomChangeRequest(new RoomChangeRequestParams(destinationRoomID));
     }
 
     onPlayerProximityStart()
@@ -27,8 +27,8 @@ export default class DoorGameObject extends GameObject
         const speechBubble = this.components.speechBubble as SpeechBubble;
         const instancer = this.components.persistentObjectMeshInstancer as PersistentObjectMeshInstancer;
         const po = instancer.getPersistentObject();
-        const destinationRoomID = po.metadata;
-        speechBubble.showMessage(`Click to Visit ${destinationRoomID}`, true, false);
+        //const destinationRoomID = po.metadata;
+        //speechBubble.showMessage(`Click to Visit ${destinationRoomID}`, true, false);
     }
 
     onPlayerProximityEnd()

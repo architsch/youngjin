@@ -1,13 +1,14 @@
 import { useCallback } from "react";
-import { voxelQuadSelectionObservable } from "../../../system/observables";
+import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import AtlasCellSprite from "../basic/atlasCellSprite";
 import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import GameSocketsClient from "../../../networking/gameSocketsClient";
 import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/setVoxelQuadTextureParams";
-import VoxelManager from "../../../voxel/voxelManager";
 import App from "../../../app";
 import VoxelMeshInstancer from "../../../object/components/voxelMeshInstancer";
+import { setVoxelQuadVisible } from "../../../../shared/voxel/util/voxelQuadUpdateUtil";
+import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
@@ -42,11 +43,16 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     console.error("Current room not found.");
                     return;
                 }
-                const params = new SetVoxelQuadTextureParams(quadIndex, textureIndex);
-                if (await VoxelManager.setVoxelQuadTextureOnClientSide(room, params))
+
+                const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+                const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
+                const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
+                if (setVoxelQuadVisible(true, props.selection.voxel, facingAxis, orientation,
+                    collisionLayer, textureIndex))
                 {
                     voxelQuadSelectionObservable.notify();
-                    GameSocketsClient.emitSetVoxelQuadTexture(params);
+                    GameSocketsClient.emitSetVoxelQuadTexture(new SetVoxelQuadTextureParams(quadIndex, textureIndex));
                 }
             };
             return <AtlasCellSprite

@@ -1,4 +1,4 @@
-import User from "../../../shared/auth/user";
+import User from "../../../shared/auth/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import Room from "../../../shared/room/types/room";
 import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../shared/system/constants";
@@ -9,7 +9,7 @@ import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVox
 import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
 import UpdateVoxelGridTaskParams from "../../../shared/voxel/types/update/updateVoxelGridTaskParams";
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../shared/voxel/util/voxelBlockUpdateUtil";
-import { showVoxelQuad } from "../../../shared/voxel/util/voxelQuadUpdateUtil";
+import { setVoxelQuadVisible } from "../../../shared/voxel/util/voxelQuadUpdateUtil";
 import { getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
@@ -32,6 +32,9 @@ export function updateVoxelGrid(socketUserContext: SocketUserContext, params: Up
             case VOXEL_GRID_TASK_TYPE_TEX:
                 setVoxelQuadTextureTask(socketUserContext, task as SetVoxelQuadTextureParams);
                 break;
+            /*case VOXEL_GRID_TASK_TYPE_SHRINK_OR_EXPAND:
+                shrinkOrExpandVoxelBlockTask(socketUserContext, task as ShrinkOrExpandVoxelBlockParams);
+                break;*/
             default:
                 console.error(`Unknown task type :: ${task.type}`);
                 break;
@@ -53,7 +56,7 @@ function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVo
 function addVoxelBlockTask(socketUserContext: SocketUserContext, params: AddVoxelBlockParams)
 {
     const room = getRoom(socketUserContext);
-    if (!room || !addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
+    if (!room || !addVoxelBlock(room, params.quadIndex, /*params.xShrink, params.zShrink,*/ params.quadTextureIndicesWithinLayer))
     {
         console.error(`Voxel update failed (addVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         return;
@@ -92,13 +95,24 @@ function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: S
     const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
     const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
     const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-    if (!showVoxelQuad(voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
+    if (!setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
     {
         console.error(`Voxel update failed (setVoxelQuadTextureTask) - params: ${JSON.stringify(params)}`);
         return;
     }
     broadcast(socketUserContext, room, params, "setVoxelQuadTexture");
 }
+
+/*function shrinkOrExpandVoxelBlockTask(socketUserContext: SocketUserContext, params: ShrinkOrExpandVoxelBlockParams)
+{
+    const room = getRoom(socketUserContext);
+    if (!room || !shrinkOrExpandVoxelBlock(room, params.quadIndex))
+    {
+        console.error(`Voxel update failed (shrinkOrExpandVoxelBlock) - params: ${JSON.stringify(params)}`);
+        return;
+    }
+    broadcast(socketUserContext, room, params, "shrinkOrExpandVoxelBlock");
+}*/
 
 function broadcast(socketUserContext: SocketUserContext, room: Room,
     signal: EncodableData, updateType: string)
@@ -110,7 +124,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
     else
     {
         Object.entries(socketRoomContext.getUserContexts()).forEach((kvp: [string, SocketUserContext]) => {
-            if (user.userName != kvp[0])
+            if (user.userName != kvp[0]) // Exclude the broadcast sender from the group of broadcast recipients (in order to prevent an infinite cycle).
             {
                 const ctx = kvp[1];
                 const success = ctx.tryUpdateLatestPendingSignal("updateVoxelGridParams", (existingSignal: EncodableData) => {

@@ -8,7 +8,7 @@ import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import VoxelMeshInstancer from "./components/voxelMeshInstancer";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import PersistentObjectMeshInstancer from "./components/persistentObjectMeshInstancer";
-import { objectDespawnObservable, objectSpawnObservable } from "../system/observables";
+import { objectDespawnObservable, objectSpawnObservable } from "../system/clientObservables";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -58,8 +58,8 @@ const ObjectManager =
             await ObjectManager.spawnObject(gameObject);
         };
 
-        // Load objects from decodedPersistentObjects
-        for (const po of roomRuntimeMemory.room.persistentObjects)
+        // Load objects from decoded persistentObjects
+        for (const po of roomRuntimeMemory.room.persistentObjectGroup.persistentObjects)
         {
             // Let's assume that (+z) is the direction in which the 0 y-axis angle is pointing.
             let dirX = 0, dirY = 0, dirZ = 0;

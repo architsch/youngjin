@@ -5,7 +5,7 @@ import GameObject from "../types/gameObject";
 import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
-import { getFirstVoxelQuadIndexInVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadTransformDimensions } from "../../../shared/voxel/util/voxelQueryUtil";
+import { getFirstVoxelQuadIndexInVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadTransformDimensions } from "../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM } from "../../../shared/system/constants";
 
 let isDevMode: boolean | undefined;
@@ -14,7 +14,7 @@ export default class VoxelMeshInstancer extends GameObjectComponent
 {
     instancedMeshGraphics: InstancedMeshGraphics;
     static latestMaterialParams: TexturePackMaterialParams;
-    static latestMaterialParamsSyncedRoomID: string = "";
+    static latestMaterialParamsSyncedRoomID: number = 0;
 
     private voxel: Voxel | undefined;
 
@@ -104,25 +104,20 @@ export default class VoxelMeshInstancer extends GameObjectComponent
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = getVoxelQuadTransformDimensions(this.voxel, quadIndex);
         this.instancedMeshGraphics.updateInstanceTransform(quadIndex, offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
-        this.updateTextureUV(quadIndex);
+        this.updateTextureUV(quadIndex, scaleX, scaleY);
     }
 
-    private updateTextureUV(quadIndex: number)
+    private updateTextureUV(quadIndex: number, scaleX: number, scaleY: number)
     {
+        const v = this.voxel!;
         const quad = App.getVoxelQuads()[quadIndex];
-        const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-        let sampleOffsetX = 0; // [0,1]
-        let sampleOffsetY = 0; // [0,1]
-        let sampleScaleX = 1; // [0,1]
-        let sampleScaleY = 1; // [0,1]
-        if (facingAxis != "y")
-        {
-            sampleScaleY = 0.5;
-            if (collisionLayer % 2 == 0)
-                sampleOffsetY = 0.5;
-        }
+        const sampleOffsetX = (scaleX < 1) ? (((v.row + v.col) % 2) * scaleX) : 0; // [0,1]
+        const sampleOffsetY = (scaleY < 1 && collisionLayer % 2 == 0) ? scaleY : 0; // [0,1]
+        const sampleScaleX = scaleX; // [0,1]
+        const sampleScaleY = scaleY; // [0,1]
+
         this.instancedMeshGraphics.updateInstanceTextureUV(quadIndex,
             quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }

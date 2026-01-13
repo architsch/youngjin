@@ -1,4 +1,4 @@
-import User from "../../../shared/auth/user";
+import User from "../../../shared/auth/types/user";
 
 export default interface ThingsPoolEnv
 {

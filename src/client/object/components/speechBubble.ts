@@ -3,7 +3,7 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectMessageParams from "../../../shared/object/types/objectMessageParams";
-import { objectMessageObservable } from "../../system/observables";
+import { objectMessageObservable } from "../../system/clientObservables";
 import GameObject from "../types/gameObject";
 import GameSocketsClient from "../../networking/gameSocketsClient";
 

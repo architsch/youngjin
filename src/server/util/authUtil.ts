@@ -1,14 +1,14 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import EmailUtil from "./emailUtil";
 import SearchDB from "../db/searchDB";
-import AuthDB from "../db/authDB";
-import TextUtil from "../../shared/embeddedScripts/util/textUtil";
+import UserDB from "../db/userDB";
 import DebugUtil from "./debugUtil";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
-import UIConfig from "../../shared/embeddedScripts/config/uiConfig";
-import User from "../../shared/auth/user";
+import User from "../../shared/auth/types/user";
+import { AUTH_TOKEN_NAME } from "../../shared/system/constants";
+import AuthInputValidator from "../../shared/auth/util/authInputValidator";
+import { localize } from "../../shared/localization/util/locUtil";
 dotenv.config();
 
 const dev = process.env.MODE == "dev";
@@ -23,14 +23,6 @@ const AuthUtil =
             if (!validateUserNameAndPassword(req, res))
                 return;
 
-            const emailError = TextUtil.findErrorInEmailAddress(req.body.email);
-            if (emailError != null)
-            {
-                DebugUtil.log("Email Input Error", {email: req.body.email, emailError}, "high", "pink");
-                res.status(400).send(UIConfig.displayText.message[emailError]);
-                return;
-            }
-
             let existingUsers = await SearchDB.users.withUserName(req.body.userName, res);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
@@ -40,24 +32,10 @@ const AuthUtil =
                 res.status(403).send(`User "${req.body.userName}" already exists.`);
                 return;
             }
-
-            existingUsers = await SearchDB.users.withEmail(req.body.email, res);
-            if (res.statusCode < 200 || res.statusCode >= 300)
-                return;
-            if (existingUsers && existingUsers.length > 0)
-            {
-                DebugUtil.log("There is already an account with the same email", {email: req.body.email, existingUser: existingUsers[0]}, "high", "pink");
-                res.status(403).send(`There is already an account with the email "${req.body.email}".`);
-                return;
-            }
-    
-            await EmailUtil.endEmailVerification(req, res);
-            if (res.statusCode < 200 || res.statusCode >= 300)
-                return;
     
             const passwordHash = await bcrypt.hash(req.body.password, 10);
     
-            await AuthDB.registerNewUser(req.body.userName, passwordHash, req.body.email, res);
+            await UserDB.createUser(req.body.userName, passwordHash, res);
             if (res.statusCode < 200 || res.statusCode >= 300)
                 return;
 
@@ -103,7 +81,7 @@ const AuthUtil =
     },
     clearToken: (req: Request, res: Response): void =>
     {
-        res.clearCookie("thingspool_token").status(200);
+        res.clearCookie(AUTH_TOKEN_NAME).status(200);
     },
     authenticateAdmin: async (req: Request, res: Response, next: () => void): Promise<void> =>
     {
@@ -178,7 +156,7 @@ async function authenticate(req: Request, res: Response,
 // Returns a guest user if the token doesn't exist.
 function getUserFromReq(req: Request): User | null
 {
-    const token = req.cookies["thingspool_token"];
+    const token = req.cookies[AUTH_TOKEN_NAME];
     if (token) // Token exists? It means the client has authenticated before.
     {
         // If the token is valid and not expired, the existing user (member) will be returned.
@@ -190,11 +168,11 @@ function getUserFromReq(req: Request): User | null
         // Since this is the first-time visit, just generate a random user and make a guest-token for it.
         // We will keep using this guest-token until the client creates his/her own account.
 
-        const uniqueInt = ((Math.floor(Date.now() / 1000) - 1757800000) * 10) + cyclicCounter;
+        const uniqueInt = ((Math.floor(Date.now() / 1000) - 1768000000) * 10) + cyclicCounter;
         cyclicCounter = (cyclicCounter + 1) % 10;
         const uniqueHex = uniqueInt.toString(16);
         const guestName = `Guest-${uniqueHex}`;
-        return { userID: "0", userName: guestName, userType: "guest", passwordHash: "NO_PASSWORD", email: "NO_EMAIL" };
+        return { userID: 0, userName: guestName, userType: "guest", passwordHash: "NO_PASSWORD" };
     }
 }
 
@@ -225,7 +203,7 @@ async function addTokenForGuest(guestUser: User, res?: Response): Promise<void>
         process.env.JWT_SECRET_KEY as string,
     );
 
-    res?.cookie("thingspool_token", token, {
+    res?.cookie(AUTH_TOKEN_NAME, token, {
         secure: dev ? false : true,
         httpOnly: true,
         sameSite: "strict",
@@ -248,7 +226,7 @@ async function addTokenForRegisteredUser(userName: string, res?: Response): Prom
         process.env.JWT_SECRET_KEY as string,
     );
 
-    res?.cookie("thingspool_token", token, {
+    res?.cookie(AUTH_TOKEN_NAME, token, {
         secure: dev ? false : true,
         httpOnly: true,
         sameSite: "strict",
@@ -264,7 +242,7 @@ async function findExistingUserByUserName(userName: string, res?: Response): Pro
     if (!existingUsers || existingUsers.length == 0)
     {
         DebugUtil.log("User Not Found", {userName}, "high", "pink");
-        res?.clearCookie("thingspool_token")
+        res?.clearCookie(AUTH_TOKEN_NAME)
             .status(404)
             .send(`There is no account with userName "${userName}".`);
         return null;
@@ -274,18 +252,18 @@ async function findExistingUserByUserName(userName: string, res?: Response): Pro
 
 function validateUserNameAndPassword(req: Request, res: Response): boolean
 {
-    const userNameError = TextUtil.findErrorInUserName(req.body.userName);
+    const userNameError = AuthInputValidator.findErrorInUserName(req.body.userName);
     if (userNameError != null)
     {
         DebugUtil.log("UserName Input Error", {userName: req.body.userName, userNameError}, "high", "pink");
-        res.status(400).send(UIConfig.displayText.message[userNameError]);
+        res.status(400).send(localize(userNameError));
         return false;
     }
-    const passwordError = TextUtil.findErrorInPassword(req.body.password);
+    const passwordError = AuthInputValidator.findErrorInPassword(req.body.password);
     if (passwordError != null)
     {
         DebugUtil.log("Password Input Error", {password: (dev ? req.body.password : "(HIDDEN)"), passwordError}, "high", "pink");
-        res.status(400).send(UIConfig.displayText.message[passwordError]);
+        res.status(400).send(localize(passwordError));
         return false;
     }
     return true;

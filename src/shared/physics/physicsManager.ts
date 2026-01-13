@@ -13,7 +13,7 @@ import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
 import { getHighestOccupiedVoxelCollisionLayer, isVoxelCollisionLayerOccupied } from "../voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/constants";
 
-const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
+const physicsRooms: {[roomID: number]: PhysicsRoom} = {};
 
 let hitStateTemp: PhysicsHitState = {
     minHitRayScale: 1,
@@ -47,17 +47,17 @@ const PhysicsManager =
             objectById: {},
         };
     },
-    unload: (roomID: string) =>
+    unload: (roomID: number) =>
     {
         if (physicsRooms[roomID] == undefined)
             throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
         delete physicsRooms[roomID];
     },
-    hasRoom: (roomID: string): boolean =>
+    hasRoom: (roomID: number): boolean =>
     {
         return physicsRooms[roomID] != undefined;
     },
-    addObject: (roomID: string, objectId: string, hitbox: AABB2, collisionLayerMaskAtGroundLevel: number): PhysicsObject =>
+    addObject: (roomID: number, objectId: string, hitbox: AABB2, collisionLayerMaskAtGroundLevel: number): PhysicsObject =>
     {
         //console.log(`PhysicsManager.addObject :: roomID = ${roomID}, objectId = ${objectId}`);
         const physicsRoom = physicsRooms[roomID];
@@ -87,7 +87,7 @@ const PhysicsManager =
         setObjectPosition(physicsRoom, objectId, { x: hitbox.x, y: hitbox.y });
         return newObject;
     },
-    removeObject: (roomID: string, objectId: string) =>
+    removeObject: (roomID: number, objectId: string) =>
     {
         //console.log(`PhysicsManager.removeObject :: roomID = ${roomID}, objectId = ${objectId}`);
         const physicsRoom = physicsRooms[roomID];
@@ -101,7 +101,7 @@ const PhysicsManager =
 
         removeObjectFromIntersectingVoxels(object);
     },
-    tryMoveObject: (roomID: string, objectId: string, targetPos: Vec2): PhysicsPosUpdateResult =>
+    tryMoveObject: (roomID: number, objectId: string, targetPos: Vec2): PhysicsPosUpdateResult =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRooms[roomID] == undefined)
@@ -258,7 +258,7 @@ const PhysicsManager =
 
         return { resolvedPos, desyncDetected: false };
     },
-    forceMoveObject: (roomID: string, objectId: string, targetPos: Vec2) =>
+    forceMoveObject: (roomID: number, objectId: string, targetPos: Vec2) =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRooms[roomID] == undefined)
@@ -271,7 +271,7 @@ const PhysicsManager =
         object.hitbox.x = targetPos.x;
         object.hitbox.y = targetPos.y;
     },
-    getObjectsInDist: (roomID: string, centerX: number, centerY: number, dist: number): PhysicsObject[] =>
+    getObjectsInDist: (roomID: number, centerX: number, centerY: number, dist: number): PhysicsObject[] =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRooms[roomID] == undefined)

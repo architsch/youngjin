@@ -1,27 +1,30 @@
 import { useEffect, useState } from "react";
-import { ongoingProcessesObservable } from "../../../system/observables";
+import { ongoingClientProcessesObservable } from "../../../system/clientObservables";
 import { ongoingClientProcessExists } from "../../../system/types/clientProcess";
-import ScreenCenterPopup from "../basic/screenCenterPopup";
+import ScreenCenterText from "../basic/screenCenterText";
+import { Z_INDEX_LOADING_SCREEN } from "../../../../shared/system/constants";
 
 export default function Loading()
 {
     const [state, setState] = useState<LoadingState>({loading: true});
 
     useEffect(() => {
-        ongoingProcessesObservable.addListener("ui.loading", _ => setState({
+        ongoingClientProcessesObservable.addListener("ui.loading", _ => setState({
             loading: ongoingClientProcessExists()
         }));
         return () => {
-            ongoingProcessesObservable.removeListener("ui.loading");
+            ongoingClientProcessesObservable.removeListener("ui.loading");
         };
     }, []);
 
     return <>
-        {state.loading && <div className="w-full h-full z-900 bg-black/50">
-            <ScreenCenterPopup text="Loading..." customClassNames="text-amber-600 text-4xl bg-black"/>
+        {state.loading && <div className={className}>
+            <ScreenCenterText text="Loading..." customClassNames="text-amber-600 text-4xl bg-black"/>
         </div>}
     </>;
 }
+
+const className = `w-full h-full bg-black/50 ${Z_INDEX_LOADING_SCREEN}`;
 
 interface LoadingState
 {

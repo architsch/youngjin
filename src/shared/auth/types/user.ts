@@ -1,8 +1,7 @@
 export default interface User
 {
-    userID: string;
+    userID: number;
     userName: string;
     userType: string; // "admin" | "member" | "guest"
     passwordHash: string;
-    email: string;
 }

@@ -29,7 +29,7 @@ const DebugUtil =
     {
         let details = "";
         if (eventDescObj != undefined)
-            details = JSON.stringify(eventDescObj);
+            details = JSON.stringify(eventDescObj).substring(0, 1024);
         const origin = DebugUtil.getStackTrace();
 
         const logLevel = DebugUtil.getLogLevelFromName(logLevelName);

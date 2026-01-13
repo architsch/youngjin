@@ -2,139 +2,94 @@ import DB from "./db";
 import Room from "../../shared/room/types/room";
 import { Response } from "express";
 import dotenv from "dotenv";
+import RoomGenerator from "../../shared/room/roomGenerator";
+import Encoding from "../../shared/networking/encoding";
+import SerializedRoom from "../../shared/room/types/serializedRoom";
+import VoxelGrid from "../../shared/voxel/types/voxelGrid";
+import BufferState from "../../shared/networking/types/bufferState";
+import PersistentObjectGroup from "../../shared/object/types/persistentObjectGroup";
 dotenv.config();
 
 const RoomDB =
 {
-    //------------------------------------------------------------------------------------
-    // Core
-    //------------------------------------------------------------------------------------
+    getRoom: async (roomID: number, res?: Response): Promise<Room | null> =>
+    {
+        const result = await DB.runQuery<SerializedRoom>(
+            `SELECT * FROM rooms WHERE rooms.roomID = ?;`,
+            [roomID], res, "RoomDB.getRoom");
 
-    getRoomContent: async (roomID: string, accessorUserID: string, res?: Response): Promise<Room[]> =>
-    {
-        // TODO: Fetch the room's "saved data". (+ make sure to include the "ownerUserName" field in it.)
-        return await DB.makeQuery<Room>(`SELECT rooms.*
-            FROM rooms INNER JOIN roomMemberships ON roomMemberships.roomID = rooms.roomID
-            WHERE rooms.roomID = ? AND roomMemberships.userID = ? AND
-                (roomMemberships.userStatus = 'member' OR roomMemberships.userStatus = 'owner');`,
-            [roomID, accessorUserID]
-        ).run(res, "RoomDB.getRoomContent");
-    },
-    createRoom: async (roomName: string, ownerUserName: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeTransaction([
-            DB.makeQuery(`INSERT INTO rooms (roomName, ownerUserName) VALUES (?, ?);`,
-                [roomName, ownerUserName]),
-            DB.makeQuery(`INSERT INTO roomMemberships (roomID, userID, userStatus)
-                VALUES (LAST_INSERT_ID(), (SELECT userID FROM users WHERE userName = ?), 'owner');`,
-                [ownerUserName])
-        ]).run(res, "RoomDB.createRoom");
-    },
-    deleteRoom: async (roomID: string, ownerUserName: string, res?: Response): Promise<void> =>
-    {
-        return await DB.makeTransaction([
-            DB.makeQuery(`DELETE FROM rooms WHERE roomID = ? AND ownerUserName = ?;`,
-                [roomID, ownerUserName]),
-            DB.makeQuery(`DELETE FROM roomMemberships WHERE roomID = ?;`,
-                [roomID]),
-        ]).run(res, "RoomDB.deleteRoom");
-    },
-    leaveRoom: async (roomID: string, leavingUserName: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`DELETE FROM roomMemberships
-            WHERE roomID = ? AND userID = ? AND userStatus = 'member';`,
-            [roomID, leavingUserName]
-        ).run(res, "RoomDB.leaveRoom");
-    },
+        if (!result.success || result.data.length == 0)
+            return null;
+        const serializedRoom = result.data[0];
 
-    //------------------------------------------------------------------------------------
-    // API for rooms.ejs
-    //------------------------------------------------------------------------------------
+        const voxelGrid = VoxelGrid.decode(
+            new BufferState(new Uint8Array(serializedRoom.voxelGrid))
+        ) as VoxelGrid;
 
-    acceptInvitation: async (roomID: string, inviteeUserID: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`UPDATE roomMemberships SET userStatus = 'member'
-            WHERE roomID = ? AND userID = ? userStatus = 'invited';`,
-            [roomID, inviteeUserID]
-        ).run(res, "RoomDB.acceptInvitation");
+        const persistentObjectGroup = PersistentObjectGroup.decode(
+            new BufferState(new Uint8Array(serializedRoom.persistentObjectGroup))
+        ) as PersistentObjectGroup;
+        
+        return new Room(
+            serializedRoom.roomID, serializedRoom.roomName, serializedRoom.ownerUserName,
+            serializedRoom.texturePackURL, voxelGrid, persistentObjectGroup);
     },
-    ignoreInvitation: async (roomID: string, inviteeUserID: string, res?: Response): Promise<void> =>
+    saveRoomContent: async (room: Room, res?: Response): Promise<boolean> =>
     {
-        await DB.makeQuery(`DELETE FROM roomMemberships
-            WHERE roomID = ? AND userID = ? AND userStatus = 'invited';`,
-            [roomID, inviteeUserID]
-        ).run(res, "RoomDB.ignoreInvitation");
-    },
-    requestToJoin: async (roomID: string, requesterUserID: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`INSERT INTO roomMemberships (roomID, userID, userStatus)
-            VALUES (?, ?, 'requested');`,
-            [roomID, requesterUserID]
-        ).run(res, "RoomDB.requestToJoin");
-    },
-    cancelRequest: async (roomID: string, requesterUserID: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`DELETE FROM roomMemberships
-            WHERE roomID = ? AND userID = ? AND userStatus = 'requested';`,
-            [roomID, requesterUserID]
-        ).run(res, "RoomDB.cancelRequest");
-    },
+        const {voxelGridBuffer, persistentObjectGroupBuffer} =
+            encodeRoomContent(room.voxelGrid, room.persistentObjectGroup);
+        
+        const result = await DB.runQuery<void>(
+            `UPDATE rooms
+            SET voxelGrid = ?, persistentObjectGroup = ?
+            WHERE roomID = ?`,
+            [voxelGridBuffer, persistentObjectGroupBuffer, room.roomID],
+            res, "RoomDB.saveRoomContent");
 
-    //------------------------------------------------------------------------------------
-    // API for roomMembers.ejs
-    //------------------------------------------------------------------------------------
+        return result.success;
+    },
+    createRoom: async (roomName: string, ownerUserName: string,
+        floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number,
+        texturePackURL: string,
+        res?: Response): Promise<boolean> =>
+    {
+        const {voxelGrid, persistentObjectGroup} =
+            RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
-    invite: async (roomID: string, ownerUserName: string,
-        inviteeUserID: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`INSERT INTO roomMemberships (roomID, userID, userStatus)
-            VALUES (?, ?, 'invited')
-            WHERE EXISTS (
-                SELECT roomID FROM rooms WHERE roomID = ? AND ownerUserName = ? LIMIT 1
-            );`,
-            [roomID, inviteeUserID, roomID, ownerUserName]
-        ).run(res, "RoomDB.invite");
+        const {voxelGridBuffer, persistentObjectGroupBuffer} =
+            encodeRoomContent(voxelGrid, persistentObjectGroup);
+
+        const result = await DB.runQuery<void>(
+            `INSERT INTO rooms
+            (roomName, ownerUserName, texturePackURL, voxelGrid, persistentObjectGroup)
+            VALUES (?, ?, ?, ?, ?);`,
+            [roomName, ownerUserName, texturePackURL, voxelGridBuffer, persistentObjectGroupBuffer],
+            res, "RoomDB.createRoom");
+
+        return result.success;
     },
-    cancelInvite: async (roomID: string, ownerUserName: string,
-        inviteeUserID: string, res?: Response): Promise<void> =>
+    deleteRoom: async (roomID: number, res?: Response): Promise<boolean> =>
     {
-        await DB.makeQuery(`DELETE FROM roomMemberships
-            WHERE roomID = ? AND userID = ? AND userStatus = 'invited' AND EXISTS (
-                SELECT roomID FROM rooms WHERE roomID = ? AND ownerUserName = ? LIMIT 1
-            );`,
-            [roomID, inviteeUserID, roomID, ownerUserName]
-        ).run(res, "RoomDB.cancelInvite");
+        const result = await DB.runQuery<void>(
+            `DELETE FROM rooms WHERE roomID = ?;`,
+            [roomID], res, "RoomDB.deleteRoom");
+
+        return result.success;
     },
-    acceptRequest: async (roomID: string, ownerUserName: string,
-        requesterUserID: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`UPDATE roomMemberships SET userStatus = 'member'
-            WHERE roomID = ? AND userID = ? userStatus = 'requested' AND EXISTS (
-                SELECT roomID FROM rooms WHERE roomID = ? AND ownerUserName = ? LIMIT 1
-            );`,
-            [roomID, requesterUserID, roomID, ownerUserName]
-        ).run(res, "RoomDB.acceptRequest");
-    },
-    ignoreRequest: async (roomID: string, ownerUserName: string,
-        requesterUserID: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`DELETE FROM roomMemberships
-            WHERE roomID = ? AND userID = ? AND userStatus = 'requested' AND EXISTS (
-                SELECT roomID FROM rooms WHERE roomID = ? AND ownerUserName = ? LIMIT 1
-            );`,
-            [roomID, requesterUserID, roomID, ownerUserName]
-        ).run(res, "RoomDB.ignoreRequest");
-    },
-    kickout: async (roomID: string, ownerUserName: string,
-        targetUserID: string, res?: Response): Promise<void> =>
-    {
-        await DB.makeQuery(`DELETE FROM roomMemberships
-            WHERE roomID = ? AND userID = ? AND userStatus = 'member' AND EXISTS (
-                SELECT roomID FROM rooms WHERE roomID = ? AND ownerUserName = ? LIMIT 1
-            );`,
-            [roomID, targetUserID, roomID, ownerUserName]
-        ).run(res, "RoomDB.kickout");
-    },
+}
+
+function encodeRoomContent(voxelGrid: VoxelGrid, persistentObjectGroup: PersistentObjectGroup)
+    : {voxelGridBuffer: Buffer<ArrayBuffer>, persistentObjectGroupBuffer: Buffer<ArrayBuffer>}
+{
+    let bufferState = Encoding.startWrite();
+    voxelGrid.encode(bufferState);
+    const voxelGridBuffer = Buffer.from(Encoding.endWrite(bufferState));
+
+    bufferState = Encoding.startWrite(bufferState.byteIndex);
+    persistentObjectGroup.encode(bufferState);
+    const persistentObjectGroupBuffer = Buffer.from(Encoding.endWrite(bufferState));
+
+    return {voxelGridBuffer, persistentObjectGroupBuffer};
 }
 
 export default RoomDB;

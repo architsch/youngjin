@@ -1,4 +1,4 @@
-import User from "../../shared/auth/user";
+import User from "../../shared/auth/types/user";
 import PhysicsManager from "../../shared/physics/physicsManager";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Vec2 from "../../shared/math/types/vec2";
@@ -15,16 +15,16 @@ import { updateVoxelGrid } from "./util/roomVoxelUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 dotenv.config();
 
-const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
-const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
-const currentRoomIDByUserName: {[userName: string]: string} = {};
+const roomRuntimeMemories: {[roomID: number]: RoomRuntimeMemory} = {};
+const socketRoomContexts: {[roomID: number]: SocketRoomContext} = {};
+const currentRoomIDByUserName: {[userName: string]: number} = {};
 
 const RoomManager =
 {
     roomRuntimeMemories,
     socketRoomContexts,
     currentRoomIDByUserName,
-    changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean) =>
+    changeUserRoom: async (socketUserContext: SocketUserContext, roomID: number | undefined, prevRoomShouldExist: boolean) =>
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
         console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userName = ${user.userName}`);
@@ -34,7 +34,11 @@ const RoomManager =
     
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
-            roomRuntimeMemory = await loadRoom(roomID);
+        {
+            const mem = await loadRoom(roomID);
+            if (mem)
+                roomRuntimeMemory = mem;
+        }
         if (!roomRuntimeMemory)
         {
             console.error(`Failed to load room (ID = ${roomID})`);

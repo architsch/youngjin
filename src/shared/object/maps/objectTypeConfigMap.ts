@@ -43,7 +43,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         },
     }],
     [2, {
-        objectType: "Door",
+        objectType: "Canvas",
         components: {
             spawnedByAny: {
                 collider: {

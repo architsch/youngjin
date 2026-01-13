@@ -3,7 +3,7 @@ import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
-import { objectDesyncResolveObservable, objectSyncObservable } from "../../system/observables";
+import { objectDesyncResolveObservable, objectSyncObservable } from "../../system/clientObservables";
 
 const syncIntervalInMillis = 200;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;

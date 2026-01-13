@@ -31,15 +31,6 @@ const ConsoleSockets =
                         words.shift();
                         DebugUtil.logRaw((words.length == 0) ? "-" : words.join(" "), "high");
                         break;
-                    case "db":
-                        if (process.env.MODE == "dev")
-                        {
-                            words.shift();
-                            DB.runSQLFile(`${words[0]}.sql`);
-                        }
-                        else
-                            DebugUtil.logRaw(`Command "${words[0]}" is supported only in dev mode.`, "high", "pink");
-                        break;
                     case "reboot":
                         DebugUtil.logRaw("Rebooting...", "high");
                         process.exit(0);
@@ -60,7 +51,7 @@ const ConsoleSockets =
         if (nsp)
             nsp.emit("log", row(message, origin, details));
         else
-            console.log(`${message}\n(ORIGIN: ${origin})\n(DETAILS: ${details})`);
+            console.log(`${message} (ORIGIN: ${origin}) (DETAILS: ${details})`);
     },
 };
 

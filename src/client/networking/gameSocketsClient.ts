@@ -12,7 +12,7 @@ import EncodableRawByteNumber from "../../shared/networking/types/encodableRawBy
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../shared/networking/types/encodableData";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
-import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../system/observables";
+import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../system/clientObservables";
 import { tryStartClientProcess } from "../system/types/clientProcess";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
@@ -104,6 +104,8 @@ const GameSocketsClient =
         sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
     emitSetVoxelQuadTexture: (params: SetVoxelQuadTextureParams) =>
         sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
+    /*emitShrinkOrExpandVoxelBlock: (params: ShrinkOrExpandVoxelBlockParams) =>
+        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),*/
 }
 
 function sendEncodedSignal(signalType: string, signalData: EncodableData)

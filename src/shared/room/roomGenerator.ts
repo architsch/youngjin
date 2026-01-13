@@ -1,24 +1,17 @@
-import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
-import PersistentObject from "../object/types/persistentObject";
+import PersistentObjectGroup from "../object/types/persistentObjectGroup";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL } from "../system/constants";
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../voxel/types/voxelQuadsRuntimeMemory";
-import { showVoxelQuad } from "../voxel/util/voxelQuadUpdateUtil";
+import { setVoxelQuadVisible } from "../voxel/util/voxelQuadUpdateUtil";
 import { getFirstVoxelQuadIndexInLayer, getFirstVoxelQuadIndexInVoxel, getVoxelQuadIndexOffsetInsideLayer } from "../voxel/util/voxelQueryUtil";
-
-const minRoomNumber = 0;
-const maxRoomNumber = 3;
 
 const RoomGenerator =
 {
-    generateRoom: async (roomID: string): Promise<{voxelGrid: VoxelGrid, persistentObjects: PersistentObject[]}> =>
+    generateEmptyRoom: (
+        floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number
+    ): {voxelGrid: VoxelGrid, persistentObjectGroup: PersistentObjectGroup} =>
     {
-        const roomNumber = parseInt(roomID.substring(1));
-        const floorTextureIndex = 8 * roomNumber;
-        const wallTextureIndex = 8 * roomNumber + 1;
-        const ceilingTextureIndex = 8 * roomNumber + 2;
-
         const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
         const quadsMem = new VoxelQuadsRuntimeMemory();
 
@@ -62,8 +55,8 @@ const RoomGenerator =
             voxels[(NUM_VOXEL_ROWS-1) * NUM_VOXEL_COLS + col] = upperVoxel;
             for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
             {
-                showVoxelQuad(lowerVoxel, "z", "+", collisionLayer, wallTextureIndex, false);
-                showVoxelQuad(upperVoxel, "z", "-", collisionLayer, wallTextureIndex, false);
+                setVoxelQuadVisible(true, lowerVoxel, "z", "+", collisionLayer, wallTextureIndex);
+                setVoxelQuadVisible(true, upperVoxel, "z", "-", collisionLayer, wallTextureIndex);
             }
         }
         for (let row = 1; row < NUM_VOXEL_ROWS-1; ++row)
@@ -77,39 +70,14 @@ const RoomGenerator =
             voxels[row * NUM_VOXEL_COLS + NUM_VOXEL_COLS-1] = upperVoxel;
             for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
             {
-                showVoxelQuad(lowerVoxel, "x", "+", collisionLayer, wallTextureIndex, false);
-                showVoxelQuad(upperVoxel, "x", "-", collisionLayer, wallTextureIndex, false);
+                setVoxelQuadVisible(true, lowerVoxel, "x", "+", collisionLayer, wallTextureIndex);
+                setVoxelQuadVisible(true, upperVoxel, "x", "-", collisionLayer, wallTextureIndex);
             }
         }
 
-        const persistentObjects: PersistentObject[] = [];
-
-        let shift = 12;
-        for (let roomNumber = minRoomNumber; roomNumber <= maxRoomNumber; ++roomNumber)
-        {
-            const otherRoomID = `s${roomNumber}`;
-
-            if (otherRoomID != roomID)
-            {
-                const x = shift;
-                const y = 2;
-                const z = 1;
-                shift += 4;
-                const objectId = `p${x}-${y}-${z}`;
-
-                persistentObjects.push(new PersistentObject(
-                    objectId,
-                    ObjectTypeConfigMap.getIndexByType("Door"),
-                    "+z",
-                    x, y, z,
-                    otherRoomID
-                ));
-            }
-        }
-        
         return {
             voxelGrid: new VoxelGrid(voxels, quadsMem),
-            persistentObjects,
+            persistentObjectGroup: new PersistentObjectGroup([]),
         };
     },
 }

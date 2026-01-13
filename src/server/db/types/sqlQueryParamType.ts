@@ -1,0 +1,1 @@
+export type SQLQueryParamType = string | number | Buffer;
