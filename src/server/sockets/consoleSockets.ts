@@ -1,7 +1,6 @@
 import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import DebugUtil from "../util/debugUtil";
-import DB from "../db/db";
+import ServerLogUtil from "../networking/util/serverLogUtil";
 
 let nsp: socketIO.Namespace;
 
@@ -29,14 +28,14 @@ const ConsoleSockets =
                 {
                     case "print":
                         words.shift();
-                        DebugUtil.logRaw((words.length == 0) ? "-" : words.join(" "), "high");
+                        ServerLogUtil.logRaw((words.length == 0) ? "-" : words.join(" "), "high");
                         break;
                     case "reboot":
-                        DebugUtil.logRaw("Rebooting...", "high");
+                        ServerLogUtil.logRaw("Rebooting...", "high");
                         process.exit(0);
                         break;
                     default:
-                        DebugUtil.logRaw(`Unknown command "${words[0]}".`, "high", "pink");
+                        ServerLogUtil.logRaw(`Unknown command "${words[0]}".`, "high", "pink");
                         break;
                 }
             });

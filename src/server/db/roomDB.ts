@@ -1,95 +1,64 @@
 import DB from "./db";
 import Room from "../../shared/room/types/room";
-import { Response } from "express";
 import dotenv from "dotenv";
 import RoomGenerator from "../../shared/room/roomGenerator";
-import Encoding from "../../shared/networking/encoding";
-import SerializedRoom from "../../shared/room/types/serializedRoom";
-import VoxelGrid from "../../shared/voxel/types/voxelGrid";
-import BufferState from "../../shared/networking/types/bufferState";
-import PersistentObjectGroup from "../../shared/object/types/persistentObjectGroup";
+import SQLRoom from "../../shared/db/types/sqlRoom";
+import { RoomType } from "../../shared/room/types/roomType";
 dotenv.config();
 
 const RoomDB =
 {
-    getRoom: async (roomID: number, res?: Response): Promise<Room | null> =>
+    getRoomContent: async (roomID: number): Promise<Room | null> =>
     {
-        const result = await DB.runQuery<SerializedRoom>(
+        const result = await DB.runQuery<SQLRoom>(
             `SELECT * FROM rooms WHERE rooms.roomID = ?;`,
-            [roomID], res, "RoomDB.getRoom");
+            [roomID]);
 
         if (!result.success || result.data.length == 0)
             return null;
-        const serializedRoom = result.data[0];
-
-        const voxelGrid = VoxelGrid.decode(
-            new BufferState(new Uint8Array(serializedRoom.voxelGrid))
-        ) as VoxelGrid;
-
-        const persistentObjectGroup = PersistentObjectGroup.decode(
-            new BufferState(new Uint8Array(serializedRoom.persistentObjectGroup))
-        ) as PersistentObjectGroup;
-        
-        return new Room(
-            serializedRoom.roomID, serializedRoom.roomName, serializedRoom.ownerUserName,
-            serializedRoom.texturePackURL, voxelGrid, persistentObjectGroup);
+        return Room.fromSQL(result.data[0]);
     },
-    saveRoomContent: async (room: Room, res?: Response): Promise<boolean> =>
+    saveRoomContent: async (room: Room): Promise<boolean> =>
     {
-        const {voxelGridBuffer, persistentObjectGroupBuffer} =
-            encodeRoomContent(room.voxelGrid, room.persistentObjectGroup);
+        const sqlRoom = room.toSQL();
         
         const result = await DB.runQuery<void>(
             `UPDATE rooms
             SET voxelGrid = ?, persistentObjectGroup = ?
             WHERE roomID = ?`,
-            [voxelGridBuffer, persistentObjectGroupBuffer, room.roomID],
-            res, "RoomDB.saveRoomContent");
+            [Buffer.from(sqlRoom.voxelGrid), Buffer.from(sqlRoom.persistentObjectGroup),
+                room.roomID]);
 
         return result.success;
     },
-    createRoom: async (roomName: string, ownerUserName: string,
+    createRoom: async (roomName: string, roomType: RoomType, ownerUserName: string,
         floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number,
-        texturePackURL: string,
-        res?: Response): Promise<boolean> =>
+        texturePackURL: string): Promise<boolean> =>
     {
         const {voxelGrid, persistentObjectGroup} =
             RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
-        const {voxelGridBuffer, persistentObjectGroupBuffer} =
-            encodeRoomContent(voxelGrid, persistentObjectGroup);
+        const room = new Room(0, roomName, roomType, ownerUserName, texturePackURL,
+            voxelGrid, persistentObjectGroup);
+        const sqlRoom = room.toSQL();
 
         const result = await DB.runQuery<void>(
             `INSERT INTO rooms
-            (roomName, ownerUserName, texturePackURL, voxelGrid, persistentObjectGroup)
-            VALUES (?, ?, ?, ?, ?);`,
-            [roomName, ownerUserName, texturePackURL, voxelGridBuffer, persistentObjectGroupBuffer],
-            res, "RoomDB.createRoom");
+            (roomName, roomType, ownerUserName, texturePackURL, voxelGrid, persistentObjectGroup)
+            VALUES (?, ?, ?, ?, ?, ?);`,
+            [sqlRoom.roomName, sqlRoom.roomType, sqlRoom.ownerUserName, sqlRoom.texturePackURL,
+                Buffer.from(sqlRoom.voxelGrid), Buffer.from(sqlRoom.persistentObjectGroup)]);
 
         return result.success;
     },
-    deleteRoom: async (roomID: number, res?: Response): Promise<boolean> =>
+    deleteRoom: async (roomID: number): Promise<boolean> =>
     {
         const result = await DB.runQuery<void>(
             `DELETE FROM rooms WHERE roomID = ?;`,
-            [roomID], res, "RoomDB.deleteRoom");
+            [roomID]);
 
         return result.success;
     },
-}
-
-function encodeRoomContent(voxelGrid: VoxelGrid, persistentObjectGroup: PersistentObjectGroup)
-    : {voxelGridBuffer: Buffer<ArrayBuffer>, persistentObjectGroupBuffer: Buffer<ArrayBuffer>}
-{
-    let bufferState = Encoding.startWrite();
-    voxelGrid.encode(bufferState);
-    const voxelGridBuffer = Buffer.from(Encoding.endWrite(bufferState));
-
-    bufferState = Encoding.startWrite(bufferState.byteIndex);
-    persistentObjectGroup.encode(bufferState);
-    const persistentObjectGroupBuffer = Buffer.from(Encoding.endWrite(bufferState));
-
-    return {voxelGridBuffer, persistentObjectGroupBuffer};
 }
 
 export default RoomDB;

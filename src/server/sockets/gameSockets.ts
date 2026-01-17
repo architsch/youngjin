@@ -3,11 +3,14 @@ import { SocketMiddleware } from "./types/socketMiddleware";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams"
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
-import User from "../../shared/auth/types/user";
+import User from "../../shared/user/types/user";
 import RoomManager from "../room/roomManager";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
+import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/constants";
+import SearchDB from "../db/searchDB";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
@@ -66,8 +69,13 @@ const GameSockets =
                 await RoomManager.changeUserRoom(socketUserContext, undefined, false);
             });
 
-            // A recently connected client should automatically join the default room.
-            await RoomManager.changeUserRoom(socketUserContext, 1, false);
+            // A recently connected client should automatically join the hub.
+            const roomSearchResult = await SearchDB.rooms.withRoomType(RoomTypeEnumMap.Hub);
+            if (roomSearchResult.success && roomSearchResult.data.length > 0)
+            {
+                const roomID = roomSearchResult.data[0].roomID;
+                await RoomManager.changeUserRoom(socketUserContext, roomID, false);
+            }
         });
 
         signalProcessingInterval = setInterval(() => {
@@ -75,7 +83,7 @@ const GameSockets =
             {
                 socketUserContext.processAllPendingSignals();
             }
-        }, 200);
+        }, SIGNAL_BATCH_SEND_INTERVAL);
     },
 }
 

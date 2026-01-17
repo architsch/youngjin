@@ -1,12 +1,12 @@
-import BufferState from "./types/bufferState";
+import BufferState from "../types/bufferState";
 
 const writeBuffer = new ArrayBuffer(65536);
 let writeBufferReserved = false;
 let startByteIndex = 0;
 
-const Encoding =
+const EncodingUtil =
 {
-    startWrite: (byteIndex: number = 0): BufferState =>
+    startEncoding(byteIndex: number = 0): BufferState
     {
         if (writeBufferReserved)
             throw new Error("WriteBuffer is already reserved.");
@@ -14,7 +14,7 @@ const Encoding =
         startByteIndex = byteIndex;
         return new BufferState(new Uint8Array(writeBuffer, byteIndex));
     },
-    endWrite: (bufferState: BufferState): ArrayBuffer =>
+    endEncoding(bufferState: BufferState): ArrayBuffer
     {
         if (!writeBufferReserved)
             console.error("WriteBuffer is already free.");
@@ -25,4 +25,4 @@ const Encoding =
     },
 }
 
-export default Encoding;
+export default EncodingUtil;

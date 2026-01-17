@@ -1,13 +1,15 @@
 import * as THREE from "three";
 import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
-import GameSocketsClient from "../../networking/gameSocketsClient";
+import GameSocketsClient from "../../networking/client/gameSocketsClient";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
 import { objectDesyncResolveObservable } from "../../system/clientObservables";
+import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/constants";
 
-const syncIntervalInMillis = 200;
+const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
+
 const minSyncDistSqr = 0.0001;
 const minSyncAngle = 0.01;
 

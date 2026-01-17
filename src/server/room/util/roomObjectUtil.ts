@@ -1,4 +1,4 @@
-import User from "../../../shared/auth/types/user";
+import User from "../../../shared/user/types/user";
 import AABB2 from "../../../shared/math/types/aabb2";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";

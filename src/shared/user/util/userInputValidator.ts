@@ -1,6 +1,6 @@
 import { LocKey } from "../../localization/types/locKey";
 
-const AuthInputValidator =
+const UserInputValidator =
 {
     // Find error in the given text, and return the error message's localization key (if there is an error).
 
@@ -8,7 +8,7 @@ const AuthInputValidator =
     {
         if (text.length < 4 || text.length > 16)
             return "auth/error/userName/length";
-        if (text != AuthInputValidator.sanitizeUserName(text))
+        if (text != UserInputValidator.sanitizeUserName(text))
             return "auth/error/userName/chars";
         return null;
     },
@@ -16,7 +16,7 @@ const AuthInputValidator =
     {
         if (text.length < 6 || text.length > 24)
             return "auth/error/password/length";
-        if (text != AuthInputValidator.sanitizePassword(text))
+        if (text != UserInputValidator.sanitizePassword(text))
             return "auth/error/password/chars";
         return null;
     },
@@ -33,7 +33,7 @@ const AuthInputValidator =
     {
         if (text.length < 4 || text.length > 64)
             return "auth/error/roomName/length";
-        if (text != AuthInputValidator.sanitizeRoomName(text))
+        if (text != UserInputValidator.sanitizeRoomName(text))
             return "auth/error/roomName/chars";
         return null;
     },
@@ -54,7 +54,7 @@ const AuthInputValidator =
     },
     sanitizeRoomName: (text: string): string =>
     {
-        return AuthInputValidator.sanitizeRoomNameWithoutTrimming(text).trim();
+        return UserInputValidator.sanitizeRoomNameWithoutTrimming(text).trim();
     },
     sanitizeRoomNameWithoutTrimming: (text: string): string =>
     {
@@ -65,4 +65,4 @@ const AuthInputValidator =
     },
 }
 
-export default AuthInputValidator;
+export default UserInputValidator;

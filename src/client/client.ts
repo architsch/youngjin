@@ -1,5 +1,5 @@
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
-import GameSocketsClient from "./networking/gameSocketsClient";
+import GameSocketsClient from "./networking/client/gameSocketsClient";
 import App from "./app";
 import UIManager from "./ui/uiManager";
 import { roomRuntimeMemoryObservable } from "./system/clientObservables";
@@ -12,4 +12,4 @@ roomRuntimeMemoryObservable.addListener("init", async (roomRuntimeMemory: RoomRu
 });
 
 GameSocketsClient.init(env);
-UIManager.load(env);
+UIManager.load(env, App.getUser());

@@ -8,16 +8,20 @@ export default async function dbTask_init(): Promise<boolean>
             CREATE TABLE IF NOT EXISTS users (
                 userID INT NOT NULL AUTO_INCREMENT,
                 userName VARCHAR(16) NOT NULL,
-                userType VARCHAR(16) NOT NULL,
+                userType TINYINT NOT NULL,
                 passwordHash VARCHAR(72) NOT NULL,
+                email VARCHAR(64) NOT NULL,
+                tutorialStep TINYINT NOT NULL,
                 PRIMARY KEY (userID),
-                UNIQUE KEY (userName)
+                UNIQUE KEY (userName),
+                UNIQUE KEY (email)
             );
         `),
         new SQLQuery(`
             CREATE TABLE IF NOT EXISTS rooms (
                 roomID INT NOT NULL AUTO_INCREMENT,
                 roomName VARCHAR(64) NOT NULL,
+                roomType TINYINT NOT NULL,
                 ownerUserName VARCHAR(16) NOT NULL,
                 texturePackURL VARCHAR(128) NOT NULL,
                 voxelGrid BLOB NOT NULL,

@@ -4,8 +4,9 @@ import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesync
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import { objectDesyncResolveObservable, objectSyncObservable } from "../../system/clientObservables";
+import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/constants";
 
-const syncIntervalInMillis = 200;
+const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
 
 const vec3Temp = new THREE.Vector3();

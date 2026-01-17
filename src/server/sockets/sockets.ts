@@ -4,11 +4,12 @@ import ConsoleSockets from "./consoleSockets";
 import GameSockets from "./gameSockets";
 import dotenv from "dotenv";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import User from "../../shared/auth/types/user";
-import AuthUtil from "../util/authUtil";
-import NetworkUtil from "../util/networkUtil";
+import User from "../../shared/user/types/user";
+import AddressUtil from "../networking/util/addressUtil";
 import * as cookie from "cookie";
-import { AUTH_TOKEN_NAME } from "../../shared/system/constants";
+import { UserTypeEnumMap } from "../../shared/user/types/userType";
+import UserTokenUtil from "../user/util/userTokenUtil";
+import CookieUtil from "../networking/util/cookieUtil";
 dotenv.config();
 
 const connectedUserNames = new Set<string>();
@@ -20,7 +21,7 @@ export default function Sockets(server: http.Server)
     ConsoleSockets.init(io,
         (process.env.MODE == "dev")
             ? (_, next) => next() // Don't authenticate in dev mode
-            : makeAuthMiddleware((user: User) => user.userType == "admin")
+            : makeAuthMiddleware((user: User) => user.userType == UserTypeEnumMap.Admin)
     );
     
     GameSockets.init(io,
@@ -36,32 +37,32 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
         console.log(`Authenticating socket (ID: ${socket.id})`);
         if (!cookieStr)
         {
-            next(new Error(NetworkUtil.getErrorPageURL("auth-failure")));
+            next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
             return;
         }
         const cookieMap = cookie.parse(cookieStr);
-        const token = cookieMap[AUTH_TOKEN_NAME];
+        const token = cookieMap[CookieUtil.getAuthTokenName()];
         if (!token)
         {
-            next(new Error(NetworkUtil.getErrorPageURL("auth-failure")));
+            next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
             return;
         }
-        const user = AuthUtil.getUserFromToken(token);
+        const user = UserTokenUtil.getUserFromToken(token);
         if (!user)
         {
-            next(new Error(NetworkUtil.getErrorPageURL("auth-failure")));
+            next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
             return;
         }
 
         if (connectedUserNames.has(user.userName))
         {
-            next(new Error(NetworkUtil.getErrorPageURL("auth-duplication")));
+            next(new Error(AddressUtil.getErrorPageURL("auth-duplication")));
             return;
         }
 
         if (!passCondition(user))
         {
-            next(new Error(NetworkUtil.getErrorPageURL("auth-no-permission")));
+            next(new Error(AddressUtil.getErrorPageURL("auth-no-permission")));
             return;
         }
 

@@ -1,4 +1,4 @@
-import EJSUtil from "../../../util/ejsUtil";
+import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import LibraryPostPageBuilder from "./libraryPostPageBuilder";
 import dotenv from "dotenv";

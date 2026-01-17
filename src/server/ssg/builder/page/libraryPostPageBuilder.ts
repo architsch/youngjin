@@ -1,5 +1,5 @@
-import FileUtil from "../../../util/fileUtil";
-import EJSUtil from "../../../util/ejsUtil";
+import FileUtil from "../../util/fileUtil";
+import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";

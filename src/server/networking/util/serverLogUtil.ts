@@ -1,18 +1,18 @@
-import ConsoleSockets from "../sockets/consoleSockets";
+import ConsoleSockets from "../../sockets/consoleSockets";
 
 const stackTrace: string[] = [];
 
-const DebugUtil =
+const ServerLogUtil =
 {
     thresholdLogLevel: 0, // 0 = low importance, 1 = medium importance, 2 = high importance
     setThresholdLogLevel: (logLevelOrName: number | string): void =>
     {
-        DebugUtil.thresholdLogLevel = isNaN(logLevelOrName as number) ?
-            DebugUtil.getLogLevelFromName(logLevelOrName as string) : (logLevelOrName as number);
+        ServerLogUtil.thresholdLogLevel = isNaN(logLevelOrName as number) ?
+            ServerLogUtil.getLogLevelFromName(logLevelOrName as string) : (logLevelOrName as number);
     },
     getThresholdLogLevel: (): number =>
     {
-        return DebugUtil.thresholdLogLevel;
+        return ServerLogUtil.thresholdLogLevel;
     },
     getLogLevelFromName: (logLevelName: string): number => // "low" for 0, "medium" for 1, "high" for 2
     {
@@ -30,15 +30,15 @@ const DebugUtil =
         let details = "";
         if (eventDescObj != undefined)
             details = JSON.stringify(eventDescObj).substring(0, 1024);
-        const origin = DebugUtil.getStackTrace();
+        const origin = ServerLogUtil.getStackTrace();
 
-        const logLevel = DebugUtil.getLogLevelFromName(logLevelName);
-        if (logLevel >= DebugUtil.thresholdLogLevel)
+        const logLevel = ServerLogUtil.getLogLevelFromName(logLevelName);
+        if (logLevel >= ServerLogUtil.thresholdLogLevel)
             ConsoleSockets.log((highlightColor ? `<b style="color:${highlightColor}">` : "") + eventTitle + (highlightColor ? "</b>" : ""), origin, details);
     },
     logRaw: (message: string, logLevelName: string = "high", highlightColor?: string): void =>
     {
-        DebugUtil.log(message, undefined, logLevelName, highlightColor);
+        ServerLogUtil.log(message, undefined, logLevelName, highlightColor);
     },
     getStackTrace: (): string =>
     {
@@ -50,23 +50,23 @@ const DebugUtil =
     pushStackTrace: (traceName: string): void =>
     {
         stackTrace.push(traceName);
-        DebugUtil.logRaw(`pushStackTrace: ${traceName}`, "high", "gray");
+        ServerLogUtil.logRaw(`pushStackTrace: ${traceName}`, "high", "gray");
     },
     popStackTrace: (traceName: string): void =>
     {
         if (stackTrace.length == 0)
         {
-            DebugUtil.logRaw(`No name to pop in stackTrace :: (traceName = ${traceName})`, "high", "pink");
+            ServerLogUtil.logRaw(`No name to pop in stackTrace :: (traceName = ${traceName})`, "high", "pink");
             return;
         }
         const expectedTraceName = stackTrace.pop();
         if (expectedTraceName != traceName)
         {
-            DebugUtil.logRaw(`Name mismatch in stackTrace :: (traceName = ${traceName}, expectedTraceName = ${expectedTraceName})`, "high", "pink");
+            ServerLogUtil.logRaw(`Name mismatch in stackTrace :: (traceName = ${traceName}, expectedTraceName = ${expectedTraceName})`, "high", "pink");
             return;
         }
-        DebugUtil.logRaw(`popStackTrace: ${traceName}`, "high", "gray");
+        ServerLogUtil.logRaw(`popStackTrace: ${traceName}`, "high", "gray");
     },
 }
 
-export default DebugUtil;
+export default ServerLogUtil;

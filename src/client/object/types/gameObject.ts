@@ -74,7 +74,7 @@ export default abstract class GameObject
 
     isMine(): boolean
     {
-        return this.params.sourceUserName == App.getEnv().user.userName;
+        return this.params.sourceUserName == App.getUser().userName;
     }
 
     trySetPosition(position: THREE.Vector3)

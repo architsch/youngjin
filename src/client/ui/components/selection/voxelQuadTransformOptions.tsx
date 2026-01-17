@@ -3,7 +3,7 @@ import AddVoxelBlockParams from "../../../../shared/voxel/types/update/addVoxelB
 import RemoveVoxelBlockParams from "../../../../shared/voxel/types/update/removeVoxelBlockParams";
 import App from "../../../app";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
-import GameSocketsClient from "../../../networking/gameSocketsClient";
+import GameSocketsClient from "../../../networking/client/gameSocketsClient";
 import Button from "../basic/button";
 import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerAfterOffset, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex, isVoxelCollisionLayerOccupied } from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/constants";

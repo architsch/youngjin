@@ -1,25 +1,25 @@
 import { io, Socket } from "socket.io-client";
-import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
-import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
-import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
-import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
-import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import ThingsPoolEnv from "../system/types/thingsPoolEnv";
-import Encoding from "../../shared/networking/encoding";
-import EncodableArray from "../../shared/networking/types/encodableArray";
-import EncodableRawByteNumber from "../../shared/networking/types/encodableRawByteNumber";
-import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
-import EncodableData from "../../shared/networking/types/encodableData";
-import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
-import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../system/clientObservables";
-import { tryStartClientProcess } from "../system/types/clientProcess";
-import BufferState from "../../shared/networking/types/bufferState";
-import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
-import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
-import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
-import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
-import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
+import ObjectMessageParams from "../../../shared/object/types/objectMessageParams";
+import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
+import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
+import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
+import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
+import ThingsPoolEnv from "../../system/types/thingsPoolEnv";
+import EncodingUtil from "../../../shared/networking/util/encodingUtil";
+import EncodableArray from "../../../shared/networking/types/encodableArray";
+import EncodableRawByteNumber from "../../../shared/networking/types/encodableRawByteNumber";
+import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
+import EncodableData from "../../../shared/networking/types/encodableData";
+import RoomChangeRequestParams from "../../../shared/room/types/roomChangeRequestParams";
+import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../../system/clientObservables";
+import { tryStartClientProcess } from "../../system/types/clientProcess";
+import BufferState from "../../../shared/networking/types/bufferState";
+import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
+import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
+import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
+import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
+import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 
 let socket: Socket;
 
@@ -59,8 +59,6 @@ const GameSocketsClient =
             console.error(`SocketIO connection error :: ${err}`);
             if (err.message.startsWith("http"))
                 (window as any).location.href = err.message;
-            else if (env.mode == "dev")
-                (window as any).location.reload(true);
         });
 
         socket.on("signalBatch", (buffer: ArrayBuffer) => {
@@ -110,9 +108,9 @@ const GameSocketsClient =
 
 function sendEncodedSignal(signalType: string, signalData: EncodableData)
 {
-    const bufferState = Encoding.startWrite();
+    const bufferState = EncodingUtil.startEncoding();
     signalData.encode(bufferState);
-    const subBuffer = Encoding.endWrite(bufferState);
+    const subBuffer = EncodingUtil.endEncoding(bufferState);
     socket.emit(signalType, subBuffer);
 }
 

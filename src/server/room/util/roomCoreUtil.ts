@@ -10,7 +10,7 @@ export async function loadRoom(roomID: number): Promise<RoomRuntimeMemory | null
     if (RoomManager.roomRuntimeMemories[roomID] != undefined)
         throw new Error(`RoomManager.loadRoom :: RoomRuntimeMemory already exists (roomID = ${roomID})`);
 
-    const room = await RoomDB.getRoom(roomID);
+    const room = await RoomDB.getRoomContent(roomID);
     if (!room)
         return null;
 

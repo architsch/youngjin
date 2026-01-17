@@ -1,5 +1,5 @@
-import AuthUtil from "../../util/authUtil";
-import EJSUtil from "../../util/ejsUtil";
+import UserManager from "../../user/userManager";
+import EJSUtil from "../../ssg/util/ejsUtil";
 import express from "express";
 import { Request, Response } from "express";
 import dotenv from "dotenv";
@@ -8,20 +8,8 @@ dotenv.config();
 
 const PageRouter = express.Router();
 
-PageRouter.get("/mypage", AuthUtil.authenticateAnyUser, (req: Request, res: Response): void => {
+PageRouter.get("/mypage", UserManager.authenticateAnyUser, (req: Request, res: Response): void => {
     EJSUtil.render(req, res, "page/dynamic/mypage", {
-        loginDestination: `${process.env.URL_DYNAMIC}/mypage`,
-    });
-});
-
-PageRouter.get("/register", (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/dynamic/register", {
-        registerDestination: `${process.env.URL_DYNAMIC}/mypage`,
-    });
-});
-
-PageRouter.get("/login", (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/dynamic/login", {
         loginDestination: `${process.env.URL_DYNAMIC}/mypage`,
     });
 });
@@ -50,11 +38,11 @@ if (process.env.MODE == "dev")
 }
 else
 {
-    PageRouter.get("/admin", AuthUtil.authenticateAdmin, (req: Request, res: Response): void => {
+    PageRouter.get("/admin", UserManager.authenticateAdmin, (req: Request, res: Response): void => {
         EJSUtil.render(req, res, "page/development/admin", {});
     });
 
-    PageRouter.get("/console", AuthUtil.authenticateAdmin, (req: Request, res: Response): void => {
+    PageRouter.get("/console", UserManager.authenticateAdmin, (req: Request, res: Response): void => {
         EJSUtil.render(req, res, "page/development/console", {});
     });
 }

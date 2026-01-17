@@ -1,11 +1,11 @@
-import DebugUtil from "./debugUtil";
+import ServerLogUtil from "../../networking/util/serverLogUtil";
 import FileUtil from "./fileUtil";
-import UIConfig from "../../shared/embeddedScripts/config/uiConfig";
-import TextUtil from "../../shared/embeddedScripts/util/textUtil";
+import UIConfig from "../../../shared/embeddedScripts/config/uiConfig";
+import TextUtil from "../../../shared/embeddedScripts/util/textUtil";
 import ejs from "ejs";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
-import NetworkUtil from "./networkUtil";
+import AddressUtil from "../../networking/util/addressUtil";
 dotenv.config();
 
 const ejsPartialRootPath = `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/partial`;
@@ -43,7 +43,7 @@ const EJSUtil =
     postProcessHTML: (html: string): string => {
         if (process.env.MODE == "dev")
         {
-            const ip = NetworkUtil.getLocalIpAddress();
+            const ip = AddressUtil.getLocalIpAddress();
             html = html
                 .replaceAll("\n", "!*NEW_LINE*!")
                 .replace(/(PROD_CODE_BEGIN).*?(PROD_CODE_END)/g, "REMOVED_PROD_CODE")
@@ -63,12 +63,12 @@ const EJSUtil =
         Object.assign(mergedEJSParams, baseDynamicPageEJSParams);
         Object.assign(mergedEJSParams, customEJSParams);
 
-        if (mergedEJSParams.user)
-            DebugUtil.log("'user' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
-        mergedEJSParams.user = (req as any).user;
+        if (mergedEJSParams.userString)
+            ServerLogUtil.log("'userString' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
+        mergedEJSParams.userString = (req as any).userString;
 
         if (mergedEJSParams.globalDictionary)
-            DebugUtil.log("'globalDictionary' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
+            ServerLogUtil.log("'globalDictionary' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
         mergedEJSParams.globalDictionary = {};
         
         return mergedEJSParams;

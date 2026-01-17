@@ -10,8 +10,9 @@ import Popup from "../basic/popup";
 import { PopupType } from "../../types/PopupType";
 import LoginForm from "../form/loginForm";
 import RegisterForm from "../form/registerForm";
+import User from "../../../../shared/user/types/user";
 
-export default function UIRoot({ env }: UIRootProps)
+export default function UIRoot({ env, user }: UIRootProps)
 {
     const [popupType, setPopupType] = useState<PopupType>("none");
 
@@ -23,6 +24,7 @@ export default function UIRoot({ env }: UIRootProps)
         <DebugStats/>
         <UserIdentity
             env={env}
+            user={user}
             onRegisterButtonClick={openRegisterFormPopup}
             onLogInButtonClick={openLoginFormPopup}
         />
@@ -42,4 +44,5 @@ export default function UIRoot({ env }: UIRootProps)
 interface UIRootProps
 {
     env: ThingsPoolEnv;
+    user: User;
 }

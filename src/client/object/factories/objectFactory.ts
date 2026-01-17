@@ -11,7 +11,7 @@ const ObjectFactory =
 {
     createClientSideObject: (objectTypeIndex: number, transform: ObjectTransform, metadata: string = ""): GameObject =>
     {
-        const userName = App.getEnv().user.userName;
+        const userName = App.getUser().userName;
         const params = new ObjectSpawnParams(
             userName,
             objectTypeIndex,

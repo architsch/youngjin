@@ -24,10 +24,10 @@ const ObjectManager =
     },
     getMyPlayer: (): GameObject | undefined =>
     {
-        const env = App.getEnv();
-        if (env && env.user)
-            return players[App.getEnv().user.userName];
-        console.error(`Failed to fetch the user data (env = ${JSON.stringify(env)})`);
+        const user = App.getUser();
+        if (user)
+            return players[user.userName];
+        console.error(`Failed to fetch the user data (env = ${JSON.stringify(App.getEnv())})`);
         return undefined;
     },
     update: (deltaTime: number) =>

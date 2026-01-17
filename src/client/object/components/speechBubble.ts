@@ -5,7 +5,7 @@ import GameObjectComponent from "./gameObjectComponent";
 import ObjectMessageParams from "../../../shared/object/types/objectMessageParams";
 import { objectMessageObservable } from "../../system/clientObservables";
 import GameObject from "../types/gameObject";
-import GameSocketsClient from "../../networking/gameSocketsClient";
+import GameSocketsClient from "../../networking/client/gameSocketsClient";
 
 export default class SpeechBubble extends GameObjectComponent
 {

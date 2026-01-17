@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
-import DebugUtil from "./debugUtil";
+import ServerLogUtil from "../../networking/util/serverLogUtil";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -15,7 +15,7 @@ const FileUtil =
             return data;
         }
         catch (err) {
-            DebugUtil.log("Failed to read file", {relativeFilePath, err}, "high", "pink");
+            ServerLogUtil.log("Failed to read file", {relativeFilePath, err}, "high", "pink");
             return "";
         }
     },
@@ -27,7 +27,7 @@ const FileUtil =
             await fs.writeFile(absoluteFilePath, content);
         }
         catch (err) {
-            DebugUtil.log("Failed to write file", {relativeFilePath, err} as any, "high", "pink");
+            ServerLogUtil.log("Failed to write file", {relativeFilePath, err} as any, "high", "pink");
         }
     },
     getAllRelativePathsInDirRecursively: async (dir: string): Promise<string[]> =>

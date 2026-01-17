@@ -1,6 +1,9 @@
 // Networking
 
-export const AUTH_TOKEN_NAME = "thingspool_token_v3";
+export const LATEST_DB_VERSION = 0;
+export const AUTH_TOKEN_NAME_BASE = `thingspool_token_v${LATEST_DB_VERSION}`;
+export const USER_API_ROUTE_PATH = "api/user";
+export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds
 
 // Math
 
@@ -50,5 +53,5 @@ export const Z_INDEX_LOADING_SCREEN = "z-100"; // e.g. full-screen indicator tha
 export const Z_INDEX_NOTIFICATION = "z-80"; // e.g. toast message
 export const Z_INDEX_POPUP = "z-70"; // e.g. error popup, confirmation dialog window, form to fill out and submit
 export const Z_INDEX_INSTRUCTION = "z-60"; // e.g. tutorial's on-screen instruction
-export const Z_INDEX_HUD_OVERLAY = "z-55"; // e.g. tooltip text, temporary debug panel
+export const Z_INDEX_HUD_OVERLAY = "z-55"; // e.g. temporary debug panel
 export const Z_INDEX_HUD_MAIN = "z-50"; // e.g. menu, editor panel

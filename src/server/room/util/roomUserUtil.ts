@@ -1,4 +1,4 @@
-import User from "../../../shared/auth/types/user";
+import User from "../../../shared/user/types/user";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectRuntimeMemory from "../../../shared/object/types/objectRuntimeMemory";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";

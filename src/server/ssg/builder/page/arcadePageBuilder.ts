@@ -1,4 +1,4 @@
-import EJSUtil from "../../../util/ejsUtil";
+import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import ArcadeGamePageBuilder from "./arcadeGamePageBuilder";
 import dotenv from "dotenv";

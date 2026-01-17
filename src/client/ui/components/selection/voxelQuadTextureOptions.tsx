@@ -3,7 +3,7 @@ import { voxelQuadSelectionObservable } from "../../../system/clientObservables"
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import AtlasCellSprite from "../basic/atlasCellSprite";
 import { enableHorizontalDragScroll } from "../../util/mouseScroll";
-import GameSocketsClient from "../../../networking/gameSocketsClient";
+import GameSocketsClient from "../../../networking/client/gameSocketsClient";
 import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import App from "../../../app";
 import VoxelMeshInstancer from "../../../object/components/voxelMeshInstancer";

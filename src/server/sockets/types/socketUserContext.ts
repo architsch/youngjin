@@ -3,7 +3,7 @@ import EncodableData from "../../../shared/networking/types/encodableData";
 import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
 import EncodableArray from "../../../shared/networking/types/encodableArray";
 import EncodableRawByteNumber from "../../../shared/networking/types/encodableRawByteNumber";
-import Encoding from "../../../shared/networking/encoding";
+import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 
 export default class SocketUserContext
 {
@@ -58,7 +58,7 @@ export default class SocketUserContext
 
     processAllPendingSignals()
     {
-        const bufferState = Encoding.startWrite();
+        const bufferState = EncodingUtil.startEncoding();
 
         for (let typeIndex = 0; typeIndex < this.pendingSignalsByTypeIndex.length; ++typeIndex)
         {
@@ -72,7 +72,7 @@ export default class SocketUserContext
             }
         }
 
-        const subBuffer = Encoding.endWrite(bufferState);
+        const subBuffer = EncodingUtil.endEncoding(bufferState);
         if (bufferState.byteIndex > 0)
         {
             //console.log(`signalBatch sent :: ${bufferState.byteIndex}`);

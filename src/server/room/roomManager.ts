@@ -1,4 +1,4 @@
-import User from "../../shared/auth/types/user";
+import User from "../../shared/user/types/user";
 import PhysicsManager from "../../shared/physics/physicsManager";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Vec2 from "../../shared/math/types/vec2";

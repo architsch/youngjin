@@ -1,5 +1,5 @@
-import FileUtil from "../util/fileUtil";
-import EJSUtil from "../util/ejsUtil";
+import FileUtil from "./util/fileUtil";
+import EJSUtil from "./util/ejsUtil";
 import SitemapBuilder from "./builder/sitemapBuilder";
 import AtomFeedBuilder from "./builder/atomFeedBuilder";
 import ArcadePageBuilder from "./builder/page/arcadePageBuilder";

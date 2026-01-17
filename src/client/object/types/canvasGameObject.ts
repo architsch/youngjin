@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import GameObject from "./gameObject";
-import GameSocketsClient from "../../networking/gameSocketsClient";
+import GameSocketsClient from "../../networking/client/gameSocketsClient";
 import RoomChangeRequestParams from "../../../shared/room/types/roomChangeRequestParams";
 import PlayerProximityDetector from "../components/playerProximityDetector";
 import PersistentObjectMeshInstancer from "../components/persistentObjectMeshInstancer";

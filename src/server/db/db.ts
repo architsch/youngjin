@@ -1,6 +1,5 @@
 import mysql from "mysql2/promise";
-import { Response } from "express";
-import DebugUtil from "../util/debugUtil";
+import ServerLogUtil from "../networking/util/serverLogUtil";
 import dotenv from "dotenv";
 import SQLQuery from "./types/sqlQuery";
 import SQLTransaction from "./types/sqlTransaction";
@@ -19,19 +18,14 @@ const DB =
             createPool();
         return pool;
     },
-    runQuery: async <ReturnDataType>(queryStr: string, queryParams?: SQLQueryParamType[],
-        res?: Response, stackTraceName?: string): Promise<SQLQueryResponse<ReturnDataType>> =>
+    runQuery: async <ReturnDataType>(queryStr: string, queryParams?: SQLQueryParamType[])
+        : Promise<SQLQueryResponse<ReturnDataType>> =>
     {
-        const sqlQueryResponse = await (new SQLQuery<ReturnDataType>(queryStr, queryParams)
-            .run(res, stackTraceName));
-        return sqlQueryResponse;
+        return await (new SQLQuery<ReturnDataType>(queryStr, queryParams).run());
     },
-    runTransaction: async (queries: SQLQuery<void>[],
-        res?: Response, stackTraceName?: string): Promise<boolean> =>
+    runTransaction: async (queries: SQLQuery<void>[]): Promise<boolean> =>
     {
-        const success = await (new SQLTransaction(queries)
-            .run(res, stackTraceName));
-        return success;
+        return await (new SQLTransaction(queries).run());
     },
 }
 
@@ -39,7 +33,7 @@ function createPool()
 {
     if (pool)
     {
-        DebugUtil.logRaw("DB connection pool is already created.", "high", "pink");
+        ServerLogUtil.logRaw("DB connection pool is already created.", "high", "pink");
         return;
     }
     pool = mysql.createPool({
@@ -55,7 +49,7 @@ function createPool()
     });
     if (!pool)
     {
-        DebugUtil.logRaw("Failed to create a DB connection pool.", "high", "pink");
+        ServerLogUtil.logRaw("Failed to create a DB connection pool.", "high", "pink");
         return;
     }
 }

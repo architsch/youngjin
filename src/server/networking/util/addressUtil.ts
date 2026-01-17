@@ -1,22 +1,11 @@
 const os = require("os");
-import { Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();
 
-const NetworkUtil =
+const AddressUtil =
 {
-    onRouteResponse: (res: Response, resJSON: {[key: string]: any} | undefined = undefined): void => {
-        if (res.statusCode >= 200 && res.statusCode <= 299)
-        {
-            // End response if its status is OK
-            if (resJSON)
-                res.json(resJSON);
-            else
-                res.end();
-        }
-    },
     getErrorPageURL: (errorPageName: string) => {
-        return `${process.env.MODE == "dev" ? `http://${NetworkUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/error/${errorPageName}.html`;
+        return `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/error/${errorPageName}.html`;
     },
     getLocalIpAddress: () =>
     {
@@ -33,7 +22,7 @@ const NetworkUtil =
             }
         }
         return "127.0.0.1";
-    }
+    },
 }
 
-export default NetworkUtil;
+export default AddressUtil;

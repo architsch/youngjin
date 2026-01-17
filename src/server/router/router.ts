@@ -1,10 +1,9 @@
 import { Express, Request, Response } from "express";
 import PageRouter from "./ui/pageRouter";
-import AuthRouter from "./api/authRouter";
-//import RoomRouter from "./api/roomRouter";
-//import SearchRouter from "./api/searchRouter";
-import FileUtil from "../util/fileUtil";
-import EJSUtil from "../util/ejsUtil";
+import UserRouter from "./api/userRouter";
+import FileUtil from "../ssg/util/fileUtil";
+import EJSUtil from "../ssg/util/ejsUtil";
+import { USER_API_ROUTE_PATH } from "../../shared/system/constants";
 
 export default function Router(app: Express): void
 {
@@ -30,8 +29,6 @@ export default function Router(app: Express): void
         });
     }
     
-    app.use("/api/auth", AuthRouter);
-    //app.use("/api/search", SearchRouter);
-    //app.use("/api/room", RoomRouter);
+    app.use(`/${USER_API_ROUTE_PATH}`, UserRouter);
     app.use("/", PageRouter);
 }

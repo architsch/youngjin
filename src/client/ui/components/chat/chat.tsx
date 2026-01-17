@@ -25,7 +25,7 @@ export default function Chat()
         const player = ObjectManager.getMyPlayer();
         if (!player)
         {
-            console.error(`Player not found (userName = ${App.getEnv().user.userName})`);
+            console.error(`MyPlayer not found`);
             return;
         }
         

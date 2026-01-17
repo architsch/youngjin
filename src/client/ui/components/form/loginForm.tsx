@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import Spacer from "../basic/spacer";
 import Button from "../basic/button";
-import AuthInputValidator from "../../../../shared/auth/util/authInputValidator";
+import UserInputValidator from "../../../../shared/user/util/userInputValidator";
 import FormTextInput from "../basic/formTextInput";
-import AuthClient from "../../../networking/authClient";
+import UserAPIClient from "../../../networking/client/userAPIClient";
 import { localize } from "../../../../shared/localization/util/locUtil";
 import { endClientProcess, tryStartClientProcess } from "../../../system/types/clientProcess";
 import Text from "../basic/text";
@@ -14,36 +14,31 @@ export default function LoginForm({ onCancel }: LoginFormProps)
     const [passwordInput, setPasswordInput] = useState<string>("");
 
     const onSubmit = useCallback(async () => {
-        console.log("1");
         if (!tryStartClientProcess("formSubmit", 1, 2))
         {
             return;
         }
-        console.log("2");
-        const userNameError = AuthInputValidator.findErrorInUserName(userNameInput);
+        const userNameError = UserInputValidator.findErrorInUserName(userNameInput);
         if (userNameError)
         {
             alert(localize(userNameError));
             endClientProcess("formSubmit");
             return;
         }
-        console.log("3");
-        const passwordError = AuthInputValidator.findErrorInPassword(passwordInput);
+        const passwordError = UserInputValidator.findErrorInPassword(passwordInput);
         if (passwordError)
         {
             alert(localize(passwordError));
             endClientProcess("formSubmit");
             return;
         }
-        console.log("4");
-        const res = await AuthClient.login(userNameInput, passwordInput);
+        const res = await UserAPIClient.login(userNameInput, passwordInput);
         if (!res.status || res.status < 200 || res.status >= 300)
         {
-            alert((res as any).data ?? "Unknown Error");
+            alert(`${res.data} (${res.status})`);
             endClientProcess("formSubmit");
             return;
         }
-        console.log("5");
         window.location.reload();
     }, [userNameInput, passwordInput]);
 
@@ -51,11 +46,11 @@ export default function LoginForm({ onCancel }: LoginFormProps)
         <Text content="Log In" size="lg"/>
         <FormTextInput label="Username:"
             textInput={userNameInput} setTextInput={setUserNameInput}
-            filterTextInput={AuthInputValidator.sanitizeUserName}
+            filterTextInput={UserInputValidator.sanitizeUserName}
         />
         <FormTextInput label="Password:" type="password"
             textInput={passwordInput} setTextInput={setPasswordInput}
-            filterTextInput={AuthInputValidator.sanitizePassword}
+            filterTextInput={UserInputValidator.sanitizePassword}
         />
         <Spacer size="md"/>
         <div className="flex flex-row gap-2">

@@ -1,4 +1,4 @@
-import FileUtil from "../../util/fileUtil";
+import FileUtil from "../../ssg/util/fileUtil";
 import dotenv from "dotenv";
 dotenv.config();
 

@@ -9,8 +9,11 @@ import Router from "./router/router";
 import Sockets from "./sockets/sockets";
 import dotenv from "dotenv";
 import RoomDB from "./db/roomDB";
-import NetworkUtil from "./util/networkUtil";
+import AddressUtil from "./networking/util/addressUtil";
 import dbTask_init from "./db/tasks/dbTask_init";
+import { LATEST_DB_VERSION } from "../shared/system/constants";
+import { RoomTypeEnumMap } from "../shared/room/types/roomType";
+import SearchDB from "./db/searchDB";
 dotenv.config();
 
 async function Server(): Promise<void>
@@ -49,14 +52,24 @@ async function Server(): Promise<void>
         let dbVersion = result.data[0];
         console.log(`Current DB Version: ${dbVersion}`);
 
-        // Implement version migration routines here:
-        // if (dbVersion == 0)
-        // ...
+        while (dbVersion < LATEST_DB_VERSION)
+        {
+            // Implement version migration routines here:
+            // ...
+            dbVersion++;
+        }
     }
     
-    let success = await RoomDB.createRoom("entrypoint", "", 0, 1, 2, `${process.env.MODE == "dev" ? `http://${NetworkUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`);
-    if (!success)
+    const roomSearchResult = await SearchDB.rooms.withRoomType(RoomTypeEnumMap.Hub);
+    if (!roomSearchResult.success)
         return;
+
+    if (roomSearchResult.data.length == 0)
+    {
+        let success = await RoomDB.createRoom("hub", RoomTypeEnumMap.Hub, "", 0, 1, 2, `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`);
+        if (!success)
+            return;
+    }
 
     // express app
     const app = express();

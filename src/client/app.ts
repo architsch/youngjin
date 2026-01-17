@@ -6,6 +6,7 @@ import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
 import { endClientProcess } from "./system/types/clientProcess";
+import User from "../shared/user/types/user";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -14,6 +15,7 @@ const minSecondsPerFrame = 1 / maxFramesPerSecond;
 const maxSecondsPerFrame = 1 / minFramesPerSecond;
 
 let env: ThingsPoolEnv;
+let user: User;
 let prevTime: number;
 let deltaTimePending: number;
 let currentRoom: Room | undefined;
@@ -25,10 +27,15 @@ const App =
     setEnv: (newEnv: ThingsPoolEnv) =>
     {
         env = newEnv;
+        user = User.fromString(env.userString);
     },
-    getEnv: () =>
+    getEnv: (): ThingsPoolEnv =>
     {
         return env;
+    },
+    getUser: (): User =>
+    {
+        return user;
     },
     getFPS(): number
     {
