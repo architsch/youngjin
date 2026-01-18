@@ -1,22 +1,20 @@
-import bcrypt from "bcrypt";
-import SearchDB from "../db/searchDB";
-import UserDB from "../db/userDB";
-import ServerLogUtil from "../networking/util/serverLogUtil";
+import ServerLogUtil from "../../networking/util/serverLogUtil";
 import dotenv from "dotenv";
+import bcrypt from "bcrypt";
 import { Request, Response } from "express";
-import { UserTypeEnumMap } from "../../shared/user/types/userType";
-import UserTokenUtil from "./util/userTokenUtil";
-import UserSearchUtil from "./util/userSearchUtil";
-import UserAuthUtil from "./util/userAuthUtil";
-import UserInputValidator from "../../shared/user/util/userInputValidator";
-import { localize } from "../../shared/localization/util/locUtil";
-import User from "../../shared/user/types/user";
-import CookieUtil from "../networking/util/cookieUtil";
+import User from "../../../shared/user/types/user";
+import { UserTypeEnumMap } from "../../../shared/user/types/userType";
+import UserTokenUtil from "./userTokenUtil";
+import UserSearchUtil from "./userSearchUtil";
+import UserInputValidator from "../../../shared/user/util/userInputValidator";
+import { localize } from "../../../shared/localization/util/locUtil";
+import SearchDB from "../../db/searchDB";
+import UserDB from "../../db/userDB";
 dotenv.config();
 
 const dev = process.env.MODE == "dev";
 
-const UserManager =
+const UserAuthPasswordUtil =
 {
     register: async (req: Request, res: Response): Promise<void> =>
     {
@@ -94,25 +92,6 @@ const UserManager =
             res.status(500).send(`ERROR: Failed to login (${err}).`);
         }
     },
-    clearToken: (req: Request, res: Response): void =>
-    {
-        res.clearCookie(CookieUtil.getAuthTokenName()).status(200);
-    },
-    authenticateAdmin: async (req: Request, res: Response, next: () => void): Promise<void> =>
-    {
-        await UserAuthUtil.authenticateUserFromReq(req, res, user => user.userType == UserTypeEnumMap.Admin, next);
-    },
-    authenticateRegisteredUser: async (req: Request, res: Response, next: () => void): Promise<void> =>
-    {
-        await UserAuthUtil.authenticateUserFromReq(req, res,
-            user => user.userType == UserTypeEnumMap.Admin ||
-                user.userType == UserTypeEnumMap.Member,
-            next);
-    },
-    authenticateAnyUser: async (req: Request, res: Response, next: () => void): Promise<void> =>
-    {
-        await UserAuthUtil.authenticateUserFromReq(req, res, _ => true, next);
-    },
 }
 
 function validateUserNameAndPassword(req: Request, res: Response): boolean
@@ -134,4 +113,4 @@ function validateUserNameAndPassword(req: Request, res: Response): boolean
     return true;
 }
 
-export default UserManager;
+export default UserAuthPasswordUtil;

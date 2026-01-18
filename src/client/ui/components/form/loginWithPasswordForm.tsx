@@ -8,7 +8,7 @@ import { localize } from "../../../../shared/localization/util/locUtil";
 import { endClientProcess, tryStartClientProcess } from "../../../system/types/clientProcess";
 import Text from "../basic/text";
 
-export default function LoginForm({ onCancel }: LoginFormProps)
+export default function LoginWithPasswordForm({ onCancel }: Props)
 {
     const [userNameInput, setUserNameInput] = useState<string>("");
     const [passwordInput, setPasswordInput] = useState<string>("");
@@ -32,7 +32,7 @@ export default function LoginForm({ onCancel }: LoginFormProps)
             endClientProcess("formSubmit");
             return;
         }
-        const res = await UserAPIClient.login(userNameInput, passwordInput);
+        const res = await UserAPIClient.loginWithPassword(userNameInput, passwordInput);
         if (!res.status || res.status < 200 || res.status >= 300)
         {
             alert(`${res.data} (${res.status})`);
@@ -60,7 +60,7 @@ export default function LoginForm({ onCancel }: LoginFormProps)
     </div>
 }
 
-interface LoginFormProps
+interface Props
 {
     onCancel: () => void;
 }

@@ -1,0 +1,152 @@
+import ServerLogUtil from "../../networking/util/serverLogUtil";
+import dotenv from "dotenv";
+import { Request, Response } from "express";
+import User from "../../../shared/user/types/user";
+import UserTokenUtil from "./userTokenUtil";
+import UserSearchUtil from "./userSearchUtil";
+import UserDB from "../../db/userDB";
+import { UserTypeEnumMap } from "../../../shared/user/types/userType";
+import url from "url";
+import crypto from "crypto";
+import RestAPI from "../../../client/networking/api/restAPI";
+import SearchDB from "../../db/searchDB";
+import SQLUser from "../../../shared/db/types/sqlUser";
+import { USER_API_ROUTE_PATH } from "../../../shared/system/constants";
+import AddressUtil from "../../networking/util/addressUtil";
+dotenv.config();
+
+const dev = process.env.MODE == "dev";
+
+const UserAuthGoogleUtil =
+{
+    login: async (req: Request, res: Response): Promise<void> =>
+    {
+        res.redirect(generateOAuthURL());
+    },
+    loginCallback: async (req: Request, res: Response): Promise<void> =>
+    {
+        try
+        {
+            const query = url.parse(req.url, true).query;
+            if (!query || !query.code)
+            {
+                res.status(400).send(`Google OAuth code not found.`);
+                return;
+            }
+            const accessTokenRes = await RestAPI.post(generateTokenURL(query.code as string));
+            if (accessTokenRes.status < 200 || accessTokenRes.status >= 300)
+            {
+                res.status(500).send(`Failed to fetch the access token from Google API.`);
+                return;
+            }
+            const accessToken = accessTokenRes.data.access_token as string;
+            const userInfoRes = await RestAPI.get(userInfoURL, {
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+            });
+            if (userInfoRes.status < 200 || userInfoRes.status >= 300)
+            {
+                res.status(500).send(`Failed to fetch the user info from Google API.`);
+                return;
+            }
+            const userInfo = userInfoRes.data as GoogleUserInfo;
+            const email = userInfo.email;
+            if (!email)
+            {
+                res.status(404).send("Email address not found.");
+                return;
+            }
+            const userNameBase = email.split("@")[0];
+            let userName = userNameBase;
+
+            const existingUsersResult = await SearchDB.users.withEmail(email);
+            if (!existingUsersResult.success)
+            {
+                res.status(500).send(`Internal Server Error`);
+                return;
+            }
+
+            let sqlUser: SQLUser | null = null;
+
+            if (existingUsersResult.data.length == 0) // new user
+            {
+                let numNameCopies = 0;
+                while (!sqlUser && ++numNameCopies <= 5)
+                {
+                    if (numNameCopies >= 2)
+                        userName = `${userNameBase}#${numNameCopies}`;
+                    const nameConflictingUsersResult = await SearchDB.users.withUserName(userName);
+                    if (!nameConflictingUsersResult.success)
+                    {
+                        res.status(500).send(`Internal Server Error`);
+                        return;
+                    }
+                    if (nameConflictingUsersResult.data.length == 0) // free userName found
+                    {
+                        const success = await UserDB.createUser(
+                            userName, UserTypeEnumMap.Member, "", email);
+                        if (!success)
+                        {
+                            res.status(500).send(`Internal Server Error (during registration)`);
+                            return;
+                        }
+                        sqlUser = await UserSearchUtil.findExistingUserByUserName(userName, res);
+                        if (!sqlUser)
+                            return;
+                    }
+                }
+                if (!sqlUser)
+                {
+                    res.status(500).send(`Username "${userNameBase}" is used too many times.`);
+                    return;
+                }
+            }
+            else // previously registered user
+            {
+                sqlUser = existingUsersResult.data[0];
+            }
+
+            if (sqlUser)
+                await UserTokenUtil.addTokenToUser(User.fromSQL(sqlUser), req, res);
+            else
+                res.status(500).send(`Internal Server Error`);
+        }
+        catch (err)
+        {
+            ServerLogUtil.log("Login Error", {err}, "high", "pink");
+            res.status(500).send(`ERROR: Failed to login (${err}).`);
+        }
+    },
+}
+
+const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+const baseURL = dev ? `http://${AddressUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_DYNAMIC;
+const redirectURL = `${baseURL}/${USER_API_ROUTE_PATH}/login_google_callback`;
+const userInfoURL = `https://www.googleapis.com/oauth2/v3/userinfo?alt=json`;
+
+function generateOAuthURL(): string
+{
+    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=code&redirect_uri=${redirectURL}&scope=openid%20profile%20email&access_type=offline&state=${crypto.randomUUID()}&prompt=consent`;
+}
+
+function generateTokenURL(code: string): string
+{
+    return `https://oauth2.googleapis.com/token?code=${code}&client_id=${clientId}&client_secret=${clientSecret}&redirect_uri=${redirectURL}&grant_type=authorization_code`;
+}
+
+interface GoogleUserInfo
+{
+  sub: string;
+  email?: string;
+  verified_email?: boolean;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+  locale?: string;
+  hd?: string; // Hosted domain e.g. example.com
+}
+
+export default UserAuthGoogleUtil;

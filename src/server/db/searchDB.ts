@@ -35,6 +35,11 @@ const SearchDB =
                 `SELECT * FROM users WHERE userName = ?;`,
                 [userName]);
         },
+        withEmail: async (email: string): Promise<SQLQueryResponse<SQLUser>> => {
+            return await DB.runQuery<SQLUser>(
+                `SELECT * FROM users WHERE email = ?;`,
+                [email]);
+        },
         withUserNameOrEmail: async (userName: string, email: string): Promise<SQLQueryResponse<SQLUser>> => {
             return await DB.runQuery<SQLUser>(
                 `SELECT * FROM users WHERE userName = ? OR email = ?;`,

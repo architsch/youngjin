@@ -5,17 +5,25 @@ import { USER_API_ROUTE_PATH } from "../../../shared/system/constants";
 
 const UserAPIClient =
 {
-    register: async (userName: string, password: string): Promise<RestAPIResponse> =>
+    registerWithPassword: async (userName: string, password: string): Promise<RestAPIResponse> =>
     {
-        return await RestAPI.post(getURL("register"), {userName, password} as AxiosRequestConfig);
+        return await RestAPI.post(getURL("register_password"), {userName, password} as AxiosRequestConfig);
     },
-    login: async (userName: string, password: string): Promise<RestAPIResponse> =>
+    loginWithPassword: async (userName: string, password: string): Promise<RestAPIResponse> =>
     {
-        return await RestAPI.post(getURL("login"), {userName, password} as AxiosRequestConfig);
+        return await RestAPI.post(getURL("login_password"), {userName, password} as AxiosRequestConfig);
+    },
+    /*loginWithGoogle: async (): Promise<RestAPIResponse> =>
+    {
+        return await RestAPI.post(getURL("login_google"));
+    },*/
+    loginWithGoogle: (): void =>
+    {
+        window.location.href = getURL("login_google");
     },
     logout: async (): Promise<RestAPIResponse> =>
     {
-         return await RestAPI.get(getURL("login"));
+         return await RestAPI.get(getURL("logout"));
     },
 }
 

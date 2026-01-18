@@ -22,8 +22,8 @@ export default function Tutorial()
     };
 
     return <>
-        {!state.loading && state.step == 0 &&
-            <TutorialMoveInstruction incrementTutorialStep={incrementTutorialStep}/>}
+        {/*!state.loading && state.step == 0 &&
+            <TutorialMoveInstruction incrementTutorialStep={incrementTutorialStep}/>*/}
     </>;
 }
 

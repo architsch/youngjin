@@ -7,7 +7,7 @@ export default async function dbTask_init(): Promise<boolean>
         new SQLQuery(`
             CREATE TABLE IF NOT EXISTS users (
                 userID INT NOT NULL AUTO_INCREMENT,
-                userName VARCHAR(16) NOT NULL,
+                userName VARCHAR(32) NOT NULL,
                 userType TINYINT NOT NULL,
                 passwordHash VARCHAR(72) NOT NULL,
                 email VARCHAR(64) NOT NULL,

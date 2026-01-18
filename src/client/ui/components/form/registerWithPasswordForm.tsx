@@ -8,7 +8,7 @@ import { localize } from "../../../../shared/localization/util/locUtil";
 import { endClientProcess, tryStartClientProcess } from "../../../system/types/clientProcess";
 import Text from "../basic/text";
 
-export default function RegisterForm({ onCancel }: RegisterFormProps)
+export default function RegisterWithPasswordForm({ onCancel }: Props)
 {
     const [userNameInput, setUserNameInput] = useState<string>("");
     const [passwordInput, setPasswordInput] = useState<string>("");
@@ -39,7 +39,7 @@ export default function RegisterForm({ onCancel }: RegisterFormProps)
             endClientProcess("formSubmit");
             return;
         }
-        const res = await UserAPIClient.register(userNameInput, passwordInput);
+        const res = await UserAPIClient.registerWithPassword(userNameInput, passwordInput);
         if (!res.status || res.status < 200 || res.status >= 300)
         {
             alert(`${res.data} (${res.status})`);
@@ -71,7 +71,7 @@ export default function RegisterForm({ onCancel }: RegisterFormProps)
     </div>
 }
 
-interface RegisterFormProps
+interface Props
 {
     onCancel: () => void;
 }

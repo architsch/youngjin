@@ -1,1 +1,5 @@
-export type PopupType = "none" | "register" | "login";
+export type PopupType =
+    "none" |
+    "authPrompt" |
+    "registerWithPassword" |
+    "loginWithPassword";

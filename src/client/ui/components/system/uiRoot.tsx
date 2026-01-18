@@ -8,16 +8,21 @@ import UserIdentity from "../user/userIdentity";
 import Loading from "./loading";
 import Popup from "../basic/popup";
 import { PopupType } from "../../types/PopupType";
-import LoginForm from "../form/loginForm";
-import RegisterForm from "../form/registerForm";
+import LoginWithPasswordForm from "../form/loginWithPasswordForm";
+import RegisterWithPasswordForm from "../form/registerWithPasswordForm";
 import User from "../../../../shared/user/types/user";
+import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
+import AuthPromptForm from "../form/authPromptForm";
+import UserAPIClient from "../../../networking/client/userAPIClient";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
-    const [popupType, setPopupType] = useState<PopupType>("none");
+    const userIsGuest = (user.userType == UserTypeEnumMap.Guest);
+    const [popupType, setPopupType] = useState<PopupType>(userIsGuest ? "authPrompt" : "none");
 
-    const openRegisterFormPopup = useCallback(() => setPopupType("register"), []);
-    const openLoginFormPopup = useCallback(() => setPopupType("login"), []);
+    const openAuthPromptFormPopup = useCallback(() => setPopupType("authPrompt"), []);
+    const openRegisterWithPasswordFormPopup = useCallback(() => setPopupType("registerWithPassword"), []);
+    const openLoginWithPasswordFormPopup = useCallback(() => setPopupType("loginWithPassword"), []);
     const closePopup = useCallback(() => setPopupType("none"), []);
 
     return <>
@@ -25,17 +30,22 @@ export default function UIRoot({ env, user }: UIRootProps)
         <UserIdentity
             env={env}
             user={user}
-            onRegisterButtonClick={openRegisterFormPopup}
-            onLogInButtonClick={openLoginFormPopup}
+            onAuthPromptButtonClick={openAuthPromptFormPopup}
         />
         <Tutorial/>
         <Chat/>
         <VoxelQuadSelectionMenu/>
-        {popupType == "register" && <Popup>
-            <RegisterForm onCancel={closePopup}/>
+        {popupType == "authPrompt" && <Popup>
+            <AuthPromptForm
+                onPlayAsGuestButtonClick={closePopup}
+                onLoginWithGoogleButtonClick={() => UserAPIClient.loginWithGoogle()}
+            />
         </Popup>}
-        {popupType == "login" && <Popup>
-            <LoginForm onCancel={closePopup}/>
+        {popupType == "registerWithPassword" && <Popup>
+            <RegisterWithPasswordForm onCancel={closePopup}/>
+        </Popup>}
+        {popupType == "loginWithPassword" && <Popup>
+            <LoginWithPasswordForm onCancel={closePopup}/>
         </Popup>}
         <Loading/>
     </>
