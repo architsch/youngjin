@@ -1,7 +1,7 @@
 import BufferState from "../../../networking/types/bufferState";
 import EncodableData from "../../../networking/types/encodableData";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
-import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../system/constants";
+import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../system/sharedConstants";
 import AddVoxelBlockParams from "./addVoxelBlockParams";
 import MoveVoxelBlockParams from "./moveVoxelBlockParams";
 import RemoveVoxelBlockParams from "./removeVoxelBlockParams";

@@ -6,7 +6,7 @@ import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import { getVoxelQuadTransformDimensions } from "../../../../shared/voxel/util/voxelQueryUtil";
-import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/constants";
+import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 
 const vec3Temp = new THREE.Vector3();
 

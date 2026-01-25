@@ -1,7 +1,9 @@
+// Database
+
+export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
+
 // Networking
 
-export const LATEST_DB_VERSION = 0;
-export const AUTH_TOKEN_NAME_BASE = `thingspool_token_v${LATEST_DB_VERSION}`;
 export const USER_API_ROUTE_PATH = "api/user";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds
 

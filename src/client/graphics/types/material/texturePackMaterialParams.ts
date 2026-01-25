@@ -2,20 +2,20 @@ import MaterialParams from "./materialParams";
 
 export default class TexturePackMaterialParams extends MaterialParams
 {
-    textureId: string;
+    texturePath: string;
     textureWidth: number;
     textureHeight: number;
     textureGridCellWidth: number;
     textureGridCellHeight: number;
     textureLoadType: TextureLoadType;
 
-    constructor(textureId: string, textureWidth: number, textureHeight: number,
+    constructor(texturePath: string, textureWidth: number, textureHeight: number,
         textureGridCellWidth: number, textureGridCellHeight: number,
         textureLoadType: TextureLoadType)
     {
         super("TexturePack");
 
-        this.textureId = textureId;
+        this.texturePath = texturePath;
         this.textureWidth = textureWidth;
         this.textureHeight = textureHeight;
         this.textureGridCellWidth = textureGridCellWidth;
@@ -25,8 +25,8 @@ export default class TexturePackMaterialParams extends MaterialParams
 
     getMaterialId(): string
     {
-        return `${super.getMaterialId()}-${this.textureId}`;
+        return `${super.getMaterialId()}-${this.texturePath}`;
     }
 }
 
-type TextureLoadType = "staticImageFromURL" | "dynamicEmpty";
+type TextureLoadType = "staticImageFromPath" | "dynamicEmpty";

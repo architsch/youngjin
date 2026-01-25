@@ -6,7 +6,7 @@ import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import { getFirstVoxelQuadIndexInVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadTransformDimensions } from "../../../shared/voxel/util/voxelQueryUtil";
-import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM } from "../../../shared/system/constants";
+import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM } from "../../../shared/system/sharedConstants";
 
 let isDevMode: boolean | undefined;
 
@@ -14,7 +14,7 @@ export default class VoxelMeshInstancer extends GameObjectComponent
 {
     instancedMeshGraphics: InstancedMeshGraphics;
     static latestMaterialParams: TexturePackMaterialParams;
-    static latestMaterialParamsSyncedRoomID: number = 0;
+    static latestMaterialParamsSyncedRoomID: string = "";
 
     private voxel: Voxel | undefined;
 
@@ -32,12 +32,12 @@ export default class VoxelMeshInstancer extends GameObjectComponent
         const currentRoom = App.getCurrentRoom();
         if (!currentRoom)
             throw new Error(`Current room not found.`);
-        if (VoxelMeshInstancer.latestMaterialParamsSyncedRoomID != currentRoom.roomID)
+        if (VoxelMeshInstancer.latestMaterialParamsSyncedRoomID != currentRoom.id)
         {
-            const materialParams = new TexturePackMaterialParams(currentRoom.texturePackURL,
-                1024, 1024, 128, 128, "staticImageFromURL");
+            const materialParams = new TexturePackMaterialParams(currentRoom.texturePackPath,
+                1024, 1024, 128, 128, "staticImageFromPath");
             VoxelMeshInstancer.latestMaterialParams = materialParams;
-            VoxelMeshInstancer.latestMaterialParamsSyncedRoomID = currentRoom.roomID;
+            VoxelMeshInstancer.latestMaterialParamsSyncedRoomID = currentRoom.id;
         }
         this.instancedMeshGraphics.setInstancingProperties(VoxelMeshInstancer.latestMaterialParams,
             "Square", NUM_VOXEL_QUADS_PER_ROOM);

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { useEffect } from "react";
 import ObjectManager from "../../../object/objectManager";
 import ScreenCenterText from "../basic/screenCenterText";
-import { Z_INDEX_INSTRUCTION } from "../../../../shared/system/constants";
+import { Z_INDEX_INSTRUCTION } from "../../../../shared/system/sharedConstants";
 
 const initialPlayerPos: THREE.Vector3 = new THREE.Vector3();
 const currPlayerPos: THREE.Vector3 = new THREE.Vector3();

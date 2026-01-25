@@ -15,18 +15,18 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
 {
     const user: User = socketUserContext.socket.handshake.auth as User;
     
-    console.log(`RoomManager.addUserToRoom :: roomID = ${roomRuntimeMemory.room.roomID}, userName = ${userName}`);
+    console.log(`RoomManager.addUserToRoom :: roomID = ${roomRuntimeMemory.room.id}, userName = ${userName}`);
     if (roomRuntimeMemory.participantUserNames[userName] != undefined)
     {
-        console.error(`RoomManager.addUserToRoom :: User is already registered (roomID = ${roomRuntimeMemory.room.roomID}, userName = ${userName})`);
+        console.error(`RoomManager.addUserToRoom :: User is already registered (roomID = ${roomRuntimeMemory.room.id}, userName = ${userName})`);
         return;
     }
-    RoomManager.currentRoomIDByUserName[userName] = roomRuntimeMemory.room.roomID;
+    RoomManager.currentRoomIDByUserName[userName] = roomRuntimeMemory.room.id;
     roomRuntimeMemory.participantUserNames[userName] = true;
 
-    const socketRoomContext = RoomManager.socketRoomContexts[roomRuntimeMemory.room.roomID];
+    const socketRoomContext = RoomManager.socketRoomContexts[roomRuntimeMemory.room.id];
     if (!socketRoomContext)
-        console.error(`RoomManager.addUserToRoom :: SocketRoomContext not found (roomID = ${roomRuntimeMemory.room.roomID})`);
+        console.error(`RoomManager.addUserToRoom :: SocketRoomContext not found (roomID = ${roomRuntimeMemory.room.id})`);
     else
         socketRoomContext.addSocketUserContext(userName, socketUserContext);
 
@@ -83,7 +83,7 @@ export function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoo
     //    unloadRoom(roomID);
 }
 
-export function getIdsOfObjectsSpawnedByUser(roomID: number, userName: string): string[]
+export function getIdsOfObjectsSpawnedByUser(roomID: string, userName: string): string[]
 {
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
     if (roomRuntimeMemory == undefined)

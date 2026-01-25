@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ongoingClientProcessesObservable } from "../../../system/clientObservables";
 import { ongoingClientProcessExists } from "../../../system/types/clientProcess";
 import ScreenCenterText from "../basic/screenCenterText";
-import { Z_INDEX_LOADING_SCREEN } from "../../../../shared/system/constants";
+import { Z_INDEX_LOADING_SCREEN } from "../../../../shared/system/sharedConstants";
 
 export default function Loading()
 {

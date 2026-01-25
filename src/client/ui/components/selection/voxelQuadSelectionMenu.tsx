@@ -3,7 +3,7 @@ import { voxelQuadSelectionObservable } from "../../../system/clientObservables"
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import VoxelQuadTextureOptions from "./voxelQuadTextureOptions";
 import VoxelQuadTransformOptions from "./voxelQuadTransformOptions";
-import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/constants";
+import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/sharedConstants";
 
 export default function VoxelQuadSelectionMenu()
 {

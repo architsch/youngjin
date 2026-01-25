@@ -6,6 +6,7 @@ import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import UserTokenUtil from "./userTokenUtil";
 import UserSearchUtil from "./userSearchUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
+import DBUserUtil from "../../db/util/dbUserUtil";
 dotenv.config();
 
 let cyclicCounter = 0;
@@ -47,10 +48,10 @@ async function identifyUserFromReq(req: Request, res: Response,
             case UserTypeEnumMap.Admin:
             case UserTypeEnumMap.Member:
                 try {
-                    const sqlUser = await UserSearchUtil.findExistingUserByUserName(user.userName, res); // Re-fetch the user object (because it could've been modified)
-                    if (!sqlUser)
+                    const dbUser = await UserSearchUtil.findExistingUserByUserName(user.userName, res); // Re-fetch the user object (because it could've been modified)
+                    if (!dbUser)
                         return false;
-                    const latestUser = User.fromSQL(sqlUser);
+                    const latestUser = DBUserUtil.fromDBType(dbUser);
                     await UserTokenUtil.addTokenToUser(latestUser, req, res);
                     (req as any).userString = latestUser.toString();
                     next();
@@ -105,7 +106,7 @@ function getUserFromReq(req: Request): User | undefined
         cyclicCounter = (cyclicCounter + 1) % 10;
         const uniqueHex = uniqueInt.toString(16);
         const guestName = `Guest-${uniqueHex}`;
-        user = new User(0, guestName, UserTypeEnumMap.Guest, "", 0);
+        user = new User("", guestName, UserTypeEnumMap.Guest, "", 0);
     }
     return user;
 }

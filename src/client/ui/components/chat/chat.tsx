@@ -3,9 +3,8 @@ import ChatTextInput from "./chatTextInput";
 import ChatSendButton from "./chatSendButton";
 import ChatSentMessage from "./chatSentMessage";
 import ObjectManager from "../../../object/objectManager";
-import App from "../../../app";
 import SpeechBubble from "../../../object/components/speechBubble";
-import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/constants";
+import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/sharedConstants";
 
 let sentMessageTimeout: NodeJS.Timeout | undefined = undefined;
 

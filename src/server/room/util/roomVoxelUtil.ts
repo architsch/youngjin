@@ -1,7 +1,7 @@
 import User from "../../../shared/user/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import Room from "../../../shared/room/types/room";
-import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../shared/system/constants";
+import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../shared/system/sharedConstants";
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
@@ -118,9 +118,9 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
     signal: EncodableData, updateType: string)
 {
     const user: User = socketUserContext.socket.handshake.auth as User;
-    const socketRoomContext = RoomManager.socketRoomContexts[room.roomID];
+    const socketRoomContext = RoomManager.socketRoomContexts[room.id];
     if (!socketRoomContext)
-        console.error(`SocketRoomContext not found (roomID = ${room.roomID})`);
+        console.error(`SocketRoomContext not found (roomID = ${room.id})`);
     else
     {
         Object.entries(socketRoomContext.getUserContexts()).forEach((kvp: [string, SocketUserContext]) => {

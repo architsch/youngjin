@@ -1,5 +1,5 @@
 import Button from "../basic/button";
-import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/constants";
+import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/sharedConstants";
 import User from "../../../../shared/user/types/user";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 

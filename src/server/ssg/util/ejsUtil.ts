@@ -3,12 +3,11 @@ import FileUtil from "./fileUtil";
 import UIConfig from "../../../shared/embeddedScripts/config/uiConfig";
 import TextUtil from "../../../shared/embeddedScripts/util/textUtil";
 import ejs from "ejs";
-import dotenv from "dotenv";
 import { Request, Response } from "express";
 import AddressUtil from "../../networking/util/addressUtil";
-dotenv.config();
+import { LOCALHOST_PORT, URL_DYNAMIC, URL_STATIC, VIEWS_ROOT_DIR } from "../../system/serverConstants";
 
-const ejsPartialRootPath = `${process.env.PWD}/${process.env.VIEWS_ROOT_DIR}/partial`;
+const ejsPartialRootPath = `${process.env.PWD}/${VIEWS_ROOT_DIR}/partial`;
 
 const baseStaticPageEJSParams = {
     TextUtil, UIConfig,
@@ -48,8 +47,8 @@ const EJSUtil =
                 .replaceAll("\n", "!*NEW_LINE*!")
                 .replace(/(PROD_CODE_BEGIN).*?(PROD_CODE_END)/g, "REMOVED_PROD_CODE")
                 .replaceAll("!*NEW_LINE*!", "\n")
-                .replaceAll(process.env.URL_STATIC as string, `http://${ip}:${process.env.PORT}`) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
-                .replaceAll(process.env.URL_DYNAMIC as string, `http://${ip}:${process.env.PORT}`);
+                .replaceAll(URL_STATIC as string, `http://${ip}:${LOCALHOST_PORT}`) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
+                .replaceAll(URL_DYNAMIC as string, `http://${ip}:${LOCALHOST_PORT}`);
             return html;
         }
         else
@@ -86,7 +85,7 @@ const EJSUtil =
         let ejsString = cachedEJSStrings[relativeEJSFilePath];
         if (ejsString == undefined)
         {
-            ejsString = await FileUtil.read(relativeEJSFilePath, process.env.VIEWS_ROOT_DIR);
+            ejsString = await FileUtil.read(relativeEJSFilePath, VIEWS_ROOT_DIR);
             cachedEJSStrings[relativeEJSFilePath] = ejsString;
         }
 

@@ -24,7 +24,7 @@ export default class FirstPersonProximityDetection
 
         if (currentRoom)
         {
-            const physicsObjects = PhysicsManager.getObjectsInDist(currentRoom.roomID,
+            const physicsObjects = PhysicsManager.getObjectsInDist(currentRoom.id,
                 controller.gameObject.position.x, controller.gameObject.position.z, maxProximityDetectionDist);
             
             for (const physicsObject of physicsObjects)

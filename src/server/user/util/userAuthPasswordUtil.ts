@@ -8,8 +8,8 @@ import UserTokenUtil from "./userTokenUtil";
 import UserSearchUtil from "./userSearchUtil";
 import UserInputValidator from "../../../shared/user/util/userInputValidator";
 import { localize } from "../../../shared/localization/util/locUtil";
-import SearchDB from "../../db/searchDB";
-import UserDB from "../../db/userDB";
+import DBSearchUtil from "../../db/util/dbSearchUtil";
+import DBUserUtil from "../../db/util/dbUserUtil";
 dotenv.config();
 
 const dev = process.env.MODE == "dev";
@@ -23,7 +23,7 @@ const UserAuthPasswordUtil =
             if (!validateUserNameAndPassword(req, res))
                 return;
 
-            const existingUsersResult = await SearchDB.users.withUserNameOrEmail(
+            const existingUsersResult = await DBSearchUtil.users.withUserNameOrEmail(
                 req.body.userName, "test@example.com");
             if (!existingUsersResult.success)
             {
@@ -44,7 +44,7 @@ const UserAuthPasswordUtil =
     
             const passwordHash = await bcrypt.hash(req.body.password, 10);
     
-            const success = await UserDB.createUser(
+            const success = await DBUserUtil.createUser(
                 req.body.userName, UserTypeEnumMap.Member, passwordHash, "test@example.com");
             if (!success)
             {
@@ -52,11 +52,11 @@ const UserAuthPasswordUtil =
                 return;
             }
 
-            const sqlUser = await UserSearchUtil.findExistingUserByUserName(req.body.userName, res); // Re-fetch the user object (because it could've been modified)
-            if (!sqlUser)
+            const dbUser = await UserSearchUtil.findExistingUserByUserName(req.body.userName, res); // Re-fetch the user object (because it could've been modified)
+            if (!dbUser)
                 return;
 
-            await UserTokenUtil.addTokenToUser(User.fromSQL(sqlUser), req, res);
+            await UserTokenUtil.addTokenToUser(DBUserUtil.fromDBType(dbUser), req, res);
         }
         catch (err)
         {
@@ -71,20 +71,20 @@ const UserAuthPasswordUtil =
             if (!validateUserNameAndPassword(req, res))
                 return;
 
-            const sqlUser = await UserSearchUtil.findExistingUserByUserName(req.body.userName, res);
-            if (!sqlUser)
+            const dbUser = await UserSearchUtil.findExistingUserByUserName(req.body.userName, res);
+            if (!dbUser)
                 return;
 
-            const passwordIsValid = await bcrypt.compare(req.body.password, sqlUser.passwordHash);
+            const passwordIsValid = await bcrypt.compare(req.body.password, dbUser.passwordHash);
 
             if (!passwordIsValid)
             {
-                ServerLogUtil.log("Wrong password", {passwordEntered: (dev ? req.body.password : "(HIDDEN)"), passwordHash: sqlUser.passwordHash}, "high", "pink");
+                ServerLogUtil.log("Wrong password", {passwordEntered: (dev ? req.body.password : "(HIDDEN)"), passwordHash: dbUser.passwordHash}, "high", "pink");
                 res.status(401).send("Wrong password.");
                 return;
             }
 
-            await UserTokenUtil.addTokenToUser(User.fromSQL(sqlUser), req, res);
+            await UserTokenUtil.addTokenToUser(DBUserUtil.fromDBType(dbUser), req, res);
         }
         catch (err)
         {

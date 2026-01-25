@@ -12,14 +12,14 @@ export const MaterialConstructorMap: { [materialType: string]:
         const p = params as TexturePackMaterialParams;
         switch (p.textureLoadType)
         {
-            case "staticImageFromURL":
+            case "staticImageFromPath":
                 return createTexturePackMaterial(
-                    await TextureFactory.loadStaticImageTexture(p.textureId),
+                    await TextureFactory.loadStaticImageTexture(p.texturePath),
                     p.textureWidth, p.textureHeight, p.textureGridCellWidth, p.textureGridCellHeight
                 );
             case "dynamicEmpty":
                 return createTexturePackMaterial(
-                    TextureFactory.loadDynamicEmptyTexture(p.textureId, p.textureWidth, p.textureHeight),
+                    TextureFactory.loadDynamicEmptyTexture(p.texturePath, p.textureWidth, p.textureHeight),
                     p.textureWidth, p.textureHeight, p.textureGridCellWidth, p.textureGridCellHeight
                 );
             default:

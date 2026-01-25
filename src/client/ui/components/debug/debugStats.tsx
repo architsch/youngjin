@@ -4,7 +4,7 @@ import ObjectManager from "../../../object/objectManager";
 import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import { getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../basic/button";
-import { Z_INDEX_HUD_OVERLAY } from "../../../../shared/system/constants";
+import { Z_INDEX_HUD_OVERLAY } from "../../../../shared/system/sharedConstants";
 
 export default function DebugStats()
 {

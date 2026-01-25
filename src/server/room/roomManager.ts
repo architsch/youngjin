@@ -15,16 +15,16 @@ import { updateVoxelGrid } from "./util/roomVoxelUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 dotenv.config();
 
-const roomRuntimeMemories: {[roomID: number]: RoomRuntimeMemory} = {};
-const socketRoomContexts: {[roomID: number]: SocketRoomContext} = {};
-const currentRoomIDByUserName: {[userName: string]: number} = {};
+const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
+const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
+const currentRoomIDByUserName: {[userName: string]: string} = {};
 
 const RoomManager =
 {
     roomRuntimeMemories,
     socketRoomContexts,
     currentRoomIDByUserName,
-    changeUserRoom: async (socketUserContext: SocketUserContext, roomID: number | undefined, prevRoomShouldExist: boolean) =>
+    changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean) =>
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
         console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userName = ${user.userName}`);

@@ -1,19 +1,17 @@
 import ServerLogUtil from "../../networking/util/serverLogUtil";
-import dotenv from "dotenv";
 import { Request, Response } from "express";
-import User from "../../../shared/user/types/user";
 import UserTokenUtil from "./userTokenUtil";
 import UserSearchUtil from "./userSearchUtil";
-import UserDB from "../../db/userDB";
+import DBUserUtil from "../../db/util/dbUserUtil";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import url from "url";
 import crypto from "crypto";
 import RestAPI from "../../../client/networking/api/restAPI";
-import SearchDB from "../../db/searchDB";
-import SQLUser from "../../../shared/db/types/sqlUser";
-import { USER_API_ROUTE_PATH } from "../../../shared/system/constants";
+import DBSearchUtil from "../../db/util/dbSearchUtil";
+import DBUser from "../../../server/db/types/row/dbUser";
+import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import AddressUtil from "../../networking/util/addressUtil";
-dotenv.config();
+import { LOCALHOST_PORT, URL_DYNAMIC } from "../../system/serverConstants";
 
 const dev = process.env.MODE == "dev";
 
@@ -60,23 +58,23 @@ const UserAuthGoogleUtil =
             const userNameBase = email.split("@")[0];
             let userName = userNameBase;
 
-            const existingUsersResult = await SearchDB.users.withEmail(email);
+            const existingUsersResult = await DBSearchUtil.users.withEmail(email);
             if (!existingUsersResult.success)
             {
                 res.status(500).send(`Internal Server Error`);
                 return;
             }
 
-            let sqlUser: SQLUser | null = null;
+            let dbUser: DBUser | null = null;
 
             if (existingUsersResult.data.length == 0) // new user
             {
                 let numNameCopies = 0;
-                while (!sqlUser && ++numNameCopies <= 5)
+                while (!dbUser && ++numNameCopies <= 5)
                 {
                     if (numNameCopies >= 2)
                         userName = `${userNameBase}#${numNameCopies}`;
-                    const nameConflictingUsersResult = await SearchDB.users.withUserName(userName);
+                    const nameConflictingUsersResult = await DBSearchUtil.users.withUserName(userName);
                     if (!nameConflictingUsersResult.success)
                     {
                         res.status(500).send(`Internal Server Error`);
@@ -84,19 +82,19 @@ const UserAuthGoogleUtil =
                     }
                     if (nameConflictingUsersResult.data.length == 0) // free userName found
                     {
-                        const success = await UserDB.createUser(
+                        const success = await DBUserUtil.createUser(
                             userName, UserTypeEnumMap.Member, "", email);
                         if (!success)
                         {
                             res.status(500).send(`Internal Server Error (during registration)`);
                             return;
                         }
-                        sqlUser = await UserSearchUtil.findExistingUserByUserName(userName, res);
-                        if (!sqlUser)
+                        dbUser = await UserSearchUtil.findExistingUserByUserName(userName, res);
+                        if (!dbUser)
                             return;
                     }
                 }
-                if (!sqlUser)
+                if (!dbUser)
                 {
                     res.status(500).send(`Username "${userNameBase}" is used too many times.`);
                     return;
@@ -104,11 +102,11 @@ const UserAuthGoogleUtil =
             }
             else // previously registered user
             {
-                sqlUser = existingUsersResult.data[0];
+                dbUser = existingUsersResult.data[0];
             }
 
-            if (sqlUser)
-                await UserTokenUtil.addTokenToUser(User.fromSQL(sqlUser), req, res);
+            if (dbUser)
+                await UserTokenUtil.addTokenToUser(DBUserUtil.fromDBType(dbUser), req, res);
             else
                 res.status(500).send(`Internal Server Error`);
         }
@@ -122,7 +120,7 @@ const UserAuthGoogleUtil =
 
 const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-const baseURL = dev ? `http://${AddressUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_DYNAMIC;
+const baseURL = dev ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_DYNAMIC;
 const redirectURL = `${baseURL}/${USER_API_ROUTE_PATH}/login_google_callback`;
 const userInfoURL = `https://www.googleapis.com/oauth2/v3/userinfo?alt=json`;
 

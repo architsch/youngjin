@@ -1,16 +1,16 @@
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
-import RoomDB from "../../db/roomDB";
+import DBRoomUtil from "../../db/util/dbRoomUtil";
 import SocketRoomContext from "../../sockets/types/socketRoomContext";
 import RoomManager from "../roomManager";
 
-export async function loadRoom(roomID: number): Promise<RoomRuntimeMemory | null>
+export async function loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
 {
     console.log(`RoomManager.loadRoom :: roomID = ${roomID}`);
     if (RoomManager.roomRuntimeMemories[roomID] != undefined)
         throw new Error(`RoomManager.loadRoom :: RoomRuntimeMemory already exists (roomID = ${roomID})`);
 
-    const room = await RoomDB.getRoomContent(roomID);
+    const room = await DBRoomUtil.getRoomContent(roomID);
     if (!room)
         return null;
 
@@ -22,7 +22,7 @@ export async function loadRoom(roomID: number): Promise<RoomRuntimeMemory | null
     return roomRuntimeMemory;
 }
 
-export function unloadRoom(roomID: number)
+export function unloadRoom(roomID: string)
 {
     console.log(`RoomManager.unloadRoom :: roomID = ${roomID}`);
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];

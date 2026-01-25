@@ -31,18 +31,4 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
-    - name: Create .env
-      run: |
-        echo "PORT=${{ secrets.PORT }}" >> ./.env
-        echo "URL_STATIC=${{ secrets.URL_STATIC }}" >> ./.env
-        echo "URL_DYNAMIC=${{ secrets.URL_DYNAMIC }}" >> ./.env
-        echo "STATIC_PAGE_ROOT_DIR=public" >> ./.env
-        echo "VIEWS_ROOT_DIR=views" >> ./.env
-        echo "SRC_ROOT_DIR=src" >> ./.env
-        echo "GLOBAL_LAST_MOD=2023-09-10" >> ./.env
-        echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> ./.env
-        echo "EMAIL_SENDER_PASS=${{ secrets.EMAIL_SENDER_PASS }}" >> ./.env
-        echo "SQL_HOST_PROD=${{ secrets.SQL_HOST_PROD }}" >> ./.env
-        echo "SQL_USER_PROD=${{ secrets.SQL_USER_PROD }}" >> ./.env
-        echo "SQL_PASS_PROD=${{ secrets.SQL_PASS_PROD }}" >> ./.env
     - run: pm2 restart admin

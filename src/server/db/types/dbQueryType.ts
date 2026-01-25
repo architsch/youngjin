@@ -1,0 +1,1 @@
+export type DBQueryType = "select" | "insert" | "update" | "delete" | "?";

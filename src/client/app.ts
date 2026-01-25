@@ -79,7 +79,7 @@ async function unloadCurrentRoom()
 
     await VoxelManager.unload();
     await ObjectManager.unload();
-    PhysicsManager.unload(currentRoom.roomID);
+    PhysicsManager.unload(currentRoom.id);
     await GraphicsManager.unload();
 
     currentRoom = undefined;

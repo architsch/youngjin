@@ -3,7 +3,7 @@ import PageRouter from "./ui/pageRouter";
 import UserRouter from "./api/userRouter";
 import FileUtil from "../ssg/util/fileUtil";
 import EJSUtil from "../ssg/util/ejsUtil";
-import { USER_API_ROUTE_PATH } from "../../shared/system/constants";
+import { USER_API_ROUTE_PATH } from "../../shared/system/sharedConstants";
 
 export default function Router(app: Express): void
 {

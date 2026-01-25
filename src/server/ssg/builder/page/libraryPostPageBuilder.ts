@@ -1,12 +1,11 @@
 import FileUtil from "../../util/fileUtil";
 import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
-import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import PostEntry from "../../types/postEntry"
 import PostInfo from "../../types/postInfo"
-dotenv.config();
+import { URL_STATIC } from "../../../system/serverConstants";
 
 export default class LibraryPostPageBuilder
 {
@@ -69,7 +68,7 @@ export default class LibraryPostPageBuilder
             contentLines.length = 0;
 
             this.sitemapBuilder.addEntry(postRelativeURL, lastmod);
-            this.atomFeedBuilder.addEntry(`${process.env.URL_STATIC}/${postRelativeURL}`, title, lastmod, desc);
+            this.atomFeedBuilder.addEntry(`${URL_STATIC}/${postRelativeURL}`, title, lastmod, desc);
 
             postInfoList.push({ pageNumber, title, lastmod, desc, keywords, customOGImagePath });
             pageNumber++;
@@ -120,7 +119,7 @@ export default class LibraryPostPageBuilder
                 const imgName = (line.match(/<(.*?)>/) as string[])[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${process.env.URL_STATIC}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${URL_STATIC}/${entry.dirName}/${imgName}.jpg`;
                     if (customOGImagePath == undefined || line.endsWith("*"))
                         customOGImagePath = imgPath;
                     contentLines.push(`<img class="l_image" src="${imgPath}" alt="${title.replaceAll("\"", "&quot;")} (Figure ${imageNumber++})">`);

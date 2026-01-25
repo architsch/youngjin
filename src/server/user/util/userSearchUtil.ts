@@ -1,17 +1,17 @@
-import SearchDB from "../../db/searchDB";
+import DBSearchUtil from "../../db/util/dbSearchUtil";
 import ServerLogUtil from "../../networking/util/serverLogUtil";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
-import SQLUser from "../../../shared/db/types/sqlUser";
+import DBUser from "../../../server/db/types/row/dbUser";
 import CookieUtil from "../../networking/util/cookieUtil";
 dotenv.config();
 
 const UserSearchUtil =
 {
     findExistingUserByUserName: async (userName: string, res?: Response,
-        ignoreNotFoundError: boolean = false): Promise<SQLUser | null> =>
+        ignoreNotFoundError: boolean = false): Promise<DBUser | null> =>
     {
-        const existingUsersResult = await SearchDB.users.withUserName(userName);
+        const existingUsersResult = await DBSearchUtil.users.withUserName(userName);
         if (!existingUsersResult.success)
         {
             res?.status(500).send(`Internal Server Error`);

@@ -2,7 +2,7 @@ import BufferState from "../../../networking/types/bufferState";
 import EncodableData from "../../../networking/types/encodableData";
 import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
-import { NUM_VOXEL_QUADS_PER_COLLISION_LAYER, VOXEL_GRID_TASK_TYPE_ADD } from "../../../system/constants";
+import { NUM_VOXEL_QUADS_PER_COLLISION_LAYER, VOXEL_GRID_TASK_TYPE_ADD } from "../../../system/sharedConstants";
 import UpdateVoxelGridTaskParams from "./updateVoxelGridTaskParams";
 
 export default class AddVoxelBlockParams extends UpdateVoxelGridTaskParams

@@ -1,5 +1,5 @@
 import Vec2 from "../../math/types/vec2";
-import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL } from "../../system/constants";
+import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import PhysicsObject from "../types/physicsObject";
 import PhysicsRoom from "../types/physicsRoom";
 import PhysicsVoxel from "../types/physicsVoxel";

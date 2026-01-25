@@ -1,12 +1,12 @@
 import BufferState from "../../networking/types/bufferState";
+import EncodableByteString from "../../networking/types/encodableByteString";
 import EncodableData from "../../networking/types/encodableData";
-import EncodableRaw4ByteNumber from "../../networking/types/encodableRaw4ByteNumber";
 
 export default class RoomChangeRequestParams extends EncodableData
 {
-    roomID: number;
+    roomID: string;
 
-    constructor(roomID: number)
+    constructor(roomID: string)
     {
         super();
         this.roomID = roomID;
@@ -14,12 +14,12 @@ export default class RoomChangeRequestParams extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        new EncodableRaw4ByteNumber(this.roomID).encode(bufferState);
+        new EncodableByteString(this.roomID).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const roomID = (EncodableRaw4ByteNumber.decode(bufferState) as EncodableRaw4ByteNumber).n;
+        const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         return new RoomChangeRequestParams(roomID);
     }
 }

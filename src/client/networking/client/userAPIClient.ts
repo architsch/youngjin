@@ -1,7 +1,7 @@
 import { AxiosRequestConfig } from "axios";
 import App from "../../app";
 import RestAPI, { RestAPIResponse } from "../api/restAPI";
-import { USER_API_ROUTE_PATH } from "../../../shared/system/constants";
+import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 
 const UserAPIClient =
 {

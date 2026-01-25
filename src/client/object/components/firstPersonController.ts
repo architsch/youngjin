@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
-import { NEAR_EPSILON } from "../../../shared/system/constants";
+import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import FirstPersonCamera from "./helpers/firstPerson/firstPersonCamera";
 import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProximityDetection";
 import FirstPersonPointerInput from "./helpers/firstPerson/firstPersonPointerInput";

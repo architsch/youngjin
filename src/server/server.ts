@@ -4,24 +4,22 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import hpp from "hpp";
 import SSG from "./ssg/ssg";
-import DB from "./db/db";
 import Router from "./router/router";
 import Sockets from "./sockets/sockets";
-import dotenv from "dotenv";
-import RoomDB from "./db/roomDB";
+import DBRoomUtil from "./db/util/dbRoomUtil";
 import AddressUtil from "./networking/util/addressUtil";
-import dbTask_init from "./db/tasks/dbTask_init";
-import { LATEST_DB_VERSION } from "../shared/system/constants";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
-import SearchDB from "./db/searchDB";
-dotenv.config();
+import DBSearchUtil from "./db/util/dbSearchUtil";
+import { LOCALHOST_PORT, URL_STATIC } from "./system/serverConstants";
+
+const dev = process.env.MODE == "dev";
 
 async function Server(): Promise<void>
 {
     // SSG = "Static Site Generator"
     if (!process.env.SKIP_SSG)
     {
-        if (process.env.MODE == "dev") // If you are in dev mode, rebuild the static pages on restart.
+        if (dev) // If you are in dev mode, rebuild the static pages on restart.
         {
             await SSG();
         }
@@ -31,42 +29,14 @@ async function Server(): Promise<void>
             return;
         }
     }
-
-    // database initialization
-
-    if (!(await DB.runQuery(`DROP DATABASE IF EXISTS main;`)).success) return; // <--- Reset the DB every time the server restarts (TODO: Remove this once the DB system gets fully stabilized.)
-    if (!(await DB.runQuery(`CREATE DATABASE IF NOT EXISTS main;`)).success) return;
-    if (!(await DB.runQuery(`USE main;`)).success) return;
-    if (!(await DB.runQuery(`CREATE TABLE IF NOT EXISTS globalData (dbVersion INT NOT NULL);`)).success) return;
     
-    let result = await DB.runQuery<number>(`SELECT dbVersion FROM globalData;`);
-    if (!result.success)
-        return;
-
-    if (!result.data || result.data.length == 0) // dbVersion doesn't exist yet. (i.e. This is the first-time setup)
-    {
-        if (!(await dbTask_init())) return;
-    }
-    else // dbVersion already exists. (i.e. This is either an up-to-date or outdated DB)
-    {
-        let dbVersion = result.data[0];
-        console.log(`Current DB Version: ${dbVersion}`);
-
-        while (dbVersion < LATEST_DB_VERSION)
-        {
-            // Implement version migration routines here:
-            // ...
-            dbVersion++;
-        }
-    }
-    
-    const roomSearchResult = await SearchDB.rooms.withRoomType(RoomTypeEnumMap.Hub);
+    const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
     if (!roomSearchResult.success)
         return;
 
     if (roomSearchResult.data.length == 0)
     {
-        let success = await RoomDB.createRoom("hub", RoomTypeEnumMap.Hub, "", 0, 1, 2, `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/app/assets/texture_packs/default.jpg`);
+        let success = await DBRoomUtil.createRoom("hub", RoomTypeEnumMap.Hub, "", 0, 1, 2, `${dev ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_STATIC}/app/assets/texture_packs/default.jpg`);
         if (!success)
             return;
     }
@@ -88,9 +58,9 @@ async function Server(): Promise<void>
     Router(app);
 
     // server connection
-    server.listen(process.env.PORT, () => {
+    server.listen(dev ? LOCALHOST_PORT : process.env.PORT, () => {
         console.log("---------------------------------------------");
-        console.log(`Listening to port ${process.env.PORT}.`);
+        console.log(`Listening to port ${LOCALHOST_PORT}.`);
     });
     
     // socket connection
@@ -100,5 +70,5 @@ async function Server(): Promise<void>
 Server();
 
 // Prevent automatic restart when the server app crashes (only on dev mode)
-if (process.env.MODE == "dev")
+if (dev)
     setInterval(() => {}, 36000000);

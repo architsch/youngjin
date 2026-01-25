@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Z_INDEX_POPUP } from "../../../../shared/system/constants";
+import { Z_INDEX_POPUP } from "../../../../shared/system/sharedConstants";
 
 export default function Popup({ children }: PopupProps)
 {

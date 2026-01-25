@@ -4,7 +4,7 @@ import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesync
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import { objectDesyncResolveObservable, objectSyncObservable } from "../../system/clientObservables";
-import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/constants";
+import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;

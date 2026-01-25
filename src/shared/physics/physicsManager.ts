@@ -11,9 +11,9 @@ import { getLowestObjectCollisionLayer, getObjectsInDist, removeObjectFromInters
 import { getVoxelsInBox } from "./util/physicsVoxelUtil";
 import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
 import { getHighestOccupiedVoxelCollisionLayer, isVoxelCollisionLayerOccupied } from "../voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/constants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/sharedConstants";
 
-const physicsRooms: {[roomID: number]: PhysicsRoom} = {};
+const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
 
 let hitStateTemp: PhysicsHitState = {
     minHitRayScale: 1,
@@ -24,12 +24,12 @@ const PhysicsManager =
 {
     load: (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
-        if (physicsRooms[roomRuntimeMemory.room.roomID] != undefined)
-            throw new Error(`Physics-room already exists (roomID = ${roomRuntimeMemory.room.roomID})`);
+        if (physicsRooms[roomRuntimeMemory.room.id] != undefined)
+            throw new Error(`Physics-room already exists (roomID = ${roomRuntimeMemory.room.id})`);
 
         const voxelGrid = roomRuntimeMemory.room.voxelGrid;
 
-        physicsRooms[roomRuntimeMemory.room.roomID] = {
+        physicsRooms[roomRuntimeMemory.room.id] = {
             room: roomRuntimeMemory.room,
             voxels: voxelGrid.voxels.map(voxel => {
                 const row = voxel.row;
@@ -47,17 +47,17 @@ const PhysicsManager =
             objectById: {},
         };
     },
-    unload: (roomID: number) =>
+    unload: (roomID: string) =>
     {
         if (physicsRooms[roomID] == undefined)
             throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
         delete physicsRooms[roomID];
     },
-    hasRoom: (roomID: number): boolean =>
+    hasRoom: (roomID: string): boolean =>
     {
         return physicsRooms[roomID] != undefined;
     },
-    addObject: (roomID: number, objectId: string, hitbox: AABB2, collisionLayerMaskAtGroundLevel: number): PhysicsObject =>
+    addObject: (roomID: string, objectId: string, hitbox: AABB2, collisionLayerMaskAtGroundLevel: number): PhysicsObject =>
     {
         //console.log(`PhysicsManager.addObject :: roomID = ${roomID}, objectId = ${objectId}`);
         const physicsRoom = physicsRooms[roomID];
@@ -87,7 +87,7 @@ const PhysicsManager =
         setObjectPosition(physicsRoom, objectId, { x: hitbox.x, y: hitbox.y });
         return newObject;
     },
-    removeObject: (roomID: number, objectId: string) =>
+    removeObject: (roomID: string, objectId: string) =>
     {
         //console.log(`PhysicsManager.removeObject :: roomID = ${roomID}, objectId = ${objectId}`);
         const physicsRoom = physicsRooms[roomID];
@@ -101,7 +101,7 @@ const PhysicsManager =
 
         removeObjectFromIntersectingVoxels(object);
     },
-    tryMoveObject: (roomID: number, objectId: string, targetPos: Vec2): PhysicsPosUpdateResult =>
+    tryMoveObject: (roomID: string, objectId: string, targetPos: Vec2): PhysicsPosUpdateResult =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRooms[roomID] == undefined)
@@ -258,7 +258,7 @@ const PhysicsManager =
 
         return { resolvedPos, desyncDetected: false };
     },
-    forceMoveObject: (roomID: number, objectId: string, targetPos: Vec2) =>
+    forceMoveObject: (roomID: string, objectId: string, targetPos: Vec2) =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRooms[roomID] == undefined)
@@ -271,7 +271,7 @@ const PhysicsManager =
         object.hitbox.x = targetPos.x;
         object.hitbox.y = targetPos.y;
     },
-    getObjectsInDist: (roomID: number, centerX: number, centerY: number, dist: number): PhysicsObject[] =>
+    getObjectsInDist: (roomID: string, centerX: number, centerY: number, dist: number): PhysicsObject[] =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRooms[roomID] == undefined)

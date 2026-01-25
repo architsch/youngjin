@@ -1,4 +1,4 @@
-import { NUM_VOXEL_QUADS_PER_ROOM } from "../../system/constants";
+import { NUM_VOXEL_QUADS_PER_ROOM } from "../../system/sharedConstants";
 
 export default class VoxelQuadsRuntimeMemory
 {

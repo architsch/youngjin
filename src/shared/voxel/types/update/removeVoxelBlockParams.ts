@@ -1,7 +1,7 @@
 import BufferState from "../../../networking/types/bufferState";
 import EncodableData from "../../../networking/types/encodableData";
 import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
-import { VOXEL_GRID_TASK_TYPE_REMOVE } from "../../../system/constants";
+import { VOXEL_GRID_TASK_TYPE_REMOVE } from "../../../system/sharedConstants";
 import UpdateVoxelGridTaskParams from "./updateVoxelGridTaskParams";
 
 export default class RemoveVoxelBlockParams extends UpdateVoxelGridTaskParams

@@ -4,7 +4,7 @@ import GraphicsManager from "../../../../graphics/graphicsManager";
 import { playerViewTargetPosObservable } from "../../../../system/clientObservables";
 import GameObject from "../../../types/gameObject";
 import Num from "../../../../../shared/math/util/num";
-import { NEAR_EPSILON } from "../../../../../shared/system/constants";
+import { NEAR_EPSILON } from "../../../../../shared/system/sharedConstants";
 import WorldSpaceSelection from "../../../../graphics/types/gizmo/worldSpaceSelection";
 
 const frustum = new THREE.Frustum();

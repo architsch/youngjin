@@ -1,6 +1,5 @@
 import FileUtil from "../../ssg/util/fileUtil";
-import dotenv from "dotenv";
-dotenv.config();
+import { URL_STATIC } from "../../system/serverConstants";
 
 export default class SitemapBuilder
 {
@@ -10,7 +9,7 @@ export default class SitemapBuilder
     {
         this.lines.push(`</url>`);
         this.lines.push(`  <lastmod>${lastmod}</lastmod>`);
-        this.lines.push(`  <loc>${process.env.URL_STATIC}/${relativeURL}</loc>`);
+        this.lines.push(`  <loc>${URL_STATIC}/${relativeURL}</loc>`);
         this.lines.push(`<url>`);
     }
 

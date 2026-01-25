@@ -1,6 +1,5 @@
 const os = require("os");
-import dotenv from "dotenv";
-dotenv.config();
+import { LOCALHOST_PORT, URL_DYNAMIC, URL_STATIC } from "../../system/serverConstants";
 
 // If this is set to TRUE, the local IP address will simply be "localhost" (This is for testing features which require the server URL to be based on "localhost" instead of an actual IP address).
 const forceLocalhost = true;
@@ -8,10 +7,10 @@ const forceLocalhost = true;
 const AddressUtil =
 {
     getErrorPageURL: (errorPageName: string) => {
-        return `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_STATIC}/error/${errorPageName}.html`;
+        return `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_STATIC}/error/${errorPageName}.html`;
     },
     getMyPageURL: () => {
-        return `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${process.env.PORT}` : process.env.URL_DYNAMIC}/mypage`;
+        return `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_DYNAMIC}/mypage`;
     },
     getLocalIpAddress: () =>
     {

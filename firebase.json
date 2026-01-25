@@ -1,0 +1,42 @@
+{
+  "apphosting": [
+    {
+      "backendId": "thingspool",
+      "rootDir": "./dist/server",
+      "ignore": [
+        ".git",
+        ".github",
+        ".vscode",
+        "build",
+        "node_modules",
+        "public",
+        "src",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions"
+      ]
+    }
+  ],
+  "firestore": {
+    "database": "thingspool",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "emulators": {
+    "apphosting": {
+      "port": 5002,
+      "rootDirectory": "./"
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}

@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import GameEntry from "../../types/gameEntry"
+import { URL_STATIC } from "../../../system/serverConstants";
 dotenv.config();
 
 export default class ArcadeGamePageBuilder
@@ -76,7 +77,7 @@ export default class ArcadeGamePageBuilder
                 const imgName = (line.match(/<(.*?)>/) as string[])[1];
                 if (imgName.length > 0)
                 {
-                    const imgPath = `${process.env.URL_STATIC}/${entry.dirName}/${imgName}.jpg`;
+                    const imgPath = `${URL_STATIC}/${entry.dirName}/${imgName}.jpg`;
                     contentLines.push(`<img class="l_image" src="${imgPath}" alt="ThingsPool - ${entry.title} (Screenshot ${imageIndex++})">`);
                 }
             }
@@ -99,7 +100,7 @@ export default class ArcadeGamePageBuilder
         }));
 
         this.sitemapBuilder.addEntry(relativeURL, entry.lastmod);
-        this.atomFeedBuilder.addEntry(`${process.env.URL_STATIC}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
+        this.atomFeedBuilder.addEntry(`${URL_STATIC}/${relativeURL}`, entry.title, entry.lastmod, entry.title);
 
         await builder.build(relativeURL);
     };

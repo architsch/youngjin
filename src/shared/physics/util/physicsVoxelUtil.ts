@@ -1,5 +1,5 @@
 import AABB2 from "../../math/types/aabb2";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/constants";
+import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import PhysicsRoom from "../types/physicsRoom";
 import PhysicsVoxel from "../types/physicsVoxel";
 

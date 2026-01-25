@@ -6,14 +6,14 @@ const loadedRenderTargets: { [renderTargetId: string]: THREE.WebGLRenderTarget }
 
 const TextureFactory =
 {
-    loadStaticImageTexture: async (url: string): Promise<THREE.Texture> =>
+    loadStaticImageTexture: async (texturePath: string): Promise<THREE.Texture> =>
     {
-        const loadedTexture = loadedTextures[url];
+        const loadedTexture = loadedTextures[texturePath];
         if (loadedTexture != undefined)
             return loadedTexture;
         
-        const newTexture = await textureLoader.loadAsync(url);
-        loadedTextures[url] = newTexture;
+        const newTexture = await textureLoader.loadAsync(texturePath);
+        loadedTextures[texturePath] = newTexture;
         return newTexture;
     },
     loadDynamicEmptyTexture: (textureId: string, width: number, height: number): THREE.Texture =>

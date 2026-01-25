@@ -8,8 +8,8 @@ import RoomManager from "../room/roomManager";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
-import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/constants";
-import SearchDB from "../db/searchDB";
+import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
+import DBSearchUtil from "../db/util/dbSearchUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 let nsp: socketIO.Namespace;
@@ -70,10 +70,10 @@ const GameSockets =
             });
 
             // A recently connected client should automatically join the hub.
-            const roomSearchResult = await SearchDB.rooms.withRoomType(RoomTypeEnumMap.Hub);
+            const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
             if (roomSearchResult.success && roomSearchResult.data.length > 0)
             {
-                const roomID = roomSearchResult.data[0].roomID;
+                const roomID = roomSearchResult.data[0].id as string;
                 await RoomManager.changeUserRoom(socketUserContext, roomID, false);
             }
         });
