@@ -20,6 +20,7 @@ import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVox
 import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
+import UserCommandParams from "../../../shared/user/types/userCommandParams";
 
 let socket: Socket;
 
@@ -88,6 +89,7 @@ const GameSocketsClient =
 
     emitObjectSync: (params: ObjectSyncParams) => sendEncodedSignal("objectSync", params),
     emitObjectMessage: (params: ObjectMessageParams) => sendEncodedSignal("objectMessage", params),
+    emitUserCommand: (params: UserCommandParams) => sendEncodedSignal("userCommand", params),
     tryEmitRoomChangeRequest: (params: RoomChangeRequestParams) => {
         if (tryStartClientProcess("roomChange", 1, 1))
             sendEncodedSignal("roomChangeRequest", params);

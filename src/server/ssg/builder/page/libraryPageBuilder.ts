@@ -1,12 +1,10 @@
 import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import LibraryPostListPageBuilder from "./libraryPostListPageBuilder";
-import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import { LibraryData } from "../../data/libraryData";
 import { ArcadeData } from "../../data/arcadeData";
-dotenv.config();
 
 export default class LibraryPageBuilder
 {

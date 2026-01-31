@@ -6,6 +6,8 @@ export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
 
 export const USER_API_ROUTE_PATH = "api/user";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds
+export const ROOM_SAVE_INTERVAL = 180000; // in milliseconds
+export const GUEST_TUTORIAL_STEP_COOKIE_NAME = "thingspool_guest_tutorial_step";
 
 // Math
 
@@ -51,9 +53,9 @@ export const VOXEL_GRID_TASK_TYPE_TEX = 3;
 
 // UI
 
-export const Z_INDEX_LOADING_SCREEN = "z-100"; // e.g. full-screen indicator that the whole app is transitioning to another state.
-export const Z_INDEX_NOTIFICATION = "z-80"; // e.g. toast message
-export const Z_INDEX_POPUP = "z-70"; // e.g. error popup, confirmation dialog window, form to fill out and submit
-export const Z_INDEX_INSTRUCTION = "z-60"; // e.g. tutorial's on-screen instruction
-export const Z_INDEX_HUD_OVERLAY = "z-55"; // e.g. temporary debug panel
-export const Z_INDEX_HUD_MAIN = "z-50"; // e.g. menu, editor panel
+export const PAGE_NAME_MAP = {
+    "index": "Home", // static
+    "arcade": "Arcade", // static
+    "library": "Library", // static
+    "portfolio": "Portfolio", // static
+};

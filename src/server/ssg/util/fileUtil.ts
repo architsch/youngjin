@@ -1,8 +1,7 @@
 import path from "path";
 import fs from "fs/promises";
-import ServerLogUtil from "../../networking/util/serverLogUtil";
-import dotenv from "dotenv";
-dotenv.config();
+import { STATIC_PAGE_ROOT_DIR } from "../../system/serverConstants";
+import LogUtil from "../../../shared/system/util/logUtil";
 
 const FileUtil =
 {
@@ -15,7 +14,7 @@ const FileUtil =
             return data;
         }
         catch (err) {
-            ServerLogUtil.log("Failed to read file", {relativeFilePath, err}, "high", "pink");
+            LogUtil.log("Failed to read file", {relativeFilePath, err}, "high", "error");
             return "";
         }
     },
@@ -27,7 +26,7 @@ const FileUtil =
             await fs.writeFile(absoluteFilePath, content);
         }
         catch (err) {
-            ServerLogUtil.log("Failed to write file", {relativeFilePath, err} as any, "high", "pink");
+            LogUtil.log("Failed to write file", {relativeFilePath, err} as any, "high", "error");
         }
     },
     getAllRelativePathsInDirRecursively: async (dir: string): Promise<string[]> =>
@@ -40,7 +39,7 @@ const FileUtil =
     getAbsoluteFilePath(relativeFilePath: string, rootDir?: string): string
     {
         if (rootDir == undefined)
-            rootDir = process.env.STATIC_PAGE_ROOT_DIR;
+            rootDir = STATIC_PAGE_ROOT_DIR;
         return path.join(process.env.PWD as string, rootDir + "/" + relativeFilePath);
     },
     async getAllRelativePathsInDirRecursively_internal(

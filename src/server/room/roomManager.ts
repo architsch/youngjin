@@ -5,7 +5,6 @@ import Vec2 from "../../shared/math/types/vec2";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
-import dotenv from "dotenv";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
@@ -13,7 +12,8 @@ import { addUserToRoom, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
 import { updateVoxelGrid } from "./util/roomVoxelUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
-dotenv.config();
+import DBRoomUtil from "../db/util/dbRoomUtil";
+import { ROOM_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -24,6 +24,27 @@ const RoomManager =
     roomRuntimeMemories,
     socketRoomContexts,
     currentRoomIDByUserName,
+    saveRooms: async () =>
+    {
+        const currTimeInMillis = Date.now();
+        //console.log(`RoomManager.saveRooms :: Saving rooms... (currTimeInMillis = ${Math.floor(currTimeInMillis)})`);
+        for (const [roomID, roomRuntimeMemory] of Object.entries(roomRuntimeMemories))
+        {
+            if (roomRuntimeMemory.room.dirty &&
+                currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_SAVE_INTERVAL)
+            {
+                const success = await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room);
+                if (success)
+                {
+                    roomRuntimeMemory.lastSavedTimeInMillis = Date.now();
+                    roomRuntimeMemory.room.dirty = false;
+                    console.log(`RoomManager.saveRooms :: Saved room (roomID = ${roomID})`);
+                }
+                else
+                    console.error(`RoomManager.saveRooms :: Failed to save room (roomID = ${roomID})`);
+            }
+        }
+    },
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean) =>
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
@@ -143,5 +164,15 @@ const RoomManager =
         }
     },
 }
+
+// periodic room saving
+let savingInProgress = false;
+setInterval(async () => {
+    if (savingInProgress)
+        return;
+    savingInProgress = true;
+    await RoomManager.saveRooms();
+    savingInProgress = false;
+}, 3000);
 
 export default RoomManager;

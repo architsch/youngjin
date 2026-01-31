@@ -1,18 +1,19 @@
 import Spacer from "../basic/spacer";
 import Button from "../basic/button";
 import Text from "../basic/text";
+import Form from "../basic/form";
 
 export default function AuthPromptForm({
     onPlayAsGuestButtonClick,
     onLoginWithGoogleButtonClick
 }: Props)
 {
-    return <div className="flex flex-col gap-2">
-        <Text content="Welcome, Guest!" size="lg"/>
+    return <Form>
+        <Text content="Sign In" size="lg"/>
         <Spacer size="sm"/>
-        <Button name="Play as Guest" size="md" onClick={onPlayAsGuestButtonClick}/>
+        <Button name="Continue as Guest" size="md" onClick={onPlayAsGuestButtonClick}/>
         <Button name="Sign In with Google" size="md" onClick={onLoginWithGoogleButtonClick}/>
-    </div>
+    </Form>
 }
 
 interface Props

@@ -1,36 +1,50 @@
 const os = require("os");
 import { LOCALHOST_PORT, URL_DYNAMIC, URL_STATIC } from "../../system/serverConstants";
 
+const dev = process.env.MODE == "dev";
+
 // If this is set to TRUE, the local IP address will simply be "localhost" (This is for testing features which require the server URL to be based on "localhost" instead of an actual IP address).
 const forceLocalhost = true;
 
 const AddressUtil =
 {
     getErrorPageURL: (errorPageName: string) => {
-        return `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_STATIC}/error/${errorPageName}.html`;
+        return `${AddressUtil.getEnvStaticURL()}/error/${errorPageName}.html`;
     },
     getMyPageURL: () => {
-        return `${process.env.MODE == "dev" ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_DYNAMIC}/mypage`;
+        return `${AddressUtil.getEnvDynamicURL()}/mypage`;
     },
-    getLocalIpAddress: () =>
+    getEnvStaticURL: () => {
+        return dev ? getLocalURL() : URL_STATIC;
+    },
+    getEnvDynamicURL: () => {
+        return dev ? getLocalURL() : URL_DYNAMIC;
+    },
+}
+
+function getLocalURL(): string
+{
+    return `http://${getLocalDomain()}:${LOCALHOST_PORT}`;
+}
+
+function getLocalDomain(): string
+{
+    if (forceLocalhost)
+        return "localhost";
+
+    if (!dev)
+        throw new Error("Calling 'getLocalDomain' is not allowed in a non-dev mode.");
+
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces))
     {
-        if (forceLocalhost)
-            return "localhost";
-
-        if (process.env.MODE != "dev")
-            throw new Error("Calling 'getLocalIpAddress' is not allowed in a non-dev mode.");
-
-        const interfaces = os.networkInterfaces();
-        for (const name of Object.keys(interfaces))
+        for (const i of interfaces[name])
         {
-            for (const i of interfaces[name])
-            {
-                if (i.family == "IPv4" && !i.internal)
-                    return i.address;
-            }
+            if (i.family == "IPv4" && !i.internal)
+                return i.address;
         }
-        return "127.0.0.1";
-    },
+    }
+    return "127.0.0.1";
 }
 
 export default AddressUtil;

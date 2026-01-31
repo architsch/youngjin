@@ -13,10 +13,6 @@ const UserAPIClient =
     {
         return await RestAPI.post(getURL("login_password"), {userName, password} as AxiosRequestConfig);
     },
-    /*loginWithGoogle: async (): Promise<RestAPIResponse> =>
-    {
-        return await RestAPI.post(getURL("login_google"));
-    },*/
     loginWithGoogle: (): void =>
     {
         window.location.href = getURL("login_google");

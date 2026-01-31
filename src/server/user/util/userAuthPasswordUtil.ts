@@ -1,8 +1,5 @@
-import ServerLogUtil from "../../networking/util/serverLogUtil";
-import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
-import User from "../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import UserTokenUtil from "./userTokenUtil";
 import UserSearchUtil from "./userSearchUtil";
@@ -10,7 +7,7 @@ import UserInputValidator from "../../../shared/user/util/userInputValidator";
 import { localize } from "../../../shared/localization/util/locUtil";
 import DBSearchUtil from "../../db/util/dbSearchUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
-dotenv.config();
+import LogUtil from "../../../shared/system/util/logUtil";
 
 const dev = process.env.MODE == "dev";
 
@@ -32,11 +29,11 @@ const UserAuthPasswordUtil =
             }
             if (existingUsersResult.data.length > 0)
             {
-                ServerLogUtil.log("User already exists", {
+                LogUtil.log("User already exists", {
                     userName: req.body.userName,
                     email: "test@example.com",
                     existingUser: existingUsersResult.data[0]
-                }, "high", "pink");
+                }, "high", "error");
 
                 res.status(403).send(`User "${req.body.userName}" (${"test@example.com"}) already exists.`);
                 return;
@@ -44,9 +41,9 @@ const UserAuthPasswordUtil =
     
             const passwordHash = await bcrypt.hash(req.body.password, 10);
     
-            const success = await DBUserUtil.createUser(
+            const result = await DBUserUtil.createUser(
                 req.body.userName, UserTypeEnumMap.Member, passwordHash, "test@example.com");
-            if (!success)
+            if (!result.success)
             {
                 res.status(500).send(`Internal Server Error (during registration)`);
                 return;
@@ -60,7 +57,7 @@ const UserAuthPasswordUtil =
         }
         catch (err)
         {
-            ServerLogUtil.log("User Registration Error", {err}, "high", "pink");
+            LogUtil.log("User Registration Error", {err}, "high", "error");
             res.status(500).send(`ERROR: Failed to register the user (${err}).`);
         }
     },
@@ -79,7 +76,7 @@ const UserAuthPasswordUtil =
 
             if (!passwordIsValid)
             {
-                ServerLogUtil.log("Wrong password", {passwordEntered: (dev ? req.body.password : "(HIDDEN)"), passwordHash: dbUser.passwordHash}, "high", "pink");
+                LogUtil.log("Wrong password", {passwordEntered: (dev ? req.body.password : "(HIDDEN)"), passwordHash: dbUser.passwordHash}, "high", "error");
                 res.status(401).send("Wrong password.");
                 return;
             }
@@ -88,7 +85,7 @@ const UserAuthPasswordUtil =
         }
         catch (err)
         {
-            ServerLogUtil.log("Login Error", {err}, "high", "pink");
+            LogUtil.log("Login Error", {err}, "high", "error");
             res.status(500).send(`ERROR: Failed to login (${err}).`);
         }
     },
@@ -99,14 +96,14 @@ function validateUserNameAndPassword(req: Request, res: Response): boolean
     const userNameError = UserInputValidator.findErrorInUserName(req.body.userName);
     if (userNameError != null)
     {
-        ServerLogUtil.log("UserName Error", {userName: req.body.userName, userNameError}, "high", "pink");
+        LogUtil.log("UserName Error", {userName: req.body.userName, userNameError}, "high", "error");
         res.status(400).send(localize(userNameError));
         return false;
     }
     const passwordError = UserInputValidator.findErrorInPassword(req.body.password);
     if (passwordError != null)
     {
-        ServerLogUtil.log("Password Error", {password: (dev ? req.body.password : "(HIDDEN)"), passwordError}, "high", "pink");
+        LogUtil.log("Password Error", {password: (dev ? req.body.password : "(HIDDEN)"), passwordError}, "high", "error");
         res.status(400).send(localize(passwordError));
         return false;
     }

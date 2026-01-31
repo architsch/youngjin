@@ -12,7 +12,6 @@ export default class SpeechBubble extends GameObjectComponent
     private speechBubbleHotspot: THREE.Object3D = new THREE.Object3D();
     private textElement: HTMLElement | undefined;
     private textCSS2DObject: CSS2DObject | undefined;
-    private textTimeout: NodeJS.Timeout | undefined;
 
     private vecTemp1 = new THREE.Vector3();
     private vecTemp2 = new THREE.Vector3();
@@ -49,26 +48,21 @@ export default class SpeechBubble extends GameObjectComponent
         }
     }
 
-    showMessage(message: string, showOnClientSide: boolean, broadcastToServer: boolean,
-        lifetimeInMillis?: number)
+    setMessage(message: string, applyOnClientSide: boolean, broadcastToServer: boolean)
     {
-        if (showOnClientSide)
+        if (applyOnClientSide)
         {
             this.clearMessage();
 
-            this.textElement = document.createElement("div");
-            this.textElement.style = "position:absolute; max-width:16rem; margin:auto auto; padding:0.2rem 0.2rem; color:white; background-color:rgba(0, 0, 0, 0.5); font-size:0.75rem; text-align:center; white-space:normal;";
-            this.textElement.textContent = message;
-            this.textCSS2DObject = new CSS2DObject(this.textElement);
-            this.speechBubbleHotspot.add(this.textCSS2DObject);
-            this.textCSS2DObject.center.set(0.5, 1);
-            this.textCSS2DObject.position.set(0, 0, 0);
-            
-            if (lifetimeInMillis != undefined)
+            if (message.length > 0)
             {
-                this.textTimeout = setTimeout(() => {
-                    this.clearMessage(true);
-                }, lifetimeInMillis);
+                this.textElement = document.createElement("div");
+                this.textElement.style = "position:absolute; max-width:16rem; margin:auto auto; padding:0.2rem 0.2rem; color:white; background-color:rgba(0, 0, 0, 0.5); font-size:0.75rem; text-align:center; white-space:normal;";
+                this.textElement.textContent = message;
+                this.textCSS2DObject = new CSS2DObject(this.textElement);
+                this.speechBubbleHotspot.add(this.textCSS2DObject);
+                this.textCSS2DObject.center.set(0.5, 1);
+                this.textCSS2DObject.position.set(0, 0, 0);
             }
         }
 
@@ -79,14 +73,8 @@ export default class SpeechBubble extends GameObjectComponent
         }
     }
 
-    clearMessage(dontClearTimeout: boolean = false): void
+    private clearMessage(): void
     {
-        if (!dontClearTimeout)
-        {
-            if (this.textTimeout)
-                clearTimeout(this.textTimeout);
-            this.textTimeout = undefined;
-        }
         this.textElement?.remove();
         this.textElement = undefined;
         this.textCSS2DObject?.removeFromParent();
@@ -100,6 +88,6 @@ export default class SpeechBubble extends GameObjectComponent
             console.error(`Object-message was received by a different object (senderObjectId = ${params.senderObjectId}, receiverObjectId = ${this.gameObject.params.objectId})`);
             return;
         }
-        this.showMessage(params.message, true, false, 5000);
+        this.setMessage(params.message, true, false);
     }
 }

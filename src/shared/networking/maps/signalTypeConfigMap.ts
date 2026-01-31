@@ -3,6 +3,7 @@ import ObjectDesyncResolveParams from "../../object/types/objectDesyncResolvePar
 import ObjectMessageParams from "../../object/types/objectMessageParams";
 import ObjectSpawnParams from "../../object/types/objectSpawnParams";
 import ObjectSyncParams from "../../object/types/objectSyncParams";
+import UserCommandParams from "../../user/types/userCommandParams";
 import RoomChangeRequestParams from "../../room/types/roomChangeRequestParams";
 import RoomRuntimeMemory from "../../room/types/roomRuntimeMemory";
 import UpdateVoxelGridParams from "../../voxel/types/update/updateVoxelGridParams";
@@ -41,6 +42,10 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
     [7, {
         signalType: "updateVoxelGridParams",
         decode: (bufferState: BufferState) => UpdateVoxelGridParams.decode(bufferState),
+    }],
+    [8, {
+        signalType: "userCommandParams",
+        decode: (bufferState: BufferState) => UserCommandParams.decode(bufferState),
     }],
 ];
 

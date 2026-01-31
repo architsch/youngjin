@@ -1,5 +1,4 @@
 import Room from "../../../shared/room/types/room";
-import dotenv from "dotenv";
 import RoomGenerator from "../../../shared/room/roomGenerator";
 import DBRoom from "../types/row/dbRoom";
 import { RoomType } from "../../../shared/room/types/roomType";
@@ -11,12 +10,14 @@ import BufferState from "../../../shared/networking/types/bufferState";
 import PersistentObjectGroup from "../../../shared/object/types/persistentObjectGroup";
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
 import DBFileStorageUtil from "./dbFileStorageUtil";
-dotenv.config();
+import LogUtil from "../../../shared/system/util/logUtil";
+import DBQueryResponse from "../types/dbQueryResponse";
 
 const DBRoomUtil =
 {
     getRoomContent: async (roomID: string): Promise<Room | null> =>
     {
+        LogUtil.log("DBRoomUtil.getRoomContent", {roomID}, "low", "info");
         const result = await new DBQuery<DBRoom>()
             .select()
             .from("rooms")
@@ -28,6 +29,7 @@ const DBRoomUtil =
     },
     saveRoomContent: async (room: Room): Promise<boolean> =>
     {
+        LogUtil.log("DBRoomUtil.saveRoomContent", {roomID: room.id}, "low", "info");
         const bufferState = EncodingUtil.startEncoding();
         room.voxelGrid.encode(bufferState);
         room.persistentObjectGroup.encode(bufferState);
@@ -36,12 +38,15 @@ const DBRoomUtil =
     },
     deleteRoomContent: async (room: Room): Promise<boolean> =>
     {
+        LogUtil.log("DBRoomUtil.deleteRoomContent", {roomID: room.id}, "low", "info");
         return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(room.id));
     },
     createRoom: async (roomName: string, roomType: RoomType, ownerUserName: string,
         floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number,
-        texturePackPath: string): Promise<boolean> =>
+        texturePackPath: string): Promise<DBQueryResponse<{id: string}>> =>
     {
+        LogUtil.log("DBRoomUtil.createRoom", {roomName, roomType, ownerUserName, floorTextureIndex, wallTextureIndex,
+            ceilingTextureIndex, texturePackPath}, "low", "info");
         const {voxelGrid, persistentObjectGroup} =
             RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
@@ -49,11 +54,7 @@ const DBRoomUtil =
             voxelGrid, persistentObjectGroup);
         const dbRoom = getDBRoomFromRoom(room);
 
-        const contentSaved = await DBRoomUtil.saveRoomContent(room);
-        if (!contentSaved)
-            return false;
-
-        const roomInsertResult = await new DBQuery<DBRow>()
+        const roomInsertResult = await new DBQuery<{id: string}>()
             .insertInto("rooms")
             .values(dbRoom as DBRow)
             .run();
@@ -61,22 +62,29 @@ const DBRoomUtil =
         if (!roomInsertResult.success)
         {
             await DBRoomUtil.deleteRoomContent(room);
-            return false;
+            return {success: false, data: []};
         }
-        else
-            return true;
+        room.id = roomInsertResult.data[0].id;
+
+        const contentSaved = await DBRoomUtil.saveRoomContent(room);
+        if (!contentSaved)
+            return {success: false, data: []};
+
+        return roomInsertResult;
     },
-    deleteRoom: async (id: string): Promise<boolean> =>
+    deleteRoom: async (roomID: string): Promise<boolean> =>
     {
+        LogUtil.log("DBRoomUtil.deleteRoom", {roomID}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .delete()
             .from("rooms")
-            .where("id", "==", id)
+            .where("id", "==", roomID)
             .run();
         return result.success;
     },
     changeRoomName: async (room: Room, newRoomName: string): Promise<boolean> =>
     {
+        LogUtil.log("DBRoomUtil.changeRoomName", {roomID: room.id, newRoomName}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("rooms")
             .set({

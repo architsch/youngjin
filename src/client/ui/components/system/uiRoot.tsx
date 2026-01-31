@@ -11,35 +11,39 @@ import { PopupType } from "../../types/PopupType";
 import LoginWithPasswordForm from "../form/loginWithPasswordForm";
 import RegisterWithPasswordForm from "../form/registerWithPasswordForm";
 import User from "../../../../shared/user/types/user";
-import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
 import AuthPromptForm from "../form/authPromptForm";
 import UserAPIClient from "../../../networking/client/userAPIClient";
+import SignOutForm from "../form/signOutForm";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
-    const userIsGuest = (user.userType == UserTypeEnumMap.Guest);
-    const [popupType, setPopupType] = useState<PopupType>(userIsGuest ? "authPrompt" : "none");
+    const [popupType, setPopupType] = useState<PopupType>("none");
 
     const openAuthPromptFormPopup = useCallback(() => setPopupType("authPrompt"), []);
+    const openSignOutFormPopup = useCallback(() => setPopupType("signOut"), []);
     const openRegisterWithPasswordFormPopup = useCallback(() => setPopupType("registerWithPassword"), []);
     const openLoginWithPasswordFormPopup = useCallback(() => setPopupType("loginWithPassword"), []);
     const closePopup = useCallback(() => setPopupType("none"), []);
 
     return <>
-        <DebugStats/>
         <UserIdentity
             env={env}
             user={user}
             onAuthPromptButtonClick={openAuthPromptFormPopup}
+            onSignOutButtonClick={openSignOutFormPopup}
         />
-        <Tutorial/>
+        <DebugStats env={env}/>
         <Chat/>
         <VoxelQuadSelectionMenu/>
+        <Tutorial user={user}/>
         {popupType == "authPrompt" && <Popup>
             <AuthPromptForm
                 onPlayAsGuestButtonClick={closePopup}
                 onLoginWithGoogleButtonClick={() => UserAPIClient.loginWithGoogle()}
             />
+        </Popup>}
+        {popupType == "signOut" && <Popup>
+            <SignOutForm onCancel={closePopup}/>
         </Popup>}
         {popupType == "registerWithPassword" && <Popup>
             <RegisterWithPasswordForm onCancel={closePopup}/>

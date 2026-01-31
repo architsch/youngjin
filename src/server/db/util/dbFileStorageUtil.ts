@@ -1,11 +1,12 @@
 import FirebaseUtil from "../../networking/util/firebaseUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
-import ServerLogUtil from "../../networking/util/serverLogUtil";
+import LogUtil from "../../../shared/system/util/logUtil";
 
 const DBFileStorageUtil =
 {
     saveBinaryFile: async (filePath: string, buffer: Buffer): Promise<boolean> =>
     {
+        LogUtil.log("DBFileStorageUtil.saveBinaryFile", {filePath, bufferLength: buffer.length}, "low", "info");
         try {
             const bucket = FirebaseUtil.getStorage().bucket();
             const file = bucket.file(filePath);
@@ -17,12 +18,13 @@ const DBFileStorageUtil =
             });
             return true;
         } catch (err) {
-            ServerLogUtil.log("saveBinaryFile failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "pink");
+            LogUtil.log("DBFileStorageUtil.saveBinaryFile failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "error");
             return false;
         }
     },
     loadBinaryFile: async (filePath: string): Promise<Buffer | null> =>
     {
+        LogUtil.log("DBFileStorageUtil.loadBinaryFile", {filePath}, "low", "info");
         try {
             const bucket = FirebaseUtil.getStorage().bucket();
             const file = bucket.file(filePath);
@@ -33,12 +35,13 @@ const DBFileStorageUtil =
             else
                 return null;
         } catch (err) {
-            ServerLogUtil.log("loadBinaryFile failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "pink");
+            LogUtil.log("DBFileStorageUtil.loadBinaryFile failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "error");
             return null;
         }
     },
     deleteFile: async (filePath: string): Promise<boolean> =>
     {
+        LogUtil.log("DBFileStorageUtil.deleteFile", {filePath}, "low", "info");
         try {
             const bucket = FirebaseUtil.getStorage().bucket();
             const file = bucket.file(filePath);
@@ -48,13 +51,13 @@ const DBFileStorageUtil =
                 const statusCode = response.statusCode;
                 if (statusCode < 200 || statusCode >= 300)
                 {
-                    ServerLogUtil.log("deleteFile failure found in response", {response: JSON.stringify(response)}, "high", "pink");
+                    LogUtil.log("DBFileStorageUtil.deleteFile :: failure found in response", {response: JSON.stringify(response)}, "high", "error");
                     return false;
                 }
             }
             return true;
         } catch (err) {
-            ServerLogUtil.log("deleteFile failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "pink");
+            LogUtil.log("DBFileStorageUtil.deleteFile :: failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "error");
             return false;
         }
     },

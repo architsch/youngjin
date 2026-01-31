@@ -1,13 +1,14 @@
-import ServerLogUtil from "../../networking/util/serverLogUtil";
+import * as admin from "firebase-admin";
 import DBQuery from "../types/dbQuery";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import runQueryVersionMigration from "./runQueryVersionMigration";
+import LogUtil from "../../../shared/system/util/logUtil";
 
-export default async function runSelect<T extends DBRow>(
+export default async function runQuerySelect<T extends DBRow>(
     dbQuery: DBQuery<T>,
-    docRef: FirebaseFirestore.DocumentReference | undefined,
-    collectionQuery: FirebaseFirestore.Query
+    docRef: admin.firestore.DocumentReference | undefined,
+    collectionQuery: admin.firestore.Query
 ): Promise<DBQueryResponse<T>>
 {
     let data: T[] = [];
@@ -20,9 +21,10 @@ export default async function runSelect<T extends DBRow>(
             const docData = doc.data();
             if (!docData)
             {
-                ServerLogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "medium");
+                LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
                 return { success: false, data: [] };
             }
+            docData.id = doc.id;
             data.push(runQueryVersionMigration(dbQuery, docData) as T);
         }
     }
@@ -30,17 +32,18 @@ export default async function runSelect<T extends DBRow>(
     {
         const querySnapshot = await collectionQuery.get();
         const docs = querySnapshot.docs;
-        docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+        docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
             let docData = doc.data();
             if (!docData)
             {
-                ServerLogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "medium");
+                LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
                 return { success: false, data: [] };
             }
+            docData.id = doc.id;
             data.push(runQueryVersionMigration(dbQuery, docData) as T);
         });
     }
 
-    ServerLogUtil.log("DB Query Succeeded", dbQuery.getStateAsObject(), "medium");
+    LogUtil.log("DB Query Succeeded", dbQuery.getStateAsObject(), "medium");
     return { success: true, data };
 }

@@ -5,7 +5,7 @@ import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import PostEntry from "../../types/postEntry"
 import PostInfo from "../../types/postInfo"
-import { URL_STATIC } from "../../../system/serverConstants";
+import { GLOBAL_LAST_MOD, URL_STATIC } from "../../../system/serverConstants";
 
 export default class LibraryPostPageBuilder
 {
@@ -35,7 +35,7 @@ export default class LibraryPostPageBuilder
 
         let desc = "A writing by ThingsPool.";
         let keywords = "thingspool, software, engineering, philosophy";
-        let lastmod = process.env.GLOBAL_LAST_MOD as string;
+        let lastmod = GLOBAL_LAST_MOD as string;
 
         let prev_title = title;
         let prev_desc = desc;

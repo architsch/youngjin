@@ -1,3 +1,4 @@
+import * as admin from "firebase-admin";
 import { DBVersionMigration } from "../types/versionMigration/dbVersionMigration";
 import DBUserVersionMigration from "../types/versionMigration/dbUserVersionMigration";
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
@@ -6,8 +7,8 @@ import { DBRow } from "../types/row/dbRow";
 
 export default function runQueryVersionMigration<T extends DBRow>(
     dbQuery: DBQuery<T>,
-    docData: FirebaseFirestore.DocumentData
-): FirebaseFirestore.DocumentData
+    docData: admin.firestore.DocumentData
+): admin.firestore.DocumentData
 {
     let versionMigration: DBVersionMigration;
     switch (dbQuery.tableId)

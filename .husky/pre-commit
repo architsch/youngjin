@@ -1,0 +1,1 @@
+echo "Pre-commit process started" && npm run build

@@ -1,4 +1,4 @@
-export default function Text({content, size = "md", color = "gray" }: ButtonProps)
+export default function Text({content, size = "md", color = "gray" }: Props)
 {
     return <div className={`text-left ${textClassNames[size]} ${panelClassNames[color]}`}>
         {content}
@@ -18,7 +18,7 @@ const panelClassNames = {
     red: "text-pink-300",
 };
 
-interface ButtonProps
+interface Props
 {
     content: string;
     size?: "xs" | "sm" | "md" | "lg";

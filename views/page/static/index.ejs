@@ -1,11 +1,11 @@
 <%- include(`${ejsPartialRootPath}/common/header.ejs`, {
-    url: process.env.URL_STATIC,
+    url: URL_STATIC,
     pageName: "index",
 }) %>
 <div class="portal horizontallyCentered">
-    <a target="_blank" href="<%= process.env.URL_DYNAMIC %>/mypage">
-        <img class="horizontallyCentered" style="position: relative; display: block; max-width: 100%; max-height: 70%; object-fit: contain;" src="<%= process.env.URL_STATIC %>/portal.png" alt="ThingsPool Portal">
-        <a class="bigButton horizontallyCentered" target="_blank" href="<%= process.env.URL_DYNAMIC %>/mypage">Enter the Portal</a>
+    <a target="_blank" href="<%= URL_DYNAMIC %>/mypage">
+        <img class="horizontallyCentered" style="position: relative; display: block; max-width: 100%; max-height: 70%; object-fit: contain;" src="<%= URL_STATIC %>/portal.png" alt="ThingsPool Portal">
+        <a class="bigButton horizontallyCentered" target="_blank" href="<%= URL_DYNAMIC %>/mypage">Enter the Portal</a>
     </a>
 </div>
 <p class="dim" style="text-align: center;">Door image by <a target="_blank" href="https://www.freepik.com/author/xadartstudio">xadartstudio</a></p>

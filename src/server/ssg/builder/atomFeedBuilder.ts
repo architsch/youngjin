@@ -1,10 +1,10 @@
 import FileUtil from "../../ssg/util/fileUtil";
-import { URL_STATIC } from "../../system/serverConstants";
+import { GLOBAL_LAST_MOD, URL_STATIC } from "../../system/serverConstants";
 
 export default class AtomFeedBuilder
 {
     private lines = [`</feed>`];
-    private globalLatestUpdate = new Date(process.env.GLOBAL_LAST_MOD as string);
+    private globalLatestUpdate = new Date(GLOBAL_LAST_MOD as string);
 
     addEntry(url: string, title: string, lastmod: string, description: string): void
     {

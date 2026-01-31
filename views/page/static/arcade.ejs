@@ -1,13 +1,13 @@
 <%- include(`${ejsPartialRootPath}/common/header.ejs`, {
     desc: "Games made by ThingsPool.",
     keywords: "thingspool, software toys, technical design, computer science, systems engineering, game design, game development",
-    url: `${process.env.URL_STATIC}/arcade.html`,
+    url: `${URL_STATIC}/arcade.html`,
     pageName: "arcade",
     pagePathList: [
-        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
-        {title: UIConfig.displayText.pageName["arcade"], url: undefined},
+        {title: PAGE_NAME_MAP["index"], url: URL_STATIC},
+        {title: PAGE_NAME_MAP["arcade"], url: undefined},
     ],
-    backDestination_href: process.env.URL_STATIC,
+    backDestination_href: URL_STATIC,
 }) %>
 <hr>
 <h1>Games</h1>

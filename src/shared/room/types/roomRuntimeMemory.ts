@@ -10,6 +10,7 @@ export default class RoomRuntimeMemory extends EncodableData
     room: Room;
     participantUserNames: { [userName: string]: boolean };
     objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory};
+    lastSavedTimeInMillis: number;
 
     constructor(room: Room, participantUserNames: { [userName: string]: boolean },
         objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory})
@@ -18,6 +19,7 @@ export default class RoomRuntimeMemory extends EncodableData
         this.room = room;
         this.participantUserNames = participantUserNames;
         this.objectRuntimeMemories = objectRuntimeMemories;
+        this.lastSavedTimeInMillis = Date.now();
     }
 
     encode(bufferState: BufferState)

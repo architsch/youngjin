@@ -11,6 +11,8 @@ import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGr
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
 import DBSearchUtil from "../db/util/dbSearchUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import UserCommandParams from "../../shared/user/types/userCommandParams";
+import UserCommandUtil from "../user/util/userCommandUtil";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
@@ -44,6 +46,11 @@ const GameSockets =
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
                 RoomManager.sendObjectMessage(socketUserContext, params);
+            });
+            socket.on("userCommand", async (buffer: ArrayBuffer) => {
+                const bufferState = new BufferState(new Uint8Array(buffer));
+                const params = UserCommandParams.decode(bufferState) as UserCommandParams;
+                await UserCommandUtil.handleCommand(user, params);
             });
             socket.on("updateVoxelGrid", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));

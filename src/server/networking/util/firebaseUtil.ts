@@ -1,6 +1,4 @@
 import * as admin from "firebase-admin";
-import dotenv from "dotenv";
-dotenv.config();
 
 const FirebaseUtil =
 {
@@ -24,7 +22,9 @@ function ensureFirebaseInitialized()
 {
     if (firebaseInitialized)
         return;
-    admin.initializeApp();
+    admin.initializeApp({
+        storageBucket: "thingspool.firebasestorage.app",
+    });
     db = admin.firestore();
     storage = admin.storage();
     firebaseInitialized = true;

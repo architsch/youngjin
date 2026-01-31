@@ -57,7 +57,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
             };
             return <AtlasCellSprite
                 key={`texture.select.${textureIndex}`}
-                atlasImageURL={materialParams.textureId}
+                atlasImageURL={materialParams.texturePath}
                 atlasWidth={materialParams.textureWidth}
                 atlasHeight={materialParams.textureHeight}
                 atlasCellWidth={materialParams.textureGridCellWidth}

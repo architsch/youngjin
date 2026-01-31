@@ -1,4 +1,4 @@
-export default function Spacer({ size = "md" }: SpacerProps)
+export default function Spacer({ size = "md" }: Props)
 {
     return <div className={sizeClassNames[size]}></div>
 }
@@ -10,7 +10,7 @@ const sizeClassNames = {
     lg: "w-4 h-4",
 };
 
-interface SpacerProps
+interface Props
 {
     size?: "xs" | "sm" | "md" | "lg";
 }

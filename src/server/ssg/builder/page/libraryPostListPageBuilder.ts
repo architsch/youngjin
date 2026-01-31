@@ -1,11 +1,9 @@
 import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import LibraryPostPageBuilder from "./libraryPostPageBuilder";
-import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import PostEntry from "../../types/postEntry";
-dotenv.config();
 
 export default class LibraryPostListPageBuilder
 {

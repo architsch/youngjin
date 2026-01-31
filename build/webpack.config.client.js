@@ -20,7 +20,7 @@ module.exports = {
         extensions: ['.tsx', '.ts', '.js'],
     },
     output: {
-        filename: `bundle.js`,
+        filename: `bundle_v2.js`,
         path: path.resolve(__dirname, '../public/app'),
     },
 };

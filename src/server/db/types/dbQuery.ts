@@ -1,4 +1,4 @@
-import ServerLogUtil from "../../networking/util/serverLogUtil";
+import * as admin from "firebase-admin";
 import DBQueryResponse from "./dbQueryResponse";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { DBRow } from "./row/dbRow";
@@ -11,6 +11,7 @@ import runQuerySelect from "../runners/runQuerySelect";
 import runQueryInsert from "../runners/runQueryInsert";
 import runQueryUpdate from "../runners/runQueryUpdate";
 import runQueryDelete from "../runners/runQueryDelete";
+import LogUtil from "../../../shared/system/util/logUtil";
 
 export default class DBQuery<T extends DBRow>
 {
@@ -18,7 +19,7 @@ export default class DBQuery<T extends DBRow>
     tableId: string = "";
     docId: string | undefined;
     columnValues: DBRow = {};
-    condGroups: FirebaseFirestore.Filter[][] = [[]];
+    condGroups: admin.firestore.Filter[][] = [[]];
     orderByCommand: DBQueryOrderBy | undefined;
     limitCommand: number | undefined;
     offsetCommand: number | undefined;
@@ -85,7 +86,7 @@ export default class DBQuery<T extends DBRow>
         else
         {
             this.condGroups[this.condGroups.length - 1].push(
-                FirebaseFirestore.Filter.where(columnName, operator, value)
+                admin.firestore.Filter.where(columnName, operator, value)
             );
         }
         return this;
@@ -123,13 +124,13 @@ export default class DBQuery<T extends DBRow>
 
     async run(): Promise<DBQueryResponse<T>>
     {
-        ServerLogUtil.log("DB Query Started", this.getStateAsObject(), "low");
+        LogUtil.log("DB Query Started", this.getStateAsObject(), "low");
 
         try {
             const db = FirebaseUtil.getDB();
             let collectionRef = db.collection(this.tableId);
             const docRef = this.docId ? collectionRef.doc(this.docId) : undefined;
-            let collectionQuery: FirebaseFirestore.Query =
+            let collectionQuery: admin.firestore.Query =
                 (this.condGroups[0].length > 0)
                 // At least 1 condition found:
                 ? collectionRef.where(
@@ -139,16 +140,16 @@ export default class DBQuery<T extends DBRow>
                         // There is only 1 condition:
                         ? this.condGroups[0][0]
                         // There are multiple conditions:
-                        : FirebaseFirestore.Filter.and(...this.condGroups[0]))
+                        : admin.firestore.Filter.and(...this.condGroups[0]))
                     // "OR" conjunction found:
-                    : FirebaseFirestore.Filter.or(
+                    : admin.firestore.Filter.or(
                         // (For each group of conditions):
                         ...this.condGroups.map(condGroup =>
                             (condGroup.length == 1)
                             // Only 1 condition found within the group:
                             ? condGroup[0]
                             // Multiple conditions found within the group:
-                            : FirebaseFirestore.Filter.and(...condGroup))))
+                            : admin.firestore.Filter.and(...condGroup))))
                 // No condition found:
                 : collectionRef;
 
@@ -169,7 +170,7 @@ export default class DBQuery<T extends DBRow>
             }
         }
         catch (err) {
-            ServerLogUtil.log("DB Query Error", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "pink");
+            LogUtil.log("DB Query Error", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "error");
             return { success: false, data: [] };
         }
     }

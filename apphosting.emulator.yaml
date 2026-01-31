@@ -12,6 +12,12 @@ runConfig:
   # Configure environment variables.
   # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
 
+    - variable: MODE
+      value: "dev"
+      availability:
+        - BUILD
+        - RUNTIME
+
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
 

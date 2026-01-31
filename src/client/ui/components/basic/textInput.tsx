@@ -2,7 +2,7 @@ import { FormEvent, FormEventHandler, useCallback, useEffect, useRef } from "rea
 import { numActiveTextInputsObservable } from "../../../system/clientObservables";
 
 export default function TextInput({type = "text", size = "md", placeholder = "", textInput,
-    filterTextInput = (str => str), setTextInput }: TextInputProps)
+    filterTextInput = (str => str), setTextInput }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +53,7 @@ const textClassNames = {
     lg: "yj-text-lg",
 };
 
-interface TextInputProps
+interface Props
 {
     type?: "text" | "number" | "password" | "email";
     size?: "xs" | "sm" | "md" | "lg";

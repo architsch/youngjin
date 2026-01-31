@@ -9,19 +9,14 @@
 <meta name="keywords" content="<%= v_keywords %>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= v_title %></title>
-<link rel="shortcut icon" href="<%= process.env.URL_STATIC %>/favicon.ico">
+<link rel="shortcut icon" href="<%= URL_STATIC %>/favicon.ico">
 <%_ if (locals.useTailwindCSS) { _%>
-<link rel="stylesheet" href="<%= process.env.URL_STATIC %>/app/style.css">
+<link rel="stylesheet" href="<%= URL_STATIC %>/app/style_v2.css">
 <%_ } else { _%>
-<link rel="stylesheet" href="<%= process.env.URL_STATIC %>/style.css">
+<link rel="stylesheet" href="<%= URL_STATIC %>/style.css">
 <%_ } _%>
 </head>
 <body style="background-color: black;">
-<!-- Will become obsolete
-<%_ if (!isStaticPage) { _%>
-<%- include(`${ejsPartialRootPath}/common/coreUIDynamics.ejs`) %>
-<%_ } _%>
--->
 <%_ if (includeFullscreenPanel) { _%>
 <div class="fullscreenPanel" style="top: 0; bottom: 0; left: 0; right: 0; width: 95%; height: 100%;">
 <%_ } _%>

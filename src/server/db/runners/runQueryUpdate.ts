@@ -1,14 +1,15 @@
+import * as admin from "firebase-admin";
 import FirebaseUtil from "../../networking/util/firebaseUtil";
-import ServerLogUtil from "../../networking/util/serverLogUtil";
 import DBQuery from "../types/dbQuery";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import runQueryVersionMigration from "./runQueryVersionMigration";
+import LogUtil from "../../../shared/system/util/logUtil";
 
-export default async function runUpdate<T extends DBRow>(
+export default async function runQueryUpdate<T extends DBRow>(
     dbQuery: DBQuery<T>,
-    docRef: FirebaseFirestore.DocumentReference | undefined,
-    collectionQuery: FirebaseFirestore.Query
+    docRef: admin.firestore.DocumentReference | undefined,
+    collectionQuery: admin.firestore.Query
 ): Promise<DBQueryResponse<T>>
 {
     let numDocsAffected = 0;
@@ -20,7 +21,7 @@ export default async function runUpdate<T extends DBRow>(
             const docData = doc.data();
             if (!docData)
             {
-                ServerLogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "medium");
+                LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
                 return { success: false, data: [] };
             }
             const originalVersion = docData.version;
@@ -38,7 +39,7 @@ export default async function runUpdate<T extends DBRow>(
         }
         else
         {
-            ServerLogUtil.log(`DB Query Failed - doc doesn't exist (docRef.id = ${docRef.id})`, dbQuery.getStateAsObject(), "medium");
+            LogUtil.log(`DB Query Failed - doc doesn't exist (docRef.id = ${docRef.id})`, dbQuery.getStateAsObject(), "high", "error");
             return { success: false, data: [] };
         }
     }
@@ -51,7 +52,7 @@ export default async function runUpdate<T extends DBRow>(
         {
             const db = FirebaseUtil.getDB();
             const batch = db.batch();
-            querySnapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+            querySnapshot.docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
                 const docData = doc.data();
                 const originalVersion = docData.version;
                 const newDocData = runQueryVersionMigration(dbQuery, docData);
@@ -84,6 +85,6 @@ export default async function runUpdate<T extends DBRow>(
             }
         }
     }
-    ServerLogUtil.log(`DB Query Succeeded (numDocsAffected = ${numDocsAffected})`, dbQuery.getStateAsObject(), "medium");
+    LogUtil.log(`DB Query Succeeded (numDocsAffected = ${numDocsAffected})`, dbQuery.getStateAsObject(), "medium");
     return { success: true, data: [] };
 }

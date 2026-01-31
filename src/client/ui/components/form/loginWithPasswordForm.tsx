@@ -7,6 +7,7 @@ import UserAPIClient from "../../../networking/client/userAPIClient";
 import { localize } from "../../../../shared/localization/util/locUtil";
 import { endClientProcess, tryStartClientProcess } from "../../../system/types/clientProcess";
 import Text from "../basic/text";
+import Form from "../basic/form";
 
 export default function LoginWithPasswordForm({ onCancel }: Props)
 {
@@ -42,7 +43,7 @@ export default function LoginWithPasswordForm({ onCancel }: Props)
         window.location.reload();
     }, [userNameInput, passwordInput]);
 
-    return <div className="flex flex-col gap-2">
+    return <Form>
         <Text content="Log In" size="lg"/>
         <FormTextInput label="Username:"
             textInput={userNameInput} setTextInput={setUserNameInput}
@@ -57,7 +58,7 @@ export default function LoginWithPasswordForm({ onCancel }: Props)
             <Button name="Log In" size="md" color="green" onClick={onSubmit}/>
             <Button name="Cancel" size="md" color="red" onClick={onCancel}/>
         </div>
-    </div>
+    </Form>
 }
 
 interface Props

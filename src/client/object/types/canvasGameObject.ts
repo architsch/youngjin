@@ -28,12 +28,12 @@ export default class CanvasGameObject extends GameObject
         const instancer = this.components.persistentObjectMeshInstancer as PersistentObjectMeshInstancer;
         const po = instancer.getPersistentObject();
         //const destinationRoomID = po.metadata;
-        //speechBubble.showMessage(`Click to Visit ${destinationRoomID}`, true, false);
+        //speechBubble.setMessage(`Click to Visit ${destinationRoomID}`, true, false);
     }
 
     onPlayerProximityEnd()
     {
         const speechBubble = this.components.speechBubble as SpeechBubble;
-        speechBubble.clearMessage();
+        speechBubble.setMessage("", true, false);
     }
 }

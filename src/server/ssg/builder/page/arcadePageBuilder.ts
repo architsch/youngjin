@@ -1,11 +1,9 @@
 import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
 import ArcadeGamePageBuilder from "./arcadeGamePageBuilder";
-import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import { ArcadeData } from "../../data/arcadeData";
-dotenv.config();
 
 export default class ArcadePageBuilder
 {

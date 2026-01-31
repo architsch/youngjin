@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
 import { AUTH_TOKEN_NAME_BASE } from "../../system/serverConstants";
-dotenv.config();
 
 const dev = process.env.MODE == "dev";
 

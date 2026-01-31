@@ -2,7 +2,6 @@ import http from "http";
 import socketIO from "socket.io";
 import ConsoleSockets from "./consoleSockets";
 import GameSockets from "./gameSockets";
-import dotenv from "dotenv";
 import { SocketMiddleware } from "./types/socketMiddleware";
 import User from "../../shared/user/types/user";
 import AddressUtil from "../networking/util/addressUtil";
@@ -10,7 +9,6 @@ import * as cookie from "cookie";
 import { UserTypeEnumMap } from "../../shared/user/types/userType";
 import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
-dotenv.config();
 
 const connectedUserNames = new Set<string>();
 

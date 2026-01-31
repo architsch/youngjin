@@ -117,6 +117,8 @@ function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: S
 function broadcast(socketUserContext: SocketUserContext, room: Room,
     signal: EncodableData, updateType: string)
 {
+    room.dirty = true; // Mark the room as dirty since its voxel grid has been modified.
+
     const user: User = socketUserContext.socket.handshake.auth as User;
     const socketRoomContext = RoomManager.socketRoomContexts[room.id];
     if (!socketRoomContext)

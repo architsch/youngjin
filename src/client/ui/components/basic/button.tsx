@@ -1,4 +1,4 @@
-export default function Button({name, size = "md", color = "gray", onClick }: ButtonProps)
+export default function Button({name, size = "md", color = "gray", onClick }: Props)
 {
     return <div
         className={`text-center ${textClassNames[size]} ${panelClassNames[color]}`}
@@ -21,7 +21,7 @@ const panelClassNames = {
     red: "yj-panel-red",
 };
 
-interface ButtonProps
+interface Props
 {
     name: string;
     size?: "xs" | "sm" | "md" | "lg";

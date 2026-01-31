@@ -7,15 +7,33 @@ import SSG from "./ssg/ssg";
 import Router from "./router/router";
 import Sockets from "./sockets/sockets";
 import DBRoomUtil from "./db/util/dbRoomUtil";
-import AddressUtil from "./networking/util/addressUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
-import { LOCALHOST_PORT, URL_STATIC } from "./system/serverConstants";
+import { LOCALHOST_PORT } from "./system/serverConstants";
+import AddressUtil from "./networking/util/addressUtil";
 
 const dev = process.env.MODE == "dev";
+if (dev)
+    require("dotenv").config({ path: ".env.emulator" });
 
 async function Server(): Promise<void>
 {
+    if (!process.env.JWT_SECRET_KEY)
+    {
+        console.error("Secret not found :: JWT_SECRET_KEY");
+        return;
+    }
+    if (!process.env.GOOGLE_OAUTH_CLIENT_ID)
+    {
+        console.error("Secret not found :: GOOGLE_OAUTH_CLIENT_ID");
+        return;
+    }
+    if (!process.env.GOOGLE_OAUTH_CLIENT_SECRET)
+    {
+        console.error("Secret not found :: GOOGLE_OAUTH_CLIENT_SECRET");
+        return;
+    }
+
     // SSG = "Static Site Generator"
     if (!process.env.SKIP_SSG)
     {
@@ -36,8 +54,8 @@ async function Server(): Promise<void>
 
     if (roomSearchResult.data.length == 0)
     {
-        let success = await DBRoomUtil.createRoom("hub", RoomTypeEnumMap.Hub, "", 0, 1, 2, `${dev ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_STATIC}/app/assets/texture_packs/default.jpg`);
-        if (!success)
+        let result = await DBRoomUtil.createRoom("hub", RoomTypeEnumMap.Hub, "", 0, 1, 2, `${AddressUtil.getEnvStaticURL()}/app/assets/texture_packs/default.jpg`);
+        if (!result.success)
             return;
     }
 
@@ -68,7 +86,3 @@ async function Server(): Promise<void>
 }
 
 Server();
-
-// Prevent automatic restart when the server app crashes (only on dev mode)
-if (dev)
-    setInterval(() => {}, 36000000);

@@ -1,4 +1,3 @@
-import ServerLogUtil from "../../networking/util/serverLogUtil";
 import { Request, Response } from "express";
 import UserTokenUtil from "./userTokenUtil";
 import UserSearchUtil from "./userSearchUtil";
@@ -11,9 +10,11 @@ import DBSearchUtil from "../../db/util/dbSearchUtil";
 import DBUser from "../../../server/db/types/row/dbUser";
 import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import AddressUtil from "../../networking/util/addressUtil";
-import { LOCALHOST_PORT, URL_DYNAMIC } from "../../system/serverConstants";
+import LogUtil from "../../../shared/system/util/logUtil";
 
 const dev = process.env.MODE == "dev";
+if (dev)
+    require("dotenv").config({ path: ".env.emulator" });
 
 const UserAuthGoogleUtil =
 {
@@ -82,9 +83,9 @@ const UserAuthGoogleUtil =
                     }
                     if (nameConflictingUsersResult.data.length == 0) // free userName found
                     {
-                        const success = await DBUserUtil.createUser(
+                        const result = await DBUserUtil.createUser(
                             userName, UserTypeEnumMap.Member, "", email);
-                        if (!success)
+                        if (!result.success)
                         {
                             res.status(500).send(`Internal Server Error (during registration)`);
                             return;
@@ -112,7 +113,7 @@ const UserAuthGoogleUtil =
         }
         catch (err)
         {
-            ServerLogUtil.log("Login Error", {err}, "high", "pink");
+            LogUtil.log("Login Error", {err}, "high", "error");
             res.status(500).send(`ERROR: Failed to login (${err}).`);
         }
     },
@@ -120,8 +121,7 @@ const UserAuthGoogleUtil =
 
 const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-const baseURL = dev ? `http://${AddressUtil.getLocalIpAddress()}:${LOCALHOST_PORT}` : URL_DYNAMIC;
-const redirectURL = `${baseURL}/${USER_API_ROUTE_PATH}/login_google_callback`;
+const redirectURL = `${AddressUtil.getEnvDynamicURL()}/${USER_API_ROUTE_PATH}/login_google_callback`;
 const userInfoURL = `https://www.googleapis.com/oauth2/v3/userinfo?alt=json`;
 
 function generateOAuthURL(): string

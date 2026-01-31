@@ -1,21 +1,21 @@
-import ServerLogUtil from "../../networking/util/serverLogUtil";
 import FileUtil from "./fileUtil";
-import UIConfig from "../../../shared/embeddedScripts/config/uiConfig";
-import TextUtil from "../../../shared/embeddedScripts/util/textUtil";
 import ejs from "ejs";
 import { Request, Response } from "express";
 import AddressUtil from "../../networking/util/addressUtil";
 import { LOCALHOST_PORT, URL_DYNAMIC, URL_STATIC, VIEWS_ROOT_DIR } from "../../system/serverConstants";
+import { PAGE_NAME_MAP } from "../../../shared/system/sharedConstants";
+import LogUtil from "../../../shared/system/util/logUtil";
 
 const ejsPartialRootPath = `${process.env.PWD}/${VIEWS_ROOT_DIR}/partial`;
 
 const baseStaticPageEJSParams = {
-    TextUtil, UIConfig,
+    PAGE_NAME_MAP,
+    URL_STATIC, URL_DYNAMIC,
     ejsPartialRootPath,
     isStaticPage: true,
 };
 const baseDynamicPageEJSParams = {
-    TextUtil, UIConfig,
+    URL_STATIC, URL_DYNAMIC,
     ejsPartialRootPath,
     isStaticPage: false,
 };
@@ -42,13 +42,12 @@ const EJSUtil =
     postProcessHTML: (html: string): string => {
         if (process.env.MODE == "dev")
         {
-            const ip = AddressUtil.getLocalIpAddress();
             html = html
                 .replaceAll("\n", "!*NEW_LINE*!")
                 .replace(/(PROD_CODE_BEGIN).*?(PROD_CODE_END)/g, "REMOVED_PROD_CODE")
                 .replaceAll("!*NEW_LINE*!", "\n")
-                .replaceAll(URL_STATIC as string, `http://${ip}:${LOCALHOST_PORT}`) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
-                .replaceAll(URL_DYNAMIC as string, `http://${ip}:${LOCALHOST_PORT}`);
+                .replaceAll(URL_STATIC as string, AddressUtil.getEnvStaticURL()) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
+                .replaceAll(URL_DYNAMIC as string, AddressUtil.getEnvDynamicURL());
             return html;
         }
         else
@@ -63,11 +62,11 @@ const EJSUtil =
         Object.assign(mergedEJSParams, customEJSParams);
 
         if (mergedEJSParams.userString)
-            ServerLogUtil.log("'userString' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
+            LogUtil.log("'userString' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "error");
         mergedEJSParams.userString = (req as any).userString;
 
         if (mergedEJSParams.globalDictionary)
-            ServerLogUtil.log("'globalDictionary' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "pink");
+            LogUtil.log("'globalDictionary' shouldn't be defined manually in EJS params.", {mergedEJSParams}, "high", "error");
         mergedEJSParams.globalDictionary = {};
         
         return mergedEJSParams;

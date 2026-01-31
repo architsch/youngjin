@@ -1,12 +1,10 @@
 import FileUtil from "../../util/fileUtil";
 import EJSUtil from "../../util/ejsUtil";
 import TextFileBuilder from "../textFileBuilder";
-import dotenv from "dotenv";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import GameEntry from "../../types/gameEntry"
 import { URL_STATIC } from "../../../system/serverConstants";
-dotenv.config();
 
 export default class ArcadeGamePageBuilder
 {

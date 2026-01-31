@@ -1,5 +1,4 @@
 import Button from "../basic/button";
-import { Z_INDEX_HUD_MAIN } from "../../../../shared/system/sharedConstants";
 import User from "../../../../shared/user/types/user";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 
@@ -7,23 +6,27 @@ export default function UserIdentity({
     env,
     user,
     onAuthPromptButtonClick,
+    onSignOutButtonClick,
 }: Props)
 {
-    const dev = env.mode == "dev";
+    const isGuest = user.userName.startsWith("Guest-");
 
     return <div className={className}>
-        <div className="p-1">{user.userName + (dev ? "(dev)" : "")}</div>
-        <div className="flex flex-row p-1 gap-1">
-            <Button name="Sign In" size="sm" onClick={onAuthPromptButtonClick}/>
+        <div className="flex flex-row">
+            <div className="yj-text-sm text-gray-400">Your Name:</div>
+            <div className="yj-text-sm text-amber-300">{user.userName}</div>
         </div>
+        {isGuest && <Button name="Sign In" size="sm" onClick={onAuthPromptButtonClick}/>}
+        {!isGuest && <Button name="Sign Out" size="sm" onClick={onSignOutButtonClick}/>}
     </div>;
 }
 
-const className = `flex flex-col absolute right-0 top-0 py-1 px-2 text-amber-200 text-right bg-black/50 ${Z_INDEX_HUD_MAIN}`;
+const className = "flex flex-col justify-end gap-1 absolute right-0 top-0 py-1 px-2 text-right bg-black";
 
 interface Props
 {
     env: ThingsPoolEnv;
     user: User;
     onAuthPromptButtonClick: () => void;
+    onSignOutButtonClick: () => void;
 }

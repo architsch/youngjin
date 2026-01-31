@@ -1,12 +1,12 @@
-import ServerLogUtil from "../../networking/util/serverLogUtil";
-import dotenv from "dotenv";
 import { Request, Response } from "express";
 import User from "../../../shared/user/types/user";
 import jwt from "jsonwebtoken";
 import CookieUtil from "../../networking/util/cookieUtil";
-dotenv.config();
+import LogUtil from "../../../shared/system/util/logUtil";
 
 const dev = process.env.MODE == "dev";
+if (dev)
+    require("dotenv").config({ path: ".env.emulator" });
 
 const UserTokenUtil =
 {
@@ -20,12 +20,12 @@ const UserTokenUtil =
             }
             else
             {
-                ServerLogUtil.log("User is not found in the given token.", { tokenLength: (token as string).length }, "high", "yellow");
+                LogUtil.log("User is not found in the given token.", { tokenLength: (token as string).length }, "high", "warn");
                 return undefined;
             }
         }
         catch (err) {
-            ServerLogUtil.log("Token Verification Failed", {err}, "high", "pink");
+            LogUtil.log("Token Verification Failed", {err}, "high", "error");
             return undefined;
         }
     },

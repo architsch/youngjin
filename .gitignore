@@ -1,4 +1,7 @@
 node_modules
 
 .env
+.env.emulator
 .DS_Store
+
+*.log

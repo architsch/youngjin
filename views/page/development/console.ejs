@@ -47,16 +47,16 @@
         <br>
         <table>
             <thead>
-                <tr><th>Message</th><th>Origin</th><th style="overflow:hidden; resize:none;">Details</th></tr>
+                <tr><th>Message</th><th style="overflow:hidden; resize:none;">Details</th></tr>
             </thead>
             <tbody id="logList">
             </tbody>
         </table>
 
         <script src="https://code.jquery.com/jquery.min.js"></script>
-        <script src="<%= process.env.URL_DYNAMIC %>/socket.io/socket.io.min.js"></script>
+        <script src="<%= URL_DYNAMIC %>/socket.io/socket.io.min.js"></script>
         <script>
-            const socket = io("<%= process.env.URL_DYNAMIC %>/console_sockets", { auth: user });
+            const socket = io("<%= URL_DYNAMIC %>/console_sockets", { auth: user });
 
             socket.on("connect_error", (err) => {
                 $("#logList").append($("<tr>").html(err.message));

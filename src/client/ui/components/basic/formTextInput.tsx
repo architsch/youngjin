@@ -2,7 +2,7 @@ import TextInput from "./textInput";
 import Text from "./text";
 
 export default function FormTextInput({label, type = "text", size = "md", placeholder = "", textInput,
-    filterTextInput = (str => str), setTextInput }: FormTextInputProps)
+    filterTextInput = (str => str), setTextInput }: Props)
 {
     return <div className="flex flex-row gap-1">
         <Text content={label}/>
@@ -17,7 +17,7 @@ export default function FormTextInput({label, type = "text", size = "md", placeh
     </div>
 }
 
-interface FormTextInputProps
+interface Props
 {
     label: string;
     type?: "text" | "number" | "password" | "email";

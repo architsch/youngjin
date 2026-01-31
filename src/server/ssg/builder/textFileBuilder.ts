@@ -1,6 +1,5 @@
 import FileUtil from "../../ssg/util/fileUtil";
-import dotenv from "dotenv";
-dotenv.config();
+import { STATIC_PAGE_ROOT_DIR } from "../../system/serverConstants";
 
 export default class TextFileBuilder
 {
@@ -19,7 +18,7 @@ export default class TextFileBuilder
     async build(relativeFilePath: string, rootDir?: string): Promise<void>
     {
         if (rootDir == undefined)
-            rootDir = process.env.STATIC_PAGE_ROOT_DIR;
+            rootDir = STATIC_PAGE_ROOT_DIR;
         await FileUtil.write(relativeFilePath, this.lines.join("\n"), rootDir);
     }
 }

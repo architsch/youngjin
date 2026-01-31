@@ -1,5 +1,3 @@
-import ServerLogUtil from "../../networking/util/serverLogUtil";
-import dotenv from "dotenv";
 import { Request, Response } from "express";
 import User from "../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
@@ -7,7 +5,7 @@ import UserTokenUtil from "./userTokenUtil";
 import UserSearchUtil from "./userSearchUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
-dotenv.config();
+import LogUtil from "../../../shared/system/util/logUtil";
 
 let cyclicCounter = 0;
 
@@ -33,12 +31,12 @@ const UserIdentificationUtil =
 async function identifyUserFromReq(req: Request, res: Response,
     passCondition: (user: User) => Boolean, next: () => void): Promise<boolean>
 {
-    const user = getUserFromReq(req);
+    const user = getUserFromReq(req, res);
     if (user)
     {
         if (!passCondition(user))
         {
-            ServerLogUtil.log("User doesn't satisfy the pass-condition.", { user }, "high", "pink");
+            LogUtil.log("User doesn't satisfy the pass-condition.", { user }, "high", "error");
             res.status(403).send("User doesn't satisfy the pass-condition.");
             return false;
         }
@@ -58,7 +56,7 @@ async function identifyUserFromReq(req: Request, res: Response,
                     return true;
                 }
                 catch (err) {
-                    ServerLogUtil.log("Failed to process a registered user", {err}, "high", "pink");
+                    LogUtil.log("Failed to process a registered user", {err}, "high", "error");
                     res.status(401).send(`Failed to process a registered user (error: ${err})`);
                     return false;
                 }
@@ -70,25 +68,25 @@ async function identifyUserFromReq(req: Request, res: Response,
                     return true;
                 }
                 catch (err) {
-                    ServerLogUtil.log("Failed to add token (guest)", {err}, "high", "pink");
+                    LogUtil.log("Failed to add token (guest)", {err}, "high", "error");
                     res.status(401).send(`Failed to add token (error: ${err})`);
                     return false;
                 }
             default:
-                ServerLogUtil.log(`Unknown user type`, { userType: user.userType }, "high", "pink");
+                LogUtil.log(`Unknown user type`, { userType: user.userType }, "high", "error");
                 res.status(500).send(`Unknown user type :: ${user.userType} (user: ${user.toString()})`);
                 return false;
         }
     }
     else
     {
-        ServerLogUtil.logRaw("Failed to identify the user", "high", "pink");
+        LogUtil.logRaw("Failed to identify the user", "high", "error");
         res.status(401).send("Failed to identify the user");
         return false;
     }
 }
 
-function getUserFromReq(req: Request): User | undefined
+function getUserFromReq(req: Request, res: Response): User | undefined
 {
     let user: User | undefined = undefined;
     const token = req.cookies[CookieUtil.getAuthTokenName()];

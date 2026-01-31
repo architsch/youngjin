@@ -5,11 +5,8 @@ import AtomFeedBuilder from "./builder/atomFeedBuilder";
 import ArcadePageBuilder from "./builder/page/arcadePageBuilder";
 import LibraryPageBuilder from "./builder/page/libraryPageBuilder";
 import TextFileBuilder from "./builder/textFileBuilder";
-import EmbeddedScriptBuilder from "./builder/embeddedScriptBuilder";
 import styleDictionary from "./style/styleDictionary";
-import dotenv from "dotenv";
 import ErrorPageBuilder from "./builder/page/errorPageBuilder";
-dotenv.config();
 
 export default async function SSG(): Promise<void>
 {
@@ -49,9 +46,6 @@ export default async function SSG(): Promise<void>
 
     // Generate CSS
     await FileUtil.write("style.css", styleDictionary);
-
-    // Generate embedded scripts
-    await new EmbeddedScriptBuilder().build();
 
     console.log("SSG END");
 }

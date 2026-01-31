@@ -1,10 +1,8 @@
 import DBSearchUtil from "../../db/util/dbSearchUtil";
-import ServerLogUtil from "../../networking/util/serverLogUtil";
-import dotenv from "dotenv";
 import { Request, Response } from "express";
 import DBUser from "../../../server/db/types/row/dbUser";
 import CookieUtil from "../../networking/util/cookieUtil";
-dotenv.config();
+import LogUtil from "../../../shared/system/util/logUtil";
 
 const UserSearchUtil =
 {
@@ -21,10 +19,9 @@ const UserSearchUtil =
         {
             if (!ignoreNotFoundError)
             {
-                ServerLogUtil.log("User Not Found", {userName}, "high", "pink");
+                LogUtil.log("User Not Found", {userName}, "high", "error");
                 res?.clearCookie(CookieUtil.getAuthTokenName())
-                    .status(404)
-                    .send(`There is no account with userName "${userName}".`);
+                    .redirect("/mypage");
             }
             return null;
         }

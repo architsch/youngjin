@@ -1,18 +1,18 @@
 <%- include(`${ejsPartialRootPath}/common/header.ejs`, {
-    url: `${process.env.URL_STATIC}/library.html`,
+    url: `${URL_STATIC}/library.html`,
     pageName: "library",
     pagePathList: [
-        {title: UIConfig.displayText.pageName["index"], url: process.env.URL_STATIC},
-        {title: UIConfig.displayText.pageName["library"], url: undefined},
+        {title: PAGE_NAME_MAP["index"], url: URL_STATIC},
+        {title: PAGE_NAME_MAP["library"], url: undefined},
     ],
-    backDestination_href: process.env.URL_STATIC,
+    backDestination_href: URL_STATIC,
 }) %>
 <%_ for (const [category, entries] of Object.entries(entriesByCategory)) { _%>
 <hr>
 <h1><%- category %></h1>
 <%_ for (let i = entries.length-1; i >= 0; --i) { _%>
 <%_ const entry = entries[i]; _%>
-<a class="postEntryButton" href="<%= process.env.URL_STATIC %>/<%= entry.dirName %>/list.html"><%- entry.title %></a>
+<a class="postEntryButton" href="<%= URL_STATIC %>/<%= entry.dirName %>/list.html"><%- entry.title %></a>
 <%_ } _%>
 <%_ } _%>
 <hr>

@@ -1,15 +1,16 @@
 import socketIO from "socket.io";
 import { SocketMiddleware } from "./types/socketMiddleware";
-import ServerLogUtil from "../networking/util/serverLogUtil";
+import LogUtil from "../../shared/system/util/logUtil";
+import { logEventObservable } from "../../shared/system/sharedObservables";
+import LogEvent from "../../shared/system/types/logEvent";
 
 let nsp: socketIO.Namespace;
 
 const col1 = `<td style="color: #e0e020; background-color: #202090;">`;
-const col2 = `<td style="color: #20e020; background-color: #101010;">`;
-const col3 = `<td style="color: #303030; background-color: #c0c0c0;">`;
+const col2 = `<td style="color: #303030; background-color: #c0c0c0;">`;
 const end = `</td>`;
-const row = (txt1: string, txt2: string, txt3: string) =>
-    `${col1}${txt1}${end}${col2}${txt2}${end}${col3}${txt3}${end}`;
+const row = (txt1: string, txt2: string) =>
+    `${col1}${txt1}${end}${col2}${txt2}${end}`;
 
 const ConsoleSockets =
 {
@@ -28,29 +29,37 @@ const ConsoleSockets =
                 {
                     case "print":
                         words.shift();
-                        ServerLogUtil.logRaw((words.length == 0) ? "-" : words.join(" "), "high");
+                        LogUtil.logRaw((words.length == 0) ? "-" : words.join(" "), "high");
                         break;
                     case "reboot":
-                        ServerLogUtil.logRaw("Rebooting...", "high");
+                        LogUtil.logRaw("Rebooting...", "high");
                         process.exit(0);
                         break;
                     default:
-                        ServerLogUtil.logRaw(`Unknown command "${words[0]}".`, "high", "pink");
+                        LogUtil.logRaw(`Unknown command "${words[0]}".`, "high", "error");
                         break;
                 }
             });
 
             socket.on("disconnect", () => {
                 console.log(`(ConsoleSockets) Client disconnected :: ${JSON.stringify(socket.handshake.auth)}`);
+                logEventObservable.removeListener(`consoleSocket_${socket.id}`);
             });
+
+            logEventObservable.addListener(`consoleSocket_${socket.id}`, ConsoleSockets.log);
         });
     },
-    log: (message: string, origin: string, details: string): void =>
+    log: (logEvent: LogEvent): void =>
     {
-        if (nsp)
-            nsp.emit("log", row(message, origin, details));
-        else
-            console.log(`${message} (ORIGIN: ${origin}) (DETAILS: ${details})`);
+        let title = logEvent.eventTitle;
+        switch (logEvent.logType)
+        {
+            case "info": break;
+            case "warn": title = `<b style="color:yellow">${title}</b>`; break;
+            case "error": title = `<b style="color:pink">${title}</b>`; break;
+            default: throw new Error(`Unknown log type: ${logEvent.logType}`);
+        }
+        nsp?.emit("log", row(title, logEvent.eventDescJSON));
     },
 };
 

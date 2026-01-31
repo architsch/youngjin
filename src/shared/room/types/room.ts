@@ -16,6 +16,7 @@ export default class Room extends EncodableData
     texturePackPath: string;
     voxelGrid: VoxelGrid;
     persistentObjectGroup: PersistentObjectGroup;
+    dirty: boolean;
 
     constructor(id: string | undefined, roomName: string, roomType: RoomType, ownerUserName: string,
         texturePackPath: string,
@@ -29,6 +30,7 @@ export default class Room extends EncodableData
         this.texturePackPath = texturePackPath;
         this.voxelGrid = voxelGrid;
         this.persistentObjectGroup = persistentObjectGroup;
+        this.dirty = false;
     }
 
     get voxelQuads(): Uint8Array
