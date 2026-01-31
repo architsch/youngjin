@@ -9,8 +9,8 @@
 		"stop": "pm2 stop all && pm2 delete all",
 		"build": "npm run compileCSS && webpack --config build/webpack.config.server.js && webpack --config build/webpack.config.client.js",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style_v2.css",
-		"start": "node dist/server/bundle.js",
-		"prepare": "husky"
+		"ssg": "MODE=ssg node dist/server/bundle.js",
+		"start": "node dist/server/bundle.js"
 	},
 	"dependencies": {
 		"@tailwindcss/cli": "^4.1.17",
@@ -44,7 +44,6 @@
 		"@types/jsonwebtoken": "^9.0.9",
 		"@types/node": "^22.15.17",
 		"@types/three": "^0.180.0",
-		"husky": "^9.1.7",
 		"ts-loader": "^9.5.2",
 		"typescript": "^5.8.3",
 		"webpack": "^5.99.8",

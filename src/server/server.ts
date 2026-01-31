@@ -18,6 +18,20 @@ if (dev)
 
 async function Server(): Promise<void>
 {
+    // SSG = "Static Site Generator"
+    if (!process.env.SKIP_SSG)
+    {
+        if (dev) // If you are in dev mode, rebuild the static pages on restart.
+        {
+            await SSG();
+        }
+        else if (process.env.MODE == "ssg") // If you are in ssg mode, just rebuild the static pages and quit immediately.
+        {
+            await SSG();
+            return;
+        }
+    }
+
     if (!process.env.JWT_SECRET_KEY)
     {
         console.error("Secret not found :: JWT_SECRET_KEY");
@@ -34,20 +48,6 @@ async function Server(): Promise<void>
         return;
     }
 
-    // SSG = "Static Site Generator"
-    if (!process.env.SKIP_SSG)
-    {
-        if (dev) // If you are in dev mode, rebuild the static pages on restart.
-        {
-            await SSG();
-        }
-        else if (process.env.MODE == "ssg") // If you are in ssg mode, just rebuild the static pages and quit immediately.
-        {
-            await SSG();
-            return;
-        }
-    }
-    
     const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
     if (!roomSearchResult.success)
         return;
@@ -76,9 +76,10 @@ async function Server(): Promise<void>
     Router(app);
 
     // server connection
-    server.listen(dev ? LOCALHOST_PORT : process.env.PORT, () => {
+    const port = dev ? LOCALHOST_PORT : process.env.PORT;
+    server.listen(port, () => {
         console.log("---------------------------------------------");
-        console.log(`Listening to port ${LOCALHOST_PORT}.`);
+        console.log(`Listening to port ${port}.`);
     });
     
     // socket connection
