@@ -32,22 +32,19 @@ export default async function runQuerySelect<T extends DBRow>(
     {
         const querySnapshot = await collectionQuery.get();
         const docs = querySnapshot.docs;
-        if (docs)
-        {
-            docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
-                if (doc.exists)
+        docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
+            if (doc.exists)
+            {
+                let docData = doc.data();
+                if (!docData)
                 {
-                    let docData = doc.data();
-                    if (!docData)
-                    {
-                        LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
-                        return { success: false, data: [] };
-                    }
-                    docData.id = doc.id;
-                    data.push(runQueryVersionMigration(dbQuery, docData) as T);
+                    LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
+                    return { success: false, data: [] };
                 }
-            });
-        }
+                docData.id = doc.id;
+                data.push(runQueryVersionMigration(dbQuery, docData) as T);
+            }
+        });
     }
 
     LogUtil.log("DB Query Succeeded", dbQuery.getStateAsObject(), "medium");

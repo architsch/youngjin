@@ -2,7 +2,9 @@ const ErrorUtil =
 {
     getErrorMessage: (err: unknown): string =>
     {
-        return (err instanceof Error) ? err.message : String(err);
+        return (err instanceof Error)
+            ? `Name: ${err.name}, Message: ${err.message}, Stack: ${err.stack ?? "N/A"}`
+            : String(err);
     },
 }
 
