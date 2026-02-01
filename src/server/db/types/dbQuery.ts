@@ -181,9 +181,15 @@ export default class DBQuery<T extends DBRow>
             type: this.type,
             tableId: this.tableId,
             columnValues: this.columnValues,
-            condGroups: JSON.stringify(this.condGroups.map(condGroup =>
-                condGroup.map(cond => String(cond))
-            )),
+            conditions: this.condGroups.map(
+                condGroup => `(${condGroup.map(cond => getCondStr(cond)).join(" AND ")})`
+            ).join(" OR "),
         };
     }
+}
+
+function getCondStr(cond: admin.firestore.Filter): string
+{
+    const condObj = cond as any;
+    return `${condObj.field} ${condObj.operator} ${condObj.value}`;
 }
