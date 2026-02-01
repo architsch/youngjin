@@ -127,7 +127,7 @@ export default class DBQuery<T extends DBRow>
         LogUtil.log("DB Query Started", this.getStateAsObject(), "low");
 
         try {
-            const db = FirebaseUtil.getDB();
+            const db = await FirebaseUtil.getDB();
             let collectionRef = db.collection(this.tableId);
             const docRef = this.docId ? collectionRef.doc(this.docId) : undefined;
             let collectionQuery: admin.firestore.Query =

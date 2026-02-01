@@ -11,6 +11,7 @@
 		"build": "npm run compileCSS && webpack --config build/webpack.config.server.js && webpack --config build/webpack.config.client.js",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style_v2.css",
 		"start": "node dist/server/bundle.js",
+		"debugFirestore": "gcloud auth application-default login && GRPC_VERBOSITY=DEBUG GRPC_TRACE=all node debug-firestore.js",
 		"prepare": "husky"
 	},
 	"dependencies": {

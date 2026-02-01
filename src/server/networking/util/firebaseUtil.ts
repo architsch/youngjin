@@ -4,14 +4,14 @@ import ErrorUtil from "../../../shared/system/util/errorUtil";
 
 const FirebaseUtil =
 {
-    getDB: (): admin.firestore.Firestore =>
+    getDB: async (): Promise<admin.firestore.Firestore> =>
     {
-        ensureFirebaseInitialized();
+        await ensureFirebaseInitialized();
         return db;
     },
-    getStorage: (): admin.storage.Storage =>
+    getStorage: async (): Promise<admin.storage.Storage> =>
     {
-        ensureFirebaseInitialized();
+        await ensureFirebaseInitialized();
         return storage;
     },
 }
@@ -20,7 +20,7 @@ let firebaseInitialized = false;
 let db: admin.firestore.Firestore;
 let storage: admin.storage.Storage;
 
-function ensureFirebaseInitialized()
+async function ensureFirebaseInitialized()
 {
     if (firebaseInitialized)
         return;
@@ -35,6 +35,13 @@ function ensureFirebaseInitialized()
         LogUtil.log("Firebase App Initialized", { options: optionsObj }, "high", "info");
     } catch (err) {
         LogUtil.log("Failed to get Firebase app options", { errorMessage: ErrorUtil.getErrorMessage(err) }, "high", "error");
+    }
+
+    try {
+        const cols = await db.listCollections();
+        LogUtil.log("Firestore collections", { count: cols.length, names: cols.map(c => c.id) }, "high", "info");
+    } catch (err) {
+        LogUtil.log("Firestore listCollections failed", { errorMessage: ErrorUtil.getErrorMessage(err) }, "high", "error");
     }
 
     firebaseInitialized = true;

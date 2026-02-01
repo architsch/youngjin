@@ -50,7 +50,7 @@ export default async function runQueryUpdate<T extends DBRow>(
 
         if (querySnapshot.docs.length > 1)
         {
-            const db = FirebaseUtil.getDB();
+            const db = await FirebaseUtil.getDB();
             const batch = db.batch();
             querySnapshot.docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
                 const docData = doc.data();

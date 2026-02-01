@@ -8,7 +8,7 @@ const DBFileStorageUtil =
     {
         LogUtil.log("DBFileStorageUtil.saveBinaryFile", {filePath, bufferLength: buffer.length}, "low", "info");
         try {
-            const bucket = FirebaseUtil.getStorage().bucket();
+            const bucket = (await FirebaseUtil.getStorage()).bucket();
             const file = bucket.file(filePath);
             await file.save(buffer, {
                 metadata: {
@@ -26,7 +26,7 @@ const DBFileStorageUtil =
     {
         LogUtil.log("DBFileStorageUtil.loadBinaryFile", {filePath}, "low", "info");
         try {
-            const bucket = FirebaseUtil.getStorage().bucket();
+            const bucket = (await FirebaseUtil.getStorage()).bucket();
             const file = bucket.file(filePath);
             const contents = await file.download();
             const buffer = Buffer.concat(contents);
@@ -43,7 +43,7 @@ const DBFileStorageUtil =
     {
         LogUtil.log("DBFileStorageUtil.deleteFile", {filePath}, "low", "info");
         try {
-            const bucket = FirebaseUtil.getStorage().bucket();
+            const bucket = (await FirebaseUtil.getStorage()).bucket();
             const file = bucket.file(filePath);
             const responses = await file.delete();
             for (const response of responses)

@@ -23,7 +23,7 @@ export default async function runQueryDelete<T extends DBRow>(
         numDocsAffected = querySnapshot.docs.length;
         if (querySnapshot.docs.length > 1)
         {
-            const db = FirebaseUtil.getDB();
+            const db = await FirebaseUtil.getDB();
             const batch = db.batch();
             querySnapshot.docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
                 batch.delete(doc.ref);
