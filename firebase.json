@@ -30,7 +30,7 @@
     "apphosting": {
       "port": 3000,
       "rootDirectory": "./",
-      "startCommand": "MODE=dev GCLOUD_PROJECT=\"thingspool\" FIRESTORE_EMULATOR_HOST=\"localhost:8080\" FIREBASE_STORAGE_EMULATOR_HOST=\"localhost:9199\" pm2 start ./devRunner.js --no-daemon --watch --ignore-watch=\"dist public .git\""
+      "startCommand": "GCLOUD_PROJECT=\"thingspool\" FIRESTORE_EMULATOR_HOST=\"localhost:8080\" FIREBASE_STORAGE_EMULATOR_HOST=\"localhost:9199\" pm2 start ./devRunner.js --no-daemon --watch --ignore-watch=\"dist public .git\""
     },
     "firestore": {
       "port": 8080
