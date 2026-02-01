@@ -25,16 +25,7 @@ function ensureFirebaseInitialized()
     if (firebaseInitialized)
         return;
 
-    LogUtil.log("Initializing Firebase App...", {
-        GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
-        GCLOUD_PROJECT: process.env.GCLOUD_PROJECT,
-        GCLOUD_PROJECT_ID: process.env.GCLOUD_PROJECT_ID,
-    }, "high", "info");
-
-    const app = admin.initializeApp({
-        projectId: process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCLOUD_PROJECT_ID,
-        storageBucket: "thingspool.firebasestorage.app",
-    });
+    const app = admin.initializeApp();
 
     db = admin.firestore();
     storage = admin.storage();
