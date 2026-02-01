@@ -5,8 +5,6 @@ import CookieUtil from "../../networking/util/cookieUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 const dev = process.env.MODE == "dev";
-if (dev)
-    require("dotenv").config({ path: ".env.emulator" });
 
 const UserTokenUtil =
 {

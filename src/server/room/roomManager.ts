@@ -49,7 +49,7 @@ const RoomManager =
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
         console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userName = ${user.userName}`);
-        removeUserFromRoom(socketUserContext, prevRoomShouldExist);
+        await removeUserFromRoom(socketUserContext, prevRoomShouldExist);
         if (!roomID)
             return;
     

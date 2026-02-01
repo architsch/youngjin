@@ -9,12 +9,9 @@ import Sockets from "./sockets/sockets";
 import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
-import { LOCALHOST_PORT } from "./system/serverConstants";
 import AddressUtil from "./networking/util/addressUtil";
 
 const dev = process.env.MODE == "dev";
-if (dev)
-    require("dotenv").config({ path: ".env.emulator" });
 
 async function Server(): Promise<void>
 {
@@ -76,10 +73,9 @@ async function Server(): Promise<void>
     Router(app);
 
     // server connection
-    const port = dev ? LOCALHOST_PORT : process.env.PORT;
-    server.listen(port, () => {
+    server.listen(process.env.PORT, () => {
         console.log("---------------------------------------------");
-        console.log(`Listening to port ${port}.`);
+        console.log(`Listening to port ${process.env.PORT}.`);
     });
     
     // socket connection

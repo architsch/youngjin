@@ -2,7 +2,7 @@ import FileUtil from "./fileUtil";
 import ejs from "ejs";
 import { Request, Response } from "express";
 import AddressUtil from "../../networking/util/addressUtil";
-import { LOCALHOST_PORT, URL_DYNAMIC, URL_STATIC, VIEWS_ROOT_DIR } from "../../system/serverConstants";
+import { URL_DYNAMIC, URL_STATIC, VIEWS_ROOT_DIR } from "../../system/serverConstants";
 import { PAGE_NAME_MAP } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 

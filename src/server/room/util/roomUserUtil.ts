@@ -6,8 +6,9 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
-//import { unloadRoom } from "./roomCoreUtil";
+import { unloadRoom } from "./roomCoreUtil";
 import { addObject, removeObject } from "./roomObjectUtil";
+import DBRoomUtil from "../../db/util/dbRoomUtil";
 
 let lastObjectIdNumber = 0;
 
@@ -43,7 +44,7 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
      )));
 }
 
-export function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean)
+export async function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean)
 {
     const user: User = socketUserContext.socket.handshake.auth as User;
     const roomID = RoomManager.currentRoomIDByUserName[user.userName];
@@ -78,9 +79,11 @@ export function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoo
     else
         socketRoomContext.removeSocketUserContext(user.userName);
 
-    // NOTE: For now, don't unload a room even if there's no user left in it.
-    //if (Object.keys(roomRuntimeMemory.participantUserNames).length == 0)
-    //    unloadRoom(roomID);
+    if (Object.keys(roomRuntimeMemory.participantUserNames).length == 0)
+    {
+        if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
+            unloadRoom(roomID);
+    }
 }
 
 export function getIdsOfObjectsSpawnedByUser(roomID: string, userName: string): string[]

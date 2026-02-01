@@ -6,26 +6,25 @@ runConfig:
   # concurrency: 80
   # cpu: 1
   # memoryMiB: 512
-
 # Environment variables and secrets.
-  env:
+env:
   # Configure environment variables.
   # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
 
-    - variable: MODE
-      value: "dev"
-      availability:
-        - BUILD
-        - RUNTIME
+  - variable: MODE
+    value: "dev"
+    availability:
+      - BUILD
+      - RUNTIME
 
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
 
-    - variable: JWT_SECRET_KEY
-      secret: JWT_SECRET_KEY
+  - variable: JWT_SECRET_KEY
+    secret: JWT_SECRET_KEY
 
-    - variable: GOOGLE_OAUTH_CLIENT_ID
-      secret: GOOGLE_OAUTH_CLIENT_ID
+  - variable: GOOGLE_OAUTH_CLIENT_ID
+    secret: GOOGLE_OAUTH_CLIENT_ID
 
-    - variable: GOOGLE_OAUTH_CLIENT_SECRET
-      secret: GOOGLE_OAUTH_CLIENT_SECRET
+  - variable: GOOGLE_OAUTH_CLIENT_SECRET
+    secret: GOOGLE_OAUTH_CLIENT_SECRET

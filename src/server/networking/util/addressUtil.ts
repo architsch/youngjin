@@ -1,5 +1,5 @@
 const os = require("os");
-import { LOCALHOST_PORT, URL_DYNAMIC, URL_STATIC } from "../../system/serverConstants";
+import { URL_DYNAMIC, URL_STATIC } from "../../system/serverConstants";
 
 const dev = process.env.MODE == "dev";
 
@@ -24,7 +24,7 @@ const AddressUtil =
 
 function getLocalURL(): string
 {
-    return `http://${getLocalDomain()}:${LOCALHOST_PORT}`;
+    return `http://${getLocalDomain()}:${process.env.PORT}`;
 }
 
 function getLocalDomain(): string

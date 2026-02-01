@@ -7,10 +7,11 @@
 		"devserver": "SKIP_CSS_COMPILE=true SKIP_CLIENT_COMPILE=true SKIP_SSG=true npm run dev",
 		"devnossg": "SKIP_SSG=true npm run dev",
 		"stop": "pm2 stop all && pm2 delete all",
+		"beforeCommit": "npm run build && MODE=ssg node dist/server/bundle.js",
 		"build": "npm run compileCSS && webpack --config build/webpack.config.server.js && webpack --config build/webpack.config.client.js",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style_v2.css",
-		"ssg": "MODE=ssg node dist/server/bundle.js",
-		"start": "node dist/server/bundle.js"
+		"start": "node dist/server/bundle.js",
+		"prepare": "husky"
 	},
 	"dependencies": {
 		"@tailwindcss/cli": "^4.1.17",
@@ -21,7 +22,6 @@
 		"body-parser": "^1.20.3",
 		"cookie": "^1.0.2",
 		"cookie-parser": "^1.4.7",
-		"dotenv": "^17.2.3",
 		"ejs": "^3.1.10",
 		"express": "^4.21.2",
 		"firebase-admin": "^13.6.0",
@@ -44,6 +44,7 @@
 		"@types/jsonwebtoken": "^9.0.9",
 		"@types/node": "^22.15.17",
 		"@types/three": "^0.180.0",
+		"husky": "^9.1.7",
 		"ts-loader": "^9.5.2",
 		"typescript": "^5.8.3",
 		"webpack": "^5.99.8",

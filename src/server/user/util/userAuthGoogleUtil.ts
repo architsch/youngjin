@@ -12,10 +12,6 @@ import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import AddressUtil from "../../networking/util/addressUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 
-const dev = process.env.MODE == "dev";
-if (dev)
-    require("dotenv").config({ path: ".env.emulator" });
-
 const UserAuthGoogleUtil =
 {
     login: async (req: Request, res: Response): Promise<void> =>

@@ -2,7 +2,6 @@ import DBUserVersionMigration from "../db/types/versionMigration/dbUserVersionMi
 
 // Networking
 
-export const LOCALHOST_PORT = 3000;
 export const URL_STATIC = "https://thingspool.net";
 export const URL_DYNAMIC = "https://app.thingspool.net";
 export const AUTH_TOKEN_NAME_BASE = `thingspool_token_v${DBUserVersionMigration.length}`;
