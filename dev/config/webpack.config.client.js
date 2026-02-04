@@ -1,7 +1,7 @@
 const path = require("path");
 
 module.exports = {
-    entry: path.resolve(__dirname, '../src/client/client.ts'),
+    entry: path.resolve(__dirname, '../../src/client/client.ts'),
     target: 'web',
     mode: 'production',
     module: {
@@ -10,7 +10,7 @@ module.exports = {
                 test: /\.(ts|tsx)$/,
                 loader: 'ts-loader',
                 options: {
-                    configFile: path.resolve(__dirname, '../build/tsconfig.client.json'),
+                    configFile: path.resolve(__dirname, '../../dev/config/tsconfig.client.json'),
                 },
                 exclude: /node_modules/,
             },
@@ -21,6 +21,6 @@ module.exports = {
     },
     output: {
         filename: `bundle_v2.js`,
-        path: path.resolve(__dirname, '../public/app'),
+        path: path.resolve(__dirname, '../../public/app'),
     },
 };

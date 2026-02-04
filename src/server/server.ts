@@ -11,12 +11,23 @@ import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
 import AddressUtil from "./networking/util/addressUtil";
 
-const dev = process.env.MODE == "dev";
-
 async function Server(): Promise<void>
 {
+    console.log(`========================================
+Env Variables in Server:
+========================================
+    MODE: ${process.env.MODE}
+    SKIP_SSG: ${process.env.SKIP_SSG}
+    PORT: ${process.env.PORT}
+    SKIP_CSS_COMPILE: ${process.env.SKIP_CSS_COMPILE}
+    SKIP_CLIENT_COMPILE: ${process.env.SKIP_CLIENT_COMPILE}
+    SKIP_SERVER_COMPILE: ${process.env.SKIP_SERVER_COMPILE}
+========================================`);
+
+    const dev = process.env.MODE == "dev";
+
     // SSG = "Static Site Generator"
-    if (!process.env.SKIP_SSG)
+    if (process.env.SKIP_SSG != "true")
     {
         if (dev) // If you are in dev mode, rebuild the static pages on restart.
         {

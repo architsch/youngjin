@@ -1,17 +1,17 @@
 {
 	"name": "youngjin",
 	"scripts": {
-		"dev": "firebase emulators:start",
-		"devcss": "SKIP_CLIENT_COMPILE=true SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
-		"devclient": "SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
-		"devserver": "SKIP_CSS_COMPILE=true SKIP_CLIENT_COMPILE=true SKIP_SSG=true npm run dev",
-		"devnossg": "SKIP_SSG=true npm run dev",
+		"devcss": "cp dev/config/apphosting.emulator.devcss.yaml apphosting.emulator.yaml && firebase emulators:start",
+		"devclient": "cp dev/config/apphosting.emulator.devclient.yaml apphosting.emulator.yaml && firebase emulators:start",
+		"devserver": "cp dev/config/apphosting.emulator.devserver.yaml apphosting.emulator.yaml && firebase emulators:start",
+		"devnossg": "cp dev/config/apphosting.emulator.devnossg.yaml apphosting.emulator.yaml && firebase emulators:start",
+		"devfull": "cp dev/config/apphosting.emulator.devfull.yaml apphosting.emulator.yaml && firebase emulators:start",
 		"stop": "pm2 stop all && pm2 delete all",
 		"beforeCommit": "npm run build && MODE=ssg node dist/server/bundle.js",
-		"build": "npm run compileCSS && webpack --config build/webpack.config.server.js && webpack --config build/webpack.config.client.js",
+		"build": "npm run compileCSS && webpack --config dev/config/webpack.config.server.js && webpack --config dev/config/webpack.config.client.js",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style_v2.css",
 		"start": "node dist/server/bundle.js",
-		"debugFirestore": "gcloud auth application-default login && GRPC_VERBOSITY=DEBUG GRPC_TRACE=all node debug-firestore.js",
+		"debugFirestore": "gcloud auth application-default login && GRPC_VERBOSITY=DEBUG GRPC_TRACE=all node dev/scripts/debug-firestore.js",
 		"prepare": "husky"
 	},
 	"dependencies": {

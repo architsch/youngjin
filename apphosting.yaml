@@ -24,6 +24,24 @@ env:
       - BUILD
       - RUNTIME
 
+  - variable: SKIP_CSS_COMPILE
+    value: false
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: SKIP_CLIENT_COMPILE
+    value: false
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: SKIP_SERVER_COMPILE
+    value: false
+    availability:
+      - BUILD
+      - RUNTIME
+
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
 

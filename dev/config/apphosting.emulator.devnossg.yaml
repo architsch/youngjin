@@ -19,7 +19,7 @@ env:
       - RUNTIME
 
   - variable: SKIP_SSG
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME

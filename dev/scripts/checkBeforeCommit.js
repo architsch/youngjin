@@ -22,8 +22,8 @@ function checkBundle(pathStr)
     }
 }
 
-checkBundle("public/app/bundle_v2.js");
-checkBundle("dist/server/bundle.js");
+checkBundle("../../public/app/bundle_v2.js");
+checkBundle("../../dist/server/bundle.js");
 
 console.log("✅ Production build verified.");
 process.exit(0);

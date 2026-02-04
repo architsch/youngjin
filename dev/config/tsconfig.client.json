@@ -1,19 +1,19 @@
 {
     "compilerOptions": {
         "strict": true,
-        "outDir": "./dist/",
+        "outDir": "../../public/",
         "allowJs": true,
         "noImplicitAny": true,
         "sourceMap": true,
         "module": "es6",
         "target": "es5",
-        "jsx": "react",
+        "jsx": "react-jsx",
         "moduleResolution": "node",
         "allowSyntheticDefaultImports" : true,
         "esModuleInterop" : true,
         "lib": [
-          "ES2021.String"
+          "dom", "ES2021.String"
         ]
     },
-    "include": ["../src/server/**/*", "../src/shared/**/*"]
+    "include": ["../../src/client/**/*", "../../src/shared/**/*"]
 }

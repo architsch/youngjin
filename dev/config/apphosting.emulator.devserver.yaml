@@ -19,19 +19,19 @@ env:
       - RUNTIME
 
   - variable: SKIP_SSG
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME
 
   - variable: SKIP_CSS_COMPILE
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME
 
   - variable: SKIP_CLIENT_COMPILE
-    value: "false"
+    value: "true"
     availability:
       - BUILD
       - RUNTIME
