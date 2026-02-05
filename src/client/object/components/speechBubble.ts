@@ -6,6 +6,7 @@ import ObjectMessageParams from "../../../shared/object/types/objectMessageParam
 import { objectMessageObservable } from "../../system/clientObservables";
 import GameObject from "../types/gameObject";
 import GameSocketsClient from "../../networking/client/gameSocketsClient";
+import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 
 export default class SpeechBubble extends GameObjectComponent
 {
@@ -27,6 +28,12 @@ export default class SpeechBubble extends GameObjectComponent
         this.gameObject.obj.add(this.speechBubbleHotspot);
         this.speechBubbleHotspot.position.set(0, this.componentConfig.yOffset as number, 0);
         objectMessageObservable.addListener(this.gameObject.params.objectId, this.onObjectMessageReceived);
+
+        if (this.gameObject.params.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage))
+        {
+            const message = this.gameObject.params.getMetadata(ObjectMetadataKeyEnumMap.SentMessage);
+            this.onObjectMessageReceived(new ObjectMessageParams(this.gameObject.params.objectId, message))
+        }
     }
 
     async onDespawn(): Promise<void>

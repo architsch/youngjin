@@ -14,6 +14,7 @@ import { updateVoxelGrid } from "./util/roomVoxelUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import { ROOM_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -104,6 +105,7 @@ const RoomManager =
             return;
         }
         params.message = params.message.trim().substring(0, 32);
+        objectRuntimeMemory.objectSpawnParams.setMetadata(ObjectMetadataKeyEnumMap.SentMessage, params.message);
 
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)

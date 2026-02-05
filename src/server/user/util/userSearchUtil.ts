@@ -4,6 +4,8 @@ import DBUser from "../../../server/db/types/row/dbUser";
 import CookieUtil from "../../networking/util/cookieUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 
+const dev = process.env.MODE == "dev";
+
 const UserSearchUtil =
 {
     findExistingUserByUserName: async (userName: string, res?: Response,
@@ -21,7 +23,7 @@ const UserSearchUtil =
             {
                 LogUtil.log("User Not Found", {userName}, "high", "error");
                 res?.clearCookie(CookieUtil.getAuthTokenName())
-                    .redirect("/mypage");
+                    .redirect(dev ? "/mypage" : "/");
             }
             return null;
         }

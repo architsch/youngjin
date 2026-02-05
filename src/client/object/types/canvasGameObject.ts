@@ -18,7 +18,7 @@ export default class CanvasGameObject extends GameObject
         const po = instancer.getPersistentObject();
         console.log(`Selected PersistentObject = ${JSON.stringify(po)}`);
         
-        //const destinationRoomID = po.metadata;
+        //const destinationRoomID = po.metadata[ObjectMetadataKeyEnumMap.RoomID];
         //GameSocketsClient.tryEmitRoomChangeRequest(new RoomChangeRequestParams(destinationRoomID));
     }
 
@@ -27,7 +27,7 @@ export default class CanvasGameObject extends GameObject
         const speechBubble = this.components.speechBubble as SpeechBubble;
         const instancer = this.components.persistentObjectMeshInstancer as PersistentObjectMeshInstancer;
         const po = instancer.getPersistentObject();
-        //const destinationRoomID = po.metadata;
+        //const destinationRoomID = po.metadata[ObjectMetadataKeyEnumMap.RoomID];
         //speechBubble.setMessage(`Click to Visit ${destinationRoomID}`, true, false);
     }
 

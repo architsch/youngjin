@@ -7,7 +7,7 @@
 		"devnossg": "cp dev/config/apphosting.emulator.devnossg.yaml apphosting.emulator.yaml && firebase emulators:start",
 		"devfull": "cp dev/config/apphosting.emulator.devfull.yaml apphosting.emulator.yaml && firebase emulators:start",
 		"stop": "pm2 stop all && pm2 delete all",
-		"beforeCommit": "npm run build && MODE=ssg node dist/server/bundle.js",
+		"beforeCommit": "cp dev/config/apphosting.emulator.devfull.yaml apphosting.emulator.yaml && npm run build && MODE=ssg node dist/server/bundle.js",
 		"build": "npm run compileCSS && webpack --config dev/config/webpack.config.server.js && webpack --config dev/config/webpack.config.client.js",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style_v2.css",
 		"start": "node dist/server/bundle.js",

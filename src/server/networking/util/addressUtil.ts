@@ -12,7 +12,7 @@ const AddressUtil =
         return `${AddressUtil.getEnvStaticURL()}/error/${errorPageName}.html`;
     },
     getMyPageURL: () => {
-        return `${AddressUtil.getEnvDynamicURL()}/mypage`;
+        return dev ? `${AddressUtil.getEnvDynamicURL()}/mypage` : AddressUtil.getEnvDynamicURL();
     },
     getEnvStaticURL: () => {
         return dev ? getLocalURL() : URL_STATIC;

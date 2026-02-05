@@ -1,6 +1,8 @@
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
 import EncodableByteString from "../../networking/types/encodableByteString";
+import { ObjectMetadata } from "./objectMetadata";
+import EncodableMap from "../../networking/types/encodableMap";
 
 export default class PersistentObject extends EncodableData
 {
@@ -10,10 +12,10 @@ export default class PersistentObject extends EncodableData
     x: number;
     y: number;
     z: number;
-    metadata: string;
+    metadata: ObjectMetadata;
 
     constructor(objectId: string, objectTypeIndex: number, direction: "+z" | "+x" | "-z" | "-x",
-        x: number, y: number, z: number, metadata: string)
+        x: number, y: number, z: number, metadata: ObjectMetadata = {})
     {
         super();
         this.objectId = objectId;
@@ -49,7 +51,7 @@ export default class PersistentObject extends EncodableData
         bufferState.view[bufferState.byteIndex++] = (Math.floor(2 * this.x) << 2 | yRawFirstHalf);
         bufferState.view[bufferState.byteIndex++] = (Math.floor(2 * this.z) << 2 | yRawSecondHalf);
 
-        new EncodableByteString(this.metadata).encode(bufferState);
+        new EncodableMap(this.metadata).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
@@ -73,7 +75,7 @@ export default class PersistentObject extends EncodableData
         const yRaw = (yRawFirstHalf << 2) | yRawSecondHalf;
         const y = 0.25 * yRaw;
 
-        const metadata = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
 
         const objectId = `p${x}-${y}-${z}`;
         return new PersistentObject(objectId, objectTypeIndex, direction, x, y, z, metadata);
@@ -84,7 +86,7 @@ export default class PersistentObject extends EncodableData
 // Each PersistentObject's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Main Byte 1][Main Byte 2][Main Byte 3][Metadata Byte][Metadata Byte][Metadata Byte]...
+// Layout: [Main Byte 1][Main Byte 2][Main Byte 3][Metadata]...
 //
 // [Main Byte 1]
 //     6 bits for the object's type index
@@ -103,6 +105,4 @@ export default class PersistentObject extends EncodableData
 //     second 2 bits of the y-coordinate of the object's bottom position
 //         (4-bit binary value = floor(4 * y))
 //
-// [Metadata Byte]
-//     8 bits for each character in the metadata string (0 (null character) marks the end of the metadata string)
 //------------------------------------------------------------------------------

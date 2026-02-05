@@ -39,8 +39,7 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
         new ObjectTransform(
             16, 0, 16,
             0, 0, 1
-        ),
-        ""
+        )
      )));
 }
 
