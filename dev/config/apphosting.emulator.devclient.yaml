@@ -1,6 +1,9 @@
 # Settings for Backend (on Cloud Run).
 # See https://firebase.google.com/docs/app-hosting/configure#cloud-run
 runConfig:
+  sessionAffinity: true # Enable Session Affinity to keep the socket on one instance
+  cpuIdle: false # Ensure the CPU stays active during the socket connection
+  timeoutSeconds: 3600 # Increase timeout to allow long-lived WebSockets
   minInstances: 0
   # maxInstances: 100
   # concurrency: 80

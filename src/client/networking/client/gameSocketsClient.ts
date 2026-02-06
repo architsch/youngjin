@@ -56,6 +56,9 @@ const GameSocketsClient =
 
         socket = io(`${env.socket_server_url}/game_sockets`, {
             transports: ["websocket"],
+            upgrade: false, // Stay on websocket
+            secure: true, // Force WSS
+            reconnectionAttempts: 5 // Don't loop forever if there's a hard failure
         });
 
         socket.on("connect_error", (err) => {
