@@ -28,8 +28,15 @@ export default function Router(app: Express): void
             res.sendFile(FileUtil.getAbsoluteFilePath(req.url));
         });
     }
+    else
+    {
+        // Respond to Google's health check (Firebase App Hosting)
+        app.get("/", (req: Request, res: Response) => {
+            res.status(200).send("Server is running");
+        });
+    }
     
-    app.get("/robots.txt", (req, res) => {
+    app.get("/robots.txt", (req: Request, res: Response) => {
         res.type("text/plain");
         res.send("User-agent: *\nDisallow: /socket.io/");
     });

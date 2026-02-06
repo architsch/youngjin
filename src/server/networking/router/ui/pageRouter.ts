@@ -8,7 +8,7 @@ const dev = process.env.MODE == "dev";
 
 const PageRouter = express.Router();
 
-PageRouter.get(dev ? "/mypage" : "/", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
+PageRouter.get("/mypage", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
     EJSUtil.render(req, res, "page/dynamic/mypage", {});
 });
 

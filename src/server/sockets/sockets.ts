@@ -9,6 +9,7 @@ import * as cookie from "cookie";
 import { UserTypeEnumMap } from "../../shared/user/types/userType";
 import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
+import { URL_DYNAMIC } from "../system/serverConstants";
 
 const connectedUserNames = new Set<string>();
 
@@ -17,10 +18,15 @@ export default function Sockets(server: http.Server)
     const io = new socketIO.Server(server, {
         pingTimeout: 5000, // default: 20000
         pingInterval: 10000, // default: 25000
+        cors: {
+            origin: [URL_DYNAMIC],
+            methods: ["GET", "POST"],
+            credentials: true
+        },
         allowRequest: (req, callback) => {
             const userAgent = req.headers["user-agent"] || "";
             const isBot = (/^(Google)$|^.*(bot|crawler|spider|robot|crawling).*$/i.test(userAgent))
-                || !userAgent.includes("Mozilla");
+                && !userAgent.includes("Mozilla");
             if (isBot)
                 return callback("No Bots Allowed", false); // Reject the connection with 403 (forbidden)
             callback(null, true);

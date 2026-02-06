@@ -23,7 +23,7 @@ const UserSearchUtil =
             {
                 LogUtil.log("User Not Found", {userName}, "high", "error");
                 res?.clearCookie(CookieUtil.getAuthTokenName())
-                    .redirect(dev ? "/mypage" : "/");
+                    .redirect("/mypage");
             }
             return null;
         }
