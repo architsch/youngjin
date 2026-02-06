@@ -1,8 +1,8 @@
-import EJSUtil from "../../ssg/util/ejsUtil";
+import EJSUtil from "../../../ssg/util/ejsUtil";
 import express from "express";
 import { Request, Response } from "express";
-import { ArcadeData } from "../../ssg/data/arcadeData";
-import UserIdentificationUtil from "../../user/util/userIdentificationUtil";
+import { ArcadeData } from "../../../ssg/data/arcadeData";
+import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
 
 const dev = process.env.MODE == "dev";
 

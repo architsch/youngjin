@@ -4,7 +4,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import hpp from "hpp";
 import SSG from "./ssg/ssg";
-import Router from "./router/router";
+import Router from "./networking/router/router";
 import Sockets from "./sockets/sockets";
 import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";

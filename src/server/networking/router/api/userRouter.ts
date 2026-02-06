@@ -1,12 +1,12 @@
 import express from "express";
 import { Request, Response } from "express";
-import UserAuthPasswordUtil from "../../user/util/userAuthPasswordUtil";
-import UserAuthGoogleUtil from "../../user/util/userAuthGoogleUtil";
-import UserTokenUtil from "../../user/util/userTokenUtil";
-import AddressUtil from "../../networking/util/addressUtil";
+import UserAuthPasswordUtil from "../../../user/util/userAuthPasswordUtil";
+import UserAuthGoogleUtil from "../../../user/util/userAuthGoogleUtil";
+import UserTokenUtil from "../../../user/util/userTokenUtil";
+import AddressUtil from "../../util/addressUtil";
 
 const UserRouter = express.Router();
-
+/*
 // req.body = {userName, password}
 UserRouter.post("/register_password", async (req: Request, res: Response): Promise<void> => {
     await UserAuthPasswordUtil.register(req, res);
@@ -20,7 +20,7 @@ UserRouter.post("/login_password", async (req: Request, res: Response): Promise<
     if (res.statusCode >= 200 && res.statusCode <= 299)
         res.end();
 });
-
+*/
 UserRouter.get("/login_google", async (req: Request, res: Response): Promise<void> => {
     await UserAuthGoogleUtil.login(req, res);
     if (res.statusCode >= 200 && res.statusCode <= 299)

@@ -1,9 +1,9 @@
 import { Express, Request, Response } from "express";
 import PageRouter from "./ui/pageRouter";
 import UserRouter from "./api/userRouter";
-import FileUtil from "../ssg/util/fileUtil";
-import EJSUtil from "../ssg/util/ejsUtil";
-import { USER_API_ROUTE_PATH } from "../../shared/system/sharedConstants";
+import FileUtil from "../../ssg/util/fileUtil";
+import EJSUtil from "../../ssg/util/ejsUtil";
+import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 
 export default function Router(app: Express): void
 {
@@ -29,6 +29,11 @@ export default function Router(app: Express): void
         });
     }
     
+    app.get("/robots.txt", (req, res) => {
+        res.type("text/plain");
+        res.send("User-agent: *\nDisallow: /socket.io/");
+    });
+
     app.use(`/${USER_API_ROUTE_PATH}`, UserRouter);
     app.use("/", PageRouter);
 }

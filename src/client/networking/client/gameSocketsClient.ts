@@ -54,7 +54,9 @@ const GameSocketsClient =
         if (!tryStartClientProcess("roomChange", 1, 0))
             throw new Error("'roomChange' process is already ongoing.");
 
-        socket = io(`${env.socket_server_url}/game_sockets`);
+        socket = io(`${env.socket_server_url}/game_sockets`, {
+            transports: ["websocket"],
+        });
 
         socket.on("connect_error", (err) => {
             console.error(`SocketIO connection error :: ${err}`);
