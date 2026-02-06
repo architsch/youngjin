@@ -9,7 +9,6 @@ import * as cookie from "cookie";
 import { UserTypeEnumMap } from "../../shared/user/types/userType";
 import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
-import { URL_DYNAMIC } from "../system/serverConstants";
 
 const connectedUserNames = new Set<string>();
 
@@ -19,18 +18,24 @@ export default function Sockets(server: http.Server)
         pingTimeout: 5000, // default: 20000
         pingInterval: 10000, // default: 25000
         cors: {
-            origin: [URL_DYNAMIC],
+            origin: [AddressUtil.getEnvDynamicURL()],
             methods: ["GET", "POST"],
-            credentials: true
         },
         allowRequest: (req, callback) => {
             const userAgent = req.headers["user-agent"] || "";
             const isBot = (/^(Google)$|^.*(bot|crawler|spider|robot|crawling).*$/i.test(userAgent))
                 && !userAgent.includes("Mozilla");
             if (isBot)
-                return callback("No Bots Allowed", false); // Reject the connection with 403 (forbidden)
+                return callback(null, false); // Reject the connection with 403 (forbidden)
             callback(null, true);
         },
+    });
+
+    io.engine.on("connection_error", (err) => {
+        console.error("Socket connection error :: req ---> " + err.req); // the request object
+        console.error("Socket connection error :: code ---> " + err.code); // the error code, for example 1
+        console.error("Socket connection error :: message ---> " + err.message); // the error message, for example "Session ID unknown"
+        console.error("Socket connection error :: context ---> " + err.context); // some additional error context
     });
 
     ConsoleSockets.init(io,
