@@ -38,11 +38,11 @@ export default function Sockets(server: http.Server)
         console.error("Socket connection error :: context ---> " + err.context); // some additional error context
     });
 
-    ConsoleSockets.init(io,
+    /*ConsoleSockets.init(io,
         (process.env.MODE == "dev")
             ? (_, next) => next() // Don't authenticate in dev mode
             : makeAuthMiddleware((user: User) => user.userType == UserTypeEnumMap.Admin)
-    );
+    );*/
     
     GameSockets.init(io,
         makeAuthMiddleware((user: User) => true)
