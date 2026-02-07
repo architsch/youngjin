@@ -17,10 +17,10 @@ export default function Sockets(server: http.Server)
     const io = new socketIO.Server(server, {
         pingTimeout: 5000, // default: 20000
         pingInterval: 10000, // default: 25000
-        cors: {
+        /*cors: {
             origin: [AddressUtil.getEnvDynamicURL()],
             methods: ["GET", "POST"],
-        },
+        },*/
         allowRequest: (req, callback) => {
             const userAgent = req.headers["user-agent"] || "";
             const isBot = (/^(Google)$|^.*(bot|crawler|spider|robot|crawling).*$/i.test(userAgent))
@@ -32,10 +32,7 @@ export default function Sockets(server: http.Server)
     });
 
     io.engine.on("connection_error", (err) => {
-        console.error("Socket connection error :: req ---> " + err.req); // the request object
-        console.error("Socket connection error :: code ---> " + err.code); // the error code, for example 1
-        console.error("Socket connection error :: message ---> " + err.message); // the error message, for example "Session ID unknown"
-        console.error("Socket connection error :: context ---> " + err.context); // some additional error context
+        console.error(`Socket connection error :: (code = ${err.code}, message = ${err.message}, req = ${JSON.stringify(err.req)}, context = ${JSON.stringify(err.context)})`);
     });
 
     /*ConsoleSockets.init(io,
