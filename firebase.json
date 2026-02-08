@@ -5,7 +5,9 @@
       "rootDir": "./",
       "ignore": [
         ".git",
+        ".continue",
         ".github",
+        ".husky",
         ".vscode",
         "node_modules",
         "public",

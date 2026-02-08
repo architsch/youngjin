@@ -14,7 +14,7 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import UserCommandParams from "../../shared/user/types/userCommandParams";
 import UserCommandUtil from "../user/util/userCommandUtil";
 
-//let nsp: socketIO.Namespace;
+let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
 const socketUserContexts: {[userName: string]: SocketUserContext} = {};
 
@@ -22,10 +22,10 @@ const GameSockets =
 {
     init: (io: socketIO.Server, authMiddleware: SocketMiddleware): void =>
     {
-        //nsp = io.of("/game_sockets");
-        io.use(authMiddleware);
+        nsp = io.of("/game_sockets");
+        nsp.use(authMiddleware);
 
-        io.on("connection", async (socket: socketIO.Socket) => {
+        nsp.on("connection", async (socket: socketIO.Socket) => {
             const socketUserContext = new SocketUserContext(socket);
             const user: User = socket.handshake.auth as User;
             console.log(`(GameSockets) Client connected :: ${JSON.stringify(user)}`);

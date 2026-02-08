@@ -17,10 +17,10 @@ export default function Sockets(server: http.Server)
     const io = new socketIO.Server(server, {
         pingTimeout: 5000, // default: 20000
         pingInterval: 10000, // default: 25000
-        /*cors: {
+        cors: {
             origin: [AddressUtil.getEnvDynamicURL()],
             methods: ["GET", "POST"],
-        },*/
+        },
         allowRequest: (req, callback) => {
             const userAgent = req.headers["user-agent"] || "";
             const isBot = (/^(Google)$|^.*(bot|crawler|spider|robot|crawling).*$/i.test(userAgent))
@@ -35,11 +35,11 @@ export default function Sockets(server: http.Server)
         console.error(`Socket connection error :: (code = ${err.code}, message = ${err.message}, req = ${JSON.stringify(err.req)}, context = ${JSON.stringify(err.context)})`);
     });
 
-    /*ConsoleSockets.init(io,
+    ConsoleSockets.init(io,
         (process.env.MODE == "dev")
             ? (_, next) => next() // Don't authenticate in dev mode
             : makeAuthMiddleware((user: User) => user.userType == UserTypeEnumMap.Admin)
-    );*/
+    );
     
     GameSockets.init(io,
         makeAuthMiddleware((user: User) => true)
