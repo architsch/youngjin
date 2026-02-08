@@ -9,3 +9,11 @@ mcpServers:
       - firebase-tools@latest
       - mcp
     env: {}
+  - name: chrome-devtools
+    command: npx
+    args:
+      - -y
+      - chrome-devtools-mcp@latest
+      - mcp
+    type: stdio
+    env: {}

@@ -12,6 +12,7 @@
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style_v2.css",
 		"start": "node dist/server/bundle.js",
 		"debugFirestore": "gcloud auth application-default login && GRPC_VERBOSITY=DEBUG GRPC_TRACE=all node dev/scripts/debug-firestore.js",
+		"startChromeTest": "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-profile-stable",
 		"prepare": "husky"
 	},
 	"dependencies": {

@@ -6,7 +6,7 @@
 - **Backend**: Express.js (HTTP requests, authentication), Socket.IO server (real-time communication), Firebase (app hosting, database, storage, load balancing, content distribution)
 - **Database**: Firestore, Firebase Storage
 - **Build Tools**: Webpack (typescript compiler, bundler)
-- **Dev Tools**: Husky (git hooks), PM2 (process management during local dev test), GitHub (source control and static site hosting)
+- **Dev Tools**: Husky (git hooks), PM2 (process management during local dev test), GitHub (source control and static site hosting), Continue.dev (AI Agent, MCP Servers)
 
 ## Project Structure
 

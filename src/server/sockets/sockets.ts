@@ -18,7 +18,7 @@ export default function Sockets(server: http.Server)
         pingTimeout: 5000, // default: 20000
         pingInterval: 10000, // default: 25000
         cors: {
-            origin: [AddressUtil.getEnvDynamicURL()],
+            origin: [AddressUtil.getEnvDynamicURL(), AddressUtil.getEnvStaticURL()],
             methods: ["GET", "POST"],
         },
         allowRequest: (req, callback) => {

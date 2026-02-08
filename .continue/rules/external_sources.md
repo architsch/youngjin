@@ -22,3 +22,4 @@
 ## Development
 - Typescript: https://www.typescriptlang.org/docs
 - Webpack: https://webpack.js.org
+- Continue.dev: https://docs.continue.dev
