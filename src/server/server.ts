@@ -80,6 +80,10 @@ Env Variables in Server:
     // config
     app.set("view engine", "ejs");
 
+    // CRITICAL: Trust proxy headers from Firebase App Hosting / Cloud Run
+    // This is required for WebSocket upgrades to work properly behind the load balancer
+    app.set("trust proxy", true);
+
     // middleware
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: true }));

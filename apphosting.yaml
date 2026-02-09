@@ -4,11 +4,11 @@ runConfig:
   sessionAffinity: true # Enable Session Affinity to keep the socket on one instance
   cpuIdle: false # Ensure the CPU stays active during the socket connection
   timeoutSeconds: 3600 # Increase timeout to allow long-lived WebSockets
-  minInstances: 0
+  minInstances: 1 # Keep at least 1 instance warm for WebSocket connections
   # maxInstances: 100
-  # concurrency: 80
+  concurrency: 80 # Allow multiple concurrent connections per instance
   # cpu: 1
-  # memoryMiB: 512
+  memoryMiB: 512 # Ensure sufficient memory for Socket.IO state management
 
 # Environment variables and secrets.
 env:

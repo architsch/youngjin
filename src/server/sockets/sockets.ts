@@ -18,15 +18,28 @@ export default function Sockets(server: http.Server)
         pingTimeout: 5000, // default: 20000
         pingInterval: 10000, // default: 25000
         cors: {
-            origin: [AddressUtil.getEnvDynamicURL(), AddressUtil.getEnvStaticURL()],
+            // Same-origin setup: page at app.thingspool.net → socket at app.thingspool.net
+            origin: AddressUtil.getEnvDynamicURL(),
             methods: ["GET", "POST"],
         },
+        // CRITICAL: Allow EIO (Engine.IO) protocol for WebSocket upgrades
+        allowEIO3: true,
+        // WebSocket-specific transport settings
+        transports: ["websocket", "polling"],
         allowRequest: (req, callback) => {
             const userAgent = req.headers["user-agent"] || "";
+            console.log(`[allowRequest] User-Agent: ${userAgent}, URL: ${req.url}`);
+
+            // Only block clear bot patterns, be more lenient for WebSocket connections
             const isBot = (/^(Google)$|^.*(bot|crawler|spider|robot|crawling).*$/i.test(userAgent))
                 && !userAgent.includes("Mozilla");
-            if (isBot)
+
+            if (isBot) {
+                console.log(`[allowRequest] Blocking bot: ${userAgent}`);
                 return callback(null, false); // Reject the connection with 403 (forbidden)
+            }
+
+            console.log(`[allowRequest] Allowing connection from: ${userAgent}`);
             callback(null, true);
         },
     });

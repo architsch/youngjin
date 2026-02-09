@@ -1,12 +1,12 @@
-# Project: ThingsPool (3D Voxel-Based Multiplayer Game)
+# Project Overview
 
 ## Technology Stack
 - **Runtime**: Node.js with TypeScript
-- **Frontend**: Three.js (3D graphics), Axios (client-side HTTP requests), Socket.IO client (real-time communication), React, Tailwind CSS
+- **Frontend**: Three.js (3D graphics), Axios (client-side HTTP requests), Socket.IO client (real-time communication), React, Tailwind CSS, EJS
 - **Backend**: Express.js (HTTP requests, authentication), Socket.IO server (real-time communication), Firebase (app hosting, database, storage, load balancing, content distribution)
 - **Database**: Firestore, Firebase Storage
 - **Build Tools**: Webpack (typescript compiler, bundler)
-- **Dev Tools**: Husky (git hooks), PM2 (process management during local dev test), GitHub (source control and static site hosting), Continue.dev (AI Agent, MCP Servers)
+- **Dev Tools**: Husky (git hooks), PM2 (process management during local dev test), GitHub (source control and static site hosting)
 
 ## Project Structure
 
@@ -39,9 +39,6 @@
   - `/user` - User types and validators
   - `/voxel` - Voxel/block system (3D world building)
 
-### `/public` - Static assets served to client
-- HTML files, images, and compiled client app
-
 ### `/views` - EJS templates for both static and SSR pages
 - **`/page`** - EJS page templates
   - `/development` - Development-only SSR pages
@@ -53,35 +50,19 @@
   - `/info` - Informative content (e.g. links, portfolio)
 
 ### `/dev` - Development configuration
-- `/config` - Webpack configs, tsconfig files, firebase emulator configs
-- `/scripts` - Development helper scripts (dev server with hot-reloading capability, etc)
+- `/config` - Webpack configs, tsconfig files, firebase emulator config templates
+- `/scripts` - Helper scripts (e.g. dev-server with hot-reloading capability)
 
-### `/dist` - Compiled server app
-
-## Core Files
+## Important Files
 - `package.json` - NPM packages and custom scripts
-- `firebase.json` - Firebase App Hosting, Firestore, Firebase Storage, Firebase Emulators
+- `firebase.json` - Settings for Firebase App Hosting, Firestore, Firebase Storage, Firebase Emulators
 - `apphosting.yaml` - Configuration for Firebase App Hosting
 - `apphosting.emulator.yaml` - Configuration for Firebase App Hosting Emulator (This file is copied from one of the "dev/config" directory's "apphosting.emulator.dev(...).yaml" files, depending on which of the dev commands (in "package.json") is chosen to run)
 - `src/client/client.ts` - Entrypoint of the client app
 - `src/server/server.ts` - Entrypoint of the server app
 - `views/page/dynamic/mypage.ejs` - Page where the client app runs (This is where gameplay takes place). This client app authenticates itself via the server's user-API routes and makes a socket connection (game_sockets) with the server's Socket.IO instance.
 
-## Things to Ignore
-- Ignore all directories listed below:
-  - node_modules
-  - dist
-  - public
-- Ignore all files listed below:
-  - package-lock.json
-  - .env
-  - .DS_Store
-
 ## Architecture Notes
-- **Client-Server Model**: Real-time multiplayer gameplay is based on Socket.IO. Authentication is carried out via HTTP requests. The server app is served via Firebase App Hosting, and is responsible for authenticating the client (user) and establishing socket connections.
-- **Voxel-Based**: 3D world made of blocks/voxels
-- **Physics**: Custom physics engine for collision detection
-- **Room System**: Users join "rooms" (Each room is a 3D world, which consists of a group of objects and a three-dimensional array (grid) of voxels. No direct communication occurs between different rooms)
 - **Observable Pattern**: Used for state management. Each listener can subscribe to an observable and react to its state changes.
 - **Optional Sign-Up**: A new user automatically joins the game as a guest, which is a temporary user profile. In order to save one's progress, the user needs to create his/her own account by selecting one of the given auth providers (such as Google OAuth2).
 - **Separation between Static and Dynamic Pages**: Static pages (HTML files in the "public" directory) are being served via GitHub Pages, under the URL: "https://thingspool.net" (URL_STATIC). Dynamic pages and the server app are being hosted in Firebase App Hosting, under the URL: "https://app.thingspool.net" (URL_DYNAMIC). During local dev test, a local URL (such as "http://localhost:3000") is used for both.

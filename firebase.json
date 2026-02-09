@@ -5,7 +5,6 @@
       "rootDir": "./",
       "ignore": [
         ".git",
-        ".continue",
         ".github",
         ".husky",
         ".vscode",

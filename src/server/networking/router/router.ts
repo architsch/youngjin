@@ -41,6 +41,20 @@ export default function Router(app: Express): void
         res.send("User-agent: *\nDisallow: /socket.io/");
     });
 
+    // Debug endpoint to check server connectivity and headers
+    app.get("/debug-connection", (req: Request, res: Response) => {
+        res.json({
+            status: "ok",
+            headers: req.headers,
+            secure: req.secure,
+            protocol: req.protocol,
+            hostname: req.hostname,
+            ip: req.ip,
+            ips: req.ips,
+            timestamp: new Date().toISOString()
+        });
+    });
+
     app.use(`/${USER_API_ROUTE_PATH}`, UserRouter);
     app.use("/", PageRouter);
 }

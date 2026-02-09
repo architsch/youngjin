@@ -57,14 +57,25 @@ const GameSocketsClient =
         const connectionURL = `${env.socket_server_url}/game_sockets`;
         console.log(`Attempting to establish a socket connection with: [${connectionURL}]`);
         socket = io(connectionURL, {
-            transports: ["websocket"],
-            upgrade: false, // Stay on websocket
-            secure: true, // Force WSS
-            reconnectionAttempts: 3 // Don't loop forever if there's a hard failure
+            // Allow both transports for better compatibility with Firebase App Hosting
+            transports: ["websocket", "polling"],
+            // Let Socket.IO handle the upgrade process automatically
+            upgrade: true,
+            // Reconnection settings
+            reconnectionAttempts: 3, // Don't loop forever if there's a hard failure
+            reconnectionDelay: 1000,
+            // Same-origin connection (cookies sent automatically, no need for withCredentials)
+            forceNew: false,
+        });
+
+        socket.on("connect", () => {
+            console.log(`Successfully connected to game_sockets (transport: ${socket.io.engine.transport.name})`);
         });
 
         socket.on("connect_error", (err) => {
-            console.error(`SocketIO connection error :: ${err}`);
+            console.error("SocketIO connection error");
+            console.error(`Error message: ${err.message}`);
+            console.error(`Error data:`, err);
             if (err.message.startsWith("http"))
                 (window as any).location.href = err.message;
         });
