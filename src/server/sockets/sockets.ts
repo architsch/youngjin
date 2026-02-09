@@ -30,9 +30,10 @@ export default function Sockets(server: http.Server)
             const userAgent = req.headers["user-agent"] || "";
             console.log(`[allowRequest] User-Agent: ${userAgent}, URL: ${req.url}`);
 
-            // Only block clear bot patterns, be more lenient for WebSocket connections
-            const isBot = (/^(Google)$|^.*(bot|crawler|spider|robot|crawling).*$/i.test(userAgent))
-                && !userAgent.includes("Mozilla");
+            // NOTE: Firebase App Hosting's load balancer rewrites user-agent to "Google"
+            // when proxying requests, so we must NOT treat "Google" as a bot.
+            // Only block user-agents that contain explicit bot/crawler keywords.
+            const isBot = /bot|crawler|spider|robot|crawling/i.test(userAgent);
 
             if (isBot) {
                 console.log(`[allowRequest] Blocking bot: ${userAgent}`);
