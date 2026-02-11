@@ -25,7 +25,9 @@ async function ensureFirebaseInitialized()
     if (firebaseInitialized)
         return;
 
-    const app = admin.initializeApp();
+    const app = admin.initializeApp({
+        storageBucket: "thingspool.firebasestorage.app",
+    });
 
     db = admin.firestore();
     storage = admin.storage();

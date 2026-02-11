@@ -30,7 +30,7 @@ export default function Router(app: Express): void
     }
     else
     {
-        // Respond to Google's health check (Firebase App Hosting)
+        // Health check endpoint
         app.get("/", (req: Request, res: Response) => {
             res.status(200).send("Server is running");
         });

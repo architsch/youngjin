@@ -22,17 +22,13 @@ export default function Sockets(server: http.Server)
             origin: AddressUtil.getEnvDynamicURL(),
             methods: ["GET", "POST"],
         },
-        // CRITICAL: Allow EIO (Engine.IO) protocol for WebSocket upgrades
         allowEIO3: true,
-        // WebSocket-specific transport settings
         transports: ["websocket", "polling"],
         allowRequest: (req, callback) => {
             const userAgent = req.headers["user-agent"] || "";
             console.log(`[allowRequest] User-Agent: ${userAgent}, URL: ${req.url}`);
 
-            // NOTE: Firebase App Hosting's load balancer rewrites user-agent to "Google"
-            // when proxying requests, so we must NOT treat "Google" as a bot.
-            // Only block user-agents that contain explicit bot/crawler keywords.
+            // Block known bot/crawler user-agents from establishing socket connections.
             const isBot = /bot|crawler|spider|robot|crawling/i.test(userAgent);
 
             if (isBot) {

@@ -57,15 +57,10 @@ const GameSocketsClient =
         const connectionURL = `${env.socket_server_url}/game_sockets`;
         console.log(`Attempting to establish a socket connection with: [${connectionURL}]`);
         socket = io(connectionURL, {
-            // Allow both transports for better compatibility with Firebase App Hosting
             transports: ["websocket", "polling"],
-            // Let Socket.IO handle the upgrade process automatically
             upgrade: true,
-            // Reconnection settings
-            reconnectionAttempts: 3, // Don't loop forever if there's a hard failure
+            reconnectionAttempts: 3,
             reconnectionDelay: 1000,
-            // Same-origin connection (cookies sent automatically, no need for withCredentials)
-            forceNew: false,
         });
 
         socket.on("connect", () => {
