@@ -33,7 +33,7 @@ UserRouter.get("/login_google_callback", async (req: Request, res: Response): Pr
         res.redirect(AddressUtil.getMyPageURL());
 });
 
-UserRouter.get("/logout", (req: Request, res: Response): void => {
+UserRouter.post("/logout", (req: Request, res: Response): void => {
     UserTokenUtil.clearTokenFromUser(req, res);
     if (res.statusCode >= 200 && res.statusCode <= 299)
         res.end();

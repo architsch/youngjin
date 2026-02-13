@@ -6,6 +6,7 @@ import VoxelQuadSelectionMenu from "../selection/voxelQuadSelectionMenu";
 import Tutorial from "../tutorial/tutorial";
 import UserIdentity from "../user/userIdentity";
 import Loading from "./loading";
+import Reconnecting from "./reconnecting";
 import Popup from "../basic/popup";
 import { PopupType } from "../../types/PopupType";
 import LoginWithPasswordForm from "../form/loginWithPasswordForm";
@@ -52,6 +53,7 @@ export default function UIRoot({ env, user }: UIRootProps)
             <LoginWithPasswordForm onCancel={closePopup}/>
         </Popup>}
         <Loading/>
+        <Reconnecting/>
     </>
 }
 

@@ -61,7 +61,8 @@ ssh root@222.239.251.208 "nginx -t && systemctl reload nginx"
 3. Open up the terminal, and run the following commands:
 ```
 ssh root@222.239.251.208
-pm2 logs admin --lines 30   # Look for "[bootstrap] Secret loaded" messages
+. ./go.sh # "go.sh" is a custom shell script I made to let me instantly jump into the project root.
+pm2 logs admin --lines 30   # Look for "[bootstrap] Secret (...) loaded" messages
 curl http://localhost:3000/  # Should return "Server is running"
 ```
 4. Open up the browser, visit `https://app.thingspool.net/mypage`, and verify that the browser's console log prints out the following message:

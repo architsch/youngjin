@@ -12,7 +12,7 @@ import EncodableRawByteNumber from "../../../shared/networking/types/encodableRa
 import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import RoomChangeRequestParams from "../../../shared/room/types/roomChangeRequestParams";
-import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../../system/clientObservables";
+import { connectionStateObservable, objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../../system/clientObservables";
 import { tryStartClientProcess } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
@@ -59,12 +59,28 @@ const GameSocketsClient =
         socket = io(connectionURL, {
             transports: ["websocket", "polling"],
             upgrade: true,
-            reconnectionAttempts: 3,
-            reconnectionDelay: 1000,
+            reconnectionAttempts: 30,
+            reconnectionDelay: 2000,
+            reconnectionDelayMax: 10000,
         });
+
+        let hasConnectedBefore = false;
 
         socket.on("connect", () => {
             console.log(`Successfully connected to game_sockets (transport: ${socket.io.engine.transport.name})`);
+            connectionStateObservable.set("connected");
+            if (hasConnectedBefore)
+            {
+                // Reconnection: start a new roomChange process so the server's
+                // auto-join flow (which sends roomRuntimeMemory) can complete.
+                tryStartClientProcess("roomChange", 1, 0);
+            }
+            hasConnectedBefore = true;
+        });
+
+        socket.on("disconnect", (reason) => {
+            console.warn(`Socket disconnected (reason: ${reason})`);
+            connectionStateObservable.set("reconnecting");
         });
 
         socket.on("connect_error", (err) => {

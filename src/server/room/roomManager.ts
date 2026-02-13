@@ -25,14 +25,14 @@ const RoomManager =
     roomRuntimeMemories,
     socketRoomContexts,
     currentRoomIDByUserName,
-    saveRooms: async () =>
+    saveRooms: async (force: boolean = false) =>
     {
         const currTimeInMillis = Date.now();
         //console.log(`RoomManager.saveRooms :: Saving rooms... (currTimeInMillis = ${Math.floor(currTimeInMillis)})`);
         for (const [roomID, roomRuntimeMemory] of Object.entries(roomRuntimeMemories))
         {
             if (roomRuntimeMemory.room.dirty &&
-                currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_SAVE_INTERVAL)
+                (force || currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_SAVE_INTERVAL))
             {
                 const success = await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room);
                 if (success)

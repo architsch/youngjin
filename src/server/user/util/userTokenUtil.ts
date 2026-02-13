@@ -37,13 +37,18 @@ const UserTokenUtil =
         res?.cookie(CookieUtil.getAuthTokenName(), token, {
             secure: dev ? false : true,
             httpOnly: true,
-            sameSite: dev ? "lax" : "strict",
+            sameSite: "lax",
             maxAge: 3155692600000, // 100 years
         }).status(201);
     },
     clearTokenFromUser: (req: Request, res: Response): void =>
     {
-        res.clearCookie(CookieUtil.getAuthTokenName()).status(200);
+        res.clearCookie(CookieUtil.getAuthTokenName(), {
+            secure: dev ? false : true,
+            httpOnly: true,
+            sameSite: "lax",
+            maxAge: 3155692600000, // 100 years
+        }).status(200);
     },
 }
 

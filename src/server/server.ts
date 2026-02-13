@@ -6,6 +6,7 @@ import hpp from "hpp";
 import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
 import Sockets from "./sockets/sockets";
+import RoomManager from "./room/roomManager";
 import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
@@ -101,6 +102,31 @@ Env Variables in Server:
     
     // socket connection
     Sockets(server);
+
+    // graceful shutdown
+    const gracefulShutdown = async (signal: string) =>
+    {
+        console.log(`[${signal}] Graceful shutdown initiated...`);
+        console.log("Saving all rooms before shutdown...");
+        await RoomManager.saveRooms(true);
+        console.log("All rooms saved.");
+
+        server.close(() =>
+        {
+            console.log("HTTP server closed.");
+            process.exit(0);
+        });
+
+        // Force exit if server.close() hangs
+        setTimeout(() =>
+        {
+            console.error("Forced shutdown after timeout.");
+            process.exit(1);
+        }, 8000);
+    };
+
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 }
 
 Server();

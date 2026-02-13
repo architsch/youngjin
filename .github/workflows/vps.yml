@@ -36,9 +36,6 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Build
-      run: npm run build
-
     - name: Restart application via PM2
       run: npm run start
 

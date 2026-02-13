@@ -24,6 +24,7 @@ export const playerViewTargetPosObservable = new Observable<THREE.Vector3 | null
 
 // Networking
 
+export const connectionStateObservable = new Observable<string>();
 export const roomRuntimeMemoryObservable = new Observable<RoomRuntimeMemory>();
 export const objectSyncObservable = new Observable<ObjectSyncParams>();
 export const objectDesyncResolveObservable = new Observable<ObjectDesyncResolveParams>();

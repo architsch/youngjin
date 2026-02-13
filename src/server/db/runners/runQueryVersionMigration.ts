@@ -38,10 +38,6 @@ export default function runQueryVersionMigration<T extends DBRow>(
             docDataAfterMigration.version = ++versionNumber;
         }
         docDataAfterMigration.version = versionNumber;
-
-        // TODO: Register a queued task that replaces the original document with the new one.
-        //...
-
         return docDataAfterMigration;
     }
     else

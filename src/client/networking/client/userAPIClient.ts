@@ -19,7 +19,7 @@ const UserAPIClient =
     },
     logout: async (): Promise<RestAPIResponse> =>
     {
-         return await RestAPI.get(getURL("logout"));
+         return await RestAPI.post(getURL("logout"));
     },
 }
 
