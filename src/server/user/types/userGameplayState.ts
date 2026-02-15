@@ -8,4 +8,5 @@ export default interface UserGameplayState
     lastDirX: number;
     lastDirY: number;
     lastDirZ: number;
+    playerMetadata: {[key: string]: string};
 }

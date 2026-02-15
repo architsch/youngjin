@@ -1,6 +1,6 @@
 import { UserType } from "./userType";
 
-export default class User// extends EncodableData
+export default class User
 {
     id: string;
     userName: string;
@@ -14,11 +14,13 @@ export default class User// extends EncodableData
     lastDirX: number;
     lastDirY: number;
     lastDirZ: number;
+    playerMetadata: {[key: string]: string};
 
     constructor(id: string | undefined, userName: string, userType: UserType, email: string,
         tutorialStep: number,
         lastRoomID: string = "", lastX: number = 16, lastY: number = 0, lastZ: number = 16,
-        lastDirX: number = 0, lastDirY: number = 0, lastDirZ: number = 1)
+        lastDirX: number = 0, lastDirY: number = 0, lastDirZ: number = 1,
+        playerMetadata: {[key: string]: string} = {})
     {
         //super();
         this.id = (id != undefined) ? id : "";
@@ -33,6 +35,7 @@ export default class User// extends EncodableData
         this.lastDirX = lastDirX;
         this.lastDirY = lastDirY;
         this.lastDirZ = lastDirZ;
+        this.playerMetadata = playerMetadata;
     }
 
     static fromString(userString: string): User

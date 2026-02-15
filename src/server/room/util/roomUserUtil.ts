@@ -2,6 +2,7 @@ import User from "../../../shared/user/types/user";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectRuntimeMemory from "../../../shared/object/types/objectRuntimeMemory";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import SocketUserContext from "../../sockets/types/socketUserContext";
@@ -33,11 +34,15 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
         socketRoomContext.addSocketUserContext(userID, socketUserContext);
 
     // Create the user's player object
+    const restoredMetadata: {[key: number]: EncodableByteString} = {};
+    for (const key of Object.keys(user.playerMetadata))
+        restoredMetadata[parseInt(key)] = new EncodableByteString(user.playerMetadata[key]);
     addObject(socketUserContext, new ObjectRuntimeMemory(new ObjectSpawnParams(
         user.id,
         ObjectTypeConfigMap.getIndexByType("Player"),
         user.id, // Player object's objectId must be identical to the user's ID.
-        playerObjectTransform
+        playerObjectTransform,
+        restoredMetadata
      )));
 }
 
@@ -119,6 +124,10 @@ export function getUserGameplayState(userID: string, roomRuntimeMemory: RoomRunt
         return undefined;
     }
     const tr = playerObjectRuntimeMemory.objectSpawnParams.transform;
+    const rawMetadata = playerObjectRuntimeMemory.objectSpawnParams.metadata;
+    const playerMetadata: {[key: string]: string} = {};
+    for (const key of Object.keys(rawMetadata))
+        playerMetadata[key] = rawMetadata[key as any].str;
 
     return {
         userID,
@@ -129,5 +138,6 @@ export function getUserGameplayState(userID: string, roomRuntimeMemory: RoomRunt
         lastDirX: tr.dirX,
         lastDirY: tr.dirY,
         lastDirZ: tr.dirZ,
+        playerMetadata,
     };
 }

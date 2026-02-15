@@ -6,7 +6,6 @@ import DBUserVersionMigration from "../types/versionMigration/dbUserVersionMigra
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
-import FirebaseUtil from "../../networking/util/firebaseUtil";
 import UserGameplayState from "../../user/types/userGameplayState";
 import DBUserCacheUtil from "./dbUserCacheUtil";
 
@@ -29,6 +28,7 @@ const DBUserUtil =
             lastDirX: 0,
             lastDirY: 0,
             lastDirZ: 1,
+            playerMetadata: {},
             lastLoginAt: Date.now(),
         };
         const result = await new DBQuery<{id: string}>()
@@ -79,6 +79,7 @@ const DBUserUtil =
                 lastDirX: gameplayState.lastDirX,
                 lastDirY: gameplayState.lastDirY,
                 lastDirZ: gameplayState.lastDirZ,
+                playerMetadata: gameplayState.playerMetadata,
             })
             .where("id", "==", gameplayState.userID)
             .run();
@@ -91,27 +92,22 @@ const DBUserUtil =
         for (const gs of gameplayStates)
             DBUserCacheUtil.invalidate(gs.userID);
         LogUtil.log("DBUserUtil.saveMultipleUsersGameplayState", {count: gameplayStates.length}, "low", "info");
-        const db = await FirebaseUtil.getDB();
-        const batchSize = 500; // Firestore batch limit
-        for (let i = 0; i < gameplayStates.length; i += batchSize)
-        {
-            const batch = db.batch();
-            const chunk = gameplayStates.slice(i, i + batchSize);
-            for (const entry of chunk)
-            {
-                const docRef = db.collection("users").doc(entry.userID);
-                batch.update(docRef, {
-                    lastRoomID: entry.lastRoomID,
-                    lastX: entry.lastX,
-                    lastY: entry.lastY,
-                    lastZ: entry.lastZ,
-                    lastDirX: entry.lastDirX,
-                    lastDirY: entry.lastDirY,
-                    lastDirZ: entry.lastDirZ,
-                });
-            }
-            await batch.commit();
-        }
+        const queries = gameplayStates.map(gs =>
+            new DBQuery<DBRow>()
+                .update("users")
+                .set({
+                    lastRoomID: gs.lastRoomID,
+                    lastX: gs.lastX,
+                    lastY: gs.lastY,
+                    lastZ: gs.lastZ,
+                    lastDirX: gs.lastDirX,
+                    lastDirY: gs.lastDirY,
+                    lastDirZ: gs.lastDirZ,
+                    playerMetadata: gs.playerMetadata,
+                })
+                .where("id", "==", gs.userID)
+        );
+        await DBQuery.runAll(queries);
     },
     setUserLastRoomID: async (userID: string, lastRoomID: string): Promise<DBQueryResponse<DBRow>> =>
     {
@@ -142,36 +138,37 @@ const DBUserUtil =
     updateLastLogin: async (userID: string): Promise<void> =>
     {
         // No cache invalidation should happen here (And it doesn't have to because 'lastLoginAt' is only used by deleteStaleGuests)
-        const db = await FirebaseUtil.getDB();
-        await db.collection("users").doc(userID).update({ lastLoginAt: Date.now() });
+        await new DBQuery<DBRow>()
+            .update("users")
+            .set({ lastLoginAt: Date.now() })
+            .where("id", "==", userID)
+            .run();
     },
     deleteStaleGuests: async (maxAgeMs: number): Promise<number> =>
     {
         const cutoff = Date.now() - maxAgeMs;
-        const db = await FirebaseUtil.getDB();
-        const snapshot = await db.collection("users")
+
+        const selectResult = await new DBQuery<DBUser>()
+            .select()
+            .from("users")
             .where("userType", "==", UserTypeEnumMap.Guest)
             .where("lastLoginAt", "<", cutoff)
-            .get();
+            .run();
 
-        if (snapshot.empty)
+        if (!selectResult.success || selectResult.data.length === 0)
             return 0;
 
-        for (const doc of snapshot.docs)
-            DBUserCacheUtil.invalidate(doc.id);
+        for (const doc of selectResult.data)
+            if (doc.id) DBUserCacheUtil.invalidate(doc.id);
 
-        let deleted = 0;
-        const docs = snapshot.docs;
-        const batchSize = 500;
-        for (let i = 0; i < docs.length; i += batchSize)
-        {
-            const batch = db.batch();
-            const chunk = docs.slice(i, i + batchSize);
-            chunk.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-            deleted += chunk.length;
-        }
-        return deleted;
+        await new DBQuery<DBRow>()
+            .delete()
+            .from("users")
+            .where("userType", "==", UserTypeEnumMap.Guest)
+            .where("lastLoginAt", "<", cutoff)
+            .run();
+
+        return selectResult.data.length;
     },
     deleteUser: async (userID: string): Promise<DBQueryResponse<DBRow>> =>
     {
@@ -198,7 +195,8 @@ const DBUserUtil =
             dbUser.lastZ ?? 16,
             dbUser.lastDirX ?? 0,
             dbUser.lastDirY ?? 0,
-            dbUser.lastDirZ ?? 1
+            dbUser.lastDirZ ?? 1,
+            (dbUser.playerMetadata as {[key: string]: string}) ?? {}
         );
     },
 }

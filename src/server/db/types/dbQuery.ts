@@ -11,6 +11,7 @@ import runQuerySelect from "../runners/runQuerySelect";
 import runQueryInsert from "../runners/runQueryInsert";
 import runQueryUpdate from "../runners/runQueryUpdate";
 import runQueryDelete from "../runners/runQueryDelete";
+import runQueryBatch from "../runners/runQueryBatch";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 export default class DBQuery<T extends DBRow>
@@ -173,6 +174,13 @@ export default class DBQuery<T extends DBRow>
             LogUtil.log("DB Query Error", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "error");
             return { success: false, data: [] };
         }
+    }
+
+    static async runAll(queries: DBQuery<DBRow>[]): Promise<DBQueryResponse<DBRow>>
+    {
+        if (queries.length === 0)
+            return { success: true, data: [] };
+        return await runQueryBatch(queries);
     }
 
     getStateAsObject(): any
