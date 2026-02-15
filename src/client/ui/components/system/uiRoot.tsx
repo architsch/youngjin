@@ -9,8 +9,6 @@ import Loading from "./loading";
 import Reconnecting from "./reconnecting";
 import Popup from "../basic/popup";
 import { PopupType } from "../../types/PopupType";
-import LoginWithPasswordForm from "../form/loginWithPasswordForm";
-import RegisterWithPasswordForm from "../form/registerWithPasswordForm";
 import User from "../../../../shared/user/types/user";
 import AuthPromptForm from "../form/authPromptForm";
 import UserAPIClient from "../../../networking/client/userAPIClient";
@@ -22,8 +20,6 @@ export default function UIRoot({ env, user }: UIRootProps)
 
     const openAuthPromptFormPopup = useCallback(() => setPopupType("authPrompt"), []);
     const openSignOutFormPopup = useCallback(() => setPopupType("signOut"), []);
-    const openRegisterWithPasswordFormPopup = useCallback(() => setPopupType("registerWithPassword"), []);
-    const openLoginWithPasswordFormPopup = useCallback(() => setPopupType("loginWithPassword"), []);
     const closePopup = useCallback(() => setPopupType("none"), []);
 
     return <>
@@ -45,12 +41,6 @@ export default function UIRoot({ env, user }: UIRootProps)
         </Popup>}
         {popupType == "signOut" && <Popup>
             <SignOutForm onCancel={closePopup}/>
-        </Popup>}
-        {popupType == "registerWithPassword" && <Popup>
-            <RegisterWithPasswordForm onCancel={closePopup}/>
-        </Popup>}
-        {popupType == "loginWithPassword" && <Popup>
-            <LoginWithPasswordForm onCancel={closePopup}/>
         </Popup>}
         <Loading/>
         <Reconnecting/>

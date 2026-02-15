@@ -9,8 +9,9 @@ import * as cookie from "cookie";
 import { UserTypeEnumMap } from "../../shared/user/types/userType";
 import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
+import DBUserUtil from "../db/util/dbUserUtil";
 
-const connectedUserNames = new Set<string>();
+const connectedUserIDs = new Set<string>();
 
 export default function Sockets(server: http.Server)
 {
@@ -50,7 +51,7 @@ export default function Sockets(server: http.Server)
             ? (_, next) => next() // Don't authenticate in dev mode
             : makeAuthMiddleware((user: User) => user.userType == UserTypeEnumMap.Admin)
     );
-    
+
     GameSockets.init(io,
         makeAuthMiddleware((user: User) => true)
     );
@@ -58,53 +59,69 @@ export default function Sockets(server: http.Server)
 
 function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddleware
 {
-    return (socket: socketIO.Socket, next: (err?: socketIO.ExtendedError) => void) =>
+    return async (socket: socketIO.Socket, next: (err?: socketIO.ExtendedError) => void) =>
     {
-        const cookieStr = socket.request.headers.cookie;
-        console.log(`Authenticating socket (ID: ${socket.id})`);
-        if (!cookieStr)
+        try
         {
-            next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
-            return;
-        }
-        const cookieMap = cookie.parse(cookieStr);
-        const token = cookieMap[CookieUtil.getAuthTokenName()];
-        if (!token)
-        {
-            next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
-            return;
-        }
-        const user = UserTokenUtil.getUserFromToken(token);
-        if (!user)
-        {
-            next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
-            return;
-        }
-
-        if (connectedUserNames.has(user.userName))
-        {
-            next(new Error(AddressUtil.getErrorPageURL("auth-duplication")));
-            return;
-        }
-
-        if (!passCondition(user))
-        {
-            next(new Error(AddressUtil.getErrorPageURL("auth-no-permission")));
-            return;
-        }
-
-        connectedUserNames.add(user.userName);
-
-        socket.on("disconnect", () => {
-            if (!connectedUserNames.has(user.userName))
+            const cookieStr = socket.request.headers.cookie;
+            console.log(`Authenticating socket (ID: ${socket.id})`);
+            if (!cookieStr)
             {
-                console.error(`User "${user.userName}" is already disconnected.`);
+                next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
                 return;
             }
-            connectedUserNames.delete(user.userName);
-        });
+            const cookieMap = cookie.parse(cookieStr);
+            const token = cookieMap[CookieUtil.getAuthTokenName()];
+            if (!token)
+            {
+                next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
+                return;
+            }
+            const userId = UserTokenUtil.getUserIdFromToken(token);
+            if (!userId)
+            {
+                next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
+                return;
+            }
 
-        socket.handshake.auth = user;
-        next();
+            const dbUser = await DBUserUtil.findUserById(userId);
+            if (!dbUser)
+            {
+                next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
+                return;
+            }
+            const user = DBUserUtil.fromDBType(dbUser);
+
+            if (connectedUserIDs.has(user.id))
+            {
+                next(new Error(AddressUtil.getErrorPageURL("auth-duplication")));
+                return;
+            }
+
+            if (!passCondition(user))
+            {
+                next(new Error(AddressUtil.getErrorPageURL("auth-no-permission")));
+                return;
+            }
+
+            connectedUserIDs.add(user.id);
+
+            socket.on("disconnect", () => {
+                if (!connectedUserIDs.has(user.id))
+                {
+                    console.error(`User "${user.id}" is already disconnected.`);
+                    return;
+                }
+                connectedUserIDs.delete(user.id);
+            });
+
+            socket.handshake.auth = user;
+            next();
+        }
+        catch (err)
+        {
+            console.error(`Socket auth error: ${err}`);
+            next(new Error(AddressUtil.getErrorPageURL("auth-failure")));
+        }
     }
 }

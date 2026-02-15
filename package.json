@@ -9,7 +9,7 @@
 		"stop": "pm2 stop all && pm2 delete all",
 		"beforeCommit": "npm run build && MODE=ssg node dist/server/bundle.js",
 		"build": "npm run compileCSS && webpack --config dev/config/webpack.config.server.js && webpack --config dev/config/webpack.config.client.js",
-		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style_v2.css",
+		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style.css",
 		"start": "pm2 startOrRestart ecosystem.config.js",
 		"debugFirestore": "gcloud auth application-default login && GRPC_VERBOSITY=DEBUG GRPC_TRACE=all node dev/scripts/debug-firestore.js",
 		"prepare": "husky"

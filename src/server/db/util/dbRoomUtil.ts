@@ -41,16 +41,16 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.deleteRoomContent", {roomID: room.id}, "low", "info");
         return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(room.id));
     },
-    createRoom: async (roomName: string, roomType: RoomType, ownerUserName: string,
+    createRoom: async (roomName: string, roomType: RoomType, ownerUserID: string,
         floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number,
         texturePackPath: string): Promise<DBQueryResponse<{id: string}>> =>
     {
-        LogUtil.log("DBRoomUtil.createRoom", {roomName, roomType, ownerUserName, floorTextureIndex, wallTextureIndex,
+        LogUtil.log("DBRoomUtil.createRoom", {roomName, roomType, ownerUserID, floorTextureIndex, wallTextureIndex,
             ceilingTextureIndex, texturePackPath}, "low", "info");
         const {voxelGrid, persistentObjectGroup} =
             RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
-        const room = new Room(undefined, roomName, roomType, ownerUserName, texturePackPath,
+        const room = new Room(undefined, roomName, roomType, ownerUserID, texturePackPath,
             voxelGrid, persistentObjectGroup);
         const dbRoom = getDBRoomFromRoom(room);
 
@@ -103,7 +103,7 @@ function getDBRoomFromRoom(room: Room): DBRoom
         version: DBRoomVersionMigration.length,
         roomName: room.roomName,
         roomType: room.roomType,
-        ownerUserName: room.ownerUserName,
+        ownerUserID: room.ownerUserID,
         texturePackPath: room.texturePackPath,
     };
     return dbRoom;
@@ -123,7 +123,7 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
         dbRoom.id,
         dbRoom.roomName,
         dbRoom.roomType,
-        dbRoom.ownerUserName,
+        dbRoom.ownerUserID,
         dbRoom.texturePackPath,
         voxelGrid,
         persistentObjectGroup

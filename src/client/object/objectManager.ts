@@ -12,9 +12,6 @@ import { objectDespawnObservable, objectSpawnObservable } from "../system/client
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
-const players: {[userName: string]: GameObject} = {};
-
-const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
 const ObjectManager =
 {
@@ -26,7 +23,7 @@ const ObjectManager =
     {
         const user = App.getUser();
         if (user)
-            return players[user.userName];
+            return gameObjects[user.id];
         console.error(`Failed to fetch the user data (env = ${JSON.stringify(App.getEnv())})`);
         return undefined;
     },
@@ -128,12 +125,6 @@ const ObjectManager =
         for (const key of stringsTemp)
             delete updatableGameObjects[key];
 
-        stringsTemp.length = 0;
-        for (const key of Object.keys(players))
-            stringsTemp.push(key);
-        for (const key of stringsTemp)
-            delete players[key];
-
         // Remove listeners
         objectSpawnObservable.removeListener("room");
         objectDespawnObservable.removeListener("room");
@@ -152,8 +143,6 @@ const ObjectManager =
             }
             if (updatable)
                 updatableGameObjects[object.params.objectId] = object;
-            if (object.params.objectTypeIndex == playerTypeIndex) 
-                players[object.params.sourceUserName] = object;
             await object.onSpawn();
         }
         else
@@ -170,8 +159,6 @@ const ObjectManager =
             delete gameObjects[objectId];
             if (updatableGameObjects[object.params.objectId] != undefined)
                 delete updatableGameObjects[object.params.objectId];
-            if (players[object.params.sourceUserName] != undefined)
-                delete players[object.params.sourceUserName];
         }
         else
         {

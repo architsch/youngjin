@@ -1,28 +1,38 @@
-import BufferState from "../../networking/types/bufferState";
-import EncodableByteString from "../../networking/types/encodableByteString";
-import EncodableData from "../../networking/types/encodableData";
-import EncodableEnum from "../../networking/types/encodableEnum";
-import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
-import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
-import { UserType, UserTypeEnumMap } from "./userType";
+import { UserType } from "./userType";
 
-export default class User extends EncodableData
+export default class User// extends EncodableData
 {
     id: string;
     userName: string;
     userType: UserType;
     email: string;
     tutorialStep: number;
+    lastRoomID: string;
+    lastX: number;
+    lastY: number;
+    lastZ: number;
+    lastDirX: number;
+    lastDirY: number;
+    lastDirZ: number;
 
     constructor(id: string | undefined, userName: string, userType: UserType, email: string,
-        tutorialStep: number)
+        tutorialStep: number,
+        lastRoomID: string = "", lastX: number = 16, lastY: number = 0, lastZ: number = 16,
+        lastDirX: number = 0, lastDirY: number = 0, lastDirZ: number = 1)
     {
-        super();
+        //super();
         this.id = (id != undefined) ? id : "";
         this.userName = userName;
         this.userType = userType;
         this.email = email;
         this.tutorialStep = tutorialStep;
+        this.lastRoomID = lastRoomID;
+        this.lastX = lastX;
+        this.lastY = lastY;
+        this.lastZ = lastZ;
+        this.lastDirX = lastDirX;
+        this.lastDirY = lastDirY;
+        this.lastDirZ = lastDirZ;
     }
 
     static fromString(userString: string): User
@@ -45,26 +55,5 @@ export default class User extends EncodableData
     toString(): string
     {
         return `${this.id} ${this.userName} ${this.userType} ${this.email} ${this.tutorialStep}`;
-    }
-
-    encode(bufferState: BufferState)
-    {
-        new EncodableByteString(this.id.length > 0 ? this.id : UNDEFINED_DOCUMENT_ID_CHAR).encode(bufferState);
-        new EncodableByteString(this.userName).encode(bufferState);
-        new EncodableEnum(this.userType, UserTypeEnumMap).encode(bufferState);
-        new EncodableByteString(this.email).encode(bufferState);
-        new EncodableRawByteNumber(this.tutorialStep).encode(bufferState);
-    }
-
-    static decode(bufferState: BufferState): EncodableData
-    {
-        let id: string | undefined = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        if (id == UNDEFINED_DOCUMENT_ID_CHAR)
-            id = undefined;
-        const userName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        const userType = (EncodableEnum.decodeWithParams(bufferState, UserTypeEnumMap) as EncodableEnum).enumValue;
-        const email = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        const tutorialStep = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        return new User(id, userName, userType, email, tutorialStep);
     }
 }

@@ -16,10 +16,18 @@ import UserCommandUtil from "../user/util/userCommandUtil";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
-const socketUserContexts: {[userName: string]: SocketUserContext} = {};
+const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 
 const GameSockets =
 {
+    disconnectAllUsers: async (): Promise<void> =>
+    {
+        for (const [userID, socketUserContext] of Object.entries(socketUserContexts))
+        {
+            await RoomManager.changeUserRoom(socketUserContext, undefined, false, false);
+            socketUserContext.socket.disconnect(true);
+        }
+    },
     init: (io: socketIO.Server, authMiddleware: SocketMiddleware): void =>
     {
         nsp = io.of("/game_sockets");
@@ -30,12 +38,12 @@ const GameSockets =
             const user: User = socket.handshake.auth as User;
             console.log(`(GameSockets) Client connected :: ${JSON.stringify(user)}`);
             
-            if (socketUserContexts[user.userName] != undefined)
+            if (socketUserContexts[user.id] != undefined)
             {
-                console.error(`SocketUserContext with userName already exists (userName = ${user.userName})`);
+                console.error(`SocketUserContext with userID already exists (userID = ${user.id})`);
                 return;
             }
-            socketUserContexts[user.userName] = socketUserContext;
+            socketUserContexts[user.id] = socketUserContext;
 
             socket.on("objectSync", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
@@ -66,22 +74,29 @@ const GameSockets =
             socket.on("disconnect", async () => {
                 console.log(`(GameSockets) Client disconnected :: ${JSON.stringify(user)}`);
 
-                if (socketUserContexts[user.userName] == undefined)
+                if (socketUserContexts[user.id] == undefined)
                 {
-                    console.error(`SocketUserContext with userName doesn't exist (userName = ${user.userName})`);
+                    console.error(`SocketUserContext with userID doesn't exist (userID = ${user.id})`);
                     return;
                 }
-                delete socketUserContexts[user.userName];
+                delete socketUserContexts[user.id];
 
                 await RoomManager.changeUserRoom(socketUserContext, undefined, false);
             });
 
-            // A recently connected client should automatically join the hub.
-            const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
-            if (roomSearchResult.success && roomSearchResult.data.length > 0)
+            // Each connected client (user) should automatically join a room.
+            // If the user has lastRoomID,
+            //    -> The user should join the room whose ID is lastRoomID.
+            // If the user either has no lastRoomID or doesn't have a lastRoomID which corresponds to an existing room,
+            //    -> The user should join the "hub" room.
+            if (!(await RoomManager.changeUserRoom(socketUserContext, user.lastRoomID, false)))
             {
-                const roomID = roomSearchResult.data[0].id as string;
-                await RoomManager.changeUserRoom(socketUserContext, roomID, false);
+                const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
+                if (roomSearchResult.success && roomSearchResult.data.length > 0)
+                {
+                    const roomID = roomSearchResult.data[0].id as string;
+                    await RoomManager.changeUserRoom(socketUserContext, roomID, false);
+                }
             }
         });
 

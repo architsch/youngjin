@@ -28,8 +28,8 @@ export function unloadRoom(roomID: string)
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
     if (RoomManager.roomRuntimeMemories[roomID] == undefined)
         throw new Error(`RoomManager.unloadRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
-    if (Object.keys(roomRuntimeMemory.participantUserNames).length > 0)
-        throw new Error(`RoomManager.unloadRoom :: There are still participants in the room (participants = [${JSON.stringify(roomRuntimeMemory.participantUserNames)}])`);
+    if (Object.keys(roomRuntimeMemory.participantUserIDs).length > 0)
+        throw new Error(`RoomManager.unloadRoom :: There are still participants in the room (participants = [${JSON.stringify(roomRuntimeMemory.participantUserIDs)}])`);
     delete RoomManager.roomRuntimeMemories[roomID];
     delete RoomManager.socketRoomContexts[roomID];
 

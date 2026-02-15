@@ -8,51 +8,82 @@ import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
-import { addUserToRoom, removeUserFromRoom } from "./util/roomUserUtil";
+import { addUserToRoom, getUserGameplayState, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
 import { updateVoxelGrid } from "./util/roomVoxelUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import { ROOM_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
+import UserGameplayState from "../user/types/userGameplayState";
+import DBUserUtil from "../db/util/dbUserUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
-const currentRoomIDByUserName: {[userName: string]: string} = {};
+const currentRoomIDByUserID: {[userID: string]: string} = {};
 
 const RoomManager =
 {
     roomRuntimeMemories,
     socketRoomContexts,
-    currentRoomIDByUserName,
+    currentRoomIDByUserID,
     saveRooms: async (force: boolean = false) =>
     {
         const currTimeInMillis = Date.now();
-        //console.log(`RoomManager.saveRooms :: Saving rooms... (currTimeInMillis = ${Math.floor(currTimeInMillis)})`);
-        for (const [roomID, roomRuntimeMemory] of Object.entries(roomRuntimeMemories))
+        const roomsToSave: RoomRuntimeMemory[] = [];
+        for (const roomRuntimeMemory of Object.values(roomRuntimeMemories))
         {
             if (roomRuntimeMemory.room.dirty &&
                 (force || currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_SAVE_INTERVAL))
             {
-                const success = await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room);
-                if (success)
-                {
-                    roomRuntimeMemory.lastSavedTimeInMillis = Date.now();
-                    roomRuntimeMemory.room.dirty = false;
-                    console.log(`RoomManager.saveRooms :: Saved room (roomID = ${roomID})`);
-                }
-                else
-                    console.error(`RoomManager.saveRooms :: Failed to save room (roomID = ${roomID})`);
+                roomsToSave.push(roomRuntimeMemory);
             }
         }
+
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < roomsToSave.length; i += BATCH_SIZE)
+        {
+            await Promise.all(roomsToSave.slice(i, i + BATCH_SIZE).map(async (mem) =>
+            {
+                const success = await DBRoomUtil.saveRoomContent(mem.room);
+                if (success)
+                {
+                    mem.lastSavedTimeInMillis = Date.now();
+                    mem.room.dirty = false;
+                    console.log(`RoomManager.saveRooms :: Saved room (roomID = ${mem.room.id})`);
+                }
+                else
+                    console.error(`RoomManager.saveRooms :: Failed to save room (roomID = ${mem.room.id})`);
+            }));
+        }
     },
-    changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean) =>
+    saveAllUserGameplayStates: async () =>
+    {
+        const gameplayStates: UserGameplayState[] = [];
+        
+        for (const [userID, roomID] of Object.entries(currentRoomIDByUserID))
+        {
+            const roomRuntimeMemory = roomRuntimeMemories[roomID];
+            if (!roomRuntimeMemory)
+            {
+                console.error(`RoomManager.saveAllUserGameplayStates :: RoomRuntimeMemory not found (roomID = ${roomID})`);
+                continue;
+            }
+            const gameplayState = getUserGameplayState(userID, roomRuntimeMemory);
+            if (gameplayState)
+                gameplayStates.push(gameplayState);
+        }
+
+        await DBUserUtil.saveMultipleUsersGameplayState(gameplayStates);
+    },
+    changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
+        saveGameplayState: boolean = true): Promise<boolean> =>
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
-        console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userName = ${user.userName}`);
-        await removeUserFromRoom(socketUserContext, prevRoomShouldExist);
+        console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
+        await removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
         if (!roomID)
-            return;
+            return false;
     
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
@@ -64,15 +95,20 @@ const RoomManager =
         if (!roomRuntimeMemory)
         {
             console.error(`Failed to load room (ID = ${roomID})`);
-            return;
+            return false;
         }
-        addUserToRoom(socketUserContext, roomRuntimeMemory, user.userName);
+        addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
+            new ObjectTransform(
+                user.lastX, user.lastY, user.lastZ,
+                user.lastDirX, user.lastDirY, user.lastDirZ)
+        );
 
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)
             console.error(`RoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
         else
-            socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.userName);
+            socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.id);
+        return true;
     },
     updateVoxelGrid: (socketUserContext: SocketUserContext, params: UpdateVoxelGridParams) =>
     {
@@ -81,10 +117,10 @@ const RoomManager =
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
-        const roomID = currentRoomIDByUserName[user.userName];
+        const roomID = currentRoomIDByUserID[user.id];
         if (roomID == undefined)
         {
-            console.error(`RoomManager.sendObjectMessage :: RoomID not found (userName = ${user.userName})`);
+            console.error(`RoomManager.sendObjectMessage :: RoomID not found (userID = ${user.id})`);
             return;
         }
         const roomRuntimeMemory = roomRuntimeMemories[roomID];
@@ -99,7 +135,7 @@ const RoomManager =
             console.error(`RoomManager.sendObjectMessage :: ObjectRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${params.senderObjectId})`);
             return;
         }
-        if (objectRuntimeMemory.objectSpawnParams.sourceUserName != user.userName)
+        if (objectRuntimeMemory.objectSpawnParams.sourceUserID != user.id)
         {
             console.error(`RoomManager.sendObjectMessage :: User has no authority to control this object (roomID = ${roomID}, objectId = ${params.senderObjectId})`);
             return;
@@ -111,15 +147,15 @@ const RoomManager =
         if (!socketRoomContext)
             console.error(`RoomManager.sendObjectMessage :: SocketRoomContext not found (roomID = ${roomID})`);
         else
-            socketRoomContext.multicastSignal("objectMessageParams", params, user.userName);
+            socketRoomContext.multicastSignal("objectMessageParams", params, user.id);
     },
     updateObjectTransform: (socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform) =>
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
-        const roomID = currentRoomIDByUserName[user.userName];
+        const roomID = currentRoomIDByUserID[user.id];
         if (roomID == undefined)
         {
-            console.error(`RoomManager.updateObjectTransform :: RoomID not found (userName = ${user.userName})`);
+            console.error(`RoomManager.updateObjectTransform :: RoomID not found (userID = ${user.id})`);
             return;
         }
         const roomRuntimeMemory = roomRuntimeMemories[roomID];
@@ -134,7 +170,7 @@ const RoomManager =
             console.error(`RoomManager.updateObjectTransform :: ObjectRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
-        if (objectRuntimeMemory.objectSpawnParams.sourceUserName != user.userName)
+        if (objectRuntimeMemory.objectSpawnParams.sourceUserID != user.id)
         {
             console.error(`RoomManager.updateObjectTransform :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
             return;
@@ -162,7 +198,7 @@ const RoomManager =
             if (!socketRoomContext)
                 console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
             else
-                socketRoomContext.multicastSignal("objectSyncParams", params, user.userName);
+                socketRoomContext.multicastSignal("objectSyncParams", params, user.id);
         }
     },
 }

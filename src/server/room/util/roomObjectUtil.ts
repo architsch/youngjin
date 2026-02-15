@@ -10,13 +10,13 @@ import RoomManager from "../roomManager";
 export function addObject(socketUserContext: SocketUserContext, objectRuntimeMemory: ObjectRuntimeMemory)
 {
     const user: User = socketUserContext.socket.handshake.auth as User;
-    const roomID = RoomManager.currentRoomIDByUserName[user.userName];
+    const roomID = RoomManager.currentRoomIDByUserID[user.id];
     const objectId = objectRuntimeMemory.objectSpawnParams.objectId;
 
-    console.log(`RoomManager.addObject :: roomID = ${roomID}, userName = ${user.userName}, objectId = ${objectId}`);
+    console.log(`RoomManager.addObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
     if (roomID == undefined)
     {
-        console.error(`RoomManager.addObject :: RoomID not found (userName = ${user.userName}, objectId = ${objectId})`);
+        console.error(`RoomManager.addObject :: RoomID not found (userID = ${user.id}, objectId = ${objectId})`);
         return;
     }
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
@@ -53,17 +53,17 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
     if (!socketRoomContext)
         console.error(`RoomManager.addObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
-        socketRoomContext.multicastSignal("objectSpawnParams", objectRuntimeMemory.objectSpawnParams, user.userName);
+        socketRoomContext.multicastSignal("objectSpawnParams", objectRuntimeMemory.objectSpawnParams, user.id);
 }
 
 export function removeObject(socketUserContext: SocketUserContext, objectId: string)
 {
     const user: User = socketUserContext.socket.handshake.auth as User;
-    const roomID = RoomManager.currentRoomIDByUserName[user.userName];
-    console.log(`RoomManager.removeObject :: roomID = ${roomID}, userName = ${user.userName}, objectId = ${objectId}`);
+    const roomID = RoomManager.currentRoomIDByUserID[user.id];
+    console.log(`RoomManager.removeObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
     if (roomID == undefined)
     {
-        console.error(`RoomManager.removeObject :: RoomID not found (userName = ${user.userName}, objectId = ${objectId})`);
+        console.error(`RoomManager.removeObject :: RoomID not found (userID = ${user.id}, objectId = ${objectId})`);
         return;
     }
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
@@ -91,5 +91,5 @@ export function removeObject(socketUserContext: SocketUserContext, objectId: str
     if (!socketRoomContext)
         console.error(`RoomManager.removeObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
-        socketRoomContext.multicastSignal("objectDespawnParams", despawnParams, user.userName);
+        socketRoomContext.multicastSignal("objectDespawnParams", despawnParams, user.id);
 }

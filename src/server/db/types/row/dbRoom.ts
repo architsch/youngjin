@@ -7,6 +7,6 @@ export default interface DBRoom extends DBRow
     version: number;
     roomName: string;
     roomType: RoomType;
-    ownerUserName: string;
+    ownerUserID: string;
     texturePackPath: string;
 }

@@ -1,16 +1,15 @@
 import { Request, Response } from "express";
 import UserTokenUtil from "./userTokenUtil";
-import UserSearchUtil from "./userSearchUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import url from "url";
 import crypto from "crypto";
 import RestAPI from "../../../client/networking/api/restAPI";
 import DBSearchUtil from "../../db/util/dbSearchUtil";
-import DBUser from "../../../server/db/types/row/dbUser";
 import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import AddressUtil from "../../networking/util/addressUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
+import CookieUtil from "../../networking/util/cookieUtil";
 
 const UserAuthGoogleUtil =
 {
@@ -62,12 +61,16 @@ const UserAuthGoogleUtil =
                 return;
             }
 
-            let dbUser: DBUser | null = null;
+            // Get current guest's document ID from JWT cookie
+            const currentToken = req.cookies[CookieUtil.getAuthTokenName()];
+            const guestId = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
 
             if (existingUsersResult.data.length == 0) // new user
             {
+                // Find an available userName
+                let nameFound = false;
                 let numNameCopies = 0;
-                while (!dbUser && ++numNameCopies <= 5)
+                while (!nameFound && ++numNameCopies <= 9)
                 {
                     if (numNameCopies >= 2)
                         userName = `${userNameBase}#${numNameCopies}`;
@@ -77,35 +80,46 @@ const UserAuthGoogleUtil =
                         res.status(500).send(`Internal Server Error`);
                         return;
                     }
-                    if (nameConflictingUsersResult.data.length == 0) // free userName found
-                    {
-                        const result = await DBUserUtil.createUser(
-                            userName, UserTypeEnumMap.Member, "", email);
-                        if (!result.success)
-                        {
-                            res.status(500).send(`Internal Server Error (during registration)`);
-                            return;
-                        }
-                        dbUser = await UserSearchUtil.findExistingUserByUserName(userName, res);
-                        if (!dbUser)
-                            return;
-                    }
+                    if (nameConflictingUsersResult.data.length == 0)
+                        nameFound = true;
                 }
-                if (!dbUser)
+                if (!nameFound)
                 {
                     res.status(500).send(`Username "${userNameBase}" is used too many times.`);
                     return;
                 }
+
+                if (guestId)
+                {
+                    // Upgrade the existing guest document in-place (preserves gameplay state)
+                    await DBUserUtil.upgradeGuestToMember(guestId, userName, email);
+                    // JWT stays the same — same document ID
+                }
+                else
+                {
+                    // No guest to upgrade — create a new member document
+                    const result = await DBUserUtil.createUser(userName, UserTypeEnumMap.Member, email);
+                    if (!result.success)
+                    {
+                        res.status(500).send(`Internal Server Error (during registration)`);
+                        return;
+                    }
+                    UserTokenUtil.addTokenForUserId(result.data[0].id, req, res);
+                }
             }
             else // previously registered user
             {
-                dbUser = existingUsersResult.data[0];
+                const dbUser = existingUsersResult.data[0];
+
+                // Delete the orphaned guest document (if different from existing account)
+                if (guestId && guestId !== dbUser.id)
+                    DBUserUtil.deleteUser(guestId); // fire-and-forget
+
+                // Sign JWT with the existing account's document ID
+                UserTokenUtil.addTokenForUserId(dbUser.id!, req, res);
             }
 
-            if (dbUser)
-                await UserTokenUtil.addTokenToUser(DBUserUtil.fromDBType(dbUser), req, res);
-            else
-                res.status(500).send(`Internal Server Error`);
+            res.redirect("/mypage");
         }
         catch (err)
         {

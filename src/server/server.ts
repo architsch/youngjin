@@ -7,10 +7,13 @@ import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
 import Sockets from "./sockets/sockets";
 import RoomManager from "./room/roomManager";
+import GameSockets from "./sockets/gameSockets";
 import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
+import DBUserUtil from "./db/util/dbUserUtil";
 import AddressUtil from "./networking/util/addressUtil";
+import LogUtil from "../shared/system/util/logUtil";
 
 async function Server(): Promise<void>
 {
@@ -103,13 +106,29 @@ Env Variables in Server:
     // socket connection
     Sockets(server);
 
+    // Clean up stale guest accounts every 12 hours
+    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+    const GUEST_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
+    setInterval(() => {
+        DBUserUtil.deleteStaleGuests(GUEST_MAX_AGE)
+            .then(count => { if (count > 0) LogUtil.logRaw(`Cleaned up ${count} stale guest accounts`, "low", "info"); })
+            .catch(err => LogUtil.log("Guest cleanup failed", { err }, "high", "error"));
+    }, TWELVE_HOURS);
+
     // graceful shutdown
     const gracefulShutdown = async (signal: string) =>
     {
         console.log(`[${signal}] Graceful shutdown initiated...`);
-        console.log("Saving all rooms before shutdown...");
+        console.log("Saving all rooms and user gameplay states before shutdown...");
+
         await RoomManager.saveRooms(true);
         console.log("All rooms saved.");
+
+        await RoomManager.saveAllUserGameplayStates();
+        console.log("All user gameplay states saved.");
+
+        await GameSockets.disconnectAllUsers();
+        console.log("All users disconnected.");
 
         server.close(() =>
         {

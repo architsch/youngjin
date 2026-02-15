@@ -9,17 +9,17 @@ import { ObjectMetadataKey } from "./objectMetadataKey";
 
 export default class ObjectSpawnParams extends EncodableData
 {
-    sourceUserName: string;
+    sourceUserID: string;
     objectTypeIndex: number;
     objectId: string;
     transform: ObjectTransform;
     metadata: ObjectMetadata;
 
-    constructor(sourceUserName: string, objectTypeIndex: number, objectId: string,
+    constructor(sourceUserID: string, objectTypeIndex: number, objectId: string,
         transform: ObjectTransform, metadata: ObjectMetadata = {})
     {
         super();
-        this.sourceUserName = sourceUserName;
+        this.sourceUserID = sourceUserID;
         this.objectTypeIndex = objectTypeIndex;
         this.objectId = objectId;
         this.transform = transform;
@@ -56,7 +56,7 @@ export default class ObjectSpawnParams extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        new EncodableByteString(this.sourceUserName).encode(bufferState);
+        new EncodableByteString(this.sourceUserID).encode(bufferState);
         new EncodableRawByteNumber(this.objectTypeIndex).encode(bufferState);
         new EncodableByteString(this.objectId).encode(bufferState);
         this.transform.encode(bufferState);
@@ -65,11 +65,11 @@ export default class ObjectSpawnParams extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const sourceUserName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        const sourceUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const objectTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const transform = ObjectTransform.decode(bufferState) as ObjectTransform;
         const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
-        return new ObjectSpawnParams(sourceUserName, objectTypeIndex, objectId, transform, metadata);
+        return new ObjectSpawnParams(sourceUserID, objectTypeIndex, objectId, transform, metadata);
     }
 }

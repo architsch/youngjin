@@ -126,7 +126,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
     else
     {
         Object.entries(socketRoomContext.getUserContexts()).forEach((kvp: [string, SocketUserContext]) => {
-            if (user.userName != kvp[0]) // Exclude the broadcast sender from the group of broadcast recipients (in order to prevent an infinite cycle).
+            if (user.id != kvp[0]) // Exclude the broadcast sender from the group of broadcast recipients (in order to prevent an infinite cycle).
             {
                 const ctx = kvp[1];
                 const success = ctx.tryUpdateLatestPendingSignal("updateVoxelGridParams", (existingSignal: EncodableData) => {
@@ -146,10 +146,10 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
 function getRoom(socketUserContext: SocketUserContext): Room | undefined
 {
     const user: User = socketUserContext.socket.handshake.auth as User;
-    const roomID = RoomManager.currentRoomIDByUserName[user.userName];
+    const roomID = RoomManager.currentRoomIDByUserID[user.id];
     if (roomID == undefined)
     {
-        console.error(`getRoom :: RoomID not found (userName = ${user.userName})`);
+        console.error(`getRoom :: RoomID not found (userID = ${user.id})`);
         return undefined;
     }
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];

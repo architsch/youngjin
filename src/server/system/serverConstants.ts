@@ -1,10 +1,8 @@
-import DBUserVersionMigration from "../db/types/versionMigration/dbUserVersionMigration";
-
 // Networking
 
 export const URL_STATIC = "https://thingspool.net";
 export const URL_DYNAMIC = "https://app.thingspool.net";
-export const AUTH_TOKEN_NAME_BASE = `thingspool_token_v${DBUserVersionMigration.length}`;
+export const AUTH_TOKEN_NAME_BASE = "thingspool_token";
 
 // SSG (Static Site Generator)
 

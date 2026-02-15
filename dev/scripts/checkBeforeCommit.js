@@ -22,7 +22,7 @@ function checkBundle(pathStr)
     }
 }
 
-checkBundle("../../public/app/bundle_v2.js");
+checkBundle("../../public/app/bundle.js");
 checkBundle("../../dist/server/bundle.js");
 
 console.log("✅ Production build verified.");

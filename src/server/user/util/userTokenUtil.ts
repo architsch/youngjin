@@ -1,24 +1,21 @@
 import { Request, Response } from "express";
-import User from "../../../shared/user/types/user";
 import jwt from "jsonwebtoken";
 import CookieUtil from "../../networking/util/cookieUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 
-const dev = process.env.MODE == "dev";
-
 const UserTokenUtil =
 {
-    getUserFromToken: (token: string): User | undefined =>
+    getUserIdFromToken: (token: string): string | undefined =>
     {
         try {
-            const userString = jwt.verify(token as string, process.env.JWT_SECRET_KEY as string);
-            if (userString)
+            const userId = jwt.verify(token as string, process.env.JWT_SECRET_KEY as string);
+            if (userId && typeof userId === "string" && userId.length > 0)
             {
-                return User.fromString(userString as string);
+                return userId;
             }
             else
             {
-                LogUtil.log("User is not found in the given token.", { tokenLength: (token as string).length }, "high", "warn");
+                LogUtil.log("User ID not found in the given token.", { tokenLength: (token as string).length }, "high", "warn");
                 return undefined;
             }
         }
@@ -27,28 +24,20 @@ const UserTokenUtil =
             return undefined;
         }
     },
-    addTokenToUser: async (user: User, req: Request, res?: Response): Promise<void> =>
+    addTokenForUserId: (userId: string, req: Request, res?: Response): void =>
     {
         const token = jwt.sign(
-            user.toString(),
+            userId,
             process.env.JWT_SECRET_KEY as string,
         );
 
-        res?.cookie(CookieUtil.getAuthTokenName(), token, {
-            secure: dev ? false : true,
-            httpOnly: true,
-            sameSite: "lax",
-            maxAge: 3155692600000, // 100 years
-        }).status(201);
+        res?.cookie(CookieUtil.getAuthTokenName(), token,
+            CookieUtil.getAuthTokenCookieOptions()).status(201);
     },
-    clearTokenFromUser: (req: Request, res: Response): void =>
+    clearToken: (req: Request, res: Response): void =>
     {
-        res.clearCookie(CookieUtil.getAuthTokenName(), {
-            secure: dev ? false : true,
-            httpOnly: true,
-            sameSite: "lax",
-            maxAge: 3155692600000, // 100 years
-        }).status(200);
+        res.clearCookie(CookieUtil.getAuthTokenName(),
+            CookieUtil.getAuthTokenCookieOptions()).status(200);
     },
 }
 

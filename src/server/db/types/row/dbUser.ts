@@ -7,7 +7,14 @@ export default interface DBUser extends DBRow
     version: number;
     userName: string;
     userType: UserType;
-    passwordHash: string;
     email: string;
     tutorialStep: number;
+    lastRoomID: string;
+    lastX: number;
+    lastY: number;
+    lastZ: number;
+    lastDirX: number;
+    lastDirY: number;
+    lastDirZ: number;
+    lastLoginAt: number;
 }
