@@ -8,6 +8,7 @@ import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import FirebaseUtil from "../../networking/util/firebaseUtil";
 import UserGameplayState from "../../user/types/userGameplayState";
+import DBUserCacheUtil from "./dbUserCacheUtil";
 
 const DBUserUtil =
 {
@@ -38,6 +39,9 @@ const DBUserUtil =
     },
     findUserById: async (userID: string): Promise<DBUser | null> =>
     {
+        const cached = DBUserCacheUtil.get(userID);
+        if (cached) return cached;
+
         LogUtil.log("DBUserUtil.findUserById", {userID}, "low", "info");
         const result = await new DBQuery<DBUser>()
             .select()
@@ -46,10 +50,13 @@ const DBUserUtil =
             .run();
         if (!result.success || result.data.length == 0)
             return null;
+
+        DBUserCacheUtil.set(userID, result.data[0]);
         return result.data[0];
     },
     setUserTutorialStep: async (userID: string, tutorialStep: number): Promise<DBQueryResponse<DBRow>> =>
     {
+        DBUserCacheUtil.invalidate(userID);
         LogUtil.log("DBUserUtil.setUserTutorialStep", {userId: userID, tutorialStep}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("users")
@@ -60,6 +67,7 @@ const DBUserUtil =
     },
     saveUserGameplayState: async (gameplayState: UserGameplayState): Promise<DBQueryResponse<DBRow>> =>
     {
+        DBUserCacheUtil.invalidate(gameplayState.userID);
         LogUtil.log("DBUserUtil.saveUserGameplayState", gameplayState, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("users")
@@ -80,6 +88,8 @@ const DBUserUtil =
     {
         if (gameplayStates.length == 0)
             return;
+        for (const gs of gameplayStates)
+            DBUserCacheUtil.invalidate(gs.userID);
         LogUtil.log("DBUserUtil.saveMultipleUsersGameplayState", {count: gameplayStates.length}, "low", "info");
         const db = await FirebaseUtil.getDB();
         const batchSize = 500; // Firestore batch limit
@@ -105,6 +115,7 @@ const DBUserUtil =
     },
     setUserLastRoomID: async (userID: string, lastRoomID: string): Promise<DBQueryResponse<DBRow>> =>
     {
+        DBUserCacheUtil.invalidate(userID);
         LogUtil.log("DBUserUtil.setUserLastRoomID", {userID, lastRoomID}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("users")
@@ -115,6 +126,7 @@ const DBUserUtil =
     },
     upgradeGuestToMember: async (userID: string, userName: string, email: string): Promise<DBQueryResponse<DBRow>> =>
     {
+        DBUserCacheUtil.invalidate(userID);
         LogUtil.log("DBUserUtil.upgradeGuestToMember", {userID, userName, email}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("users")
@@ -129,6 +141,7 @@ const DBUserUtil =
     },
     updateLastLogin: async (userID: string): Promise<void> =>
     {
+        // No cache invalidation should happen here (And it doesn't have to because 'lastLoginAt' is only used by deleteStaleGuests)
         const db = await FirebaseUtil.getDB();
         await db.collection("users").doc(userID).update({ lastLoginAt: Date.now() });
     },
@@ -143,6 +156,9 @@ const DBUserUtil =
 
         if (snapshot.empty)
             return 0;
+
+        for (const doc of snapshot.docs)
+            DBUserCacheUtil.invalidate(doc.id);
 
         let deleted = 0;
         const docs = snapshot.docs;
@@ -159,6 +175,7 @@ const DBUserUtil =
     },
     deleteUser: async (userID: string): Promise<DBQueryResponse<DBRow>> =>
     {
+        DBUserCacheUtil.invalidate(userID);
         LogUtil.log("DBUserUtil.deleteUser", {userID}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .delete()
