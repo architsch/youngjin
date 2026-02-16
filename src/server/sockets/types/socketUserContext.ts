@@ -9,15 +9,33 @@ export default class SocketUserContext
 {
     socket: socketIO.Socket;
 
-    private pendingSignalsByTypeIndex: Array<EncodableData[]>;
+    private pendingSignalsToUserByTypeIndex: Array<EncodableData[]>;
+    private throttleTimestamps: {[signalType: string]: number} = {};
 
     constructor(socket: socketIO.Socket)
     {
         this.socket = socket;
-        this.pendingSignalsByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
+        this.pendingSignalsToUserByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
     }
 
-    addPendingSignal(signalType: string, signalData: EncodableData)
+    onReceivedSignalFromUser(signalType: string,
+        handler: (buffer: ArrayBuffer) => void,
+        throttleInterval: number = 0): void
+    {
+        this.socket.on(signalType, (buffer: ArrayBuffer) => {
+            if (throttleInterval > 0)
+            {
+                const now = Date.now();
+                const lastTime = this.throttleTimestamps[signalType];
+                if (lastTime && now - lastTime < throttleInterval)
+                    return;
+                this.throttleTimestamps[signalType] = now;
+            }
+            handler(buffer);
+        });
+    }
+
+    addPendingSignalToUser(signalType: string, signalData: EncodableData)
     {
         const typeIndex = SignalTypeConfigMap.getIndexByType(signalType);
         if (typeIndex == undefined)
@@ -26,16 +44,16 @@ export default class SocketUserContext
             return;
         }
 
-        let pendingSignals = this.pendingSignalsByTypeIndex[typeIndex];
+        let pendingSignals = this.pendingSignalsToUserByTypeIndex[typeIndex];
         if (pendingSignals == undefined)
         {
             pendingSignals = [];
-            this.pendingSignalsByTypeIndex[typeIndex] = pendingSignals;
+            this.pendingSignalsToUserByTypeIndex[typeIndex] = pendingSignals;
         }
         pendingSignals.push(signalData);
     }
 
-    tryUpdateLatestPendingSignal(signalType: string, signalDataUpdateMethod: (signal: EncodableData) => void): boolean
+    tryUpdateLatestPendingSignalToUser(signalType: string, signalDataUpdateMethod: (signal: EncodableData) => void): boolean
     {
         const typeIndex = SignalTypeConfigMap.getIndexByType(signalType);
         if (typeIndex == undefined)
@@ -44,7 +62,7 @@ export default class SocketUserContext
             return false;
         }
 
-        let pendingSignals = this.pendingSignalsByTypeIndex[typeIndex];
+        let pendingSignals = this.pendingSignalsToUserByTypeIndex[typeIndex];
         if (pendingSignals == undefined)
             return false;
 
@@ -56,13 +74,13 @@ export default class SocketUserContext
         return true;
     }
 
-    processAllPendingSignals()
+    processAllPendingSignalsToUser()
     {
         const bufferState = EncodingUtil.startEncoding();
 
-        for (let typeIndex = 0; typeIndex < this.pendingSignalsByTypeIndex.length; ++typeIndex)
+        for (let typeIndex = 0; typeIndex < this.pendingSignalsToUserByTypeIndex.length; ++typeIndex)
         {
-            const pendingSignals = this.pendingSignalsByTypeIndex[typeIndex];
+            const pendingSignals = this.pendingSignalsToUserByTypeIndex[typeIndex];
             if (pendingSignals && pendingSignals.length > 0)
             {
                 //console.log(`preparing to send signal of type [${SignalTypeConfigMap.getConfigByIndex(typeIndex).signalType}] - length = ${pendingSignals.length}`);

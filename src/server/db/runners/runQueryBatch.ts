@@ -4,6 +4,7 @@ import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import LogUtil from "../../../shared/system/util/logUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
+import DBCacheUtil from "../util/dbCacheUtil";
 
 export default async function runQueryBatch<T extends DBRow>(
     queries: DBQuery<T>[]
@@ -35,6 +36,13 @@ export default async function runQueryBatch<T extends DBRow>(
                 }
             }
             await batch.commit();
+
+            // Invalidate cache for each document in the committed batch
+            for (const query of chunk)
+            {
+                if (query.docId && !query._skipCacheInvalidation)
+                    DBCacheUtil.invalidate(query.tableId, query.docId);
+            }
         }
         LogUtil.log(`DB Batch Query Succeeded (numQueries = ${queries.length})`, {}, "medium");
         return { success: true, data: [] };

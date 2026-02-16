@@ -14,6 +14,7 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import UserCommandParams from "../../shared/user/types/userCommandParams";
 import UserCommandUtil from "../user/util/userCommandUtil";
 
+
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
@@ -45,31 +46,31 @@ const GameSockets =
             }
             socketUserContexts[user.id] = socketUserContext;
 
-            socket.on("objectSync", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("objectSync", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectSyncParams.decode(bufferState) as ObjectSyncParams;
                 RoomManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
-            socket.on("objectMessage", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("objectMessage", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
                 RoomManager.sendObjectMessage(socketUserContext, params);
-            });
-            socket.on("userCommand", async (buffer: ArrayBuffer) => {
+            }, 1000);
+            socketUserContext.onReceivedSignalFromUser("userCommand", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UserCommandParams.decode(bufferState) as UserCommandParams;
                 await UserCommandUtil.handleCommand(user, params);
-            });
-            socket.on("updateVoxelGrid", (buffer: ArrayBuffer) => {
+            }, 1000);
+            socketUserContext.onReceivedSignalFromUser("updateVoxelGrid", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UpdateVoxelGridParams.decode(bufferState) as UpdateVoxelGridParams;
                 RoomManager.updateVoxelGrid(socketUserContext, params);
             });
-            socket.on("roomChangeRequest", async (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("roomChangeRequest", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RoomChangeRequestParams.decode(bufferState) as RoomChangeRequestParams;
                 await RoomManager.changeUserRoom(socketUserContext, params.roomID, true);
-            });
+            }, 2000);
 
             socket.on("disconnect", async () => {
                 console.log(`(GameSockets) Client disconnected :: ${JSON.stringify(user)}`);
@@ -91,19 +92,31 @@ const GameSockets =
             //    -> The user should join the "hub" room.
             if (!(await RoomManager.changeUserRoom(socketUserContext, user.lastRoomID, false)))
             {
-                const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
-                if (roomSearchResult.success && roomSearchResult.data.length > 0)
+                // Check in-memory rooms first to avoid a Firestore query
+                let hubRoomID: string | undefined;
+                for (const [roomID, mem] of Object.entries(RoomManager.roomRuntimeMemories))
                 {
-                    const roomID = roomSearchResult.data[0].id as string;
-                    await RoomManager.changeUserRoom(socketUserContext, roomID, false);
+                    if (mem.room.roomType === RoomTypeEnumMap.Hub)
+                    {
+                        hubRoomID = roomID;
+                        break;
+                    }
                 }
+                if (!hubRoomID)
+                {
+                    const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
+                    if (roomSearchResult.success && roomSearchResult.data.length > 0)
+                        hubRoomID = roomSearchResult.data[0].id as string;
+                }
+                if (hubRoomID)
+                    await RoomManager.changeUserRoom(socketUserContext, hubRoomID, false);
             }
         });
 
         signalProcessingInterval = setInterval(() => {
             for (const socketUserContext of Object.values(socketUserContexts))
             {
-                socketUserContext.processAllPendingSignals();
+                socketUserContext.processAllPendingSignalsToUser();
             }
         }, SIGNAL_BATCH_SEND_INTERVAL);
     },

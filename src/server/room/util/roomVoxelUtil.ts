@@ -129,13 +129,13 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
             if (user.id != kvp[0]) // Exclude the broadcast sender from the group of broadcast recipients (in order to prevent an infinite cycle).
             {
                 const ctx = kvp[1];
-                const success = ctx.tryUpdateLatestPendingSignal("updateVoxelGridParams", (existingSignal: EncodableData) => {
+                const success = ctx.tryUpdateLatestPendingSignalToUser("updateVoxelGridParams", (existingSignal: EncodableData) => {
                     const updateVoxelGridParams = existingSignal as UpdateVoxelGridParams;
                     updateVoxelGridParams.tasks.push(signal as UpdateVoxelGridTaskParams);
                 });
                 if (!success)
                 {
-                    ctx.addPendingSignal("updateVoxelGridParams",
+                    ctx.addPendingSignalToUser("updateVoxelGridParams",
                         new UpdateVoxelGridParams([signal as UpdateVoxelGridTaskParams]));
                 }
             }

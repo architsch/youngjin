@@ -20,7 +20,7 @@ export default class SocketRoomContext
         for (const [userID, socketUserContext] of Object.entries(this.socketUserContexts))
         {
             if (userID != userIDToExclude)
-                socketUserContext.addPendingSignal(signalType, signalData);
+                socketUserContext.addPendingSignalToUser(signalType, signalData);
         }
     }
 
@@ -32,7 +32,7 @@ export default class SocketRoomContext
             console.error(`SocketUserContext not found (targetUserID = ${targetUserID})`);
             return;
         }
-        socketUserContext.addPendingSignal(signalType, signalData);
+        socketUserContext.addPendingSignalToUser(signalType, signalData);
     }
 
     addSocketUserContext(userID: string, socketUserContext: SocketUserContext)

@@ -7,7 +7,7 @@ import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import UserGameplayState from "../../user/types/userGameplayState";
-import DBUserCacheUtil from "./dbUserCacheUtil";
+import DBCacheUtil from "./dbCacheUtil";
 
 const DBUserUtil =
 {
@@ -39,9 +39,6 @@ const DBUserUtil =
     },
     findUserById: async (userID: string): Promise<DBUser | null> =>
     {
-        const cached = DBUserCacheUtil.get(userID);
-        if (cached) return cached;
-
         LogUtil.log("DBUserUtil.findUserById", {userID}, "low", "info");
         const result = await new DBQuery<DBUser>()
             .select()
@@ -50,13 +47,10 @@ const DBUserUtil =
             .run();
         if (!result.success || result.data.length == 0)
             return null;
-
-        DBUserCacheUtil.set(userID, result.data[0]);
         return result.data[0];
     },
     setUserTutorialStep: async (userID: string, tutorialStep: number): Promise<DBQueryResponse<DBRow>> =>
     {
-        DBUserCacheUtil.invalidate(userID);
         LogUtil.log("DBUserUtil.setUserTutorialStep", {userId: userID, tutorialStep}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("users")
@@ -67,7 +61,6 @@ const DBUserUtil =
     },
     saveUserGameplayState: async (gameplayState: UserGameplayState): Promise<DBQueryResponse<DBRow>> =>
     {
-        DBUserCacheUtil.invalidate(gameplayState.userID);
         LogUtil.log("DBUserUtil.saveUserGameplayState", gameplayState, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("users")
@@ -89,8 +82,6 @@ const DBUserUtil =
     {
         if (gameplayStates.length == 0)
             return;
-        for (const gs of gameplayStates)
-            DBUserCacheUtil.invalidate(gs.userID);
         LogUtil.log("DBUserUtil.saveMultipleUsersGameplayState", {count: gameplayStates.length}, "low", "info");
         const queries = gameplayStates.map(gs =>
             new DBQuery<DBRow>()
@@ -109,20 +100,8 @@ const DBUserUtil =
         );
         await DBQuery.runAll(queries);
     },
-    setUserLastRoomID: async (userID: string, lastRoomID: string): Promise<DBQueryResponse<DBRow>> =>
-    {
-        DBUserCacheUtil.invalidate(userID);
-        LogUtil.log("DBUserUtil.setUserLastRoomID", {userID, lastRoomID}, "low", "info");
-        const result = await new DBQuery<DBRow>()
-            .update("users")
-            .set({ lastRoomID })
-            .where("id", "==", userID)
-            .run();
-        return result;
-    },
     upgradeGuestToMember: async (userID: string, userName: string, email: string): Promise<DBQueryResponse<DBRow>> =>
     {
-        DBUserCacheUtil.invalidate(userID);
         LogUtil.log("DBUserUtil.upgradeGuestToMember", {userID, userName, email}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update("users")
@@ -137,9 +116,10 @@ const DBUserUtil =
     },
     updateLastLogin: async (userID: string): Promise<void> =>
     {
-        // No cache invalidation should happen here (And it doesn't have to because 'lastLoginAt' is only used by deleteStaleGuests)
+        // Cache invalidation must NOT happen here ((Reason 1): Cache invalidation in this case will immediately invalidate the cache of a user who is currently logging in, resulting in redundant DB lookups. (Reason 2): 'lastLoginAt' is only used by deleteStaleGuests)
         await new DBQuery<DBRow>()
             .update("users")
+            .noInvalidate()
             .set({ lastLoginAt: Date.now() })
             .where("id", "==", userID)
             .run();
@@ -159,7 +139,7 @@ const DBUserUtil =
             return 0;
 
         for (const doc of selectResult.data)
-            if (doc.id) DBUserCacheUtil.invalidate(doc.id);
+            if (doc.id) DBCacheUtil.invalidate("users", doc.id);
 
         await new DBQuery<DBRow>()
             .delete()
@@ -172,7 +152,6 @@ const DBUserUtil =
     },
     deleteUser: async (userID: string): Promise<DBQueryResponse<DBRow>> =>
     {
-        DBUserCacheUtil.invalidate(userID);
         LogUtil.log("DBUserUtil.deleteUser", {userID}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .delete()

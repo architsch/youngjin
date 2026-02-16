@@ -20,7 +20,7 @@
   - `/voxel` - Voxel management
   
 - **`/server`** - Server-side code (Node.js/Express)
-  - `/db` - Database utilities and types (Firestore, Firebase Storage)
+  - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin initialization)
   - `/room` - Game room management
   - `/sockets` - Socket.IO initializer and event handlers

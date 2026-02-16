@@ -13,6 +13,8 @@ import runQueryUpdate from "../runners/runQueryUpdate";
 import runQueryDelete from "../runners/runQueryDelete";
 import runQueryBatch from "../runners/runQueryBatch";
 import LogUtil from "../../../shared/system/util/logUtil";
+import DBQueryRateMonitor from "../util/dbQueryRateMonitor";
+import DBCacheUtil from "../util/dbCacheUtil";
 
 export default class DBQuery<T extends DBRow>
 {
@@ -24,6 +26,7 @@ export default class DBQuery<T extends DBRow>
     orderByCommand: DBQueryOrderBy | undefined;
     limitCommand: number | undefined;
     offsetCommand: number | undefined;
+    _skipCacheInvalidation: boolean = false;
 
     select(): DBQuery<T>
     {
@@ -123,9 +126,30 @@ export default class DBQuery<T extends DBRow>
         return this;
     }
 
+    noInvalidate(): DBQuery<T>
+    {
+        this._skipCacheInvalidation = true;
+        return this;
+    }
+
     async run(): Promise<DBQueryResponse<T>>
     {
         LogUtil.log("DB Query Started", this.getStateAsObject(), "low");
+
+        if (!DBQueryRateMonitor.allowQuery(this.type))
+            return { success: false, data: [] };
+
+        // Cache hit for single-document select queries
+        if (this.type === "select" && this.docId)
+        {
+            const cached = DBCacheUtil.get(this.tableId, this.docId);
+            if (cached)
+                return { success: true, data: [cached as T] };
+        }
+
+        // Invalidate cache for update/delete (before the query, so stale data is never served)
+        if ((this.type === "update" || this.type === "delete") && this.docId && !this._skipCacheInvalidation)
+            DBCacheUtil.invalidate(this.tableId, this.docId);
 
         try {
             const db = await FirebaseUtil.getDB();
@@ -163,7 +187,13 @@ export default class DBQuery<T extends DBRow>
 
             switch (this.type)
             {
-                case "select": return await runQuerySelect(this, docRef, collectionQuery);
+                case "select":
+                {
+                    const result = await runQuerySelect(this, docRef, collectionQuery);
+                    if (result.success && this.docId && result.data.length > 0)
+                        DBCacheUtil.set(this.tableId, this.docId, result.data[0]);
+                    return result;
+                }
                 case "insert": return await runQueryInsert(this, collectionRef);
                 case "update": return await runQueryUpdate(this, docRef, collectionQuery);
                 case "delete": return await runQueryDelete(this, docRef, collectionQuery);

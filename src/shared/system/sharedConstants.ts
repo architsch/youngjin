@@ -5,9 +5,8 @@ export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
 // Networking
 
 export const USER_API_ROUTE_PATH = "api/user";
-export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds
-export const ROOM_SAVE_INTERVAL = 180000; // in milliseconds
-export const GUEST_TUTORIAL_STEP_COOKIE_NAME = "thingspool_guest_tutorial_step";
+export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
+export const ROOM_SAVE_INTERVAL = 600000; // in milliseconds (10m)
 
 // Math
 

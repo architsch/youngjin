@@ -4,6 +4,7 @@ import UserRouter from "./api/userRouter";
 import FileUtil from "../../ssg/util/fileUtil";
 import EJSUtil from "../../ssg/util/ejsUtil";
 import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import RateLimitUtil from "../util/rateLimitUtil";
 
 export default function Router(app: Express): void
 {
@@ -55,6 +56,6 @@ export default function Router(app: Express): void
         });
     });
 
-    app.use(`/${USER_API_ROUTE_PATH}`, UserRouter);
-    app.use("/", PageRouter);
+    app.use(`/${USER_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, UserRouter);
+    app.use("/", RateLimitUtil.pageRateLimiter, PageRouter);
 }
