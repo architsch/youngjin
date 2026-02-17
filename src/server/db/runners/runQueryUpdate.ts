@@ -5,6 +5,7 @@ import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import runQueryVersionMigration from "./runQueryVersionMigration";
 import LogUtil from "../../../shared/system/util/logUtil";
+import DBCacheUtil from "../util/dbCacheUtil";
 
 export default async function runQueryUpdate<T extends DBRow>(
     dbQuery: DBQuery<T>,
@@ -15,6 +16,9 @@ export default async function runQueryUpdate<T extends DBRow>(
     let numDocsAffected = 0;
     if (docRef)
     {
+        if (!dbQuery._skipCacheInvalidation)
+            DBCacheUtil.invalidate(dbQuery.tableId, docRef.id);
+
         const doc = await docRef.get();
         if (doc.exists)
         {
@@ -47,6 +51,12 @@ export default async function runQueryUpdate<T extends DBRow>(
     {
         const querySnapshot = await collectionQuery.get();
         numDocsAffected = querySnapshot.docs.length;
+
+        if (!dbQuery._skipCacheInvalidation)
+        {
+            for (const doc of querySnapshot.docs)
+                DBCacheUtil.invalidate(dbQuery.tableId, doc.id);
+        }
 
         if (querySnapshot.docs.length > 1)
         {

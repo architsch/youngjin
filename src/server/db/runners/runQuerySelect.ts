@@ -4,6 +4,7 @@ import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import runQueryVersionMigration from "./runQueryVersionMigration";
 import LogUtil from "../../../shared/system/util/logUtil";
+import DBCacheUtil from "../util/dbCacheUtil";
 
 export default async function runQuerySelect<T extends DBRow>(
     dbQuery: DBQuery<T>,
@@ -12,6 +13,14 @@ export default async function runQuerySelect<T extends DBRow>(
 ): Promise<DBQueryResponse<T>>
 {
     let data: T[] = [];
+
+    // Cache hit for single-document select queries
+    if (docRef)
+    {
+        const cached = DBCacheUtil.get(dbQuery.tableId, dbQuery.docId!);
+        if (cached)
+            return { success: true, data: [cached as T] };
+    }
 
     if (docRef) // Access a single document by its ID
     {
@@ -45,7 +54,7 @@ export default async function runQuerySelect<T extends DBRow>(
     {
         const querySnapshot = await collectionQuery.get();
         const docs = querySnapshot.docs;
-        const staleDocEntries: { ref: admin.firestore.DocumentReference, originalVersion: number, newDocData: admin.firestore.DocumentData }[] = [];
+        const versionMigratedDocEntries: { ref: admin.firestore.DocumentReference, originalVersion: number, newDocData: admin.firestore.DocumentData }[] = [];
 
         docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
             if (doc.exists)
@@ -60,18 +69,18 @@ export default async function runQuerySelect<T extends DBRow>(
                 const originalVersion = docData.version;
                 const newDocData = runQueryVersionMigration(dbQuery, docData);
                 if (newDocData.version !== originalVersion)
-                    staleDocEntries.push({ ref: doc.ref, originalVersion, newDocData });
+                    versionMigratedDocEntries.push({ ref: doc.ref, originalVersion, newDocData });
                 data.push(newDocData as T);
             }
         });
 
-        if (staleDocEntries.length > 0)
+        if (versionMigratedDocEntries.length > 0)
         {
             // Note: Each Firestore transaction can process only upt o 500 reads/writes.
             
             // Write back the updated data to the DB (Note: This is a fire-and-forget operation. Don't await, don't block the read)
             collectionQuery.firestore.runTransaction(async (tx: admin.firestore.Transaction) => {
-                for (const entry of staleDocEntries)
+                for (const entry of versionMigratedDocEntries)
                 {
                     const freshDoc = await tx.get(entry.ref);
                     if (freshDoc.exists && freshDoc.data()?.version === entry.originalVersion)
@@ -80,6 +89,13 @@ export default async function runQuerySelect<T extends DBRow>(
                 }
             }).catch(err => LogUtil.log("Migration write-back failed", { err }, "low", "error"));
         }
+    }
+
+    // Cache all returned documents
+    for (const row of data)
+    {
+        if (row.id && typeof row.id === "string")
+            DBCacheUtil.set(dbQuery.tableId, row.id, row);
     }
 
     LogUtil.log("DB Query Succeeded", dbQuery.getStateAsObject(), "medium");

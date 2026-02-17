@@ -22,6 +22,10 @@ export default async function runQueryBatch<T extends DBRow>(
                 if (!query.docId)
                     throw new Error("runQueryBatch :: Each query must target a specific document (where id == ...).");
 
+                // Invalidate cache before the write, so stale data is never served
+                if (!query._skipCacheInvalidation)
+                    DBCacheUtil.invalidate(query.tableId, query.docId);
+
                 const docRef = db.collection(query.tableId).doc(query.docId);
                 switch (query.type)
                 {
@@ -36,13 +40,6 @@ export default async function runQueryBatch<T extends DBRow>(
                 }
             }
             await batch.commit();
-
-            // Invalidate cache for each document in the committed batch
-            for (const query of chunk)
-            {
-                if (query.docId && !query._skipCacheInvalidation)
-                    DBCacheUtil.invalidate(query.tableId, query.docId);
-            }
         }
         LogUtil.log(`DB Batch Query Succeeded (numQueries = ${queries.length})`, {}, "medium");
         return { success: true, data: [] };

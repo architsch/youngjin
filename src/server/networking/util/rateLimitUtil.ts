@@ -1,12 +1,13 @@
 import rateLimit from "express-rate-limit";
 import LogUtil from "../../../shared/system/util/logUtil";
+import { MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 
 const RateLimitUtil =
 {
-    // For page routes (/mypage, /console): 30 requests per minute per IP
+    // For page routes: 20 requests per minute per IP
     pageRateLimiter: rateLimit({
-        windowMs: 60 * 1000,
-        limit: 30,
+        windowMs: MINUTE_IN_MS,
+        limit: 20,
         standardHeaders: true,
         legacyHeaders: false,
         message: "Too many requests. Please try again later.",
@@ -16,10 +17,10 @@ const RateLimitUtil =
         },
     }),
 
-    // For API routes (/user/*): 10 requests per minute per IP
+    // For API routes: 20 requests per minute per IP
     apiRateLimiter: rateLimit({
-        windowMs: 60 * 1000,
-        limit: 10,
+        windowMs: MINUTE_IN_MS,
+        limit: 20,
         standardHeaders: true,
         legacyHeaders: false,
         message: "Too many requests. Please try again later.",

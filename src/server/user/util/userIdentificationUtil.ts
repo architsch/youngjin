@@ -4,6 +4,7 @@ import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import UserTokenUtil from "./userTokenUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
+import GuestCreationLimitUtil from "./guestCreationLimitUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 let cyclicCounter = 0;
@@ -79,6 +80,13 @@ async function getUserFromReq(req: Request, res: Response): Promise<User | undef
     }
 
     // No valid token or user not found in DB — create a new guest in Firestore
+    const ip = req.ip || "unknown";
+    const userAgent = req.headers["user-agent"] || "unknown";
+    if (!GuestCreationLimitUtil.allowGuestCreation(ip, userAgent))
+    {
+        return undefined;
+    }
+
     const uniqueInt = ((Math.floor(Date.now() / 1000) - 1768000000) * 10) + cyclicCounter;
     cyclicCounter = (cyclicCounter + 1) % 10;
     const uniqueHex = uniqueInt.toString(16);

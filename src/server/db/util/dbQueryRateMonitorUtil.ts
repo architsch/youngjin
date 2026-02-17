@@ -1,13 +1,14 @@
+import { MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 
-const WINDOW_MS = 60 * 1000; // 1-minute rolling window
-const WARN_THRESHOLD = 500;  // Log warning at this many queries/min
-const CRITICAL_THRESHOLD = 1000; // Reject non-essential queries at this many queries/min
+const WINDOW_MS = MINUTE_IN_MS; // 1-minute rolling window
+const WARN_THRESHOLD = 150;  // Log warning at this many queries/min
+const CRITICAL_THRESHOLD = 300; // Reject non-essential queries at this many queries/min
 
 let queryCount = 0;
 let windowStart = Date.now();
 
-const DBQueryRateMonitor =
+const DBQueryRateMonitorUtil =
 {
     /**
      * Records a query and checks if the rate is within acceptable limits.
@@ -45,6 +46,6 @@ const DBQueryRateMonitor =
 
         return true;
     },
-};
+}
 
-export default DBQueryRateMonitor;
+export default DBQueryRateMonitorUtil;

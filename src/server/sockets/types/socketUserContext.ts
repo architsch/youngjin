@@ -8,6 +8,7 @@ import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 export default class SocketUserContext
 {
     socket: socketIO.Socket;
+    connectTime: number;
 
     private pendingSignalsToUserByTypeIndex: Array<EncodableData[]>;
     private throttleTimestamps: {[signalType: string]: number} = {};
@@ -15,6 +16,7 @@ export default class SocketUserContext
     constructor(socket: socketIO.Socket)
     {
         this.socket = socket;
+        this.connectTime = Date.now();
         this.pendingSignalsToUserByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
     }
 

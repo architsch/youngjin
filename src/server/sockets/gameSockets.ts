@@ -14,15 +14,16 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import UserCommandParams from "../../shared/user/types/userCommandParams";
 import UserCommandUtil from "../user/util/userCommandUtil";
 
-
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 
 const GameSockets =
 {
-    disconnectAllUsers: async (): Promise<void> =>
+    saveAndDisconnectAllUsers: async (): Promise<void> =>
     {
+        await RoomManager.saveAllUserGameplayStates(socketUserContexts);
+
         for (const [userID, socketUserContext] of Object.entries(socketUserContexts))
         {
             await RoomManager.changeUserRoom(socketUserContext, undefined, false, false);

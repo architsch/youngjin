@@ -5,7 +5,7 @@ import { playerViewTargetPosObservable } from "../../../../system/clientObservab
 import GameObject from "../../../types/gameObject";
 import Num from "../../../../../shared/math/util/num";
 import { NEAR_EPSILON } from "../../../../../shared/system/sharedConstants";
-import WorldSpaceSelection from "../../../../graphics/types/gizmo/worldSpaceSelection";
+import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 
 const frustum = new THREE.Frustum();
 const mat4Temp = new THREE.Matrix4();
@@ -50,9 +50,13 @@ export default class FirstPersonCamera
 
     private updateTargetPitch(): void
     {
-        const angleForViewTarget = this.processViewTarget(playerViewTargetPosObservable.peek());
+        const playerViewTarget = playerViewTargetPosObservable.peek();
+        const angleForViewTarget = this.processViewTarget(playerViewTarget);
+
+        // The higher you are, the more you should look down (unless something is selected).
         const angleForAltitude = -0.4 * this.player!.position.y;
-        const desiredAngle = Math.abs(angleForViewTarget) > Math.abs(angleForAltitude)
+
+        const desiredAngle = playerViewTarget
             ? angleForViewTarget : angleForAltitude;
 
         if (Math.abs(desiredAngle) > NEAR_EPSILON)
@@ -66,13 +70,15 @@ export default class FirstPersonCamera
         if (playerViewTargetPos == null)
             return 0;
     
-        // Current selection went out of sight? Then just unselect whatever was selected.
+        // Current selection went out of sight? Then just unselect whatever was selected (after a bit of delay).
         mat4Temp.multiplyMatrices(this.camera!.projectionMatrix, this.camera!.matrixWorldInverse);
         frustum.setFromProjectionMatrix(mat4Temp);
-        if (!frustum.containsPoint(playerViewTargetPos))
+        if (!frustum.containsPoint(playerViewTargetPos) &&
+            !WorldSpaceSelectionUtil.unselectionPending())
         {
-            WorldSpaceSelection.unselectAll();
-            return 0;
+            WorldSpaceSelectionUtil.unselectAllAfterDelay(300);
+            //WorldSpaceSelectionUtil.unselectAll();
+            //return 0;
         }
 
         this.camera!.getWorldPosition(cameraPos);

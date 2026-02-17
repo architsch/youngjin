@@ -40,7 +40,7 @@ const RoomManager =
             }
         }
 
-        const BATCH_SIZE = 5;
+        const BATCH_SIZE = 5; // Saving too many rooms at once will introduce too much bandwidth, but saving too few rooms will slow down the whole process. We should pick a number that is neither too high nor too low.
         for (let i = 0; i < roomsToSave.length; i += BATCH_SIZE)
         {
             await Promise.all(roomsToSave.slice(i, i + BATCH_SIZE).map(async (mem) =>
@@ -57,10 +57,10 @@ const RoomManager =
             }));
         }
     },
-    saveAllUserGameplayStates: async () =>
+    saveAllUserGameplayStates: async (socketUserContextsByUserID: {[userID: string]: SocketUserContext}) =>
     {
         const gameplayStates: UserGameplayState[] = [];
-        
+
         for (const [userID, roomID] of Object.entries(currentRoomIDByUserID))
         {
             const roomRuntimeMemory = roomRuntimeMemories[roomID];
@@ -69,7 +69,13 @@ const RoomManager =
                 console.error(`RoomManager.saveAllUserGameplayStates :: RoomRuntimeMemory not found (roomID = ${roomID})`);
                 continue;
             }
-            const gameplayState = getUserGameplayState(userID, roomRuntimeMemory);
+            const socketUserContext = socketUserContextsByUserID[userID];
+            if (!socketUserContext)
+            {
+                console.error(`RoomManager.saveAllUserGameplayStates :: SocketUserContext not found (userID = ${userID})`);
+                continue;
+            }
+            const gameplayState = getUserGameplayState(socketUserContext, roomRuntimeMemory);
             if (gameplayState)
                 gameplayStates.push(gameplayState);
         }

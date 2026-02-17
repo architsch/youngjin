@@ -18,4 +18,7 @@ export default interface DBUser extends DBRow
     lastDirZ: number;
     playerMetadata: {[key: string]: string};
     lastLoginAt: number;
+    createdAt: number;
+    loginCount: number;
+    totalPlaytimeMs: number;
 }

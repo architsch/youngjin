@@ -14,6 +14,8 @@ import DBSearchUtil from "./db/util/dbSearchUtil";
 import DBUserUtil from "./db/util/dbUserUtil";
 import AddressUtil from "./networking/util/addressUtil";
 import LogUtil from "../shared/system/util/logUtil";
+import { HOUR_IN_MS } from "../shared/system/sharedConstants";
+import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 
 async function Server(): Promise<void>
 {
@@ -106,14 +108,15 @@ Env Variables in Server:
     // socket connection
     Sockets(server);
 
-    // Clean up stale guest accounts every 12 hours
-    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-    const GUEST_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
+    // Clean up stale guest accounts regularly (rotating through tiers to spread DB load)
+    let cleanupPhase = 0;
     setInterval(() => {
-        DBUserUtil.deleteStaleGuests(GUEST_MAX_AGE)
-            .then(count => { if (count > 0) LogUtil.logRaw(`Cleaned up ${count} stale guest accounts`, "low", "info"); })
-            .catch(err => LogUtil.log("Guest cleanup failed", { err }, "high", "error"));
-    }, TWELVE_HOURS);
+        const phase = cleanupPhase;
+        cleanupPhase = (cleanupPhase + 1) % 3;
+        DBUserUtil.deleteStaleGuestsByTier(phase)
+            .then(count => { if (count > 0) LogUtil.logRaw(`Cleaned up ${count} stale ${GUEST_TIER_NAME_BY_TIER_PHASE[phase]} guest accounts`, "low", "info"); })
+            .catch(err => LogUtil.log("Guest cleanup failed", { err, phase }, "high", "error"));
+    }, HOUR_IN_MS);
 
     // graceful shutdown
     const gracefulShutdown = async (signal: string) =>
@@ -124,11 +127,8 @@ Env Variables in Server:
         await RoomManager.saveRooms(true);
         console.log("All rooms saved.");
 
-        await RoomManager.saveAllUserGameplayStates();
-        console.log("All user gameplay states saved.");
-
-        await GameSockets.disconnectAllUsers();
-        console.log("All users disconnected.");
+        await GameSockets.saveAndDisconnectAllUsers();
+        console.log("All users saved and disconnected.");
 
         server.close(() =>
         {
@@ -137,11 +137,10 @@ Env Variables in Server:
         });
 
         // Force exit if server.close() hangs
-        setTimeout(() =>
-        {
+        setTimeout(() => {
             console.error("Forced shutdown after timeout.");
             process.exit(1);
-        }, 8000);
+        }, 10000); // 10 seconds
     };
 
     process.on("SIGINT", () => gracefulShutdown("SIGINT"));

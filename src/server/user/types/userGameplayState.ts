@@ -9,4 +9,5 @@ export default interface UserGameplayState
     lastDirY: number;
     lastDirZ: number;
     playerMetadata: {[key: string]: string};
+    sessionDurationMs?: number;
 }

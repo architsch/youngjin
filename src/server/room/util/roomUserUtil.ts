@@ -66,7 +66,7 @@ export async function removeUserFromRoom(socketUserContext: SocketUserContext, p
     }
     if (saveGameplayState)
     {
-        const gameplayState = getUserGameplayState(user.id, roomRuntimeMemory);
+        const gameplayState = getUserGameplayState(socketUserContext, roomRuntimeMemory);
         if (gameplayState)
             await DBUserUtil.saveUserGameplayState(gameplayState);
     }
@@ -113,14 +113,15 @@ export function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): st
     return ids;
 }
 
-export function getUserGameplayState(userID: string, roomRuntimeMemory: RoomRuntimeMemory)
+export function getUserGameplayState(socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory)
     : UserGameplayState | undefined
 {
+    const user: User = socketUserContext.socket.handshake.auth as User;
     // Player object's objectId must be identical to the user's ID.
-    const playerObjectRuntimeMemory = roomRuntimeMemory.objectRuntimeMemories[userID];
+    const playerObjectRuntimeMemory = roomRuntimeMemory.objectRuntimeMemories[user.id];
     if (!playerObjectRuntimeMemory)
     {
-        console.error(`getUserGameplayState :: Player's ObjectRuntimeMemory not found (userID = ${userID})`);
+        console.error(`getUserGameplayState :: Player's ObjectRuntimeMemory not found (userID = ${user.id})`);
         return undefined;
     }
     const tr = playerObjectRuntimeMemory.objectSpawnParams.transform;
@@ -130,7 +131,7 @@ export function getUserGameplayState(userID: string, roomRuntimeMemory: RoomRunt
         playerMetadata[key] = rawMetadata[key as any].str;
 
     return {
-        userID,
+        userID: user.id,
         lastRoomID: roomRuntimeMemory.room.id,
         lastX: tr.x,
         lastY: tr.y,
@@ -139,5 +140,6 @@ export function getUserGameplayState(userID: string, roomRuntimeMemory: RoomRunt
         lastDirY: tr.dirY,
         lastDirZ: tr.dirZ,
         playerMetadata,
+        sessionDurationMs: Date.now() - socketUserContext.connectTime,
     };
 }

@@ -1,6 +1,9 @@
 // Database
 
 export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
+export const FIRST_TUTORIAL_STEP = 0;
+export const LAST_TUTORIAL_STEP = 0;
+export const TUTORIAL_DONE_STEP = 10000;
 
 // Networking
 
@@ -11,6 +14,9 @@ export const ROOM_SAVE_INTERVAL = 600000; // in milliseconds (10m)
 // Math
 
 export const NEAR_EPSILON = 0.000000001;
+export const MINUTE_IN_MS = 60 * 1000;
+export const HOUR_IN_MS = 60 * MINUTE_IN_MS;
+export const DAY_IN_MS = 24 * HOUR_IN_MS;
 
 // Physics
 
