@@ -32,9 +32,6 @@ export function updateVoxelGrid(socketUserContext: SocketUserContext, params: Up
             case VOXEL_GRID_TASK_TYPE_TEX:
                 setVoxelQuadTextureTask(socketUserContext, task as SetVoxelQuadTextureParams);
                 break;
-            /*case VOXEL_GRID_TASK_TYPE_SHRINK_OR_EXPAND:
-                shrinkOrExpandVoxelBlockTask(socketUserContext, task as ShrinkOrExpandVoxelBlockParams);
-                break;*/
             default:
                 console.error(`Unknown task type :: ${task.type}`);
                 break;
@@ -56,7 +53,7 @@ function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVo
 function addVoxelBlockTask(socketUserContext: SocketUserContext, params: AddVoxelBlockParams)
 {
     const room = getRoom(socketUserContext);
-    if (!room || !addVoxelBlock(room, params.quadIndex, /*params.xShrink, params.zShrink,*/ params.quadTextureIndicesWithinLayer))
+    if (!room || !addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
     {
         console.error(`Voxel update failed (addVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         return;
@@ -102,17 +99,6 @@ function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: S
     }
     broadcast(socketUserContext, room, params, "setVoxelQuadTexture");
 }
-
-/*function shrinkOrExpandVoxelBlockTask(socketUserContext: SocketUserContext, params: ShrinkOrExpandVoxelBlockParams)
-{
-    const room = getRoom(socketUserContext);
-    if (!room || !shrinkOrExpandVoxelBlock(room, params.quadIndex))
-    {
-        console.error(`Voxel update failed (shrinkOrExpandVoxelBlock) - params: ${JSON.stringify(params)}`);
-        return;
-    }
-    broadcast(socketUserContext, room, params, "shrinkOrExpandVoxelBlock");
-}*/
 
 function broadcast(socketUserContext: SocketUserContext, room: Room,
     signal: EncodableData, updateType: string)

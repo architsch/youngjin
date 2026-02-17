@@ -20,10 +20,10 @@ export default class SocketUserContext
         this.pendingSignalsToUserByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
     }
 
-    onReceivedSignalFromUser(signalType: string,
-        handler: (buffer: ArrayBuffer) => void,
-        throttleInterval: number = 0): void
+    onReceivedSignalFromUser(signalType: string, handler: (buffer: ArrayBuffer) => void): void
     {
+        const throttleInterval = SignalTypeConfigMap.getConfigByType(signalType).throttleInterval;
+
         this.socket.on(signalType, (buffer: ArrayBuffer) => {
             if (throttleInterval > 0)
             {

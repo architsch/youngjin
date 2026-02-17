@@ -24,7 +24,7 @@ import UserCommandParams from "../../../shared/user/types/userCommandParams";
 
 let socket: Socket;
 
-const signalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
+const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "roomRuntimeMemory": (data: EncodableData) =>
         roomRuntimeMemoryObservable.set(data as RoomRuntimeMemory),
     "objectSyncParams": (data: EncodableData) => {
@@ -46,6 +46,8 @@ const signalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "updateVoxelGridParams": (data: EncodableData) =>
         updateVoxelGridObservable.set(data as UpdateVoxelGridParams),
 }
+
+const lastSignalSentTimes: {[signalType: string]: number} = {};
 
 const GameSocketsClient =
 {
@@ -103,46 +105,79 @@ const GameSocketsClient =
                     console.error(`Unknown signal type index: ${signalTypeIndex}`);
                     return;
                 }
-                const signalHandler = signalHandlers[signalConfig.signalType];
-                if (!signalHandler)
+                const incomingSignalHandler = incomingSignalHandlers[signalConfig.signalType];
+                if (!incomingSignalHandler)
                 {
-                    console.error(`Signal handler not found (signal type = ${signalConfig.signalType})`);
+                    console.error(`Incoming Signal handler not found (signal type = ${signalConfig.signalType})`);
                     return;
                 }
                 const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
                 for (const data of arr)
-                    signalHandler(data);
+                    incomingSignalHandler(data);
             }
         });
     },
 
-    emitObjectSync: (params: ObjectSyncParams) => sendEncodedSignal("objectSync", params),
-    emitObjectMessage: (params: ObjectMessageParams) => sendEncodedSignal("objectMessage", params),
-    emitUserCommand: (params: UserCommandParams) => sendEncodedSignal("userCommand", params),
+    emitObjectSync: (params: ObjectSyncParams) => emitWhenReady("objectSyncParams", params),
+    emitObjectMessage: (params: ObjectMessageParams) => emitWhenReady("objectMessageParams", params),
+    emitUserCommand: (params: UserCommandParams) => emitWhenReady("userCommandParams", params),
     tryEmitRoomChangeRequest: (params: RoomChangeRequestParams) => {
         if (tryStartClientProcess("roomChange", 1, 1))
-            sendEncodedSignal("roomChangeRequest", params);
+            emitWhenReady("roomChangeRequestParams", params);
         else
             console.warn("Cannot change room because 'roomChange' process is ongoing.");
     },
     emitMoveVoxelBlock: (params: MoveVoxelBlockParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
     emitAddVoxelBlock: (params: AddVoxelBlockParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
     emitRemoveVoxelBlock: (params: RemoveVoxelBlockParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
     emitSetVoxelQuadTexture: (params: SetVoxelQuadTextureParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),
-    /*emitShrinkOrExpandVoxelBlock: (params: ShrinkOrExpandVoxelBlockParams) =>
-        sendEncodedSignal("updateVoxelGrid", new UpdateVoxelGridParams([params])),*/
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
 }
 
-function sendEncodedSignal(signalType: string, signalData: EncodableData)
+function emitWhenReady(signalType: string, signalData: EncodableData,
+    maxRetries: number = 10, retryInterval: number = 200)
 {
+    const throttleInterval = SignalTypeConfigMap.getConfigByType(signalType).throttleInterval;
+    if (throttleInterval <= 0)
+    {
+        trySendEncodedSignal(signalType, signalData);
+    }
+    else
+    {
+        const attempt = (remaining: number) => {
+            if (trySendEncodedSignal(signalType, signalData))
+                return;
+            if (remaining > 0)
+                setTimeout(() => attempt(remaining - 1), retryInterval);
+            else
+                console.warn(`Signal '${signalType}' dropped after max retries`);
+        };
+        attempt(maxRetries);
+    }
+}
+
+function trySendEncodedSignal(signalType: string, signalData: EncodableData): boolean
+{
+    if (!canEmit(signalType))
+        return false;
+    lastSignalSentTimes[signalType] = Date.now();
+
     const bufferState = EncodingUtil.startEncoding();
     signalData.encode(bufferState);
     const subBuffer = EncodingUtil.endEncoding(bufferState);
     socket.emit(signalType, subBuffer);
+    return true;
+}
+
+function canEmit(signalType: string): boolean
+{
+    const lastSignalSentTime = lastSignalSentTimes[signalType];
+    const throttleInterval = SignalTypeConfigMap.getConfigByType(signalType).throttleInterval;
+    return lastSignalSentTime == undefined ||
+        Date.now() >= lastSignalSentTime + throttleInterval + 200; // 200 = extra time margin (to reduce the chance that the signal will be rejected by the server due to an earlier signal arriving at the server too late)
 }
 
 export default GameSocketsClient;

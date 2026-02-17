@@ -17,25 +17,8 @@ export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSe
         <Button name="Remove Block" size="sm" onClick={() => removeVoxelBlockOption(props.selection)}/>
         <Button name="Move Up" size="sm" onClick={() => moveVoxelBlockOption(props.selection, 0, 0, 1)}/>
         <Button name="Move Down" size="sm" onClick={() => moveVoxelBlockOption(props.selection, 0, 0, -1)}/>
-        {/*<Button name="Shrink/Expand" size="sm" onClick={() => shrinkOrExpandVoxelBlockOption(props.selection)}/>*/}
     </div>;
 }
-
-/*function shrinkOrExpandVoxelBlockOption(selection: VoxelQuadSelection)
-{
-    const room = App.getCurrentRoom();
-    if (!room)
-    {
-        console.error("Current room not found.");
-        return;
-    }
-    const quadIndex = selection.quadIndex;
-    if (shrinkOrExpandVoxelBlock(room, quadIndex))
-    {
-        voxelQuadSelectionObservable.notify();
-        GameSocketsClient.emitShrinkOrExpandVoxelBlock(new ShrinkOrExpandVoxelBlockParams(quadIndex));
-    }
-}*/
 
 function moveVoxelBlockOption(selection: VoxelQuadSelection, rowOffset: number, colOffset: number, collisionLayerOffset: number)
 {
@@ -80,9 +63,6 @@ function addVoxelBlockOption(selection: VoxelQuadSelection)
     const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
     const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-    /*const xShrink = (voxel.xShrinkMask & (1 << collisionLayer)) != 0;
-    const zShrink = (voxel.zShrinkMask & (1 << collisionLayer)) != 0;*/
-
     let newRow = voxel.row;
     let newCol = voxel.col;
     if (facingAxis == "z")
@@ -105,11 +85,10 @@ function addVoxelBlockOption(selection: VoxelQuadSelection)
         quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
 
     const targetQuadIndex = getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    if (addVoxelBlock(room, targetQuadIndex, /*xShrink, zShrink,*/ quadTextureIndicesWithinLayer))
+    if (addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
     {
         VoxelQuadSelection.trySelect(getVoxel(room, newRow, newCol), targetQuadIndex);
-        GameSocketsClient.emitAddVoxelBlock(new AddVoxelBlockParams(targetQuadIndex,
-            /*xShrink, zShrink,*/ quadTextureIndicesWithinLayer));
+        GameSocketsClient.emitAddVoxelBlock(new AddVoxelBlockParams(targetQuadIndex, quadTextureIndicesWithinLayer));
     }
 }
 

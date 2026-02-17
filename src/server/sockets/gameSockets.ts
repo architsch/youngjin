@@ -47,31 +47,35 @@ const GameSockets =
             }
             socketUserContexts[user.id] = socketUserContext;
 
-            socketUserContext.onReceivedSignalFromUser("objectSync", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("objectSyncParams", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectSyncParams.decode(bufferState) as ObjectSyncParams;
                 RoomManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
-            socketUserContext.onReceivedSignalFromUser("objectMessage", (buffer: ArrayBuffer) => {
+
+            socketUserContext.onReceivedSignalFromUser("objectMessageParams", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
                 RoomManager.sendObjectMessage(socketUserContext, params);
-            }, 1000);
-            socketUserContext.onReceivedSignalFromUser("userCommand", async (buffer: ArrayBuffer) => {
+            });
+
+            socketUserContext.onReceivedSignalFromUser("userCommandParams", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UserCommandParams.decode(bufferState) as UserCommandParams;
                 await UserCommandUtil.handleCommand(user, params);
-            }, 1000);
-            socketUserContext.onReceivedSignalFromUser("updateVoxelGrid", (buffer: ArrayBuffer) => {
+            });
+
+            socketUserContext.onReceivedSignalFromUser("updateVoxelGridParams", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UpdateVoxelGridParams.decode(bufferState) as UpdateVoxelGridParams;
                 RoomManager.updateVoxelGrid(socketUserContext, params);
             });
-            socketUserContext.onReceivedSignalFromUser("roomChangeRequest", async (buffer: ArrayBuffer) => {
+
+            socketUserContext.onReceivedSignalFromUser("roomChangeRequestParams", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RoomChangeRequestParams.decode(bufferState) as RoomChangeRequestParams;
                 await RoomManager.changeUserRoom(socketUserContext, params.roomID, true);
-            }, 2000);
+            });
 
             socket.on("disconnect", async () => {
                 console.log(`(GameSockets) Client disconnected :: ${JSON.stringify(user)}`);

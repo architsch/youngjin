@@ -38,7 +38,7 @@ const VoxelManager =
                         break;
                     case VOXEL_GRID_TASK_TYPE_ADD:
                         const addParams = task as AddVoxelBlockParams;
-                        addVoxelBlock(room, addParams.quadIndex, /*addParams.xShrink, addParams.zShrink,*/ addParams.quadTextureIndicesWithinLayer);
+                        addVoxelBlock(room, addParams.quadIndex, addParams.quadTextureIndicesWithinLayer);
                         break;
                     case VOXEL_GRID_TASK_TYPE_REMOVE:
                         const removeParams = task as RemoveVoxelBlockParams;
@@ -60,10 +60,6 @@ const VoxelManager =
                         const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
                         setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, texParams.textureIndex);
                         break;
-                    /*case VOXEL_GRID_TASK_TYPE_SHRINK_OR_EXPAND:
-                        const shrinkOrExpandParams = task as ShrinkOrExpandVoxelBlockParams;
-                        shrinkOrExpandVoxelBlock(room, shrinkOrExpandParams.quadIndex);
-                        break;*/
                     default:
                         console.error(`Unknown task type :: ${task.type}`);
                         break;

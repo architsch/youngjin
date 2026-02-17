@@ -19,7 +19,7 @@ export default class CanvasGameObject extends GameObject
         console.log(`Selected PersistentObject = ${JSON.stringify(po)}`);
         
         //const destinationRoomID = po.metadata[ObjectMetadataKeyEnumMap.RoomID];
-        //GameSocketsClient.tryEmitRoomChangeRequest(new RoomChangeRequestParams(destinationRoomID));
+        //GameSocketsClient.emitRoomChangeRequest(new RoomChangeRequestParams(destinationRoomID));
     }
 
     onPlayerProximityStart()

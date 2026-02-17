@@ -1,3 +1,10 @@
+// Math
+
+export const NEAR_EPSILON = 0.000000001;
+export const MINUTE_IN_MS = 60 * 1000;
+export const HOUR_IN_MS = 60 * MINUTE_IN_MS;
+export const DAY_IN_MS = 24 * HOUR_IN_MS;
+
 // Database
 
 export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
@@ -9,14 +16,7 @@ export const TUTORIAL_DONE_STEP = 10000;
 
 export const USER_API_ROUTE_PATH = "api/user";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
-export const ROOM_SAVE_INTERVAL = 600000; // in milliseconds (10m)
-
-// Math
-
-export const NEAR_EPSILON = 0.000000001;
-export const MINUTE_IN_MS = 60 * 1000;
-export const HOUR_IN_MS = 60 * MINUTE_IN_MS;
-export const DAY_IN_MS = 24 * HOUR_IN_MS;
+export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
 
 // Physics
 
@@ -54,7 +54,6 @@ export const VOXEL_GRID_TASK_TYPE_MOVE = 0;
 export const VOXEL_GRID_TASK_TYPE_ADD = 1;
 export const VOXEL_GRID_TASK_TYPE_REMOVE = 2;
 export const VOXEL_GRID_TASK_TYPE_TEX = 3;
-/*export const VOXEL_GRID_TASK_TYPE_SHRINK_OR_EXPAND = 4;*/
 
 // UI
 

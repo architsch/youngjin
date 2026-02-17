@@ -13,7 +13,7 @@ import { loadRoom } from "./util/roomCoreUtil";
 import { updateVoxelGrid } from "./util/roomVoxelUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
-import { ROOM_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import UserGameplayState from "../user/types/userGameplayState";
 import DBUserUtil from "../db/util/dbUserUtil";
@@ -34,7 +34,7 @@ const RoomManager =
         for (const roomRuntimeMemory of Object.values(roomRuntimeMemories))
         {
             if (roomRuntimeMemory.room.dirty &&
-                (force || currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_SAVE_INTERVAL))
+                (force || currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_AUTO_SAVE_INTERVAL))
             {
                 roomsToSave.push(roomRuntimeMemory);
             }

@@ -1,5 +1,8 @@
 import { ongoingClientProcessesObservable } from "../clientObservables";
 
+// While there is at least 1 ongoing ClientProcess,
+// the UI should be showing the "Loading" screen as well as blocking
+// any other major (i.e. network or system-related) actions.
 export default interface ClientProcess
 {
     numOngoingProcesses: number;
