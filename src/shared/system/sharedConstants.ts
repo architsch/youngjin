@@ -35,6 +35,7 @@ export const COLLISION_LAYER_NULL = 8;
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
 
+export const GROUND_LEVEL_OBJECT_Y = 0;
 export const MIN_OBJECT_LEVEL_CHANGE_INTERVAL = 0.2;
 
 // Voxel Grid Dimensions

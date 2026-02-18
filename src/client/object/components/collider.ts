@@ -5,18 +5,16 @@ import App from "../../app";
 import GameObjectComponent from "./gameObjectComponent";
 import AABB2 from "../../../shared/math/types/aabb2";
 import PhysicsObject from "../../../shared/physics/types/physicsObject";
-import { MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { GROUND_LEVEL_OBJECT_Y, MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 
 const vec3Temp = new THREE.Vector3();
 
 export default class Collider extends GameObjectComponent
 {
     private physicsObject: PhysicsObject | undefined;
-    private groundLevelObjectY: number = 0;
 
     async onSpawn(): Promise<void>
     {
-        this.groundLevelObjectY = this.gameObject.position.y;
         const hitboxSize = this.componentConfig.hitboxSize;
 
         this.gameObject.obj.getWorldDirection(vec3Temp);
@@ -42,13 +40,13 @@ export default class Collider extends GameObjectComponent
     update(deltaTime: number): void
     {
         const p = this.gameObject.position;
-        const desiredY = this.groundLevelObjectY + 0.5 * this.physicsObject!.level;
+        const desiredY = GROUND_LEVEL_OBJECT_Y + 0.5 * this.physicsObject!.level;
         const desiredChangeInY = desiredY - p.y;
         //console.log(this.physicsObject!.level);
         
         if (Math.abs(desiredChangeInY) > NEAR_EPSILON)
         {
-            const delta = (0.5 * deltaTime / MIN_OBJECT_LEVEL_CHANGE_INTERVAL) // based on the expectation that Y change change by 0.5 during a span of "MIN_OBJECT_LEVEL_CHANGE_INTERVAL" seconds.
+            const delta = (0.5 * deltaTime / MIN_OBJECT_LEVEL_CHANGE_INTERVAL) // based on the expectation that Y shifts by 0.5 during each span of "MIN_OBJECT_LEVEL_CHANGE_INTERVAL" seconds.
                 * (desiredChangeInY >= 0 ? 1 : -1);
             
             if (Math.abs(delta) >= Math.abs(desiredChangeInY))

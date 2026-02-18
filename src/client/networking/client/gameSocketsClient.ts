@@ -176,6 +176,8 @@ function canEmit(signalType: string): boolean
 {
     const lastSignalSentTime = lastSignalSentTimes[signalType];
     const throttleInterval = SignalTypeConfigMap.getConfigByType(signalType).throttleInterval;
+    if (throttleInterval <= 0)
+        return true;
     return lastSignalSentTime == undefined ||
         Date.now() >= lastSignalSentTime + throttleInterval + 200; // 200 = extra time margin (to reduce the chance that the signal will be rejected by the server due to an earlier signal arriving at the server too late)
 }

@@ -73,12 +73,17 @@ export default class FirstPersonCamera
         // Current selection went out of sight? Then just unselect whatever was selected (after a bit of delay).
         mat4Temp.multiplyMatrices(this.camera!.projectionMatrix, this.camera!.matrixWorldInverse);
         frustum.setFromProjectionMatrix(mat4Temp);
-        if (!frustum.containsPoint(playerViewTargetPos) &&
-            !WorldSpaceSelectionUtil.unselectionPending())
+
+        // If the current selection is out of the camera view for a certain duration,
+        // automatically remove that selection so as to make the camera recover its normal pitch.
+        if (frustum.containsPoint(playerViewTargetPos)) // selection is in camera view
         {
-            WorldSpaceSelectionUtil.unselectAllAfterDelay(300);
-            //WorldSpaceSelectionUtil.unselectAll();
-            //return 0;
+            WorldSpaceSelectionUtil.cancelDelayedUnselectTimeout();
+        }
+        else // selection is NOT in camera view
+        {
+            if (!WorldSpaceSelectionUtil.unselectionPending())
+                WorldSpaceSelectionUtil.unselectAllAfterDelay(300);
         }
 
         this.camera!.getWorldPosition(cameraPos);
