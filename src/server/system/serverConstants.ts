@@ -17,7 +17,7 @@ export const GUEST_MAX_AGE_BY_TIER_PHASE = [
 // Networking
 
 export const URL_STATIC = "https://thingspool.net";
-export const URL_DYNAMIC = "https://app.thingspool.net";
+export const URL_DYNAMIC = process.env.DB_PREFIX == "staging_" ? "https://staging.thingspool.net" : "https://app.thingspool.net";
 export const AUTH_TOKEN_NAME_BASE = "thingspool_token";
 
 // SSG (Static Site Generator)
