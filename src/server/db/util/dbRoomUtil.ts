@@ -12,6 +12,7 @@ import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigra
 import DBFileStorageUtil from "./dbFileStorageUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryResponse from "../types/dbQueryResponse";
+import { COLLECTION_ROOMS } from "../../system/serverConstants";
 
 const DBRoomUtil =
 {
@@ -20,7 +21,7 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.getRoomContent", {roomID}, "low", "info");
         const result = await new DBQuery<DBRoom>()
             .select()
-            .from("rooms")
+            .from(COLLECTION_ROOMS)
             .where("id", "==", roomID)
             .run();
         if (!result.success || result.data.length == 0)
@@ -55,7 +56,7 @@ const DBRoomUtil =
         const dbRoom = getDBRoomFromRoom(room);
 
         const roomInsertResult = await new DBQuery<{id: string}>()
-            .insertInto("rooms")
+            .insertInto(COLLECTION_ROOMS)
             .values(dbRoom as DBRow)
             .run();
         
@@ -77,7 +78,7 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.deleteRoom", {roomID}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .delete()
-            .from("rooms")
+            .from(COLLECTION_ROOMS)
             .where("id", "==", roomID)
             .run();
         return result.success;
@@ -86,7 +87,7 @@ const DBRoomUtil =
     {
         LogUtil.log("DBRoomUtil.changeRoomName", {roomID: room.id, newRoomName}, "low", "info");
         const result = await new DBQuery<DBRow>()
-            .update("rooms")
+            .update(COLLECTION_ROOMS)
             .set({
                 roomName: newRoomName,
             })
@@ -134,7 +135,7 @@ function getRoomContentFilePath(roomID?: string): string
 {
     if (!roomID)
         throw new Error("getRoomContentFilePath :: roomID not found.");
-    return `rooms/${roomID}/content.bin`;
+    return `${COLLECTION_ROOMS}/${roomID}/content.bin`;
 }
 
 export default DBRoomUtil;

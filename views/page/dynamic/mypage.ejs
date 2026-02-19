@@ -12,13 +12,14 @@
     <script type="text/javascript">
         window.thingspool_env = { // client-side environment variables
             mode: "<%- process.env.MODE %>",
+            serverType: "<%- process.env.DB_PREFIX == 'staging_' ? 'Staging' : 'Live' %>",
             userString: "<%- userString %>",
             socket_server_url: "<%= URL_DYNAMIC %>",
             rest_api_server_url: "<%= URL_DYNAMIC %>",
             assets_url: "<%= URL_STATIC %>/app/assets",
         };
     </script>
-    <script type="text/javascript" src="<%= URL_STATIC %>/app/bundle.js"></script>
+    <script type="text/javascript" src="<%= URL_DYNAMIC %>/app/bundle.js"></script>
 <%_ } else { _%>
     <h3>Error: No user found</h3>
 <%_ } _%>

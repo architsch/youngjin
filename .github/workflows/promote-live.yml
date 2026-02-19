@@ -1,0 +1,35 @@
+# Promotes the current staging bundle to the live server.
+# Backs up the previous live bundle for rollback capability.
+name: Promote to Live
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: "live"
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: self-hosted
+
+    steps:
+    - name: Back up current live bundles
+      run: |
+        cp dist/server/bundle.live.js dist/server/bundle.backup.js || true
+        cp dist/client/bundle.live.js dist/client/bundle.backup.js || true
+        cp dist/client/style.live.css dist/client/style.backup.css || true
+
+    - name: Promote staging bundles to live
+      run: |
+        cp dist/server/bundle.js dist/server/bundle.live.js
+        cp dist/client/bundle.js dist/client/bundle.live.js
+        cp dist/client/style.css dist/client/style.live.css
+
+    - name: Restart live server
+      run: pm2 startOrRestart ecosystem.config.js --only live
+
+    - name: Verify deployment
+      run: |
+        sleep 5
+        pm2 status live

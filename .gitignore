@@ -4,3 +4,11 @@ node_modules
 .DS_Store
 
 *.log
+
+# VPS deployment artifacts (live bundle copy and backup for rollback)
+dist/server/bundle.live.js
+dist/server/bundle.backup.js
+dist/client/bundle.live.js
+dist/client/bundle.backup.js
+dist/client/style.live.css
+dist/client/style.backup.css

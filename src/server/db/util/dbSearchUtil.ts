@@ -4,6 +4,7 @@ import DBUser from "../../../server/db/types/row/dbUser";
 import DBQuery from "../types/dbQuery";
 import DBRoom from "../../../server/db/types/row/dbRoom";
 import LogUtil from "../../../shared/system/util/logUtil";
+import { COLLECTION_ROOMS, COLLECTION_USERS } from "../../system/serverConstants";
 
 const DBSearchUtil =
 {
@@ -12,7 +13,7 @@ const DBSearchUtil =
             LogUtil.log("DBSearchUtil.rooms.all", {page}, "low", "info");
             return await new DBQuery<DBRoom>()
                 .select()
-                .from("rooms")
+                .from(COLLECTION_ROOMS)
                 .orderBy("roomName")
                 .limit(10)
                 .offset(page * 10)
@@ -22,7 +23,7 @@ const DBSearchUtil =
             LogUtil.log("DBSearchUtil.rooms.withRoomName", {roomName}, "low", "info");
             return await new DBQuery<DBRoom>()
                 .select()
-                .from("rooms")
+                .from(COLLECTION_ROOMS)
                 .where("roomName", "==", roomName)
                 .run();
         },
@@ -30,7 +31,7 @@ const DBSearchUtil =
             LogUtil.log("DBSearchUtil.rooms.withRoomType", {roomType}, "low", "info");
             return await new DBQuery<DBRoom>()
                 .select()
-                .from("rooms")
+                .from(COLLECTION_ROOMS)
                 .where("roomType", "==", roomType)
                 .run();
         },
@@ -40,7 +41,7 @@ const DBSearchUtil =
             LogUtil.log("DBSearchUtil.users.all", {page}, "low", "info");
             return await new DBQuery<DBUser>()
                 .select()
-                .from("users")
+                .from(COLLECTION_USERS)
                 .orderBy("userName")
                 .limit(10)
                 .offset(page * 10)
@@ -50,7 +51,7 @@ const DBSearchUtil =
             LogUtil.log("DBSearchUtil.users.withUserName", {userName}, "low", "info");
             return await new DBQuery<DBUser>()
                 .select()
-                .from("users")
+                .from(COLLECTION_USERS)
                 .where("userName", "==", userName)
                 .run();
         },
@@ -58,7 +59,7 @@ const DBSearchUtil =
             LogUtil.log("DBSearchUtil.users.withEmail", {email}, "low", "info");
             return await new DBQuery<DBUser>()
                 .select()
-                .from("users")
+                .from(COLLECTION_USERS)
                 .where("email", "==", email)
                 .run();
         },
@@ -66,7 +67,7 @@ const DBSearchUtil =
             LogUtil.log("DBSearchUtil.users.withUserNameOrEmail", {userName, email}, "low", "info");
             return await new DBQuery<DBUser>()
                 .select()
-                .from("users")
+                .from(COLLECTION_USERS)
                 .where("userName", "==", userName)
                 .or()
                 .where("email", "==", email)

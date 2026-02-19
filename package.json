@@ -9,10 +9,15 @@
 		"stop": "pm2 stop all && pm2 delete all",
 		"beforeCommit": "npm run build && MODE=ssg node dist/server/bundle.js",
 		"build": "npm run compileCSS && webpack --config dev/config/webpack.config.server.js && webpack --config dev/config/webpack.config.client.js",
-		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./public/app/style.css",
+		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./dist/client/style.css",
 		"start": "pm2 startOrRestart ecosystem.config.js",
 		"debugFirestore": "gcloud auth application-default login && GRPC_VERBOSITY=DEBUG GRPC_TRACE=all node dev/scripts/debug-firestore.js",
-		"prepare": "husky"
+		"prepare": "husky",
+		"nginx:update": "scp ./dev/config/nginx_default.txt root@222.239.251.208:/etc/nginx/sites-available/default && scp ./dev/config/nginx_conf.txt root@222.239.251.208:/etc/nginx/nginx.conf && npm run nginx:reload",
+		"nginx:reload": "ssh root@222.239.251.208 \"nginx -t && systemctl reload nginx\"",
+		"nginx:start": "ssh root@222.239.251.208 \"nginx -t && systemctl start nginx\"",
+		"nginx:stop": "ssh root@222.239.251.208 \"nginx -t && systemctl stop nginx\"",
+		"nginx:status": "ssh root@222.239.251.208 \"nginx -t && systemctl status nginx.service\""
 	},
 	"dependencies": {
 		"@google-cloud/secret-manager": "^6.1.1",

@@ -1,0 +1,107 @@
+# Live server
+server {
+    listen 80;
+    listen [::]:80;
+    server_name app.thingspool.net;
+    return 301 https://app.thingspool.net/$request_uri;
+}
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name app.thingspool.net;
+    ssl_certificate /etc/letsencrypt/live/app.thingspool.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.thingspool.net/privkey.pem;
+    root /root/actions-runner/_work/youngjin/youngjin/public;
+
+    # Rate limiting — allow short bursts (up to 10 queued) but enforce 5 req/s average per IP.
+    # Returns 429 Too Many Requests when exceeded.
+    limit_req zone=per_ip burst=10 nodelay;
+    limit_req_status 429;
+
+    # Client bundles — served directly by Nginx (not proxied to Node.js).
+    # Live uses promoted copies (bundle.live.js / style.live.css) mapped to the canonical paths.
+    # no-cache = browser caches the file but always revalidates via ETag before using it.
+    # If unchanged: 304 Not Modified (~200 bytes). If changed: full re-download.
+    location = /app/bundle.js {
+        alias /root/actions-runner/_work/youngjin/youngjin/dist/client/bundle.live.js;
+        types { application/javascript js; }
+        add_header Cache-Control "no-cache";
+    }
+    location = /app/style.css {
+        alias /root/actions-runner/_work/youngjin/youngjin/dist/client/style.live.css;
+        types { text/css css; }
+        add_header Cache-Control "no-cache";
+    }
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_redirect off;
+
+        # Standard proxy headers
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (required for Socket.IO)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Long timeout for persistent WebSocket connections
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}
+
+# Staging server
+server {
+    listen 80;
+    listen [::]:80;
+    server_name staging.thingspool.net;
+    return 301 https://staging.thingspool.net/$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name staging.thingspool.net;
+    ssl_certificate /etc/letsencrypt/live/staging.thingspool.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/staging.thingspool.net/privkey.pem;
+
+    # Rate limiting — allow short bursts (up to 10 queued) but enforce 5 req/s average per IP.
+    # Returns 429 Too Many Requests when exceeded.
+    limit_req zone=per_ip burst=10 nodelay;
+    limit_req_status 429;
+
+    # Client bundles — served directly by Nginx (staging uses the git-tracked files).
+    # no-cache = always revalidate via ETag, so you see changes immediately during testing.
+    location = /app/bundle.js {
+        alias /root/actions-runner/_work/youngjin/youngjin/dist/client/bundle.js;
+        types { application/javascript js; }
+        add_header Cache-Control "no-cache";
+    }
+    location = /app/style.css {
+        alias /root/actions-runner/_work/youngjin/youngjin/dist/client/style.css;
+        types { text/css css; }
+        add_header Cache-Control "no-cache";
+    }
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_redirect off;
+
+        # Standard proxy headers
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (required for Socket.IO)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Long timeout for persistent WebSocket connections
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}

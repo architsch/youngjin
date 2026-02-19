@@ -56,8 +56,9 @@ async function main()
 {
     console.log("[bootstrap] Loading secrets from Google Secret Manager...");
     await loadSecrets();
-    console.log("[bootstrap] All secrets loaded. Starting server...");
-    require("../../dist/server/bundle.js");
+    const bundlePath = process.env.BUNDLE_PATH || "../../dist/server/bundle.js";
+    console.log(`[bootstrap] All secrets loaded. Starting server from ${bundlePath}...`);
+    require(bundlePath);
 }
 
 main().catch((err) => {

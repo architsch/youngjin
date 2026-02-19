@@ -4,6 +4,7 @@ import DBUserVersionMigration from "../types/versionMigration/dbUserVersionMigra
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
 import DBQuery from "../types/dbQuery";
 import { DBRow } from "../types/row/dbRow";
+import { COLLECTION_ROOMS, COLLECTION_USERS } from "../../system/serverConstants";
 
 export default function runQueryVersionMigration<T extends DBRow>(
     dbQuery: DBQuery<T>,
@@ -13,10 +14,10 @@ export default function runQueryVersionMigration<T extends DBRow>(
     let versionMigration: DBVersionMigration;
     switch (dbQuery.tableId)
     {
-        case "users":
+        case COLLECTION_USERS:
             versionMigration = DBUserVersionMigration;
             break;
-        case "rooms":
+        case COLLECTION_ROOMS:
             versionMigration = DBRoomVersionMigration;
             break;
         default:

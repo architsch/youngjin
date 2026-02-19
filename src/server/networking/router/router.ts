@@ -21,6 +21,14 @@ export default function Router(app: Express): void
             res.status(200).setHeader("content-type", "text/html")
                 .send(EJSUtil.postProcessHTML(staticContent));
         });
+        // Client bundles are built to dist/client/, not public/
+        app.get("/app/bundle.js", (req: Request, res: Response): void => {
+            res.status(200).setHeader("content-type", "text/javascript")
+                .sendFile(FileUtil.getAbsoluteFilePath("bundle.js", "dist/client"));
+        });
+        app.get("/app/style.css", (req: Request, res: Response): void => {
+            res.sendFile(FileUtil.getAbsoluteFilePath("style.css", "dist/client"));
+        });
         app.get(/.*\.js$/, async (req: Request, res: Response): Promise<void> => {
             res.status(200).setHeader("content-type", "text/javascript")
                 .sendFile(FileUtil.getAbsoluteFilePath(req.url));

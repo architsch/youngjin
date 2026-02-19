@@ -1,0 +1,31 @@
+# Rolls back the live server to the previous bundle.
+name: Rollback Live
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: "live"
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: self-hosted
+
+    steps:
+    - name: Check backup exists
+      run: test -f dist/server/bundle.backup.js
+
+    - name: Restore backup bundles
+      run: |
+        cp dist/server/bundle.backup.js dist/server/bundle.live.js
+        cp dist/client/bundle.backup.js dist/client/bundle.live.js || true
+        cp dist/client/style.backup.css dist/client/style.live.css || true
+
+    - name: Restart live server
+      run: pm2 startOrRestart ecosystem.config.js --only live
+
+    - name: Verify rollback
+      run: |
+        sleep 5
+        pm2 status live

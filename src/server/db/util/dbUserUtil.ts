@@ -9,7 +9,7 @@ import { DBRow } from "../types/row/dbRow";
 import UserGameplayState from "../../user/types/userGameplayState";
 import { FIRST_TUTORIAL_STEP, HOUR_IN_MS, MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 import { FieldValue } from "firebase-admin/firestore";
-import { GUEST_MAX_AGE_BY_TIER_PHASE } from "../../system/serverConstants";
+import { COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE } from "../../system/serverConstants";
 
 const DBUserUtil =
 {
@@ -37,7 +37,7 @@ const DBUserUtil =
             totalPlaytimeMs: 0,
         };
         const result = await new DBQuery<{id: string}>()
-            .insertInto("users")
+            .insertInto(COLLECTION_USERS)
             .values(user)
             .run();
         return result;
@@ -47,7 +47,7 @@ const DBUserUtil =
         LogUtil.log("DBUserUtil.findUserById", {userID}, "low", "info");
         const result = await new DBQuery<DBUser>()
             .select()
-            .from("users")
+            .from(COLLECTION_USERS)
             .where("id", "==", userID)
             .run();
         if (!result.success || result.data.length == 0)
@@ -58,7 +58,7 @@ const DBUserUtil =
     {
         LogUtil.log("DBUserUtil.setUserTutorialStep", {userId: userID, tutorialStep}, "low", "info");
         const result = await new DBQuery<DBRow>()
-            .update("users")
+            .update(COLLECTION_USERS)
             .set({"tutorialStep": tutorialStep})
             .where("id", "==", userID)
             .run();
@@ -80,7 +80,7 @@ const DBUserUtil =
         if (gameplayState.sessionDurationMs != undefined)
             columnValues.totalPlaytimeMs = FieldValue.increment(gameplayState.sessionDurationMs);
         const result = await new DBQuery<DBRow>()
-            .update("users")
+            .update(COLLECTION_USERS)
             .set(columnValues)
             .where("id", "==", gameplayState.userID)
             .run();
@@ -105,7 +105,7 @@ const DBUserUtil =
             if (gs.sessionDurationMs != undefined)
                 columnValues.totalPlaytimeMs = FieldValue.increment(gs.sessionDurationMs);
             return new DBQuery<DBRow>()
-                .update("users")
+                .update(COLLECTION_USERS)
                 .set(columnValues)
                 .where("id", "==", gs.userID);
         });
@@ -115,7 +115,7 @@ const DBUserUtil =
     {
         LogUtil.log("DBUserUtil.upgradeGuestToMember", {userID, userName, email}, "low", "info");
         const result = await new DBQuery<DBRow>()
-            .update("users")
+            .update(COLLECTION_USERS)
             .set({
                 userName,
                 userType: UserTypeEnumMap.Member,
@@ -129,7 +129,7 @@ const DBUserUtil =
     {
         // Cache invalidation must NOT happen here ((Reason 1): Cache invalidation in this case will immediately invalidate the cache of a user who is currently logging in, resulting in redundant DB lookups. (Reason 2): 'lastLoginAt' and 'loginCount' are only used by deleteStaleGuestsByTier)
         await new DBQuery<DBRow>()
-            .update("users")
+            .update(COLLECTION_USERS)
             .noInvalidate()
             .set({ lastLoginAt: Date.now(), loginCount: FieldValue.increment(1) })
             .where("id", "==", userID)
@@ -141,7 +141,7 @@ const DBUserUtil =
 
         const selectResult = await new DBQuery<DBUser>()
             .select()
-            .from("users")
+            .from(COLLECTION_USERS)
             .where("userType", "==", UserTypeEnumMap.Guest)
             .where("lastLoginAt", "<", cutoffTime)
             .run();
@@ -170,7 +170,7 @@ const DBUserUtil =
             .filter(doc => doc.id)
             .map(doc => new DBQuery<DBRow>()
                 .delete()
-                .from("users")
+                .from(COLLECTION_USERS)
                 .where("id", "==", doc.id as string)
             );
         await DBQuery.runAll(deleteQueries);
@@ -182,7 +182,7 @@ const DBUserUtil =
         LogUtil.log("DBUserUtil.deleteUser", {userID}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .delete()
-            .from("users")
+            .from(COLLECTION_USERS)
             .where("id", "==", userID)
             .run();
         return result;

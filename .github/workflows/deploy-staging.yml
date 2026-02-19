@@ -1,19 +1,14 @@
-# Workflow for deploying the server app to the Cafe24 VPS.
+# Deploys the latest code to the staging server on the VPS.
 # Secrets are fetched at runtime from Google Secret Manager (not from GitHub Secrets).
-name: Deploy to VPS
+name: Deploy to Staging
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
-  group: "vps"
+  group: "staging"
   cancel-in-progress: false
 
 jobs:
@@ -36,10 +31,10 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Restart application via PM2
-      run: npm run start
+    - name: Restart staging server
+      run: pm2 startOrRestart ecosystem.config.js --only staging
 
     - name: Verify deployment
       run: |
         sleep 5
-        pm2 status admin
+        pm2 status staging
