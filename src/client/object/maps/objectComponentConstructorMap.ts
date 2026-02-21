@@ -1,4 +1,4 @@
-import Collider from "../components/collider";
+import DynamicCollider from "../components/dynamicCollider";
 import FirstPersonController from "../components/firstPersonController";
 import GameObjectComponent from "../components/gameObjectComponent";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
@@ -8,14 +8,17 @@ import ObjectSyncReceiver from "../components/objectSyncReceiver";
 import PersistentObjectMeshInstancer from "../components/persistentObjectMeshInstancer";
 import PlayerProximityDetector from "../components/playerProximityDetector";
 import SpeechBubble from "../components/speechBubble";
+import StaticCollider from "../components/staticCollider";
 import VoxelMeshInstancer from "../components/voxelMeshInstancer";
 import GameObject from "../types/gameObject";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
     (parentObject: GameObject, componentConfig: {[key: string]: any}) => GameObjectComponent} =
 {
-    "collider": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new Collider(parentObject, componentConfig),
+    "dynamicCollider": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new DynamicCollider(parentObject, componentConfig),
+    "staticCollider": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new StaticCollider(parentObject, componentConfig),
     "firstPersonController": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new FirstPersonController(parentObject, componentConfig),
     "instancedMeshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>

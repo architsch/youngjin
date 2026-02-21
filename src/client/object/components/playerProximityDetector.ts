@@ -2,13 +2,14 @@ import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProximityDetection";
+import InstancedMeshGraphics from "./instancedMeshGraphics";
 
 const vec3Temp = new THREE.Vector3();
 
 export default class PlayerProximityDetector extends GameObjectComponent
 {
     private maxDist: number;
-    private maxLookAngle: number;
+    private maxLookAngle: number; // (maxLookAngle <= 0) if the look-angle doesn't matter
     private proximityOn: boolean;
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
@@ -17,6 +18,13 @@ export default class PlayerProximityDetector extends GameObjectComponent
         this.maxDist = componentConfig.maxDist;
         this.maxLookAngle = componentConfig.maxLookAngle;
         this.proximityOn = false;
+
+        if (this.maxLookAngle > 0)
+        {
+            const instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;
+            if (!instancedMeshGraphics)
+                throw new Error("PlayerProximityDetector with positive 'maxLookAngle' requires InstancedMeshGraphics component");
+        }
     }
 
     async onDespawn(): Promise<void>
@@ -39,7 +47,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
 
         if (distSqr <= this.maxDist * this.maxDist)
         {
-            if (this.maxLookAngle < 0)
+            if (this.maxLookAngle <= 0)
             {
                 proximityShouldBeOn = true;
             }

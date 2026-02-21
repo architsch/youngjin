@@ -34,7 +34,7 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
 
     const config = ObjectTypeConfigMap.getConfigByIndex(objectRuntimeMemory.objectSpawnParams.objectTypeIndex);
     
-    const colliderConfig = config.components.spawnedByAny?.collider;
+    const colliderConfig = config.components.spawnedByAny?.dynamicCollider ?? config.components.spawnedByAny?.staticCollider;
     if (colliderConfig)
     {
         const halfSizeX = 0.5 * colliderConfig.hitboxSize.sizeX;
@@ -46,7 +46,9 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
             halfSizeX,
             halfSizeY,
         };
-        PhysicsManager.addObject(roomID, objectId, hitbox, colliderConfig.collisionLayerMaskAtGroundLevel);
+        PhysicsManager.addObject(roomID, objectId,
+            objectRuntimeMemory.objectSpawnParams.transform.y, hitbox,
+            colliderConfig.collisionLayerMaskAtGroundLevel);
     }
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
@@ -81,7 +83,7 @@ export function removeObject(socketUserContext: SocketUserContext, objectId: str
     delete roomRuntimeMemory.objectRuntimeMemories[objectId];
 
     const config = ObjectTypeConfigMap.getConfigByIndex(objectRuntimeMemory.objectSpawnParams.objectTypeIndex);
-    const colliderConfig = config.components.spawnedByAny?.collider;
+    const colliderConfig = config.components.spawnedByAny?.dynamicCollider ?? config.components.spawnedByAny?.staticCollider;
     if (colliderConfig)
         PhysicsManager.removeObject(roomID, objectId);
     

@@ -7,7 +7,11 @@ export default interface ObjectTypeConfig
     objectType: string;
     components: {
         spawnedByAny?: {
-            collider?: {
+            dynamicCollider?: {
+                collisionLayerMaskAtGroundLevel: number,
+                hitboxSize: HitboxSize,
+            },
+            staticCollider?: {
                 collisionLayerMaskAtGroundLevel: number,
                 hitboxSize: HitboxSize,
             },

@@ -79,6 +79,10 @@ export default abstract class GameObject
 
     trySetPosition(position: THREE.Vector3)
     {
+        // If there is a component which has the "trySetPosition" method,
+        // invoke that "trySetPosition" method.
+        // If such a method is not found, simply assign the given position vector
+        // to the GameObject's current position.
         let overrideFound = false;
         for (const component of Object.values(this.components))
         {
@@ -96,6 +100,10 @@ export default abstract class GameObject
 
     forceSetPosition(position: THREE.Vector3)
     {
+        // If there is a component which has the "forceSetPosition" method,
+        // invoke that "forceSetPosition" method.
+        // If such a method is not found, simply assign the given position vector
+        // to the GameObject's current position.
         let overrideFound = false;
         for (const component of Object.values(this.components))
         {

@@ -57,7 +57,7 @@ const PhysicsManager =
     {
         return physicsRooms[roomID] != undefined;
     },
-    addObject: (roomID: string, objectId: string, hitbox: AABB2, collisionLayerMaskAtGroundLevel: number): PhysicsObject =>
+    addObject: (roomID: string, objectId: string, posY: number, hitbox: AABB2, collisionLayerMaskAtGroundLevel: number): PhysicsObject =>
     {
         //console.log(`PhysicsManager.addObject :: roomID = ${roomID}, objectId = ${objectId}`);
         const physicsRoom = physicsRooms[roomID];
@@ -69,15 +69,13 @@ const PhysicsManager =
             console.warn(`PhysicsObjct is already added (roomID = ${roomID}, objectId = ${objectId})`);
             return physicsRoom.objectById[objectId];
         }
-        const currVoxel = physicsRoom.voxels[Math.floor(hitbox.y) * NUM_VOXEL_COLS + Math.floor(hitbox.x)].voxel;
-        const highestLayer = getHighestOccupiedVoxelCollisionLayer(currVoxel);
         const intersectingVoxels = new Array<PhysicsVoxel>(4);
         intersectingVoxels.length = 0;
 
         const newObject: PhysicsObject = {
             objectId,
             collisionLayerMaskAtGroundLevel,
-            level: (highestLayer != COLLISION_LAYER_NULL) ? highestLayer : COLLISION_LAYER_MIN,
+            level: Math.round(2 * posY),
             lastLevelChangeTime: performance.now() * 0.001,
             hitbox,
             intersectingVoxels
@@ -119,10 +117,6 @@ const PhysicsManager =
         {
             console.warn(`Physics-position desync due to distance gap (startPos = (${startPos.x.toFixed(3)}, ${startPos.y.toFixed(3)}), targetPos = (${targetPos.x.toFixed(3)}, ${targetPos.y.toFixed(3)}), dist = ${Math.sqrt(desyncDistSqr)})`);
             return { resolvedPos: startPos, desyncDetected: true };
-        }
-        if (desyncDistSqr < 0.000001)
-        {
-            return { resolvedPos: startPos, desyncDetected: false };
         }
 
         // Step back the starting position a bit, to prevent raycasting from within the enclosing line segments of whichever nearby obstacle (hitbox) that the object is running against.

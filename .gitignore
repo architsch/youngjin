@@ -12,3 +12,10 @@ dist/client/bundle.live.js
 dist/client/bundle.backup.js
 dist/client/style.live.css
 dist/client/style.backup.css
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+e2e/.auth/

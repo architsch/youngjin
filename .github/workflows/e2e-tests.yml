@@ -1,0 +1,72 @@
+# Runs Playwright e2e tests against the staging server after deployment.
+# Uses GitHub-hosted runners to avoid memory pressure on the VPS.
+name: E2E Tests (Staging)
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Staging"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: "e2e-tests"
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    strategy:
+      matrix:
+        node-version: [22.14.0]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install chromium --with-deps
+
+    - name: Wait for staging server to be ready
+      run: |
+        echo "Waiting for staging server..."
+        for i in $(seq 1 30); do
+          if curl -sf https://staging.thingspool.net/ > /dev/null 2>&1; then
+            echo "Staging server is up!"
+            exit 0
+          fi
+          echo "Attempt $i/30 - waiting 5s..."
+          sleep 5
+        done
+        echo "Staging server did not respond in time"
+        exit 1
+
+    - name: Run E2E tests
+      run: npm run test:e2e
+      env:
+        E2E_BASE_URL: https://staging.thingspool.net
+
+    - name: Upload test report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 14
+
+    - name: Upload test traces
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: playwright-traces
+        path: test-results/
+        retention-days: 7

@@ -16,7 +16,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Player",
         components: {
             spawnedByAny: {
-                collider: {
+                dynamicCollider: {
                     collisionLayerMaskAtGroundLevel: 0b00011111,
                     hitboxSize: {sizeX: 0.6, sizeZ: 0.6},
                 },
@@ -46,10 +46,6 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Canvas",
         components: {
             spawnedByAny: {
-                collider: {
-                    collisionLayerMaskAtGroundLevel: 0b00000000,
-                    hitboxSize: {sizeX: 0, sizeZ: 0},
-                },
                 instancedMeshGraphics: {
                     createInstanceIdPool: true,
                 },
