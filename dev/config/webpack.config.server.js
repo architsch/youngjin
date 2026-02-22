@@ -1,10 +1,20 @@
 const path = require("path");
+const webpack = require("webpack");
+const { execSync } = require("child_process");
 const nodeExternals = require('webpack-node-externals');
+
+let gitCommit = "";
+try { gitCommit = execSync("git rev-parse --short HEAD").toString().trim(); } catch (_) {}
 
 module.exports = {
     entry: path.resolve(__dirname, '../../src/server/server.ts'),
     target: 'node',
     mode: 'production',
+    plugins: [
+        new webpack.DefinePlugin({
+            __GIT_COMMIT__: JSON.stringify(gitCommit),
+        }),
+    ],
     module: {
         rules: [
             {

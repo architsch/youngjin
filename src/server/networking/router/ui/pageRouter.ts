@@ -3,13 +3,14 @@ import express from "express";
 import { Request, Response } from "express";
 import { ArcadeData } from "../../../ssg/data/arcadeData";
 import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
+import { GIT_COMMIT } from "../../../system/serverConstants";
 
 const dev = process.env.MODE == "dev";
 
 const PageRouter = express.Router();
 
 PageRouter.get("/mypage", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/dynamic/mypage", {});
+    EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT });
 });
 
 if (process.env.MODE == "dev")

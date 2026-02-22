@@ -42,8 +42,15 @@ const GameSockets =
             
             if (socketUserContexts[user.id] != undefined)
             {
-                console.error(`SocketUserContext with userID already exists (userID = ${user.id})`);
-                return;
+                // This happens when the user refreshes the page: the new socket
+                // connects before the old one's "disconnect" event fires.
+                // Save gameplay state from the old session, clean it up, and
+                // let the new connection proceed.
+                console.warn(`(GameSockets) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
+                const oldContext = socketUserContexts[user.id];
+                delete socketUserContexts[user.id];
+                await RoomManager.changeUserRoom(oldContext, undefined, false);
+                oldContext.socket.disconnect(true);
             }
             socketUserContexts[user.id] = socketUserContext;
 
@@ -124,6 +131,22 @@ const GameSockets =
                 socketUserContext.processAllPendingSignalsToUser();
             }
         }, SIGNAL_BATCH_SEND_INTERVAL);
+
+        // Periodically remove users whose socket connection is no longer alive.
+        // This catches edge cases where the "disconnect" event fails to fire
+        // (e.g., abrupt browser crash with no TCP FIN, or a swallowed error in
+        // the disconnect handler).
+        setInterval(async () => {
+            for (const [userID, ctx] of Object.entries(socketUserContexts))
+            {
+                if (!ctx.socket.connected)
+                {
+                    console.warn(`(GameSockets) Stale socket detected, cleaning up :: userID = ${userID}`);
+                    delete socketUserContexts[userID];
+                    await RoomManager.changeUserRoom(ctx, undefined, false);
+                }
+            }
+        }, 30_000);
     },
 }
 

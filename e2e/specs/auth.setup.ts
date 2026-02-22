@@ -46,4 +46,16 @@ setup("authenticate as guest", async ({ page }) => {
 
     // Save cookies for reuse by all authenticated test projects
     await page.context().storageState({ path: AUTH_STATE_PATH });
+
+    // Explicitly disconnect the socket so the server removes the player
+    // from the room. Without this, a stale player may persist on the server.
+    await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+            const io = (window as any).__socket_io_instance;
+            if (!io || io.disconnected) { resolve(); return; }
+            io.on("disconnect", () => resolve());
+            io.disconnect();
+            setTimeout(resolve, 3000);
+        });
+    }).catch(() => {});
 });

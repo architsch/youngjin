@@ -66,6 +66,9 @@ const GameSocketsClient =
             reconnectionDelayMax: 10000,
         });
 
+        // Expose for E2E test teardown (explicit disconnect prevents stale players)
+        (window as any).__socket_io_instance = socket;
+
         let hasConnectedBefore = false;
 
         socket.on("connect", () => {
@@ -83,6 +86,21 @@ const GameSocketsClient =
         socket.on("disconnect", (reason) => {
             console.warn(`Socket disconnected (reason: ${reason})`);
             connectionStateObservable.set("reconnecting");
+
+            if (reason === "io server disconnect")
+            {
+                // Server-initiated disconnect (graceful shutdown / deployment).
+                // Socket.IO won't auto-reconnect for this reason, so poll
+                // the server until it's back up and then reload the page.
+                pollServerAndReload(env.socket_server_url);
+            }
+        });
+
+        socket.io.on("reconnect_failed", () => {
+            // All automatic reconnection attempts exhausted (network disconnect).
+            console.warn("All reconnection attempts exhausted. Reloading page...");
+            connectionStateObservable.set("disconnected");
+            window.location.reload();
         });
 
         socket.on("connect_error", (err) => {
@@ -170,6 +188,16 @@ function trySendEncodedSignal(signalType: string, signalData: EncodableData): bo
     const subBuffer = EncodingUtil.endEncoding(bufferState);
     socket.emit(signalType, subBuffer);
     return true;
+}
+
+function pollServerAndReload(serverUrl: string, interval: number = 3000)
+{
+    const poll = () => {
+        fetch(serverUrl, { method: "HEAD", mode: "no-cors" })
+            .then(() => window.location.reload())
+            .catch(() => setTimeout(poll, interval));
+    };
+    setTimeout(poll, interval);
 }
 
 function canEmit(signalType: string): boolean

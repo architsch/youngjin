@@ -68,7 +68,7 @@ export default function DebugStats({env}: Props)
             onClick={() => setState({...state, display: !state.display})}
         />
         {state.display && <div className="m-0 p-1 text-xs text-gray-400 text-nowrap bg-black overflow-auto pointer-events-auto">
-            Server: {env.serverType}, FPS: {state.fpsDesc}, Position: {state.playerPosDesc}
+            Server: {env.serverType}{env.gitCommit ? ` (${env.gitCommit})` : ""}, FPS: {state.fpsDesc}, Position: {state.playerPosDesc}
             <br/>User: {JSON.stringify(App.getUser())}
             {voxelDescLine}
             {voxelQuadSelectionDescLine}

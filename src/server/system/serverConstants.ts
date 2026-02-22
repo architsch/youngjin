@@ -1,5 +1,10 @@
 import { DAY_IN_MS } from "../../shared/system/sharedConstants";
 
+// Build Info
+
+declare const __GIT_COMMIT__: string;
+export const GIT_COMMIT: string = typeof __GIT_COMMIT__ !== "undefined" ? __GIT_COMMIT__ : "";
+
 // Database
 
 // DB collection namespace (staging server uses "staging_" prefix to isolate data from the live server)
