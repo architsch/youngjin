@@ -11,8 +11,6 @@ import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
 
-const connectedUserIDs = new Set<string>();
-
 export default function Sockets(server: http.Server)
 {
     const io = new socketIO.Server(server, {
@@ -92,28 +90,11 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
             }
             const user = DBUserUtil.fromDBType(dbUser);
 
-            if (connectedUserIDs.has(user.id))
-            {
-                next(new Error(AddressUtil.getErrorPageURL("auth-duplication")));
-                return;
-            }
-
             if (!passCondition(user))
             {
                 next(new Error(AddressUtil.getErrorPageURL("auth-no-permission")));
                 return;
             }
-
-            connectedUserIDs.add(user.id);
-
-            socket.on("disconnect", () => {
-                if (!connectedUserIDs.has(user.id))
-                {
-                    console.error(`User "${user.id}" is already disconnected.`);
-                    return;
-                }
-                connectedUserIDs.delete(user.id);
-            });
 
             socket.handshake.auth = user;
             next();
