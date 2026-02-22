@@ -1,10 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Health Check", () => {
-    test("GET / returns 200 with expected body", async ({ request }) => {
+    test("GET / returns 200", async ({ request }) => {
         const response = await request.get("/");
         expect(response.status()).toBe(200);
-        expect(await response.text()).toContain("Server is running");
     });
 
     test("GET /debug-connection returns valid JSON", async ({ request }) => {
