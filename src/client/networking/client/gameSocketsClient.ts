@@ -61,9 +61,9 @@ const GameSocketsClient =
         socket = io(connectionURL, {
             transports: ["websocket", "polling"],
             upgrade: true,
-            reconnectionAttempts: 30,
-            reconnectionDelay: 2000,
-            reconnectionDelayMax: 10000,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
         });
 
         // Expose for E2E test teardown (explicit disconnect prevents stale players)

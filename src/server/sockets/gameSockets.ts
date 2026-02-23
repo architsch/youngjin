@@ -5,6 +5,7 @@ import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
 import User from "../../shared/user/types/user";
 import RoomManager from "../room/roomManager";
+import { getUserGameplayState } from "../room/util/roomUserUtil";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
@@ -44,13 +45,30 @@ const GameSockets =
             {
                 // This happens when the user refreshes the page: the new socket
                 // connects before the old one's "disconnect" event fires.
-                // Save gameplay state from the old session, clean it up, and
-                // let the new connection proceed.
+                // Capture the old session's gameplay state, clean it up, and
+                // update the new socket's user object so the player spawns at
+                // the correct position.
                 console.warn(`(GameSockets) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
                 const oldContext = socketUserContexts[user.id];
+                const oldRoomID = RoomManager.currentRoomIDByUserID[user.id];
+                const oldRoomMemory = oldRoomID ? RoomManager.roomRuntimeMemories[oldRoomID] : undefined;
+                const oldGameplayState = oldRoomMemory ? getUserGameplayState(oldContext, oldRoomMemory) : undefined;
+
                 delete socketUserContexts[user.id];
                 await RoomManager.changeUserRoom(oldContext, undefined, false);
                 oldContext.socket.disconnect(true);
+
+                if (oldGameplayState)
+                {
+                    user.lastRoomID = oldGameplayState.lastRoomID;
+                    user.lastX = oldGameplayState.lastX;
+                    user.lastY = oldGameplayState.lastY;
+                    user.lastZ = oldGameplayState.lastZ;
+                    user.lastDirX = oldGameplayState.lastDirX;
+                    user.lastDirY = oldGameplayState.lastDirY;
+                    user.lastDirZ = oldGameplayState.lastDirZ;
+                    user.playerMetadata = oldGameplayState.playerMetadata;
+                }
             }
             socketUserContexts[user.id] = socketUserContext;
 
@@ -89,11 +107,10 @@ const GameSockets =
 
                 if (socketUserContexts[user.id] == undefined)
                 {
-                    console.error(`SocketUserContext with userID doesn't exist (userID = ${user.id})`);
+                    console.warn(`SocketUserContext with userID doesn't exist (userID = ${user.id})`);
                     return;
                 }
                 delete socketUserContexts[user.id];
-
                 await RoomManager.changeUserRoom(socketUserContext, undefined, false);
             });
 

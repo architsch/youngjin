@@ -37,11 +37,18 @@ test.describe("Main Page (/mypage)", () => {
         expect(criticalErrors).toHaveLength(0);
     });
 
-    test("thingspool_env is injected into window", async ({ authenticatedPage }) => {
+    test("thingspool_env is injected into window", async ({ authenticatedPage }, testInfo) => {
         const env = await authenticatedPage.evaluate(() => (window as any).thingspool_env);
         expect(env).toBeTruthy();
         expect(env.mode).toBeTruthy();
-        expect(env.socket_server_url).toContain("staging.thingspool.net");
-        expect(env.serverType).toBe("Staging");
+        const baseURL = testInfo.project.use.baseURL ?? "";
+        const isLocal = /localhost|127\.0\.0\.1/.test(baseURL);
+        if (isLocal) {
+            expect(env.socket_server_url).toMatch(/localhost|127\.0\.0\.1/);
+            expect(env.serverType).toBe("Live");
+        } else {
+            expect(env.socket_server_url).toContain("staging.thingspool.net");
+            expect(env.serverType).toBe("Staging");
+        }
     });
 });

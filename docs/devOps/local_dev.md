@@ -18,7 +18,7 @@ gcloud auth application-default login
     - `npm run devserver` - for testing the server only
     - `npm run devnossg` - for full development test except the SSG
 
-3. Open up the browser and visit `http://localhost:3000/mypage` to access the app on `dev` mode (In the production environment (VPS), the app runs on `prod` mode and is accessible via either `https://app.thingspool.net/mypage` (live server) or `https://staging.thingspool.net/mypage` (staging server)).
+3. Open up the browser and visit `http://127.0.0.1:3000/mypage` to access the app on `dev` mode (In the production environment (VPS), the app runs on `prod` mode and is accessible via either `https://app.thingspool.net/mypage` (live server) or `https://staging.thingspool.net/mypage` (staging server)).
 
 4. If you want to terminate the local instance, press `Ctrl+C` to exit the inner console and then run `npm stop` to terminate the PM2 process.
 

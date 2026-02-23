@@ -1,7 +1,7 @@
 {
 	"name": "youngjin",
 	"scripts": {
-		"dev": "concurrently -k -n emu,srv -c blue,green \"firebase emulators:start --only firestore,storage\" \"sleep 3 && GCLOUD_PROJECT=thingspool FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199 MODE=dev PORT=3000 pm2 start ./dev/scripts/devRunner.js --no-daemon --watch --ignore-watch='dist public .git'\"",
+		"dev": "concurrently -k -n emu,srv -c blue,green \"firebase emulators:start --only firestore,storage\" \"sleep 3 && GCLOUD_PROJECT=thingspool FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 MODE=dev PORT=3000 pm2 start ./dev/scripts/devRunner.js --no-daemon --watch --ignore-watch='dist public .git temp test-results playwright-report e2e *.log'\"",
 		"devcss": "SKIP_CLIENT_COMPILE=true SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devclient": "SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devserver": "SKIP_CSS_COMPILE=true SKIP_CLIENT_COMPILE=true SKIP_SSG=true npm run dev",
@@ -22,7 +22,7 @@
 		"test:e2e:headed": "npx playwright test --headed",
 		"test:e2e:report": "npx playwright show-report",
 		"test:e2e:debug": "npx playwright test --debug",
-		"test:e2e:local": "E2E_BASE_URL=http://localhost:3000 npx playwright test"
+		"test:e2e:local": "E2E_BASE_URL=http://127.0.0.1:3000 npx playwright test"
 	},
 	"dependencies": {
 		"@google-cloud/secret-manager": "^6.1.1",

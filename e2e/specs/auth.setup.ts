@@ -18,13 +18,29 @@ setup("authenticate as guest", async ({ page }) => {
         fs.mkdirSync(authDir, { recursive: true });
     }
 
-    // Reuse existing auth state if it's recent enough
+    // Reuse existing auth state if it's recent enough AND still valid.
+    // A server restart (local dev or staging deploy) invalidates all
+    // in-memory sessions, so we verify the cached token with a quick
+    // navigation before trusting it.
     if (fs.existsSync(AUTH_STATE_PATH)) {
         const age = Date.now() - fs.statSync(AUTH_STATE_PATH).mtimeMs;
         if (age < AUTH_STATE_MAX_AGE_MS) {
+            // Load the saved cookies into the browser context, then
+            // check whether the server still accepts them.
+            await page.context().addCookies(
+                JSON.parse(fs.readFileSync(AUTH_STATE_PATH, "utf-8")).cookies ?? [],
+            );
+            const checkResponse = await page.goto("/mypage", { waitUntil: "domcontentloaded" });
+            if (checkResponse && checkResponse.status() === 200) {
+                // eslint-disable-next-line no-console
+                console.log(`Reusing cached auth state (age: ${Math.round(age / 1000)}s)`);
+                return;
+            }
+            // Token rejected — discard the stale cache and fall through
+            // to create a fresh guest session.
             // eslint-disable-next-line no-console
-            console.log(`Reusing cached auth state (age: ${Math.round(age / 1000)}s)`);
-            return;
+            console.log("Cached auth state is stale (server rejected token). Creating new guest.");
+            fs.unlinkSync(AUTH_STATE_PATH);
         }
     }
 
