@@ -47,7 +47,7 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
 }
 
 export async function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
-    saveGameplayState: boolean = true)
+    saveGameplayState: boolean)
 {
     const user: User = socketUserContext.socket.handshake.auth as User;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];

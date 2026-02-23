@@ -83,7 +83,7 @@ const RoomManager =
         await DBUserUtil.saveMultipleUsersGameplayState(gameplayStates);
     },
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
-        saveGameplayState: boolean = true): Promise<boolean> =>
+        saveGameplayState: boolean): Promise<boolean> =>
     {
         const user: User = socketUserContext.socket.handshake.auth as User;
         console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);

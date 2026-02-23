@@ -55,9 +55,14 @@ const GameSockets =
                 const oldGameplayState = oldRoomMemory ? getUserGameplayState(oldContext, oldRoomMemory) : undefined;
 
                 delete socketUserContexts[user.id];
-                await RoomManager.changeUserRoom(oldContext, undefined, false);
+                await RoomManager.changeUserRoom(oldContext, undefined, false, true);
                 oldContext.socket.disconnect(true);
 
+                // The "user" object that was passed in from the socket handshake is the result of the DB query which was executed by the Express (HTTP) middleware during the page load ("/mypage").
+                // This "user" object contains the gameplay state from the last moment at which the user was saved in the DB.
+                // This DB-originated gameplay state is outdated in case of page refresh, since a socket disconnection (which saves the gameplay state to the DB) does not precede the page load.
+                // Thus, this "user" object's gameplay state data should be overwritten by the current runtime memory's latest gameplay state.
+                // (Saving of this new gameplay state will be done by the "changeUserRoom" function call shown above.)
                 if (oldGameplayState)
                 {
                     user.lastRoomID = oldGameplayState.lastRoomID;
@@ -99,7 +104,7 @@ const GameSockets =
             socketUserContext.onReceivedSignalFromUser("roomChangeRequestParams", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RoomChangeRequestParams.decode(bufferState) as RoomChangeRequestParams;
-                await RoomManager.changeUserRoom(socketUserContext, params.roomID, true);
+                await RoomManager.changeUserRoom(socketUserContext, params.roomID, true, false);
             });
 
             socket.on("disconnect", async () => {
@@ -111,7 +116,7 @@ const GameSockets =
                     return;
                 }
                 delete socketUserContexts[user.id];
-                await RoomManager.changeUserRoom(socketUserContext, undefined, false);
+                await RoomManager.changeUserRoom(socketUserContext, undefined, false, true);
             });
 
             // Each connected client (user) should automatically join a room.
@@ -119,7 +124,7 @@ const GameSockets =
             //    -> The user should join the room whose ID is lastRoomID.
             // If the user either has no lastRoomID or doesn't have a lastRoomID which corresponds to an existing room,
             //    -> The user should join the "hub" room.
-            if (!(await RoomManager.changeUserRoom(socketUserContext, user.lastRoomID, false)))
+            if (!(await RoomManager.changeUserRoom(socketUserContext, user.lastRoomID, false, false)))
             {
                 // Check in-memory rooms first to avoid a Firestore query
                 let hubRoomID: string | undefined;
@@ -138,7 +143,7 @@ const GameSockets =
                         hubRoomID = roomSearchResult.data[0].id as string;
                 }
                 if (hubRoomID)
-                    await RoomManager.changeUserRoom(socketUserContext, hubRoomID, false);
+                    await RoomManager.changeUserRoom(socketUserContext, hubRoomID, false, false);
             }
         });
 
@@ -160,7 +165,7 @@ const GameSockets =
                 {
                     console.warn(`(GameSockets) Stale socket detected, cleaning up :: userID = ${userID}`);
                     delete socketUserContexts[userID];
-                    await RoomManager.changeUserRoom(ctx, undefined, false);
+                    await RoomManager.changeUserRoom(ctx, undefined, false, false);
                 }
             }
         }, 30_000);

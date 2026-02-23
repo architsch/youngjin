@@ -5,8 +5,6 @@ import { ArcadeData } from "../../../ssg/data/arcadeData";
 import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
 import { GIT_COMMIT } from "../../../system/serverConstants";
 
-const dev = process.env.MODE == "dev";
-
 const PageRouter = express.Router();
 
 PageRouter.get("/mypage", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
