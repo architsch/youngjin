@@ -14,6 +14,7 @@ import runQueryDelete from "../runners/runQueryDelete";
 import runQueryBatch from "../runners/runQueryBatch";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryRateMonitorUtil from "../util/dbQueryRateMonitorUtil";
+import LatencySimUtil from "../../system/util/latencySimUtil";
 
 export default class DBQuery<T extends DBRow>
 {
@@ -137,6 +138,8 @@ export default class DBQuery<T extends DBRow>
 
         if (!DBQueryRateMonitorUtil.allowQuery(this.type))
             return { success: false, data: [] };
+
+        await LatencySimUtil.simulateDBLatency();
 
         try {
             const db = await FirebaseUtil.getDB();

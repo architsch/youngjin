@@ -16,6 +16,7 @@ import AddressUtil from "./networking/util/addressUtil";
 import LogUtil from "../shared/system/util/logUtil";
 import { HOUR_IN_MS } from "../shared/system/sharedConstants";
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
+import LatencySimUtil from "./system/util/latencySimUtil";
 
 async function Server(): Promise<void>
 {
@@ -28,6 +29,7 @@ Env Variables in Server:
     SKIP_CSS_COMPILE: ${process.env.SKIP_CSS_COMPILE}
     SKIP_CLIENT_COMPILE: ${process.env.SKIP_CLIENT_COMPILE}
     SKIP_SERVER_COMPILE: ${process.env.SKIP_SERVER_COMPILE}
+${LatencySimUtil.getConfigSummary()}
 ========================================`);
 
     const dev = process.env.MODE == "dev";
@@ -95,6 +97,15 @@ Env Variables in Server:
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser());
     app.use(hpp()); // for HTTP parameter pollution prevention
+
+    // simulated network latency (dev only — controlled by SIMULATED_LATENCY_MS env var)
+    if (LatencySimUtil.networkLatencyEnabled)
+    {
+        app.use(async (_req, _res, next) => {
+            await LatencySimUtil.simulateNetworkLatency();
+            next();
+        });
+    }
 
     // router
     Router(app);

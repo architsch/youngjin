@@ -1,12 +1,14 @@
 import FirebaseUtil from "../../networking/util/firebaseUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
+import LatencySimUtil from "../../system/util/latencySimUtil";
 
 const DBFileStorageUtil =
 {
     saveBinaryFile: async (filePath: string, buffer: Buffer): Promise<boolean> =>
     {
         LogUtil.log("DBFileStorageUtil.saveBinaryFile", {filePath, bufferLength: buffer.length}, "low", "info");
+        await LatencySimUtil.simulateDBLatency();
         try {
             const bucket = (await FirebaseUtil.getStorage()).bucket();
             const file = bucket.file(filePath);
@@ -25,6 +27,7 @@ const DBFileStorageUtil =
     loadBinaryFile: async (filePath: string): Promise<Buffer | null> =>
     {
         LogUtil.log("DBFileStorageUtil.loadBinaryFile", {filePath}, "low", "info");
+        await LatencySimUtil.simulateDBLatency();
         try {
             const bucket = (await FirebaseUtil.getStorage()).bucket();
             const file = bucket.file(filePath);
@@ -42,6 +45,7 @@ const DBFileStorageUtil =
     deleteFile: async (filePath: string): Promise<boolean> =>
     {
         LogUtil.log("DBFileStorageUtil.deleteFile", {filePath}, "low", "info");
+        await LatencySimUtil.simulateDBLatency();
         try {
             const bucket = (await FirebaseUtil.getStorage()).bucket();
             const file = bucket.file(filePath);

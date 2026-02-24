@@ -11,6 +11,10 @@ PageRouter.get("/mypage", UserIdentificationUtil.identifyAnyUser, (req: Request,
     EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT });
 });
 
+PageRouter.get("/error/auth-duplication", (req: Request, res: Response): void => {
+    EJSUtil.render(req, res, "page/static/error/auth-duplication", {});
+});
+
 if (process.env.MODE == "dev")
 {
     PageRouter.get("/console", (req: Request, res: Response): void => {

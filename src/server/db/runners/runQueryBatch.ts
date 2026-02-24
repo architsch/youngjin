@@ -5,12 +5,14 @@ import { DBRow } from "../types/row/dbRow";
 import LogUtil from "../../../shared/system/util/logUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import DBCacheUtil from "../util/dbCacheUtil";
+import LatencySimUtil from "../../system/util/latencySimUtil";
 
 export default async function runQueryBatch<T extends DBRow>(
     queries: DBQuery<T>[]
 ): Promise<DBQueryResponse<T>>
 {
     try {
+        await LatencySimUtil.simulateDBLatency();
         const db = await FirebaseUtil.getDB();
         const batchSize = 500; // Firestore batch limit
         for (let i = 0; i < queries.length; i += batchSize)

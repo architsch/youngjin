@@ -1,3 +1,4 @@
+import UserGameplayState from "../../../server/user/types/userGameplayState";
 import { UserType } from "./userType";
 
 export default class User
@@ -22,7 +23,6 @@ export default class User
         lastDirX: number = 0, lastDirY: number = 0, lastDirZ: number = 1,
         playerMetadata: {[key: string]: string} = {})
     {
-        //super();
         this.id = (id != undefined) ? id : "";
         this.userName = userName;
         this.userType = userType;
@@ -36,6 +36,18 @@ export default class User
         this.lastDirY = lastDirY;
         this.lastDirZ = lastDirZ;
         this.playerMetadata = playerMetadata;
+    }
+
+    applyGameplayState(state: UserGameplayState): void
+    {
+        this.lastRoomID = state.lastRoomID;
+        this.lastX = state.lastX;
+        this.lastY = state.lastY;
+        this.lastZ = state.lastZ;
+        this.lastDirX = state.lastDirX;
+        this.lastDirY = state.lastDirY;
+        this.lastDirZ = state.lastDirZ;
+        this.playerMetadata = state.playerMetadata;
     }
 
     static fromString(userString: string): User

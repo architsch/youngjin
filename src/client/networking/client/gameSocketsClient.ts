@@ -83,6 +83,10 @@ const GameSocketsClient =
             hasConnectedBefore = true;
         });
 
+        socket.on("forceRedirect", (url: string) => {
+            window.location.href = url;
+        });
+
         socket.on("disconnect", (reason) => {
             console.warn(`Socket disconnected (reason: ${reason})`);
             connectionStateObservable.set("reconnecting");
