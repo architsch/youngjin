@@ -16,12 +16,13 @@ import UserCommandParams from "../../shared/user/types/userCommandParams";
 import UserCommandUtil from "../user/util/userCommandUtil";
 import UserGameplayState from "../user/types/userGameplayState";
 import LatencySimUtil from "../system/util/latencySimUtil";
+import AddressUtil from "../networking/util/addressUtil";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const recentDisconnectGameplayStates: {[userID: string]: {state: UserGameplayState, timestamp: number}} = {};
-const GAMEPLAY_STATE_CACHE_TTL = 60_000;
+const staleSocketFirstDetectedAt: {[userID: string]: number} = {};
 
 const GameSockets =
 {
@@ -69,7 +70,7 @@ const GameSockets =
 
                 delete socketUserContexts[user.id];
                 await RoomManager.changeUserRoom(oldContext, undefined, false, true);
-                oldContext.socket.emit("forceRedirect", "/error/auth-duplication");
+                oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
                 oldContext.socket.disconnect(true);
 
                 if (oldGameplayState)
@@ -179,35 +180,48 @@ const GameSockets =
         });
 
         signalProcessingInterval = setInterval(() => {
-            for (const socketUserContext of Object.values(socketUserContexts))
+            for (const userID in socketUserContexts)
             {
-                socketUserContext.processAllPendingSignalsToUser();
+                socketUserContexts[userID].processAllPendingSignalsToUser();
             }
         }, SIGNAL_BATCH_SEND_INTERVAL);
 
-        // Periodically remove users whose socket connection is no longer alive.
-        // This catches edge cases where the "disconnect" event fails to fire
-        // (e.g., abrupt browser crash with no TCP FIN, or a swallowed error in
-        // the disconnect handler).
         setInterval(async () => {
+            // Periodically remove users whose socket connection is no longer alive.
+            // This catches edge cases where the "disconnect" event fails to fire
+            // (e.g., abrupt browser crash with no TCP FIN, or a swallowed error in
+            // the disconnect handler).
+            const currTime = Date.now();
             for (const [userID, ctx] of Object.entries(socketUserContexts))
             {
                 if (!ctx.socket.connected)
                 {
-                    console.warn(`(GameSockets) Stale socket detected, cleaning up :: userID = ${userID}`);
-                    delete socketUserContexts[userID];
-                    await RoomManager.changeUserRoom(ctx, undefined, false, false);
+                    if (staleSocketFirstDetectedAt[userID] == undefined)
+                    {
+                        staleSocketFirstDetectedAt[userID] = currTime;
+                    }
+                    else if (currTime - staleSocketFirstDetectedAt[userID] > 5000)
+                    {
+                        console.warn(`(GameSockets) Stale socket detected, cleaning up :: userID = ${userID}`);
+                        delete staleSocketFirstDetectedAt[userID];
+                        delete socketUserContexts[userID];
+                        await RoomManager.changeUserRoom(ctx, undefined, false, false);
+                    }
+                }
+                else
+                {
+                    delete staleSocketFirstDetectedAt[userID];
                 }
             }
 
-            // Evict expired gameplay state cache entries.
+            // Periodically evict expired gameplay state cache entries.
             const now = Date.now();
             for (const [userID, cached] of Object.entries(recentDisconnectGameplayStates))
             {
-                if (now - cached.timestamp > GAMEPLAY_STATE_CACHE_TTL)
+                if (now - cached.timestamp > 30000)
                     delete recentDisconnectGameplayStates[userID];
             }
-        }, 30_000);
+        }, 5000);
     },
 }
 

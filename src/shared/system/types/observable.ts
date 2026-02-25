@@ -26,8 +26,8 @@ export default class Observable<ValueType>
         }
         else // broadcast
         {
-            for (const listener of Object.values(this.listeners))
-                listener(this.currValue);
+            for (const key in this.listeners)
+                this.listeners[key](this.currValue);
         }
     }
 

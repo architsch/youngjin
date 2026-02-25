@@ -29,12 +29,13 @@ const ObjectManager =
     },
     update: (deltaTime: number) =>
     {
-        for (const updatableGameObject of Object.values(updatableGameObjects))
+        for (const id in updatableGameObjects)
         {
-            for (const component of Object.values(updatableGameObject.components))
+            const components = updatableGameObjects[id].components;
+            for (const name in components)
             {
-                if (component.update)
-                    component.update(deltaTime);
+                if (components[name].update)
+                    components[name].update(deltaTime);
             }
         }
     },

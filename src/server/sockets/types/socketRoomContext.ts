@@ -17,10 +17,10 @@ export default class SocketRoomContext
 
     multicastSignal(signalType: string, signalData: EncodableData, userIDToExclude: string | undefined = undefined)
     {
-        for (const [userID, socketUserContext] of Object.entries(this.socketUserContexts))
+        for (const userID in this.socketUserContexts)
         {
             if (userID != userIDToExclude)
-                socketUserContext.addPendingSignalToUser(signalType, signalData);
+                this.socketUserContexts[userID].addPendingSignalToUser(signalType, signalData);
         }
     }
 

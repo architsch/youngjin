@@ -193,8 +193,9 @@ const PhysicsManager =
         }
         
         // Process collision against other objects
-        for (const otherObject of Object.values(physicsRoom.objectById))
+        for (const otherObjectId in physicsRoom.objectById)
         {
+            const otherObject = physicsRoom.objectById[otherObjectId];
             const otherObjectMask = otherObject.collisionLayerMaskAtGroundLevel << otherObject.level;
 
             if (object.objectId != otherObject.objectId &&
