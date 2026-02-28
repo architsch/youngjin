@@ -1,4 +1,3 @@
-import User from "../../../shared/user/types/user";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectRuntimeMemory from "../../../shared/object/types/objectRuntimeMemory";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
@@ -8,16 +7,18 @@ import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 import { unloadRoom } from "./roomCoreUtil";
-import { addObject, removeObject } from "./roomObjectUtil";
+import { addObject, generateObjectId, removeObject } from "./roomObjectUtil";
 import DBRoomUtil from "../../db/util/dbRoomUtil";
 import UserGameplayState from "../../user/types/userGameplayState";
 import DBUserUtil from "../../db/util/dbUserUtil";
 
+const playerObjectRuntimeMemoryByUserID: {[userID: string]: ObjectRuntimeMemory} = {};
+
 export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
     userID: string, playerObjectTransform: ObjectTransform)
 {
-    const user: User = socketUserContext.socket.handshake.auth as User;
-    
+    const user = socketUserContext.user;
+
     console.log(`RoomManager.addUserToRoom :: roomID = ${roomRuntimeMemory.room.id}, userID = ${userID}`);
     if (roomRuntimeMemory.participantUserIDs[userID] != undefined)
     {
@@ -37,19 +38,23 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
     const restoredMetadata: {[key: number]: EncodableByteString} = {};
     for (const key of Object.keys(user.playerMetadata))
         restoredMetadata[parseInt(key)] = new EncodableByteString(user.playerMetadata[key]);
-    addObject(socketUserContext, new ObjectRuntimeMemory(new ObjectSpawnParams(
+    const playerObjectRuntimeMemory = new ObjectRuntimeMemory(new ObjectSpawnParams(
+        roomRuntimeMemory.room.id,
         user.id,
+        user.userName,
         ObjectTypeConfigMap.getIndexByType("Player"),
-        user.id, // Player object's objectId must be identical to the user's ID.
+        generateObjectId(),
         playerObjectTransform,
         restoredMetadata
-     )));
+    ));
+    addObject(socketUserContext, playerObjectRuntimeMemory);
+    playerObjectRuntimeMemoryByUserID[userID] = playerObjectRuntimeMemory;
 }
 
 export async function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
     saveGameplayState: boolean)
 {
-    const user: User = socketUserContext.socket.handshake.auth as User;
+    const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
     console.log(`RoomManager.removeUserFromRoom :: roomID = ${roomID}, userID = ${user.id}`);
     if (roomID == undefined)
@@ -82,6 +87,7 @@ export async function removeUserFromRoom(socketUserContext: SocketUserContext, p
     }
     delete RoomManager.currentRoomIDByUserID[user.id];
     delete roomRuntimeMemory.participantUserIDs[user.id];
+    delete playerObjectRuntimeMemoryByUserID[user.id];
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (!socketRoomContext)
@@ -116,9 +122,8 @@ export function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): st
 export function getUserGameplayState(socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory)
     : UserGameplayState | undefined
 {
-    const user: User = socketUserContext.socket.handshake.auth as User;
-    // Player object's objectId must be identical to the user's ID.
-    const playerObjectRuntimeMemory = roomRuntimeMemory.objectRuntimeMemories[user.id];
+    const user = socketUserContext.user;
+    const playerObjectRuntimeMemory = playerObjectRuntimeMemoryByUserID[user.id];
     if (!playerObjectRuntimeMemory)
     {
         console.error(`getUserGameplayState :: Player's ObjectRuntimeMemory not found (userID = ${user.id})`);

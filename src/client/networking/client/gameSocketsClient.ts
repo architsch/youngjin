@@ -21,28 +21,23 @@ import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVox
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import UserCommandParams from "../../../shared/user/types/userCommandParams";
+import App from "../../app";
 
 let socket: Socket;
 
 const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "roomRuntimeMemory": (data: EncodableData) =>
         roomRuntimeMemoryObservable.set(data as RoomRuntimeMemory),
-    "objectSyncParams": (data: EncodableData) => {
-        const params = data as ObjectSyncParams;
-        objectSyncObservable.set(params, params.objectId);
-    },
-    "objectDesyncResolveParams": (data: EncodableData) => {
-        const params = data as ObjectDesyncResolveParams;
-        objectDesyncResolveObservable.set(params, params.objectId);
-    },
+    "objectSyncParams": (data: EncodableData) =>
+        objectSyncObservable.set(data as ObjectSyncParams),
+    "objectDesyncResolveParams": (data: EncodableData) =>
+        objectDesyncResolveObservable.set(data as ObjectDesyncResolveParams),
     "objectSpawnParams": (data: EncodableData) =>
         objectSpawnObservable.set(data as ObjectSpawnParams),
     "objectDespawnParams": (data: EncodableData) =>
         objectDespawnObservable.set(data as ObjectDespawnParams),
-    "objectMessageParams": (data: EncodableData) => {
-        const params = data as ObjectMessageParams;
-        objectMessageObservable.set(params, params.senderObjectId);
-    },
+    "objectMessageParams": (data: EncodableData) =>
+        objectMessageObservable.set(data as ObjectMessageParams),
     "updateVoxelGridParams": (data: EncodableData) =>
         updateVoxelGridObservable.set(data as UpdateVoxelGridParams),
 }
@@ -61,7 +56,7 @@ const GameSocketsClient =
         socket = io(connectionURL, {
             transports: ["websocket", "polling"],
             upgrade: true,
-            reconnectionAttempts: 10,
+            reconnectionAttempts: 20,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
         });
@@ -150,20 +145,52 @@ const GameSocketsClient =
             console.warn("Cannot change room because 'roomChange' process is ongoing.");
     },
     emitMoveVoxelBlock: (params: MoveVoxelBlockParams) =>
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
+    {
+        const currentRoom = App.getCurrentRoom();
+        if (!currentRoom)
+        {
+            console.error("Modified a voxel, but the current room doesn't exist.");
+            return;
+        }
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+    },
     emitAddVoxelBlock: (params: AddVoxelBlockParams) =>
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
+    {
+        const currentRoom = App.getCurrentRoom();
+        if (!currentRoom)
+        {
+            console.error("Modified a voxel, but the current room doesn't exist.");
+            return;
+        }
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+    },
     emitRemoveVoxelBlock: (params: RemoveVoxelBlockParams) =>
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
+    {
+        const currentRoom = App.getCurrentRoom();
+        if (!currentRoom)
+        {
+            console.error("Modified a voxel, but the current room doesn't exist.");
+            return;
+        }
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+    },
     emitSetVoxelQuadTexture: (params: SetVoxelQuadTextureParams) =>
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams([params])),
+    {
+        const currentRoom = App.getCurrentRoom();
+        if (!currentRoom)
+        {
+            console.error("Modified a voxel, but the current room doesn't exist.");
+            return;
+        }
+        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+    }
 }
 
 function emitWhenReady(signalType: string, signalData: EncodableData,
     maxRetries: number = 10, retryInterval: number = 200)
 {
-    const throttleInterval = SignalTypeConfigMap.getConfigByType(signalType).throttleInterval;
-    if (throttleInterval <= 0)
+    const minClientToServerSendInterval = SignalTypeConfigMap.getConfigByType(signalType).minClientToServerSendInterval;
+    if (minClientToServerSendInterval <= 0)
     {
         trySendEncodedSignal(signalType, signalData);
     }
@@ -207,11 +234,11 @@ function pollServerAndReload(serverUrl: string, interval: number = 3000)
 function canEmit(signalType: string): boolean
 {
     const lastSignalSentTime = lastSignalSentTimes[signalType];
-    const throttleInterval = SignalTypeConfigMap.getConfigByType(signalType).throttleInterval;
-    if (throttleInterval <= 0)
+    const minClientToServerSendInterval = SignalTypeConfigMap.getConfigByType(signalType).minClientToServerSendInterval;
+    if (minClientToServerSendInterval <= 0)
         return true;
     return lastSignalSentTime == undefined ||
-        Date.now() >= lastSignalSentTime + throttleInterval + 200; // 200 = extra time margin (to reduce the chance that the signal will be rejected by the server due to an earlier signal arriving at the server too late)
+        Date.now() >= lastSignalSentTime + minClientToServerSendInterval + 200; // 200 = extra time margin (to reduce the chance that the signal will be rejected by the server due to an earlier signal arriving at the server too late)
 }
 
 export default GameSocketsClient;

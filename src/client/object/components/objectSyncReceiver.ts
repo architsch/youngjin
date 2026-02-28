@@ -3,7 +3,6 @@ import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
-import { objectDesyncResolveObservable, objectSyncObservable } from "../../system/clientObservables";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
@@ -34,21 +33,6 @@ export default class ObjectSyncReceiver extends GameObjectComponent
 
         this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);
         this.quaternionInterpRange[1].setFromEuler(this.gameObject.rotation);
-
-        this.onObjectDesyncResolveReceived = this.onObjectDesyncResolveReceived.bind(this);
-        this.onObjectSyncReceived = this.onObjectSyncReceived.bind(this);
-    }
-
-    async onSpawn(): Promise<void>
-    {
-        objectDesyncResolveObservable.addListener(this.gameObject.params.objectId, this.onObjectDesyncResolveReceived);
-        objectSyncObservable.addListener(this.gameObject.params.objectId, this.onObjectSyncReceived);
-    }
-
-    async onDespawn(): Promise<void>
-    {
-        objectDesyncResolveObservable.removeListener(this.gameObject.params.objectId);
-        objectSyncObservable.removeListener(this.gameObject.params.objectId);
     }
 
     update(deltaTime: number): void
@@ -72,7 +56,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
             this.quaternionInterpRange[0], this.quaternionInterpRange[1], interpProgressNormalized);
     }
 
-    private onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
+    onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
     {
         if (this.gameObject.params.objectId != params.objectId)
         {
@@ -89,10 +73,8 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         this.lastSyncTime = performance.now();
     }
 
-    private onObjectSyncReceived(params: ObjectSyncParams): void
+    onObjectSyncReceived(params: ObjectSyncParams): void
     {
-        //console.log(`(ObjectSyncReceiver) onObjectSyncReceived :: ${JSON.stringify(params)}`);
-
         if (this.gameObject.params.objectId != params.objectId)
         {
             console.error(`Object ID mismatch (this.gameObject.objectId = ${this.gameObject.params.objectId}, params.objectId = ${params.objectId})`);

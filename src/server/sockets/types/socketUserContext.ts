@@ -1,4 +1,5 @@
 import socketIO from "socket.io";
+import User from "../../../shared/user/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
 import EncodableArray from "../../../shared/networking/types/encodableArray";
@@ -8,6 +9,7 @@ import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 export default class SocketUserContext
 {
     socket: socketIO.Socket;
+    user: User;
     connectTime: number;
 
     private pendingSignalsToUserByTypeIndex: Array<EncodableData[]>;
@@ -16,20 +18,21 @@ export default class SocketUserContext
     constructor(socket: socketIO.Socket)
     {
         this.socket = socket;
+        this.user = socket.handshake.auth as User;
         this.connectTime = Date.now();
         this.pendingSignalsToUserByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
     }
 
     onReceivedSignalFromUser(signalType: string, handler: (buffer: ArrayBuffer) => void): void
     {
-        const throttleInterval = SignalTypeConfigMap.getConfigByType(signalType).throttleInterval;
+        const minClientToServerSendInterval = SignalTypeConfigMap.getConfigByType(signalType).minClientToServerSendInterval;
 
         this.socket.on(signalType, (buffer: ArrayBuffer) => {
-            if (throttleInterval > 0)
+            if (minClientToServerSendInterval > 0)
             {
                 const now = Date.now();
                 const lastTime = this.throttleTimestamps[signalType];
-                if (lastTime && now - lastTime < throttleInterval)
+                if (lastTime && now - lastTime < minClientToServerSendInterval)
                     return;
                 this.throttleTimestamps[signalType] = now;
             }

@@ -2,10 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 import path from "path";
 
 const STAGING_URL = process.env.E2E_BASE_URL || "https://staging.thingspool.net";
-const AUTH_STATE_PATH = path.join(__dirname, "e2e/.auth/guest.json");
+const AUTH_STATE_PATH = path.join(__dirname, "tests/e2e/.auth/guest.json");
 
 export default defineConfig({
-    testDir: "./e2e/specs",
+    testDir: "./tests/e2e/specs",
     timeout: 60_000,
     expect: {
         timeout: 10_000,

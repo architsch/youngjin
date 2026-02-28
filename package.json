@@ -1,7 +1,7 @@
 {
 	"name": "youngjin",
 	"scripts": {
-		"dev": "concurrently -k -n emu,srv -c blue,green \"firebase emulators:start --only firestore,storage\" \"sleep 3 && GCLOUD_PROJECT=thingspool FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 MODE=dev PORT=3000 SIMULATED_LATENCY_MS=200 SIMULATED_DB_LATENCY_MS=200 SIMULATED_LATENCY_JITTER_MS=50 pm2 start ./dev/scripts/devRunner.js --no-daemon --watch --ignore-watch='dist public .git temp test-results playwright-report e2e *.log'\"",
+		"dev": "concurrently -k -n emu,srv -c blue,green \"firebase emulators:start --only firestore,storage\" \"sleep 3 && GCLOUD_PROJECT=thingspool FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 MODE=dev PORT=3000 SIMULATED_LATENCY_MS=200 SIMULATED_DB_LATENCY_MS=200 SIMULATED_LATENCY_JITTER_MS=50 pm2 start ./dev/scripts/devRunner.js --no-daemon --watch --ignore-watch='dist public .git temp test-results playwright-report tests *.log'\"",
 		"devcss": "SKIP_CLIENT_COMPILE=true SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devclient": "SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devserver": "SKIP_CSS_COMPILE=true SKIP_CLIENT_COMPILE=true SKIP_SSG=true npm run dev",
@@ -22,7 +22,10 @@
 		"test:e2e:headed": "npx playwright test --headed",
 		"test:e2e:report": "npx playwright show-report",
 		"test:e2e:debug": "npx playwright test --debug",
-		"test:e2e:local": "E2E_BASE_URL=http://127.0.0.1:3000 npx playwright test"
+		"test:e2e:local": "E2E_BASE_URL=http://127.0.0.1:3000 npx playwright test",
+		"test:integration": "npx vitest run",
+		"test:integration:watch": "npx vitest",
+		"test:integration:ui": "npx vitest --ui"
 	},
 	"dependencies": {
 		"@google-cloud/secret-manager": "^6.1.1",
@@ -58,9 +61,11 @@
 		"@types/node": "^22.15.17",
 		"@types/three": "^0.180.0",
 		"concurrently": "^9.2.1",
+		"fast-check": "^4.5.3",
 		"husky": "^9.1.7",
 		"ts-loader": "^9.5.2",
 		"typescript": "^5.8.3",
+		"vitest": "^4.0.18",
 		"webpack": "^5.99.8",
 		"webpack-cli": "^6.0.1",
 		"webpack-node-externals": "^3.0.0"

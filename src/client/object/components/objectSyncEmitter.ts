@@ -5,7 +5,6 @@ import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesync
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
-import { objectDesyncResolveObservable } from "../../system/clientObservables";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
@@ -31,18 +30,6 @@ export default class ObjectSyncEmitter extends GameObjectComponent
         this.lastSyncTime = performance.now();
         this.lastSyncedPosition.copy(this.gameObject.position);
         this.lastSyncedRotation.copy(this.gameObject.rotation);
-
-        this.onObjectDesyncResolveReceived = this.onObjectDesyncResolveReceived.bind(this);
-    }
-
-    async onSpawn(): Promise<void>
-    {
-        objectDesyncResolveObservable.addListener(this.gameObject.params.objectId, this.onObjectDesyncResolveReceived); 
-    }
-
-    async onDespawn(): Promise<void>
-    {
-        objectDesyncResolveObservable.removeListener(this.gameObject.params.objectId);
     }
 
     update(deltaTime: number)
@@ -78,7 +65,7 @@ export default class ObjectSyncEmitter extends GameObjectComponent
         }
     }
 
-    private onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
+    onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
     {
         const p = params.resolvedPos;
         vec3Temp.set(p.x, this.gameObject.position.y, p.y);

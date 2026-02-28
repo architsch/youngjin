@@ -3,7 +3,6 @@ import { SocketMiddleware } from "./types/socketMiddleware";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams"
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
-import User from "../../shared/user/types/user";
 import RoomManager from "../room/roomManager";
 import { getUserGameplayState } from "../room/util/roomUserUtil";
 import SocketUserContext from "./types/socketUserContext";
@@ -17,10 +16,10 @@ import UserCommandUtil from "../user/util/userCommandUtil";
 import UserGameplayState from "../user/types/userGameplayState";
 import LatencySimUtil from "../system/util/latencySimUtil";
 import AddressUtil from "../networking/util/addressUtil";
+import UserManager from "../user/userManager";
 
 let nsp: socketIO.Namespace;
 let signalProcessingInterval: NodeJS.Timeout;
-const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const recentDisconnectGameplayStates: {[userID: string]: {state: UserGameplayState, timestamp: number}} = {};
 const staleSocketFirstDetectedAt: {[userID: string]: number} = {};
 
@@ -28,9 +27,9 @@ const GameSockets =
 {
     saveAndDisconnectAllUsers: async (): Promise<void> =>
     {
-        await RoomManager.saveAllUserGameplayStates(socketUserContexts);
+        await RoomManager.saveAllUserGameplayStates(UserManager.socketUserContexts);
 
-        for (const [userID, socketUserContext] of Object.entries(socketUserContexts))
+        for (const [userID, socketUserContext] of Object.entries(UserManager.socketUserContexts))
         {
             await RoomManager.changeUserRoom(socketUserContext, undefined, false, false);
             socketUserContext.socket.disconnect(true);
@@ -52,10 +51,10 @@ const GameSockets =
 
         nsp.on("connection", async (socket: socketIO.Socket) => {
             const socketUserContext = new SocketUserContext(socket);
-            const user: User = socket.handshake.auth as User;
+            const user = socketUserContext.user;
             console.log(`(GameSockets) Client connected :: ${JSON.stringify(user)}`);
-            
-            if (socketUserContexts[user.id] != undefined)
+
+            if (UserManager.hasUser(user.id))
             {
                 // Case A: New socket connects BEFORE old disconnect fires (common on
                 // low-latency environments as well as cases in which another tab inside the same
@@ -63,12 +62,12 @@ const GameSockets =
                 // Capture the old session's gameplay state from runtime memory, clean it up,
                 // and update the new socket's user object so the player spawns at the correct position.
                 console.warn(`(GameSockets) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
-                const oldContext = socketUserContexts[user.id];
+                const oldContext = UserManager.getSocketUserContext(user.id)!;
                 const oldRoomID = RoomManager.currentRoomIDByUserID[user.id];
                 const oldRoomMemory = oldRoomID ? RoomManager.roomRuntimeMemories[oldRoomID] : undefined;
                 const oldGameplayState = oldRoomMemory ? getUserGameplayState(oldContext, oldRoomMemory) : undefined;
 
-                delete socketUserContexts[user.id];
+                UserManager.removeUser(user.id);
                 await RoomManager.changeUserRoom(oldContext, undefined, false, true);
                 oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
                 oldContext.socket.disconnect(true);
@@ -92,7 +91,8 @@ const GameSockets =
                 }
             }
             delete recentDisconnectGameplayStates[user.id];
-            socketUserContexts[user.id] = socketUserContext;
+            delete staleSocketFirstDetectedAt[user.id];
+            UserManager.addUser(socketUserContext);
 
             socketUserContext.onReceivedSignalFromUser("objectSyncParams", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
@@ -127,7 +127,7 @@ const GameSockets =
             socket.on("disconnect", async () => {
                 console.log(`(GameSockets) Client disconnected :: ${JSON.stringify(user)}`);
 
-                if (socketUserContexts[user.id] != socketUserContext)
+                if (UserManager.getSocketUserContext(user.id) != socketUserContext)
                 {
                     // This socket was already replaced by a newer connection (page
                     // refresh), or was cleaned up earlier.  The replacement logic in
@@ -147,7 +147,7 @@ const GameSockets =
                 if (gameplayState)
                     recentDisconnectGameplayStates[user.id] = {state: gameplayState, timestamp: Date.now()};
 
-                delete socketUserContexts[user.id];
+                UserManager.removeUser(user.id);
                 await RoomManager.changeUserRoom(socketUserContext, undefined, false, true);
             });
 
@@ -179,10 +179,13 @@ const GameSockets =
             }
         });
 
+        // Sending a separate packet for every individual signal is too wasteful of network resources.
+        // Therefore, we should batch signals that are very close to one another in time
+        // and send those batches at regular intervals instead.
         signalProcessingInterval = setInterval(() => {
-            for (const userID in socketUserContexts)
+            for (const userID in UserManager.socketUserContexts)
             {
-                socketUserContexts[userID].processAllPendingSignalsToUser();
+                UserManager.socketUserContexts[userID].processAllPendingSignalsToUser();
             }
         }, SIGNAL_BATCH_SEND_INTERVAL);
 
@@ -192,7 +195,7 @@ const GameSockets =
             // (e.g., abrupt browser crash with no TCP FIN, or a swallowed error in
             // the disconnect handler).
             const currTime = Date.now();
-            for (const [userID, ctx] of Object.entries(socketUserContexts))
+            for (const [userID, ctx] of Object.entries(UserManager.socketUserContexts))
             {
                 if (!ctx.socket.connected)
                 {
@@ -204,8 +207,8 @@ const GameSockets =
                     {
                         console.warn(`(GameSockets) Stale socket detected, cleaning up :: userID = ${userID}`);
                         delete staleSocketFirstDetectedAt[userID];
-                        delete socketUserContexts[userID];
-                        await RoomManager.changeUserRoom(ctx, undefined, false, false);
+                        UserManager.removeUser(userID);
+                        await RoomManager.changeUserRoom(ctx, undefined, false, true);
                     }
                 }
                 else

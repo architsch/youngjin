@@ -1,4 +1,3 @@
-import User from "../../../shared/user/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import Room from "../../../shared/room/types/room";
 import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../shared/system/sharedConstants";
@@ -105,7 +104,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
 {
     room.dirty = true; // Mark the room as dirty since its voxel grid has been modified.
 
-    const user: User = socketUserContext.socket.handshake.auth as User;
+    const user = socketUserContext.user;
     const socketRoomContext = RoomManager.socketRoomContexts[room.id];
     if (!socketRoomContext)
         console.error(`SocketRoomContext not found (roomID = ${room.id})`);
@@ -122,7 +121,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
                 if (!success)
                 {
                     ctx.addPendingSignalToUser("updateVoxelGridParams",
-                        new UpdateVoxelGridParams([signal as UpdateVoxelGridTaskParams]));
+                        new UpdateVoxelGridParams(room.id, [signal as UpdateVoxelGridTaskParams]));
                 }
             }
         });
@@ -131,7 +130,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
 
 function getRoom(socketUserContext: SocketUserContext): Room | undefined
 {
-    const user: User = socketUserContext.socket.handshake.auth as User;
+    const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
     if (roomID == undefined)
     {

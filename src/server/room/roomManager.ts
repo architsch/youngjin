@@ -1,4 +1,3 @@
-import User from "../../shared/user/types/user";
 import PhysicsManager from "../../shared/physics/physicsManager";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Vec2 from "../../shared/math/types/vec2";
@@ -13,7 +12,7 @@ import { loadRoom } from "./util/roomCoreUtil";
 import { updateVoxelGrid } from "./util/roomVoxelUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
-import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { OBJECT_MESSAGE_MAX_LENGTH, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import UserGameplayState from "../user/types/userGameplayState";
 import DBUserUtil from "../db/util/dbUserUtil";
@@ -85,7 +84,7 @@ const RoomManager =
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
         saveGameplayState: boolean): Promise<boolean> =>
     {
-        const user: User = socketUserContext.socket.handshake.auth as User;
+        const user = socketUserContext.user;
         console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
         await removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
         if (!roomID)
@@ -112,7 +111,7 @@ const RoomManager =
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)
             console.error(`RoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
-        else
+        else // Send the room data to the user who is added to the room.
             socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.id);
         return true;
     },
@@ -122,7 +121,7 @@ const RoomManager =
     },
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {
-        const user: User = socketUserContext.socket.handshake.auth as User;
+        const user = socketUserContext.user;
         const roomID = currentRoomIDByUserID[user.id];
         if (roomID == undefined)
         {
@@ -146,18 +145,18 @@ const RoomManager =
             console.error(`RoomManager.sendObjectMessage :: User has no authority to control this object (roomID = ${roomID}, objectId = ${params.senderObjectId})`);
             return;
         }
-        params.message = params.message.trim().substring(0, 32);
+        params.message = params.message.trim().substring(0, OBJECT_MESSAGE_MAX_LENGTH);
         objectRuntimeMemory.objectSpawnParams.setMetadata(ObjectMetadataKeyEnumMap.SentMessage, params.message);
 
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)
             console.error(`RoomManager.sendObjectMessage :: SocketRoomContext not found (roomID = ${roomID})`);
-        else
+        else // Broadcast to everyone except the one who sent the objectMessageParams.
             socketRoomContext.multicastSignal("objectMessageParams", params, user.id);
     },
     updateObjectTransform: (socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform) =>
     {
-        const user: User = socketUserContext.socket.handshake.auth as User;
+        const user = socketUserContext.user;
         const roomID = currentRoomIDByUserID[user.id];
         if (roomID == undefined)
         {
@@ -194,7 +193,7 @@ const RoomManager =
             const socketRoomContext = socketRoomContexts[roomID];
             if (!socketRoomContext)
                 console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
-            else
+            else // Broadcast to everyone.
                 socketRoomContext.multicastSignal("objectDesyncResolveParams", params);
         }
         else
@@ -203,7 +202,7 @@ const RoomManager =
             const socketRoomContext = socketRoomContexts[roomID];
             if (!socketRoomContext)
                 console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
-            else
+            else // Broadcast to everyone except the one who sent the objectSyncParams.
                 socketRoomContext.multicastSignal("objectSyncParams", params, user.id);
         }
     },

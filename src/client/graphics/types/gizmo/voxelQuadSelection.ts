@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { roomRuntimeMemoryObservable, updateVoxelGridObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { roomRuntimeMemoryObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
@@ -23,9 +23,6 @@ export default class VoxelQuadSelection
 
     static trySelect(voxel: Voxel, quadIndex: number): boolean
     {
-        if (!listenersInitialized)
-            initListeners();
-        
         // If the quadIndex doesn't even make sense, just unselect.
         if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
         {
@@ -69,85 +66,46 @@ export default class VoxelQuadSelection
     }
 }
 
-function refresh()
-{
-    if (!listenersInitialized)
-        initListeners();
-
-    const existingSelection = voxelQuadSelectionObservable.peek();
-    
-    if (existingSelection != null)
-    {
-        const quadIndex = existingSelection.quadIndex;
-
-        // If the quadIndex doesn't even make sense, just unselect.
-        if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
-            voxelQuadSelectionObservable.set(null);
-
-        // If the quad is hidden, just unselect.
-        const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
-        if ((quad & 0b10000000) == 0)
-            voxelQuadSelectionObservable.set(null);
-
-        // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
-        voxelQuadSelectionObservable.notify();
-    }
-}
-
-let listenersInitialized = false;
 let voxelQuadSelectionMeshClone: THREE.Mesh | null = null;
 
-function initListeners()
-{
-    voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {
-        if (selection)
+voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {
+    if (selection)
+    {
+        if (voxelQuadSelectionMeshClone == null)
         {
-            if (voxelQuadSelectionMeshClone == null)
-            {
-                const mesh = await MeshFactory.loadMesh("Square", new WireframeMaterialParams("#00ff00"));
-                voxelQuadSelectionMeshClone = mesh.clone();
-                GraphicsManager.getScene().add(voxelQuadSelectionMeshClone);
-            }
-            const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
-                getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
-
-            voxelQuadSelectionMeshClone!.scale.set(scaleX, scaleY, scaleZ);
-            voxelQuadSelectionMeshClone!.position.set(
-                selection.voxel.col + 0.5 + offsetX,
-                offsetY,
-                selection.voxel.row + 0.5 + offsetZ
-            );
-
-            const p = voxelQuadSelectionMeshClone!.position;
-            vec3Temp.set(p.x + dirX, p.y + dirY, p.z + dirZ);
-            voxelQuadSelectionMeshClone!.lookAt(vec3Temp);
-
-            voxelQuadSelectionMeshClone.visible = true;
+            const mesh = await MeshFactory.loadMesh("Square", new WireframeMaterialParams("#00ff00"));
+            voxelQuadSelectionMeshClone = mesh.clone();
+            GraphicsManager.getScene().add(voxelQuadSelectionMeshClone);
         }
-        else
-        {
-            if (voxelQuadSelectionMeshClone == null)
-                console.error(`VoxelQuad selection's mesh was not instantiated.`);
-            else
-                voxelQuadSelectionMeshClone.visible = false;
-        }
-    });
+        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
+            getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
 
-    updateVoxelGridObservable.addListener("voxelQuadSelection", refresh);
+        voxelQuadSelectionMeshClone!.scale.set(scaleX, scaleY, scaleZ);
+        voxelQuadSelectionMeshClone!.position.set(
+            selection.voxel.col + 0.5 + offsetX,
+            offsetY,
+            selection.voxel.row + 0.5 + offsetZ
+        );
 
-    roomRuntimeMemoryObservable.addListener("voxelQuadSelection", async (roomRuntimeMemory: RoomRuntimeMemory) => {
-        VoxelQuadSelection.unselect();
+        const p = voxelQuadSelectionMeshClone!.position;
+        vec3Temp.set(p.x + dirX, p.y + dirY, p.z + dirZ);
+        voxelQuadSelectionMeshClone!.lookAt(vec3Temp);
 
-        if (voxelQuadSelectionMeshClone)
-        {
-            voxelQuadSelectionMeshClone.removeFromParent();
-            voxelQuadSelectionMeshClone = null;
-        }
-        voxelQuadSelectionObservable.removeListener("voxelQuadSelection");
-        updateVoxelGridObservable.removeListener("voxelQuadSelection");
-        roomRuntimeMemoryObservable.removeListener("voxelQuadSelection");
-        listenersInitialized = false;
-    });
+        voxelQuadSelectionMeshClone.visible = true;
+    }
+    else
+    {
+        if (voxelQuadSelectionMeshClone != null)
+            voxelQuadSelectionMeshClone.visible = false;
+    }
+});
 
-    listenersInitialized = true;
-}
+roomRuntimeMemoryObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
+    VoxelQuadSelection.unselect();
+
+    if (voxelQuadSelectionMeshClone)
+    {
+        voxelQuadSelectionMeshClone.removeFromParent();
+        voxelQuadSelectionMeshClone = null;
+    }
+});

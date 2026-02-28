@@ -2,11 +2,12 @@
 
 ## Technology Stack
 - **Runtime**: Node.js with TypeScript
-- **Frontend**: Three.js (3D graphics), Axios (client-side HTTP requests), Socket.IO client (real-time communication), React, Tailwind CSS, EJS
-- **Backend**: Express.js (HTTP requests, authentication), Socket.IO server (real-time communication), Firebase (database, file storage, content distribution), Nginx (VPS's web server)
-- **Database**: Firestore, Firebase Storage
+- **Frontend**: Three.js (3D graphics), React, Tailwind CSS, EJS
+- **Networking**: Express.js (HTTP requests, authentication), Socket.IO (real-time communication), Axios (client-side HTTP requests), Nginx (VPS's web server)
+- **Database**: Firebase (Firestore, Cloud Storage, Content Distribution)
 - **Build Tools**: Webpack (typescript compiler, bundler)
-- **Dev Tools**: Husky (git hooks), PM2 (runtime process management), GitHub (source control, workflows, and static page hosting), Playwright (E2E tests), VS Code (IDE), Claude Code (AI assistant)
+- **Dev Tools**: Husky (git hooks), PM2 (runtime process management), GitHub (source control, workflows, and static page hosting), VS Code (IDE), Claude Code (AI assistant)
+- **Tests**: Playwright (E2E tests), Vitest (Integration tests), fast-check (Property-based testing)
 
 ## Project Structure
 ### `/src` - Main Source Code
@@ -53,10 +54,12 @@
 - **`/scripts`** - Helper scripts (e.g. dev-server with hot-reloading capability, secrets injector)
 
 ### `/docs` - Documents explaining technical details
-- **`/devOps`** - E2E, Local Development, VPS
+- **`/devOps`** - Tests, Local Development, VPS
 - **`/networking`** - HTTP/Socket/Authentication Flows
 
-### `/e2e` - E2E Test Fixtures, Specs, Configs, and Helpers
+### `/tests` - All Tests
+- **`/e2e`** - E2E test fixtures, specs, configs, and helpers (Playwright)
+- **`/integration`** - Integration tests and helpers (Vitest)
 
 ### `/.github` - GitHub Configuration and Workflows
 

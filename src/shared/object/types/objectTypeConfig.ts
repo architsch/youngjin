@@ -24,6 +24,9 @@ export default interface ObjectTypeConfig
             },
             speechBubble?: {
                 yOffset: number,
+                prependUserNameToMessage: boolean,
+                showMessageIfSpawnedByMe: boolean,
+                showMessageIfSpawnedByOther: boolean,
             },
             playerProximityDetector?: {
                 maxDist: number,

@@ -4,7 +4,6 @@ import GraphicsManager from "../../../../graphics/graphicsManager";
 import { playerViewTargetPosObservable } from "../../../../system/clientObservables";
 import GameObject from "../../../types/gameObject";
 import Num from "../../../../../shared/math/util/num";
-import { NEAR_EPSILON } from "../../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 
 const frustum = new THREE.Frustum();
@@ -51,20 +50,29 @@ export default class FirstPersonCamera
     private updateTargetPitch(): void
     {
         const playerViewTarget = playerViewTargetPosObservable.peek();
-        const angleForViewTarget = this.processViewTarget(playerViewTarget);
 
-        // The higher you are, the more you should look down (unless something is selected).
-        const angleForAltitude = -0.4 * this.player!.position.y;
+        // If there is an active view target, you should either:
+        // (1) Look down toward the view target if it is placed below your eye level, or
+        // (2) Look up toward the view target if it is placed above your eye level.
+        // (3) Neither try to look down nor up if the view target doesn't exist (i.e. angle == 0).
+        const pitchAngleForViewTarget = this.processViewTarget(playerViewTarget);
 
-        const desiredAngle = playerViewTarget
-            ? angleForViewTarget : angleForAltitude;
+        // The higher you are, the more you should look down
+        // (unless there is a view target that is placed higher).
+        const pitchAngleForAltitude = -0.4 * this.player!.position.y;
 
-        if (Math.abs(desiredAngle) > NEAR_EPSILON)
-            this.quaternionInterpTarget.setFromAxisAngle(right, desiredAngle);
-        else
-            this.quaternionInterpTarget.copy(this.defaultQuaternion);
+        // (+1 = "look up"), (-1 = "look down"), (0 = "neither")
+        const s1 = Math.sign(pitchAngleForViewTarget);
+        const s2 = Math.sign(pitchAngleForAltitude);
+
+        const desiredPitchAngle = (s1 == -s2)
+            ? Math.max(pitchAngleForViewTarget, pitchAngleForAltitude) // If one of the angles tries to look down and the other tries to look up, always prefer looking up.
+            : (s1 == 0 ? s2 : s1) * Math.max(s1 * pitchAngleForViewTarget, s2 * pitchAngleForAltitude); // Otherwise, choose the angle with the biggest absolute value.
+
+        this.quaternionInterpTarget.setFromAxisAngle(right, desiredPitchAngle);
     }
 
+    // Updates the view-target's selection state and returns the desired camera pitch angle.
     private processViewTarget(playerViewTargetPos: THREE.Vector3 | null): number
     {
         if (playerViewTargetPos == null)
@@ -78,10 +86,13 @@ export default class FirstPersonCamera
         // automatically remove that selection so as to make the camera recover its normal pitch.
         if (frustum.containsPoint(playerViewTargetPos)) // selection is in camera view
         {
+            // Cancel the plan to unselect the current selection if it
+            // came back into the camera view before the timeout.
             WorldSpaceSelectionUtil.cancelDelayedUnselectTimeout();
         }
         else // selection is NOT in camera view
         {
+            // Unselect the current selection after a bit of delay.
             if (!WorldSpaceSelectionUtil.unselectionPending())
                 WorldSpaceSelectionUtil.unselectAllAfterDelay(300);
         }
@@ -95,11 +106,13 @@ export default class FirstPersonCamera
         viewDir.subVectors(playerViewTargetPos, cameraPos);
         viewDirOnVerticalPlane.copy(viewDir);
         viewDirOnVerticalPlane.projectOnPlane(playerRightDir); // viewDirOnVerticalPlane = view direction that is projected onto the plane which dissects the player's face vertically.
+        viewDirOnVerticalPlane.normalize();
 
-        const verticalAngleForViewTarget = Num.clampInRange(
-            0.5 * playerForwardDir.angleTo(viewDirOnVerticalPlane) * (viewDirOnVerticalPlane.y > 0 ? 1 : -1),
-            -0.6, 0.6
+        const pitchAngleForViewTarget = Num.clampInRange(
+            0.5 * playerForwardDir.angleTo(viewDirOnVerticalPlane)
+                * Math.sign(viewDirOnVerticalPlane.y - playerForwardDir.y), // Math.sign(...) = (+1 if you need to "look up", or -1 if you need to "look down")
+            -0.7, 0.7
         );
-        return verticalAngleForViewTarget;
+        return pitchAngleForViewTarget;
     }
 }

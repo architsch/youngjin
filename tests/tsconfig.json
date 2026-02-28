@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "outDir": "../dist/tests",
+        "allowJs": true,
+        "noImplicitAny": true,
+        "sourceMap": true,
+        "module": "es6",
+        "target": "es2020",
+        "jsx": "react",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "types": ["vitest/globals"],
+        "lib": ["ES2021.String"]
+    },
+    "include": ["./**/*", "../src/server/**/*", "../src/shared/**/*"]
+}

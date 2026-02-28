@@ -9,10 +9,17 @@ import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/object
 
 const vec3Temp = new THREE.Vector3();
 
+// Whenever you are implementing a new GameObject type, you must:
+//      (1) Create a class for the new type and make sure that it inherits from GameObject.
+//      (2) Add an entry to ObjectConstructorMap.
+//      (3) Add an entry to ObjectTypeConfigMap.
+// Whenever you are modifying an existing GameObject type, you must:
+//      (1) Make appropriate modifications to the existing type's class (i.e. the one which inherits from GameObject).
+//      (2) Make appropriate modifications to the existing type's entry in ObjectTypeConfigMap.
 export default abstract class GameObject
 {
-    params: ObjectSpawnParams;
-    obj: THREE.Object3D = new THREE.Object3D();
+    params: ObjectSpawnParams; // When a GameObject spawns, use these parameters to initialize it.
+    obj: THREE.Object3D = new THREE.Object3D(); // This Three.js object holds the GameObject's transform attributes such as position, rotation, and scale.
     config: ObjectTypeConfig;
     components: {[componentName: string]: GameObjectComponent} = {};
     spawnFinished: boolean = false;
@@ -33,6 +40,7 @@ export default abstract class GameObject
         this.config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
         for (const [spawnType, componentConfigs] of Object.entries(this.config.components))
         {
+            // Only add components which meet the object's spawn condition.
             if (this.meetsSpawnCondition(spawnType as SpawnType))
             {
                 for (const [componentName, componentConfig] of Object.entries(componentConfigs))
@@ -46,10 +54,11 @@ export default abstract class GameObject
         }
     }
 
-    // Customizable callback functions
-    onClick(instanceId: number, hitPoint: THREE.Vector3) {}
-    onPlayerProximityStart() {}
-    onPlayerProximityEnd() {}
+    // Callback functions which must be overriden by subclasses
+    // if they are meant to be used:
+    onClick(instanceId: number, hitPoint: THREE.Vector3) {} // Invoked when the object is clicked by the user's pointer input (mouse or touch). "instanceId" is the ID of the mesh instance that was hit by the user's pointer input.
+    onPlayerProximityStart() {} // Invoked when the object gets close to the player.
+    onPlayerProximityEnd() {} // Invoked when the object moves away from the player.
 
     async onSpawn(): Promise<void>
     {
@@ -77,6 +86,10 @@ export default abstract class GameObject
         return this.params.sourceUserID == App.getUser().id;
     }
 
+    // Checks to see if the position-updating process should be regulated by one of the components
+    // (e.g. collider updating the object's position based on physics).
+    // If there is one, let that component intercept the position-updating process.
+    // If not, just assign the given position to the object's current position.
     trySetPosition(position: THREE.Vector3)
     {
         // If there is a component which has the "trySetPosition" method,
@@ -98,6 +111,9 @@ export default abstract class GameObject
             this.position.copy(position);
     }
 
+    // This method works like "trySetPosition", but is intended to be invoked
+    // only in an exceptional case where the object's position must be set forcefully
+    // (e.g. when the object's client-side position is out of sync with its server-side position).
     forceSetPosition(position: THREE.Vector3)
     {
         // If there is a component which has the "forceSetPosition" method,
@@ -119,12 +135,11 @@ export default abstract class GameObject
             this.position.copy(position);
     }
     
+    // Aliases
     get position(): THREE.Vector3 { return this.obj.position; }
     set position(p: THREE.Vector3) { this.obj.position.set(p.x, p.y, p.z); }
-
     get rotation(): THREE.Euler { return this.obj.rotation; }
     set rotation(r: THREE.Euler) { this.obj.rotation.set(r.x, r.y, r.z); }
-
     get quaternion(): THREE.Quaternion { return this.obj.quaternion; }
     set quaternion(q: THREE.Quaternion) { this.obj.quaternion.set(q.x, q.y, q.z, q.w); }
 

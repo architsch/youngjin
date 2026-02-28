@@ -10,11 +10,15 @@ let lastObjectIdNumber = 0;
 
 const ObjectFactory =
 {
-    createClientSideObject: (objectTypeIndex: number, transform: ObjectTransform, metadata: ObjectMetadata = {}): GameObject =>
+    // This method is called when the client is instantiating an object which only belongs to the client.
+    // The server, therefore, is never informed of this object's existence.
+    createClientSideObject: (roomID: string, objectTypeIndex: number, transform: ObjectTransform, metadata: ObjectMetadata = {}): GameObject =>
     {
-        const userID = App.getUser().id;
+        const user = App.getUser();
         const params = new ObjectSpawnParams(
-            userID,
+            roomID,
+            user.id,
+            user.userName,
             objectTypeIndex,
             (++lastObjectIdNumber).toString(),
             transform,
@@ -23,6 +27,8 @@ const ObjectFactory =
         const objectType = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).objectType;
         return ObjectConstructorMap[objectType](params);
     },
+    // This method is called when the client is instantiating an object
+    // that was spawned by the server.
     createServerSideObject: (params: ObjectSpawnParams): GameObject =>
     {
         const objectType = ObjectTypeConfigMap.getConfigByIndex(params.objectTypeIndex).objectType;

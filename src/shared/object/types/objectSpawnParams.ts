@@ -9,17 +9,21 @@ import { ObjectMetadataKey } from "./objectMetadataKey";
 
 export default class ObjectSpawnParams extends EncodableData
 {
+    roomID: string;
     sourceUserID: string;
+    sourceUserName: string;
     objectTypeIndex: number;
     objectId: string;
     transform: ObjectTransform;
     metadata: ObjectMetadata;
 
-    constructor(sourceUserID: string, objectTypeIndex: number, objectId: string,
+    constructor(roomID: string, sourceUserID: string, sourceUserName: string, objectTypeIndex: number, objectId: string,
         transform: ObjectTransform, metadata: ObjectMetadata = {})
     {
         super();
+        this.roomID = roomID;
         this.sourceUserID = sourceUserID;
+        this.sourceUserName = sourceUserName;
         this.objectTypeIndex = objectTypeIndex;
         this.objectId = objectId;
         this.transform = transform;
@@ -56,7 +60,9 @@ export default class ObjectSpawnParams extends EncodableData
 
     encode(bufferState: BufferState)
     {
+        new EncodableByteString(this.roomID).encode(bufferState);
         new EncodableByteString(this.sourceUserID).encode(bufferState);
+        new EncodableByteString(this.sourceUserName).encode(bufferState);
         new EncodableRawByteNumber(this.objectTypeIndex).encode(bufferState);
         new EncodableByteString(this.objectId).encode(bufferState);
         this.transform.encode(bufferState);
@@ -65,11 +71,13 @@ export default class ObjectSpawnParams extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
+        const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const sourceUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        const sourceUserName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const objectTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const transform = ObjectTransform.decode(bufferState) as ObjectTransform;
         const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
-        return new ObjectSpawnParams(sourceUserID, objectTypeIndex, objectId, transform, metadata);
+        return new ObjectSpawnParams(roomID, sourceUserID, sourceUserName, objectTypeIndex, objectId, transform, metadata);
     }
 }

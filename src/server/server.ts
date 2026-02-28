@@ -90,7 +90,7 @@ ${LatencySimUtil.getConfigSummary()}
 
     // Trust proxy headers from Nginx reverse proxy
     // Required for correct req.ip, req.protocol, req.secure behind Nginx
-    app.set("trust proxy", true);
+    app.set("trust proxy", 1); // Allow up to a single (i.e. 1) proxy hop.
 
     // middleware
     app.use(bodyParser.json());

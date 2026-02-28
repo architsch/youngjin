@@ -1,6 +1,5 @@
 import GameObject from "../object/types/gameObject";
 import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectFactory from "./factories/objectFactory";
 import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
@@ -8,10 +7,21 @@ import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import VoxelMeshInstancer from "./components/voxelMeshInstancer";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import PersistentObjectMeshInstancer from "./components/persistentObjectMeshInstancer";
-import { objectDespawnObservable, objectSpawnObservable } from "../system/clientObservables";
+import AsyncUtil from "../../shared/system/util/asyncUtil";
+import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
+import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable } from "../system/clientObservables";
+import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
+import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
+import SpeechBubble from "./components/speechBubble";
+import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
+import ObjectSyncReceiver from "./components/objectSyncReceiver";
+import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
+import ObjectSyncEmitter from "./components/objectSyncEmitter";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
+const playerByUserID: {[userID: string]: GameObject} = {};
+const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
 const ObjectManager =
 {
@@ -23,7 +33,7 @@ const ObjectManager =
     {
         const user = App.getUser();
         if (user)
-            return gameObjects[user.id];
+            return playerByUserID[user.id];
         console.error(`Failed to fetch the user data (env = ${JSON.stringify(App.getEnv())})`);
         return undefined;
     },
@@ -45,6 +55,7 @@ const ObjectManager =
         for (const voxel of roomRuntimeMemory.room.voxelGrid.voxels)
         {
             const gameObject = ObjectFactory.createClientSideObject(
+                roomRuntimeMemory.room.id,
                 voxelTypeIndex,
                 new ObjectTransform(
                     voxel.col + 0.5, 0, voxel.row + 0.5,
@@ -70,7 +81,9 @@ const ObjectManager =
                 default: throw new Error(`Unknown direction (${po.direction})`);
             }
             const objectSpawnParams = new ObjectSpawnParams(
-                "", // Persistent objects are not directly owned by anyone.
+                roomRuntimeMemory.room.id,
+                "", // Persistent objects are not directly owned by anyone, so sourceUserID is empty.
+                "", // Persistent objects are not directly owned by anyone, so sourceUserName is empty.
                 po.objectTypeIndex,
                 po.objectId,
                 new ObjectTransform(po.x, po.y, po.z, dirX, dirY, dirZ),
@@ -96,45 +109,28 @@ const ObjectManager =
             const object = ObjectFactory.createServerSideObject(objectRuntimeMemory.objectSpawnParams);
             await ObjectManager.spawnObject(object);
         }
-
-        // Add listeners
-        objectSpawnObservable.addListener("room", async (params: ObjectSpawnParams) => {
-            if (gameObjects[params.objectId] != undefined)
-                return;
-            const gameObject = ObjectFactory.createServerSideObject(params);
-            await ObjectManager.spawnObject(gameObject);
-        });
-        objectDespawnObservable.addListener("room", async (params: ObjectDespawnParams) => {
-            await ObjectManager.despawnObject(params.objectId);
-        });
     },
     unload: async () =>
     {
         // Unload objects
-        const stringsTemp: string[] = [];
         for (const key of Object.keys(gameObjects))
-            stringsTemp.push(key);
-        for (const key of stringsTemp)
         {
             await ObjectManager.despawnObject(key);
             delete gameObjects[key];
         }
-
-        stringsTemp.length = 0;
         for (const key of Object.keys(updatableGameObjects))
-            stringsTemp.push(key);
-        for (const key of stringsTemp)
             delete updatableGameObjects[key];
-
-        // Remove listeners
-        objectSpawnObservable.removeListener("room");
-        objectDespawnObservable.removeListener("room");
+        for (const key of Object.keys(playerByUserID))
+            delete playerByUserID[key];
     },
     spawnObject: async (object: GameObject) =>
     {
         if (gameObjects[object.params.objectId] == undefined)
         {
             gameObjects[object.params.objectId] = object;
+
+            if (object.params.objectTypeIndex === playerTypeIndex)
+                playerByUserID[object.params.sourceUserID] = object;
 
             let updatable = false;
             for (const component of Object.values(object.components))
@@ -160,6 +156,8 @@ const ObjectManager =
             delete gameObjects[objectId];
             if (updatableGameObjects[object.params.objectId] != undefined)
                 delete updatableGameObjects[object.params.objectId];
+            if (object.params.objectTypeIndex === playerTypeIndex)
+                delete playerByUserID[object.params.sourceUserID];
         }
         else
         {
@@ -167,5 +165,55 @@ const ObjectManager =
         }
     },
 }
+
+const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
+    AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
+
+// When the client receives an ObjectSpawnParams signal from the server,
+// the given object will spawn as soon as the room to which it belongs is available.
+objectSpawnObservable.addListener("objectManager", async (params: ObjectSpawnParams) => {
+    const success = await waitUntilSignalProcessingReady("objectSpawnParams",
+        () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+    if (!success)
+        return;
+    const gameObject = ObjectFactory.createServerSideObject(params);
+    await ObjectManager.spawnObject(gameObject);
+});
+
+// When the client receives an ObjectDespawnParams signal from the server,
+// the given object will despawn as soon as the room to which it belongs is available.
+objectDespawnObservable.addListener("objectManager", async (params: ObjectDespawnParams) => {
+    const success = await waitUntilSignalProcessingReady("objectDespawnParams",
+        () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+    if (!success)
+        return;
+    await ObjectManager.despawnObject(params.objectId);
+});
+
+// When the client receives an ObjectMessageParams signal from the server,
+// the given message will be displayed as soon as the message's sender object is found.
+objectMessageObservable.addListener("objectManager", async (params: ObjectMessageParams) => {
+    const success = await waitUntilSignalProcessingReady("objectMessageParams",
+        () => ObjectManager.getObjectById(params.senderObjectId) != undefined);
+    if (!success)
+        return;
+    const senderObject = ObjectManager.getObjectById(params.senderObjectId)!;
+    const speechBubble = senderObject.components.speechBubble as SpeechBubble;
+    speechBubble.onObjectMessageReceived(params);
+});
+
+objectSyncObservable.addListener("objectManager", async (params: ObjectSyncParams) => {
+    const object = ObjectManager.getObjectById(params.objectId)!;
+    if (object.components.objectSyncReceiver)
+        (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectSyncReceived(params);
+});
+
+objectDesyncResolveObservable.addListener("objectManager", async (params: ObjectDesyncResolveParams) => {
+    const object = ObjectManager.getObjectById(params.objectId)!;
+    if (object.components.objectSyncReceiver)
+        (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectDesyncResolveReceived(params);
+    if (object.components.objectSyncEmitter)
+        (object.components.objectSyncEmitter as ObjectSyncEmitter).onObjectDesyncResolveReceived(params);
+});
 
 export default ObjectManager;

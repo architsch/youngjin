@@ -6,6 +6,8 @@ import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 
 export default class VoxelGameObject extends GameObject
 {
+    // "instanceId" is the ID of the voxelQuad's mesh instance that was
+    // hit by the user's pointer input.
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
         const player = ObjectManager.getMyPlayer();

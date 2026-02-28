@@ -1,7 +1,7 @@
 import { test as base, Page } from "@playwright/test";
 
 // The "setup" project in playwright.config.ts creates a guest session and saves
-// cookies to e2e/.auth/guest.json. All tests in the "chromium" project inherit
+// cookies to tests/e2e/.auth/guest.json. All tests in the "chromium" project inherit
 // that storageState automatically. This fixture navigates to /mypage using those
 // saved cookies, so no new guest user is created.
 

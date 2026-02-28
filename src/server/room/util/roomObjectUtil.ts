@@ -1,4 +1,3 @@
-import User from "../../../shared/user/types/user";
 import AABB2 from "../../../shared/math/types/aabb2";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
@@ -7,9 +6,16 @@ import PhysicsManager from "../../../shared/physics/physicsManager";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 
+let serverObjectIdCounter = 0;
+
+export function generateObjectId(): string
+{
+    return `s${++serverObjectIdCounter}`;
+}
+
 export function addObject(socketUserContext: SocketUserContext, objectRuntimeMemory: ObjectRuntimeMemory)
 {
-    const user: User = socketUserContext.socket.handshake.auth as User;
+    const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
     const objectId = objectRuntimeMemory.objectSpawnParams.objectId;
 
@@ -60,7 +66,7 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
 
 export function removeObject(socketUserContext: SocketUserContext, objectId: string)
 {
-    const user: User = socketUserContext.socket.handshake.auth as User;
+    const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
     console.log(`RoomManager.removeObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
     if (roomID == undefined)
@@ -87,7 +93,7 @@ export function removeObject(socketUserContext: SocketUserContext, objectId: str
     if (colliderConfig)
         PhysicsManager.removeObject(roomID, objectId);
     
-    const despawnParams = new ObjectDespawnParams(objectId);
+    const despawnParams = new ObjectDespawnParams(roomID, objectId);
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (!socketRoomContext)

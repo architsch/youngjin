@@ -1,5 +1,6 @@
 import { FormEvent, FormEventHandler, useEffect, useRef } from "react";
 import { numActiveTextInputsObservable } from "../../../system/clientObservables";
+import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../../shared/system/sharedConstants";
 
 export default function ChatTextInput({textInput, setTextInput}
     : {textInput: string, setTextInput: (newTextInput: string) => void})
@@ -7,7 +8,7 @@ export default function ChatTextInput({textInput, setTextInput}
     const inputRef = useRef<HTMLInputElement>(null);
 
     const onInput: FormEventHandler<HTMLInputElement> = (event: FormEvent<HTMLInputElement>) => {
-        setTextInput(event.currentTarget.value.substring(0, 32));
+        setTextInput(event.currentTarget.value.substring(0, OBJECT_MESSAGE_MAX_LENGTH));
     };
 
     const onKeyDown = (ev: KeyboardEvent) =>

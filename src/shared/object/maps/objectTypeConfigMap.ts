@@ -1,7 +1,10 @@
 import ObjectTypeConfig from "../types/objectTypeConfig";
 
+// This map specifies all types of GameObject and their global configs.
+// Each config specifies all types of GameObjectComponents which must be included in the
+// GameObject when it spawns (Each GameObject can have one or more GameObjectComponents in it).
 const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
-    [0, {
+    [0, { // This object represents each voxel in the room's voxelGrid. Each voxel consists of blocks, and each block consists of quads (aka "voxelQuads").
         objectType: "Voxel",
         components: {
             spawnedByAny: {
@@ -12,7 +15,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             },
         },
     }],
-    [1, {
+    [1, { // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
         objectType: "Player",
         components: {
             spawnedByAny: {
@@ -22,6 +25,9 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 },
                 speechBubble: {
                     yOffset: 2.4,
+                    prependUserNameToMessage: true,
+                    showMessageIfSpawnedByMe: false,
+                    showMessageIfSpawnedByOther: true,
                 },
                 playerProximityDetector: {
                     maxDist: 0.45,
@@ -42,7 +48,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             },
         },
     }],
-    [2, {
+    [2, { // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
         objectType: "Canvas",
         components: {
             spawnedByAny: {
@@ -53,6 +59,9 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 },
                 speechBubble: {
                     yOffset: 0,
+                    prependUserNameToMessage: false,
+                    showMessageIfSpawnedByMe: true,
+                    showMessageIfSpawnedByOther: true,
                 },
                 playerProximityDetector: {
                     maxDist: 3,

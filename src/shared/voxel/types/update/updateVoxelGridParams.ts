@@ -1,4 +1,5 @@
 import BufferState from "../../../networking/types/bufferState";
+import EncodableByteString from "../../../networking/types/encodableByteString";
 import EncodableData from "../../../networking/types/encodableData";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
 import { VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../system/sharedConstants";
@@ -10,16 +11,20 @@ import UpdateVoxelGridTaskParams from "./updateVoxelGridTaskParams";
 
 export default class UpdateVoxelGridParams extends EncodableData
 {
+    roomID: string;
     tasks: UpdateVoxelGridTaskParams[];
 
-    constructor(tasks: UpdateVoxelGridTaskParams[])
+    constructor(roomID: string, tasks: UpdateVoxelGridTaskParams[])
     {
         super();
+        this.roomID = roomID;
         this.tasks = tasks;
     }
 
     encode(bufferState: BufferState)
     {
+        new EncodableByteString(this.roomID).encode(bufferState);
+
         for (const task of this.tasks)
         {
             new EncodableRawByteNumber(task.type).encode(bufferState);
@@ -29,6 +34,8 @@ export default class UpdateVoxelGridParams extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
+        const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+
         const tasks: UpdateVoxelGridTaskParams[] = [];
         while (bufferState.byteIndex < bufferState.view.byteLength)
         {
@@ -53,6 +60,6 @@ export default class UpdateVoxelGridParams extends EncodableData
                     break;
             }
         }
-        return new UpdateVoxelGridParams(tasks);
+        return new UpdateVoxelGridParams(roomID, tasks);
     }
 }
