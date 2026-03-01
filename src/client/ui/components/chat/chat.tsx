@@ -5,7 +5,7 @@ import ChatSentMessage from "./chatSentMessage";
 import ObjectManager from "../../../object/objectManager";
 import SpeechBubble from "../../../object/components/speechBubble";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import { roomRuntimeMemoryObservable } from "../../../system/clientObservables";
+import { roomChangedObservable } from "../../../system/clientObservables";
 import App from "../../../app";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import AsyncUtil from "../../../../shared/system/util/asyncUtil";
@@ -15,7 +15,7 @@ export default function Chat()
     const [state, setState] = useState<ChatState>({textInput: "", sentMessage: ""});
 
     useEffect(() => {
-        roomRuntimeMemoryObservable.addListener("ui_chat", async (roomRuntimeMemory: RoomRuntimeMemory) => {
+        roomChangedObservable.addListener("ui_chat", async (roomRuntimeMemory: RoomRuntimeMemory) => {
             const user = App.getUser();
             if (!user)
                 return;
@@ -32,7 +32,7 @@ export default function Chat()
             else
                 setState(prev => ({...prev, sentMessage: ""}));
         });
-        return () => { roomRuntimeMemoryObservable.removeListener("ui_chat"); };
+        return () => { roomChangedObservable.removeListener("ui_chat"); };
     }, []);
 
     const setTextInput = (textInput: string) => {

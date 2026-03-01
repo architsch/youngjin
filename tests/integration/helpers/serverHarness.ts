@@ -146,7 +146,7 @@ import RoomManager from "../../../src/server/room/roomManager";
 import UserManager from "../../../src/server/user/userManager";
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
-import { getUserGameplayState } from "../../../src/server/room/util/roomUserUtil";
+import { getUserGameplayState, getPlayerObjectRuntimeMemory, clearPlayerObjectRuntimeMemories } from "../../../src/server/room/util/roomUserUtil";
 import UserGameplayState from "../../../src/server/user/types/userGameplayState";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import ObjectMessageParams from "../../../src/shared/object/types/objectMessageParams";
@@ -196,6 +196,7 @@ export const harness = {
         }
         for (const uid in RoomManager.currentRoomIDByUserID)
             delete RoomManager.currentRoomIDByUserID[uid];
+        clearPlayerObjectRuntimeMemories();
 
         // Reset in-memory DB stores
         resetStores();
@@ -302,11 +303,7 @@ export const harness = {
      */
     getPlayerObjectInRoom(ctx: ConnectedUser)
     {
-        const roomID = RoomManager.currentRoomIDByUserID[ctx.user.id];
-        if (!roomID) return undefined;
-        const roomMem = RoomManager.roomRuntimeMemories[roomID];
-        if (!roomMem) return undefined;
-        const objMem = roomMem.playerObjectMemoryByUserID[ctx.user.id];
+        const objMem = getPlayerObjectRuntimeMemory(ctx.user.id);
         if (!objMem) return undefined;
         return objMem.objectSpawnParams;
     },
@@ -463,11 +460,7 @@ export const harness = {
 
     getPlayerObjectId(ctx: ConnectedUser): string | undefined
     {
-        const roomID = RoomManager.currentRoomIDByUserID[ctx.user.id];
-        if (!roomID) return undefined;
-        const roomMem = RoomManager.roomRuntimeMemories[roomID];
-        if (!roomMem) return undefined;
-        const playerMem = roomMem.playerObjectMemoryByUserID[ctx.user.id];
+        const playerMem = getPlayerObjectRuntimeMemory(ctx.user.id);
         if (!playerMem) return undefined;
         return playerMem.objectSpawnParams.objectId;
     },
@@ -475,6 +468,7 @@ export const harness = {
     /**
      * Direct access to the underlying modules for advanced assertions.
      */
+    getPlayerObjectRuntimeMemory,
     RoomManager,
     UserManager,
     PhysicsManager,

@@ -1,6 +1,6 @@
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import VoxelMeshInstancer from "../object/components/voxelMeshInstancer";
-import { updateVoxelGridObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
 import Room from "../../shared/room/types/room";
 import ObjectManager from "../object/objectManager";
@@ -29,84 +29,80 @@ const VoxelManager =
     unload: async () =>
     {
     },
+    // When the client receives an UpdateVoxelGridParams signal from the server,
+    // the given voxelGrid-update will be applied as soon as the room to which it belongs is available.
+    onUpdateVoxelGridReceived: async (params: UpdateVoxelGridParams) => {
+        const success = await waitUntilSignalProcessingReady("updateVoxelGridParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+
+        const room = App.getCurrentRoom()!;
+        for (const task of params.tasks)
+        {
+            switch (task.type)
+            {
+                case VOXEL_GRID_TASK_TYPE_MOVE:
+                    const moveParams = task as MoveVoxelBlockParams;
+                    moveVoxelBlock(room, moveParams.quadIndex, moveParams.rowOffset, moveParams.colOffset, moveParams.collisionLayerOffset);
+                    break;
+                case VOXEL_GRID_TASK_TYPE_ADD:
+                    const addParams = task as AddVoxelBlockParams;
+                    addVoxelBlock(room, addParams.quadIndex, addParams.quadTextureIndicesWithinLayer);
+                    break;
+                case VOXEL_GRID_TASK_TYPE_REMOVE:
+                    const removeParams = task as RemoveVoxelBlockParams;
+                    removeVoxelBlock(room, removeParams.quadIndex);
+                    break;
+                case VOXEL_GRID_TASK_TYPE_TEX:
+                    const texParams = task as SetVoxelQuadTextureParams;
+                    const quadIndex = texParams.quadIndex;
+                    const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+                    const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
+                    const row = getVoxelRowFromQuadIndex(quadIndex);
+                    const col = getVoxelColFromQuadIndex(quadIndex);
+                    const voxel = getVoxel(room, row, col);
+                    if (!voxel)
+                    {
+                        console.error(`Voxel update failed (VOXEL_GRID_TASK_TYPE_TEX) - voxel not found - params: ${JSON.stringify(params)}`);
+                        return;
+                    }
+                    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+                    setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, texParams.textureIndex);
+                    break;
+                default:
+                    console.error(`Unknown task type :: ${task.type}`);
+                    break;
+            }
+        }
+
+        // After the voxelGrid mutation is applied, refresh the voxelQuad selection
+        // to ensure it stays in sync with the updated grid state.
+        const existingSelection = voxelQuadSelectionObservable.peek();
+        if (existingSelection != null)
+        {
+            const quadIndex = existingSelection.quadIndex;
+
+            // If the quadIndex doesn't even make sense, just unselect.
+            if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
+            {
+                voxelQuadSelectionObservable.set(null);
+                return;
+            }
+
+            // If the quad is hidden, just unselect.
+            const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
+            if ((quad & 0b10000000) == 0)
+            {
+                voxelQuadSelectionObservable.set(null);
+                return;
+            }
+
+            // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
+            voxelQuadSelectionObservable.notify();
+        }
+    },
 }
-
-const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
-    AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
-
-// When the client receives an UpdateVoxelGridParams signal from the server,
-// the given voxelGrid-update will be applied as soon as the room to which it belongs is available.
-updateVoxelGridObservable.addListener("voxelManager", async (params: UpdateVoxelGridParams) => {
-    const success = await waitUntilSignalProcessingReady("updateVoxelGridParams",
-        () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
-    if (!success)
-        return;
-
-    const room = App.getCurrentRoom()!;
-    for (const task of params.tasks)
-    {
-        switch (task.type)
-        {
-            case VOXEL_GRID_TASK_TYPE_MOVE:
-                const moveParams = task as MoveVoxelBlockParams;
-                moveVoxelBlock(room, moveParams.quadIndex, moveParams.rowOffset, moveParams.colOffset, moveParams.collisionLayerOffset);
-                break;
-            case VOXEL_GRID_TASK_TYPE_ADD:
-                const addParams = task as AddVoxelBlockParams;
-                addVoxelBlock(room, addParams.quadIndex, addParams.quadTextureIndicesWithinLayer);
-                break;
-            case VOXEL_GRID_TASK_TYPE_REMOVE:
-                const removeParams = task as RemoveVoxelBlockParams;
-                removeVoxelBlock(room, removeParams.quadIndex);
-                break;
-            case VOXEL_GRID_TASK_TYPE_TEX:
-                const texParams = task as SetVoxelQuadTextureParams;
-                const quadIndex = texParams.quadIndex;
-                const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-                const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-                const row = getVoxelRowFromQuadIndex(quadIndex);
-                const col = getVoxelColFromQuadIndex(quadIndex);
-                const voxel = getVoxel(room, row, col);
-                if (!voxel)
-                {
-                    console.error(`Voxel update failed (VOXEL_GRID_TASK_TYPE_TEX) - voxel not found - params: ${JSON.stringify(params)}`);
-                    return;
-                }
-                const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-                setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, texParams.textureIndex);
-                break;
-            default:
-                console.error(`Unknown task type :: ${task.type}`);
-                break;
-        }
-    }
-
-    // After the voxelGrid mutation is applied, refresh the voxelQuad selection
-    // to ensure it stays in sync with the updated grid state.
-    const existingSelection = voxelQuadSelectionObservable.peek();
-    if (existingSelection != null)
-    {
-        const quadIndex = existingSelection.quadIndex;
-
-        // If the quadIndex doesn't even make sense, just unselect.
-        if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
-        {
-            voxelQuadSelectionObservable.set(null);
-            return;
-        }
-
-        // If the quad is hidden, just unselect.
-        const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
-        if ((quad & 0b10000000) == 0)
-        {
-            voxelQuadSelectionObservable.set(null);
-            return;
-        }
-
-        // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
-        voxelQuadSelectionObservable.notify();
-    }
-});
 
 voxelQuadChangeObservable.addListener("voxelManager", async (change: VoxelQuadChange) => {
     const room = App.getCurrentRoom();
@@ -150,5 +146,8 @@ function getVoxelMeshInstancer(room: Room, row: number, col: number): VoxelMeshI
     }
     return instancer;
 }
+
+const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
+    AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
 
 export default VoxelManager;

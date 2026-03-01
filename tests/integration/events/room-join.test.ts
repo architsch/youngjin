@@ -103,7 +103,7 @@ describe("room join events", () => {
         await harness.joinRoom(joiner, "vis-room");
 
         const roomMem = RoomManager.roomRuntimeMemories["vis-room"];
-        const joinerObj = roomMem.playerObjectMemoryByUserID[joiner.user.id];
+        const joinerObj = harness.getPlayerObjectRuntimeMemory(joiner.user.id);
         expect(joinerObj).toBeDefined();
         expect(joinerObj.objectSpawnParams.transform.x).toBeCloseTo(7);
         expect(joinerObj.objectSpawnParams.transform.z).toBeCloseTo(28);
@@ -123,7 +123,7 @@ describe("room join events", () => {
         await harness.joinRoom(joiner, "meta-vis-room");
 
         const roomMem = RoomManager.roomRuntimeMemories["meta-vis-room"];
-        const joinerObj = roomMem.playerObjectMemoryByUserID[joiner.user.id];
+        const joinerObj = harness.getPlayerObjectRuntimeMemory(joiner.user.id);
         expect(joinerObj).toBeDefined();
         expect(joinerObj.objectSpawnParams.metadata[0]?.str).toBe("custom-emote");
         expect(joinerObj.objectSpawnParams.metadata[1]?.str).toBe("special-room");
@@ -150,7 +150,7 @@ describe("room join events", () => {
 
         for (let i = 0; i < N; i++)
         {
-            const obj = roomMem.playerObjectMemoryByUserID[users[i].user.id];
+            const obj = harness.getPlayerObjectRuntimeMemory(users[i].user.id);
             expect(obj).toBeDefined();
             expect(obj.objectSpawnParams.transform.x).toBeCloseTo(5 + i * 4, 0);
             expect(obj.objectSpawnParams.transform.z).toBeCloseTo(5 + i * 3, 0);

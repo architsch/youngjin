@@ -75,7 +75,7 @@ describe("object message events", () => {
 
         // Observer can see the sender's metadata in the room's object runtime memory
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const senderObj = roomMem.playerObjectMemoryByUserID["sender"];
+        const senderObj = harness.getPlayerObjectRuntimeMemory("sender");
         expect(senderObj).toBeDefined();
         expect(senderObj.objectSpawnParams.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe(true);
         expect(senderObj.objectSpawnParams.getMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe("hi everyone");
@@ -93,11 +93,11 @@ describe("object message events", () => {
 
         // The other room should not contain the sender's object
         const otherRoomMem = RoomManager.roomRuntimeMemories["other-room"];
-        expect(otherRoomMem.playerObjectMemoryByUserID["room-a-user"]).toBeUndefined();
+        const senderObjectId = harness.getPlayerObjectId(sender);
+        expect(otherRoomMem.objectRuntimeMemories[senderObjectId!]).toBeUndefined();
 
         // Sender's room should have the metadata
-        const senderRoomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const senderObj = senderRoomMem.playerObjectMemoryByUserID["room-a-user"];
+        const senderObj = harness.getPlayerObjectRuntimeMemory("room-a-user");
         expect(senderObj.objectSpawnParams.getMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe("room A only");
     });
 

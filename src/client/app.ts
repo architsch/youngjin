@@ -7,6 +7,7 @@ import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
+import { roomChangedObservable } from "./system/clientObservables";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -49,6 +50,9 @@ const App =
     {
         return currentRoom!.voxelGrid.quadsMem.quads;
     },
+    // When this method receives a RoomRuntimeMemory signal from the server,
+    // the given room will be loaded on the client side immediately
+    // (The previous room will be unloaded - if it exists).
     changeRoom: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
         if (currentRoom != undefined)
@@ -56,6 +60,7 @@ const App =
         await loadRoom(roomRuntimeMemory);
 
         endClientProcess("roomChange");
+        roomChangedObservable.set(roomRuntimeMemory);
     },
 }
 

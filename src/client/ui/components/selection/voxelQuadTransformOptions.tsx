@@ -3,7 +3,7 @@ import AddVoxelBlockParams from "../../../../shared/voxel/types/update/addVoxelB
 import RemoveVoxelBlockParams from "../../../../shared/voxel/types/update/removeVoxelBlockParams";
 import App from "../../../app";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
-import GameSocketsClient from "../../../networking/client/gameSocketsClient";
+import SocketsClient from "../../../networking/client/socketsClient";
 import Button from "../basic/button";
 import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerAfterOffset, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex, isVoxelCollisionLayerOccupied } from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
@@ -45,7 +45,7 @@ function moveVoxelBlockOption(selection: VoxelQuadSelection, rowOffset: number, 
             VoxelQuadSelection.trySelect(selection.voxel,
                 getVoxelQuadIndex(newRow, newCol, facingAxis, (orientation == "-") ? "+" : "-", newCollisionLayer));
         }
-        GameSocketsClient.emitMoveVoxelBlock(new MoveVoxelBlockParams(quadIndex, rowOffset, colOffset, collisionLayerOffset));
+        SocketsClient.emitMoveVoxelBlock(new MoveVoxelBlockParams(quadIndex, rowOffset, colOffset, collisionLayerOffset));
     }
 }
 
@@ -88,7 +88,7 @@ function addVoxelBlockOption(selection: VoxelQuadSelection)
     if (addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
     {
         VoxelQuadSelection.trySelect(getVoxel(room, newRow, newCol), targetQuadIndex);
-        GameSocketsClient.emitAddVoxelBlock(new AddVoxelBlockParams(targetQuadIndex, quadTextureIndicesWithinLayer));
+        SocketsClient.emitAddVoxelBlock(new AddVoxelBlockParams(targetQuadIndex, quadTextureIndicesWithinLayer));
     }
 }
 
@@ -128,7 +128,7 @@ function removeVoxelBlockOption(selection: VoxelQuadSelection)
             dirIndex = (dirIndex + 1) % quadDirections.length;
         }
 
-        GameSocketsClient.emitRemoveVoxelBlock(new RemoveVoxelBlockParams(quadIndex));
+        SocketsClient.emitRemoveVoxelBlock(new RemoveVoxelBlockParams(quadIndex));
     }
 }
 

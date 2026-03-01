@@ -116,7 +116,7 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (!roomID) return;
             const roomMem = RoomManager.roomRuntimeMemories[roomID];
             if (!roomMem) return;
-            const obj = roomMem.playerObjectMemoryByUserID[ctx.user.id];
+            const obj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
             if (!obj) return;
             const tr = obj.objectSpawnParams.transform;
             const newTransform = new ObjectTransform(
@@ -137,7 +137,7 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (!roomID) return;
             const roomMem = RoomManager.roomRuntimeMemories[roomID];
             if (!roomMem) return;
-            const playerObj = roomMem.playerObjectMemoryByUserID[ctx.user.id];
+            const playerObj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
             if (!playerObj) return;
             RoomManager.sendObjectMessage(
                 ctx.socketUserContext,

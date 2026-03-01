@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import TutorialMoveInstruction from "./tutorialMoveInstruction";
 import { ongoingClientProcessExists } from "../../../system/types/clientProcess";
 import { ongoingClientProcessesObservable } from "../../../system/clientObservables";
-import GameSocketsClient from "../../../networking/client/gameSocketsClient";
+import SocketsClient from "../../../networking/client/socketsClient";
 import UserCommandParams from "../../../../shared/user/types/userCommandParams";
 import User from "../../../../shared/user/types/user";
 import { LAST_TUTORIAL_STEP, TUTORIAL_DONE_STEP } from "../../../../shared/system/sharedConstants";
@@ -26,7 +26,7 @@ export default function Tutorial({user}: Props)
             ? TUTORIAL_DONE_STEP
             : state.step + 1;
         setState({...state, step: newStep});
-        GameSocketsClient.emitUserCommand(new UserCommandParams(`tutorialStep ${newStep}`));
+        SocketsClient.emitUserCommand(new UserCommandParams(`tutorialStep ${newStep}`));
     };
 
     return <>

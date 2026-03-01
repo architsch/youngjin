@@ -65,9 +65,13 @@ export default class FirstPersonCamera
         const s1 = Math.sign(pitchAngleForViewTarget);
         const s2 = Math.sign(pitchAngleForAltitude);
 
-        const desiredPitchAngle = (s1 == -s2)
-            ? Math.max(pitchAngleForViewTarget, pitchAngleForAltitude) // If one of the angles tries to look down and the other tries to look up, always prefer looking up.
-            : (s1 == 0 ? s2 : s1) * Math.max(s1 * pitchAngleForViewTarget, s2 * pitchAngleForAltitude); // Otherwise, choose the angle with the biggest absolute value.
+        let desiredPitchAngle = 0;
+        if (s2 == 0) // If there is no "look down" due to the player's altitude, only take the view-target into account.
+            desiredPitchAngle = pitchAngleForViewTarget;
+        else if (s1 == 0) // If there is neither "look up" nor "look down" that is due to the view-target, only take the player's altitude into account.
+            desiredPitchAngle = pitchAngleForAltitude;
+        else // Otherwise, always prefer looking up.
+            desiredPitchAngle = Math.max(pitchAngleForViewTarget, pitchAngleForAltitude);
 
         this.quaternionInterpTarget.setFromAxisAngle(right, desiredPitchAngle);
     }
@@ -75,6 +79,7 @@ export default class FirstPersonCamera
     // Updates the view-target's selection state and returns the desired camera pitch angle.
     private processViewTarget(playerViewTargetPos: THREE.Vector3 | null): number
     {
+        // If there is no view-target, stay neutral (i.e. neither try to look up nor look down).
         if (playerViewTargetPos == null)
             return 0;
     
@@ -108,11 +113,15 @@ export default class FirstPersonCamera
         viewDirOnVerticalPlane.projectOnPlane(playerRightDir); // viewDirOnVerticalPlane = view direction that is projected onto the plane which dissects the player's face vertically.
         viewDirOnVerticalPlane.normalize();
 
-        const pitchAngleForViewTarget = Num.clampInRange(
-            0.5 * playerForwardDir.angleTo(viewDirOnVerticalPlane)
+        let pitchAngleForViewTarget = Num.clampInRange(
+            0.6 * playerForwardDir.angleTo(viewDirOnVerticalPlane)
                 * Math.sign(viewDirOnVerticalPlane.y - playerForwardDir.y), // Math.sign(...) = (+1 if you need to "look up", or -1 if you need to "look down")
             -0.7, 0.7
         );
+        // If the angle is approximately 0, it will be misinterpreted as: "View-target is null".
+        // Therefore, always make sure that the angle is obviously nonzero if the view-target exists.
+        if (Math.abs(pitchAngleForViewTarget) < 0.001)
+            pitchAngleForViewTarget = 0.001;
         return pitchAngleForViewTarget;
     }
 }

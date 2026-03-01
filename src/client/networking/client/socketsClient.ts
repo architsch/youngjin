@@ -12,7 +12,7 @@ import EncodableRawByteNumber from "../../../shared/networking/types/encodableRa
 import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import RoomChangeRequestParams from "../../../shared/room/types/roomChangeRequestParams";
-import { connectionStateObservable, objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable, roomRuntimeMemoryObservable, updateVoxelGridObservable } from "../../system/clientObservables";
+import { connectionStateObservable } from "../../system/clientObservables";
 import { tryStartClientProcess } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
@@ -22,36 +22,38 @@ import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBloc
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import UserCommandParams from "../../../shared/user/types/userCommandParams";
 import App from "../../app";
+import ObjectManager from "../../object/objectManager";
+import VoxelManager from "../../voxel/voxelManager";
 
 let socket: Socket;
 
 const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "roomRuntimeMemory": (data: EncodableData) =>
-        roomRuntimeMemoryObservable.set(data as RoomRuntimeMemory),
+        App.changeRoom(data as RoomRuntimeMemory),
     "objectSyncParams": (data: EncodableData) =>
-        objectSyncObservable.set(data as ObjectSyncParams),
+        ObjectManager.onObjectSyncReceived(data as ObjectSyncParams),
     "objectDesyncResolveParams": (data: EncodableData) =>
-        objectDesyncResolveObservable.set(data as ObjectDesyncResolveParams),
+        ObjectManager.onObjectDesyncResolveReceived(data as ObjectDesyncResolveParams),
     "objectSpawnParams": (data: EncodableData) =>
-        objectSpawnObservable.set(data as ObjectSpawnParams),
+        ObjectManager.onObjectSpawnReceived(data as ObjectSpawnParams),
     "objectDespawnParams": (data: EncodableData) =>
-        objectDespawnObservable.set(data as ObjectDespawnParams),
+        ObjectManager.onObjectDespawnReceived(data as ObjectDespawnParams),
     "objectMessageParams": (data: EncodableData) =>
-        objectMessageObservable.set(data as ObjectMessageParams),
+        ObjectManager.onObjectMessageReceived(data as ObjectMessageParams),
     "updateVoxelGridParams": (data: EncodableData) =>
-        updateVoxelGridObservable.set(data as UpdateVoxelGridParams),
+        VoxelManager.onUpdateVoxelGridReceived(data as UpdateVoxelGridParams),
 }
 
 const lastSignalSentTimes: {[signalType: string]: number} = {};
 
-const GameSocketsClient =
+const SocketsClient =
 {
     init: (env: ThingsPoolEnv) =>
     {
         if (!tryStartClientProcess("roomChange", 1, 0))
             throw new Error("'roomChange' process is already ongoing.");
 
-        const connectionURL = `${env.socket_server_url}/game_sockets`;
+        const connectionURL = env.socket_server_url;
         console.log(`Attempting to establish a socket connection with: [${connectionURL}]`);
         socket = io(connectionURL, {
             transports: ["websocket", "polling"],
@@ -67,7 +69,7 @@ const GameSocketsClient =
         let hasConnectedBefore = false;
 
         socket.on("connect", () => {
-            console.log(`Successfully connected to game_sockets (transport: ${socket.io.engine.transport.name})`);
+            console.log(`Successfully connected to socket server (transport: ${socket.io.engine.transport.name})`);
             connectionStateObservable.set("connected");
             if (hasConnectedBefore)
             {
@@ -241,4 +243,4 @@ function canEmit(signalType: string): boolean
         Date.now() >= lastSignalSentTime + minClientToServerSendInterval + 200; // 200 = extra time margin (to reduce the chance that the signal will be rejected by the server due to an earlier signal arriving at the server too late)
 }
 
-export default GameSocketsClient;
+export default SocketsClient;

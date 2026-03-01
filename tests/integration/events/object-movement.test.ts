@@ -42,8 +42,8 @@ describe("object movement events", () => {
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
 
-        const obj1 = roomMem.playerObjectMemoryByUserID[u1.user.id];
-        const obj2 = roomMem.playerObjectMemoryByUserID[u2.user.id];
+        const obj1 = harness.getPlayerObjectRuntimeMemory(u1.user.id);
+        const obj2 = harness.getPlayerObjectRuntimeMemory(u2.user.id);
 
         expect(obj1).toBeDefined();
         expect(obj2).toBeDefined();
@@ -61,7 +61,7 @@ describe("object movement events", () => {
         harness.updateObjectTransform(u1, new ObjectTransform(12, 0, 12, 0, 0, 1));
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const obj = roomMem.playerObjectMemoryByUserID[u1.user.id];
+        const obj = harness.getPlayerObjectRuntimeMemory(u1.user.id);
         expect(obj.objectSpawnParams.transform.x).toBeDefined();
         expect(obj.objectSpawnParams.transform.z).toBeDefined();
     });
@@ -74,7 +74,7 @@ describe("object movement events", () => {
 
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-        const u2ObjectId = RoomManager.roomRuntimeMemories[ROOM_ID].playerObjectMemoryByUserID[u2.user.id].objectSpawnParams.objectId;
+        const u2ObjectId = harness.getPlayerObjectRuntimeMemory(u2.user.id).objectSpawnParams.objectId;
         RoomManager.updateObjectTransform(
             u1.socketUserContext, u2ObjectId,
             new ObjectTransform(15, 0, 15, 0, 0, 1)
@@ -86,7 +86,7 @@ describe("object movement events", () => {
         consoleSpy.mockRestore();
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const obj2 = roomMem.playerObjectMemoryByUserID[u2.user.id];
+        const obj2 = harness.getPlayerObjectRuntimeMemory(u2.user.id);
         expect(obj2.objectSpawnParams.transform.x).toBeCloseTo(20);
         expect(obj2.objectSpawnParams.transform.z).toBeCloseTo(20);
     });
@@ -103,8 +103,8 @@ describe("object movement events", () => {
         await harness.disconnectUser(u1, false);
 
         expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(1);
-        expect(roomMem.playerObjectMemoryByUserID[u2.user.id]).toBeDefined();
-        expect(roomMem.playerObjectMemoryByUserID[u1.user.id]).toBeUndefined();
+        expect(harness.getPlayerObjectRuntimeMemory(u2.user.id)).toBeDefined();
+        expect(harness.getPlayerObjectRuntimeMemory(u1.user.id)).toBeUndefined();
     });
 
     // ─── Error handling ─────────────────────────────────────────────────────
@@ -144,14 +144,14 @@ describe("object movement events", () => {
         for (let i = 0; i < 3; i++)
         {
             const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-            const tr = roomMem.playerObjectMemoryByUserID[ctx.user.id].objectSpawnParams.transform;
+            const tr = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
             harness.updateObjectTransform(ctx,
                 new ObjectTransform(tr.x + 0.5, tr.y, tr.z + 0.5, tr.dirX, tr.dirY, tr.dirZ)
             );
         }
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const objTransform = roomMem.playerObjectMemoryByUserID[ctx.user.id].objectSpawnParams.transform;
+        const objTransform = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
         const gameplayState = harness.getGameplayState(ctx)!;
 
         expect(gameplayState.lastX).toBe(objTransform.x);
@@ -171,7 +171,7 @@ describe("object movement events", () => {
         for (let step = 0; step < 5; step++)
         {
             const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-            const tr = roomMem.playerObjectMemoryByUserID[ctx.user.id].objectSpawnParams.transform;
+            const tr = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
             harness.updateObjectTransform(ctx,
                 new ObjectTransform(Math.min(30, tr.x + 1), tr.y, Math.min(30, tr.z + 1), tr.dirX, tr.dirY, tr.dirZ)
             );

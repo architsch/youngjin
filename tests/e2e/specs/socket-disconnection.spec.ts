@@ -18,13 +18,13 @@ async function waitForSocketConnection(
     timeout: number = TIMEOUTS.SOCKET_CONNECT,
 ): Promise<void> {
     const alreadyConnected = consoleLogs.some((l) =>
-        l.includes("Successfully connected to game_sockets"),
+        l.includes("Successfully connected to socket server"),
     );
     if (alreadyConnected) return;
 
     await page.waitForEvent("console", {
         predicate: (msg) =>
-            msg.text().includes("Successfully connected to game_sockets"),
+            msg.text().includes("Successfully connected to socket server"),
         timeout,
     });
 }
@@ -191,7 +191,7 @@ test.describe("Socket Disconnection Handling", () => {
                 predicate: (msg) =>
                     msg
                         .text()
-                        .includes("Successfully connected to game_sockets"),
+                        .includes("Successfully connected to socket server"),
                 timeout: 30_000,
             });
 
@@ -202,7 +202,7 @@ test.describe("Socket Disconnection Handling", () => {
             const reconnectIndex = consoleLogs.findIndex(
                 (l, i) =>
                     i > disconnectIndex &&
-                    l.includes("Successfully connected to game_sockets"),
+                    l.includes("Successfully connected to socket server"),
             );
             expect(reconnectIndex).toBeGreaterThan(disconnectIndex);
         });

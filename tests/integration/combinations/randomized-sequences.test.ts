@@ -356,7 +356,7 @@ describe("property-based: state persistence under random connect/disconnect (fas
                     {
                         for (const uid of Object.keys(roomMem.participantUserIDs))
                         {
-                            const obj = roomMem.playerObjectMemoryByUserID[uid];
+                            const obj = harness.getPlayerObjectRuntimeMemory(uid);
                             expect(obj).toBeDefined();
                             expect(obj.objectSpawnParams.sourceUserID).toBe(uid);
                         }
@@ -409,7 +409,7 @@ describe("state persistence with simulated DB latency", () => {
         const roomMem = RoomManager.roomRuntimeMemories[LATENCY_ROOM];
         for (let i = 0; i < N; i++)
         {
-            const obj = roomMem.playerObjectMemoryByUserID[users[i].user.id];
+            const obj = harness.getPlayerObjectRuntimeMemory(users[i].user.id);
             expect(obj).toBeDefined();
             expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`lat-${i}`);
         }
@@ -499,18 +499,18 @@ describe("state persistence with simulated DB latency", () => {
         const roomMem = RoomManager.roomRuntimeMemories[LATENCY_ROOM];
         for (let i = 0; i < stayers.length; i++)
         {
-            const obj = roomMem.playerObjectMemoryByUserID[stayers[i].user.id];
+            const obj = harness.getPlayerObjectRuntimeMemory(stayers[i].user.id);
             expect(obj).toBeDefined();
             expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`stayer-${i}`);
         }
         for (let i = 0; i < joiners.length; i++)
         {
-            const obj = roomMem.playerObjectMemoryByUserID[joiners[i].user.id];
+            const obj = harness.getPlayerObjectRuntimeMemory(joiners[i].user.id);
             expect(obj).toBeDefined();
             expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`joiner-${i}`);
         }
         for (const ctx of leavers)
-            expect(roomMem.playerObjectMemoryByUserID[ctx.user.id]).toBeUndefined();
+            expect(harness.getPlayerObjectRuntimeMemory(ctx.user.id)).toBeUndefined();
 
         for (const expected of leaverStates)
         {
@@ -532,7 +532,7 @@ describe("state persistence with simulated DB latency", () => {
         await harness.joinRoom(user, LATENCY_ROOM);
 
         const roomMem = RoomManager.roomRuntimeMemories[LATENCY_ROOM];
-        const tr = roomMem.playerObjectMemoryByUserID["lat-reconnect"].objectSpawnParams.transform;
+        const tr = harness.getPlayerObjectRuntimeMemory("lat-reconnect").objectSpawnParams.transform;
         harness.updateObjectTransform(user,
             new ObjectTransform(
                 Math.min(30, tr.x + 1), tr.y, Math.min(30, tr.z + 1),
@@ -554,7 +554,7 @@ describe("state persistence with simulated DB latency", () => {
         ));
         await harness.joinRoom(reconnected, LATENCY_ROOM);
 
-        const obj = roomMem.playerObjectMemoryByUserID["lat-reconnect"];
+        const obj = harness.getPlayerObjectRuntimeMemory("lat-reconnect");
         expect(obj).toBeDefined();
         expect(obj.objectSpawnParams.transform.x).toBeCloseTo(stateBeforeDisconnect.lastX, 0);
         expect(obj.objectSpawnParams.transform.z).toBeCloseTo(stateBeforeDisconnect.lastZ, 0);

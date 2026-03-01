@@ -9,7 +9,6 @@ import ObjectTransform from "../../shared/object/types/objectTransform";
 import PersistentObjectMeshInstancer from "./components/persistentObjectMeshInstancer";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
-import { objectDespawnObservable, objectDesyncResolveObservable, objectMessageObservable, objectSpawnObservable, objectSyncObservable } from "../system/clientObservables";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import SpeechBubble from "./components/speechBubble";
@@ -164,56 +163,51 @@ const ObjectManager =
             console.error(`Object (ID = ${objectId}) has already been despawned.`);
         }
     },
+    // When the client receives an ObjectSpawnParams signal from the server,
+    // the given object will spawn as soon as the room to which it belongs is available.
+    onObjectSpawnReceived: async (params: ObjectSpawnParams) => {
+        const success = await waitUntilSignalProcessingReady("objectSpawnParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+        const gameObject = ObjectFactory.createServerSideObject(params);
+        await ObjectManager.spawnObject(gameObject);
+    },
+    // When the client receives an ObjectDespawnParams signal from the server,
+    // the given object will despawn as soon as the room to which it belongs is available.
+    onObjectDespawnReceived: async (params: ObjectDespawnParams) => {
+        const success = await waitUntilSignalProcessingReady("objectDespawnParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+        await ObjectManager.despawnObject(params.objectId);
+    },
+    // When the client receives an ObjectMessageParams signal from the server,
+    // the given message will be displayed as soon as the message's sender object is found.
+    onObjectMessageReceived: async (params: ObjectMessageParams) => {
+        const success = await waitUntilSignalProcessingReady("objectMessageParams",
+            () => ObjectManager.getObjectById(params.senderObjectId) != undefined);
+        if (!success)
+            return;
+        const senderObject = ObjectManager.getObjectById(params.senderObjectId)!;
+        const speechBubble = senderObject.components.speechBubble as SpeechBubble;
+        speechBubble.onObjectMessageReceived(params);
+    },
+    onObjectSyncReceived: async (params: ObjectSyncParams) => {
+        const object = ObjectManager.getObjectById(params.objectId)!;
+        if (object.components.objectSyncReceiver)
+            (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectSyncReceived(params);
+    },
+    onObjectDesyncResolveReceived: async (params: ObjectDesyncResolveParams) => {
+        const object = ObjectManager.getObjectById(params.objectId)!;
+        if (object.components.objectSyncReceiver)
+            (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectDesyncResolveReceived(params);
+        if (object.components.objectSyncEmitter)
+            (object.components.objectSyncEmitter as ObjectSyncEmitter).onObjectDesyncResolveReceived(params);
+    },
 }
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
-
-// When the client receives an ObjectSpawnParams signal from the server,
-// the given object will spawn as soon as the room to which it belongs is available.
-objectSpawnObservable.addListener("objectManager", async (params: ObjectSpawnParams) => {
-    const success = await waitUntilSignalProcessingReady("objectSpawnParams",
-        () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
-    if (!success)
-        return;
-    const gameObject = ObjectFactory.createServerSideObject(params);
-    await ObjectManager.spawnObject(gameObject);
-});
-
-// When the client receives an ObjectDespawnParams signal from the server,
-// the given object will despawn as soon as the room to which it belongs is available.
-objectDespawnObservable.addListener("objectManager", async (params: ObjectDespawnParams) => {
-    const success = await waitUntilSignalProcessingReady("objectDespawnParams",
-        () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
-    if (!success)
-        return;
-    await ObjectManager.despawnObject(params.objectId);
-});
-
-// When the client receives an ObjectMessageParams signal from the server,
-// the given message will be displayed as soon as the message's sender object is found.
-objectMessageObservable.addListener("objectManager", async (params: ObjectMessageParams) => {
-    const success = await waitUntilSignalProcessingReady("objectMessageParams",
-        () => ObjectManager.getObjectById(params.senderObjectId) != undefined);
-    if (!success)
-        return;
-    const senderObject = ObjectManager.getObjectById(params.senderObjectId)!;
-    const speechBubble = senderObject.components.speechBubble as SpeechBubble;
-    speechBubble.onObjectMessageReceived(params);
-});
-
-objectSyncObservable.addListener("objectManager", async (params: ObjectSyncParams) => {
-    const object = ObjectManager.getObjectById(params.objectId)!;
-    if (object.components.objectSyncReceiver)
-        (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectSyncReceived(params);
-});
-
-objectDesyncResolveObservable.addListener("objectManager", async (params: ObjectDesyncResolveParams) => {
-    const object = ObjectManager.getObjectById(params.objectId)!;
-    if (object.components.objectSyncReceiver)
-        (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectDesyncResolveReceived(params);
-    if (object.components.objectSyncEmitter)
-        (object.components.objectSyncEmitter as ObjectSyncEmitter).onObjectDesyncResolveReceived(params);
-});
 
 export default ObjectManager;

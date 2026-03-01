@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
-import GameSocketsClient from "../../networking/client/gameSocketsClient";
+import SocketsClient from "../../networking/client/socketsClient";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
@@ -59,7 +59,7 @@ export default class ObjectSyncEmitter extends GameObjectComponent
                         vec3Temp.z
                     )
                 );
-                GameSocketsClient.emitObjectSync(params);
+                SocketsClient.emitObjectSync(params);
                 //console.log(`(ObjectSyncEmitter) emitObjectSync :: ${JSON.stringify(params)}`);
             }
         }

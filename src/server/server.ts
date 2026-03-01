@@ -7,7 +7,6 @@ import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
 import Sockets from "./sockets/sockets";
 import RoomManager from "./room/roomManager";
-import GameSockets from "./sockets/gameSockets";
 import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
@@ -117,7 +116,7 @@ ${LatencySimUtil.getConfigSummary()}
     });
     
     // socket connection
-    Sockets(server);
+    Sockets.init(server);
 
     // Clean up stale guest accounts regularly (rotating through tiers to spread DB load)
     let cleanupPhase = 0;
@@ -138,7 +137,7 @@ ${LatencySimUtil.getConfigSummary()}
         await RoomManager.saveRooms(true);
         console.log("All rooms saved.");
 
-        await GameSockets.saveAndDisconnectAllUsers();
+        await Sockets.saveAndDisconnectAllUsers();
         console.log("All users saved and disconnected.");
 
         server.close(() =>

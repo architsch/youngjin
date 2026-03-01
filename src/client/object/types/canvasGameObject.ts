@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import GameObject from "./gameObject";
-import GameSocketsClient from "../../networking/client/gameSocketsClient";
+import SocketsClient from "../../networking/client/socketsClient";
 import RoomChangeRequestParams from "../../../shared/room/types/roomChangeRequestParams";
 import PlayerProximityDetector from "../components/playerProximityDetector";
 import PersistentObjectMeshInstancer from "../components/persistentObjectMeshInstancer";
@@ -19,7 +19,7 @@ export default class CanvasGameObject extends GameObject
         console.log(`Selected PersistentObject = ${JSON.stringify(po)}`);
         
         //const destinationRoomID = po.metadata[ObjectMetadataKeyEnumMap.RoomID];
-        //GameSocketsClient.emitRoomChangeRequest(new RoomChangeRequestParams(destinationRoomID));
+        //SocketsClient.emitRoomChangeRequest(new RoomChangeRequestParams(destinationRoomID));
     }
 
     onPlayerProximityStart()

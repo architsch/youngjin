@@ -320,7 +320,7 @@ describe("concurrent same-type events", () => {
             for (const ctx of contexts)
             {
                 const roomMem = RoomManager.roomRuntimeMemories["transform-room"];
-                const currentPos = roomMem.playerObjectMemoryByUserID[ctx.user.id].objectSpawnParams.transform;
+                const currentPos = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
                 harness.updateObjectTransform(ctx,
                     new ObjectTransform(currentPos.x + 0.5, currentPos.y, currentPos.z + 0.5, 0, 0, 1)
                 );
@@ -329,7 +329,7 @@ describe("concurrent same-type events", () => {
             const roomMem = RoomManager.roomRuntimeMemories["transform-room"];
             for (const ctx of contexts)
             {
-                const obj = roomMem.playerObjectMemoryByUserID[ctx.user.id];
+                const obj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
                 expect(obj).toBeDefined();
                 expect(obj.objectSpawnParams.transform.x).toBeGreaterThan(0);
                 expect(obj.objectSpawnParams.transform.z).toBeGreaterThan(0);

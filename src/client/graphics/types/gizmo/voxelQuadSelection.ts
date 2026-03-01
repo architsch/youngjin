@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { roomRuntimeMemoryObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
@@ -68,6 +68,8 @@ export default class VoxelQuadSelection
 
 let voxelQuadSelectionMeshClone: THREE.Mesh | null = null;
 
+// Whenever the current voxelQuad selection changes,
+// its graphics (e.g. mesh) should be updated to reflect such a change.
 voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {
     if (selection)
     {
@@ -100,7 +102,9 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
     }
 });
 
-roomRuntimeMemoryObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
+// Whenever the current room changes,
+// the existing selection (if there is one) should be discarded.
+roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
     VoxelQuadSelection.unselect();
 
     if (voxelQuadSelectionMeshClone)

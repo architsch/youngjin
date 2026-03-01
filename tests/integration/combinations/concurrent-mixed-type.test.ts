@@ -225,18 +225,18 @@ describe("concurrent mixed-type events", () => {
 
         for (let i = 0; i < stayers.length; i++)
         {
-            const obj = roomMem.playerObjectMemoryByUserID[stayers[i].user.id];
+            const obj = harness.getPlayerObjectRuntimeMemory(stayers[i].user.id);
             expect(obj).toBeDefined();
             expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`stayer-${i}`);
         }
         for (let i = 0; i < joiners.length; i++)
         {
-            const obj = roomMem.playerObjectMemoryByUserID[joiners[i].user.id];
+            const obj = harness.getPlayerObjectRuntimeMemory(joiners[i].user.id);
             expect(obj).toBeDefined();
             expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`joiner-${i}`);
         }
         for (const ctx of leavers)
-            expect(roomMem.playerObjectMemoryByUserID[ctx.user.id]).toBeUndefined();
+            expect(harness.getPlayerObjectRuntimeMemory(ctx.user.id)).toBeUndefined();
     });
 
     // ─── Reconnect while others present ─────────────────────────────────────
@@ -260,8 +260,8 @@ describe("concurrent mixed-type events", () => {
         expect(harness.isRoomLoaded(ROOM_ID)).toBe(true);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        expect(roomMem.playerObjectMemoryByUserID["user-A-recon"]).toBeUndefined();
-        expect(roomMem.playerObjectMemoryByUserID["user-B-observer"]).toBeDefined();
+        expect(harness.getPlayerObjectRuntimeMemory("user-A-recon")).toBeUndefined();
+        expect(harness.getPlayerObjectRuntimeMemory("user-B-observer")).toBeDefined();
 
         const saved = harness.savedGameplayStates[0];
         const reconnectedA = harness.connectUser(new User(
@@ -273,7 +273,7 @@ describe("concurrent mixed-type events", () => {
         ));
         await harness.joinRoom(reconnectedA, ROOM_ID);
 
-        const objA = roomMem.playerObjectMemoryByUserID["user-A-recon"];
+        const objA = harness.getPlayerObjectRuntimeMemory("user-A-recon");
         expect(objA).toBeDefined();
         expect(objA.objectSpawnParams.transform.x).toBeCloseTo(stateBeforeDisconnect.lastX, 0);
         expect(objA.objectSpawnParams.transform.z).toBeCloseTo(stateBeforeDisconnect.lastZ, 0);
@@ -334,7 +334,7 @@ describe("concurrent mixed-type events", () => {
             const saved = harness.savedGameplayStates.find(
                 s => s.userID === `recon-user-${i}`
             )!;
-            const obj = roomMem.playerObjectMemoryByUserID[`recon-user-${i}`];
+            const obj = harness.getPlayerObjectRuntimeMemory(`recon-user-${i}`);
             expect(obj).toBeDefined();
             expect(obj.objectSpawnParams.transform.x).toBeCloseTo(saved.lastX, 0);
             expect(obj.objectSpawnParams.transform.z).toBeCloseTo(saved.lastZ, 0);
@@ -384,7 +384,7 @@ describe("concurrent mixed-type events", () => {
         await harness.joinRoom(reconnectedA, ROOM_ID);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const objA = roomMem.playerObjectMemoryByUserID["lifecycle-A"];
+        const objA = harness.getPlayerObjectRuntimeMemory("lifecycle-A");
         expect(objA).toBeDefined();
         expect(objA.objectSpawnParams.transform.x).toBeCloseTo(savedA.lastX, 0);
         expect(objA.objectSpawnParams.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str).toBe("see ya");
@@ -417,7 +417,7 @@ describe("concurrent mixed-type events", () => {
             expect(state.lastZ).toBeCloseTo(lastSavedZ, 0);
 
             const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-            const tr = roomMem.playerObjectMemoryByUserID[ctx.user.id].objectSpawnParams.transform;
+            const tr = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
             harness.updateObjectTransform(ctx,
                 new ObjectTransform(
                     Math.min(30, tr.x + 1), tr.y, Math.min(30, tr.z + 1),
@@ -474,10 +474,10 @@ describe("concurrent mixed-type events", () => {
         expect(resultNew).toBe(true);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const objA = roomMem.playerObjectMemoryByUserID["returning-A"];
+        const objA = harness.getPlayerObjectRuntimeMemory("returning-A");
         expect(objA.objectSpawnParams.transform.x).toBeCloseTo(actualStateAfterMove.lastX, 0);
 
-        const objNew = roomMem.playerObjectMemoryByUserID["brand-new"];
+        const objNew = harness.getPlayerObjectRuntimeMemory("brand-new");
         expect(objNew.objectSpawnParams.transform.x).toBeCloseTo(16, 0);
 
         expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(2);
@@ -506,7 +506,7 @@ describe("concurrent mixed-type events", () => {
         await harness.joinRoom(userB, ROOM_ID);
 
         let roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        expect(roomMem.playerObjectMemoryByUserID["interleave-A"].objectSpawnParams.transform.x)
+        expect(harness.getPlayerObjectRuntimeMemory("interleave-A").objectSpawnParams.transform.x)
             .toBeCloseTo(stateAfterAMove.lastX, 0);
 
         await harness.disconnectUser(userA, true);
@@ -520,9 +520,9 @@ describe("concurrent mixed-type events", () => {
 
         roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
         expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(2);
-        expect(roomMem.playerObjectMemoryByUserID["interleave-B"]).toBeDefined();
-        expect(roomMem.playerObjectMemoryByUserID["interleave-C"]).toBeDefined();
-        expect(roomMem.playerObjectMemoryByUserID["interleave-A"]).toBeUndefined();
+        expect(harness.getPlayerObjectRuntimeMemory("interleave-B")).toBeDefined();
+        expect(harness.getPlayerObjectRuntimeMemory("interleave-C")).toBeDefined();
+        expect(harness.getPlayerObjectRuntimeMemory("interleave-A")).toBeUndefined();
 
         await harness.disconnectUser(userB, true);
         await harness.disconnectUser(userC, true);

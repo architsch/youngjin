@@ -148,3 +148,15 @@ export function getUserGameplayState(socketUserContext: SocketUserContext, roomR
         sessionDurationMs: Date.now() - socketUserContext.connectTime,
     };
 }
+
+export function getPlayerObjectRuntimeMemory(userID: string): ObjectRuntimeMemory | undefined
+{
+    return playerObjectRuntimeMemoryByUserID[userID];
+}
+
+// WARNING: Use this method only in integration tests.
+export function clearPlayerObjectRuntimeMemories(): void
+{
+    for (const key in playerObjectRuntimeMemoryByUserID)
+        delete playerObjectRuntimeMemoryByUserID[key];
+}

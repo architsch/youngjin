@@ -3,7 +3,7 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectMessageParams from "../../../shared/object/types/objectMessageParams";
-import GameSocketsClient from "../../networking/client/gameSocketsClient";
+import SocketsClient from "../../networking/client/socketsClient";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 
 export default class SpeechBubble extends GameObjectComponent
@@ -71,7 +71,7 @@ export default class SpeechBubble extends GameObjectComponent
         if (broadcastToServer)
         {
             const params = new ObjectMessageParams(this.gameObject.params.objectId, message);
-            GameSocketsClient.emitObjectMessage(params);
+            SocketsClient.emitObjectMessage(params);
         }
     }
 

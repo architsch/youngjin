@@ -12,7 +12,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test.describe("Socket.IO Connection", () => {
-    test("client establishes socket connection to game_sockets", async ({ page }) => {
+    test("client establishes socket connection to server", async ({ page }) => {
         const consoleLogs: string[] = [];
         page.on("console", (msg) => consoleLogs.push(msg.text()));
 
@@ -20,21 +20,21 @@ test.describe("Socket.IO Connection", () => {
 
         // Check if the connection log appeared during page load
         const connectionLog = consoleLogs.find((log) =>
-            log.includes("Successfully connected to game_sockets")
+            log.includes("Successfully connected to socket server")
         );
 
         if (connectionLog) {
-            expect(connectionLog).toContain("Successfully connected to game_sockets");
+            expect(connectionLog).toContain("Successfully connected to socket server");
             return;
         }
 
         // If not yet connected, wait a bit longer
         const connectionMessage = await page.waitForEvent("console", {
             predicate: (msg) =>
-                msg.text().includes("Successfully connected to game_sockets"),
+                msg.text().includes("Successfully connected to socket server"),
             timeout: TIMEOUTS.SOCKET_CONNECT,
         });
-        expect(connectionMessage.text()).toContain("Successfully connected to game_sockets");
+        expect(connectionMessage.text()).toContain("Successfully connected to socket server");
     });
 
     test("socket connection uses websocket transport", async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe("Socket.IO Connection", () => {
         await page.goto("/mypage", { waitUntil: "networkidle" });
 
         const connectionLog = consoleLogs.find((log) =>
-            log.includes("Successfully connected to game_sockets")
+            log.includes("Successfully connected to socket server")
         );
 
         if (connectionLog) {
@@ -54,7 +54,7 @@ test.describe("Socket.IO Connection", () => {
 
         const connectionMessage = await page.waitForEvent("console", {
             predicate: (msg) =>
-                msg.text().includes("Successfully connected to game_sockets"),
+                msg.text().includes("Successfully connected to socket server"),
             timeout: TIMEOUTS.SOCKET_CONNECT,
         });
         expect(connectionMessage.text()).toContain("transport: websocket");

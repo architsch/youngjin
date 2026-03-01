@@ -107,7 +107,7 @@ export function checkPlayerObjectsExist(): void
     {
         for (const uid of Object.keys(roomMem.participantUserIDs))
         {
-            const obj = roomMem.playerObjectMemoryByUserID[uid];
+            const obj = harness.getPlayerObjectRuntimeMemory(uid);
             expect(obj, `Player object missing for user ${uid} in room ${roomID}`).toBeDefined();
             expect(obj.objectSpawnParams.sourceUserID).toBe(uid);
         }
@@ -124,7 +124,7 @@ export function checkObjectTransformConsistency(connectedUsers: ConnectedUser[])
         const roomMem = RoomManager.roomRuntimeMemories[roomID];
         if (!roomMem) continue;
 
-        const obj = roomMem.playerObjectMemoryByUserID[ctx.user.id];
+        const obj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
         const state = harness.getGameplayState(ctx);
         if (obj && state)
         {
