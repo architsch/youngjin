@@ -4,9 +4,7 @@ import ObjectFactory from "./factories/objectFactory";
 import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
-import VoxelMeshInstancer from "./components/voxelMeshInstancer";
 import ObjectTransform from "../../shared/object/types/objectTransform";
-import PersistentObjectMeshInstancer from "./components/persistentObjectMeshInstancer";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
@@ -16,6 +14,7 @@ import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import ObjectSyncReceiver from "./components/objectSyncReceiver";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectSyncEmitter from "./components/objectSyncEmitter";
+import VoxelGameObject from "./types/voxelGameObject";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -50,6 +49,7 @@ const ObjectManager =
     },
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
+        // Load voxels from the decoded voxelGrid
         const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
         for (const voxel of roomRuntimeMemory.room.voxelGrid.voxels)
         {
@@ -61,12 +61,12 @@ const ObjectManager =
                     0, 0, 1
                 )
             );
-            const voxelMeshInstancer = gameObject.components.voxelMeshInstancer! as VoxelMeshInstancer;
-            voxelMeshInstancer.setVoxel(voxel);
+            const voxelGameObject = gameObject as VoxelGameObject;
+            voxelGameObject.setVoxel(voxel);
             await ObjectManager.spawnObject(gameObject);
         };
 
-        // Load objects from decoded persistentObjects
+        // Load objects from the decoded persistentObjectGroup
         for (const po of roomRuntimeMemory.room.persistentObjectGroup.persistentObjects)
         {
             // Let's assume that (+z) is the direction in which the 0 y-axis angle is pointing.
@@ -88,15 +88,7 @@ const ObjectManager =
                 new ObjectTransform(po.x, po.y, po.z, dirX, dirY, dirZ),
                 po.metadata
             );
-            const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
-            if (!config)
-                throw new Error(`PersistentObject's object type config not found (objectTypeIndex = ${po.objectTypeIndex})`);
-            if (!config.components.spawnedByAny || !config.components.spawnedByAny.persistentObjectMeshInstancer)
-                throw new Error(`PersistentObjectMeshInstancer is missing from PersistentObject (objectTypeIndex = ${po.objectTypeIndex})`);
-
             const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
-            const persistentObjectMeshInstancer = gameObject.components.persistentObjectMeshInstancer! as PersistentObjectMeshInstancer;
-            persistentObjectMeshInstancer.setPersistentObject(po);
             await ObjectManager.spawnObject(gameObject);
         }
 

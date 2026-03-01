@@ -4,7 +4,6 @@ import MeshFactory from "../../graphics/factories/meshFactory";
 import GameObject from "../types/gameObject";
 import TextureUtil from "../../graphics/util/textureUtil";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
-import App from "../../app";
 import MaterialParams from "../../graphics/types/material/materialParams";
 
 const tempObj = new THREE.Object3D();
@@ -14,9 +13,9 @@ const objMap: {[meshId: string] : { [instanceId: number]: GameObject }} = {};
 
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
-    materialParams: MaterialParams | undefined; // must be set by an instancer component
-    geometryId: string = ""; // must be set by an instancer component
-    maxNumInstances: number = 0; // must be set by an instancer component
+    materialParams: MaterialParams | undefined; // must be set externally
+    geometryId: string = ""; // must be set externally
+    maxNumInstances: number = 0; // must be set externally
     instancedMesh: THREE.InstancedMesh | undefined;
 
     static findGameObject(instancedMeshObj: THREE.Object3D, instanceId: number): GameObject | undefined
@@ -182,13 +181,9 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         const uvSampleSizeBufferAttrib = this.instancedMesh.geometry.getAttribute("uvSampleSize");
         uvSampleSizeBufferAttrib.setXY(instanceId, sampleScaleX, sampleScaleY);
         uvSampleSizeBufferAttrib.needsUpdate = true;
-
-        // temp (for test)
-        if (this.gameObject.params.objectTypeIndex == 2)
-            this.drawTextureAtIndex(instanceId % 64, `${App.getEnv().assets_url}/lenna.png`);
     }
 
-    async drawTextureAtIndex(textureIndex: number, textureURL: string)
+    async drawImageAtIndex(textureIndex: number, imageURL: string)
     {
         const texturePackMaterialParams = this.materialParams as TexturePackMaterialParams;
         const w = texturePackMaterialParams.textureWidth;
@@ -208,6 +203,6 @@ export default class InstancedMeshGraphics extends GameObjectComponent
 
         const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
         const rt = material.map!.renderTarget as THREE.WebGLRenderTarget;
-        await TextureUtil.drawTextureOnRenderTarget(textureURL, rt, u1, v1, u2, v2);
+        await TextureUtil.drawImageOnRenderTarget(imageURL, rt, u1, v1, u2, v2);
     }
 }

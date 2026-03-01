@@ -6,9 +6,9 @@ import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import SocketsClient from "../../../networking/client/socketsClient";
 import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import App from "../../../app";
-import VoxelMeshInstancer from "../../../object/components/voxelMeshInstancer";
 import { setVoxelQuadVisible } from "../../../../shared/voxel/util/voxelQuadUpdateUtil";
 import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
+import VoxelGameObject from "../../../object/types/voxelGameObject";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
@@ -20,7 +20,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
     const quadIndex = props.selection.quadIndex;
     const selectedTextureIndex = App.getVoxelQuads()[quadIndex] & 0b01111111;
 
-    const materialParams = VoxelMeshInstancer.latestMaterialParams;
+    const materialParams = VoxelGameObject.latestMaterialParams;
     const numCols = materialParams.textureWidth / materialParams.textureGridCellWidth;
     const numRows = materialParams.textureHeight / materialParams.textureGridCellHeight;
     const selectedTextureCol = selectedTextureIndex % numCols;

@@ -6,6 +6,7 @@ const loadedRenderTargets: { [renderTargetId: string]: THREE.WebGLRenderTarget }
 
 const TextureFactory =
 {
+    // A fixed texture that is based on an image asset (cannot be modified during runtime).
     loadStaticImageTexture: async (texturePath: string): Promise<THREE.Texture> =>
     {
         const loadedTexture = loadedTextures[texturePath];
@@ -16,6 +17,7 @@ const TextureFactory =
         loadedTextures[texturePath] = newTexture;
         return newTexture;
     },
+    // An empty texture upon which images can be freely rendered during runtime.
     loadDynamicEmptyTexture: (textureId: string, width: number, height: number): THREE.Texture =>
     {
         const loadedTexture = loadedTextures[textureId];

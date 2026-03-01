@@ -11,7 +11,6 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 instancedMeshGraphics: {
                     createInstanceIdPool: false,
                 },
-                voxelMeshInstancer: {},
             },
         },
     }],
@@ -55,17 +54,15 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 instancedMeshGraphics: {
                     createInstanceIdPool: true,
                 },
-                persistentObjectMeshInstancer: {
-                },
-                speechBubble: {
-                    yOffset: 0,
-                    prependUserNameToMessage: false,
-                    showMessageIfSpawnedByMe: true,
-                    showMessageIfSpawnedByOther: true,
-                },
-                playerProximityDetector: {
-                    maxDist: 3,
-                    maxLookAngle: Math.PI * 0.25,
+            },
+        },
+    }],
+    [3, { // The user can enter another room by using this object as a portal.
+        objectType: "Door",
+        components: {
+            spawnedByAny: {
+                instancedMeshGraphics: {
+                    createInstanceIdPool: true,
                 },
             },
         },

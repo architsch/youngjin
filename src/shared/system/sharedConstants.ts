@@ -57,6 +57,10 @@ export const VOXEL_GRID_TASK_TYPE_ADD = 1;
 export const VOXEL_GRID_TASK_TYPE_REMOVE = 2;
 export const VOXEL_GRID_TASK_TYPE_TEX = 3;
 
+// Gameplay
+
+export const MAX_WORLDSPACE_SELECT_DIST_SQR = 64; // = 8*8
+
 // UI
 
 export const PAGE_NAME_MAP = {

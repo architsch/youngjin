@@ -1,5 +1,4 @@
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import VoxelMeshInstancer from "../object/components/voxelMeshInstancer";
 import { voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
 import Room from "../../shared/room/types/room";
@@ -17,6 +16,7 @@ import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
+import VoxelGameObject from "../object/types/voxelGameObject";
 
 const VoxelManager =
 {
@@ -114,15 +114,15 @@ voxelQuadChangeObservable.addListener("voxelManager", async (change: VoxelQuadCh
     const quadIndex = change.quadIndex;
     const row = getVoxelRowFromQuadIndex(quadIndex);
     const col = getVoxelColFromQuadIndex(quadIndex);
-    const instancer = getVoxelMeshInstancer(room, row, col);
-    console.log("applyVoxelQuadChange?");
-    if (instancer)
-        await instancer.applyVoxelQuadChange(change);
+    const voxelGameObject = getVoxelGameObject(room, row, col);
+
+    if (voxelGameObject)
+        await voxelGameObject.applyVoxelQuadChange(change);
     else
-        console.error(`VoxelMeshInstancer is missing (change = ${String(change)})`);
+        console.error(`VoxelGameObject is missing (change = ${String(change)})`);
 });
 
-function getVoxelMeshInstancer(room: Room, row: number, col: number): VoxelMeshInstancer | null
+function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObject | null
 {
     const voxel = getVoxel(room, row, col);
     if (!voxel)
@@ -138,13 +138,13 @@ function getVoxelMeshInstancer(room: Room, row: number, col: number): VoxelMeshI
         return null;
     }
 
-    const instancer = obj.components.voxelMeshInstancer as VoxelMeshInstancer;
-    if (!instancer)
+    const voxelGameObject = obj as VoxelGameObject;
+    if (!voxelGameObject)
     {
-        console.error(`VoxelMeshInstancer not found (row: ${row}, col: ${col})`);
+        console.error(`VoxelGameObject not found (row: ${row}, col: ${col})`);
         return null;
     }
-    return instancer;
+    return voxelGameObject;
 }
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>

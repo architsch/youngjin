@@ -18,10 +18,6 @@ export default interface ObjectTypeConfig
             instancedMeshGraphics?: {
                 createInstanceIdPool: boolean,
             },
-            voxelMeshInstancer?: {
-            },
-            persistentObjectMeshInstancer?: {
-            },
             speechBubble?: {
                 yOffset: number,
                 prependUserNameToMessage: boolean,

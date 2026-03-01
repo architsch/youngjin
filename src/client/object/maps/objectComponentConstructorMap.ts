@@ -5,11 +5,9 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import ModelGraphics from "../components/modelGraphics";
 import ObjectSyncEmitter from "../components/objectSyncEmitter";
 import ObjectSyncReceiver from "../components/objectSyncReceiver";
-import PersistentObjectMeshInstancer from "../components/persistentObjectMeshInstancer";
 import PlayerProximityDetector from "../components/playerProximityDetector";
 import SpeechBubble from "../components/speechBubble";
 import StaticCollider from "../components/staticCollider";
-import VoxelMeshInstancer from "../components/voxelMeshInstancer";
 import GameObject from "../types/gameObject";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
@@ -31,10 +29,6 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new ObjectSyncReceiver(parentObject, componentConfig),
     "speechBubble": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new SpeechBubble(parentObject, componentConfig),
-    "voxelMeshInstancer": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new VoxelMeshInstancer(parentObject, componentConfig),
-    "persistentObjectMeshInstancer": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new PersistentObjectMeshInstancer(parentObject, componentConfig),
     "playerProximityDetector": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new PlayerProximityDetector(parentObject, componentConfig),
 }

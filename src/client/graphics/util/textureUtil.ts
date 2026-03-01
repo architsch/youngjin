@@ -6,7 +6,7 @@ const vec2Temp = new THREE.Vector2();
 
 const TextureUtil =
 {
-    drawTextureOnRenderTarget: async (textureURL: string, renderTarget: THREE.WebGLRenderTarget,
+    drawImageOnRenderTarget: async (textureURL: string, renderTarget: THREE.WebGLRenderTarget,
         targetU1: number, targetV1: number, targetU2: number, targetV2: number): Promise<void> =>
     {
         const texture = await TextureFactory.loadStaticImageTexture(textureURL);
