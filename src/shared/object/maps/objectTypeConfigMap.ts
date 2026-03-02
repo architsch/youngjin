@@ -49,6 +49,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     }],
     [2, { // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
         objectType: "Canvas",
+        isWallAttached: true,
         components: {
             spawnedByAny: {
                 instancedMeshGraphics: {
@@ -59,6 +60,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     }],
     [3, { // The user can enter another room by using this object as a portal.
         objectType: "Door",
+        isWallAttached: true,
         components: {
             spawnedByAny: {
                 instancedMeshGraphics: {

@@ -145,6 +145,9 @@ export default class InstancedMeshGraphics extends GameObjectComponent
 
         this.instancedMesh.setMatrixAt(instanceId, tempObj.matrixWorld);
         this.instancedMesh.instanceMatrix.needsUpdate = true;
+        // Invalidate the cached bounding sphere so that InstancedMesh.raycast
+        // recomputes it to include the updated instance position.
+        this.instancedMesh.boundingSphere = null;
 
         tempObj.removeFromParent();
     }

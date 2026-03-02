@@ -10,7 +10,9 @@ import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import { addUserToRoom, getUserGameplayState, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
 import { updateVoxelGrid } from "./util/roomVoxelUtil";
+import { updatePersistentObjectGroup } from "./util/roomPersistentObjectUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
+import UpdatePersistentObjectGroupParams from "../../shared/object/types/update/updatePersistentObjectGroupParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import { OBJECT_MESSAGE_MAX_LENGTH, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
@@ -118,6 +120,10 @@ const RoomManager =
     updateVoxelGrid: (socketUserContext: SocketUserContext, params: UpdateVoxelGridParams) =>
     {
         updateVoxelGrid(socketUserContext, params);
+    },
+    updatePersistentObjectGroup: (socketUserContext: SocketUserContext, params: UpdatePersistentObjectGroupParams) =>
+    {
+        updatePersistentObjectGroup(socketUserContext, params);
     },
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {

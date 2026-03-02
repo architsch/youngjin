@@ -20,9 +20,6 @@ export default class PersistentObjectGroup extends EncodableData
     {
         new EncodableRawByteNumber(latestVersion).encode(bufferState);
         new EncodableArray(this.persistentObjects, 65535).encode(bufferState);
-
-        for (const persistentObject of this.persistentObjects)
-            persistentObject.encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData

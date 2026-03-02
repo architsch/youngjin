@@ -21,8 +21,11 @@ import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVox
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import UserCommandParams from "../../../shared/user/types/userCommandParams";
+import UpdatePersistentObjectGroupParams from "../../../shared/object/types/update/updatePersistentObjectGroupParams";
+import UpdatePersistentObjectGroupTaskParams from "../../../shared/object/types/update/updatePersistentObjectGroupTaskParams";
 import App from "../../app";
 import ObjectManager from "../../object/objectManager";
+import PersistentObjectManager from "../../object/persistentObjectManager";
 import VoxelManager from "../../voxel/voxelManager";
 
 let socket: Socket;
@@ -42,6 +45,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ObjectManager.onObjectMessageReceived(data as ObjectMessageParams),
     "updateVoxelGridParams": (data: EncodableData) =>
         VoxelManager.onUpdateVoxelGridReceived(data as UpdateVoxelGridParams),
+    "updatePersistentObjectGroupParams": (data: EncodableData) =>
+        PersistentObjectManager.onUpdatePersistentObjectGroupReceived(data as UpdatePersistentObjectGroupParams),
 }
 
 const lastSignalSentTimes: {[signalType: string]: number} = {};
@@ -185,7 +190,18 @@ const SocketsClient =
             return;
         }
         emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
-    }
+    },
+    emitUpdatePersistentObjectGroup: (params: UpdatePersistentObjectGroupTaskParams) =>
+    {
+        const currentRoom = App.getCurrentRoom();
+        if (!currentRoom)
+        {
+            console.error("Modified a persistent object, but the current room doesn't exist.");
+            return;
+        }
+        emitWhenReady("updatePersistentObjectGroupParams",
+            new UpdatePersistentObjectGroupParams(currentRoom.id, [params]));
+    },
 }
 
 function emitWhenReady(signalType: string, signalData: EncodableData,

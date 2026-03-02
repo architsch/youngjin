@@ -15,6 +15,7 @@ import { getUserGameplayState } from "../room/util/roomUserUtil";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
+import UpdatePersistentObjectGroupParams from "../../shared/object/types/update/updatePersistentObjectGroupParams";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
 import DBSearchUtil from "../db/util/dbSearchUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
@@ -142,6 +143,12 @@ const Sockets =
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UpdateVoxelGridParams.decode(bufferState) as UpdateVoxelGridParams;
                 RoomManager.updateVoxelGrid(socketUserContext, params);
+            });
+
+            socketUserContext.onReceivedSignalFromUser("updatePersistentObjectGroupParams", (buffer: ArrayBuffer) => {
+                const bufferState = new BufferState(new Uint8Array(buffer));
+                const params = UpdatePersistentObjectGroupParams.decode(bufferState) as UpdatePersistentObjectGroupParams;
+                RoomManager.updatePersistentObjectGroup(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("roomChangeRequestParams", async (buffer: ArrayBuffer) => {

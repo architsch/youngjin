@@ -3,8 +3,8 @@ import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Observable from "../../shared/system/types/observable";
 import ObservableMap from "../../shared/system/types/observableMap";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
+import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
 import ClientProcess from "./types/clientProcess";
-import { getVoxelQuadTransformDimensions } from "../../shared/voxel/util/voxelQueryUtil";
 
 //--------------------------------------------------------------------------------
 // Core Observables
@@ -34,6 +34,10 @@ export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
 // Each voxel consists of a stack of voxelBlocks.
 export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | null>(null);
 
+// This observable notifies its listeners whenever the user selects or unselects a persistent object
+// (such as a canvas or door).
+export const persistentObjectSelectionObservable = new Observable<PersistentObjectSelection | null>(null);
+
 // This observable notifies its listeners whenever a text input element (UI) either gets
 // focused or unfocused.
 // If the number of active text inputs goes down to 0, it will imply that the user is
@@ -46,22 +50,6 @@ export const numActiveTextInputsObservable = new Observable<number>(0);
 // player's vision, which means it should be clearly visible to the player's camera all the time.
 export const playerViewTargetPosObservable = new Observable<THREE.Vector3 | null>(null);
 
-//--------------------------------------------------------------------------------
-// Internal communication between observables
-//--------------------------------------------------------------------------------
-
-// If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
-voxelQuadSelectionObservable.addListener("global", (selection: VoxelQuadSelection | null) => {
-    if (selection)
-    {
-        const v = selection.voxel;
-        const quadIndex = selection.quadIndex;
-        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
-            getVoxelQuadTransformDimensions(v, quadIndex);
-        playerViewTargetPosObservable.set(
-            new THREE.Vector3(v.col + 0.5 + offsetX, offsetY, v.row + 0.5 * offsetZ)
-        );
-    }
-    else
-        playerViewTargetPosObservable.set(null);
-});
+// This observable notifies its listeners whenever a brief notification message
+// should be displayed to the user (e.g. error messages, status updates).
+export const notificationMessageObservable = new Observable<string | null>(null);

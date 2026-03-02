@@ -86,7 +86,7 @@ export default function Chat()
     </>;
 }
 
-const className = "flex flex-row flex-wrap gap-x-1 gap-y-0 p-2 absolute w-full bottom-0";
+const className = "flex flex-row flex-wrap gap-x-1 gap-y-0 p-2 w-full";
 
 interface ChatState
 {

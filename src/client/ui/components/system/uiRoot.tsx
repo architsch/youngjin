@@ -3,9 +3,11 @@ import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 import Chat from "../chat/chat";
 import DebugStats from "../debug/debugStats";
 import VoxelQuadSelectionMenu from "../selection/voxelQuadSelectionMenu";
+import PersistentObjectSelectionMenu from "../selection/persistentObjectSelectionMenu";
 import Tutorial from "../tutorial/tutorial";
 import UserIdentity from "../user/userIdentity";
 import Loading from "./loading";
+import Notification from "./notification";
 import Reconnecting from "./reconnecting";
 import Popup from "../basic/popup";
 import { PopupType } from "../../types/PopupType";
@@ -30,8 +32,11 @@ export default function UIRoot({ env, user }: UIRootProps)
             onSignOutButtonClick={openSignOutFormPopup}
         />
         <DebugStats env={env}/>
-        <Chat/>
-        <VoxelQuadSelectionMenu/>
+        <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
+            <PersistentObjectSelectionMenu/>
+            <VoxelQuadSelectionMenu/>
+            <Chat/>
+        </div>
         <Tutorial user={user}/>
         {popupType == "authPrompt" && <Popup>
             <AuthPromptForm
@@ -42,6 +47,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         {popupType == "signOut" && <Popup>
             <SignOutForm onCancel={closePopup}/>
         </Popup>}
+        <Notification/>
         <Loading/>
         <Reconnecting/>
     </>

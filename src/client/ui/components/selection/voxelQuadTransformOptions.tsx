@@ -9,6 +9,7 @@ import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getV
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
 import Room from "../../../../shared/room/types/room";
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../../shared/voxel/util/voxelBlockUpdateUtil";
+import { wouldBlockRemovalBreakPersistentObject } from "../../../../shared/object/util/persistentObjectUpdateUtil";
 
 export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSelection})
 {
@@ -29,6 +30,13 @@ function moveVoxelBlockOption(selection: VoxelQuadSelection, rowOffset: number, 
         return;
     }
     const quadIndex = selection.quadIndex;
+
+    const row = getVoxelRowFromQuadIndex(quadIndex);
+    const col = getVoxelColFromQuadIndex(quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    if (wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
+        return;
+
     if (moveVoxelBlock(room, quadIndex, rowOffset, colOffset, collisionLayerOffset))
     {
         const v = selection.voxel;
@@ -101,6 +109,12 @@ function removeVoxelBlockOption(selection: VoxelQuadSelection)
         return;
     }
     const quadIndex = selection.quadIndex;
+
+    const row = getVoxelRowFromQuadIndex(quadIndex);
+    const col = getVoxelColFromQuadIndex(quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    if (wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
+        return;
 
     if (removeVoxelBlock(room, quadIndex))
     {

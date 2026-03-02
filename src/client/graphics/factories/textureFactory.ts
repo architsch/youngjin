@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 const textureLoader = new THREE.TextureLoader();
+textureLoader.setCrossOrigin("anonymous");
 const loadedTextures: { [textureId: string]: THREE.Texture } = {};
 const loadedRenderTargets: { [renderTargetId: string]: THREE.WebGLRenderTarget } = {};
 

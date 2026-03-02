@@ -9,7 +9,9 @@ const TextureUtil =
     drawImageOnRenderTarget: async (textureURL: string, renderTarget: THREE.WebGLRenderTarget,
         targetU1: number, targetV1: number, targetU2: number, targetV2: number): Promise<void> =>
     {
-        const texture = await TextureFactory.loadStaticImageTexture(textureURL);
+        const texture = textureURL.length > 0
+            ? (await TextureFactory.loadStaticImageTexture(textureURL))
+            : placeholderTexture;
         material.uniforms.sourceTexture.value = texture;
         material.uniforms.sourceTexture.value.needsUpdate = true;
 
@@ -49,9 +51,15 @@ const TextureUtil =
         renderer.setSize(vec2Temp.x, vec2Temp.y);
         renderer.autoClear = autoClear;
 
-        TextureFactory.unload(textureURL);
+        if (textureURL.length > 0)
+            TextureFactory.unload(textureURL);
     }
 }
+
+// 1x1 dark gray placeholder texture for when no image is available
+const placeholderData = new Uint8Array([40, 40, 40, 255]);
+const placeholderTexture = new THREE.DataTexture(placeholderData, 1, 1, THREE.RGBAFormat);
+placeholderTexture.needsUpdate = true;
 
 const material = new THREE.RawShaderMaterial({
     uniforms: {

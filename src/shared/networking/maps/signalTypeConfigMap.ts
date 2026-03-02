@@ -7,6 +7,7 @@ import UserCommandParams from "../../user/types/userCommandParams";
 import RoomChangeRequestParams from "../../room/types/roomChangeRequestParams";
 import RoomRuntimeMemory from "../../room/types/roomRuntimeMemory";
 import UpdateVoxelGridParams from "../../voxel/types/update/updateVoxelGridParams";
+import UpdatePersistentObjectGroupParams from "../../object/types/update/updatePersistentObjectGroupParams";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
 
@@ -95,7 +96,17 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         maxClientSideReceptionPeriod: 2000, // this handles the case in which another user modifies the voxelGrid while the room is still loading on the client side, etc.
         decode: (bufferState: BufferState) => UpdateVoxelGridParams.decode(bufferState),
     }],
-    [8, { // Unidirectional (client -> server)
+    [8, { // Bidirectional (client <-> server)
+        // (Overall Flow):
+        // The client makes an update to the existing client-side persistentObjectGroup, and reports this update to the server (i.e. "updatePersistentObjectGroupParams").
+        // The server applies this update to the server-side persistentObjectGroup, and also announces it to the other clients.
+        // The other clients receive the update info and sync up their client-side persistentObjectGroups accordingly.
+        signalType: "updatePersistentObjectGroupParams",
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => UpdatePersistentObjectGroupParams.decode(bufferState),
+    }],
+    [9, { // Unidirectional (client -> server)
         // (Overall Flow):
         // The client sends a user-generated command (e.g. a command to increase the user's tutorialStep) to the server.
         // The server processes the command.

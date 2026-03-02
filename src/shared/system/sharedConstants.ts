@@ -57,6 +57,28 @@ export const VOXEL_GRID_TASK_TYPE_ADD = 1;
 export const VOXEL_GRID_TASK_TYPE_REMOVE = 2;
 export const VOXEL_GRID_TASK_TYPE_TEX = 3;
 
+// Persistent Object Group Tasks
+
+export const PERSISTENT_OBJ_TASK_TYPE_ADD = 0;
+export const PERSISTENT_OBJ_TASK_TYPE_REMOVE = 1;
+export const PERSISTENT_OBJ_TASK_TYPE_MOVE = 2;
+export const PERSISTENT_OBJ_TASK_TYPE_SET_METADATA = 3;
+
+// Persistent Object Bounds
+
+export const PERSISTENT_OBJ_MIN_X = 0;
+export const PERSISTENT_OBJ_MAX_X = 32;
+export const PERSISTENT_OBJ_MIN_Y = 0;
+export const PERSISTENT_OBJ_MAX_Y = 4;
+export const PERSISTENT_OBJ_MIN_Z = 0;
+export const PERSISTENT_OBJ_MAX_Z = 32;
+
+// Persistent Object Limits
+
+export const MAX_CANVASES_PER_ROOM = 64;
+export const MAX_IMAGE_URL_LENGTH = 512;
+export const MAX_DESTINATION_ROOM_ID_LENGTH = 128;
+
 // Gameplay
 
 export const MAX_WORLDSPACE_SELECT_DIST_SQR = 64; // = 8*8

@@ -10,6 +10,7 @@ import UpdateVoxelGridTaskParams from "../../../shared/voxel/types/update/update
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../shared/voxel/util/voxelBlockUpdateUtil";
 import { setVoxelQuadVisible } from "../../../shared/voxel/util/voxelQuadUpdateUtil";
 import { getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
+import { wouldBlockRemovalBreakPersistentObject } from "../../../shared/object/util/persistentObjectUpdateUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 
@@ -41,7 +42,20 @@ export function updateVoxelGrid(socketUserContext: SocketUserContext, params: Up
 function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVoxelBlockParams)
 {
     const room = getRoom(socketUserContext);
-    if (!room || !moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
+    if (!room)
+    {
+        console.error(`Voxel update failed (moveVoxelBlockTask) - room not found`);
+        return;
+    }
+    const row = getVoxelRowFromQuadIndex(params.quadIndex);
+    const col = getVoxelColFromQuadIndex(params.quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+    if (wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
+    {
+        console.warn(`Block move blocked: persistent object depends on this wall`);
+        return;
+    }
+    if (!moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
     {
         console.error(`Voxel update failed (moveVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         return;
@@ -63,7 +77,20 @@ function addVoxelBlockTask(socketUserContext: SocketUserContext, params: AddVoxe
 function removeVoxelBlockTask(socketUserContext: SocketUserContext, params: RemoveVoxelBlockParams)
 {
     const room = getRoom(socketUserContext);
-    if (!room || !removeVoxelBlock(room, params.quadIndex))
+    if (!room)
+    {
+        console.error(`Voxel update failed (removeVoxelBlockTask) - room not found`);
+        return;
+    }
+    const row = getVoxelRowFromQuadIndex(params.quadIndex);
+    const col = getVoxelColFromQuadIndex(params.quadIndex);
+    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+    if (wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
+    {
+        console.warn(`Block removal blocked: persistent object depends on this wall`);
+        return;
+    }
+    if (!removeVoxelBlock(room, params.quadIndex))
     {
         console.error(`Voxel update failed (removeVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         return;

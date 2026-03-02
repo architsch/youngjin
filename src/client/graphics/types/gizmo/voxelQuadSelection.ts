@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { persistentObjectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import { getVoxelQuadTransformDimensions } from "../../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
+import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -19,6 +20,11 @@ export default class VoxelQuadSelection
     {
         this.voxel = voxel;
         this.quadIndex = quadIndex;
+    }
+
+    static isSelected(): boolean
+    {
+        return voxelQuadSelectionObservable.peek() != null;
     }
 
     static trySelect(voxel: Voxel, quadIndex: number): boolean
@@ -66,40 +72,48 @@ export default class VoxelQuadSelection
     }
 }
 
-let voxelQuadSelectionMeshClone: THREE.Mesh | null = null;
+let selectionMeshClone: THREE.Mesh | null = null;
 
-// Whenever the current voxelQuad selection changes,
-// its graphics (e.g. mesh) should be updated to reflect such a change.
 voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {
     if (selection)
     {
-        if (voxelQuadSelectionMeshClone == null)
+        // Initialize the mesh if it hasn't been initialized yet.
+        if (selectionMeshClone == null)
         {
             const mesh = await MeshFactory.loadMesh("Square", new WireframeMaterialParams("#00ff00"));
-            voxelQuadSelectionMeshClone = mesh.clone();
-            GraphicsManager.getScene().add(voxelQuadSelectionMeshClone);
+            selectionMeshClone = mesh.clone();
+            GraphicsManager.getScene().add(selectionMeshClone);
         }
+
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
             getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
 
-        voxelQuadSelectionMeshClone!.scale.set(scaleX, scaleY, scaleZ);
-        voxelQuadSelectionMeshClone!.position.set(
+        selectionMeshClone!.scale.set(scaleX, scaleY, scaleZ);
+        selectionMeshClone!.position.set(
             selection.voxel.col + 0.5 + offsetX,
             offsetY,
             selection.voxel.row + 0.5 + offsetZ
         );
-
-        const p = voxelQuadSelectionMeshClone!.position;
+        const p = selectionMeshClone!.position;
         vec3Temp.set(p.x + dirX, p.y + dirY, p.z + dirZ);
-        voxelQuadSelectionMeshClone!.lookAt(vec3Temp);
+        selectionMeshClone!.lookAt(vec3Temp);
 
-        voxelQuadSelectionMeshClone.visible = true;
+        selectionMeshClone.visible = true;
+
+        // If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
+        // Also unselect any persistent object selection.
+        playerViewTargetPosObservable.set(new THREE.Vector3(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ));
+        persistentObjectSelectionObservable.set(null);
     }
     else
     {
-        if (voxelQuadSelectionMeshClone != null)
-            voxelQuadSelectionMeshClone.visible = false;
+        if (selectionMeshClone != null)
+            selectionMeshClone.visible = false;
     }
+
+    // Is nothing selected at all? Then just set the viewTarget to NULL.
+    if (!WorldSpaceSelectionUtil.isAnythingSelected())
+        playerViewTargetPosObservable.set(null);
 });
 
 // Whenever the current room changes,
@@ -107,9 +121,9 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
 roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
     VoxelQuadSelection.unselect();
 
-    if (voxelQuadSelectionMeshClone)
+    if (selectionMeshClone)
     {
-        voxelQuadSelectionMeshClone.removeFromParent();
-        voxelQuadSelectionMeshClone = null;
+        selectionMeshClone.removeFromParent();
+        selectionMeshClone = null;
     }
 });
