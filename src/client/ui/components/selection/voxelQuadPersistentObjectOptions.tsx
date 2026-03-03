@@ -1,7 +1,5 @@
-import { useState } from "react";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import Button from "../basic/button";
-import TextInput from "../basic/textInput";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ObjectManager from "../../../object/objectManager";
@@ -17,57 +15,19 @@ import EncodableByteString from "../../../../shared/networking/types/encodableBy
 import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
 import CanvasGameObject from "../../../object/types/canvasGameObject";
-import { MAX_CANVASES_PER_ROOM, MAX_IMAGE_URL_LENGTH, MAX_DESTINATION_ROOM_ID_LENGTH } from "../../../../shared/system/sharedConstants";
+import { MAX_CANVASES_PER_ROOM } from "../../../../shared/system/sharedConstants";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 export default function VoxelQuadPersistentObjectOptions(props: {selection: VoxelQuadSelection})
 {
-    const [showCanvasForm, setShowCanvasForm] = useState(false);
-    const [showDoorForm, setShowDoorForm] = useState(false);
-    const [imageURL, setImageURL] = useState("");
-    const [destRoomID, setDestRoomID] = useState("");
-
     return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
         <div className="flex flex-row gap-2">
             <Button name="Add Canvas" size="sm" onClick={() => {
-                setShowCanvasForm(!showCanvasForm);
-                setShowDoorForm(false);
-            }}/>
-            <Button name="Add Door" size="sm" onClick={() => {
-                setShowDoorForm(!showDoorForm);
-                setShowCanvasForm(false);
+                addPersistentObjectFromQuad(props.selection, canvasTypeIndex,
+                    {[ObjectMetadataKeyEnumMap.ImageURL]: new EncodableByteString("")});
             }}/>
         </div>
-        {showCanvasForm && <div className="flex flex-row gap-2 items-center">
-            <TextInput size="sm" placeholder="Image URL" textInput={imageURL} setTextInput={setImageURL}/>
-            <Button name="Create" size="sm" color="green" onClick={() => {
-                if (imageURL.length > MAX_IMAGE_URL_LENGTH)
-                {
-                    notificationMessageObservable.set(`Image URL is too long (max ${MAX_IMAGE_URL_LENGTH} characters).`);
-                    return;
-                }
-                addPersistentObjectFromQuad(props.selection, canvasTypeIndex,
-                    {[ObjectMetadataKeyEnumMap.ImageURL]: new EncodableByteString(imageURL)});
-                setShowCanvasForm(false);
-                setImageURL("");
-            }}/>
-        </div>}
-        {showDoorForm && <div className="flex flex-row gap-2 items-center">
-            <TextInput size="sm" placeholder="Destination Room ID" textInput={destRoomID} setTextInput={setDestRoomID}/>
-            <Button name="Create" size="sm" color="green" onClick={() => {
-                if (destRoomID.length > MAX_DESTINATION_ROOM_ID_LENGTH)
-                {
-                    notificationMessageObservable.set(`Destination Room ID is too long (max ${MAX_DESTINATION_ROOM_ID_LENGTH} characters).`);
-                    return;
-                }
-                addPersistentObjectFromQuad(props.selection, doorTypeIndex,
-                    {[ObjectMetadataKeyEnumMap.DestinationRoomID]: new EncodableByteString(destRoomID)});
-                setShowDoorForm(false);
-                setDestRoomID("");
-            }}/>
-        </div>}
     </div>;
 }
 

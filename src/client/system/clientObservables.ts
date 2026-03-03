@@ -34,8 +34,7 @@ export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
 // Each voxel consists of a stack of voxelBlocks.
 export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | null>(null);
 
-// This observable notifies its listeners whenever the user selects or unselects a persistent object
-// (such as a canvas or door).
+// This observable notifies its listeners whenever the user selects or unselects a persistent object.
 export const persistentObjectSelectionObservable = new Observable<PersistentObjectSelection | null>(null);
 
 // This observable notifies its listeners whenever a text input element (UI) either gets

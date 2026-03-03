@@ -16,8 +16,8 @@ let isDevMode: boolean | undefined;
 export default class VoxelGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
-    static latestMaterialParams: TexturePackMaterialParams;
-    static latestMaterialParamsSyncedRoomID: string = "";
+    static latestMaterialParams: TexturePackMaterialParams; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
+    static latestMaterialParamsSyncedRoomID: string = ""; // Caching happens on a per-room basis
 
     private voxel: Voxel | undefined;
 
@@ -56,6 +56,7 @@ export default class VoxelGameObject extends GameObject
         const startIndex = getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
+            // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
             this.instancedMeshGraphics.reserveInstance(quadIndex);
             this.updateVoxelQuadInstance(quadIndex);
         }
@@ -69,6 +70,7 @@ export default class VoxelGameObject extends GameObject
         const startIndex = getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
+            // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
             this.instancedMeshGraphics.unreserveInstance(quadIndex);
         }
     }

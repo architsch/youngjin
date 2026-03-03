@@ -58,17 +58,6 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             },
         },
     }],
-    [3, { // The user can enter another room by using this object as a portal.
-        objectType: "Door",
-        isWallAttached: true,
-        components: {
-            spawnedByAny: {
-                instancedMeshGraphics: {
-                    createInstanceIdPool: true,
-                },
-            },
-        },
-    }],
 ];
 
 const indexToConfig: {[objectTypeIndex: number]: ObjectTypeConfig} = {};

@@ -77,11 +77,10 @@ export const PERSISTENT_OBJ_MAX_Z = 32;
 
 export const MAX_CANVASES_PER_ROOM = 64;
 export const MAX_IMAGE_URL_LENGTH = 512;
-export const MAX_DESTINATION_ROOM_ID_LENGTH = 128;
 
 // Gameplay
 
-export const MAX_WORLDSPACE_SELECT_DIST_SQR = 64; // = 8*8
+export const MAX_WORLDSPACE_SELECT_DIST_SQR = 256; // = 16*16
 
 // UI
 

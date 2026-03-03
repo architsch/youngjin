@@ -14,6 +14,9 @@ const TextureUtil =
             : placeholderTexture;
         material.uniforms.sourceTexture.value = texture;
         material.uniforms.sourceTexture.value.needsUpdate = true;
+        material.uniforms.aspectRatio.value = (texture.image?.width && texture.image?.height)
+            ? texture.image.width / texture.image.height
+            : 1.0;
 
         const renderer = GraphicsManager.getGameRenderer();
         const targetTexWidth = renderTarget.texture.width;
@@ -63,7 +66,8 @@ placeholderTexture.needsUpdate = true;
 
 const material = new THREE.RawShaderMaterial({
     uniforms: {
-        sourceTexture: { value: null }
+        sourceTexture: { value: null },
+        aspectRatio: { value: 1.0 }
     },
     vertexShader: `
 attribute vec3 position;
@@ -80,11 +84,19 @@ void main() {
 precision highp float;
 
 uniform sampler2D sourceTexture;
+uniform float aspectRatio;
 
 varying vec2 vUv;
 
 void main() {
-    gl_FragColor = texture2D(sourceTexture, vUv);
+    vec2 uv = vUv;
+    if (aspectRatio > 1.0) {
+        float invAR = 1.0 / aspectRatio;
+        uv.y = uv.y * invAR - (invAR - 1.0) * 0.5;
+    } else {
+        uv.x = uv.x * aspectRatio - (aspectRatio - 1.0) * 0.5;
+    }
+    gl_FragColor = texture2D(sourceTexture, uv);
 }
 `,
 });

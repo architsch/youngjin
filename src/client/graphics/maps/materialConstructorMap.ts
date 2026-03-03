@@ -38,16 +38,8 @@ function createTexturePackMaterial(texture: THREE.Texture,
     textureWidth: number, textureHeight: number,
     textureGridCellWidth: number, textureGridCellHeight: number): THREE.Material
 {
-    // Use NearestFilter and disable mipmaps to prevent NPOT (non-power-of-2)
-    // texture rendering issues where only a tiny mip level would be sampled.
-    texture.minFilter = THREE.NearestFilter;
-    texture.magFilter = THREE.NearestFilter;
-    texture.generateMipmaps = false;
-    texture.needsUpdate = true;
-
     const newMaterial = new THREE.MeshPhongMaterial();
     newMaterial.map = texture;
-    newMaterial.alphaTest = 0.5;
     newMaterial.transparent = false;
 
     const pixelBleedingPreventionScales = [

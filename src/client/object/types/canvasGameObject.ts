@@ -5,7 +5,7 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import ObjectManager from "../objectManager";
-import { MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
+import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import PersistentObjectSelection from "../../graphics/types/gizmo/persistentObjectSelection";
 import { roomChangedObservable } from "../../system/clientObservables";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
@@ -29,7 +29,7 @@ export default class CanvasGameObject extends GameObject
         const materialParams = new TexturePackMaterialParams("canvas_texture_pack",
             2048, 2048, 256, 256, "dynamicEmpty");
         this.instancedMeshGraphics.setInstancingProperties(materialParams,
-            "Square", 512);
+            "Square", MAX_CANVASES_PER_ROOM);
     }
 
     async onSpawn(): Promise<void>

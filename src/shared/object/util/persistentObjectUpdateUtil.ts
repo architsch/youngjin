@@ -3,7 +3,7 @@ import Room from "../../room/types/room";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     PERSISTENT_OBJ_MAX_X, PERSISTENT_OBJ_MAX_Y, PERSISTENT_OBJ_MAX_Z,
     PERSISTENT_OBJ_MIN_X, PERSISTENT_OBJ_MIN_Y, PERSISTENT_OBJ_MIN_Z,
-    MAX_IMAGE_URL_LENGTH, MAX_DESTINATION_ROOM_ID_LENGTH } from "../../system/sharedConstants";
+    MAX_IMAGE_URL_LENGTH } from "../../system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { getVoxelQuadIndex } from "../../voxel/util/voxelQueryUtil";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
@@ -488,12 +488,6 @@ export function setPersistentObjectMetadata(room: Room, objectId: string,
         && metadataValue.length > MAX_IMAGE_URL_LENGTH)
     {
         console.error(`setPersistentObjectMetadata :: ImageURL exceeds max length (${metadataValue.length} > ${MAX_IMAGE_URL_LENGTH})`);
-        return null;
-    }
-    if (metadataKey === ObjectMetadataKeyEnumMap.DestinationRoomID
-        && metadataValue.length > MAX_DESTINATION_ROOM_ID_LENGTH)
-    {
-        console.error(`setPersistentObjectMetadata :: DestinationRoomID exceeds max length (${metadataValue.length} > ${MAX_DESTINATION_ROOM_ID_LENGTH})`);
         return null;
     }
 

@@ -5,7 +5,7 @@ export type SpawnType = "spawnedByMe" | "spawnedByOther" | "spawnedByAny";
 export default interface ObjectTypeConfig
 {
     objectType: string;
-    isWallAttached?: boolean; // TRUE if the object should always stay attached to the nearest wall (e.g. canvas, door, etc)
+    isWallAttached?: boolean; // TRUE if the object should always stay attached to the nearest wall (e.g. canvas)
     components: {
         spawnedByAny?: {
             dynamicCollider?: {
