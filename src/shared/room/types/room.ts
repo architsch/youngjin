@@ -10,7 +10,6 @@ import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
 export default class Room extends EncodableData
 {
     id: string;
-    roomName: string;
     roomType: RoomType;
     ownerUserID: string;
     texturePackPath: string;
@@ -18,13 +17,12 @@ export default class Room extends EncodableData
     persistentObjectGroup: PersistentObjectGroup;
     dirty: boolean;
 
-    constructor(id: string | undefined, roomName: string, roomType: RoomType, ownerUserID: string,
+    constructor(id: string | undefined, roomType: RoomType, ownerUserID: string,
         texturePackPath: string,
         voxelGrid: VoxelGrid, persistentObjectGroup: PersistentObjectGroup)
     {
         super();
         this.id = (id != undefined) ? id : "";
-        this.roomName = roomName;
         this.roomType = roomType;
         this.ownerUserID = ownerUserID;
         this.texturePackPath = texturePackPath;
@@ -41,7 +39,6 @@ export default class Room extends EncodableData
     encode(bufferState: BufferState)
     {
         new EncodableByteString(this.id.length > 0 ? this.id : UNDEFINED_DOCUMENT_ID_CHAR).encode(bufferState);
-        new EncodableByteString(this.roomName).encode(bufferState);
         new EncodableEnum(this.roomType, RoomTypeEnumMap).encode(bufferState);
         new EncodableByteString(this.ownerUserID).encode(bufferState);
         new EncodableByteString(this.texturePackPath).encode(bufferState);
@@ -54,12 +51,11 @@ export default class Room extends EncodableData
         let id: string | undefined = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         if (id == UNDEFINED_DOCUMENT_ID_CHAR)
             id = undefined;
-        const roomName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const roomType = (EncodableEnum.decodeWithParams(bufferState, RoomTypeEnumMap) as EncodableEnum).enumValue;
         const ownerUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
         const persistentObjectGroup = PersistentObjectGroup.decode(bufferState) as PersistentObjectGroup;
-        return new Room(id, roomName, roomType, ownerUserID, texturePackPath, voxelGrid, persistentObjectGroup);
+        return new Room(id, roomType, ownerUserID, texturePackPath, voxelGrid, persistentObjectGroup);
     }
 }

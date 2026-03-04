@@ -17,8 +17,6 @@ import { harness, ConnectedUser } from "../helpers/serverHarness";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import RoomManager from "../../../src/server/room/roomManager";
-import User from "../../../src/shared/user/types/user";
-import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 
 describe("concurrent mixed-type events", () => {
@@ -264,13 +262,12 @@ describe("concurrent mixed-type events", () => {
         expect(harness.getPlayerObjectRuntimeMemory("user-B-observer")).toBeDefined();
 
         const saved = harness.savedGameplayStates[0];
-        const reconnectedA = harness.connectUser(new User(
-            "user-A-recon", "UserA", UserTypeEnumMap.Guest, "a@test.com", 0,
-            saved.lastRoomID,
-            saved.lastX, saved.lastY, saved.lastZ,
-            saved.lastDirX, saved.lastDirY, saved.lastDirZ,
-            saved.playerMetadata
-        ));
+        const reconnectedA = harness.connectUser({
+            id: "user-A-recon", lastRoomID: saved.lastRoomID,
+            lastX: saved.lastX, lastY: saved.lastY, lastZ: saved.lastZ,
+            lastDirX: saved.lastDirX, lastDirY: saved.lastDirY, lastDirZ: saved.lastDirZ,
+            playerMetadata: saved.playerMetadata,
+        });
         await harness.joinRoom(reconnectedA, ROOM_ID);
 
         const objA = harness.getPlayerObjectRuntimeMemory("user-A-recon");
@@ -311,14 +308,12 @@ describe("concurrent mixed-type events", () => {
             const saved = harness.savedGameplayStates.find(
                 s => s.userID === `recon-user-${i}`
             )!;
-            reconnectedUsers.push(harness.connectUser(new User(
-                `recon-user-${i}`, `ReconUser${i}`, UserTypeEnumMap.Guest,
-                `recon${i}@test.com`, 0,
-                saved.lastRoomID,
-                saved.lastX, saved.lastY, saved.lastZ,
-                saved.lastDirX, saved.lastDirY, saved.lastDirZ,
-                saved.playerMetadata
-            )));
+            reconnectedUsers.push(harness.connectUser({
+                id: `recon-user-${i}`, lastRoomID: saved.lastRoomID,
+                lastX: saved.lastX, lastY: saved.lastY, lastZ: saved.lastZ,
+                lastDirX: saved.lastDirX, lastDirY: saved.lastDirY, lastDirZ: saved.lastDirZ,
+                playerMetadata: saved.playerMetadata,
+            }));
         }
 
         const results = await Promise.all(
@@ -374,13 +369,12 @@ describe("concurrent mixed-type events", () => {
 
         harness.seedRoom(ROOM_ID, "Lifecycle Room", RoomTypeEnumMap.Regular);
 
-        const reconnectedA = harness.connectUser(new User(
-            "lifecycle-A", "LifecycleA", UserTypeEnumMap.Guest, "la@test.com", 0,
-            savedA.lastRoomID,
-            savedA.lastX, savedA.lastY, savedA.lastZ,
-            savedA.lastDirX, savedA.lastDirY, savedA.lastDirZ,
-            savedA.playerMetadata
-        ));
+        const reconnectedA = harness.connectUser({
+            id: "lifecycle-A", lastRoomID: savedA.lastRoomID,
+            lastX: savedA.lastX, lastY: savedA.lastY, lastZ: savedA.lastZ,
+            lastDirX: savedA.lastDirX, lastDirY: savedA.lastDirY, lastDirZ: savedA.lastDirZ,
+            playerMetadata: savedA.playerMetadata,
+        });
         await harness.joinRoom(reconnectedA, ROOM_ID);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
@@ -405,11 +399,10 @@ describe("concurrent mixed-type events", () => {
             if (!harness.isRoomLoaded(ROOM_ID))
                 harness.seedRoom(ROOM_ID, "Cycle Room", RoomTypeEnumMap.Regular);
 
-            const ctx = harness.connectUser(new User(
-                "cycle-user", "CycleUser", UserTypeEnumMap.Guest,
-                "cycle@test.com", 0, ROOM_ID,
-                lastSavedX, 0, lastSavedZ, 0, 0, 1, {}
-            ));
+            const ctx = harness.connectUser({
+                id: "cycle-user", lastRoomID: ROOM_ID,
+                lastX: lastSavedX, lastY: 0, lastZ: lastSavedZ,
+            });
             await harness.joinRoom(ctx, ROOM_ID);
 
             const state = harness.getGameplayState(ctx)!;
@@ -455,13 +448,12 @@ describe("concurrent mixed-type events", () => {
         harness.seedRoom(ROOM_ID, "Mixed Room", RoomTypeEnumMap.Regular);
 
         const savedA = harness.savedGameplayStates.find(s => s.userID === "returning-A")!;
-        const reconnectedA = harness.connectUser(new User(
-            "returning-A", "ReturningA", UserTypeEnumMap.Guest, "ra@test.com", 0,
-            savedA.lastRoomID,
-            savedA.lastX, savedA.lastY, savedA.lastZ,
-            savedA.lastDirX, savedA.lastDirY, savedA.lastDirZ,
-            savedA.playerMetadata
-        ));
+        const reconnectedA = harness.connectUser({
+            id: "returning-A", lastRoomID: savedA.lastRoomID,
+            lastX: savedA.lastX, lastY: savedA.lastY, lastZ: savedA.lastZ,
+            lastDirX: savedA.lastDirX, lastDirY: savedA.lastDirY, lastDirZ: savedA.lastDirZ,
+            playerMetadata: savedA.playerMetadata,
+        });
         const newUser = harness.connectUser({
             id: "brand-new", lastX: 16, lastZ: 16,
         });

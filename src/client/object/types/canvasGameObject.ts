@@ -35,11 +35,28 @@ export default class CanvasGameObject extends GameObject
     async onSpawn(): Promise<void>
     {
         await super.onSpawn();
+
         await this.instancedMeshGraphics.loadInstancedMesh();
+
         this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool();
-        const { dirX, dirY, dirZ } = this.params.transform;
+        const tr = this.params.transform;
+
+        // (y = 0.0) -> (verticalStepIsOdd = 0)
+        // (y = 0.5) -> (verticalStepIsOdd = 1)
+        // (y = 1.0) -> (verticalStepIsOdd = 0)
+        // (y = 1.5) -> (verticalStepIsOdd = 1)
+        // ...
+        const horizontalValue = (tr.dirZ != 0) ? tr.x : tr.z;
+        const horizontalStepIsOdd = (horizontalValue * 2) % 2;
+        const verticalStepIsOdd = (tr.y * 2) % 2;
+        const overlapPreventionIndex = horizontalStepIsOdd + 2*verticalStepIsOdd; // in range [0, 3]
+        const zFightTieBreaker = 0.001 + 0.001 * overlapPreventionIndex;
+
         this.instancedMeshGraphics.updateInstanceTransform(
-            this.instanceId, 0, 0, 0.01, dirX, dirY, dirZ, 1, 1, 1); // The offset of 0.01 along the local +z axis (wall normal) prevents z-fighting with the wall.
+            this.instanceId,
+            0, 0, zFightTieBreaker,
+            tr.dirX, tr.dirY, tr.dirZ,
+            1, 1, 1);
 
         CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
     }

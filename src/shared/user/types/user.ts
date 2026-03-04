@@ -1,4 +1,3 @@
-import UserGameplayState from "../../../server/user/types/userGameplayState";
 import { UserType } from "./userType";
 
 export default class User
@@ -9,19 +8,9 @@ export default class User
     email: string;
     tutorialStep: number;
     lastRoomID: string;
-    lastX: number;
-    lastY: number;
-    lastZ: number;
-    lastDirX: number;
-    lastDirY: number;
-    lastDirZ: number;
-    playerMetadata: {[key: string]: string};
 
     constructor(id: string | undefined, userName: string, userType: UserType, email: string,
-        tutorialStep: number,
-        lastRoomID: string = "", lastX: number = 16, lastY: number = 0, lastZ: number = 16,
-        lastDirX: number = 0, lastDirY: number = 0, lastDirZ: number = 1,
-        playerMetadata: {[key: string]: string} = {})
+        tutorialStep: number, lastRoomID: string = "")
     {
         this.id = (id != undefined) ? id : "";
         this.userName = userName;
@@ -29,25 +18,6 @@ export default class User
         this.email = email;
         this.tutorialStep = tutorialStep;
         this.lastRoomID = lastRoomID;
-        this.lastX = lastX;
-        this.lastY = lastY;
-        this.lastZ = lastZ;
-        this.lastDirX = lastDirX;
-        this.lastDirY = lastDirY;
-        this.lastDirZ = lastDirZ;
-        this.playerMetadata = playerMetadata;
-    }
-
-    applyGameplayState(state: UserGameplayState): void
-    {
-        this.lastRoomID = state.lastRoomID;
-        this.lastX = state.lastX;
-        this.lastY = state.lastY;
-        this.lastZ = state.lastZ;
-        this.lastDirX = state.lastDirX;
-        this.lastDirY = state.lastDirY;
-        this.lastDirZ = state.lastDirZ;
-        this.playerMetadata = state.playerMetadata;
     }
 
     static fromString(userString: string): User

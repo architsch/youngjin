@@ -81,40 +81,45 @@ const Sockets =
             const user = socketUserContext.user;
             console.log(`(Sockets) Client connected :: ${JSON.stringify(user)}`);
 
+            // Cached gameplay state from a previous session (used for reconnection).
+            // This is passed to changeUserRoom so it can restore position without a DB lookup.
+            let cachedGameplayState: UserGameplayState | undefined;
+
             if (UserManager.hasUser(user.id))
             {
                 // Case A: New socket connects BEFORE old disconnect fires (common on
                 // low-latency environments as well as cases in which another tab inside the same
                 // browser window connects to the server while the original tab is still connected).
                 // Capture the old session's gameplay state from runtime memory, clean it up,
-                // and update the new socket's user object so the player spawns at the correct position.
+                // and pass it to changeUserRoom so the player spawns at the correct position.
                 console.warn(`(Sockets) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
                 const oldContext = UserManager.getSocketUserContext(user.id)!;
                 const oldRoomID = RoomManager.currentRoomIDByUserID[user.id];
                 const oldRoomMemory = oldRoomID ? RoomManager.roomRuntimeMemories[oldRoomID] : undefined;
-                const oldGameplayState = oldRoomMemory ? getUserGameplayState(oldContext, oldRoomMemory) : undefined;
+                cachedGameplayState = oldRoomMemory ? getUserGameplayState(oldContext, oldRoomMemory) : undefined;
 
                 UserManager.removeUser(user.id);
                 await RoomManager.changeUserRoom(oldContext, undefined, false, true);
                 oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
                 oldContext.socket.disconnect(true);
 
-                if (oldGameplayState)
-                    user.applyGameplayState(oldGameplayState);
+                if (cachedGameplayState)
+                    user.lastRoomID = cachedGameplayState.lastRoomID;
             }
             else
             {
                 // Case B: Old disconnect already fired BEFORE this new socket
                 // connected (common on higher-latency environments).
                 // The disconnect handler cached the gameplay state in memory.
-                // Apply it here because the DB write from the disconnect handler
+                // Restore it here because the DB write from the disconnect handler
                 // may not have completed before the socket auth middleware queried
                 // the DB for this new connection.
                 const cached = recentDisconnectGameplayStates[user.id];
                 if (cached)
                 {
                     console.log(`(Sockets) Restoring cached gameplay state for userID = ${user.id}`);
-                    user.applyGameplayState(cached.state);
+                    cachedGameplayState = cached.state;
+                    user.lastRoomID = cached.state.lastRoomID;
                 }
             }
             delete recentDisconnectGameplayStates[user.id];
@@ -184,12 +189,17 @@ const Sockets =
                 await RoomManager.changeUserRoom(socketUserContext, undefined, false, true);
             });
 
-            // Each connected client (user) should automatically join a room.
-            // If the user has lastRoomID,
-            //    -> The user should join the room whose ID is lastRoomID.
-            // If the user either has no lastRoomID or doesn't have a lastRoomID which corresponds to an existing room,
-            //    -> The user should join the "hub" room.
-            if (!(await RoomManager.changeUserRoom(socketUserContext, user.lastRoomID, false, false)))
+            // Determine which room the user should join.
+            // Priority:
+            //   1. targetRoomID from socket handshake (URL-based room access: /mypage/:roomID)
+            //   2. user.lastRoomID (the room the user was last in)
+            //   3. Hub room (fallback)
+            const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
+            const preferredRoomID = (targetRoomID && targetRoomID.length > 0)
+                ? targetRoomID
+                : user.lastRoomID;
+
+            if (!(await RoomManager.changeUserRoom(socketUserContext, preferredRoomID, false, false, cachedGameplayState)))
             {
                 // Check in-memory rooms first to avoid a Firestore query
                 let hubRoomID: string | undefined;
@@ -312,7 +322,7 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
                 return;
             }
 
-            socket.handshake.auth = user;
+            socket.handshake.auth = { ...socket.handshake.auth, user };
             next();
         }
         catch (err)

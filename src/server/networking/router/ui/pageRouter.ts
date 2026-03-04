@@ -8,7 +8,11 @@ import { GIT_COMMIT } from "../../../system/serverConstants";
 const PageRouter = express.Router();
 
 PageRouter.get("/mypage", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT });
+    EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: "" });
+});
+
+PageRouter.get("/mypage/:roomID", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
+    EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: req.params.roomID });
 });
 
 if (process.env.MODE == "dev")

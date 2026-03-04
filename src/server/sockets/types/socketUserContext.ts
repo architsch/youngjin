@@ -18,7 +18,7 @@ export default class SocketUserContext
     constructor(socket: socketIO.Socket)
     {
         this.socket = socket;
-        this.user = socket.handshake.auth as User;
+        this.user = socket.handshake.auth.user as User;
         this.connectTime = Date.now();
         this.pendingSignalsToUserByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
     }

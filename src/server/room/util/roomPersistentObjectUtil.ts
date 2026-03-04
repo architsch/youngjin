@@ -94,7 +94,7 @@ function movePersistentObjectTask(socketUserContext: SocketUserContext, params: 
         console.error(`PersistentObject update failed (movePersistentObjectTask) - room not found`);
         return;
     }
-    const po = movePersistentObject(room, params.objectId, params.dx, params.dy);
+    const po = movePersistentObject(room, params.objectId, params.dx, params.dy, params.dz);
     if (!po)
     {
         console.error(`PersistentObject update failed (movePersistentObjectTask) - params: ${JSON.stringify(params)}`);

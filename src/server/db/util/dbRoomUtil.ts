@@ -42,16 +42,16 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.deleteRoomContent", {roomID: room.id}, "low", "info");
         return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(room.id));
     },
-    createRoom: async (roomName: string, roomType: RoomType, ownerUserID: string,
+    createRoom: async (roomType: RoomType, ownerUserID: string,
         floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number,
         texturePackPath: string): Promise<DBQueryResponse<{id: string}>> =>
     {
-        LogUtil.log("DBRoomUtil.createRoom", {roomName, roomType, ownerUserID, floorTextureIndex, wallTextureIndex,
+        LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, floorTextureIndex, wallTextureIndex,
             ceilingTextureIndex, texturePackPath}, "low", "info");
         const {voxelGrid, persistentObjectGroup} =
             RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
-        const room = new Room(undefined, roomName, roomType, ownerUserID, texturePackPath,
+        const room = new Room(undefined, roomType, ownerUserID, texturePackPath,
             voxelGrid, persistentObjectGroup);
         const dbRoom = getDBRoomFromRoom(room);
 
@@ -83,13 +83,13 @@ const DBRoomUtil =
             .run();
         return result.success;
     },
-    changeRoomName: async (room: Room, newRoomName: string): Promise<boolean> =>
+    changeRoomTexturePackPath: async (room: Room, newTexturePackPath: string): Promise<boolean> =>
     {
-        LogUtil.log("DBRoomUtil.changeRoomName", {roomID: room.id, newRoomName}, "low", "info");
+        LogUtil.log("DBRoomUtil.changeRoomTexturePackPath", {roomID: room.id, newTexturePackPath}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update(COLLECTION_ROOMS)
             .set({
-                roomName: newRoomName,
+                texturePackPath: newTexturePackPath,
             })
             .where("id", "==", room.id)
             .run();
@@ -102,7 +102,6 @@ function getDBRoomFromRoom(room: Room): DBRoom
     const dbRoom: DBRoom = {
         id: room.id,
         version: DBRoomVersionMigration.length,
-        roomName: room.roomName,
         roomType: room.roomType,
         ownerUserID: room.ownerUserID,
         texturePackPath: room.texturePackPath,
@@ -122,7 +121,6 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
 
     return new Room(
         dbRoom.id,
-        dbRoom.roomName,
         dbRoom.roomType,
         dbRoom.ownerUserID,
         dbRoom.texturePackPath,

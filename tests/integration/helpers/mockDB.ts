@@ -14,7 +14,6 @@ import UserGameplayState from "../../../src/server/user/types/userGameplayState"
 interface StoredRoom
 {
     id: string;
-    roomName: string;
     roomType: RoomType;
     ownerUserID: string;
     texturePackPath: string;
@@ -29,13 +28,6 @@ interface StoredUser
     email: string;
     tutorialStep: number;
     lastRoomID: string;
-    lastX: number;
-    lastY: number;
-    lastZ: number;
-    lastDirX: number;
-    lastDirY: number;
-    lastDirZ: number;
-    playerMetadata: {[key: string]: string};
     lastLoginAt: number;
     createdAt: number;
     loginCount: number;
@@ -43,8 +35,23 @@ interface StoredUser
     version: number;
 }
 
+interface StoredUserRoomState
+{
+    userID: string;
+    roomID: string;
+    lastX: number;
+    lastY: number;
+    lastZ: number;
+    lastDirX: number;
+    lastDirY: number;
+    lastDirZ: number;
+    playerMetadata: {[key: string]: string};
+    version: number;
+}
+
 export const roomStore: {[roomID: string]: StoredRoom} = {};
 export const userStore: {[userID: string]: StoredUser} = {};
+export const userRoomStateStore: {[compositeId: string]: StoredUserRoomState} = {};
 export const savedGameplayStates: UserGameplayState[] = [];
 
 let roomCounter = 0;
@@ -54,6 +61,7 @@ export function resetStores(): void
 {
     for (const k in roomStore) delete roomStore[k];
     for (const k in userStore) delete userStore[k];
+    for (const k in userRoomStateStore) delete userRoomStateStore[k];
     savedGameplayStates.length = 0;
     roomCounter = 0;
     userCounter = 0;
@@ -63,21 +71,36 @@ export function resetStores(): void
 
 export function seedRoom(
     roomID: string,
-    roomName: string = "test-room",
     roomType: RoomType = RoomTypeEnumMap.Hub,
 ): Room
 {
     const { voxelGrid, persistentObjectGroup } = RoomGenerator.generateEmptyRoom(0, 1, 2);
-    const room = new Room(roomID, roomName, roomType, "", "", voxelGrid, persistentObjectGroup);
+    const room = new Room(roomID, roomType, "", "", voxelGrid, persistentObjectGroup);
     roomStore[roomID] = {
         id: roomID,
-        roomName,
         roomType,
         ownerUserID: "",
         texturePackPath: "",
         room,
     };
     return room;
+}
+
+export function seedUserRoomState(
+    userID: string, roomID: string,
+    lastX: number, lastY: number, lastZ: number,
+    lastDirX: number, lastDirY: number, lastDirZ: number,
+    playerMetadata: {[key: string]: string},
+): void
+{
+    const compositeId = `${userID}_${roomID}`;
+    userRoomStateStore[compositeId] = {
+        userID, roomID,
+        lastX, lastY, lastZ,
+        lastDirX, lastDirY, lastDirZ,
+        playerMetadata,
+        version: 0,
+    };
 }
 
 // ─── Mock: DBRoomUtil ────────────────────────────────────────────────────────
@@ -97,19 +120,19 @@ export const mockDBRoomUtil = {
         return true;
     }),
     createRoom: vi.fn(async (
-        roomName: string, roomType: RoomType, _ownerUserID: string,
+        roomType: RoomType, _ownerUserID: string,
         _floor: number, _wall: number, _ceil: number, _texPath: string
     ) =>
     {
         const id = `room-${++roomCounter}`;
-        seedRoom(id, roomName, roomType);
+        seedRoom(id, roomType);
         return { success: true, data: [{ id }] };
     }),
     deleteRoom: vi.fn(async (_roomID: string): Promise<boolean> =>
     {
         return true;
     }),
-    changeRoomName: vi.fn(async (_room: Room, _newName: string): Promise<boolean> =>
+    changeRoomTexturePackPath: vi.fn(async (_room: Room, _newTexturePackPath: string): Promise<boolean> =>
     {
         return true;
     }),
@@ -120,10 +143,6 @@ export const mockDBRoomUtil = {
 export const mockDBSearchUtil = {
     rooms: {
         all: vi.fn(async () => ({ success: true, data: Object.values(roomStore) })),
-        withRoomName: vi.fn(async (name: string) => ({
-            success: true,
-            data: Object.values(roomStore).filter(r => r.roomName === name),
-        })),
         withRoomType: vi.fn(async (type: RoomType) => ({
             success: true,
             data: Object.values(roomStore).filter(r => r.roomType === type),
@@ -161,9 +180,7 @@ export const mockDBUserUtil = {
         const id = `user-${++userCounter}`;
         userStore[id] = {
             id, userName, userType, email,
-            tutorialStep: 0, lastRoomID: "", lastX: 16, lastY: 0, lastZ: 16,
-            lastDirX: 0, lastDirY: 0, lastDirZ: 1,
-            playerMetadata: {},
+            tutorialStep: 0, lastRoomID: "",
             lastLoginAt: Date.now(), createdAt: Date.now(),
             loginCount: 1, totalPlaytimeMs: 0, version: 1,
         };
@@ -175,4 +192,31 @@ export const mockDBUserUtil = {
     fromDBType: vi.fn((dbUser: any) => dbUser),
     updateLastLogin: vi.fn(async () => {}),
     upgradeGuestToMember: vi.fn(async () => ({ success: true, data: [] })),
+};
+
+// ─── Mock: DBUserRoomStateUtil ──────────────────────────────────────────────
+
+export const mockDBUserRoomStateUtil = {
+    findByUserAndRoom: vi.fn(async (userID: string, roomID: string) =>
+    {
+        const compositeId = `${userID}_${roomID}`;
+        return userRoomStateStore[compositeId] ?? null;
+    }),
+    saveUserRoomState: vi.fn(async (
+        userID: string, roomID: string,
+        lastX: number, lastY: number, lastZ: number,
+        lastDirX: number, lastDirY: number, lastDirZ: number,
+        playerMetadata: {[key: string]: string},
+    ) =>
+    {
+        const compositeId = `${userID}_${roomID}`;
+        userRoomStateStore[compositeId] = {
+            userID, roomID,
+            lastX, lastY, lastZ,
+            lastDirX, lastDirY, lastDirZ,
+            playerMetadata,
+            version: 0,
+        };
+    }),
+    makeCompositeId: (userID: string, roomID: string) => `${userID}_${roomID}`,
 };

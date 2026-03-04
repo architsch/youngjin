@@ -66,6 +66,7 @@ const SocketsClient =
             reconnectionAttempts: 20,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
+            auth: { targetRoomID: env.targetRoomID },
         });
 
         // Expose for E2E test teardown (explicit disconnect prevents stale players)

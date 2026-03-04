@@ -15,7 +15,7 @@ import EncodableByteString from "../../../../shared/networking/types/encodableBy
 import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
 import CanvasGameObject from "../../../object/types/canvasGameObject";
-import { MAX_CANVASES_PER_ROOM } from "../../../../shared/system/sharedConstants";
+import { MAX_CANVASES_PER_ROOM, MID_ROOM_Y } from "../../../../shared/system/sharedConstants";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -35,7 +35,8 @@ function addPersistentObjectFromQuad(selection: VoxelQuadSelection,
     objectTypeIndex: number, metadata: {[key: number]: EncodableByteString})
 {
     const room = App.getCurrentRoom();
-    if (!room) return;
+    if (!room)
+        return;
 
     if (objectTypeIndex === canvasTypeIndex
         && CanvasGameObject.spawnedCanvasGameObjects.size >= MAX_CANVASES_PER_ROOM)
@@ -48,9 +49,15 @@ function addPersistentObjectFromQuad(selection: VoxelQuadSelection,
     const quadIndex = selection.quadIndex;
     const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
         getVoxelQuadTransformDimensions(voxel, quadIndex);
+    
+    if (dirY != 0) // A canvas cannot be added to a voxelQuad which is either looking up (+y) or down (-y).
+    {
+        notificationMessageObservable.set("You can only add a canvas to a wall!");
+        return;
+    }
 
     const x = voxel.col + 0.5 + offsetX;
-    const y = offsetY;
+    const y = 0.5 * (offsetY < MID_ROOM_Y ? Math.ceil(2 * offsetY) : Math.floor(2 * offsetY));
     const z = voxel.row + 0.5 + offsetZ;
 
     let direction: "+z" | "+x" | "-z" | "-x" = "+z";

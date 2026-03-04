@@ -60,7 +60,7 @@ function moveCanvas(selection: PersistentObjectSelection, dx: number, dy: number
     if (!room) return;
 
     const oldObjectId = selection.gameObject.params.objectId;
-    const po = movePersistentObject(room, oldObjectId, dx, dy);
+    const po = movePersistentObject(room, oldObjectId, dx, dy, 0);
     if (!po) return;
 
     ObjectManager.despawnObject(oldObjectId);
@@ -79,7 +79,7 @@ function moveCanvas(selection: PersistentObjectSelection, dx: number, dy: number
         PersistentObjectSelection.trySelect(gameObject);
     });
 
-    SocketsClient.emitUpdatePersistentObjectGroup(new MovePersistentObjectParams(oldObjectId, dx, dy));
+    SocketsClient.emitUpdatePersistentObjectGroup(new MovePersistentObjectParams(oldObjectId, dx, dy, 0));
 }
 
 function setCanvasImageURL(selection: PersistentObjectSelection, imageURL: string)

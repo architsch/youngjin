@@ -14,17 +14,8 @@ const DBSearchUtil =
             return await new DBQuery<DBRoom>()
                 .select()
                 .from(COLLECTION_ROOMS)
-                .orderBy("roomName")
                 .limit(10)
                 .offset(page * 10)
-                .run();
-        },
-        withRoomName: async (roomName: string): Promise<DBQueryResponse<DBRoom>> => {
-            LogUtil.log("DBSearchUtil.rooms.withRoomName", {roomName}, "low", "info");
-            return await new DBQuery<DBRoom>()
-                .select()
-                .from(COLLECTION_ROOMS)
-                .where("roomName", "==", roomName)
                 .run();
         },
         withRoomType: async (roomType: RoomType): Promise<DBQueryResponse<DBRoom>> => {

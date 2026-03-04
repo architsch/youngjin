@@ -13,8 +13,6 @@ import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import RoomManager from "../../../src/server/room/roomManager";
 import UserManager from "../../../src/server/user/userManager";
-import User from "../../../src/shared/user/types/user";
-import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 
 const ROOM_ID = "lifecycle-room";
@@ -116,13 +114,12 @@ describe("server lifecycle events", () => {
         harness.seedRoom(ROOM_ID, "Lifecycle Room", RoomTypeEnumMap.Regular);
 
         // User reconnects with saved state (simulating DB lookup)
-        const rebooted = harness.connectUser(new User(
-            "reboot-user", "RebootUser", UserTypeEnumMap.Guest, "r@test.com", 0,
-            saved.lastRoomID,
-            saved.lastX, saved.lastY, saved.lastZ,
-            saved.lastDirX, saved.lastDirY, saved.lastDirZ,
-            saved.playerMetadata
-        ));
+        const rebooted = harness.connectUser({
+            id: "reboot-user", lastRoomID: saved.lastRoomID,
+            lastX: saved.lastX, lastY: saved.lastY, lastZ: saved.lastZ,
+            lastDirX: saved.lastDirX, lastDirY: saved.lastDirY, lastDirZ: saved.lastDirZ,
+            playerMetadata: saved.playerMetadata,
+        });
         await harness.joinRoom(rebooted, ROOM_ID);
 
         // State should match what was saved before shutdown

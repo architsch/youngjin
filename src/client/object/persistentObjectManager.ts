@@ -71,7 +71,7 @@ const PersistentObjectManager =
                 {
                     const moveParams = task as MovePersistentObjectParams;
                     const oldObjectId = moveParams.objectId;
-                    const po = movePersistentObject(room, oldObjectId, moveParams.dx, moveParams.dy);
+                    const po = movePersistentObject(room, oldObjectId, moveParams.dx, moveParams.dy, moveParams.dz);
                     if (po)
                     {
                         // Despawn old, respawn at new position (direction may have changed due to corner wrapping)

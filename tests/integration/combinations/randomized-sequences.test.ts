@@ -19,8 +19,6 @@ import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import RoomManager from "../../../src/server/room/roomManager";
 import UserManager from "../../../src/server/user/userManager";
-import User from "../../../src/shared/user/types/user";
-import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import {
     Action, actionArb, connectAction, disconnectAction,
     joinRoomAction, moveObjectAction, editVoxelAction,
@@ -545,13 +543,12 @@ describe("state persistence with simulated DB latency", () => {
         expect(harness.savedGameplayStates).toHaveLength(1);
 
         const saved = harness.savedGameplayStates[0];
-        const reconnected = harness.connectUser(new User(
-            "lat-reconnect", "LatReconnect", UserTypeEnumMap.Guest, "lr@test.com", 0,
-            saved.lastRoomID,
-            saved.lastX, saved.lastY, saved.lastZ,
-            saved.lastDirX, saved.lastDirY, saved.lastDirZ,
-            saved.playerMetadata
-        ));
+        const reconnected = harness.connectUser({
+            id: "lat-reconnect", lastRoomID: saved.lastRoomID,
+            lastX: saved.lastX, lastY: saved.lastY, lastZ: saved.lastZ,
+            lastDirX: saved.lastDirX, lastDirY: saved.lastDirY, lastDirZ: saved.lastDirZ,
+            playerMetadata: saved.playerMetadata,
+        });
         await harness.joinRoom(reconnected, LATENCY_ROOM);
 
         const obj = harness.getPlayerObjectRuntimeMemory("lat-reconnect");

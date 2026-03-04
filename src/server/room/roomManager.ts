@@ -18,6 +18,7 @@ import { OBJECT_MESSAGE_MAX_LENGTH, ROOM_AUTO_SAVE_INTERVAL } from "../../shared
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import UserGameplayState from "../user/types/userGameplayState";
 import DBUserUtil from "../db/util/dbUserUtil";
+import DBUserRoomStateUtil from "../db/util/dbUserRoomStateUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -84,14 +85,14 @@ const RoomManager =
         await DBUserUtil.saveMultipleUsersGameplayState(gameplayStates);
     },
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
-        saveGameplayState: boolean): Promise<boolean> =>
+        saveGameplayState: boolean, cachedGameplayState?: UserGameplayState): Promise<boolean> =>
     {
         const user = socketUserContext.user;
         console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
         await removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
         if (!roomID)
             return false;
-    
+
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
@@ -104,10 +105,41 @@ const RoomManager =
             console.error(`Failed to load room (ID = ${roomID})`);
             return false;
         }
+
+        // Determine the user's position/direction/metadata for this room.
+        // Priority: cachedGameplayState (from reconnection) > DB lookup > defaults
+        let lastX = 16, lastY = 0, lastZ = 16;
+        let lastDirX = 0, lastDirY = 0, lastDirZ = 1;
+        let playerMetadata: {[key: string]: string} = {};
+
+        if (cachedGameplayState && cachedGameplayState.lastRoomID === roomID)
+        {
+            lastX = cachedGameplayState.lastX;
+            lastY = cachedGameplayState.lastY;
+            lastZ = cachedGameplayState.lastZ;
+            lastDirX = cachedGameplayState.lastDirX;
+            lastDirY = cachedGameplayState.lastDirY;
+            lastDirZ = cachedGameplayState.lastDirZ;
+            playerMetadata = cachedGameplayState.playerMetadata;
+        }
+        else
+        {
+            const roomState = await DBUserRoomStateUtil.findByUserAndRoom(user.id, roomID);
+            if (roomState)
+            {
+                lastX = roomState.lastX;
+                lastY = roomState.lastY;
+                lastZ = roomState.lastZ;
+                lastDirX = roomState.lastDirX;
+                lastDirY = roomState.lastDirY;
+                lastDirZ = roomState.lastDirZ;
+                playerMetadata = (roomState.playerMetadata as {[key: string]: string}) ?? {};
+            }
+        }
+
         addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
-            new ObjectTransform(
-                user.lastX, user.lastY, user.lastZ,
-                user.lastDirX, user.lastDirY, user.lastDirZ)
+            new ObjectTransform(lastX, lastY, lastZ, lastDirX, lastDirY, lastDirZ),
+            playerMetadata
         );
 
         const socketRoomContext = socketRoomContexts[roomID];

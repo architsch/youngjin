@@ -43,6 +43,15 @@ export default class DBQuery<T extends DBRow>
         this.tableId = tableId;
         return this;
     }
+    insertIntoWithId(tableId: string, docId: string): DBQuery<T>
+    {
+        if (this.type != "?")
+            throw new Error(`DB query syntax error: Query type is already determined (${this.type})`);
+        this.type = "insert";
+        this.tableId = tableId;
+        this.docId = docId;
+        return this;
+    }
     delete(): DBQuery<T>
     {
         if (this.type != "?")

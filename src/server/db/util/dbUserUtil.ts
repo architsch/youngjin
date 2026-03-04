@@ -10,6 +10,7 @@ import UserGameplayState from "../../user/types/userGameplayState";
 import { FIRST_TUTORIAL_STEP, HOUR_IN_MS, MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 import { FieldValue } from "firebase-admin/firestore";
 import { COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE } from "../../system/serverConstants";
+import DBUserRoomStateUtil from "./dbUserRoomStateUtil";
 
 const DBUserUtil =
 {
@@ -24,13 +25,6 @@ const DBUserUtil =
             email,
             tutorialStep: FIRST_TUTORIAL_STEP,
             lastRoomID: "",
-            lastX: 16, // center of the room (16 = half of the room's size)
-            lastY: 0,
-            lastZ: 16, // center of the room (16 = half of the room's size)
-            lastDirX: 0,
-            lastDirY: 0,
-            lastDirZ: 1,
-            playerMetadata: {},
             lastLoginAt: Date.now(),
             createdAt: Date.now(),
             loginCount: 0,
@@ -64,43 +58,40 @@ const DBUserUtil =
             .run();
         return result;
     },
-    saveUserGameplayState: async (gameplayState: UserGameplayState): Promise<DBQueryResponse<DBRow>> =>
+    saveUserGameplayState: async (gameplayState: UserGameplayState): Promise<void> =>
     {
         LogUtil.log("DBUserUtil.saveUserGameplayState", gameplayState, "low", "info");
-        const columnValues: DBRow = {
+
+        // 1. Update lastRoomID (and optionally totalPlaytimeMs) on the user document
+        const userColumnValues: DBRow = {
             lastRoomID: gameplayState.lastRoomID,
-            lastX: gameplayState.lastX,
-            lastY: gameplayState.lastY,
-            lastZ: gameplayState.lastZ,
-            lastDirX: gameplayState.lastDirX,
-            lastDirY: gameplayState.lastDirY,
-            lastDirZ: gameplayState.lastDirZ,
-            playerMetadata: gameplayState.playerMetadata,
         };
         if (gameplayState.sessionDurationMs != undefined)
-            columnValues.totalPlaytimeMs = FieldValue.increment(gameplayState.sessionDurationMs);
-        const result = await new DBQuery<DBRow>()
+            userColumnValues.totalPlaytimeMs = FieldValue.increment(gameplayState.sessionDurationMs);
+        await new DBQuery<DBRow>()
             .update(COLLECTION_USERS)
-            .set(columnValues)
+            .set(userColumnValues)
             .where("id", "==", gameplayState.userID)
             .run();
-        return result;
+
+        // 2. Save per-room state (position, direction, metadata) to userRoomStates
+        await DBUserRoomStateUtil.saveUserRoomState(
+            gameplayState.userID, gameplayState.lastRoomID,
+            gameplayState.lastX, gameplayState.lastY, gameplayState.lastZ,
+            gameplayState.lastDirX, gameplayState.lastDirY, gameplayState.lastDirZ,
+            gameplayState.playerMetadata
+        );
     },
     saveMultipleUsersGameplayState: async (gameplayStates: UserGameplayState[]): Promise<void> =>
     {
         if (gameplayStates.length == 0)
             return;
         LogUtil.log("DBUserUtil.saveMultipleUsersGameplayState", {count: gameplayStates.length}, "low", "info");
-        const queries = gameplayStates.map(gs => {
+
+        // 1. Batch update lastRoomID (and optionally totalPlaytimeMs) on user documents
+        const userQueries = gameplayStates.map(gs => {
             const columnValues: DBRow = {
                 lastRoomID: gs.lastRoomID,
-                lastX: gs.lastX,
-                lastY: gs.lastY,
-                lastZ: gs.lastZ,
-                lastDirX: gs.lastDirX,
-                lastDirY: gs.lastDirY,
-                lastDirZ: gs.lastDirZ,
-                playerMetadata: gs.playerMetadata,
             };
             if (gs.sessionDurationMs != undefined)
                 columnValues.totalPlaytimeMs = FieldValue.increment(gs.sessionDurationMs);
@@ -109,7 +100,17 @@ const DBUserUtil =
                 .set(columnValues)
                 .where("id", "==", gs.userID);
         });
-        await DBQuery.runAll(queries);
+        await DBQuery.runAll(userQueries);
+
+        // 2. Save per-room states individually (each is an upsert with a specific doc ID)
+        await Promise.all(gameplayStates.map(gs =>
+            DBUserRoomStateUtil.saveUserRoomState(
+                gs.userID, gs.lastRoomID,
+                gs.lastX, gs.lastY, gs.lastZ,
+                gs.lastDirX, gs.lastDirY, gs.lastDirZ,
+                gs.playerMetadata
+            )
+        ));
     },
     upgradeGuestToMember: async (userID: string, userName: string, email: string): Promise<DBQueryResponse<DBRow>> =>
     {
@@ -195,14 +196,7 @@ const DBUserUtil =
             dbUser.userType,
             dbUser.email,
             dbUser.tutorialStep,
-            dbUser.lastRoomID ?? "",
-            dbUser.lastX ?? 16,
-            dbUser.lastY ?? 0,
-            dbUser.lastZ ?? 16,
-            dbUser.lastDirX ?? 0,
-            dbUser.lastDirY ?? 0,
-            dbUser.lastDirZ ?? 1,
-            (dbUser.playerMetadata as {[key: string]: string}) ?? {}
+            dbUser.lastRoomID ?? ""
         );
     },
 }

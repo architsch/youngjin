@@ -15,7 +15,7 @@ import DBUserUtil from "../../db/util/dbUserUtil";
 const playerObjectRuntimeMemoryByUserID: {[userID: string]: ObjectRuntimeMemory} = {};
 
 export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
-    userID: string, playerObjectTransform: ObjectTransform)
+    userID: string, playerObjectTransform: ObjectTransform, playerMetadata: {[key: string]: string})
 {
     const user = socketUserContext.user;
 
@@ -36,8 +36,8 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
 
     // Create the user's player object
     const restoredMetadata: {[key: number]: EncodableByteString} = {};
-    for (const key of Object.keys(user.playerMetadata))
-        restoredMetadata[parseInt(key)] = new EncodableByteString(user.playerMetadata[key]);
+    for (const key of Object.keys(playerMetadata))
+        restoredMetadata[parseInt(key)] = new EncodableByteString(playerMetadata[key]);
     const playerObjectRuntimeMemory = new ObjectRuntimeMemory(new ObjectSpawnParams(
         roomRuntimeMemory.room.id,
         user.id,

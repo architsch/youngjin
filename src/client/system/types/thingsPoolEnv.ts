@@ -7,4 +7,5 @@ export default interface ThingsPoolEnv
     rest_api_server_url: string,
     assets_url: string,
     gitCommit: string,
+    targetRoomID: string,
 }

@@ -20,7 +20,7 @@
  */
 
 import { vi } from "vitest";
-import { resetStores, seedRoom, roomStore } from "./mockDB";
+import { resetStores, seedRoom, roomStore, userRoomStateStore } from "./mockDB";
 
 // ─── Shared room store reference for the getRoomContent mock ─────────────────
 // We import roomStore above and reference it inside the factory closures.
@@ -42,6 +42,11 @@ const _roomStore = vi.hoisted(() => {
 const _savedGameplayStates = vi.hoisted(() => {
     const states: any[] = [];
     return states;
+});
+
+const _userRoomStateStore = vi.hoisted(() => {
+    const store: { [compositeId: string]: any } = {};
+    return store;
 });
 
 const _latencyConfig = vi.hoisted(() => ({
@@ -72,7 +77,7 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
         deleteRoomContent: vi.fn(async () => true),
         createRoom: vi.fn(async () => ({ success: true, data: [{ id: "room-auto" }] })),
         deleteRoom: vi.fn(async () => true),
-        changeRoomName: vi.fn(async () => true),
+        changeRoomTexturePackPath: vi.fn(async () => true),
     },
 }));
 
@@ -80,7 +85,6 @@ vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
     default: {
         rooms: {
             all: vi.fn(async () => ({ success: true, data: [] })),
-            withRoomName: vi.fn(async () => ({ success: true, data: [] })),
             withRoomType: vi.fn(async () => ({ success: true, data: [] })),
         },
         users: {
@@ -111,6 +115,33 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
         fromDBType: vi.fn((u: any) => u),
         updateLastLogin: vi.fn(async () => {}),
         upgradeGuestToMember: vi.fn(async () => ({ success: true, data: [] })),
+    },
+}));
+
+vi.mock("../../../src/server/db/util/dbUserRoomStateUtil", () => ({
+    default: {
+        findByUserAndRoom: vi.fn(async (userID: string, roomID: string) => {
+            if (_latencyConfig.enabled) await _randomDelay();
+            const compositeId = `${userID}_${roomID}`;
+            return _userRoomStateStore[compositeId] ?? null;
+        }),
+        saveUserRoomState: vi.fn(async (
+            userID: string, roomID: string,
+            lastX: number, lastY: number, lastZ: number,
+            lastDirX: number, lastDirY: number, lastDirZ: number,
+            playerMetadata: {[key: string]: string},
+        ) => {
+            if (_latencyConfig.enabled) await _randomDelay();
+            const compositeId = `${userID}_${roomID}`;
+            _userRoomStateStore[compositeId] = {
+                userID, roomID,
+                lastX, lastY, lastZ,
+                lastDirX, lastDirY, lastDirZ,
+                playerMetadata,
+                version: 0,
+            };
+        }),
+        makeCompositeId: (userID: string, roomID: string) => `${userID}_${roomID}`,
     },
 }));
 
@@ -151,7 +182,7 @@ import UserGameplayState from "../../../src/server/user/types/userGameplayState"
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import ObjectMessageParams from "../../../src/shared/object/types/objectMessageParams";
 import { MockSocket } from "./mockSocket";
-import { createMockUser, resetUserCounter } from "./mockUser";
+import { createMockUser, resetUserCounter, MockUserOverrides } from "./mockUser";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -162,7 +193,7 @@ export interface ConnectedUser
     socketUserContext: SocketUserContext;
 }
 
-// ─── Internal: keep _roomStore in sync with mockDB.roomStore ─────────────────
+// ─── Internal: keep hoisted stores in sync with mockDB stores ────────────────
 
 function syncRoomStore(): void
 {
@@ -172,6 +203,16 @@ function syncRoomStore(): void
     for (const [k, v] of Object.entries(roomStore))
         _roomStore[k] = v;
 }
+
+// ─── Internal: pending initial positions for users ───────────────────────────
+// When connectUser is called with position overrides, we store them here.
+// When joinRoom is called, we seed the userRoomStateStore for that user+room.
+
+const _pendingPositions: {[userID: string]: {
+    lastX: number; lastY: number; lastZ: number;
+    lastDirX: number; lastDirY: number; lastDirZ: number;
+    playerMetadata: {[key: string]: string};
+}} = {};
 
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
@@ -202,9 +243,13 @@ export const harness = {
         resetStores();
         resetUserCounter();
 
-        // Clear hoisted room store and saved gameplay states
+        // Clear hoisted stores and saved gameplay states
         for (const k in _roomStore) delete _roomStore[k];
+        for (const k in _userRoomStateStore) delete _userRoomStateStore[k];
         _savedGameplayStates.length = 0;
+
+        // Clear pending positions
+        for (const k in _pendingPositions) delete _pendingPositions[k];
 
         // Disable latency by default (tests opt in explicitly)
         _latencyConfig.enabled = false;
@@ -218,11 +263,10 @@ export const harness = {
      */
     seedRoom(
         roomID: string,
-        roomName: string = "test-room",
         roomType: RoomType = RoomTypeEnumMap.Hub,
     ): Room
     {
-        const room = seedRoom(roomID, roomName, roomType);
+        const room = seedRoom(roomID, roomType);
         // Sync to the hoisted store so the vi.mock factory can find it
         syncRoomStore();
         return room;
@@ -231,15 +275,27 @@ export const harness = {
     /**
      * Simulates a user connecting a socket. Returns the context needed to
      * interact with the server.
+     *
+     * Position overrides (lastX, lastY, lastZ, etc.) are stored as pending
+     * initial positions and applied when the user joins a room.
      */
-    connectUser(userOrOverrides?: User | Parameters<typeof createMockUser>[0]): ConnectedUser
+    connectUser(userOrOverrides?: User | MockUserOverrides): ConnectedUser
     {
-        const user = userOrOverrides instanceof User
-            ? userOrOverrides
-            : createMockUser(userOrOverrides);
+        let user: User;
+        if (userOrOverrides instanceof User)
+        {
+            user = userOrOverrides;
+        }
+        else
+        {
+            const result = createMockUser(userOrOverrides);
+            user = result.user;
+            // Store initial position for seeding when joining a room
+            _pendingPositions[user.id] = result.initialPosition;
+        }
 
         const socket = new MockSocket(user);
-        // SocketUserContext reads user from socket.handshake.auth
+        // SocketUserContext reads user from socket.handshake.auth.user
         const socketUserContext = new SocketUserContext(socket as any);
 
         UserManager.addUser(socketUserContext);
@@ -249,9 +305,22 @@ export const harness = {
 
     /**
      * Moves a connected user into a room (loads the room if needed).
+     * Seeds the user's per-room state from pending positions before joining.
      */
     async joinRoom(ctx: ConnectedUser, roomID: string): Promise<boolean>
     {
+        // Seed per-room state from pending initial position
+        const pending = _pendingPositions[ctx.user.id];
+        if (pending)
+        {
+            const compositeId = `${ctx.user.id}_${roomID}`;
+            _userRoomStateStore[compositeId] = {
+                userID: ctx.user.id,
+                roomID,
+                ...pending,
+                version: 0,
+            };
+        }
         return RoomManager.changeUserRoom(ctx.socketUserContext, roomID, false, false);
     },
 
@@ -337,17 +406,17 @@ export const harness = {
      * Simulates reconnection Case A: a new socket connects BEFORE the old
      * disconnect fires (e.g. page refresh on low-latency).
      *
-     * Mirrors the logic in gameSockets.ts lines 57-77:
+     * Mirrors the logic in sockets.ts:
      *   1. Captures old session's gameplay state from runtime memory
      *   2. Removes old user and cleans up old room membership
-     *   3. Applies cached state to the new user object
+     *   3. Passes cached state to changeUserRoom so the player spawns correctly
      *   4. Registers the new user
      *
      * Returns a new ConnectedUser that has inherited the old session's state.
      */
     async reconnectCaseA(oldCtx: ConnectedUser): Promise<ConnectedUser>
     {
-        // Step 1: Capture old state from runtime memory (same as gameSockets.ts)
+        // Step 1: Capture old state from runtime memory (same as sockets.ts)
         const oldRoomID = RoomManager.currentRoomIDByUserID[oldCtx.user.id];
         const oldRoomMem = oldRoomID ? RoomManager.roomRuntimeMemories[oldRoomID] : undefined;
         const oldGameplayState = oldRoomMem
@@ -359,15 +428,29 @@ export const harness = {
         await RoomManager.changeUserRoom(oldCtx.socketUserContext, undefined, false, true);
         oldCtx.socket.connected = false;
 
-        // Step 3: Create new user with old state applied
-        const newUser = createMockUser({
+        // Step 3: Create new user (no position fields on User anymore)
+        const { user: newUser } = createMockUser({
             id: oldCtx.user.id,
             userName: oldCtx.user.userName,
             userType: oldCtx.user.userType,
             email: oldCtx.user.email,
         });
         if (oldGameplayState)
-            newUser.applyGameplayState(oldGameplayState);
+            newUser.lastRoomID = oldGameplayState.lastRoomID;
+
+        // Store cached gameplay state as pending position for rejoining
+        if (oldGameplayState)
+        {
+            _pendingPositions[newUser.id] = {
+                lastX: oldGameplayState.lastX,
+                lastY: oldGameplayState.lastY,
+                lastZ: oldGameplayState.lastZ,
+                lastDirX: oldGameplayState.lastDirX,
+                lastDirY: oldGameplayState.lastDirY,
+                lastDirZ: oldGameplayState.lastDirZ,
+                playerMetadata: oldGameplayState.playerMetadata,
+            };
+        }
 
         // Step 4: Register new connection
         const socket = new MockSocket(newUser);
@@ -381,10 +464,10 @@ export const harness = {
      * Simulates reconnection Case B: old disconnect fires BEFORE the new
      * socket connects (e.g. high-latency environment).
      *
-     * Mirrors the logic in gameSockets.ts lines 78-92:
+     * Mirrors the logic in sockets.ts:
      *   1. Old user disconnects (state saved and cached in memory)
      *   2. New socket connects and finds cached state
-     *   3. Applies cached state to the new user object
+     *   3. Passes cached state to changeUserRoom for restoration
      *
      * Returns a new ConnectedUser that has inherited the disconnected state.
      */
@@ -396,15 +479,29 @@ export const harness = {
         // Step 2: Old user fully disconnects (state saved to DB mock)
         await harness.disconnectUser(oldCtx, true);
 
-        // Step 3: New socket connects — applies cached state
-        const newUser = createMockUser({
+        // Step 3: New socket connects
+        const { user: newUser } = createMockUser({
             id: oldCtx.user.id,
             userName: oldCtx.user.userName,
             userType: oldCtx.user.userType,
             email: oldCtx.user.email,
         });
         if (cachedState)
-            newUser.applyGameplayState(cachedState);
+            newUser.lastRoomID = cachedState.lastRoomID;
+
+        // Store cached gameplay state as pending position for rejoining
+        if (cachedState)
+        {
+            _pendingPositions[newUser.id] = {
+                lastX: cachedState.lastX,
+                lastY: cachedState.lastY,
+                lastZ: cachedState.lastZ,
+                lastDirX: cachedState.lastDirX,
+                lastDirY: cachedState.lastDirY,
+                lastDirZ: cachedState.lastDirZ,
+                playerMetadata: cachedState.playerMetadata,
+            };
+        }
 
         // Step 4: Register new connection
         const socket = new MockSocket(newUser);

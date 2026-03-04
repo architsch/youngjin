@@ -12,12 +12,8 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { harness, ConnectedUser } from "../helpers/serverHarness";
-import { createMockUser } from "../helpers/mockUser";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import User from "../../../src/shared/user/types/user";
-import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
-import RoomManager from "../../../src/server/room/roomManager";
 
 const ROOM_ID = "conn-room";
 
@@ -77,10 +73,8 @@ describe("connection events", () => {
         // Reconnect Case A: new socket while old is still registered
         const newCtx = await harness.reconnectCaseA(ctx);
 
-        // New user should have inherited the old session's state
+        // New user should have inherited the old session's room
         expect(newCtx.user.id).toBe("case-a-user");
-        expect(newCtx.user.lastX).toBeCloseTo(stateBeforeReconnect.lastX, 0);
-        expect(newCtx.user.lastZ).toBeCloseTo(stateBeforeReconnect.lastZ, 0);
         expect(newCtx.user.lastRoomID).toBe(ROOM_ID);
 
         // Only one user should be in UserManager
@@ -123,11 +117,9 @@ describe("connection events", () => {
         // Reconnect Case B: old user disconnects first, then new socket connects
         const newCtx = await harness.reconnectCaseB(ctx);
 
-        // New user should have the cached state applied
+        // New user should have the cached state's room applied
         expect(newCtx.user.id).toBe("case-b-user");
-        expect(newCtx.user.lastX).toBeCloseTo(stateBeforeDisconnect.lastX, 0);
-        expect(newCtx.user.lastZ).toBeCloseTo(stateBeforeDisconnect.lastZ, 0);
-        expect(newCtx.user.playerMetadata["0"]).toBe(stateBeforeDisconnect.playerMetadata["0"]);
+        expect(newCtx.user.lastRoomID).toBe(ROOM_ID);
     });
 
     it("Case B: reconnected user can rejoin room with preserved position", async () => {
@@ -153,22 +145,18 @@ describe("connection events", () => {
     // ─── Page refresh / duplicate socket ────────────────────────────────────
 
     it("handles duplicate socket replacement (page refresh)", async () => {
-        const user = createMockUser({ id: "refresh-user" });
-
-        const ctx1 = harness.connectUser(user);
+        const ctx1 = harness.connectUser({ id: "refresh-user" });
         await harness.joinRoom(ctx1, ROOM_ID);
         expect(harness.getRoomParticipantCount(ROOM_ID)).toBe(1);
 
         // Simulate page refresh: remove old user and room state
-        harness.UserManager.removeUser(user.id);
+        harness.UserManager.removeUser(ctx1.user.id);
         await harness.RoomManager.changeUserRoom(ctx1.socketUserContext, undefined, false, false);
 
         // New connection with same user
-        const refreshedUser = new User(
-            user.id, user.userName, user.userType, user.email, user.tutorialStep,
-            ROOM_ID, 16, 0, 16, 0, 0, 1
-        );
-        const ctx2 = harness.connectUser(refreshedUser);
+        const ctx2 = harness.connectUser({
+            id: "refresh-user", lastRoomID: ROOM_ID,
+        });
         await harness.joinRoom(ctx2, ROOM_ID);
 
         expect(Object.keys(harness.UserManager.socketUserContexts)).toHaveLength(1);
@@ -178,11 +166,9 @@ describe("connection events", () => {
     // ─── Rapid cycles ───────────────────────────────────────────────────────
 
     it("handles rapid connect-disconnect-reconnect cycle", async () => {
-        const user = createMockUser({ id: "rapid-user" });
-
         for (let cycle = 0; cycle < 5; cycle++)
         {
-            const ctx = harness.connectUser(user);
+            const ctx = harness.connectUser({ id: "rapid-user" });
             await harness.joinRoom(ctx, ROOM_ID);
             expect(harness.getRoomParticipantCount(ROOM_ID)).toBe(1);
 
@@ -251,11 +237,9 @@ describe("connection events", () => {
     // ─── Position preserved across disconnect → reconnect ───────────────────
 
     it("player position is preserved across disconnect and reconnect", async () => {
-        const user = new User(
-            "persist-user", "Persistent", UserTypeEnumMap.Guest, "p@test.com", 0,
-            "", 8, 0.5, 22, 0, 0, 1
-        );
-        const ctx1 = harness.connectUser(user);
+        const ctx1 = harness.connectUser({
+            id: "persist-user", lastX: 8, lastY: 0.5, lastZ: 22,
+        });
         await harness.joinRoom(ctx1, ROOM_ID);
 
         harness.updateObjectTransform(ctx1, new ObjectTransform(12, 0.5, 18, 0.3, 0, 0.9));
@@ -264,15 +248,13 @@ describe("connection events", () => {
         await harness.disconnectUser(ctx1, true);
 
         const savedState = harness.savedGameplayStates[0];
-        const reconnectedUser = new User(
-            "persist-user", "Persistent", UserTypeEnumMap.Guest, "p@test.com", 0,
-            savedState.lastRoomID,
-            savedState.lastX, savedState.lastY, savedState.lastZ,
-            savedState.lastDirX, savedState.lastDirY, savedState.lastDirZ,
-            savedState.playerMetadata
-        );
         harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
-        const ctx2 = harness.connectUser(reconnectedUser);
+        const ctx2 = harness.connectUser({
+            id: "persist-user", lastRoomID: savedState.lastRoomID,
+            lastX: savedState.lastX, lastY: savedState.lastY, lastZ: savedState.lastZ,
+            lastDirX: savedState.lastDirX, lastDirY: savedState.lastDirY, lastDirZ: savedState.lastDirZ,
+            playerMetadata: savedState.playerMetadata,
+        });
         await harness.joinRoom(ctx2, ROOM_ID);
 
         const stateAfterReconnect = harness.getGameplayState(ctx2);
@@ -302,13 +284,12 @@ describe("connection events", () => {
         expect(saved.playerMetadata).toEqual({ "0": "wave-emote", "1": "room-abc" });
 
         harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
-        const ctx2 = harness.connectUser(new User(
-            "meta-user", "MetaUser", UserTypeEnumMap.Guest, "m@test.com", 0,
-            saved.lastRoomID,
-            saved.lastX, saved.lastY, saved.lastZ,
-            saved.lastDirX, saved.lastDirY, saved.lastDirZ,
-            saved.playerMetadata
-        ));
+        const ctx2 = harness.connectUser({
+            id: "meta-user", lastRoomID: saved.lastRoomID,
+            lastX: saved.lastX, lastY: saved.lastY, lastZ: saved.lastZ,
+            lastDirX: saved.lastDirX, lastDirY: saved.lastDirY, lastDirZ: saved.lastDirZ,
+            playerMetadata: saved.playerMetadata,
+        });
         await harness.joinRoom(ctx2, ROOM_ID);
 
         const objAfter = harness.getPlayerObjectInRoom(ctx2);

@@ -2,9 +2,10 @@ import * as admin from "firebase-admin";
 import { DBVersionMigration } from "../types/versionMigration/dbVersionMigration";
 import DBUserVersionMigration from "../types/versionMigration/dbUserVersionMigration";
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
+import DBUserRoomStateVersionMigration from "../types/versionMigration/dbUserRoomStateVersionMigration";
 import DBQuery from "../types/dbQuery";
 import { DBRow } from "../types/row/dbRow";
-import { COLLECTION_ROOMS, COLLECTION_USERS } from "../../system/serverConstants";
+import { COLLECTION_ROOMS, COLLECTION_USERS, COLLECTION_USER_ROOM_STATES } from "../../system/serverConstants";
 
 export default function runQueryVersionMigration<T extends DBRow>(
     dbQuery: DBQuery<T>,
@@ -19,6 +20,9 @@ export default function runQueryVersionMigration<T extends DBRow>(
             break;
         case COLLECTION_ROOMS:
             versionMigration = DBRoomVersionMigration;
+            break;
+        case COLLECTION_USER_ROOM_STATES:
+            versionMigration = DBUserRoomStateVersionMigration;
             break;
         default:
             throw new Error(`Unknown table ID: ${dbQuery.tableId}`);

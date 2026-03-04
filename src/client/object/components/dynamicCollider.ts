@@ -5,7 +5,7 @@ import App from "../../app";
 import GameObjectComponent from "./gameObjectComponent";
 import AABB2 from "../../../shared/math/types/aabb2";
 import PhysicsObject from "../../../shared/physics/types/physicsObject";
-import { GROUND_LEVEL_OBJECT_Y, MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { GROUND_LEVEL_OBJECT_Y, MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -61,7 +61,7 @@ export default class DynamicCollider extends GameObjectComponent
         const desiredChangeInY = desiredY - p.y;
         if (Math.abs(desiredChangeInY) > NEAR_EPSILON)
         {
-            const delta = (0.5 * deltaTime / MIN_OBJECT_LEVEL_CHANGE_INTERVAL) // based on the expectation that Y shifts by 0.5 during each span of "MIN_OBJECT_LEVEL_CHANGE_INTERVAL" seconds.
+            const delta = (0.5 * deltaTime / MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL) // based on the expectation that Y shifts by 0.5 during each span of "MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL" seconds.
                 * (desiredChangeInY >= 0 ? 1 : -1);
             
             if (Math.abs(delta) >= Math.abs(desiredChangeInY))

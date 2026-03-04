@@ -1,14 +1,12 @@
 import EncodableByteString from "../../networking/types/encodableByteString";
 import Room from "../../room/types/room";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    PERSISTENT_OBJ_MAX_X, PERSISTENT_OBJ_MAX_Y, PERSISTENT_OBJ_MAX_Z,
-    PERSISTENT_OBJ_MIN_X, PERSISTENT_OBJ_MIN_Y, PERSISTENT_OBJ_MIN_Z,
-    MAX_IMAGE_URL_LENGTH } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_IMAGE_URL_LENGTH, MAX_ROOM_Y } from "../../system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { getVoxelQuadIndex } from "../../voxel/util/voxelQueryUtil";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import { ObjectMetadata } from "../types/objectMetadata";
 import PersistentObject from "../types/persistentObject";
+import RoomUtil from "../../room/util/roomUtil";
 
 type Direction = "+z" | "+x" | "-z" | "-x";
 
@@ -346,9 +344,7 @@ export function addPersistentObject(room: Room, objectTypeIndex: number,
     direction: Direction, x: number, y: number, z: number,
     metadata: ObjectMetadata = {}): PersistentObject | null
 {
-    if (x < PERSISTENT_OBJ_MIN_X || x > PERSISTENT_OBJ_MAX_X ||
-        y < PERSISTENT_OBJ_MIN_Y || y > PERSISTENT_OBJ_MAX_Y ||
-        z < PERSISTENT_OBJ_MIN_Z || z > PERSISTENT_OBJ_MAX_Z)
+    if (!RoomUtil.positionIsInRoom(x, y, z))
     {
         console.error(`addPersistentObject :: Position out of bounds (x=${x}, y=${y}, z=${z})`);
         return null;
@@ -380,7 +376,7 @@ export function removePersistentObject(room: Room, objectId: string): Persistent
 }
 
 export function movePersistentObject(room: Room, objectId: string,
-    dx: number, dy: number): PersistentObject | null
+    dx: number, dy: number, dz: number): PersistentObject | null
 {
     const po = room.persistentObjectGroup.persistentObjects.find(po => po.objectId === objectId);
     if (!po)
@@ -390,22 +386,24 @@ export function movePersistentObject(room: Room, objectId: string,
     }
 
     const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
-    const newY = po.y + dy;
+    let newX = po.x + dx;
+    let newY = po.y + dy;
+    let newZ = po.z + dz;
+    let newDirection = po.direction;
 
     if (config.isWallAttached)
     {
         // Wall-attached movement: dx means "slide along wall surface", with corner wrapping.
         const {worldDx, worldDz} = wallAttachedDxToWorld(po.direction, dx);
-        let newX = po.x + worldDx;
-        let newZ = po.z + worldDz;
-        let newDirection = po.direction;
+        newX = po.x + worldDx;
+        newZ = po.z + worldDz;
+        newDirection = po.direction;
 
-        // Check bounds for the target position
-        if (newX < PERSISTENT_OBJ_MIN_X || newX > PERSISTENT_OBJ_MAX_X ||
-            newY < PERSISTENT_OBJ_MIN_Y || newY > PERSISTENT_OBJ_MAX_Y ||
-            newZ < PERSISTENT_OBJ_MIN_Z || newZ > PERSISTENT_OBJ_MAX_Z)
+        if (!RoomUtil.positionIsInRoom(newX, newY, newZ) ||
+            !isWallAt(room, newX, newY, newZ, po.direction))
         {
-            // Target is out of bounds. Try corner wrap instead.
+            // Target is either out of bound or there is no wall at the straight path.
+            // Try corner wrap instead.
             let wrapped = tryCornerWrap(room, po, dx, newY);
             if (!wrapped)
                 wrapped = tryConcaveCornerWrap(room, po, dx, newY);
@@ -415,63 +413,24 @@ export function movePersistentObject(room: Room, objectId: string,
             newZ = wrapped.z;
             newDirection = wrapped.direction;
         }
-        else if (!isWallAt(room, newX, newY, newZ, po.direction))
-        {
-            // No wall at the straight target. Try corner wrapping.
-            let wrapped = tryCornerWrap(room, po, dx, newY);
-            if (!wrapped)
-                wrapped = tryConcaveCornerWrap(room, po, dx, newY);
-            if (!wrapped)
-                return null;
-            newX = wrapped.x;
-            newZ = wrapped.z;
-            newDirection = wrapped.direction;
-        }
-
-        // Check for bounds on wrapped position
-        if (newX < PERSISTENT_OBJ_MIN_X || newX > PERSISTENT_OBJ_MAX_X ||
-            newZ < PERSISTENT_OBJ_MIN_Z || newZ > PERSISTENT_OBJ_MAX_Z ||
-            newY < PERSISTENT_OBJ_MIN_Y || newY > PERSISTENT_OBJ_MAX_Y)
-        {
-            return null;
-        }
-
-        // Check for occupied target
-        const newObjectId = `p${newX}-${newY}-${newZ}`;
-        const existing = room.persistentObjectGroup.persistentObjects.find(p => p.objectId === newObjectId);
-        if (existing)
-            return null;
-
-        po.x = newX;
-        po.y = newY;
-        po.z = newZ;
-        po.direction = newDirection;
-        po.objectId = newObjectId;
-        return po;
     }
-    else
-    {
-        // Non-wall-attached: original behavior (dx = world x offset, z unchanged).
-        const newX = po.x + dx;
-        const newZ = po.z;
 
-        if (newX < PERSISTENT_OBJ_MIN_X || newX > PERSISTENT_OBJ_MAX_X ||
-            newY < PERSISTENT_OBJ_MIN_Y || newY > PERSISTENT_OBJ_MAX_Y ||
-            newZ < PERSISTENT_OBJ_MIN_Z || newZ > PERSISTENT_OBJ_MAX_Z)
-        {
-            return null;
-        }
+    // Check if the new position is out of bound
+    if (!RoomUtil.positionIsInRoom(newX, newY, newZ))
+        return null;
 
-        const newObjectId = `p${newX}-${newY}-${newZ}`;
-        const existing = room.persistentObjectGroup.persistentObjects.find(p => p.objectId === newObjectId);
-        if (existing)
-            return null;
+    // Check for occupied target
+    const newObjectId = `p${newX}-${newY}-${newZ}`;
+    const existing = room.persistentObjectGroup.persistentObjects.find(p => p.objectId === newObjectId);
+    if (existing)
+        return null;
 
-        po.x = newX;
-        po.y = newY;
-        po.objectId = newObjectId;
-        return po;
-    }
+    po.x = newX;
+    po.y = newY;
+    po.z = newZ;
+    po.direction = newDirection;
+    po.objectId = newObjectId;
+    return po;
 }
 
 export function setPersistentObjectMetadata(room: Room, objectId: string,

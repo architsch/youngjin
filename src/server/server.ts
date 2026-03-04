@@ -72,7 +72,7 @@ ${LatencySimUtil.getConfigSummary()}
 
     if (roomSearchResult.data.length == 0)
     {
-        let result = await DBRoomUtil.createRoom("hub", RoomTypeEnumMap.Hub, "", 0, 1, 2, `${AddressUtil.getEnvStaticURL()}/app/assets/texture_packs/default.jpg`);
+        let result = await DBRoomUtil.createRoom(RoomTypeEnumMap.Hub, "", 0, 1, 2, `${AddressUtil.getEnvStaticURL()}/app/assets/texture_packs/default.jpg`);
         if (!result.success)
         {
             console.error("[Premature Server Termination] :: Failed to create a hub room.");

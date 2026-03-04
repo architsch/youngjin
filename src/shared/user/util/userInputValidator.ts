@@ -29,14 +29,6 @@ const UserInputValidator =
             return "auth/error/email/chars"
         return null;
     },
-    findErrorInRoomName: (text: string): LocKey | null =>
-    {
-        if (text.length < 4 || text.length > 64)
-            return "auth/error/roomName/length";
-        if (text != UserInputValidator.sanitizeRoomName(text))
-            return "auth/error/roomName/chars";
-        return null;
-    },
 
     // Re-format the given text appropriately and return the resulting text.
 
@@ -51,17 +43,6 @@ const UserInputValidator =
         if (text.length > 24)
             text = text.substring(0, 24);
         return text.replace(/[^a-zA-Z0-9~`!@#\$%\^&\*\(\)-_\+=\{\[\}\]\|\\:;"'<>,\.\?\/]/g, "");
-    },
-    sanitizeRoomName: (text: string): string =>
-    {
-        return UserInputValidator.sanitizeRoomNameWithoutTrimming(text).trim();
-    },
-    sanitizeRoomNameWithoutTrimming: (text: string): string =>
-    {
-        if (text.length > 64)
-            text = text.substring(0, 64);
-        return text.replace(/[^a-zA-Z0-9~`!@#\$%\^&\*\(\)-_\+=\{\[\}\]\|\\:;"'<>,\.\?\/\s]/g, "")
-            .replace(/\s+/g, " "); // replace multiple consecutive spaces with a single space.
     },
 }
 

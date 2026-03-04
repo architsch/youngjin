@@ -21,23 +21,26 @@ export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 
 // Physics
 
-export const NUM_COLLISION_LAYERS = 8;
+export const NUM_COLLISION_LAYERS = 8; // Total number of collision layers which span the room's Y-axis
+export const COLLISION_LAYER_HEIGHT = 0.5; // Y-size of each collision layer
+export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * COLLISION_LAYER_HEIGHT; // 4
+export const MID_ROOM_Y = 0.5 * MAX_ROOM_Y; // 2
 
-export const COLLISION_LAYER_00_TO_05 = 0;
-export const COLLISION_LAYER_05_TO_10 = 1;
-export const COLLISION_LAYER_10_TO_15 = 2;
-export const COLLISION_LAYER_15_TO_20 = 3;
-export const COLLISION_LAYER_20_TO_25 = 4;
-export const COLLISION_LAYER_25_TO_30 = 5;
-export const COLLISION_LAYER_30_TO_35 = 6;
-export const COLLISION_LAYER_35_TO_40 = 7;
+export const COLLISION_LAYER_00_TO_05 = 0; // y = [0.0, 0.5]
+export const COLLISION_LAYER_05_TO_10 = 1; // y = [0.5, 1.0]
+export const COLLISION_LAYER_10_TO_15 = 2; // y = [1.0, 1.5]
+export const COLLISION_LAYER_15_TO_20 = 3; // y = [1.5, 2.0]
+export const COLLISION_LAYER_20_TO_25 = 4; // y = [2.0, 2.5]
+export const COLLISION_LAYER_25_TO_30 = 5; // y = [2.5, 3.0]
+export const COLLISION_LAYER_30_TO_35 = 6; // y = [3.0, 3.5]
+export const COLLISION_LAYER_35_TO_40 = 7; // y = [3.5, 4.0]
 export const COLLISION_LAYER_NULL = 8;
 
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
 
 export const GROUND_LEVEL_OBJECT_Y = 0;
-export const MIN_OBJECT_LEVEL_CHANGE_INTERVAL = 0.2;
+export const MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL = 0.2;
 
 // Voxel Grid Dimensions
 
@@ -63,15 +66,6 @@ export const PERSISTENT_OBJ_TASK_TYPE_ADD = 0;
 export const PERSISTENT_OBJ_TASK_TYPE_REMOVE = 1;
 export const PERSISTENT_OBJ_TASK_TYPE_MOVE = 2;
 export const PERSISTENT_OBJ_TASK_TYPE_SET_METADATA = 3;
-
-// Persistent Object Bounds
-
-export const PERSISTENT_OBJ_MIN_X = 0;
-export const PERSISTENT_OBJ_MAX_X = 32;
-export const PERSISTENT_OBJ_MIN_Y = 0;
-export const PERSISTENT_OBJ_MAX_Y = 4;
-export const PERSISTENT_OBJ_MIN_Z = 0;
-export const PERSISTENT_OBJ_MAX_Z = 32;
 
 // Persistent Object Limits
 

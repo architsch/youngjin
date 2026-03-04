@@ -11,6 +11,7 @@ export const GIT_COMMIT: string = typeof __GIT_COMMIT__ !== "undefined" ? __GIT_
 const DB_PREFIX = process.env.DB_PREFIX || "";
 export const COLLECTION_ROOMS = `${DB_PREFIX}rooms`;
 export const COLLECTION_USERS = `${DB_PREFIX}users`;
+export const COLLECTION_USER_ROOM_STATES = `${DB_PREFIX}userRoomStates`;
 
 export const GUEST_TIER_NAME_BY_TIER_PHASE = ["disposable", "casual", "dedicated"];
 export const GUEST_MAX_AGE_BY_TIER_PHASE = [

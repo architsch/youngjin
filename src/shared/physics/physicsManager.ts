@@ -11,7 +11,7 @@ import { getLowestObjectCollisionLayer, getObjectsInDist, removeObjectFromInters
 import { getVoxelsInBox } from "./util/physicsVoxelUtil";
 import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
 import { getHighestOccupiedVoxelCollisionLayer, isVoxelCollisionLayerOccupied } from "../voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/sharedConstants";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
 
@@ -159,7 +159,7 @@ const PhysicsManager =
                 if ((targetVoxel.collisionLayerMask & objectMask) != 0)
                 {
                     const canJumpOverToTargetVoxel =
-                        currTime >= object.lastLevelChangeTime + MIN_OBJECT_LEVEL_CHANGE_INTERVAL && // It's been long enough since the last time the object's level changed.
+                        currTime >= object.lastLevelChangeTime + MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL && // It's been long enough since the last time the object's level changed.
                         (objectMask & 0b10000000) == 0 && // Object is not touching the ceiling
                         (currVoxel.collisionLayerMask & objectMaskAfterShift) == 0 && // There is space for the object to jump within the current voxel
                         (targetVoxel.collisionLayerMask & objectMaskAfterShift) == 0; // There is space for the object to occupy after the jump (in the target voxel)
@@ -184,7 +184,7 @@ const PhysicsManager =
 
         // Object should fall down if it is suspended in thin air
         if (object.level > 0 &&
-            currTime >= object.lastLevelChangeTime + MIN_OBJECT_LEVEL_CHANGE_INTERVAL &&
+            currTime >= object.lastLevelChangeTime + MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL &&
             getLowestObjectCollisionLayer(object) > maxLayerAmongOverlappingVoxels+1)
         {
             object.level--;

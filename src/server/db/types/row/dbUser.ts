@@ -10,13 +10,6 @@ export default interface DBUser extends DBRow
     email: string;
     tutorialStep: number;
     lastRoomID: string;
-    lastX: number;
-    lastY: number;
-    lastZ: number;
-    lastDirX: number;
-    lastDirY: number;
-    lastDirZ: number;
-    playerMetadata: {[key: string]: string};
     lastLoginAt: number;
     createdAt: number;
     loginCount: number;
