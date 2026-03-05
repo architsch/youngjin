@@ -1,4 +1,6 @@
 export type PopupType =
     "none" |
     "authPrompt" |
-    "signOut";
+    "signOut" |
+    "visitMyRoom" |
+    "configureMyRoom";

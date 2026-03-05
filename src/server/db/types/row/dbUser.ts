@@ -14,4 +14,5 @@ export default interface DBUser extends DBRow
     createdAt: number;
     loginCount: number;
     totalPlaytimeMs: number;
+    ownedRoomID: string;
 }

@@ -11,7 +11,7 @@ import ObjectMessageParams from "../../shared/object/types/objectMessageParams"
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
 import RoomManager from "../room/roomManager";
-import { getUserGameplayState } from "../room/util/roomUserUtil";
+import { canUserModifyRoom, getUserGameplayState } from "../room/util/roomUserUtil";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
@@ -145,12 +145,22 @@ const Sockets =
             });
 
             socketUserContext.onReceivedSignalFromUser("updateVoxelGridParams", (buffer: ArrayBuffer) => {
+                if (!canUserModifyRoom(user.id))
+                {
+                    console.warn(`(Sockets) Rejected updateVoxelGridParams from Visitor (userID = ${user.id})`);
+                    return;
+                }
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UpdateVoxelGridParams.decode(bufferState) as UpdateVoxelGridParams;
                 RoomManager.updateVoxelGrid(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("updatePersistentObjectGroupParams", (buffer: ArrayBuffer) => {
+                if (!canUserModifyRoom(user.id))
+                {
+                    console.warn(`(Sockets) Rejected updatePersistentObjectGroupParams from Visitor (userID = ${user.id})`);
+                    return;
+                }
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UpdatePersistentObjectGroupParams.decode(bufferState) as UpdatePersistentObjectGroupParams;
                 RoomManager.updatePersistentObjectGroup(socketUserContext, params);

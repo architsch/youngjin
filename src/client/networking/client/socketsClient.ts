@@ -23,6 +23,7 @@ import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBl
 import UserCommandParams from "../../../shared/user/types/userCommandParams";
 import UpdatePersistentObjectGroupParams from "../../../shared/object/types/update/updatePersistentObjectGroupParams";
 import UpdatePersistentObjectGroupTaskParams from "../../../shared/object/types/update/updatePersistentObjectGroupTaskParams";
+import UserRoleUpdateParams from "../../../shared/user/types/userRoleUpdateParams";
 import App from "../../app";
 import ObjectManager from "../../object/objectManager";
 import PersistentObjectManager from "../../object/persistentObjectManager";
@@ -47,6 +48,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         VoxelManager.onUpdateVoxelGridReceived(data as UpdateVoxelGridParams),
     "updatePersistentObjectGroupParams": (data: EncodableData) =>
         PersistentObjectManager.onUpdatePersistentObjectGroupReceived(data as UpdatePersistentObjectGroupParams),
+    "userRoleUpdateParams": (data: EncodableData) =>
+        App.onUserRoleUpdateReceived(data as UserRoleUpdateParams),
 }
 
 const lastSignalSentTimes: {[signalType: string]: number} = {};

@@ -1,9 +1,10 @@
 import { Express, Request, Response } from "express";
 import PageRouter from "./ui/pageRouter";
 import UserRouter from "./api/userRouter";
+import RoomRouter from "./api/roomRouter";
 import FileUtil from "../../ssg/util/fileUtil";
 import EJSUtil from "../../ssg/util/ejsUtil";
-import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import RateLimitUtil from "../util/rateLimitUtil";
 
 export default function Router(app: Express): void
@@ -65,5 +66,6 @@ export default function Router(app: Express): void
     });
 
     app.use(`/${USER_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, UserRouter);
+    app.use(`/${ROOM_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, RoomRouter);
     app.use("/", RateLimitUtil.pageRateLimiter, PageRouter);
 }

@@ -10,12 +10,16 @@ import { unloadRoom } from "./roomCoreUtil";
 import { addObject, generateObjectId, removeObject } from "./roomObjectUtil";
 import DBRoomUtil from "../../db/util/dbRoomUtil";
 import UserGameplayState from "../../user/types/userGameplayState";
+import { UserRole, UserRoleEnumMap } from "../../../shared/user/types/userRole";
+import UserRoleUpdateParams from "../../../shared/user/types/userRoleUpdateParams";
 import DBUserUtil from "../../db/util/dbUserUtil";
 
 const playerObjectRuntimeMemoryByUserID: {[userID: string]: ObjectRuntimeMemory} = {};
+const userRoleByUserID: {[userID: string]: UserRole} = {};
 
 export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
-    userID: string, playerObjectTransform: ObjectTransform, playerMetadata: {[key: string]: string})
+    userID: string, playerObjectTransform: ObjectTransform, playerMetadata: {[key: string]: string},
+    userRole: UserRole)
 {
     const user = socketUserContext.user;
 
@@ -49,6 +53,7 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
     ));
     addObject(socketUserContext, playerObjectRuntimeMemory);
     playerObjectRuntimeMemoryByUserID[userID] = playerObjectRuntimeMemory;
+    userRoleByUserID[userID] = userRole;
 }
 
 export async function removeUserFromRoom(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
@@ -88,6 +93,7 @@ export async function removeUserFromRoom(socketUserContext: SocketUserContext, p
     delete RoomManager.currentRoomIDByUserID[user.id];
     delete roomRuntimeMemory.participantUserIDs[user.id];
     delete playerObjectRuntimeMemoryByUserID[user.id];
+    delete userRoleByUserID[user.id];
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (!socketRoomContext)
@@ -137,7 +143,10 @@ export function getUserGameplayState(socketUserContext: SocketUserContext, roomR
 
     return {
         userID: user.id,
+        userName: user.userName,
+        email: user.email,
         lastRoomID: roomRuntimeMemory.room.id,
+        userRole: userRoleByUserID[user.id] ?? UserRoleEnumMap.Visitor,
         lastX: tr.x,
         lastY: tr.y,
         lastZ: tr.z,
@@ -159,4 +168,31 @@ export function clearPlayerObjectRuntimeMemories(): void
 {
     for (const key in playerObjectRuntimeMemoryByUserID)
         delete playerObjectRuntimeMemoryByUserID[key];
+    for (const key in userRoleByUserID)
+        delete userRoleByUserID[key];
+}
+
+export function syncUserRoleInMemory(userID: string, roomID: string, userRole: UserRole): void
+{
+    // Update the authoritative role map.
+    userRoleByUserID[userID] = userRole;
+
+    // Broadcast the role update to all clients in the room.
+    const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+    if (!socketRoomContext)
+        return;
+
+    const params = new UserRoleUpdateParams(userID, roomID, userRole);
+    socketRoomContext.multicastSignal("userRoleUpdateParams", params);
+}
+
+export function getUserRole(userID: string): UserRole
+{
+    return userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
+}
+
+export function canUserModifyRoom(userID: string): boolean
+{
+    const role = userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
+    return role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor;
 }

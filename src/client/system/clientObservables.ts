@@ -5,6 +5,7 @@ import ObservableMap from "../../shared/system/types/observableMap";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
 import ClientProcess from "./types/clientProcess";
+import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 
 //--------------------------------------------------------------------------------
 // Core Observables
@@ -52,3 +53,11 @@ export const playerViewTargetPosObservable = new Observable<THREE.Vector3 | null
 // This observable notifies its listeners whenever a brief notification message
 // should be displayed to the user (e.g. error messages, status updates).
 export const notificationMessageObservable = new Observable<string | null>(null);
+
+//--------------------------------------------------------------------------------
+// User State Observables
+//--------------------------------------------------------------------------------
+
+// This observable notifies its listeners whenever the current user's role
+// in the current room changes (e.g. from Visitor to Editor, or vice versa).
+export const userRoleObservable = new Observable<UserRole>(UserRoleEnumMap.Visitor);

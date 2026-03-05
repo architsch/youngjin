@@ -19,6 +19,7 @@ import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetada
 import UserGameplayState from "../user/types/userGameplayState";
 import DBUserUtil from "../db/util/dbUserUtil";
 import DBUserRoomStateUtil from "../db/util/dbUserRoomStateUtil";
+import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -111,6 +112,7 @@ const RoomManager =
         let lastX = 16, lastY = 0, lastZ = 16;
         let lastDirX = 0, lastDirY = 0, lastDirZ = 1;
         let playerMetadata: {[key: string]: string} = {};
+        let userRole: UserRole = UserRoleEnumMap.Visitor;
 
         if (cachedGameplayState && cachedGameplayState.lastRoomID === roomID)
         {
@@ -121,6 +123,7 @@ const RoomManager =
             lastDirY = cachedGameplayState.lastDirY;
             lastDirZ = cachedGameplayState.lastDirZ;
             playerMetadata = cachedGameplayState.playerMetadata;
+            userRole = cachedGameplayState.userRole;
         }
         else
         {
@@ -134,14 +137,23 @@ const RoomManager =
                 lastDirY = roomState.lastDirY;
                 lastDirZ = roomState.lastDirZ;
                 playerMetadata = (roomState.playerMetadata as {[key: string]: string}) ?? {};
+                if (roomState.userRole != null)
+                    userRole = roomState.userRole;
             }
         }
 
+        // Owner takes priority regardless of what the DB/cache says.
+        if (roomRuntimeMemory.room.ownerUserID === user.id)
+            userRole = UserRoleEnumMap.Owner;
+
         addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
             new ObjectTransform(lastX, lastY, lastZ, lastDirX, lastDirY, lastDirZ),
-            playerMetadata
+            playerMetadata, userRole
         );
 
+        // Set the joining user's role on the shared RoomRuntimeMemory before unicasting.
+        // (Safe because Node.js is single-threaded and encode happens synchronously.)
+        roomRuntimeMemory.currentUserRole = userRole;
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)
             console.error(`RoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);

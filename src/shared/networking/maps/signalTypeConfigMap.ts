@@ -1,6 +1,7 @@
 import ObjectDespawnParams from "../../object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../object/types/objectDesyncResolveParams";
 import ObjectMessageParams from "../../object/types/objectMessageParams";
+import UserRoleUpdateParams from "../../user/types/userRoleUpdateParams";
 import ObjectSpawnParams from "../../object/types/objectSpawnParams";
 import ObjectSyncParams from "../../object/types/objectSyncParams";
 import UserCommandParams from "../../user/types/userCommandParams";
@@ -114,6 +115,15 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 1000, // This is necessary because this signal may cost a DB query each time it gets sent.
         maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
         decode: (bufferState: BufferState) => UserCommandParams.decode(bufferState),
+    }],
+    [10, { // Unidirectional (client <- server)
+        // (Overall Flow):
+        // The server updates a user's role in the current room and announces the update to all clients in the room.
+        // Each client receives the update and applies the new role (e.g. updating UI permissions).
+        signalType: "userRoleUpdateParams",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        maxClientSideReceptionPeriod: 2000, // this handles the case in which the role update arrives while the room is still loading on the client side, etc.
+        decode: (bufferState: BufferState) => UserRoleUpdateParams.decode(bufferState),
     }],
 ];
 

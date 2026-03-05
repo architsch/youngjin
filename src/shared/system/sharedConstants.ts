@@ -15,6 +15,7 @@ export const TUTORIAL_DONE_STEP = 10000;
 // Networking
 
 export const USER_API_ROUTE_PATH = "api/user";
+export const ROOM_API_ROUTE_PATH = "api/room";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
 export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;

@@ -11,15 +11,17 @@ export default class RoomRuntimeMemory extends EncodableData
     participantUserIDs: { [userID: string]: boolean };
     objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory};
     lastSavedTimeInMillis: number;
+    currentUserRole: number; // The role of the user receiving this data (set before unicasting to a specific user)
 
     constructor(room: Room, participantUserIDs: { [userID: string]: boolean },
-        objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory})
+        objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory}, currentUserRole: number = 0)
     {
         super();
         this.room = room;
         this.participantUserIDs = participantUserIDs;
         this.objectRuntimeMemories = objectRuntimeMemories;
         this.lastSavedTimeInMillis = Date.now();
+        this.currentUserRole = currentUserRole;
     }
 
     encode(bufferState: BufferState)
@@ -33,6 +35,7 @@ export default class RoomRuntimeMemory extends EncodableData
             Object.values(this.objectRuntimeMemories),
             65535
         ).encode(bufferState);
+        new EncodableByteString(String(this.currentUserRole)).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
@@ -54,6 +57,8 @@ export default class RoomRuntimeMemory extends EncodableData
             objectRuntimeMemories[obj.objectSpawnParams.objectId] = obj;
         }
 
-        return new RoomRuntimeMemory(room, participantUserIDs, objectRuntimeMemories);
+        const currentUserRole = parseInt((EncodableByteString.decode(bufferState) as EncodableByteString).str);
+
+        return new RoomRuntimeMemory(room, participantUserIDs, objectRuntimeMemories, currentUserRole);
     }
 }

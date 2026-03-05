@@ -7,7 +7,11 @@ import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
-import { roomChangedObservable } from "./system/clientObservables";
+import { UserRole } from "../shared/user/types/userRole";
+import { roomChangedObservable, userRoleObservable } from "./system/clientObservables";
+import UserRoleUpdateParams from "../shared/user/types/userRoleUpdateParams";
+import AsyncUtil from "../shared/system/util/asyncUtil";
+import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -46,6 +50,24 @@ const App =
     {
         return currentRoom;
     },
+    getCurrentUserRole: (): UserRole =>
+    {
+        return userRoleObservable.peek();
+    },
+    setCurrentUserRole: (role: UserRole) =>
+    {
+        userRoleObservable.set(role);
+    },
+    onUserRoleUpdateReceived: async (params: UserRoleUpdateParams) => {
+        // If this is a UserRole update on the current user's player, update the app-level role.
+        if (params.userID !== App.getUser()?.id)
+            return;
+        const success = await waitUntilSignalProcessingReady("userRoleUpdateParams",
+            () => params.roomID === App.getCurrentRoom()?.id);
+        if (!success)
+            return;
+        App.setCurrentUserRole(params.userRole);
+    },
     getVoxelQuads: (): Uint8Array =>
     {
         return currentRoom!.voxelGrid.quadsMem.quads;
@@ -67,6 +89,9 @@ const App =
 async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
 {
     currentRoom = roomRuntimeMemory.room;
+
+    // Read the current user's role directly from the RoomRuntimeMemory
+    userRoleObservable.set(roomRuntimeMemory.currentUserRole);
 
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
@@ -110,5 +135,9 @@ function update()
 
     prevTime = currTime;
 }
+
+const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
+    AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
+
 
 export default App;

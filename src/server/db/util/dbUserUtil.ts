@@ -29,6 +29,7 @@ const DBUserUtil =
             createdAt: Date.now(),
             loginCount: 0,
             totalPlaytimeMs: 0,
+            ownedRoomID: "",
         };
         const result = await new DBQuery<{id: string}>()
             .insertInto(COLLECTION_USERS)
@@ -76,10 +77,11 @@ const DBUserUtil =
 
         // 2. Save per-room state (position, direction, metadata) to userRoomStates
         await DBUserRoomStateUtil.saveUserRoomState(
-            gameplayState.userID, gameplayState.lastRoomID,
+            gameplayState.userID, gameplayState.userName, gameplayState.email, gameplayState.lastRoomID,
             gameplayState.lastX, gameplayState.lastY, gameplayState.lastZ,
             gameplayState.lastDirX, gameplayState.lastDirY, gameplayState.lastDirZ,
-            gameplayState.playerMetadata
+            gameplayState.playerMetadata,
+            gameplayState.userRole
         );
     },
     saveMultipleUsersGameplayState: async (gameplayStates: UserGameplayState[]): Promise<void> =>
@@ -103,14 +105,15 @@ const DBUserUtil =
         await DBQuery.runAll(userQueries);
 
         // 2. Save per-room states individually (each is an upsert with a specific doc ID)
-        await Promise.all(gameplayStates.map(gs =>
-            DBUserRoomStateUtil.saveUserRoomState(
-                gs.userID, gs.lastRoomID,
+        await Promise.all(gameplayStates.map(gs => {
+            return DBUserRoomStateUtil.saveUserRoomState(
+                gs.userID, gs.userName, gs.email, gs.lastRoomID,
                 gs.lastX, gs.lastY, gs.lastZ,
                 gs.lastDirX, gs.lastDirY, gs.lastDirZ,
-                gs.playerMetadata
-            )
-        ));
+                gs.playerMetadata,
+                gs.userRole
+            );
+        }));
     },
     upgradeGuestToMember: async (userID: string, userName: string, email: string): Promise<DBQueryResponse<DBRow>> =>
     {
@@ -188,6 +191,16 @@ const DBUserUtil =
             .run();
         return result;
     },
+    setOwnedRoomID: async (userID: string, roomID: string): Promise<DBQueryResponse<DBRow>> =>
+    {
+        LogUtil.log("DBUserUtil.setOwnedRoomID", {userID, roomID}, "low", "info");
+        const result = await new DBQuery<DBRow>()
+            .update(COLLECTION_USERS)
+            .set({ ownedRoomID: roomID })
+            .where("id", "==", userID)
+            .run();
+        return result;
+    },
     fromDBType(dbUser: DBUser): User
     {
         return new User(
@@ -196,7 +209,8 @@ const DBUserUtil =
             dbUser.userType,
             dbUser.email,
             dbUser.tutorialStep,
-            dbUser.lastRoomID ?? ""
+            dbUser.lastRoomID ?? "",
+            dbUser.ownedRoomID ?? ""
         );
     },
 }
