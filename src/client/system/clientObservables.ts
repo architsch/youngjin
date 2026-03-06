@@ -61,3 +61,12 @@ export const notificationMessageObservable = new Observable<string | null>(null)
 // This observable notifies its listeners whenever the current user's role
 // in the current room changes (e.g. from Visitor to Editor, or vice versa).
 export const userRoleObservable = new Observable<UserRole>(UserRoleEnumMap.Visitor);
+
+//--------------------------------------------------------------------------------
+// Pending State Observables
+//--------------------------------------------------------------------------------
+
+// This observable tracks whether a persistent object update (add) is pending
+// a server response. While true, voxel and persistent object update actions
+// should be disabled to prevent race conditions.
+export const persistentObjectAddPendingObservable = new Observable<boolean>(false);

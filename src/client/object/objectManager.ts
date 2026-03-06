@@ -67,7 +67,7 @@ const ObjectManager =
         };
 
         // Load objects from the decoded persistentObjectGroup
-        for (const po of roomRuntimeMemory.room.persistentObjectGroup.persistentObjects)
+        for (const po of Object.values(roomRuntimeMemory.room.persistentObjectGroup.persistentObjectById))
         {
             // Let's assume that (+z) is the direction in which the 0 y-axis angle is pointing.
             let dirX = 0, dirY = 0, dirZ = 0;

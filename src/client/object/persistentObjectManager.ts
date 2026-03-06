@@ -12,8 +12,9 @@ import { addPersistentObject, directionStringToVector, movePersistentObject, rem
 import { PERSISTENT_OBJ_TASK_TYPE_ADD, PERSISTENT_OBJ_TASK_TYPE_MOVE, PERSISTENT_OBJ_TASK_TYPE_REMOVE, PERSISTENT_OBJ_TASK_TYPE_SET_METADATA } from "../../shared/system/sharedConstants";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
-import { persistentObjectSelectionObservable } from "../system/clientObservables";
+import { persistentObjectSelectionObservable, persistentObjectAddPendingObservable } from "../system/clientObservables";
 import CanvasGameObject from "./types/canvasGameObject";
+import { hideWorldSpaceSpinner } from "../graphics/types/gizmo/worldSpaceSpinner";
 
 const PersistentObjectManager =
 {
@@ -34,7 +35,8 @@ const PersistentObjectManager =
                     const addParams = task as AddPersistentObjectParams;
                     const dirStr = addParams.getDirectionString();
                     const po = addPersistentObject(room, addParams.objectTypeIndex,
-                        dirStr, addParams.x, addParams.y, addParams.z, addParams.metadata);
+                        dirStr, addParams.x, addParams.y, addParams.z, addParams.metadata,
+                        addParams.objectId);
                     if (po)
                     {
                         const {dirX, dirY, dirZ} = directionStringToVector(dirStr);
@@ -50,6 +52,9 @@ const PersistentObjectManager =
                         if (gameObject instanceof CanvasGameObject)
                             await (gameObject as CanvasGameObject).loadImage();
                     }
+
+                    hideWorldSpaceSpinner();
+                    persistentObjectAddPendingObservable.set(false);
                     break;
                 }
                 case PERSISTENT_OBJ_TASK_TYPE_REMOVE:
@@ -70,15 +75,15 @@ const PersistentObjectManager =
                 case PERSISTENT_OBJ_TASK_TYPE_MOVE:
                 {
                     const moveParams = task as MovePersistentObjectParams;
-                    const oldObjectId = moveParams.objectId;
-                    const po = movePersistentObject(room, oldObjectId, moveParams.dx, moveParams.dy, moveParams.dz);
+                    const objectId = moveParams.objectId;
+                    const po = movePersistentObject(room, objectId, moveParams.dx, moveParams.dy, moveParams.dz);
                     if (po)
                     {
-                        // Despawn old, respawn at new position (direction may have changed due to corner wrapping)
-                        const existingObj = ObjectManager.getObjectById(oldObjectId);
+                        // Despawn and respawn at new position (direction may have changed due to corner wrapping)
+                        const existingObj = ObjectManager.getObjectById(objectId);
                         if (existingObj)
                         {
-                            await ObjectManager.despawnObject(oldObjectId);
+                            await ObjectManager.despawnObject(objectId);
 
                             const {dirX, dirY, dirZ} = directionStringToVector(po.direction);
                             const objectSpawnParams = new ObjectSpawnParams(
@@ -96,7 +101,7 @@ const PersistentObjectManager =
                             // If the moved object was selected by us, deactivate the selection
                             // since another user initiated the move.
                             const sel = persistentObjectSelectionObservable.peek();
-                            if (sel && sel.gameObject.params.objectId === oldObjectId)
+                            if (sel && sel.gameObject.params.objectId === objectId)
                                 persistentObjectSelectionObservable.set(null);
                         }
                     }

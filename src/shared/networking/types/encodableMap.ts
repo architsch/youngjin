@@ -1,50 +1,84 @@
 import BufferState from "./bufferState";
+import EncodableByteString from "./encodableByteString";
 import EncodableData from "./encodableData";
 import EncodableRawByteNumber from "./encodableRawByteNumber";
+import EncodableRaw2ByteNumber from "./encodableRaw2ByteNumber";
+
+type MapKeyType = "number" | "string";
 
 let temp_elementDecodeMethod: (bufferState: BufferState) => EncodableData;
+let temp_keyType: MapKeyType = "number";
+let temp_lengthLimit = 255;
 
 export default class EncodableMap extends EncodableData
 {
-    map: {[key: number]: EncodableData};
+    map: Record<string | number, EncodableData>;
+    keyType: MapKeyType;
+    lengthLimit: number;
 
-    constructor(map: {[key: number]: EncodableData})
+    constructor(map: Record<string | number, EncodableData>,
+        keyType: MapKeyType = "number", lengthLimit: number = 255)
     {
         super();
         this.map = map;
+        this.keyType = keyType;
+        this.lengthLimit = lengthLimit;
     }
 
     encode(bufferState: BufferState)
     {
-        const keys = Object.keys(this.map).map(Number);
-        if (keys.length > 255)
+        const keys = Object.keys(this.map);
+        if (keys.length > this.lengthLimit)
             throw new Error(`Too many keys in the EncodableMap :: ${JSON.stringify(keys)}`);
-        new EncodableRawByteNumber(keys.length).encode(bufferState);
+        const length = Math.min(keys.length, this.lengthLimit);
+
+        if (this.lengthLimit <= 255)
+            new EncodableRawByteNumber(length).encode(bufferState);
+        else if (this.lengthLimit <= 65535)
+            new EncodableRaw2ByteNumber(length).encode(bufferState);
+        else
+            throw new Error(`Length limit of ${this.lengthLimit} is not supported.`);
 
         for (const key of keys)
         {
-            new EncodableRawByteNumber(key).encode(bufferState);
+            if (this.keyType === "number")
+                new EncodableRawByteNumber(Number(key)).encode(bufferState);
+            else
+                new EncodableByteString(key).encode(bufferState);
             this.map[key].encode(bufferState);
         }
     }
 
     static decodeWithParams(bufferState: BufferState,
-        elementDecodeMethod: (bufferState: BufferState) => EncodableData): EncodableData
+        elementDecodeMethod: (bufferState: BufferState) => EncodableData,
+        keyType: MapKeyType = "number", lengthLimit: number = 255): EncodableData
     {
         temp_elementDecodeMethod = elementDecodeMethod;
+        temp_keyType = keyType;
+        temp_lengthLimit = lengthLimit;
         return EncodableMap.decode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const length = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+        let length = 0;
+        if (temp_lengthLimit <= 255)
+            length = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+        else if (temp_lengthLimit <= 65535)
+            length = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
+        else
+            throw new Error(`Length limit of ${temp_lengthLimit} is not supported.`);
 
-        const map: {[key: number]: EncodableData} = {};
+        const map: Record<string | number, EncodableData> = {};
         for (let i = 0; i < length; ++i)
         {
-            const key = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+            let key: string | number;
+            if (temp_keyType === "number")
+                key = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+            else
+                key = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
             map[key] = temp_elementDecodeMethod(bufferState);
         }
-        return new EncodableMap(map);
+        return new EncodableMap(map, temp_keyType, temp_lengthLimit);
     }
 }

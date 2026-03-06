@@ -12,6 +12,7 @@ import { MAX_CANVASES_PER_ROOM } from "../../../shared/system/sharedConstants";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
+import { getRoom } from "./roomCoreUtil";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -50,7 +51,7 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
     }
     if (params.objectTypeIndex === canvasTypeIndex)
     {
-        const canvasCount = room.persistentObjectGroup.persistentObjects
+        const canvasCount = Object.values(room.persistentObjectGroup.persistentObjectById)
             .filter(po => po.objectTypeIndex === canvasTypeIndex).length;
         if (canvasCount >= MAX_CANVASES_PER_ROOM)
         {
@@ -66,7 +67,8 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
         console.error(`PersistentObject update failed (addPersistentObjectTask) - params: ${JSON.stringify(params)}`);
         return;
     }
-    broadcast(socketUserContext, room, params);
+    params.objectId = po.objectId;
+    broadcastToAll(socketUserContext, room, params);
 }
 
 function removePersistentObjectTask(socketUserContext: SocketUserContext, params: RemovePersistentObjectParams)
@@ -123,16 +125,26 @@ function setPersistentObjectMetadataTask(socketUserContext: SocketUserContext, p
 function broadcast(socketUserContext: SocketUserContext, room: Room,
     signal: EncodableData)
 {
+    broadcastInternal(room, signal, socketUserContext.user.id);
+}
+
+function broadcastToAll(socketUserContext: SocketUserContext, room: Room,
+    signal: EncodableData)
+{
+    broadcastInternal(room, signal, undefined);
+}
+
+function broadcastInternal(room: Room, signal: EncodableData, excludeUserId: string | undefined)
+{
     room.dirty = true;
 
-    const user = socketUserContext.user;
     const socketRoomContext = RoomManager.socketRoomContexts[room.id];
     if (!socketRoomContext)
         console.error(`SocketRoomContext not found (roomID = ${room.id})`);
     else
     {
         Object.entries(socketRoomContext.getUserContexts()).forEach((kvp: [string, SocketUserContext]) => {
-            if (user.id != kvp[0])
+            if (excludeUserId == undefined || excludeUserId != kvp[0])
             {
                 const ctx = kvp[1];
                 const success = ctx.tryUpdateLatestPendingSignalToUser("updatePersistentObjectGroupParams", (existingSignal: EncodableData) => {
@@ -147,22 +159,4 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
             }
         });
     }
-}
-
-function getRoom(socketUserContext: SocketUserContext): Room | undefined
-{
-    const user = socketUserContext.user;
-    const roomID = RoomManager.currentRoomIDByUserID[user.id];
-    if (roomID == undefined)
-    {
-        console.error(`getRoom :: RoomID not found (userID = ${user.id})`);
-        return undefined;
-    }
-    const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
-    if (roomRuntimeMemory == undefined)
-    {
-        console.error(`getRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
-        return undefined;
-    }
-    return roomRuntimeMemory.room;
 }

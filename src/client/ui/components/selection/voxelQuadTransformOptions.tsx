@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import MoveVoxelBlockParams from "../../../../shared/voxel/types/update/moveVoxelBlockParams";
 import AddVoxelBlockParams from "../../../../shared/voxel/types/update/addVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../../../shared/voxel/types/update/removeVoxelBlockParams";
@@ -10,14 +11,22 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION
 import Room from "../../../../shared/room/types/room";
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../../shared/voxel/util/voxelBlockUpdateUtil";
 import { wouldBlockRemovalBreakPersistentObject } from "../../../../shared/object/util/persistentObjectUpdateUtil";
+import { persistentObjectAddPendingObservable } from "../../../system/clientObservables";
 
 export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSelection})
 {
+    const [pending, setPending] = useState(persistentObjectAddPendingObservable.peek());
+
+    useEffect(() => {
+        persistentObjectAddPendingObservable.addListener("ui.voxelQuadTransformOptions", setPending);
+        return () => { persistentObjectAddPendingObservable.removeListener("ui.voxelQuadTransformOptions"); };
+    }, []);
+
     return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
-        <Button name="Add Block" size="sm" onClick={() => addVoxelBlockOption(props.selection)}/>
-        <Button name="Remove Block" size="sm" onClick={() => removeVoxelBlockOption(props.selection)}/>
-        <Button name="Move Up" size="sm" onClick={() => moveVoxelBlockOption(props.selection, 0, 0, 1)}/>
-        <Button name="Move Down" size="sm" onClick={() => moveVoxelBlockOption(props.selection, 0, 0, -1)}/>
+        <Button name="Add Block" size="sm" disabled={pending} onClick={() => addVoxelBlockOption(props.selection)}/>
+        <Button name="Remove Block" size="sm" disabled={pending} onClick={() => removeVoxelBlockOption(props.selection)}/>
+        <Button name="Move Up" size="sm" disabled={pending} onClick={() => moveVoxelBlockOption(props.selection, 0, 0, 1)}/>
+        <Button name="Move Down" size="sm" disabled={pending} onClick={() => moveVoxelBlockOption(props.selection, 0, 0, -1)}/>
     </div>;
 }
 

@@ -1,4 +1,5 @@
 import Vec2 from "../../math/types/vec2";
+import ObjectTypeConfig, { ColliderConfig } from "../../object/types/objectTypeConfig";
 import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import PhysicsObject from "../types/physicsObject";
 import PhysicsRoom from "../types/physicsRoom";
@@ -7,6 +8,17 @@ import { getVoxelsInBox } from "./physicsVoxelUtil";
 
 const voxelsTemp = new Array<PhysicsVoxel>();
 const objsTemp = new Array<PhysicsObject>();
+
+export function getColliderConfig(objectTypeConfig: ObjectTypeConfig): ColliderConfig | undefined
+{
+    const components = objectTypeConfig.components;
+    let colliderConfig = components.spawnedByAny?.dynamicCollider;
+    if (!colliderConfig)
+        colliderConfig = components.spawnedByAny?.staticCollider;
+    if (!colliderConfig)
+        colliderConfig = components.spawnedByAny?.ghostCollider;
+    return colliderConfig;
+}
 
 export function canObjectCollideWithLayer(object: PhysicsObject, collisionLayer: number,
     levelShiftInObject: number = 0): boolean

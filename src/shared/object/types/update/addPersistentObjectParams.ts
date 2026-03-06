@@ -15,8 +15,9 @@ export default class AddPersistentObjectParams extends UpdatePersistentObjectGro
     y: number;
     z: number;
     metadata: ObjectMetadata;
+    objectId: string; // Assigned by server, empty when sent from client
 
-    constructor(objectTypeIndex: number, direction: number, x: number, y: number, z: number, metadata: ObjectMetadata = {})
+    constructor(objectTypeIndex: number, direction: number, x: number, y: number, z: number, metadata: ObjectMetadata = {}, objectId: string = "")
     {
         super(PERSISTENT_OBJ_TASK_TYPE_ADD);
         this.objectTypeIndex = objectTypeIndex;
@@ -25,10 +26,12 @@ export default class AddPersistentObjectParams extends UpdatePersistentObjectGro
         this.y = y;
         this.z = z;
         this.metadata = metadata;
+        this.objectId = objectId;
     }
 
     encode(bufferState: BufferState)
     {
+        new EncodableByteString(this.objectId).encode(bufferState);
         new EncodableRawByteNumber((this.objectTypeIndex << 2) | (this.direction & 0b11)).encode(bufferState);
         const yRaw = Math.floor(4 * this.y);
         const yRawFirstHalf = (yRaw & 0b1100) >> 2;
@@ -40,6 +43,8 @@ export default class AddPersistentObjectParams extends UpdatePersistentObjectGro
 
     static decode(bufferState: BufferState): EncodableData
     {
+        const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+
         const mainByte1 = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const objectTypeIndex = (mainByte1 >> 2) & 0b111111;
         const direction = mainByte1 & 0b11;
@@ -55,7 +60,7 @@ export default class AddPersistentObjectParams extends UpdatePersistentObjectGro
 
         const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
 
-        return new AddPersistentObjectParams(objectTypeIndex, direction, x, y, z, metadata);
+        return new AddPersistentObjectParams(objectTypeIndex, direction, x, y, z, metadata, objectId);
     }
 
     getDirectionString(): "+z" | "+x" | "-z" | "-x"

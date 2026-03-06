@@ -1,21 +1,14 @@
 import { HitboxSize } from "../../physics/types/hitboxSize";
 
-export type SpawnType = "spawnedByMe" | "spawnedByOther" | "spawnedByAny";
-
 export default interface ObjectTypeConfig
 {
     objectType: string;
     isWallAttached?: boolean; // TRUE if the object should always stay attached to the nearest wall (e.g. canvas)
     components: {
         spawnedByAny?: {
-            dynamicCollider?: {
-                collisionLayerMaskAtGroundLevel: number,
-                hitboxSize: HitboxSize,
-            },
-            staticCollider?: {
-                collisionLayerMaskAtGroundLevel: number,
-                hitboxSize: HitboxSize,
-            },
+            dynamicCollider?: ColliderConfig,
+            staticCollider?: ColliderConfig,
+            ghostCollider?: ColliderConfig,
             instancedMeshGraphics?: {
                 createInstanceIdPool: boolean,
             },
@@ -47,3 +40,10 @@ export default interface ObjectTypeConfig
         },
     },
 }
+
+export type SpawnType = "spawnedByMe" | "spawnedByOther" | "spawnedByAny";
+
+export type ColliderConfig = {
+    collisionLayerMaskAtGroundLevel: number,
+    hitboxSize: HitboxSize,
+};

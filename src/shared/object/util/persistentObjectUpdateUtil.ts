@@ -6,7 +6,6 @@ import { getVoxelQuadIndex } from "../../voxel/util/voxelQueryUtil";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import { ObjectMetadata } from "../types/objectMetadata";
 import PersistentObject from "../types/persistentObject";
-import RoomUtil from "../../room/util/roomUtil";
 
 type Direction = "+z" | "+x" | "-z" | "-x";
 
@@ -342,43 +341,38 @@ function tryConcaveCornerWrap(room: Room, po: PersistentObject, dx: number, newY
 
 export function addPersistentObject(room: Room, objectTypeIndex: number,
     direction: Direction, x: number, y: number, z: number,
-    metadata: ObjectMetadata = {}): PersistentObject | null
+    metadata: ObjectMetadata = {}, objectId?: string): PersistentObject | null
 {
-    if (!RoomUtil.positionIsInRoom(x, y, z))
+    if (!isPersistentObjectPositionInBound(x, y, z))
     {
         console.error(`addPersistentObject :: Position out of bounds (x=${x}, y=${y}, z=${z})`);
         return null;
     }
 
-    const objectId = `p${x}-${y}-${z}`;
-    const existing = room.persistentObjectGroup.persistentObjects.find(po => po.objectId === objectId);
-    if (existing)
-    {
-        console.error(`addPersistentObject :: Object already exists at position (x=${x}, y=${y}, z=${z})`);
-        return null;
-    }
+    if (!objectId)
+        objectId = `p${++room.persistentObjectGroup.lastPersistentObjectId}`;
 
     const po = new PersistentObject(objectId, objectTypeIndex, direction, x, y, z, metadata);
-    room.persistentObjectGroup.persistentObjects.push(po);
+    room.persistentObjectGroup.persistentObjectById[objectId] = po;
     return po;
 }
 
 export function removePersistentObject(room: Room, objectId: string): PersistentObject | null
 {
-    const index = room.persistentObjectGroup.persistentObjects.findIndex(po => po.objectId === objectId);
-    if (index < 0)
+    const removed = room.persistentObjectGroup.persistentObjectById[objectId];
+    if (!removed)
     {
         console.error(`removePersistentObject :: Object not found (objectId=${objectId})`);
         return null;
     }
-    const removed = room.persistentObjectGroup.persistentObjects.splice(index, 1)[0];
+    delete room.persistentObjectGroup.persistentObjectById[objectId];
     return removed;
 }
 
 export function movePersistentObject(room: Room, objectId: string,
     dx: number, dy: number, dz: number): PersistentObject | null
 {
-    const po = room.persistentObjectGroup.persistentObjects.find(po => po.objectId === objectId);
+    const po = room.persistentObjectGroup.persistentObjectById[objectId];
     if (!po)
     {
         console.error(`movePersistentObject :: Object not found (objectId=${objectId})`);
@@ -399,7 +393,7 @@ export function movePersistentObject(room: Room, objectId: string,
         newZ = po.z + worldDz;
         newDirection = po.direction;
 
-        if (!RoomUtil.positionIsInRoom(newX, newY, newZ) ||
+        if (!isPersistentObjectPositionInBound(newX, newY, newZ) ||
             !isWallAt(room, newX, newY, newZ, po.direction))
         {
             // Target is either out of bound or there is no wall at the straight path.
@@ -416,27 +410,20 @@ export function movePersistentObject(room: Room, objectId: string,
     }
 
     // Check if the new position is out of bound
-    if (!RoomUtil.positionIsInRoom(newX, newY, newZ))
-        return null;
-
-    // Check for occupied target
-    const newObjectId = `p${newX}-${newY}-${newZ}`;
-    const existing = room.persistentObjectGroup.persistentObjects.find(p => p.objectId === newObjectId);
-    if (existing)
+    if (!isPersistentObjectPositionInBound(newX, newY, newZ))
         return null;
 
     po.x = newX;
     po.y = newY;
     po.z = newZ;
     po.direction = newDirection;
-    po.objectId = newObjectId;
     return po;
 }
 
 export function setPersistentObjectMetadata(room: Room, objectId: string,
     metadataKey: number, metadataValue: string): PersistentObject | null
 {
-    const po = room.persistentObjectGroup.persistentObjects.find(po => po.objectId === objectId);
+    const po = room.persistentObjectGroup.persistentObjectById[objectId];
     if (!po)
     {
         console.error(`setPersistentObjectMetadata :: Object not found (objectId=${objectId})`);
@@ -463,7 +450,7 @@ export function setPersistentObjectMetadata(room: Room, objectId: string,
 export function wouldBlockRemovalBreakPersistentObject(
     room: Room, row: number, col: number, collisionLayer: number): boolean
 {
-    for (const po of room.persistentObjectGroup.persistentObjects)
+    for (const po of Object.values(room.persistentObjectGroup.persistentObjectById))
     {
         const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
         if (!config.isWallAttached) continue;
@@ -527,4 +514,11 @@ function isBlockInSlidingRange(slidingCoord: number, blockIndex: number): boolea
     const meshMax = slidingCoord + 0.5;
     // A block at index i covers [i, i+1]. It overlaps the mesh range if i < meshMax && i+1 > meshMin.
     return blockIndex < meshMax && (blockIndex + 1) > meshMin;
+}
+
+function isPersistentObjectPositionInBound(x: number, y: number, z: number): boolean
+{
+    return x >= 1 && x <= NUM_VOXEL_COLS-1 &&
+        y > 0 && y < MAX_ROOM_Y &&
+        z >= 1 && z <= NUM_VOXEL_ROWS-1;
 }

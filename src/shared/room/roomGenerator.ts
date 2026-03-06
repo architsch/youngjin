@@ -77,7 +77,7 @@ const RoomGenerator =
 
         return {
             voxelGrid: new VoxelGrid(voxels, quadsMem),
-            persistentObjectGroup: new PersistentObjectGroup([]),
+            persistentObjectGroup: new PersistentObjectGroup({}),
         };
     },
 }

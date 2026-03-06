@@ -8,6 +8,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Voxel",
         components: {
             spawnedByAny: {
+                // Collider is not needed here because the physics system handles voxels under a separate logic.
                 instancedMeshGraphics: {
                     createInstanceIdPool: false,
                 },
@@ -52,6 +53,10 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         isWallAttached: true,
         components: {
             spawnedByAny: {
+                ghostCollider: {
+                    collisionLayerMaskAtGroundLevel: 0,
+                    hitboxSize: {sizeX: 1, sizeZ: 0},
+                },
                 instancedMeshGraphics: {
                     createInstanceIdPool: true,
                 },

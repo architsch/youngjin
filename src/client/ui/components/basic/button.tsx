@@ -1,8 +1,8 @@
-export default function Button({name, size = "md", color = "gray", onClick }: Props)
+export default function Button({name, size = "md", color = "gray", disabled = false, onClick }: Props)
 {
     return <div
-        className={`text-center ${textClassNames[size]} ${panelClassNames[color]}`}
-        onClick={onClick}
+        className={`text-center ${textClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]}`}
+        onClick={disabled ? undefined : onClick}
     >
         {name}
     </div>
@@ -19,6 +19,7 @@ const panelClassNames = {
     gray: "yj-panel-gray",
     green: "yj-panel-green",
     red: "yj-panel-red",
+    disabled: "yj-panel-gray opacity-50 cursor-not-allowed",
 };
 
 interface Props
@@ -26,5 +27,6 @@ interface Props
     name: string;
     size?: "xs" | "sm" | "md" | "lg";
     color?: "gray" | "green" | "red";
+    disabled?: boolean;
     onClick: () => void;
 }

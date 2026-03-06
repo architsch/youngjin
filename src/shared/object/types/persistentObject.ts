@@ -77,8 +77,7 @@ export default class PersistentObject extends EncodableData
 
         const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
 
-        const objectId = `p${x}-${y}-${z}`;
-        return new PersistentObject(objectId, objectTypeIndex, direction, x, y, z, metadata);
+        return new PersistentObject("", objectTypeIndex, direction, x, y, z, metadata);
     }
 }
 

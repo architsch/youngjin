@@ -17,6 +17,7 @@ import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import VoxelGameObject from "../object/types/voxelGameObject";
+import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const VoxelManager =
 {
@@ -86,7 +87,7 @@ const VoxelManager =
             // If the quadIndex doesn't even make sense, just unselect.
             if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
             {
-                voxelQuadSelectionObservable.set(null);
+                VoxelQuadSelection.unselect();
                 return;
             }
 
@@ -94,7 +95,7 @@ const VoxelManager =
             const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
             if ((quad & 0b10000000) == 0)
             {
-                voxelQuadSelectionObservable.set(null);
+                VoxelQuadSelection.unselect();
                 return;
             }
 

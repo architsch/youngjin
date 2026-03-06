@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
 import Button from "../basic/button";
 import TextInput from "../basic/textInput";
@@ -9,7 +9,7 @@ import RemovePersistentObjectParams from "../../../../shared/object/types/update
 import MovePersistentObjectParams from "../../../../shared/object/types/update/movePersistentObjectParams";
 import SetPersistentObjectMetadataParams from "../../../../shared/object/types/update/setPersistentObjectMetadataParams";
 import { removePersistentObject, movePersistentObject, setPersistentObjectMetadata, directionStringToVector } from "../../../../shared/object/util/persistentObjectUpdateUtil";
-import { notificationMessageObservable, persistentObjectSelectionObservable } from "../../../system/clientObservables";
+import { notificationMessageObservable, persistentObjectSelectionObservable, persistentObjectAddPendingObservable } from "../../../system/clientObservables";
 import { MAX_IMAGE_URL_LENGTH } from "../../../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import CanvasGameObject from "../../../object/types/canvasGameObject";
@@ -25,17 +25,24 @@ export default function CanvasSelectionOptions(props: {selection: PersistentObje
         : "";
     const [imageURL, setImageURL] = useState(currentImageURL);
 
+    const [pending, setPending] = useState(persistentObjectAddPendingObservable.peek());
+
+    useEffect(() => {
+        persistentObjectAddPendingObservable.addListener("ui.canvasSelectionOptions", setPending);
+        return () => { persistentObjectAddPendingObservable.removeListener("ui.canvasSelectionOptions"); };
+    }, []);
+
     return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
         <div className="flex flex-row gap-2">
-            <Button name="Remove" size="sm" color="red" onClick={() => removeCanvas(props.selection)}/>
-            <Button name="Move Left" size="sm" onClick={() => moveCanvas(props.selection, -0.5, 0)}/>
-            <Button name="Move Right" size="sm" onClick={() => moveCanvas(props.selection, 0.5, 0)}/>
-            <Button name="Move Up" size="sm" onClick={() => moveCanvas(props.selection, 0, 0.25)}/>
-            <Button name="Move Down" size="sm" onClick={() => moveCanvas(props.selection, 0, -0.25)}/>
+            <Button name="Remove" size="sm" color="red" disabled={pending} onClick={() => removeCanvas(props.selection)}/>
+            <Button name="Move Left" size="sm" disabled={pending} onClick={() => moveCanvas(props.selection, -0.5, 0)}/>
+            <Button name="Move Right" size="sm" disabled={pending} onClick={() => moveCanvas(props.selection, 0.5, 0)}/>
+            <Button name="Move Up" size="sm" disabled={pending} onClick={() => moveCanvas(props.selection, 0, 0.25)}/>
+            <Button name="Move Down" size="sm" disabled={pending} onClick={() => moveCanvas(props.selection, 0, -0.25)}/>
         </div>
         <div className="flex flex-row gap-2 items-center">
             <TextInput size="sm" placeholder="Image URL" textInput={imageURL} setTextInput={setImageURL}/>
-            <Button name="Set URL" size="sm" color="green" onClick={() => setCanvasImageURL(props.selection, imageURL)}/>
+            <Button name="Set URL" size="sm" color="green" disabled={pending} onClick={() => setCanvasImageURL(props.selection, imageURL)}/>
         </div>
     </div>;
 }
@@ -49,7 +56,7 @@ function removeCanvas(selection: PersistentObjectSelection)
     const removed = removePersistentObject(room, objectId);
     if (!removed) return;
 
-    persistentObjectSelectionObservable.set(null);
+    PersistentObjectSelection.unselect();
     ObjectManager.despawnObject(objectId);
     SocketsClient.emitUpdatePersistentObjectGroup(new RemovePersistentObjectParams(objectId));
 }
@@ -59,11 +66,11 @@ function moveCanvas(selection: PersistentObjectSelection, dx: number, dy: number
     const room = App.getCurrentRoom();
     if (!room) return;
 
-    const oldObjectId = selection.gameObject.params.objectId;
-    const po = movePersistentObject(room, oldObjectId, dx, dy, 0);
+    const objectId = selection.gameObject.params.objectId;
+    const po = movePersistentObject(room, objectId, dx, dy, 0);
     if (!po) return;
 
-    ObjectManager.despawnObject(oldObjectId);
+    ObjectManager.despawnObject(objectId);
 
     const {dirX, dirY, dirZ} = directionStringToVector(po.direction);
     const objectSpawnParams = new ObjectSpawnParams(
@@ -79,7 +86,7 @@ function moveCanvas(selection: PersistentObjectSelection, dx: number, dy: number
         PersistentObjectSelection.trySelect(gameObject);
     });
 
-    SocketsClient.emitUpdatePersistentObjectGroup(new MovePersistentObjectParams(oldObjectId, dx, dy, 0));
+    SocketsClient.emitUpdatePersistentObjectGroup(new MovePersistentObjectParams(objectId, dx, dy, 0));
 }
 
 function setCanvasImageURL(selection: PersistentObjectSelection, imageURL: string)

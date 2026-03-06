@@ -1,7 +1,9 @@
 import PhysicsManager from "../../../shared/physics/physicsManager";
+import Room from "../../../shared/room/types/room";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import DBRoomUtil from "../../db/util/dbRoomUtil";
 import SocketRoomContext from "../../sockets/types/socketRoomContext";
+import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 
 const pendingLoads: {[roomID: string]: Promise<RoomRuntimeMemory | null>} = {};
@@ -52,4 +54,22 @@ export function unloadRoom(roomID: string)
     delete RoomManager.socketRoomContexts[roomID];
 
     PhysicsManager.unload(roomID);
+}
+
+export function getRoom(socketUserContext: SocketUserContext): Room | undefined
+{
+    const user = socketUserContext.user;
+    const roomID = RoomManager.currentRoomIDByUserID[user.id];
+    if (roomID == undefined)
+    {
+        console.error(`getRoom :: RoomID not found (userID = ${user.id})`);
+        return undefined;
+    }
+    const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+    if (roomRuntimeMemory == undefined)
+    {
+        console.error(`getRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        return undefined;
+    }
+    return roomRuntimeMemory.room;
 }
