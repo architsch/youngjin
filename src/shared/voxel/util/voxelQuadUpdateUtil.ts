@@ -1,3 +1,9 @@
+// TODO: Convert all exported functions in this file into
+// members of a globally accessible object called "VoxelQuadUpdateUtil", which is
+// formatted like: "const VoxelQuadUpdateUtil = { ... } ... export default VoxelQuadUpdateUtil;".
+// (Hint: Use "roomManager.ts" as a reference for formatting.)
+// The purpose of this refactor is to reduce syntactic ambiguity and avoid name conflicts.
+
 import { voxelQuadChangeObservable } from "../../system/sharedObservables";
 import Voxel from "../types/voxel";
 import VoxelQuadChange from "../types/voxelQuadChange";

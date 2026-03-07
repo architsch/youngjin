@@ -1,3 +1,9 @@
+// TODO: Convert all exported functions in this file into
+// members of a globally accessible object called "PersistentObjectUpdateUtil", which is
+// formatted like: "const PersistentObjectUpdateUtil = { ... } ... export default PersistentObjectUpdateUtil;".
+// (Hint: Use "roomManager.ts" as a reference for formatting.)
+// The purpose of this refactor is to reduce syntactic ambiguity and avoid name conflicts.
+
 import EncodableByteString from "../../networking/types/encodableByteString";
 import Room from "../../room/types/room";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_IMAGE_URL_LENGTH, MAX_ROOM_Y } from "../../system/sharedConstants";
@@ -119,18 +125,21 @@ function isQuadVisible(room: Room, row: number, col: number,
 }
 
 // Attempts to wrap the object around a wall corner when straight movement fails.
-// Returns the new position and direction, or null if no perpendicular wall exists at the corner.
-function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: number)
-    : {x: number, z: number, direction: Direction} | null
+// Convex corners (default): the object wraps around the outside edge of a corner.
+// Concave corners: the object wraps around an inside corner (protruding block).
+//   The wrap direction is flipped and the position shifts by 1 unit along the wall normal.
+function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: number,
+    concave: boolean = false): {x: number, z: number, direction: Direction} | null
 {
     const movingRight = dx > 0;
 
-    // Direction wrapping map:
+    // Convex direction wrapping:
     // Current dir | Move right → wrap to | Move left → wrap to
     // +z          | +x                   | -x
     // -z          | -x                   | +x
     // +x          | -z                   | +z
     // -x          | +z                   | -z
+    // Concave: the wrap direction is flipped (opposite of convex).
     let wrapDirection: Direction;
     switch (po.direction)
     {
@@ -139,126 +148,19 @@ function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: numbe
         case "+x": wrapDirection = movingRight ? "-z" : "+z"; break;
         case "-x": wrapDirection = movingRight ? "+z" : "-z"; break;
     }
+    if (concave)
+    {
+        // Flip: +x <-> -x, +z <-> -z
+        switch (wrapDirection)
+        {
+            case "+x": wrapDirection = "-x"; break;
+            case "-x": wrapDirection = "+x"; break;
+            case "+z": wrapDirection = "-z"; break;
+            case "-z": wrapDirection = "+z"; break;
+        }
+    }
 
     // Calculate the corner position on the new (perpendicular) wall.
-    // The object should appear at the edge of the new wall closest to the corner.
-    let newX: number, newZ: number;
-
-    switch (po.direction)
-    {
-        case "+z":
-        {
-            // On +z face at z = row + 1. Sliding along x.
-            // Moving right: corner at right edge. Wrap to +x face.
-            //   +x face of voxel(row, col): at x = col + 1, z slides from row to row+1.
-            //   Corner point is at z = row + 1 (same as the +z face). Place at edge: z = row + 0.5 (half step in).
-            // Moving left: corner at left edge. Wrap to -x face.
-            //   -x face of voxel(row, col-1): at x = col, z slides from row to row+1.
-            const row = po.z - 1;
-            const col = Math.floor(po.x);
-            if (movingRight)
-            {
-                newX = col + 1; // +x face position
-                newZ = row + 0.5; // center of the perpendicular wall face
-            }
-            else
-            {
-                newX = col; // -x face position
-                newZ = row + 0.5;
-            }
-            break;
-        }
-        case "-z":
-        {
-            // On -z face at z = row. Sliding along x.
-            // Moving right (-x direction in world): corner wraps to -x face.
-            // Moving left (+x direction in world): corner wraps to +x face.
-            const row = po.z;
-            const col = Math.floor(po.x);
-            if (movingRight)
-            {
-                // Moving right on -z = world -x. Left edge. Wrap to -x.
-                newX = col; // -x face position
-                newZ = row + 0.5;
-            }
-            else
-            {
-                // Moving left on -z = world +x. Right edge. Wrap to +x.
-                newX = col + 1; // +x face position
-                newZ = row + 0.5;
-            }
-            break;
-        }
-        case "+x":
-        {
-            // On +x face at x = col + 1. Sliding along z (right = -z in world).
-            const col = po.x - 1;
-            const row = Math.floor(po.z);
-            if (movingRight)
-            {
-                // Moving right on +x = world -z. Wrap to -z.
-                newX = col + 0.5;
-                newZ = row; // -z face position
-            }
-            else
-            {
-                // Moving left on +x = world +z. Wrap to +z.
-                newX = col + 0.5;
-                newZ = row + 1; // +z face position
-            }
-            break;
-        }
-        case "-x":
-        {
-            // On -x face at x = col. Sliding along z (right = +z in world).
-            const col = po.x;
-            const row = Math.floor(po.z);
-            if (movingRight)
-            {
-                // Moving right on -x = world +z. Wrap to +z.
-                newX = col + 0.5;
-                newZ = row + 1; // +z face position
-            }
-            else
-            {
-                // Moving left on -x = world -z. Wrap to -z.
-                newX = col + 0.5;
-                newZ = row; // -z face position
-            }
-            break;
-        }
-    }
-
-    // Check if the perpendicular wall exists at the wrapped position
-    if (!isWallAt(room, newX, newY, newZ, wrapDirection))
-        return null;
-
-    return {x: newX, z: newZ, direction: wrapDirection};
-}
-
-// Attempts to wrap the object around a concave (inner) wall corner when convex wrapping fails.
-// Concave corners occur when a protruding block creates an inside corner.
-// The wrap direction is OPPOSITE to the convex case, and the position shifts one row/col past the corner.
-function tryConcaveCornerWrap(room: Room, po: PersistentObject, dx: number, newY: number)
-    : {x: number, z: number, direction: Direction} | null
-{
-    const movingRight = dx > 0;
-
-    // Concave direction wrapping (opposite of convex):
-    // Current dir | Move right → wrap to | Move left → wrap to
-    // +z          | -x                   | +x
-    // -z          | +x                   | -x
-    // +x          | +z                   | -z
-    // -x          | -z                   | +z
-    let wrapDirection: Direction;
-    switch (po.direction)
-    {
-        case "+z": wrapDirection = movingRight ? "-x" : "+x"; break;
-        case "-z": wrapDirection = movingRight ? "+x" : "-x"; break;
-        case "+x": wrapDirection = movingRight ? "+z" : "-z"; break;
-        case "-x": wrapDirection = movingRight ? "-z" : "+z"; break;
-    }
-
     let newX: number, newZ: number;
 
     switch (po.direction)
@@ -267,66 +169,42 @@ function tryConcaveCornerWrap(room: Room, po: PersistentObject, dx: number, newY
         {
             const row = po.z - 1;
             const col = Math.floor(po.x);
-            if (movingRight)
-            {
-                newX = col + 1;
-                newZ = row + 1 + 0.5; // one row past the corner
-            }
-            else
-            {
-                newX = col;
-                newZ = row + 1 + 0.5;
-            }
+            newX = movingRight ? col + 1 : col;
+            newZ = row + 0.5;
             break;
         }
         case "-z":
         {
             const row = po.z;
             const col = Math.floor(po.x);
-            if (movingRight)
-            {
-                newX = col;
-                newZ = row - 1 + 0.5;
-            }
-            else
-            {
-                newX = col + 1;
-                newZ = row - 1 + 0.5;
-            }
+            newX = movingRight ? col : col + 1;
+            newZ = row + 0.5;
             break;
         }
         case "+x":
         {
             const col = po.x - 1;
             const row = Math.floor(po.z);
-            if (movingRight)
-            {
-                newX = col + 1 + 0.5;
-                newZ = row;
-            }
-            else
-            {
-                newX = col + 1 + 0.5;
-                newZ = row + 1;
-            }
+            newX = col + 0.5;
+            newZ = movingRight ? row : row + 1;
             break;
         }
         case "-x":
         {
             const col = po.x;
             const row = Math.floor(po.z);
-            if (movingRight)
-            {
-                newX = col - 1 + 0.5;
-                newZ = row + 1;
-            }
-            else
-            {
-                newX = col - 1 + 0.5;
-                newZ = row;
-            }
+            newX = col + 0.5;
+            newZ = movingRight ? row + 1 : row;
             break;
         }
+    }
+
+    // Concave case: shift position by 1 unit along the wall's normal direction.
+    if (concave)
+    {
+        const {dirX, dirZ} = directionStringToVector(po.direction);
+        newX += dirX;
+        newZ += dirZ;
     }
 
     if (!isWallAt(room, newX, newY, newZ, wrapDirection))
@@ -339,10 +217,18 @@ function tryConcaveCornerWrap(room: Room, po: PersistentObject, dx: number, newY
 // CRUD Operations
 //-------------------------------------------------------------------------------------
 
+export function canAddPersistentObject(room: Room, objectTypeIndex: number,
+    direction: Direction, x: number, y: number, z: number): boolean
+{
+    // TODO: Implement
+    return true;
+}
+
 export function addPersistentObject(room: Room, objectTypeIndex: number,
     direction: Direction, x: number, y: number, z: number,
     metadata: ObjectMetadata = {}, objectId?: string): PersistentObject | null
 {
+    // TODO: Move over the precondition logic into "canAddPersistentObject", and simply call it to check whether the conditions are met.
     if (!isPersistentObjectPositionInBound(x, y, z))
     {
         console.error(`addPersistentObject :: Position out of bounds (x=${x}, y=${y}, z=${z})`);
@@ -357,8 +243,15 @@ export function addPersistentObject(room: Room, objectTypeIndex: number,
     return po;
 }
 
+export function canRemovePersistentObject(room: Room, objectId: string): boolean
+{
+    // TODO: Implement
+    return true;
+}
+
 export function removePersistentObject(room: Room, objectId: string): PersistentObject | null
 {
+    // TODO: Move over the precondition logic into "canRemovePersistentObject", and simply call it to check whether the conditions are met.
     const removed = room.persistentObjectGroup.persistentObjectById[objectId];
     if (!removed)
     {
@@ -369,9 +262,17 @@ export function removePersistentObject(room: Room, objectId: string): Persistent
     return removed;
 }
 
+export function canMovePersistentObject(room: Room, objectId: string,
+    dx: number, dy: number, dz: number): boolean
+{
+    // TODO: Implement
+    return true;
+}
+
 export function movePersistentObject(room: Room, objectId: string,
     dx: number, dy: number, dz: number): PersistentObject | null
 {
+    // TODO: Move over the precondition logic into "canMovePersistentObject", and simply call it to check whether the conditions are met.
     const po = room.persistentObjectGroup.persistentObjectById[objectId];
     if (!po)
     {
@@ -400,7 +301,7 @@ export function movePersistentObject(room: Room, objectId: string,
             // Try corner wrap instead.
             let wrapped = tryCornerWrap(room, po, dx, newY);
             if (!wrapped)
-                wrapped = tryConcaveCornerWrap(room, po, dx, newY);
+                wrapped = tryCornerWrap(room, po, dx, newY, true);
             if (!wrapped)
                 return null;
             newX = wrapped.x;
@@ -420,9 +321,16 @@ export function movePersistentObject(room: Room, objectId: string,
     return po;
 }
 
+export function canSetPersistentObjectMetadata(room: Room, objectId: string): boolean
+{
+    // TODO: Implement
+    return true;
+}
+
 export function setPersistentObjectMetadata(room: Room, objectId: string,
     metadataKey: number, metadataValue: string): PersistentObject | null
 {
+    // TODO: Move over the precondition logic into "canSetPersistentObjectMetadata", and simply call it to check whether the conditions are met.
     const po = room.persistentObjectGroup.persistentObjectById[objectId];
     if (!po)
     {

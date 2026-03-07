@@ -12,9 +12,10 @@ import { addPersistentObject, directionStringToVector, movePersistentObject, rem
 import { PERSISTENT_OBJ_TASK_TYPE_ADD, PERSISTENT_OBJ_TASK_TYPE_MOVE, PERSISTENT_OBJ_TASK_TYPE_REMOVE, PERSISTENT_OBJ_TASK_TYPE_SET_METADATA } from "../../shared/system/sharedConstants";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
-import { persistentObjectSelectionObservable, persistentObjectAddPendingObservable } from "../system/clientObservables";
+import { persistentObjectSelectionObservable } from "../system/clientObservables";
 import CanvasGameObject from "./types/canvasGameObject";
-import { hideWorldSpaceSpinner } from "../graphics/types/gizmo/worldSpaceSpinner";
+import WorldSpaceSpinner from "../graphics/types/gizmo/worldSpaceSpinner";
+import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
 
 const PersistentObjectManager =
 {
@@ -33,28 +34,33 @@ const PersistentObjectManager =
                 case PERSISTENT_OBJ_TASK_TYPE_ADD:
                 {
                     const addParams = task as AddPersistentObjectParams;
-                    const dirStr = addParams.getDirectionString();
-                    const po = addPersistentObject(room, addParams.objectTypeIndex,
-                        dirStr, addParams.x, addParams.y, addParams.z, addParams.metadata,
-                        addParams.objectId);
-                    if (po)
-                    {
-                        const {dirX, dirY, dirZ} = directionStringToVector(dirStr);
-                        const objectSpawnParams = new ObjectSpawnParams(
-                            room.id, "", "", addParams.objectTypeIndex,
-                            po.objectId,
-                            new ObjectTransform(addParams.x, addParams.y, addParams.z, dirX, dirY, dirZ),
-                            addParams.metadata
-                        );
-                        const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
-                        await ObjectManager.spawnObject(gameObject);
 
-                        if (gameObject instanceof CanvasGameObject)
-                            await (gameObject as CanvasGameObject).loadImage();
+                    // Empty objectId means the server rejected the ADD request.
+                    // Skip object creation but still clear the pending state below.
+                    if (addParams.objectId && addParams.objectId.length > 0)
+                    {
+                        const dirStr = addParams.getDirectionString();
+                        const po = addPersistentObject(room, addParams.objectTypeIndex,
+                            dirStr, addParams.x, addParams.y, addParams.z, addParams.metadata,
+                            addParams.objectId);
+                        if (po)
+                        {
+                            const {dirX, dirY, dirZ} = directionStringToVector(dirStr);
+                            const objectSpawnParams = new ObjectSpawnParams(
+                                room.id, "", "", addParams.objectTypeIndex,
+                                po.objectId,
+                                new ObjectTransform(addParams.x, addParams.y, addParams.z, dirX, dirY, dirZ),
+                                addParams.metadata
+                            );
+                            const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
+                            await ObjectManager.spawnObject(gameObject);
+
+                            if (gameObject instanceof CanvasGameObject)
+                                await (gameObject as CanvasGameObject).loadImage();
+                        }
                     }
 
-                    hideWorldSpaceSpinner();
-                    persistentObjectAddPendingObservable.set(false);
+                    WorldSpaceSpinner.destroySpinner(addParams.x, addParams.y, addParams.z);
                     break;
                 }
                 case PERSISTENT_OBJ_TASK_TYPE_REMOVE:
@@ -66,7 +72,7 @@ const PersistentObjectManager =
                         // If the removed object was selected, unselect it.
                         const sel = persistentObjectSelectionObservable.peek();
                         if (sel && sel.gameObject.params.objectId === removeParams.objectId)
-                            persistentObjectSelectionObservable.set(null);
+                            PersistentObjectSelection.unselect();
 
                         await ObjectManager.despawnObject(removeParams.objectId);
                     }
@@ -102,7 +108,7 @@ const PersistentObjectManager =
                             // since another user initiated the move.
                             const sel = persistentObjectSelectionObservable.peek();
                             if (sel && sel.gameObject.params.objectId === objectId)
-                                persistentObjectSelectionObservable.set(null);
+                                PersistentObjectSelection.unselect();
                         }
                     }
                     break;
@@ -129,7 +135,7 @@ const PersistentObjectManager =
                         // since another user initiated the metadata change.
                         const sel = persistentObjectSelectionObservable.peek();
                         if (sel && sel.gameObject.params.objectId === metaParams.objectId)
-                            persistentObjectSelectionObservable.set(null);
+                            PersistentObjectSelection.unselect();
                     }
                     break;
                 }

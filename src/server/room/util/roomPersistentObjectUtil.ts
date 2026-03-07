@@ -8,6 +8,7 @@ import SetPersistentObjectMetadataParams from "../../../shared/object/types/upda
 import UpdatePersistentObjectGroupParams from "../../../shared/object/types/update/updatePersistentObjectGroupParams";
 import UpdatePersistentObjectGroupTaskParams from "../../../shared/object/types/update/updatePersistentObjectGroupTaskParams";
 import { addPersistentObject, movePersistentObject, removePersistentObject, setPersistentObjectMetadata } from "../../../shared/object/util/persistentObjectUpdateUtil";
+import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import { MAX_CANVASES_PER_ROOM } from "../../../shared/system/sharedConstants";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import SocketUserContext from "../../sockets/types/socketUserContext";
@@ -56,6 +57,8 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
         if (canvasCount >= MAX_CANVASES_PER_ROOM)
         {
             console.error(`addPersistentObjectTask :: Canvas limit reached (${MAX_CANVASES_PER_ROOM}) in room ${room.id}`);
+            // Send the params back with empty objectId so the client clears its pending state.
+            unicastToSender(socketUserContext, room, [params]);
             return;
         }
     }
@@ -65,6 +68,7 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
     if (!po)
     {
         console.error(`PersistentObject update failed (addPersistentObjectTask) - params: ${JSON.stringify(params)}`);
+        unicastToSender(socketUserContext, room, [params]);
         return;
     }
     params.objectId = po.objectId;
@@ -79,10 +83,23 @@ function removePersistentObjectTask(socketUserContext: SocketUserContext, params
         console.error(`PersistentObject update failed (removePersistentObjectTask) - room not found`);
         return;
     }
+
+    // Capture the object state before attempting removal, for potential recovery.
+    const existingPO = room.persistentObjectGroup.persistentObjectById[params.objectId];
+
     const removed = removePersistentObject(room, params.objectId);
     if (!removed)
     {
         console.error(`PersistentObject update failed (removePersistentObjectTask) - params: ${JSON.stringify(params)}`);
+        if (existingPO)
+        {
+            // Re-add the object on the client (which optimistically removed it).
+            const dirNum = AddPersistentObjectParams.directionStringToNumber(existingPO.direction);
+            unicastToSender(socketUserContext, room, [
+                new AddPersistentObjectParams(existingPO.objectTypeIndex, dirNum,
+                    existingPO.x, existingPO.y, existingPO.z, existingPO.metadata, existingPO.objectId),
+            ]);
+        }
         return;
     }
     broadcast(socketUserContext, room, params);
@@ -96,10 +113,28 @@ function movePersistentObjectTask(socketUserContext: SocketUserContext, params: 
         console.error(`PersistentObject update failed (movePersistentObjectTask) - room not found`);
         return;
     }
+
+    // Capture position before attempting move, for potential recovery.
+    const existingPO = room.persistentObjectGroup.persistentObjectById[params.objectId];
+    const prevX = existingPO?.x;
+    const prevY = existingPO?.y;
+    const prevZ = existingPO?.z;
+    const prevDirection = existingPO?.direction;
+
     const po = movePersistentObject(room, params.objectId, params.dx, params.dy, params.dz);
     if (!po)
     {
         console.error(`PersistentObject update failed (movePersistentObjectTask) - params: ${JSON.stringify(params)}`);
+        if (existingPO && prevDirection)
+        {
+            // Client optimistically moved the object. Send REMOVE + ADD to restore it at the server's position.
+            const dirNum = AddPersistentObjectParams.directionStringToNumber(prevDirection);
+            unicastToSender(socketUserContext, room, [
+                new RemovePersistentObjectParams(params.objectId),
+                new AddPersistentObjectParams(existingPO.objectTypeIndex, dirNum,
+                    prevX!, prevY!, prevZ!, existingPO.metadata, existingPO.objectId),
+            ]);
+        }
         return;
     }
     broadcast(socketUserContext, room, params);
@@ -113,13 +148,41 @@ function setPersistentObjectMetadataTask(socketUserContext: SocketUserContext, p
         console.error(`PersistentObject update failed (setPersistentObjectMetadataTask) - room not found`);
         return;
     }
+
+    // Capture old metadata value before attempting change, for potential recovery.
+    const existingPO = room.persistentObjectGroup.persistentObjectById[params.objectId];
+    const oldValue = existingPO?.metadata[params.metadataKey];
+
     const po = setPersistentObjectMetadata(room, params.objectId, params.metadataKey, params.metadataValue);
     if (!po)
     {
         console.error(`PersistentObject update failed (setPersistentObjectMetadataTask) - params: ${JSON.stringify(params)}`);
+        if (existingPO)
+        {
+            // Restore the old metadata value on the client.
+            const oldStr = oldValue instanceof EncodableByteString ? oldValue.str : "";
+            unicastToSender(socketUserContext, room, [
+                new SetPersistentObjectMetadataParams(params.objectId, params.metadataKey, oldStr),
+            ]);
+        }
         return;
     }
     broadcast(socketUserContext, room, params);
+}
+
+function unicastToSender(socketUserContext: SocketUserContext, room: Room,
+    tasks: UpdatePersistentObjectGroupTaskParams[])
+{
+    const success = socketUserContext.tryUpdateLatestPendingSignalToUser("updatePersistentObjectGroupParams", (existingSignal: EncodableData) => {
+        const updateParams = existingSignal as UpdatePersistentObjectGroupParams;
+        for (const task of tasks)
+            updateParams.tasks.push(task);
+    });
+    if (!success)
+    {
+        socketUserContext.addPendingSignalToUser("updatePersistentObjectGroupParams",
+            new UpdatePersistentObjectGroupParams(room.id, tasks));
+    }
 }
 
 function broadcast(socketUserContext: SocketUserContext, room: Room,

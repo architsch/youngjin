@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import MoveVoxelBlockParams from "../../../../shared/voxel/types/update/moveVoxelBlockParams";
 import AddVoxelBlockParams from "../../../../shared/voxel/types/update/addVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../../../shared/voxel/types/update/removeVoxelBlockParams";
@@ -6,32 +5,41 @@ import App from "../../../app";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import SocketsClient from "../../../networking/client/socketsClient";
 import Button from "../basic/button";
-import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerAfterOffset, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex, isVoxelCollisionLayerOccupied } from "../../../../shared/voxel/util/voxelQueryUtil";
+import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerAfterOffset, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
 import Room from "../../../../shared/room/types/room";
 import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../../shared/voxel/util/voxelBlockUpdateUtil";
 import { wouldBlockRemovalBreakPersistentObject } from "../../../../shared/object/util/persistentObjectUpdateUtil";
-import { persistentObjectAddPendingObservable } from "../../../system/clientObservables";
 
 export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSelection})
 {
-    const [pending, setPending] = useState(persistentObjectAddPendingObservable.peek());
-
-    useEffect(() => {
-        persistentObjectAddPendingObservable.addListener("ui.voxelQuadTransformOptions", setPending);
-        return () => { persistentObjectAddPendingObservable.removeListener("ui.voxelQuadTransformOptions"); };
-    }, []);
-
     return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
-        <Button name="Add Block" size="sm" disabled={pending} onClick={() => addVoxelBlockOption(props.selection)}/>
-        <Button name="Remove Block" size="sm" disabled={pending} onClick={() => removeVoxelBlockOption(props.selection)}/>
-        <Button name="Move Up" size="sm" disabled={pending} onClick={() => moveVoxelBlockOption(props.selection, 0, 0, 1)}/>
-        <Button name="Move Down" size="sm" disabled={pending} onClick={() => moveVoxelBlockOption(props.selection, 0, 0, -1)}/>
+        <Button name="Add Block" size="sm"
+            disabled={!canAddVoxelBlock(props.selection)}
+            onClick={() => tryAddVoxelBlock(props.selection)}/>
+        <Button name="Remove Block" size="sm"
+            disabled={!canRemoveVoxelBlock(props.selection)}
+            onClick={() => tryRemoveVoxelBlock(props.selection)}/>
+        <Button name="Move Up" size="sm"
+            disabled={!canMoveVoxelBlock(props.selection, 0, 0, 1)}
+            onClick={() => tryMoveVoxelBlock(props.selection, 0, 0, 1)}/>
+        <Button name="Move Down" size="sm"
+            disabled={!canMoveVoxelBlock(props.selection, 0, 0, -1)}
+            onClick={() => tryMoveVoxelBlock(props.selection, 0, 0, -1)}/>
     </div>;
 }
 
-function moveVoxelBlockOption(selection: VoxelQuadSelection, rowOffset: number, colOffset: number, collisionLayerOffset: number)
+function canMoveVoxelBlock(selection: VoxelQuadSelection,
+    rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
 {
+    // TODO: Implement
+    // (Hint: Make use of "VoxelBlockUpdateUtil.canMoveVoxelBlock" to check conditions that are not strictly confined to the client side.)
+    return true;
+}
+
+function tryMoveVoxelBlock(selection: VoxelQuadSelection, rowOffset: number, colOffset: number, collisionLayerOffset: number)
+{
+    // TODO: Move over the precondition logic into "canMoveVoxelBlock", and simply call it to check whether the conditions are met.
     const room = App.getCurrentRoom();
     if (!room)
     {
@@ -66,8 +74,16 @@ function moveVoxelBlockOption(selection: VoxelQuadSelection, rowOffset: number, 
     }
 }
 
-function addVoxelBlockOption(selection: VoxelQuadSelection)
+function canAddVoxelBlock(selection: VoxelQuadSelection): boolean
 {
+    // TODO: Implement
+    // (Hint: Make use of "VoxelBlockUpdateUtil.canAddVoxelBlock" to check conditions that are not strictly confined to the client side.)
+    return true;
+}
+
+function tryAddVoxelBlock(selection: VoxelQuadSelection)
+{
+    // TODO: Move over the precondition logic into "canAddVoxelBlock", and simply call it to check whether the conditions are met.
     const room = App.getCurrentRoom();
     if (!room)
     {
@@ -109,8 +125,16 @@ function addVoxelBlockOption(selection: VoxelQuadSelection)
     }
 }
 
-function removeVoxelBlockOption(selection: VoxelQuadSelection)
+function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
 {
+    // TODO: Implement
+    // (Hint: Make use of "VoxelBlockUpdateUtil.canRemoveVoxelBlock" to check conditions that are not strictly confined to the client side.)
+    return true;
+}
+
+function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
+{
+    // TODO: Move over the precondition logic into "canRemoveVoxelBlock", and simply call it to check whether the conditions are met.
     const room = App.getCurrentRoom();
     if (!room)
     {

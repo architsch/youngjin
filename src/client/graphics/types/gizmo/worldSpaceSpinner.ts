@@ -8,20 +8,22 @@ import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 const TIMEOUT_MS = 5000;
 const ROTATION_SPEED = 3; // radians per second
 
-let spinnerMesh: THREE.Mesh | null = null;
-let rotationInterval: ReturnType<typeof setInterval> | null = null;
-let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-let onTimeoutCallback: (() => void) | null = null;
-
 const vec3Temp = new THREE.Vector3();
 
-export function showWorldSpaceSpinner(x: number, y: number, z: number,
-    dirX: number, dirY: number, dirZ: number, onTimeout?: () => void)
+export default class WorldSpaceSpinner
 {
-    onTimeoutCallback = onTimeout ?? null;
-
-    initSpinnerMesh().then(mesh =>
+    static async createSpinner(x: number, y: number, z: number,
+        dirX: number, dirY: number, dirZ: number, onTimeout?: () => void)
     {
+        const key = `${x},${y},${z}`;
+
+        // If a spinner with this key already exists, hide it first.
+        WorldSpaceSpinner.destroySpinnerWithKey(key);
+
+        const baseMesh = await getTemplateMesh();
+        const mesh = baseMesh.clone();
+        GraphicsManager.getScene().add(mesh);
+
         mesh.position.set(x, y, z);
         vec3Temp.set(x + dirX, y + dirY, z + dirZ);
         mesh.lookAt(vec3Temp);
@@ -29,62 +31,74 @@ export function showWorldSpaceSpinner(x: number, y: number, z: number,
         mesh.visible = true;
 
         // Animate rotation
-        if (rotationInterval)
-            clearInterval(rotationInterval);
         const intervalMs = 1000 / 30;
-        rotationInterval = setInterval(() => {
+        const rotationInterval = setInterval(() => {
             mesh.rotateZ(ROTATION_SPEED * intervalMs / 1000);
         }, intervalMs);
-    });
 
-    // Auto-timeout
-    if (timeoutHandle)
-        clearTimeout(timeoutHandle);
-    timeoutHandle = setTimeout(() => {
-        notificationMessageObservable.set("Request timed out. Please try again.");
-        hideWorldSpaceSpinner();
-        if (onTimeoutCallback)
-            onTimeoutCallback();
-    }, TIMEOUT_MS);
-}
+        // Auto-timeout
+        const timeoutHandle = setTimeout(() => {
+            notificationMessageObservable.set("Request timed out. Please try again.");
+            WorldSpaceSpinner.destroySpinnerWithKey(key);
+            if (onTimeout)
+                onTimeout();
+        }, TIMEOUT_MS);
 
-export function hideWorldSpaceSpinner()
-{
-    if (spinnerMesh)
-        spinnerMesh.visible = false;
-
-    if (rotationInterval)
-    {
-        clearInterval(rotationInterval);
-        rotationInterval = null;
+        spinners.set(key, {
+            mesh,
+            rotationInterval,
+            timeoutHandle,
+            onTimeoutCallback: onTimeout ?? null,
+        });
     }
 
-    if (timeoutHandle)
+    static async destroySpinner(x: number, y: number, z: number)
     {
-        clearTimeout(timeoutHandle);
-        timeoutHandle = null;
+        WorldSpaceSpinner.destroySpinnerWithKey(`${x},${y},${z}`);
     }
 
-    onTimeoutCallback = null;
+    private static destroySpinnerWithKey(key: string)
+    {
+        const spinner = spinners.get(key);
+        if (!spinner)
+            return;
+
+        spinner.mesh.visible = false;
+        spinner.mesh.removeFromParent();
+        clearInterval(spinner.rotationInterval);
+        clearTimeout(spinner.timeoutHandle);
+        spinners.delete(key);
+    }
+
+    static destroyAllSpinners()
+    {
+        for (const key of spinners.keys())
+            WorldSpaceSpinner.destroySpinnerWithKey(key);
+    }
 }
 
-async function initSpinnerMesh(): Promise<THREE.Mesh>
+interface SpinnerInstance
 {
-    if (spinnerMesh)
-        return spinnerMesh;
+    mesh: THREE.Mesh;
+    rotationInterval: ReturnType<typeof setInterval>;
+    timeoutHandle: ReturnType<typeof setTimeout>;
+    onTimeoutCallback: (() => void) | null;
+}
+
+const spinners = new Map<string, SpinnerInstance>();
+let templateMesh: THREE.Mesh | null = null;
+
+async function getTemplateMesh(): Promise<THREE.Mesh>
+{
+    if (templateMesh)
+        return templateMesh;
 
     const mesh = await MeshFactory.loadMesh("Square", new WireframeMaterialParams("#ffff00"));
-    spinnerMesh = mesh.clone();
-    GraphicsManager.getScene().add(spinnerMesh);
-    return spinnerMesh;
+    templateMesh = mesh;
+    return templateMesh;
 }
 
 roomChangedObservable.addListener("worldSpaceSpinner", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
-    hideWorldSpaceSpinner();
-
-    if (spinnerMesh)
-    {
-        spinnerMesh.removeFromParent();
-        spinnerMesh = null;
-    }
+    WorldSpaceSpinner.destroyAllSpinners();
+    templateMesh = null;
 });

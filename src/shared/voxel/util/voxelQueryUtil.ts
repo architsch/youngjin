@@ -1,3 +1,9 @@
+// TODO: Convert all exported functions in this file into
+// members of a globally accessible object called "VoxelQueryUtil", which is
+// formatted like: "const VoxelQueryUtil = { ... } ... export default VoxelQueryUtil;".
+// (Hint: Use "roomManager.ts" as a reference for formatting.)
+// The purpose of this refactor is to reduce syntactic ambiguity and avoid name conflicts.
+
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import Room from "../../room/types/room";
 import Voxel from "../types/voxel";

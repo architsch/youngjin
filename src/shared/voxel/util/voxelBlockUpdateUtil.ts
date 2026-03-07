@@ -1,3 +1,9 @@
+// TODO: Convert all exported functions in this file into
+// members of a globally accessible object called "VoxelBlockUpdateUtil", which is
+// formatted like: "const VoxelBlockUpdateUtil = { ... } ... export default VoxelBlockUpdateUtil;".
+// (Hint: Use "roomManager.ts" as a reference for formatting.)
+// The purpose of this refactor is to reduce syntactic ambiguity and avoid name conflicts.
+
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../system/sharedConstants";
 import Room from "../../room/types/room";
 import { setVoxelQuadVisible } from "./voxelQuadUpdateUtil";
@@ -11,9 +17,17 @@ export function setVoxelBlockUpdateUtilDebugEnabled(enabled: boolean)
     debugEnabled = enabled;
 }
 
+export function canMoveVoxelBlock(room: Room, quadIndex: number,
+    rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
+{
+    // TODO: Implement
+    return true;
+}
+
 export function moveVoxelBlock(room: Room, quadIndex: number,
     rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
 {
+    // TODO: Move over the precondition logic into "canMoveVoxelBlock", and simply call it to check whether the conditions are met.
     const row = getVoxelRowFromQuadIndex(quadIndex);
     const col = getVoxelColFromQuadIndex(quadIndex);
     const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
@@ -47,8 +61,15 @@ export function moveVoxelBlock(room: Room, quadIndex: number,
     return success;
 }
 
+export function canAddVoxelBlock(room: Room, quadIndex: number, quadTextureIndicesWithinLayer: number[]): boolean
+{
+    // TODO: Implement
+    return true;
+}
+
 export function addVoxelBlock(room: Room, quadIndex: number, quadTextureIndicesWithinLayer: number[]): boolean
 {
+    // TODO: Move over the precondition logic into "canAddVoxelBlock", and simply call it to check whether the conditions are met.
     const row = getVoxelRowFromQuadIndex(quadIndex);
     const col = getVoxelColFromQuadIndex(quadIndex);
     const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
@@ -87,8 +108,15 @@ export function addVoxelBlock(room: Room, quadIndex: number, quadTextureIndicesW
     return true;
 }
 
+export function canRemoveVoxelBlock(room: Room, quadIndex: number): boolean
+{
+    // TODO: Implement
+    return true;
+}
+
 export function removeVoxelBlock(room: Room, quadIndex: number): boolean
 {
+    // TODO: Move over the precondition logic into "canRemoveVoxelBlock", and simply call it to check whether the conditions are met.
     const row = getVoxelRowFromQuadIndex(quadIndex);
     const col = getVoxelColFromQuadIndex(quadIndex);
     const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
