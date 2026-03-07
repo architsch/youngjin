@@ -7,10 +7,10 @@ import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVox
 import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
 import UpdateVoxelGridTaskParams from "../../../shared/voxel/types/update/updateVoxelGridTaskParams";
-import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock } from "../../../shared/voxel/util/voxelBlockUpdateUtil";
-import { setVoxelQuadVisible } from "../../../shared/voxel/util/voxelQuadUpdateUtil";
-import { getFirstVoxelQuadIndexInLayer, getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../shared/voxel/util/voxelQueryUtil";
-import { wouldBlockRemovalBreakPersistentObject } from "../../../shared/object/util/persistentObjectUpdateUtil";
+import VoxelBlockUpdateUtil from "../../../shared/voxel/util/voxelBlockUpdateUtil";
+import VoxelQuadUpdateUtil from "../../../shared/voxel/util/voxelQuadUpdateUtil";
+import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
+import PersistentObjectUpdateUtil from "../../../shared/object/util/persistentObjectUpdateUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 import { getRoom } from "./roomCoreUtil";
@@ -48,20 +48,20 @@ function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVo
         console.error(`Voxel update failed (moveVoxelBlockTask) - room not found`);
         return;
     }
-    const row = getVoxelRowFromQuadIndex(params.quadIndex);
-    const col = getVoxelColFromQuadIndex(params.quadIndex);
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
 
     // Capture source block textures before any modification attempt, for potential recovery.
     const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
 
-    if (wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
+    if (PersistentObjectUpdateUtil.wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
     {
         console.warn(`Block move blocked: persistent object depends on this wall`);
         sendMoveReversal(socketUserContext, room, params, sourceTextures);
         return;
     }
-    if (!moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
+    if (!VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
     {
         console.error(`Voxel update failed (moveVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         sendMoveReversal(socketUserContext, room, params, sourceTextures);
@@ -78,7 +78,7 @@ function addVoxelBlockTask(socketUserContext: SocketUserContext, params: AddVoxe
         console.error(`Voxel update failed (addVoxelBlockTask) - room not found`);
         return;
     }
-    if (!addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
+    if (!VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
     {
         console.error(`Voxel update failed (addVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         unicastToSender(socketUserContext, room, [new RemoveVoxelBlockParams(params.quadIndex)]);
@@ -95,20 +95,20 @@ function removeVoxelBlockTask(socketUserContext: SocketUserContext, params: Remo
         console.error(`Voxel update failed (removeVoxelBlockTask) - room not found`);
         return;
     }
-    const row = getVoxelRowFromQuadIndex(params.quadIndex);
-    const col = getVoxelColFromQuadIndex(params.quadIndex);
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
 
     // Capture textures before any modification attempt, for potential recovery.
     const textures = captureBlockTextures(room, row, col, collisionLayer);
 
-    if (wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
+    if (PersistentObjectUpdateUtil.wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
     {
         console.warn(`Block removal blocked: persistent object depends on this wall`);
         unicastToSender(socketUserContext, room, [new AddVoxelBlockParams(params.quadIndex, textures)]);
         return;
     }
-    if (!removeVoxelBlock(room, params.quadIndex))
+    if (!VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex))
     {
         console.error(`Voxel update failed (removeVoxelBlockTask) - params: ${JSON.stringify(params)}`);
         unicastToSender(socketUserContext, room, [new AddVoxelBlockParams(params.quadIndex, textures)]);
@@ -126,22 +126,22 @@ function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: S
         return;
     }
     const quadIndex = params.quadIndex;
-    const row = getVoxelRowFromQuadIndex(quadIndex);
-    const col = getVoxelColFromQuadIndex(quadIndex);
-    const voxel = getVoxel(room, row, col);
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
     if (!voxel)
     {
         console.error(`Voxel update failed (setVoxelQuadTextureTask) - voxel not found - params: ${JSON.stringify(params)}`);
         return;
     }
-    const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-    const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
     // Capture old texture for potential recovery.
     const oldTextureIndex = voxel.quadsMem.quads[quadIndex] & 0b01111111;
 
-    if (!setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
+    if (!VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
     {
         console.error(`Voxel update failed (setVoxelQuadTextureTask) - params: ${JSON.stringify(params)}`);
         unicastToSender(socketUserContext, room, [new SetVoxelQuadTextureParams(quadIndex, oldTextureIndex)]);
@@ -153,7 +153,7 @@ function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: S
 function captureBlockTextures(room: Room, row: number, col: number, collisionLayer: number): number[]
 {
     const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
-    const startIndex = getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
+    const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
     for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
         textures[i] = room.voxelGrid.quadsMem.quads[startIndex + i] & 0b01111111;
     return textures;
@@ -164,15 +164,15 @@ function sendMoveReversal(socketUserContext: SocketUserContext, room: Room,
 {
     // The client applied the move optimistically: added block at target, removed block at source.
     // To reverse: remove the block at the target and re-add the block at the source.
-    const row = getVoxelRowFromQuadIndex(params.quadIndex);
-    const col = getVoxelColFromQuadIndex(params.quadIndex);
-    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
 
     let newCollisionLayer = collisionLayer + params.collisionLayerOffset;
     if (newCollisionLayer < COLLISION_LAYER_MIN || newCollisionLayer > COLLISION_LAYER_MAX)
         newCollisionLayer = COLLISION_LAYER_NULL;
 
-    const targetQuadIndex = getVoxelQuadIndex(row + params.rowOffset, col + params.colOffset,
+    const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row + params.rowOffset, col + params.colOffset,
         "y", "-", newCollisionLayer);
 
     unicastToSender(socketUserContext, room, [

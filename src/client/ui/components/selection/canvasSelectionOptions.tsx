@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { useState } from "react";
 import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
 import Button from "../basic/button";
@@ -8,14 +9,12 @@ import ObjectManager from "../../../object/objectManager";
 import RemovePersistentObjectParams from "../../../../shared/object/types/update/removePersistentObjectParams";
 import MovePersistentObjectParams from "../../../../shared/object/types/update/movePersistentObjectParams";
 import SetPersistentObjectMetadataParams from "../../../../shared/object/types/update/setPersistentObjectMetadataParams";
-import { removePersistentObject, movePersistentObject, setPersistentObjectMetadata, directionStringToVector } from "../../../../shared/object/util/persistentObjectUpdateUtil";
+import PersistentObjectUpdateUtil from "../../../../shared/object/util/persistentObjectUpdateUtil";
 import { notificationMessageObservable, persistentObjectSelectionObservable } from "../../../system/clientObservables";
 import { MAX_IMAGE_URL_LENGTH } from "../../../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import CanvasGameObject from "../../../object/types/canvasGameObject";
-import ObjectFactory from "../../../object/factories/objectFactory";
-import ObjectSpawnParams from "../../../../shared/object/types/objectSpawnParams";
-import ObjectTransform from "../../../../shared/object/types/objectTransform";
+import DirUtil from "../../../../shared/math/util/dirUtil";
 
 export default function CanvasSelectionOptions(props: {selection: PersistentObjectSelection})
 {
@@ -54,20 +53,24 @@ export default function CanvasSelectionOptions(props: {selection: PersistentObje
 
 function canRemoveCanvas(selection: PersistentObjectSelection): boolean
 {
-    // TODO: Implement
-    // (Hint: Make use of "PersistentObjectUpdateUtil.canRemovePersistentObject" to check conditions that are not strictly confined to the client side.)
-    return true;
+    const room = App.getCurrentRoom();
+    if (!room)
+        return false;
+
+    const objectId = selection.gameObject.params.objectId;
+    return PersistentObjectUpdateUtil.canRemovePersistentObject(room, objectId);
 }
 
 function tryRemoveCanvas(selection: PersistentObjectSelection)
 {
-    // TODO: Move over the precondition logic into "canRemoveCanvas", and simply call it to check whether the conditions are met.
-    const room = App.getCurrentRoom();
-    if (!room) return;
+    if (!canRemoveCanvas(selection))
+        return;
 
+    const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
-    const removed = removePersistentObject(room, objectId);
-    if (!removed) return;
+    const removed = PersistentObjectUpdateUtil.removePersistentObject(room, objectId);
+    if (!removed)
+        return;
 
     PersistentObjectSelection.unselect();
     ObjectManager.despawnObject(objectId);
@@ -76,52 +79,52 @@ function tryRemoveCanvas(selection: PersistentObjectSelection)
 
 function canMoveCanvas(selection: PersistentObjectSelection, dx: number, dy: number): boolean
 {
-    // TODO: Implement
-    // (Hint: Make use of "PersistentObjectUpdateUtil.canMovePersistentObject" to check conditions that are not strictly confined to the client side.)
-    return true;
+    const room = App.getCurrentRoom();
+    if (!room)
+        return false;
+
+    const objectId = selection.gameObject.params.objectId;
+    return PersistentObjectUpdateUtil.canMovePersistentObject(room, objectId, dx, dy, 0);
 }
 
 function tryMoveCanvas(selection: PersistentObjectSelection, dx: number, dy: number)
 {
-    // TODO: Move over the precondition logic into "canMoveCanvas", and simply call it to check whether the conditions are met.
-    const room = App.getCurrentRoom();
-    if (!room) return;
+    if (!canMoveCanvas(selection, dx, dy))
+        return;
 
+    const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
-    const po = movePersistentObject(room, objectId, dx, dy, 0);
-    if (!po) return;
+    const po = PersistentObjectUpdateUtil.movePersistentObject(room, objectId, dx, dy, 0);
+    if (!po)
+        return;
 
-    ObjectManager.despawnObject(objectId);
-
-    const {dirX, dirY, dirZ} = directionStringToVector(po.direction);
-    const objectSpawnParams = new ObjectSpawnParams(
-        room.id, "", "", po.objectTypeIndex,
-        po.objectId,
-        new ObjectTransform(po.x, po.y, po.z, dirX, dirY, dirZ),
-        po.metadata
-    );
-    const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
-    ObjectManager.spawnObject(gameObject).then(async () => {
-        if (gameObject instanceof CanvasGameObject)
-            await (gameObject as CanvasGameObject).loadImage();
-        PersistentObjectSelection.trySelect(gameObject);
-    });
+    selection.gameObject.forceSetPosition(new THREE.Vector3(po.x, po.y, po.z));
+    const dirVec = DirUtil.dir4ToVec3(po.dir);
+    selection.gameObject.obj.lookAt(new THREE.Vector3(
+        po.x + dirVec.x, po.y + dirVec.y, po.z + dirVec.z
+    ));
+    persistentObjectSelectionObservable.notify();
 
     SocketsClient.emitUpdatePersistentObjectGroup(new MovePersistentObjectParams(objectId, dx, dy, 0));
 }
 
 function canSetCanvasImageURL(selection: PersistentObjectSelection, imageURL: string): boolean
 {
-    // TODO: Implement
-    // (Hint: Make use of "PersistentObjectUpdateUtil.canSetPersistentObjectMetadata" to check conditions that are not strictly confined to the client side.)
-    return true;
+    const room = App.getCurrentRoom();
+    if (!room)
+        return false;
+
+    const objectId = selection.gameObject.params.objectId;
+    return PersistentObjectUpdateUtil.canSetPersistentObjectMetadata(room, objectId,
+        ObjectMetadataKeyEnumMap.ImageURL, imageURL);
 }
 
 function trySetCanvasImageURL(selection: PersistentObjectSelection, imageURL: string)
 {
-    // TODO: Move over the precondition logic into "canSetCanvasImageURL", and simply call it to check whether the conditions are met.
-    const room = App.getCurrentRoom();
-    if (!room) return;
+    if (!canSetCanvasImageURL(selection, imageURL))
+        return;
+
+    const room = App.getCurrentRoom()!;
 
     if (imageURL.length > MAX_IMAGE_URL_LENGTH)
     {
@@ -130,7 +133,7 @@ function trySetCanvasImageURL(selection: PersistentObjectSelection, imageURL: st
     }
 
     const objectId = selection.gameObject.params.objectId;
-    const po = setPersistentObjectMetadata(room, objectId,
+    const po = PersistentObjectUpdateUtil.setPersistentObjectMetadata(room, objectId,
         ObjectMetadataKeyEnumMap.ImageURL, imageURL);
     if (!po) return;
 

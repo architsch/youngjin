@@ -1,8 +1,8 @@
-const Num =
+const NumUtil =
 {
     normalizeInRange: (n: number, min: number, max: number): number =>
     {
-        return (Num.clampInRange(n, min, max) - min) / (max - min);
+        return (NumUtil.clampInRange(n, min, max) - min) / (max - min);
     },
     clampInRange: (n: number, min: number, max: number): number =>
     {
@@ -10,7 +10,7 @@ const Num =
     },
     normalizeInRangeWithWarning: (n: number, min: number, max: number): number =>
     {
-        return (Num.clampInRangeWithWarning(n, min, max) - min) / (max - min);
+        return (NumUtil.clampInRangeWithWarning(n, min, max) - min) / (max - min);
     },
     clampInRangeWithWarning: (n: number, min: number, max: number): number =>
     {
@@ -20,4 +20,4 @@ const Num =
     },
 }
 
-export default Num;
+export default NumUtil;

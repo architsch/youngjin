@@ -3,7 +3,7 @@ import FirstPersonController from "../../firstPersonController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import { playerViewTargetPosObservable } from "../../../../system/clientObservables";
 import GameObject from "../../../types/gameObject";
-import Num from "../../../../../shared/math/util/num";
+import NumUtil from "../../../../../shared/math/util/numUtil";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 
 const frustum = new THREE.Frustum();
@@ -113,7 +113,7 @@ export default class FirstPersonCamera
         viewDirOnVerticalPlane.projectOnPlane(playerRightDir); // viewDirOnVerticalPlane = view direction that is projected onto the plane which dissects the player's face vertically.
         viewDirOnVerticalPlane.normalize();
 
-        let pitchAngleForViewTarget = Num.clampInRange(
+        let pitchAngleForViewTarget = NumUtil.clampInRange(
             0.6 * playerForwardDir.angleTo(viewDirOnVerticalPlane)
                 * Math.sign(viewDirOnVerticalPlane.y - playerForwardDir.y), // Math.sign(...) = (+1 if you need to "look up", or -1 if you need to "look down")
             -0.7, 0.7

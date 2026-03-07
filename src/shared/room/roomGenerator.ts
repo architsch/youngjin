@@ -3,8 +3,8 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROW
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../voxel/types/voxelQuadsRuntimeMemory";
-import { setVoxelQuadVisible } from "../voxel/util/voxelQuadUpdateUtil";
-import { getFirstVoxelQuadIndexInLayer, getFirstVoxelQuadIndexInVoxel, getVoxelQuadIndexOffsetInsideLayer } from "../voxel/util/voxelQueryUtil";
+import VoxelQuadUpdateUtil from "../voxel/util/voxelQuadUpdateUtil";
+import VoxelQueryUtil from "../voxel/util/voxelQueryUtil";
 
 const RoomGenerator =
 {
@@ -17,10 +17,10 @@ const RoomGenerator =
 
         // Initialize corner voxels
 
-        clearAllQuadsInVoxel(quadsMem.quads, getFirstVoxelQuadIndexInVoxel(0, 0));
-        clearAllQuadsInVoxel(quadsMem.quads, getFirstVoxelQuadIndexInVoxel(0, NUM_VOXEL_COLS-1));
-        clearAllQuadsInVoxel(quadsMem.quads, getFirstVoxelQuadIndexInVoxel(NUM_VOXEL_ROWS-1, 0));
-        clearAllQuadsInVoxel(quadsMem.quads, getFirstVoxelQuadIndexInVoxel(NUM_VOXEL_ROWS-1, NUM_VOXEL_COLS-1));
+        clearAllQuadsInVoxel(quadsMem.quads, VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(0, 0));
+        clearAllQuadsInVoxel(quadsMem.quads, VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(0, NUM_VOXEL_COLS-1));
+        clearAllQuadsInVoxel(quadsMem.quads, VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(NUM_VOXEL_ROWS-1, 0));
+        clearAllQuadsInVoxel(quadsMem.quads, VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(NUM_VOXEL_ROWS-1, NUM_VOXEL_COLS-1));
         
         voxels[0] =
             new Voxel(quadsMem, 0, 0, 0b00000000);
@@ -55,8 +55,8 @@ const RoomGenerator =
             voxels[(NUM_VOXEL_ROWS-1) * NUM_VOXEL_COLS + col] = upperVoxel;
             for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
             {
-                setVoxelQuadVisible(true, lowerVoxel, "z", "+", collisionLayer, wallTextureIndex);
-                setVoxelQuadVisible(true, upperVoxel, "z", "-", collisionLayer, wallTextureIndex);
+                VoxelQuadUpdateUtil.setVoxelQuadVisible(true, lowerVoxel, "z", "+", collisionLayer, wallTextureIndex);
+                VoxelQuadUpdateUtil.setVoxelQuadVisible(true, upperVoxel, "z", "-", collisionLayer, wallTextureIndex);
             }
         }
         for (let row = 1; row < NUM_VOXEL_ROWS-1; ++row)
@@ -70,8 +70,8 @@ const RoomGenerator =
             voxels[row * NUM_VOXEL_COLS + NUM_VOXEL_COLS-1] = upperVoxel;
             for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
             {
-                setVoxelQuadVisible(true, lowerVoxel, "x", "+", collisionLayer, wallTextureIndex);
-                setVoxelQuadVisible(true, upperVoxel, "x", "-", collisionLayer, wallTextureIndex);
+                VoxelQuadUpdateUtil.setVoxelQuadVisible(true, lowerVoxel, "x", "+", collisionLayer, wallTextureIndex);
+                VoxelQuadUpdateUtil.setVoxelQuadVisible(true, upperVoxel, "x", "-", collisionLayer, wallTextureIndex);
             }
         }
 
@@ -85,7 +85,7 @@ const RoomGenerator =
 function applyFloorAndCeilingTexture(quads: Uint8Array, row: number, col: number,
     floorTextureIndex: number, ceilingTextureIndex: number)
 {
-    const startIndex = getFirstVoxelQuadIndexInVoxel(row, col);
+    const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(row, col);
     clearAllQuadsInVoxel(quads, startIndex);
     quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL-2] = 0b10000000 | ceilingTextureIndex;
     quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL-1] = 0b10000000 | floorTextureIndex;
@@ -94,12 +94,12 @@ function applyFloorAndCeilingTexture(quads: Uint8Array, row: number, col: number
 function applyWallTexture(quads: Uint8Array, row: number, col: number,
     facingAxis: "x" | "y" | "z", orientation: "-" | "+", wallTextureIndex: number)
 {
-    const startIndex = getFirstVoxelQuadIndexInVoxel(row, col);
+    const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(row, col);
     clearAllQuadsInVoxel(quads, startIndex);
     for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
     {
-        const startIndex = getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
-        const offset = getVoxelQuadIndexOffsetInsideLayer(facingAxis, orientation);
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
+        const offset = VoxelQueryUtil.getVoxelQuadIndexOffsetInsideLayer(facingAxis, orientation);
         quads[startIndex + offset] = 0b10000000 | wallTextureIndex;
     }
 }

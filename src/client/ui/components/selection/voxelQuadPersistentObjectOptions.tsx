@@ -4,13 +4,14 @@ import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import AddPersistentObjectParams from "../../../../shared/object/types/update/addPersistentObjectParams";
-import { getVoxelQuadTransformDimensions } from "../../../../shared/voxel/util/voxelQueryUtil";
+import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import EncodableByteString from "../../../../shared/networking/types/encodableByteString";
-import { notificationMessageObservable } from "../../../system/clientObservables";
 import CanvasGameObject from "../../../object/types/canvasGameObject";
 import { MAX_CANVASES_PER_ROOM, MID_ROOM_Y } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSpinner from "../../../graphics/types/gizmo/worldSpaceSpinner";
+import PersistentObjectUpdateUtil from "../../../../shared/object/util/persistentObjectUpdateUtil";
+import DirUtil from "../../../../shared/math/util/dirUtil";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -31,51 +32,49 @@ export default function VoxelQuadPersistentObjectOptions(props: {selection: Voxe
 function canAddPersistentObjectFromQuad(selection: VoxelQuadSelection,
     objectTypeIndex: number): boolean
 {
-    // TODO: Implement
-    // (Hint: Make use of "PersistentObjectUpdateUtil.canAddPersistentObject" to check conditions that are not strictly confined to the client side.)
-    return true;
+    const room = App.getCurrentRoom();
+    if (!room)
+        return false;
+
+    if (objectTypeIndex === canvasTypeIndex
+        && CanvasGameObject.spawnedCanvasGameObjects.size >= MAX_CANVASES_PER_ROOM)
+        return false;
+
+    const voxel = selection.voxel;
+    const quadIndex = selection.quadIndex;
+    const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
+        VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex);
+
+    if (dirY != 0)
+        return false;
+
+    const x = voxel.col + 0.5 + offsetX;
+    const y = 0.5 * (offsetY < MID_ROOM_Y ? Math.ceil(2 * offsetY) : Math.floor(2 * offsetY));
+    const z = voxel.row + 0.5 + offsetZ;
+    const dir = DirUtil.vec3ToDir4({x: dirX, y: dirY, z: dirZ});
+
+    return PersistentObjectUpdateUtil.canAddPersistentObject(room, objectTypeIndex, dir, x, y, z);
 }
 
 function tryAddPersistentObjectFromQuad(selection: VoxelQuadSelection,
     objectTypeIndex: number, metadata: {[key: number]: EncodableByteString})
 {
-    // TODO: Move over the precondition logic into "canAddPersistentObjectFromQuad", and simply call it to check whether the conditions are met.
-    const room = App.getCurrentRoom();
-    if (!room)
+    if (!canAddPersistentObjectFromQuad(selection, objectTypeIndex))
         return;
-
-    if (objectTypeIndex === canvasTypeIndex
-        && CanvasGameObject.spawnedCanvasGameObjects.size >= MAX_CANVASES_PER_ROOM)
-    {
-        notificationMessageObservable.set(`Cannot add more than ${MAX_CANVASES_PER_ROOM} canvases per room.`);
-        return;
-    }
 
     const voxel = selection.voxel;
     const quadIndex = selection.quadIndex;
     const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
-        getVoxelQuadTransformDimensions(voxel, quadIndex);
-
-    if (dirY != 0) // A canvas cannot be added to a voxelQuad which is either looking up (+y) or down (-y).
-    {
-        notificationMessageObservable.set("You can only add a canvas to a wall!");
-        return;
-    }
+        VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex);
 
     const x = voxel.col + 0.5 + offsetX;
     const y = 0.5 * (offsetY < MID_ROOM_Y ? Math.ceil(2 * offsetY) : Math.floor(2 * offsetY));
     const z = voxel.row + 0.5 + offsetZ;
-
-    let direction: "+z" | "+x" | "-z" | "-x" = "+z";
-    if (dirX > 0) direction = "+x";
-    else if (dirX < 0) direction = "-x";
-    else if (dirZ > 0) direction = "+z";
-    else if (dirZ < 0) direction = "-z";
+    const dir = DirUtil.vec3ToDir4({x: dirX, y: dirY, z: dirZ});
 
     VoxelQuadSelection.unselect();
     WorldSpaceSpinner.createSpinner(x, y, z, dirX, dirY, dirZ);
 
-    const dirNum = AddPersistentObjectParams.directionStringToNumber(direction);
     SocketsClient.emitUpdatePersistentObjectGroup(
-        new AddPersistentObjectParams(objectTypeIndex, dirNum, x, y, z, metadata));
+        new AddPersistentObjectParams(objectTypeIndex, dir, x, y, z, metadata));
 }

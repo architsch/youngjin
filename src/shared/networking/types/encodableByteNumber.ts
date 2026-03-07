@@ -1,4 +1,4 @@
-import Num from "../../math/util/num";
+import NumUtil from "../../math/util/numUtil";
 import BufferState from "./bufferState";
 import EncodableData from "./encodableData";
 
@@ -21,7 +21,7 @@ export default class EncodableByteNumber extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        bufferState.view[bufferState.byteIndex++] = Math.floor(Num.normalizeInRangeWithWarning(this.n, this.min, this.max) * 255.9999);
+        bufferState.view[bufferState.byteIndex++] = Math.floor(NumUtil.normalizeInRangeWithWarning(this.n, this.min, this.max) * 255.9999);
     }
 
     static decodeWithParams(bufferState: BufferState, min: number, max: number): EncodableData

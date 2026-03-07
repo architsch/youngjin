@@ -7,7 +7,7 @@ import RemovePersistentObjectParams from "../../../shared/object/types/update/re
 import SetPersistentObjectMetadataParams from "../../../shared/object/types/update/setPersistentObjectMetadataParams";
 import UpdatePersistentObjectGroupParams from "../../../shared/object/types/update/updatePersistentObjectGroupParams";
 import UpdatePersistentObjectGroupTaskParams from "../../../shared/object/types/update/updatePersistentObjectGroupTaskParams";
-import { addPersistentObject, movePersistentObject, removePersistentObject, setPersistentObjectMetadata } from "../../../shared/object/util/persistentObjectUpdateUtil";
+import PersistentObjectUpdateUtil from "../../../shared/object/util/persistentObjectUpdateUtil";
 import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import { MAX_CANVASES_PER_ROOM } from "../../../shared/system/sharedConstants";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
@@ -63,8 +63,8 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
         }
     }
 
-    const po = addPersistentObject(room, params.objectTypeIndex,
-        params.getDirectionString(), params.x, params.y, params.z, params.metadata);
+    const po = PersistentObjectUpdateUtil.addPersistentObject(room, params.objectTypeIndex,
+        params.dir, params.x, params.y, params.z, params.metadata);
     if (!po)
     {
         console.error(`PersistentObject update failed (addPersistentObjectTask) - params: ${JSON.stringify(params)}`);
@@ -87,16 +87,15 @@ function removePersistentObjectTask(socketUserContext: SocketUserContext, params
     // Capture the object state before attempting removal, for potential recovery.
     const existingPO = room.persistentObjectGroup.persistentObjectById[params.objectId];
 
-    const removed = removePersistentObject(room, params.objectId);
+    const removed = PersistentObjectUpdateUtil.removePersistentObject(room, params.objectId);
     if (!removed)
     {
         console.error(`PersistentObject update failed (removePersistentObjectTask) - params: ${JSON.stringify(params)}`);
         if (existingPO)
         {
             // Re-add the object on the client (which optimistically removed it).
-            const dirNum = AddPersistentObjectParams.directionStringToNumber(existingPO.direction);
             unicastToSender(socketUserContext, room, [
-                new AddPersistentObjectParams(existingPO.objectTypeIndex, dirNum,
+                new AddPersistentObjectParams(existingPO.objectTypeIndex, existingPO.dir,
                     existingPO.x, existingPO.y, existingPO.z, existingPO.metadata, existingPO.objectId),
             ]);
         }
@@ -119,19 +118,18 @@ function movePersistentObjectTask(socketUserContext: SocketUserContext, params: 
     const prevX = existingPO?.x;
     const prevY = existingPO?.y;
     const prevZ = existingPO?.z;
-    const prevDirection = existingPO?.direction;
+    const prevDir = existingPO?.dir;
 
-    const po = movePersistentObject(room, params.objectId, params.dx, params.dy, params.dz);
+    const po = PersistentObjectUpdateUtil.movePersistentObject(room, params.objectId, params.dx, params.dy, params.dz);
     if (!po)
     {
         console.error(`PersistentObject update failed (movePersistentObjectTask) - params: ${JSON.stringify(params)}`);
-        if (existingPO && prevDirection)
+        if (existingPO && prevDir)
         {
             // Client optimistically moved the object. Send REMOVE + ADD to restore it at the server's position.
-            const dirNum = AddPersistentObjectParams.directionStringToNumber(prevDirection);
             unicastToSender(socketUserContext, room, [
                 new RemovePersistentObjectParams(params.objectId),
-                new AddPersistentObjectParams(existingPO.objectTypeIndex, dirNum,
+                new AddPersistentObjectParams(existingPO.objectTypeIndex, prevDir,
                     prevX!, prevY!, prevZ!, existingPO.metadata, existingPO.objectId),
             ]);
         }
@@ -153,7 +151,7 @@ function setPersistentObjectMetadataTask(socketUserContext: SocketUserContext, p
     const existingPO = room.persistentObjectGroup.persistentObjectById[params.objectId];
     const oldValue = existingPO?.metadata[params.metadataKey];
 
-    const po = setPersistentObjectMetadata(room, params.objectId, params.metadataKey, params.metadataValue);
+    const po = PersistentObjectUpdateUtil.setPersistentObjectMetadata(room, params.objectId, params.metadataKey, params.metadataValue);
     if (!po)
     {
         console.error(`PersistentObject update failed (setPersistentObjectMetadataTask) - params: ${JSON.stringify(params)}`);

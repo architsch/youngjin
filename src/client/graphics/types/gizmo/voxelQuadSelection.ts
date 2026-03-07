@@ -5,7 +5,7 @@ import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
-import { getVoxelQuadTransformDimensions } from "../../../../shared/voxel/util/voxelQueryUtil";
+import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 
@@ -86,7 +86,7 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         }
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
-            getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
+            VoxelQueryUtil.getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
 
         selectionMeshClone!.scale.set(scaleX, scaleY, scaleZ);
         selectionMeshClone!.position.set(

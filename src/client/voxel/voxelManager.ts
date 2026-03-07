@@ -1,13 +1,12 @@
-import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import { voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
 import Room from "../../shared/room/types/room";
 import ObjectManager from "../object/objectManager";
 import App from "../app";
-import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock, setVoxelBlockUpdateUtilDebugEnabled } from "../../shared/voxel/util/voxelBlockUpdateUtil";
-import { setVoxelQuadUpdateUtilDebugEnabled, setVoxelQuadVisible } from "../../shared/voxel/util/voxelQuadUpdateUtil";
+import VoxelBlockUpdateUtil from "../../shared/voxel/util/voxelBlockUpdateUtil";
+import VoxelQuadUpdateUtil from "../../shared/voxel/util/voxelQuadUpdateUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
-import { getVoxel, getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../shared/voxel/util/voxelQueryUtil";
+import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
 import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
@@ -21,15 +20,6 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const VoxelManager =
 {
-    load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
-    {
-        const isDevMode = App.getEnv().mode == "dev";
-        setVoxelBlockUpdateUtilDebugEnabled(isDevMode);
-        setVoxelQuadUpdateUtilDebugEnabled(isDevMode);
-    },
-    unload: async () =>
-    {
-    },
     // When the client receives an UpdateVoxelGridParams signal from the server,
     // the given voxelGrid-update will be applied as soon as the room to which it belongs is available.
     onUpdateVoxelGridReceived: async (params: UpdateVoxelGridParams) => {
@@ -45,31 +35,31 @@ const VoxelManager =
             {
                 case VOXEL_GRID_TASK_TYPE_MOVE:
                     const moveParams = task as MoveVoxelBlockParams;
-                    moveVoxelBlock(room, moveParams.quadIndex, moveParams.rowOffset, moveParams.colOffset, moveParams.collisionLayerOffset);
+                    VoxelBlockUpdateUtil.moveVoxelBlock(room, moveParams.quadIndex, moveParams.rowOffset, moveParams.colOffset, moveParams.collisionLayerOffset);
                     break;
                 case VOXEL_GRID_TASK_TYPE_ADD:
                     const addParams = task as AddVoxelBlockParams;
-                    addVoxelBlock(room, addParams.quadIndex, addParams.quadTextureIndicesWithinLayer);
+                    VoxelBlockUpdateUtil.addVoxelBlock(room, addParams.quadIndex, addParams.quadTextureIndicesWithinLayer);
                     break;
                 case VOXEL_GRID_TASK_TYPE_REMOVE:
                     const removeParams = task as RemoveVoxelBlockParams;
-                    removeVoxelBlock(room, removeParams.quadIndex);
+                    VoxelBlockUpdateUtil.removeVoxelBlock(room, removeParams.quadIndex);
                     break;
                 case VOXEL_GRID_TASK_TYPE_TEX:
                     const texParams = task as SetVoxelQuadTextureParams;
                     const quadIndex = texParams.quadIndex;
-                    const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-                    const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-                    const row = getVoxelRowFromQuadIndex(quadIndex);
-                    const col = getVoxelColFromQuadIndex(quadIndex);
-                    const voxel = getVoxel(room, row, col);
+                    const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+                    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+                    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+                    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+                    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
                     if (!voxel)
                     {
                         console.error(`Voxel update failed (VOXEL_GRID_TASK_TYPE_TEX) - voxel not found - params: ${JSON.stringify(params)}`);
                         return;
                     }
-                    const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-                    setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, texParams.textureIndex);
+                    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+                    VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, texParams.textureIndex);
                     break;
                 default:
                     console.error(`Unknown task type :: ${task.type}`);
@@ -113,8 +103,8 @@ voxelQuadChangeObservable.addListener("voxelManager", async (change: VoxelQuadCh
         return;
     }
     const quadIndex = change.quadIndex;
-    const row = getVoxelRowFromQuadIndex(quadIndex);
-    const col = getVoxelColFromQuadIndex(quadIndex);
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
     const voxelGameObject = getVoxelGameObject(room, row, col);
 
     if (voxelGameObject)
@@ -125,7 +115,7 @@ voxelQuadChangeObservable.addListener("voxelManager", async (change: VoxelQuadCh
 
 function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObject | null
 {
-    const voxel = getVoxel(room, row, col);
+    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
     if (!voxel)
     {
         console.error(`Voxel not found (row: ${row}, col: ${col})`);

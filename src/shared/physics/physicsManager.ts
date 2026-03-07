@@ -1,5 +1,5 @@
 import Vec2 from "../math/types/vec2";
-import Vector2D from "../math/util/vector2D";
+import Vector2DUtil from "../math/util/vector2DUtil";
 import PhysicsObject from "./types/physicsObject";
 import PhysicsVoxel from "./types/physicsVoxel";
 import PhysicsPosUpdateResult from "./types/physicsPosUpdateResult";
@@ -10,7 +10,7 @@ import AABB2 from "../math/types/aabb2";
 import { getLowestObjectCollisionLayer, getObjectsInDist, removeObjectFromIntersectingVoxels, setObjectPosition } from "./util/physicsObjectUtil";
 import { getVoxelsInBox } from "./util/physicsVoxelUtil";
 import { pushBoxAgainstBox } from "./util/physicsCollisionUtil";
-import { getHighestOccupiedVoxelCollisionLayer, isVoxelCollisionLayerOccupied } from "../voxel/util/voxelQueryUtil";
+import VoxelQueryUtil from "../voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/sharedConstants";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
@@ -112,7 +112,7 @@ const PhysicsManager =
         let startPos: Vec2 = { x: object.hitbox.x, y: object.hitbox.y };
 
         // Any attempt to move more for than the distance of 3 will force-sync the object back to its original location.
-        const desyncDistSqr = Vector2D.distSqr(targetPos, startPos);
+        const desyncDistSqr = Vector2DUtil.distSqr(targetPos, startPos);
         if (desyncDistSqr >= 9)
         {
             console.warn(`Physics-position desync due to distance gap (startPos = (${startPos.x.toFixed(3)}, ${startPos.y.toFixed(3)}), targetPos = (${targetPos.x.toFixed(3)}, ${targetPos.y.toFixed(3)}), dist = ${Math.sqrt(desyncDistSqr)})`);
@@ -120,8 +120,8 @@ const PhysicsManager =
         }
 
         // Step back the starting position a bit, to prevent raycasting from within the enclosing line segments of whichever nearby obstacle (hitbox) that the object is running against.
-        const dir = Vector2D.normalize(Vector2D.subtract(targetPos, startPos));
-        startPos = Vector2D.subtract(startPos, Vector2D.scale(dir, 0.01));
+        const dir = Vector2DUtil.normalize(Vector2DUtil.subtract(targetPos, startPos));
+        startPos = Vector2DUtil.subtract(startPos, Vector2DUtil.scale(dir, 0.01));
 
         const minIntersectableX = Math.min(startPos.x, targetPos.x) - object.hitbox.halfSizeX;
         const maxIntersectableX = Math.max(startPos.x, targetPos.x) + object.hitbox.halfSizeX;
@@ -176,7 +176,7 @@ const PhysicsManager =
                     }
                 }
 
-                const highestLayer = getHighestOccupiedVoxelCollisionLayer(targetVoxel);
+                const highestLayer = VoxelQueryUtil.getHighestOccupiedVoxelCollisionLayer(targetVoxel);
                 if (highestLayer != COLLISION_LAYER_NULL && highestLayer > maxLayerAmongOverlappingVoxels)
                     maxLayerAmongOverlappingVoxels = highestLayer;
             }
@@ -210,19 +210,19 @@ const PhysicsManager =
 
         if (hitStateTemp.hitLine != undefined)
         {   
-            const startToHit = Vector2D.scale(Vector2D.subtract(targetPos, startPos), hitStateTemp.minHitRayScale);
-            const hitPos: Vec2 = Vector2D.add(startPos, startToHit);
-            const hitToTarget = Vector2D.subtract(targetPos, hitPos);
-            let hitTangent = Vector2D.subtract(hitStateTemp.hitLine.end, hitStateTemp.hitLine.start);
-            let dot = Vector2D.dot(hitToTarget, hitTangent);
+            const startToHit = Vector2DUtil.scale(Vector2DUtil.subtract(targetPos, startPos), hitStateTemp.minHitRayScale);
+            const hitPos: Vec2 = Vector2DUtil.add(startPos, startToHit);
+            const hitToTarget = Vector2DUtil.subtract(targetPos, hitPos);
+            let hitTangent = Vector2DUtil.subtract(hitStateTemp.hitLine.end, hitStateTemp.hitLine.start);
+            let dot = Vector2DUtil.dot(hitToTarget, hitTangent);
             if (dot < 0)
             {
                 // Angle between 'hitToTarget' and 'hitTangent' must be acute
-                hitTangent = Vector2D.subtract(hitStateTemp.hitLine.start, hitStateTemp.hitLine.end);
-                dot = Vector2D.dot(hitToTarget, hitTangent);
+                hitTangent = Vector2DUtil.subtract(hitStateTemp.hitLine.start, hitStateTemp.hitLine.end);
+                dot = Vector2DUtil.dot(hitToTarget, hitTangent);
             }
-            const projectedHitToTarget = Vector2D.scale(hitTangent, dot / Vector2D.dot(hitTangent, hitTangent));
-            const slidedHitPos = Vector2D.add(hitPos, projectedHitToTarget);
+            const projectedHitToTarget = Vector2DUtil.scale(hitTangent, dot / Vector2DUtil.dot(hitTangent, hitTangent));
+            const slidedHitPos = Vector2DUtil.add(hitPos, projectedHitToTarget);
 
             const voxelsHitOnSlide = getVoxelsInBox(physicsRoom, {
                 x: slidedHitPos.x,

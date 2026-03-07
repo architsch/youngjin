@@ -1,10 +1,10 @@
 import AABB2 from "../types/aabb2";
 import Vec2 from "../types/vec2";
-import Vector2D from "./vector2D";
+import Vector2DUtil from "./vector2DUtil";
 import LineSegment2 from "../types/lineSegment2";
 import RaycastHitResult2 from "../types/raycastHitResult2";
 
-const Geometry2D =
+const Geometry2DUtil =
 {
     // Returns the AABB-casting ray's scale factor which, when applied to the ray,
     // pushes the source AABB to end up at the point of collision
@@ -33,25 +33,25 @@ const Geometry2D =
         let hitRayScale: number;
         let hitLine: LineSegment2 | undefined;
 
-        hitRayScale = Math.min(minHitRayScale, Geometry2D.raycastToLine(ray, bottom, true));
+        hitRayScale = Math.min(minHitRayScale, Geometry2DUtil.raycastToLine(ray, bottom, true));
         if (hitRayScale < minHitRayScale)
         {
             minHitRayScale = hitRayScale;
             hitLine = bottom;
         }
-        hitRayScale = Math.min(minHitRayScale, Geometry2D.raycastToLine(ray, right, true));
+        hitRayScale = Math.min(minHitRayScale, Geometry2DUtil.raycastToLine(ray, right, true));
         if (hitRayScale < minHitRayScale)
         {
             minHitRayScale = hitRayScale;
             hitLine = right;
         }
-        hitRayScale = Math.min(minHitRayScale, Geometry2D.raycastToLine(ray, top, true));
+        hitRayScale = Math.min(minHitRayScale, Geometry2DUtil.raycastToLine(ray, top, true));
         if (hitRayScale < minHitRayScale)
         {
             minHitRayScale = hitRayScale;
             hitLine = top;
         }
-        hitRayScale = Math.min(minHitRayScale, Geometry2D.raycastToLine(ray, left, true));
+        hitRayScale = Math.min(minHitRayScale, Geometry2DUtil.raycastToLine(ray, left, true));
         if (hitRayScale < minHitRayScale)
         {
             minHitRayScale = hitRayScale;
@@ -65,21 +65,21 @@ const Geometry2D =
     // (Returns 1 when the ray doesn't hit the line)
     raycastToLine: (ray: LineSegment2, line: LineSegment2, hitLineFromRightSideOnly: boolean = false): number =>
     {
-        const rayFromTo = Vector2D.subtract(ray.end, ray.start);
-        const lineFromTo = Vector2D.subtract(line.end, line.start);
-        const cross = Vector2D.cross(rayFromTo, lineFromTo);
+        const rayFromTo = Vector2DUtil.subtract(ray.end, ray.start);
+        const lineFromTo = Vector2DUtil.subtract(line.end, line.start);
+        const cross = Vector2DUtil.cross(rayFromTo, lineFromTo);
         if (cross == 0)
             return 1;
         if (hitLineFromRightSideOnly && cross > 0)
             return 1;
         const crossInverse = 1 / cross;
-        const startDiff = Vector2D.subtract(line.start, ray.start);
-        const rayScale = Vector2D.cross(startDiff, lineFromTo) * crossInverse;
-        const lineScale = Vector2D.cross(startDiff, rayFromTo) * crossInverse;
+        const startDiff = Vector2DUtil.subtract(line.start, ray.start);
+        const rayScale = Vector2DUtil.cross(startDiff, lineFromTo) * crossInverse;
+        const lineScale = Vector2DUtil.cross(startDiff, rayFromTo) * crossInverse;
         if (rayScale < 0 || rayScale > 1 || lineScale < 0 || lineScale > 1)
             return 1;
         return rayScale;
     },
 }
 
-export default Geometry2D;
+export default Geometry2DUtil;

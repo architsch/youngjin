@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import App from "../../../app";
 import ObjectManager from "../../../object/objectManager";
 import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
-import { getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
+import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../basic/button";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 
@@ -35,11 +35,11 @@ export default function DebugStats({env}: Props)
             {
                 const v = voxelQuadSelection.voxel;
                 const quadIndex = voxelQuadSelection.quadIndex;
-                const row = getVoxelRowFromQuadIndex(quadIndex);
-                const col = getVoxelColFromQuadIndex(quadIndex);
-                const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-                const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-                const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+                const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+                const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+                const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+                const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+                const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
                 const quad = App.getVoxelQuads()[quadIndex];
                 const textureIndex = quad & 0b01111111;

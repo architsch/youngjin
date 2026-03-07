@@ -7,7 +7,7 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
-import { getFirstVoxelQuadIndexInVoxel, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadTransformDimensions } from "../../../shared/voxel/util/voxelQueryUtil";
+import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 
@@ -53,7 +53,7 @@ export default class VoxelGameObject extends GameObject
 
         await this.instancedMeshGraphics.loadInstancedMesh();
 
-        const startIndex = getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
@@ -67,7 +67,7 @@ export default class VoxelGameObject extends GameObject
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
 
-        const startIndex = getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
@@ -125,7 +125,7 @@ export default class VoxelGameObject extends GameObject
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
 
-        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = getVoxelQuadTransformDimensions(this.voxel, quadIndex);
+        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxel, quadIndex);
         this.instancedMeshGraphics.updateInstanceTransform(quadIndex, offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex, scaleX, scaleY);
     }
@@ -134,7 +134,7 @@ export default class VoxelGameObject extends GameObject
     {
         const v = this.voxel!;
         const quad = App.getVoxelQuads()[quadIndex];
-        const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
         const sampleOffsetX = (scaleX < 1) ? (((v.row + v.col) % 2) * scaleX) : 0; // [0,1]
         const sampleOffsetY = (scaleY < 1 && collisionLayer % 2 == 0) ? scaleY : 0; // [0,1]

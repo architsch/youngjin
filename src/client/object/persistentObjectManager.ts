@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import App from "../app";
 import ObjectFactory from "./factories/objectFactory";
 import ObjectManager from "./objectManager";
@@ -8,7 +9,7 @@ import AddPersistentObjectParams from "../../shared/object/types/update/addPersi
 import RemovePersistentObjectParams from "../../shared/object/types/update/removePersistentObjectParams";
 import MovePersistentObjectParams from "../../shared/object/types/update/movePersistentObjectParams";
 import SetPersistentObjectMetadataParams from "../../shared/object/types/update/setPersistentObjectMetadataParams";
-import { addPersistentObject, directionStringToVector, movePersistentObject, removePersistentObject, setPersistentObjectMetadata } from "../../shared/object/util/persistentObjectUpdateUtil";
+import PersistentObjectUpdateUtil from "../../shared/object/util/persistentObjectUpdateUtil";
 import { PERSISTENT_OBJ_TASK_TYPE_ADD, PERSISTENT_OBJ_TASK_TYPE_MOVE, PERSISTENT_OBJ_TASK_TYPE_REMOVE, PERSISTENT_OBJ_TASK_TYPE_SET_METADATA } from "../../shared/system/sharedConstants";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
@@ -16,6 +17,7 @@ import { persistentObjectSelectionObservable } from "../system/clientObservables
 import CanvasGameObject from "./types/canvasGameObject";
 import WorldSpaceSpinner from "../graphics/types/gizmo/worldSpaceSpinner";
 import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
+import DirUtil from "../../shared/math/util/dirUtil";
 
 const PersistentObjectManager =
 {
@@ -39,17 +41,16 @@ const PersistentObjectManager =
                     // Skip object creation but still clear the pending state below.
                     if (addParams.objectId && addParams.objectId.length > 0)
                     {
-                        const dirStr = addParams.getDirectionString();
-                        const po = addPersistentObject(room, addParams.objectTypeIndex,
-                            dirStr, addParams.x, addParams.y, addParams.z, addParams.metadata,
+                        const po = PersistentObjectUpdateUtil.addPersistentObject(room, addParams.objectTypeIndex,
+                            addParams.dir, addParams.x, addParams.y, addParams.z, addParams.metadata,
                             addParams.objectId);
                         if (po)
                         {
-                            const {dirX, dirY, dirZ} = directionStringToVector(dirStr);
+                            const dirVec = DirUtil.dir4ToVec3(addParams.dir);
                             const objectSpawnParams = new ObjectSpawnParams(
                                 room.id, "", "", addParams.objectTypeIndex,
                                 po.objectId,
-                                new ObjectTransform(addParams.x, addParams.y, addParams.z, dirX, dirY, dirZ),
+                                new ObjectTransform(addParams.x, addParams.y, addParams.z, dirVec.x, dirVec.y, dirVec.z),
                                 addParams.metadata
                             );
                             const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
@@ -66,7 +67,7 @@ const PersistentObjectManager =
                 case PERSISTENT_OBJ_TASK_TYPE_REMOVE:
                 {
                     const removeParams = task as RemovePersistentObjectParams;
-                    const removed = removePersistentObject(room, removeParams.objectId);
+                    const removed = PersistentObjectUpdateUtil.removePersistentObject(room, removeParams.objectId);
                     if (removed)
                     {
                         // If the removed object was selected, unselect it.
@@ -82,27 +83,18 @@ const PersistentObjectManager =
                 {
                     const moveParams = task as MovePersistentObjectParams;
                     const objectId = moveParams.objectId;
-                    const po = movePersistentObject(room, objectId, moveParams.dx, moveParams.dy, moveParams.dz);
+                    const po = PersistentObjectUpdateUtil.movePersistentObject(room, objectId, moveParams.dx, moveParams.dy, moveParams.dz);
                     if (po)
                     {
-                        // Despawn and respawn at new position (direction may have changed due to corner wrapping)
                         const existingObj = ObjectManager.getObjectById(objectId);
                         if (existingObj)
                         {
-                            await ObjectManager.despawnObject(objectId);
+                            existingObj.forceSetPosition(new THREE.Vector3(po.x, po.y, po.z));
 
-                            const {dirX, dirY, dirZ} = directionStringToVector(po.direction);
-                            const objectSpawnParams = new ObjectSpawnParams(
-                                room.id, "", "", po.objectTypeIndex,
-                                po.objectId,
-                                new ObjectTransform(po.x, po.y, po.z, dirX, dirY, dirZ),
-                                po.metadata
-                            );
-                            const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
-                            await ObjectManager.spawnObject(gameObject);
-
-                            if (gameObject instanceof CanvasGameObject)
-                                await (gameObject as CanvasGameObject).loadImage();
+                            const dirVec = DirUtil.dir4ToVec3(po.dir);
+                            existingObj.obj.lookAt(new THREE.Vector3(
+                                po.x + dirVec.x, po.y + dirVec.y, po.z + dirVec.z
+                            ));
 
                             // If the moved object was selected by us, deactivate the selection
                             // since another user initiated the move.
@@ -110,13 +102,15 @@ const PersistentObjectManager =
                             if (sel && sel.gameObject.params.objectId === objectId)
                                 PersistentObjectSelection.unselect();
                         }
+                        else
+                            console.error(`Tried to move a persistentObject, but its object instance is not found (objectId = ${objectId})`);
                     }
                     break;
                 }
                 case PERSISTENT_OBJ_TASK_TYPE_SET_METADATA:
                 {
                     const metaParams = task as SetPersistentObjectMetadataParams;
-                    const po = setPersistentObjectMetadata(room, metaParams.objectId,
+                    const po = PersistentObjectUpdateUtil.setPersistentObjectMetadata(room, metaParams.objectId,
                         metaParams.metadataKey, metaParams.metadataValue);
                     if (po)
                     {

@@ -1,147 +1,268 @@
-// TODO: Convert all exported functions in this file into
-// members of a globally accessible object called "PersistentObjectUpdateUtil", which is
-// formatted like: "const PersistentObjectUpdateUtil = { ... } ... export default PersistentObjectUpdateUtil;".
-// (Hint: Use "roomManager.ts" as a reference for formatting.)
-// The purpose of this refactor is to reduce syntactic ambiguity and avoid name conflicts.
-
 import EncodableByteString from "../../networking/types/encodableByteString";
 import Room from "../../room/types/room";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_IMAGE_URL_LENGTH, MAX_ROOM_Y } from "../../system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
-import { getVoxelQuadIndex } from "../../voxel/util/voxelQueryUtil";
+import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import { ObjectMetadata } from "../types/objectMetadata";
 import PersistentObject from "../types/persistentObject";
+import { Dir4 } from "../../math/types/dir4";
+import DirUtil from "../../math/util/dirUtil";
 
-type Direction = "+z" | "+x" | "-z" | "-x";
-
-export function directionStringToVector(dir: Direction): {dirX: number, dirY: number, dirZ: number}
+const PersistentObjectUpdateUtil =
 {
-    switch (dir)
-    {
-        case "+z": return {dirX: 0, dirY: 0, dirZ: 1};
-        case "+x": return {dirX: 1, dirY: 0, dirZ: 0};
-        case "-z": return {dirX: 0, dirY: 0, dirZ: -1};
-        case "-x": return {dirX: -1, dirY: 0, dirZ: 0};
-    }
-}
+    //-------------------------------------------------------------------------------------
+    // CRUD Operations
+    //-------------------------------------------------------------------------------------
 
-// Maps dx (positive = move right from viewer's perspective) to world-space offsets.
-// Viewer faces the wall from the opposite side of the normal.
-// +z wall: viewer faces -z, right = +x
-// -z wall: viewer faces +z, right = -x
-// +x wall: viewer faces -x, right = -z
-// -x wall: viewer faces +x, right = +z
-function wallAttachedDxToWorld(direction: Direction, dx: number): {worldDx: number, worldDz: number}
-{
-    switch (direction)
+    canAddPersistentObject(room: Room, objectTypeIndex: number,
+        direction: Dir4, x: number, y: number, z: number): boolean
     {
-        case "+z": return {worldDx: dx, worldDz: 0};
-        case "-z": return {worldDx: -dx, worldDz: 0};
-        case "+x": return {worldDx: 0, worldDz: -dx};
-        case "-x": return {worldDx: 0, worldDz: dx};
-    }
-}
+        // (Potential future plan): Might also need to check collision with existing persistentObjects.
+        return isPersistentObjectPositionInBound(x, y, z);
+    },
 
-// Checks if a visible voxel quad (wall) exists at the given position and direction.
-// For ±z walls: the sliding coordinate is x. For ±x walls: the sliding coordinate is z.
-// At integer sliding coordinates (edge positions), BOTH adjacent voxels must have the quad
-// for "full attachment". At half-integer positions (centered), only one voxel is checked.
-function isWallAt(room: Room, x: number, y: number, z: number, direction: Direction): boolean
+    addPersistentObject(room: Room, objectTypeIndex: number,
+        direction: Dir4, x: number, y: number, z: number,
+        metadata: ObjectMetadata = {}, objectId?: string): PersistentObject | null
+    {
+        if (!PersistentObjectUpdateUtil.canAddPersistentObject(room, objectTypeIndex, direction, x, y, z))
+        {
+            console.error(`PersistentObjectUpdateUtil.addPersistentObject :: Failed (x=${x}, y=${y}, z=${z})`);
+            return null;
+        }
+
+        if (!objectId)
+            objectId = `p${++room.persistentObjectGroup.lastPersistentObjectId}`;
+
+        const po = new PersistentObject(objectId, objectTypeIndex, direction, x, y, z, metadata);
+        room.persistentObjectGroup.persistentObjectById[objectId] = po;
+        return po;
+    },
+
+    canRemovePersistentObject(room: Room, objectId: string): boolean
+    {
+        return room.persistentObjectGroup.persistentObjectById[objectId] != undefined;
+    },
+
+    removePersistentObject(room: Room, objectId: string): PersistentObject | null
+    {
+        if (!PersistentObjectUpdateUtil.canRemovePersistentObject(room, objectId))
+        {
+            console.error(`PersistentObjectUpdateUtil.removePersistentObject :: Failed (objectId=${objectId})`);
+            return null;
+        }
+        const removed = room.persistentObjectGroup.persistentObjectById[objectId];
+        delete room.persistentObjectGroup.persistentObjectById[objectId];
+        return removed;
+    },
+
+    canMovePersistentObject(room: Room, objectId: string,
+        dx: number, dy: number, dz: number): boolean
+    {
+        const po = room.persistentObjectGroup.persistentObjectById[objectId];
+        if (!po)
+            return false;
+
+        const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
+        let newX = po.x + dx;
+        let newY = po.y + dy;
+        let newZ = po.z + dz;
+
+        if (config.isWallAttached)
+        {
+            const {worldDx, worldDz} = DirUtil.localDxToWorldDxDz(po.dir, dx);
+            newX = po.x + worldDx;
+            newZ = po.z + worldDz;
+
+            if (!isPersistentObjectPositionInBound(newX, newY, newZ) ||
+                !isWallAt(room, newX, newY, newZ, po.dir))
+            {
+                let wrapped = tryCornerWrap(room, po, dx, newY);
+                if (!wrapped)
+                    wrapped = tryCornerWrap(room, po, dx, newY, true);
+                if (!wrapped)
+                    return false;
+                newX = wrapped.x;
+                newZ = wrapped.z;
+            }
+        }
+
+        if (!isPersistentObjectPositionInBound(newX, newY, newZ))
+            return false;
+
+        return true;
+    },
+
+    movePersistentObject(room: Room, objectId: string,
+        dx: number, dy: number, dz: number): PersistentObject | null
+    {
+        if (!PersistentObjectUpdateUtil.canMovePersistentObject(room, objectId, dx, dy, dz))
+        {
+            console.error(`PersistentObjectUpdateUtil.movePersistentObject :: Failed (objectId=${objectId}, dx=${dx}, dy=${dy}, dz=${dz})`);
+            return null;
+        }
+
+        const po = room.persistentObjectGroup.persistentObjectById[objectId];
+
+        const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
+        let newX = po.x + dx;
+        let newY = po.y + dy;
+        let newZ = po.z + dz;
+        let newDirection = po.dir;
+
+        if (config.isWallAttached)
+        {
+            const {worldDx, worldDz} = DirUtil.localDxToWorldDxDz(po.dir, dx);
+            newX = po.x + worldDx;
+            newZ = po.z + worldDz;
+            newDirection = po.dir;
+
+            if (!isPersistentObjectPositionInBound(newX, newY, newZ) ||
+                !isWallAt(room, newX, newY, newZ, po.dir))
+            {
+                let wrapped = tryCornerWrap(room, po, dx, newY);
+                if (!wrapped)
+                    wrapped = tryCornerWrap(room, po, dx, newY, true);
+                if (!wrapped)
+                    return null;
+                newX = wrapped.x;
+                newZ = wrapped.z;
+                newDirection = wrapped.direction;
+            }
+        }
+
+        if (!isPersistentObjectPositionInBound(newX, newY, newZ))
+            return null;
+
+        po.x = newX;
+        po.y = newY;
+        po.z = newZ;
+        po.dir = newDirection;
+        return po;
+    },
+
+    canSetPersistentObjectMetadata(room: Room, objectId: string,
+        metadataKey: number, metadataValue: string): boolean
+    {
+        const po = room.persistentObjectGroup.persistentObjectById[objectId];
+        if (!po)
+            return false;
+        if (metadataKey === ObjectMetadataKeyEnumMap.ImageURL
+            && metadataValue.length > MAX_IMAGE_URL_LENGTH)
+            return false;
+        return true;
+    },
+
+    setPersistentObjectMetadata(room: Room, objectId: string,
+        metadataKey: number, metadataValue: string): PersistentObject | null
+    {
+        if (!PersistentObjectUpdateUtil.canSetPersistentObjectMetadata(room, objectId, metadataKey, metadataValue))
+        {
+            console.error(`PersistentObjectUpdateUtil.setPersistentObjectMetadata :: Failed (objectId=${objectId})`);
+            return null;
+        }
+
+        const po = room.persistentObjectGroup.persistentObjectById[objectId];
+        po.metadata[metadataKey] = new EncodableByteString(metadataValue);
+        return po;
+    },
+
+    //-------------------------------------------------------------------------------------
+    // Block Removal Guard
+    //-------------------------------------------------------------------------------------
+
+    // Returns true if removing the voxel block at (row, col, collisionLayer) would cause
+    // any wall-attached persistent object to lose its wall support.
+    wouldBlockRemovalBreakPersistentObject(
+        room: Room, row: number, col: number, collisionLayer: number): boolean
+    {
+        for (const po of Object.values(room.persistentObjectGroup.persistentObjectById))
+        {
+            const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
+            if (!config.isWallAttached) continue;
+
+            const meshBottomLayer = Math.min(
+                Math.max(Math.floor(po.y * 2), COLLISION_LAYER_MIN),
+                COLLISION_LAYER_MAX
+            );
+            const meshTopLayer = Math.min(
+                Math.max(Math.floor((po.y + 1) * 2 - 0.001), COLLISION_LAYER_MIN),
+                COLLISION_LAYER_MAX
+            );
+            if (collisionLayer < meshBottomLayer || collisionLayer > meshTopLayer) continue;
+
+            if (doesBlockSupportPersistentObject(po, row, col))
+                return true;
+        }
+        return false;
+    },
+};
+
+function isWallAt(room: Room, x: number, y: number, z: number, direction: Dir4): boolean
 {
     const collisionLayer = Math.min(Math.max(Math.floor(y * 2), COLLISION_LAYER_MIN), COLLISION_LAYER_MAX);
-
-    let facingAxis: "x" | "z";
-    let orientation: "-" | "+";
-    switch (direction)
-    {
-        case "+z": facingAxis = "z"; orientation = "+"; break;
-        case "-z": facingAxis = "z"; orientation = "-"; break;
-        case "+x": facingAxis = "x"; orientation = "+"; break;
-        case "-x": facingAxis = "x"; orientation = "-"; break;
-    }
+    const {facingAxis, orientation} = DirUtil.dir4ToProperties(direction);
 
     if (facingAxis == "z")
     {
-        // Wall is a z-face. Row determined by direction: +z face at z means row = z - 1, -z face at z means row = z.
         const row = (orientation == "+") ? z - 1 : z;
         if (row < 0 || row >= NUM_VOXEL_ROWS) return false;
 
-        // Sliding coordinate is x. Check if x is integer (edge) or half-integer (center).
         const isEdge = (x % 1 === 0);
         if (isEdge)
         {
             const colLeft = x - 1;
             const colRight = x;
-            // At an edge, both adjacent voxels must have the wall for full attachment.
-            // But at grid boundaries (x=0 or x=NUM_VOXEL_COLS), only one side exists.
             const leftValid = colLeft >= 0 && colLeft < NUM_VOXEL_COLS
-                && isQuadVisible(room, row, colLeft, facingAxis, orientation, collisionLayer);
+                && VoxelQueryUtil.isVoxelQuadVisible(room, row, colLeft, facingAxis, orientation, collisionLayer);
             const rightValid = colRight >= 0 && colRight < NUM_VOXEL_COLS
-                && isQuadVisible(room, row, colRight, facingAxis, orientation, collisionLayer);
+                && VoxelQueryUtil.isVoxelQuadVisible(room, row, colRight, facingAxis, orientation, collisionLayer);
             return leftValid && rightValid;
         }
         else
         {
             const col = Math.floor(x);
             if (col < 0 || col >= NUM_VOXEL_COLS) return false;
-            return isQuadVisible(room, row, col, facingAxis, orientation, collisionLayer);
+            return VoxelQueryUtil.isVoxelQuadVisible(room, row, col, facingAxis, orientation, collisionLayer);
         }
     }
-    else // facingAxis == "x"
+    else if (facingAxis == "x")
     {
-        // Wall is an x-face. Col determined by direction: +x face at x means col = x - 1, -x face at x means col = x.
         const col = (orientation == "+") ? x - 1 : x;
         if (col < 0 || col >= NUM_VOXEL_COLS) return false;
 
-        // Sliding coordinate is z. Check if z is integer (edge) or half-integer (center).
         const isEdge = (z % 1 === 0);
         if (isEdge)
         {
             const rowLeft = z - 1;
             const rowRight = z;
             const leftValid = rowLeft >= 0 && rowLeft < NUM_VOXEL_ROWS
-                && isQuadVisible(room, rowLeft, col, facingAxis, orientation, collisionLayer);
+                && VoxelQueryUtil.isVoxelQuadVisible(room, rowLeft, col, facingAxis, orientation, collisionLayer);
             const rightValid = rowRight >= 0 && rowRight < NUM_VOXEL_ROWS
-                && isQuadVisible(room, rowRight, col, facingAxis, orientation, collisionLayer);
+                && VoxelQueryUtil.isVoxelQuadVisible(room, rowRight, col, facingAxis, orientation, collisionLayer);
             return leftValid && rightValid;
         }
         else
         {
             const row = Math.floor(z);
             if (row < 0 || row >= NUM_VOXEL_ROWS) return false;
-            return isQuadVisible(room, row, col, facingAxis, orientation, collisionLayer);
+            return VoxelQueryUtil.isVoxelQuadVisible(room, row, col, facingAxis, orientation, collisionLayer);
         }
+    }
+    else
+    {
+        throw new Error(`Invalid facingAxis :: ${facingAxis}`);
     }
 }
 
-function isQuadVisible(room: Room, row: number, col: number,
-    facingAxis: "x" | "z", orientation: "-" | "+", collisionLayer: number): boolean
-{
-    const quadIndex = getVoxelQuadIndex(row, col, facingAxis, orientation, collisionLayer);
-    if (quadIndex < 0) return false;
-    const voxel = room.voxelGrid.voxels[row * NUM_VOXEL_COLS + col];
-    return (voxel.quadsMem.quads[quadIndex] & 0b10000000) !== 0;
-}
-
-// Attempts to wrap the object around a wall corner when straight movement fails.
-// Convex corners (default): the object wraps around the outside edge of a corner.
-// Concave corners: the object wraps around an inside corner (protruding block).
-//   The wrap direction is flipped and the position shifts by 1 unit along the wall normal.
 function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: number,
-    concave: boolean = false): {x: number, z: number, direction: Direction} | null
+    concave: boolean = false): {x: number, z: number, direction: Dir4} | null
 {
     const movingRight = dx > 0;
 
-    // Convex direction wrapping:
-    // Current dir | Move right → wrap to | Move left → wrap to
-    // +z          | +x                   | -x
-    // -z          | -x                   | +x
-    // +x          | -z                   | +z
-    // -x          | +z                   | -z
-    // Concave: the wrap direction is flipped (opposite of convex).
-    let wrapDirection: Direction;
-    switch (po.direction)
+    let wrapDirection: Dir4;
+    switch (po.dir)
     {
         case "+z": wrapDirection = movingRight ? "+x" : "-x"; break;
         case "-z": wrapDirection = movingRight ? "-x" : "+x"; break;
@@ -150,7 +271,6 @@ function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: numbe
     }
     if (concave)
     {
-        // Flip: +x <-> -x, +z <-> -z
         switch (wrapDirection)
         {
             case "+x": wrapDirection = "-x"; break;
@@ -160,10 +280,9 @@ function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: numbe
         }
     }
 
-    // Calculate the corner position on the new (perpendicular) wall.
     let newX: number, newZ: number;
 
-    switch (po.direction)
+    switch (po.dir)
     {
         case "+z":
         {
@@ -199,12 +318,11 @@ function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: numbe
         }
     }
 
-    // Concave case: shift position by 1 unit along the wall's normal direction.
     if (concave)
     {
-        const {dirX, dirZ} = directionStringToVector(po.direction);
-        newX += dirX;
-        newZ += dirZ;
+        const v = DirUtil.dir4ToVec3(po.dir);
+        newX += v.x;
+        newZ += v.z;
     }
 
     if (!isWallAt(room, newX, newY, newZ, wrapDirection))
@@ -213,179 +331,10 @@ function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: numbe
     return {x: newX, z: newZ, direction: wrapDirection};
 }
 
-//-------------------------------------------------------------------------------------
-// CRUD Operations
-//-------------------------------------------------------------------------------------
-
-export function canAddPersistentObject(room: Room, objectTypeIndex: number,
-    direction: Direction, x: number, y: number, z: number): boolean
-{
-    // TODO: Implement
-    return true;
-}
-
-export function addPersistentObject(room: Room, objectTypeIndex: number,
-    direction: Direction, x: number, y: number, z: number,
-    metadata: ObjectMetadata = {}, objectId?: string): PersistentObject | null
-{
-    // TODO: Move over the precondition logic into "canAddPersistentObject", and simply call it to check whether the conditions are met.
-    if (!isPersistentObjectPositionInBound(x, y, z))
-    {
-        console.error(`addPersistentObject :: Position out of bounds (x=${x}, y=${y}, z=${z})`);
-        return null;
-    }
-
-    if (!objectId)
-        objectId = `p${++room.persistentObjectGroup.lastPersistentObjectId}`;
-
-    const po = new PersistentObject(objectId, objectTypeIndex, direction, x, y, z, metadata);
-    room.persistentObjectGroup.persistentObjectById[objectId] = po;
-    return po;
-}
-
-export function canRemovePersistentObject(room: Room, objectId: string): boolean
-{
-    // TODO: Implement
-    return true;
-}
-
-export function removePersistentObject(room: Room, objectId: string): PersistentObject | null
-{
-    // TODO: Move over the precondition logic into "canRemovePersistentObject", and simply call it to check whether the conditions are met.
-    const removed = room.persistentObjectGroup.persistentObjectById[objectId];
-    if (!removed)
-    {
-        console.error(`removePersistentObject :: Object not found (objectId=${objectId})`);
-        return null;
-    }
-    delete room.persistentObjectGroup.persistentObjectById[objectId];
-    return removed;
-}
-
-export function canMovePersistentObject(room: Room, objectId: string,
-    dx: number, dy: number, dz: number): boolean
-{
-    // TODO: Implement
-    return true;
-}
-
-export function movePersistentObject(room: Room, objectId: string,
-    dx: number, dy: number, dz: number): PersistentObject | null
-{
-    // TODO: Move over the precondition logic into "canMovePersistentObject", and simply call it to check whether the conditions are met.
-    const po = room.persistentObjectGroup.persistentObjectById[objectId];
-    if (!po)
-    {
-        console.error(`movePersistentObject :: Object not found (objectId=${objectId})`);
-        return null;
-    }
-
-    const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
-    let newX = po.x + dx;
-    let newY = po.y + dy;
-    let newZ = po.z + dz;
-    let newDirection = po.direction;
-
-    if (config.isWallAttached)
-    {
-        // Wall-attached movement: dx means "slide along wall surface", with corner wrapping.
-        const {worldDx, worldDz} = wallAttachedDxToWorld(po.direction, dx);
-        newX = po.x + worldDx;
-        newZ = po.z + worldDz;
-        newDirection = po.direction;
-
-        if (!isPersistentObjectPositionInBound(newX, newY, newZ) ||
-            !isWallAt(room, newX, newY, newZ, po.direction))
-        {
-            // Target is either out of bound or there is no wall at the straight path.
-            // Try corner wrap instead.
-            let wrapped = tryCornerWrap(room, po, dx, newY);
-            if (!wrapped)
-                wrapped = tryCornerWrap(room, po, dx, newY, true);
-            if (!wrapped)
-                return null;
-            newX = wrapped.x;
-            newZ = wrapped.z;
-            newDirection = wrapped.direction;
-        }
-    }
-
-    // Check if the new position is out of bound
-    if (!isPersistentObjectPositionInBound(newX, newY, newZ))
-        return null;
-
-    po.x = newX;
-    po.y = newY;
-    po.z = newZ;
-    po.direction = newDirection;
-    return po;
-}
-
-export function canSetPersistentObjectMetadata(room: Room, objectId: string): boolean
-{
-    // TODO: Implement
-    return true;
-}
-
-export function setPersistentObjectMetadata(room: Room, objectId: string,
-    metadataKey: number, metadataValue: string): PersistentObject | null
-{
-    // TODO: Move over the precondition logic into "canSetPersistentObjectMetadata", and simply call it to check whether the conditions are met.
-    const po = room.persistentObjectGroup.persistentObjectById[objectId];
-    if (!po)
-    {
-        console.error(`setPersistentObjectMetadata :: Object not found (objectId=${objectId})`);
-        return null;
-    }
-
-    if (metadataKey === ObjectMetadataKeyEnumMap.ImageURL
-        && metadataValue.length > MAX_IMAGE_URL_LENGTH)
-    {
-        console.error(`setPersistentObjectMetadata :: ImageURL exceeds max length (${metadataValue.length} > ${MAX_IMAGE_URL_LENGTH})`);
-        return null;
-    }
-
-    po.metadata[metadataKey] = new EncodableByteString(metadataValue);
-    return po;
-}
-
-//-------------------------------------------------------------------------------------
-// Block Removal Guard
-//-------------------------------------------------------------------------------------
-
-// Returns true if removing the voxel block at (row, col, collisionLayer) would cause
-// any wall-attached persistent object to lose its wall support.
-export function wouldBlockRemovalBreakPersistentObject(
-    room: Room, row: number, col: number, collisionLayer: number): boolean
-{
-    for (const po of Object.values(room.persistentObjectGroup.persistentObjectById))
-    {
-        const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
-        if (!config.isWallAttached) continue;
-
-        // The mesh surface spans vertically from po.y to po.y + 1 (1 unit tall).
-        // Collision layers are 0.5 units each (layer = floor(y * 2)).
-        // Check all collision layers that the mesh overlaps.
-        const meshBottomLayer = Math.min(
-            Math.max(Math.floor(po.y * 2), COLLISION_LAYER_MIN),
-            COLLISION_LAYER_MAX
-        );
-        const meshTopLayer = Math.min(
-            Math.max(Math.floor((po.y + 1) * 2 - 0.001), COLLISION_LAYER_MIN),
-            COLLISION_LAYER_MAX
-        );
-        if (collisionLayer < meshBottomLayer || collisionLayer > meshTopLayer) continue;
-
-        if (doesBlockSupportPersistentObject(po, row, col))
-            return true;
-    }
-    return false;
-}
-
 function doesBlockSupportPersistentObject(
     po: PersistentObject, blockRow: number, blockCol: number): boolean
 {
-    switch (po.direction)
+    switch (po.dir)
     {
         case "+z":
         {
@@ -416,11 +365,8 @@ function doesBlockSupportPersistentObject(
 
 function isBlockInSlidingRange(slidingCoord: number, blockIndex: number): boolean
 {
-    // The mesh surface spans ±0.5 from the center along the sliding axis.
-    // Any block whose face overlaps with [center - 0.5, center + 0.5] must be protected.
     const meshMin = slidingCoord - 0.5;
     const meshMax = slidingCoord + 0.5;
-    // A block at index i covers [i, i+1]. It overlaps the mesh range if i < meshMax && i+1 > meshMin.
     return blockIndex < meshMax && (blockIndex + 1) > meshMin;
 }
 
@@ -430,3 +376,5 @@ function isPersistentObjectPositionInBound(x: number, y: number, z: number): boo
         y > 0 && y < MAX_ROOM_Y &&
         z >= 1 && z <= NUM_VOXEL_ROWS-1;
 }
+
+export default PersistentObjectUpdateUtil;

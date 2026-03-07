@@ -1,0 +1,1 @@
+export type Dir4 = "+z" | "+x" | "-z" | "-x";

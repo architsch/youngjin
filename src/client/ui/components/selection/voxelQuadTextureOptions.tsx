@@ -6,8 +6,8 @@ import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import SocketsClient from "../../../networking/client/socketsClient";
 import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import App from "../../../app";
-import { setVoxelQuadVisible } from "../../../../shared/voxel/util/voxelQuadUpdateUtil";
-import { getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex } from "../../../../shared/voxel/util/voxelQueryUtil";
+import VoxelQuadUpdateUtil from "../../../../shared/voxel/util/voxelQuadUpdateUtil";
+import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import VoxelGameObject from "../../../object/types/voxelGameObject";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
@@ -44,11 +44,11 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     return;
                 }
 
-                const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-                const orientation = getVoxelQuadOrientationFromQuadIndex(quadIndex);
-                const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+                const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+                const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+                const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-                if (setVoxelQuadVisible(true, props.selection.voxel, facingAxis, orientation,
+                if (VoxelQuadUpdateUtil.setVoxelQuadVisible(true, props.selection.voxel, facingAxis, orientation,
                     collisionLayer, textureIndex))
                 {
                     voxelQuadSelectionObservable.notify();

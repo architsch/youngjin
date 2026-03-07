@@ -1,4 +1,4 @@
-import { getVoxelColFromQuadIndex, getVoxelQuadCollisionLayerFromQuadIndex, getVoxelQuadFacingAxisFromQuadIndex, getVoxelQuadOrientationFromQuadIndex, getVoxelRowFromQuadIndex } from "../util/voxelQueryUtil";
+import VoxelQueryUtil from "../util/voxelQueryUtil";
 
 export default class VoxelQuadChange
 {
@@ -14,11 +14,11 @@ export default class VoxelQuadChange
 
     toString(): string
     {
-        const row = getVoxelRowFromQuadIndex(this.quadIndex);
-        const col = getVoxelColFromQuadIndex(this.quadIndex);
-        const facingAxis = getVoxelQuadFacingAxisFromQuadIndex(this.quadIndex);
-        const orientation = getVoxelQuadOrientationFromQuadIndex(this.quadIndex);
-        const collisionLayer = getVoxelQuadCollisionLayerFromQuadIndex(this.quadIndex);
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(this.quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(this.quadIndex);
+        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(this.quadIndex);
+        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(this.quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(this.quadIndex);
         const showQuad = (this.newQuad & 0b10000000) != 0;
         const textureIndex = this.newQuad & 0b01111111;
         return `(${row},${col}) ${orientation}${facingAxis} at ${collisionLayer} ---> ${showQuad ? "show" : "hide"} texture ${textureIndex}

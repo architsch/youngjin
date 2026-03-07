@@ -1,6 +1,6 @@
 import Vec2 from "../types/vec2"
 
-const Vector2D =
+const Vector2DUtil =
 {
     normalize: (v: Vec2): Vec2 =>
     {
@@ -42,4 +42,4 @@ const Vector2D =
     },
 }
 
-export default Vector2D;
+export default Vector2DUtil;

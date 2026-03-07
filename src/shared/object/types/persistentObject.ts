@@ -3,24 +3,26 @@ import EncodableData from "../../networking/types/encodableData";
 import EncodableByteString from "../../networking/types/encodableByteString";
 import { ObjectMetadata } from "./objectMetadata";
 import EncodableMap from "../../networking/types/encodableMap";
+import { Dir4 } from "../../math/types/dir4";
+import DirUtil from "../../math/util/dirUtil";
 
 export default class PersistentObject extends EncodableData
 {
     objectId: string;
     objectTypeIndex: number;
-    direction: "+z" | "+x" | "-z" | "-x";
+    dir: Dir4;
     x: number;
     y: number;
     z: number;
     metadata: ObjectMetadata;
 
-    constructor(objectId: string, objectTypeIndex: number, direction: "+z" | "+x" | "-z" | "-x",
+    constructor(objectId: string, objectTypeIndex: number, dir: Dir4,
         x: number, y: number, z: number, metadata: ObjectMetadata = {})
     {
         super();
         this.objectId = objectId;
         this.objectTypeIndex = objectTypeIndex;
-        this.direction = direction;
+        this.dir = dir;
         this.x = x;
         this.y = y;
         this.z = z;
@@ -29,6 +31,8 @@ export default class PersistentObject extends EncodableData
 
     encode(bufferState: BufferState)
     {
+        if (this.objectId.length == 0)
+            throw new Error(`ObjectId is empty (objectId = ${this.objectId})`);
         if (this.objectTypeIndex < 0 || this.objectTypeIndex > 63)
             throw new Error(`Object type index out of range (objectTypeIndex = ${this.objectTypeIndex})`);
         if (this.x < 0 || this.x > 32)
@@ -38,13 +42,10 @@ export default class PersistentObject extends EncodableData
         if (this.y < 0 || this.y > 4)
             throw new Error(`Object y out of range (y = ${this.y})`);
 
-        bufferState.view[bufferState.byteIndex++] = (this.objectTypeIndex << 2) | (
-            (this.direction == "+z") ? 0b00 : (
-                (this.direction == "+x") ? 0b01 : (
-                    (this.direction == "-z") ? 0b10 : 0b11
-                )
-            )
-        );
+        new EncodableByteString(this.objectId).encode(bufferState);
+
+        bufferState.view[bufferState.byteIndex++] =
+            (this.objectTypeIndex << 2) | DirUtil.dir4ToNumber(this.dir);
         const yRaw = Math.floor(4 * this.y);
         const yRawFirstHalf = (yRaw & 0b1100) >> 2;
         const yRawSecondHalf = (yRaw & 0b0011);
@@ -56,12 +57,12 @@ export default class PersistentObject extends EncodableData
 
     static decode(bufferState: BufferState): EncodableData
     {
+        const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+
         const mainByte1 = bufferState.view[bufferState.byteIndex++];
         const objectTypeIndex = (mainByte1 >> 2) & 0b111111;
-        const directionRaw = (mainByte1 & 0b11);
-        const direction = (directionRaw <= 1)
-            ? ((directionRaw == 0) ? "+z" : "+x")
-            : ((directionRaw == 2) ? "-z" : "-x");
+        const dirNumber = (mainByte1 & 0b11);
+        const dir = DirUtil.numberToDir4(dirNumber);
 
         const mainByte2 = bufferState.view[bufferState.byteIndex++];
         const xRaw = (mainByte2 >> 2) & 0b111111;
@@ -77,7 +78,7 @@ export default class PersistentObject extends EncodableData
 
         const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
 
-        return new PersistentObject("", objectTypeIndex, direction, x, y, z, metadata);
+        return new PersistentObject(objectId, objectTypeIndex, dir, x, y, z, metadata);
     }
 }
 
@@ -85,7 +86,7 @@ export default class PersistentObject extends EncodableData
 // Each PersistentObject's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Main Byte 1][Main Byte 2][Main Byte 3][Metadata]...
+// Layout: [ObjectId Byte String][Main Byte 1][Main Byte 2][Main Byte 3][Metadata]...
 //
 // [Main Byte 1]
 //     6 bits for the object's type index

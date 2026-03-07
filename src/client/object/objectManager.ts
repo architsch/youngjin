@@ -15,6 +15,7 @@ import ObjectSyncReceiver from "./components/objectSyncReceiver";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectSyncEmitter from "./components/objectSyncEmitter";
 import VoxelGameObject from "./types/voxelGameObject";
+import DirUtil from "../../shared/math/util/dirUtil";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -69,23 +70,14 @@ const ObjectManager =
         // Load objects from the decoded persistentObjectGroup
         for (const po of Object.values(roomRuntimeMemory.room.persistentObjectGroup.persistentObjectById))
         {
-            // Let's assume that (+z) is the direction in which the 0 y-axis angle is pointing.
-            let dirX = 0, dirY = 0, dirZ = 0;
-            switch (po.direction)
-            {
-                case "+z": dirX = 0; dirY = 0; dirZ = 1; break;
-                case "-z": dirX = 0; dirY = 0; dirZ = -1; break;
-                case "+x": dirX = 1; dirY = 0; dirZ = 0; break;
-                case "-x": dirX = -1; dirY = 0; dirZ = 0; break;
-                default: throw new Error(`Unknown direction (${po.direction})`);
-            }
+            const dirVec = DirUtil.dir4ToVec3(po.dir);
             const objectSpawnParams = new ObjectSpawnParams(
                 roomRuntimeMemory.room.id,
                 "", // Persistent objects are not directly owned by anyone, so sourceUserID is empty.
                 "", // Persistent objects are not directly owned by anyone, so sourceUserName is empty.
                 po.objectTypeIndex,
                 po.objectId,
-                new ObjectTransform(po.x, po.y, po.z, dirX, dirY, dirZ),
+                new ObjectTransform(po.x, po.y, po.z, dirVec.x, dirVec.y, dirVec.z),
                 po.metadata
             );
             const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
