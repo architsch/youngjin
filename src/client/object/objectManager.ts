@@ -16,6 +16,8 @@ import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncRes
 import ObjectSyncEmitter from "./components/objectSyncEmitter";
 import VoxelGameObject from "./types/voxelGameObject";
 import DirUtil from "../../shared/math/util/dirUtil";
+import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
+import { setObjectMetadataObservable } from "../../shared/system/sharedObservables";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -67,8 +69,30 @@ const ObjectManager =
             await ObjectManager.spawnObject(gameObject);
         };
 
-        // Load objects from the decoded persistentObjectGroup
-        for (const po of Object.values(roomRuntimeMemory.room.persistentObjectGroup.persistentObjectById))
+        // Find the player's initial position for distance-based canvas loading order
+        let playerX = 0, playerY = 0, playerZ = 0;
+        for (const mem of Object.values(roomRuntimeMemory.objectRuntimeMemories))
+        {
+            if (mem.objectSpawnParams.objectTypeIndex === playerTypeIndex)
+            {
+                const t = mem.objectSpawnParams.transform;
+                playerX = t.x;
+                playerY = t.y;
+                playerZ = t.z;
+                break;
+            }
+        }
+
+        // Load objects from the decoded persistentObjectGroup, sorted by distance
+        // from the player so that canvas images load nearest-first.
+        const persistentObjects = Object.values(roomRuntimeMemory.room.persistentObjectGroup.persistentObjectById);
+        persistentObjects.sort((a, b) =>
+        {
+            const da = (a.x - playerX) ** 2 + (a.y - playerY) ** 2 + (a.z - playerZ) ** 2;
+            const db = (b.x - playerX) ** 2 + (b.y - playerY) ** 2 + (b.z - playerZ) ** 2;
+            return da - db;
+        });
+        for (const po of persistentObjects)
         {
             const dirVec = DirUtil.dir4ToVec3(po.dir);
             const objectSpawnParams = new ObjectSpawnParams(
@@ -190,6 +214,14 @@ const ObjectManager =
             (object.components.objectSyncEmitter as ObjectSyncEmitter).onObjectDesyncResolveReceived(params);
     },
 }
+
+setObjectMetadataObservable.addListener("objectManager", async (change: {objectId: string, key: ObjectMetadataKey, value: string}) => {
+    const gameObject = ObjectManager.getObjectById(change.objectId);
+    if (gameObject)
+        gameObject.onSetMetadata(change.key, change.value);
+    else
+        console.error(`Object metadata is set, but the object is not found (objectId = ${change.objectId}, key = ${change.key}, value = ${change.value})`);
+});
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)

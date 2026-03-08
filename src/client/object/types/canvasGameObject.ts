@@ -1,22 +1,21 @@
 import * as THREE from "three";
 import GameObject from "./gameObject";
-import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import ObjectManager from "../objectManager";
 import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import PersistentObjectSelection from "../../graphics/types/gizmo/persistentObjectSelection";
-import { roomChangedObservable } from "../../system/clientObservables";
-import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 
 export default class CanvasGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
 
-    private instanceId: number = -1;
-
     static spawnedCanvasGameObjects: Map<string, CanvasGameObject> = new Map();
+    private static loadQueue: Promise<void> = Promise.resolve();
+
+    private instanceId: number = -1;
 
     constructor(params: ObjectSpawnParams)
     {
@@ -34,6 +33,8 @@ export default class CanvasGameObject extends GameObject
 
     async onSpawn(): Promise<void>
     {
+        CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
+
         await super.onSpawn();
 
         await this.instancedMeshGraphics.loadInstancedMesh();
@@ -58,15 +59,20 @@ export default class CanvasGameObject extends GameObject
             tr.dirX, tr.dirY, tr.dirZ,
             1, 1, 1);
 
-        CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
+        this.loadImage();
     }
 
     async onDespawn(): Promise<void>
     {
-        CanvasGameObject.spawnedCanvasGameObjects.delete(this.params.objectId);
-
         await super.onDespawn();
         this.instancedMeshGraphics.returnInstanceToPool(this.instanceId);
+
+        CanvasGameObject.spawnedCanvasGameObjects.delete(this.params.objectId);
+    }
+
+    onSetMetadata(key: ObjectMetadataKey, value: string)
+    {
+        this.loadImage();
     }
 
     onClick(instanceId: number, hitPoint: THREE.Vector3)
@@ -84,7 +90,13 @@ export default class CanvasGameObject extends GameObject
         PersistentObjectSelection.trySelect(this);
     }
 
-    async loadImage()
+    loadImage(): Promise<void>
+    {
+        CanvasGameObject.loadQueue = CanvasGameObject.loadQueue.then(() => this.loadImageImpl());
+        return CanvasGameObject.loadQueue;
+    }
+
+    private async loadImageImpl()
     {
         if (!this.params.hasMetadata(ObjectMetadataKeyEnumMap.ImageURL))
             return;
@@ -101,29 +113,4 @@ export default class CanvasGameObject extends GameObject
             await this.instancedMeshGraphics.drawImageAtIndex(this.instanceId % 64, "");
         }
     }
-
-    static async loadAllImagesByDistance(): Promise<void>
-    {
-        const player = ObjectManager.getMyPlayer();
-        if (!player)
-            return;
-
-        const canvases = Array.from(CanvasGameObject.spawnedCanvasGameObjects.values());
-        canvases.sort((a, b) => {
-            const distA = a.position.distanceToSquared(player.position);
-            const distB = b.position.distanceToSquared(player.position);
-            return distA - distB;
-        });
-
-        for (const canvas of canvases)
-        {
-            await canvas.loadImage();
-        }
-    }
 }
-
-// After the room is fully loaded, sequentially load all canvas images
-// starting from the one closest to the player.
-roomChangedObservable.addListener("canvasGameObject", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
-    await CanvasGameObject.loadAllImagesByDistance();
-});

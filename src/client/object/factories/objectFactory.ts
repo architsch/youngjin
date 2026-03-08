@@ -28,7 +28,7 @@ const ObjectFactory =
         return ObjectConstructorMap[objectType](params);
     },
     // This method is called when the client is instantiating an object
-    // that was spawned by the server.
+    // that belongs to the server.
     createServerSideObject: (params: ObjectSpawnParams): GameObject =>
     {
         const objectType = ObjectTypeConfigMap.getConfigByIndex(params.objectTypeIndex).objectType;

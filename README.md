@@ -11,15 +11,15 @@ ThingsPool is a shared virtual space made up of interconnected **Rooms**. Each R
 - **Explore** — Travel across rooms and discover what others have built
 - **Build** — Shape the world block by block using the voxel building system
 - **Chat** — Meet and talk with other players in real time
-- **Create** — Design your own rooms and turn them into anything you imagine
+- **Create** — Design your own room and turn it into anything you imagine
 
 ## For Artists and Creators
 
-ThingsPool doubles as a creative platform. Build your own virtual gallery, design an interactive installation, or craft an entire world that tells a story. Every room can either be a blank canvas waiting to be shaped into something unique, or a hidden place of adventure inviting to be explored.
+ThingsPool doubles as a creative platform. Build your own virtual gallery, design an interactive installation, or craft an entire world that tells a story. Your room can either be a blank canvas waiting to be shaped into something unique, or a hidden place of adventure inviting to be explored.
 
 ## For Developers
 
-ThingsPool is open source and built with a modern real-time web stack — Three.js for 3D rendering, Socket.IO for multiplayer networking, and a custom physics and voxel engine for world building. If you're building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase.
+ThingsPool is open source and built with a modern real-time web stack — Three.js for 3D rendering, Socket.IO for multiplayer networking, and a custom physics and voxel engine for world building. If you are building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase.
 
 ## Documentation
 
@@ -37,3 +37,7 @@ ThingsPool is open source and built with a modern real-time web stack — Three.
 
 - **Networking**
     - [Authentication Flows](docs/networking/authentication.md)
+    - [User State Management Flows](docs/networking/user_state_management.md)
+    - ["My Room" Flows](docs/networking/my_room.md)
+    - [Voxel Grid Update Flows](docs/networking/voxel_grid_update.md)
+    - [Persistent Object Update Flows](docs/networking/persistent_object_update.md)

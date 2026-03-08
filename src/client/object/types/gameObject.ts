@@ -6,6 +6,7 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import GameObjectComponent from "../components/gameObjectComponent";
 import ObjectComponentFactory from "../factories/objectComponentFactory";
 import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/objectTypeConfig";
+import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -59,6 +60,7 @@ export default abstract class GameObject
     onClick(instanceId: number, hitPoint: THREE.Vector3) {} // Invoked when the object is clicked by the user's pointer input (mouse or touch). "instanceId" is the ID of the mesh instance that was hit by the user's pointer input.
     onPlayerProximityStart() {} // Invoked when the object gets close to the player.
     onPlayerProximityEnd() {} // Invoked when the object moves away from the player.
+    onSetMetadata(key: ObjectMetadataKey, value: string) {} // Invoked when the object's metadata is set (e.g. one of the entries in PersistentObject's "metadata" field).
 
     async onSpawn(): Promise<void>
     {

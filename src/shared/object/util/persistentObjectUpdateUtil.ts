@@ -32,8 +32,9 @@ const PersistentObjectUpdateUtil =
             return null;
         }
 
+        ++room.persistentObjectGroup.lastPersistentObjectId;
         if (!objectId)
-            objectId = `p${++room.persistentObjectGroup.lastPersistentObjectId}`;
+            objectId = `p${room.persistentObjectGroup.lastPersistentObjectId}`;
 
         const po = new PersistentObject(objectId, objectTypeIndex, direction, x, y, z, metadata);
         room.persistentObjectGroup.persistentObjectById[objectId] = po;

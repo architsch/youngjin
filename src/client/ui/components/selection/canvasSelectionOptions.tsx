@@ -139,9 +139,6 @@ function trySetCanvasImageURL(selection: PersistentObjectSelection, imageURL: st
 
     selection.gameObject.params.setMetadata(ObjectMetadataKeyEnumMap.ImageURL, imageURL);
 
-    if (selection.gameObject instanceof CanvasGameObject)
-        (selection.gameObject as CanvasGameObject).loadImage();
-
     persistentObjectSelectionObservable.notify();
     SocketsClient.emitUpdatePersistentObjectGroup(
         new SetPersistentObjectMetadataParams(objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL));

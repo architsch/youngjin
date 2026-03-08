@@ -9,9 +9,14 @@ import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/object
 import EncodableByteString from "../../../../shared/networking/types/encodableByteString";
 import CanvasGameObject from "../../../object/types/canvasGameObject";
 import { MAX_CANVASES_PER_ROOM, MID_ROOM_Y } from "../../../../shared/system/sharedConstants";
-import WorldSpaceSpinner from "../../../graphics/types/gizmo/worldSpaceSpinner";
 import PersistentObjectUpdateUtil from "../../../../shared/object/util/persistentObjectUpdateUtil";
 import DirUtil from "../../../../shared/math/util/dirUtil";
+import ObjectFactory from "../../../object/factories/objectFactory";
+import ObjectManager from "../../../object/objectManager";
+import ObjectSpawnParams from "../../../../shared/object/types/objectSpawnParams";
+import ObjectTransform from "../../../../shared/object/types/objectTransform";
+import PersistentObjectManager from "../../../object/persistentObjectManager";
+import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -56,12 +61,13 @@ function canAddPersistentObjectFromQuad(selection: VoxelQuadSelection,
     return PersistentObjectUpdateUtil.canAddPersistentObject(room, objectTypeIndex, dir, x, y, z);
 }
 
-function tryAddPersistentObjectFromQuad(selection: VoxelQuadSelection,
+async function tryAddPersistentObjectFromQuad(selection: VoxelQuadSelection,
     objectTypeIndex: number, metadata: {[key: number]: EncodableByteString})
 {
     if (!canAddPersistentObjectFromQuad(selection, objectTypeIndex))
         return;
 
+    const room = App.getCurrentRoom()!;
     const voxel = selection.voxel;
     const quadIndex = selection.quadIndex;
     const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
@@ -73,8 +79,28 @@ function tryAddPersistentObjectFromQuad(selection: VoxelQuadSelection,
     const dir = DirUtil.vec3ToDir4({x: dirX, y: dirY, z: dirZ});
 
     VoxelQuadSelection.unselect();
-    WorldSpaceSpinner.createSpinner(x, y, z, dirX, dirY, dirZ);
 
+    // Add the persistent object locally (generates objectId and increments counter)
+    const po = PersistentObjectUpdateUtil.addPersistentObject(room, objectTypeIndex, dir, x, y, z, metadata);
+    if (!po)
+        return;
+
+    // Track as speculative add so we can roll back the counter if the server rejects
+    PersistentObjectManager.speculativeAddObjectIds.add(po.objectId);
+
+    // Send to server with the client-computed objectId
     SocketsClient.emitUpdatePersistentObjectGroup(
-        new AddPersistentObjectParams(objectTypeIndex, dir, x, y, z, metadata));
+        new AddPersistentObjectParams(objectTypeIndex, dir, x, y, z, metadata, po.objectId));
+
+    // Spawn the game object locally
+    const dirVec = DirUtil.dir4ToVec3(dir);
+    const objectSpawnParams = new ObjectSpawnParams(
+        room.id, "", "", objectTypeIndex,
+        po.objectId,
+        new ObjectTransform(x, y, z, dirVec.x, dirVec.y, dirVec.z),
+        metadata
+    );
+    const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
+    await ObjectManager.spawnObject(gameObject);
+    PersistentObjectSelection.trySelect(gameObject);
 }

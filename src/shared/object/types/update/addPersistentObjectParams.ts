@@ -17,7 +17,7 @@ export default class AddPersistentObjectParams extends UpdatePersistentObjectGro
     y: number;
     z: number;
     metadata: ObjectMetadata;
-    objectId: string; // Assigned by server, empty when sent from client
+    objectId: string; // Computed by both client and server independently (They are then compared to check for race conditions)
 
     constructor(objectTypeIndex: number, dir: Dir4, x: number, y: number, z: number, metadata: ObjectMetadata = {}, objectId: string = "")
     {

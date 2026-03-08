@@ -57,10 +57,18 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
         if (canvasCount >= MAX_CANVASES_PER_ROOM)
         {
             console.error(`addPersistentObjectTask :: Canvas limit reached (${MAX_CANVASES_PER_ROOM}) in room ${room.id}`);
-            // Send the params back with empty objectId so the client clears its pending state.
-            unicastToSender(socketUserContext, room, [params]);
+            unicastToSender(socketUserContext, room, [new RemovePersistentObjectParams(params.objectId)]);
             return;
         }
+    }
+
+    // Compare client's objectId with the expected server-side objectId
+    const expectedObjectId = `p${room.persistentObjectGroup.lastPersistentObjectId + 1}`;
+    if (params.objectId !== expectedObjectId)
+    {
+        console.error(`addPersistentObjectTask :: ObjectId mismatch (expected=${expectedObjectId}, received=${params.objectId})`);
+        unicastToSender(socketUserContext, room, [new RemovePersistentObjectParams(params.objectId)]);
+        return;
     }
 
     const po = PersistentObjectUpdateUtil.addPersistentObject(room, params.objectTypeIndex,
@@ -68,11 +76,10 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
     if (!po)
     {
         console.error(`PersistentObject update failed (addPersistentObjectTask) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, room, [params]);
+        unicastToSender(socketUserContext, room, [new RemovePersistentObjectParams(params.objectId)]);
         return;
     }
-    params.objectId = po.objectId;
-    broadcastToAll(socketUserContext, room, params);
+    broadcast(socketUserContext, room, params);
 }
 
 function removePersistentObjectTask(socketUserContext: SocketUserContext, params: RemovePersistentObjectParams)
@@ -187,12 +194,6 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
     signal: EncodableData)
 {
     broadcastInternal(room, signal, socketUserContext.user.id);
-}
-
-function broadcastToAll(socketUserContext: SocketUserContext, room: Room,
-    signal: EncodableData)
-{
-    broadcastInternal(room, signal, undefined);
 }
 
 function broadcastInternal(room: Room, signal: EncodableData, excludeUserId: string | undefined)

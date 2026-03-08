@@ -6,6 +6,7 @@ import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumbe
 import { ObjectMetadata } from "./objectMetadata";
 import EncodableMap from "../../networking/types/encodableMap";
 import { ObjectMetadataKey } from "./objectMetadataKey";
+import { setObjectMetadataObservable } from "../../system/sharedObservables";
 
 export default class ObjectSpawnParams extends EncodableData
 {
@@ -48,6 +49,7 @@ export default class ObjectSpawnParams extends EncodableData
     setMetadata(key: ObjectMetadataKey, value: string)
     {
         this.metadata[key] = new EncodableByteString(value);
+        setObjectMetadataObservable.set({objectId: this.objectId, key, value});
     }
 
     deleteMetadata(key: ObjectMetadataKey)

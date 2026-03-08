@@ -15,12 +15,16 @@ import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import { persistentObjectSelectionObservable } from "../system/clientObservables";
 import CanvasGameObject from "./types/canvasGameObject";
-import WorldSpaceSpinner from "../graphics/types/gizmo/worldSpaceSpinner";
 import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
 import DirUtil from "../../shared/math/util/dirUtil";
 
 const PersistentObjectManager =
 {
+    // These are IDs of persistentObjects that were proactively instantiated by the client
+    // without waiting for the server to approve it (in order to prevent the delay
+    // that the user could experience while waiting for the server to respond).
+    speculativeAddObjectIds: new Set<string>(),
+
     onUpdatePersistentObjectGroupReceived: async (params: UpdatePersistentObjectGroupParams) =>
     {
         const success = await waitUntilSignalProcessingReady("updatePersistentObjectGroupParams",
@@ -36,32 +40,21 @@ const PersistentObjectManager =
                 case PERSISTENT_OBJ_TASK_TYPE_ADD:
                 {
                     const addParams = task as AddPersistentObjectParams;
-
-                    // Empty objectId means the server rejected the ADD request.
-                    // Skip object creation but still clear the pending state below.
-                    if (addParams.objectId && addParams.objectId.length > 0)
+                    const po = PersistentObjectUpdateUtil.addPersistentObject(room, addParams.objectTypeIndex,
+                        addParams.dir, addParams.x, addParams.y, addParams.z, addParams.metadata,
+                        addParams.objectId);
+                    if (po)
                     {
-                        const po = PersistentObjectUpdateUtil.addPersistentObject(room, addParams.objectTypeIndex,
-                            addParams.dir, addParams.x, addParams.y, addParams.z, addParams.metadata,
-                            addParams.objectId);
-                        if (po)
-                        {
-                            const dirVec = DirUtil.dir4ToVec3(addParams.dir);
-                            const objectSpawnParams = new ObjectSpawnParams(
-                                room.id, "", "", addParams.objectTypeIndex,
-                                po.objectId,
-                                new ObjectTransform(addParams.x, addParams.y, addParams.z, dirVec.x, dirVec.y, dirVec.z),
-                                addParams.metadata
-                            );
-                            const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
-                            await ObjectManager.spawnObject(gameObject);
-
-                            if (gameObject instanceof CanvasGameObject)
-                                await (gameObject as CanvasGameObject).loadImage();
-                        }
+                        const dirVec = DirUtil.dir4ToVec3(addParams.dir);
+                        const objectSpawnParams = new ObjectSpawnParams(
+                            room.id, "", "", addParams.objectTypeIndex,
+                            po.objectId,
+                            new ObjectTransform(addParams.x, addParams.y, addParams.z, dirVec.x, dirVec.y, dirVec.z),
+                            addParams.metadata
+                        );
+                        const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
+                        await ObjectManager.spawnObject(gameObject);
                     }
-
-                    WorldSpaceSpinner.destroySpinner(addParams.x, addParams.y, addParams.z);
                     break;
                 }
                 case PERSISTENT_OBJ_TASK_TYPE_REMOVE:
@@ -70,6 +63,10 @@ const PersistentObjectManager =
                     const removed = PersistentObjectUpdateUtil.removePersistentObject(room, removeParams.objectId);
                     if (removed)
                     {
+                        // If this is a rejection of our speculative add, roll back the counter
+                        if (PersistentObjectManager.speculativeAddObjectIds.delete(removeParams.objectId))
+                            room.persistentObjectGroup.lastPersistentObjectId--;
+
                         // If the removed object was selected, unselect it.
                         const sel = persistentObjectSelectionObservable.peek();
                         if (sel && sel.gameObject.params.objectId === removeParams.objectId)
@@ -117,13 +114,7 @@ const PersistentObjectManager =
                         // Update the game object's metadata
                         const gameObject = ObjectManager.getObjectById(metaParams.objectId);
                         if (gameObject)
-                        {
                             gameObject.params.setMetadata(metaParams.metadataKey, metaParams.metadataValue);
-
-                            // If it's a canvas and the image URL changed, reload the image
-                            if (gameObject instanceof CanvasGameObject)
-                                await (gameObject as CanvasGameObject).loadImage();
-                        }
 
                         // If the modified object was selected by us, deactivate the selection
                         // since another user initiated the metadata change.
