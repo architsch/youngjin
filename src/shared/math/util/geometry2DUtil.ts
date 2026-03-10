@@ -6,6 +6,11 @@ import RaycastHitResult2 from "../types/raycastHitResult2";
 
 const Geometry2DUtil =
 {
+    AABBsOverlap: (a: AABB2, b: AABB2): boolean =>
+    {
+        return Math.abs(a.x - b.x) < (a.halfSizeX + b.halfSizeX) &&
+            Math.abs(a.y - b.y) < (a.halfSizeY + b.halfSizeY);
+    },
     // Returns the AABB-casting ray's scale factor which, when applied to the ray,
     // pushes the source AABB to end up at the point of collision
     // between itself and the target AABB.

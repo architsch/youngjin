@@ -1,12 +1,74 @@
 import PhysicsVoxel from "./physicsVoxel";
-import AABB2 from "../../math/types/aabb2";
+import { ColliderInfo } from "./colliderInfo";
+import PhysicsRoom from "./physicsRoom";
+import PhysicsVoxelUtil from "../util/physicsVoxelUtil";
+import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 
-export default interface PhysicsObject
+export default class PhysicsObject
 {
+    physicsRoom: PhysicsRoom;
     objectId: string;
-    collisionLayerMaskAtGroundLevel: number; // 8-bit binary mask
-    level: number; // 0 = ground level
+    colliderInfo: ColliderInfo;
     lastLevelChangeTime: number;
-    hitbox: AABB2;
-    intersectingVoxels: PhysicsVoxel[];
+    intersectingVoxels: PhysicsVoxel[]; // The purpose of this is to let the object remember from which voxels it must unregister itself when leaving them.
+
+    constructor(physicsRoom: PhysicsRoom, objectId: string, colliderInfo: ColliderInfo)
+    {
+        this.physicsRoom = physicsRoom;
+        this.objectId = objectId;
+        this.colliderInfo = colliderInfo;
+        this.lastLevelChangeTime = performance.now() * 0.001;
+        this.intersectingVoxels = new Array<PhysicsVoxel>(4);
+        this.intersectingVoxels.length = 0;
+    }
+
+    onDestroy()
+    {
+        this.removeFromIntersectingVoxels();
+    }
+
+    removeFromIntersectingVoxels()
+    {
+        for (const voxel of PhysicsVoxelUtil.getVoxelsInBox(this.physicsRoom, this.colliderInfo.hitbox))
+        {
+            const objs = voxel.intersectingObjects;
+            for (let i = 0; i < objs.length; ++i)
+            {
+                const obj = objs[i];
+                if (obj.objectId == this.objectId)
+                {
+                    for (let j = i+1; j < objs.length; ++j)
+                        objs[i] = objs[j];
+                    --objs.length;
+                    break;
+                }
+            }
+        }
+    }
+
+    addToIntersectingVoxels()
+    {
+        const voxels = PhysicsVoxelUtil.getVoxelsInBox(this.physicsRoom, this.colliderInfo.hitbox);
+        for (const voxel of voxels)
+            voxel.intersectingObjects.push(this);
+    }
+
+    // Returns COLLISION_LAYER_NULL if no layer is occupied
+    getLowestCollisionLayer(): number
+    {
+        const colliderConfig = this.colliderInfo.colliderConfig;
+        const collisionLayerMaskAtGroundLevel = colliderConfig.collisionLayerMaskAtGroundLevel;
+        const level = this.colliderInfo.level;
+    
+        let layer = COLLISION_LAYER_MIN;
+        let maskTemp = collisionLayerMaskAtGroundLevel << level;
+        while ((maskTemp & 0b00000001) == 0)
+        {
+            maskTemp >>= 1;
+            if (maskTemp == 0)
+                return COLLISION_LAYER_NULL;
+            layer++;
+        }
+        return layer;
+    }
 }

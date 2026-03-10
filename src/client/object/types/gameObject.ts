@@ -115,7 +115,8 @@ export default abstract class GameObject
 
     // This method works like "trySetPosition", but is intended to be invoked
     // only in an exceptional case where the object's position must be set forcefully
-    // (e.g. when the object's client-side position is out of sync with its server-side position).
+    // (e.g. when the object's client-side position is out of sync with its server-side position,
+    //      or when an object with a static collider needs to be relocated).
     forceSetPosition(position: THREE.Vector3)
     {
         // If there is a component which has the "forceSetPosition" method,
@@ -135,6 +136,28 @@ export default abstract class GameObject
         }
         if (!overrideFound)
             this.position.copy(position);
+    }
+
+    // This method works like "forceSetPosition", but is intended to set the direction instead of position.
+    forceSetDirection(direction: THREE.Vector3)
+    {
+        // If there is a component which has the "forceSetDirection" method,
+        // invoke that "forceSetDirection" method.
+        // If such a method is not found, simply assign the given position vector
+        // to the GameObject's current position.
+        let overrideFound = false;
+        for (const component of Object.values(this.components))
+        {
+            if (component.forceSetDirection)
+            {
+                if (overrideFound)
+                    throw new Error("Multiple components with the 'forceSetDirection' method detected. This is not allowed.");
+                overrideFound = true;
+                component.forceSetDirection(direction);
+            }
+        }
+        if (!overrideFound)
+            this.obj.lookAt(direction);
     }
     
     // Aliases

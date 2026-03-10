@@ -8,36 +8,92 @@ import { ObjectMetadata } from "../types/objectMetadata";
 import PersistentObject from "../types/persistentObject";
 import { Dir4 } from "../../math/types/dir4";
 import DirUtil from "../../math/util/dirUtil";
+import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
+import PhysicsManager from "../../physics/physicsManager";
+import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
+
+//-------------------------------------------------------------------------------------
+// Movement Computation (Shared by canMove and move)
+//-------------------------------------------------------------------------------------
+
+function computeMovedPosition(room: Room, po: PersistentObject, dx: number, dy: number, dz: number):
+    { x: number, y: number, z: number, dir: Dir4 } | null
+{
+    const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
+    let newX = po.x + dx;
+    let newY = po.y + dy;
+    let newZ = po.z + dz;
+    let newDir = po.dir;
+
+    if (config.isWallAttached)
+    {
+        const { worldDx, worldDz } = DirUtil.localDxToWorldDxDz(po.dir, dx);
+        newX = po.x + worldDx;
+        newZ = po.z + worldDz;
+
+        if (!isPersistentObjectPositionInBound(newX, newY, newZ) ||
+            !isWallAt(room, newX, newY, newZ, po.dir))
+        {
+            let wrapped = tryCornerWrap(room, po, dx, newY);
+            if (!wrapped)
+                wrapped = tryCornerWrap(room, po, dx, newY, true);
+            if (!wrapped)
+                return null;
+            newX = wrapped.x;
+            newZ = wrapped.z;
+            newDir = wrapped.dir;
+        }
+    }
+
+    if (!isPersistentObjectPositionInBound(newX, newY, newZ))
+        return null;
+
+    return { x: newX, y: newY, z: newZ, dir: newDir };
+}
+
+//-------------------------------------------------------------------------------------
+// CRUD Operations
+//-------------------------------------------------------------------------------------
 
 const PersistentObjectUpdateUtil =
 {
-    //-------------------------------------------------------------------------------------
-    // CRUD Operations
-    //-------------------------------------------------------------------------------------
-
     canAddPersistentObject(room: Room, objectTypeIndex: number,
-        direction: Dir4, x: number, y: number, z: number): boolean
+        dir: Dir4, x: number, y: number, z: number): boolean
     {
-        // (Potential future plan): Might also need to check collision with existing persistentObjects.
-        return isPersistentObjectPositionInBound(x, y, z);
+        // In bound?
+        if (!isPersistentObjectPositionInBound(x, y, z))
+            return false;
+
+        // If the persistentObject has a collider, check collision.
+        const colliderInfo = PhysicsCollisionUtil.getColliderInfo(objectTypeIndex, DirUtil.dir4ToVec3(dir), {x, y, z});
+        if (colliderInfo)
+        {
+            const collidingObjectById = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, colliderInfo);
+            if (Object.keys(collidingObjectById).length > 0)
+                return false;
+        }
+        return true;
     },
 
-    addPersistentObject(room: Room, objectTypeIndex: number,
-        direction: Dir4, x: number, y: number, z: number,
-        metadata: ObjectMetadata = {}, objectId?: string): PersistentObject | null
+    addPersistentObject(room: Room, objectId: string, objectTypeIndex: number,
+        dir: Dir4, x: number, y: number, z: number,
+        metadata: ObjectMetadata = {}): PersistentObject | null
     {
-        if (!PersistentObjectUpdateUtil.canAddPersistentObject(room, objectTypeIndex, direction, x, y, z))
+        if (!PersistentObjectUpdateUtil.canAddPersistentObject(room, objectTypeIndex, dir, x, y, z))
         {
             console.error(`PersistentObjectUpdateUtil.addPersistentObject :: Failed (x=${x}, y=${y}, z=${z})`);
             return null;
         }
 
-        ++room.persistentObjectGroup.lastPersistentObjectId;
-        if (!objectId)
-            objectId = `p${room.persistentObjectGroup.lastPersistentObjectId}`;
-
-        const po = new PersistentObject(objectId, objectTypeIndex, direction, x, y, z, metadata);
+        const po = new PersistentObject(objectId, objectTypeIndex, dir, x, y, z, metadata);
         room.persistentObjectGroup.persistentObjectById[objectId] = po;
+
+        // If the persistentObject has a collider, add its corresponding physicsObject as well.
+        const colliderInfo = PhysicsCollisionUtil.getColliderInfo(objectTypeIndex, DirUtil.dir4ToVec3(dir), {x, y, z});
+        if (colliderInfo)
+        {
+            PhysicsManager.addObject(room.id, objectId, y, colliderInfo);
+        }
         return po;
     },
 
@@ -55,6 +111,12 @@ const PersistentObjectUpdateUtil =
         }
         const removed = room.persistentObjectGroup.persistentObjectById[objectId];
         delete room.persistentObjectGroup.persistentObjectById[objectId];
+
+        // If the persistentObject has a collider, remove its corresponding physicsObject as well.
+        if (PhysicsManager.hasObject(room.id, objectId))
+        {
+            PhysicsManager.removeObject(room.id, objectId);
+        }
         return removed;
     },
 
@@ -65,33 +127,22 @@ const PersistentObjectUpdateUtil =
         if (!po)
             return false;
 
-        const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
-        let newX = po.x + dx;
-        let newY = po.y + dy;
-        let newZ = po.z + dz;
-
-        if (config.isWallAttached)
-        {
-            const {worldDx, worldDz} = DirUtil.localDxToWorldDxDz(po.dir, dx);
-            newX = po.x + worldDx;
-            newZ = po.z + worldDz;
-
-            if (!isPersistentObjectPositionInBound(newX, newY, newZ) ||
-                !isWallAt(room, newX, newY, newZ, po.dir))
-            {
-                let wrapped = tryCornerWrap(room, po, dx, newY);
-                if (!wrapped)
-                    wrapped = tryCornerWrap(room, po, dx, newY, true);
-                if (!wrapped)
-                    return false;
-                newX = wrapped.x;
-                newZ = wrapped.z;
-            }
-        }
-
-        if (!isPersistentObjectPositionInBound(newX, newY, newZ))
+        const result = computeMovedPosition(room, po, dx, dy, dz);
+        if (!result)
             return false;
 
+        // If the persistentObject has a collider, check collision.
+        const colliderInfo = PhysicsCollisionUtil.getColliderInfo(po.objectTypeIndex,
+            DirUtil.dir4ToVec3(result.dir), {x: result.x, y: result.y, z: result.z});
+        if (colliderInfo)
+        {
+            const collidingObjectById = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, colliderInfo);
+            for (const collidingObject of Object.values(collidingObjectById))
+            {
+                if (collidingObject.objectId != objectId)
+                    return false;
+            }
+        }
         return true;
     },
 
@@ -105,41 +156,20 @@ const PersistentObjectUpdateUtil =
         }
 
         const po = room.persistentObjectGroup.persistentObjectById[objectId];
+        const result = computeMovedPosition(room, po, dx, dy, dz)!;
 
-        const config = ObjectTypeConfigMap.getConfigByIndex(po.objectTypeIndex);
-        let newX = po.x + dx;
-        let newY = po.y + dy;
-        let newZ = po.z + dz;
-        let newDirection = po.dir;
+        po.x = result.x;
+        po.y = result.y;
+        po.z = result.z;
+        po.dir = result.dir;
 
-        if (config.isWallAttached)
-        {
-            const {worldDx, worldDz} = DirUtil.localDxToWorldDxDz(po.dir, dx);
-            newX = po.x + worldDx;
-            newZ = po.z + worldDz;
-            newDirection = po.dir;
+        // TODO: Notify the client side of this position/direction change by means of a sharedObservable.
 
-            if (!isPersistentObjectPositionInBound(newX, newY, newZ) ||
-                !isWallAt(room, newX, newY, newZ, po.dir))
-            {
-                let wrapped = tryCornerWrap(room, po, dx, newY);
-                if (!wrapped)
-                    wrapped = tryCornerWrap(room, po, dx, newY, true);
-                if (!wrapped)
-                    return null;
-                newX = wrapped.x;
-                newZ = wrapped.z;
-                newDirection = wrapped.direction;
-            }
-        }
+        // TODO: Remove ------------------------------------------------
+        //const hash = spatialHashByRoomId[room.id];
+        //if (hash)
+        //    SpatialHash3DUtil.updateEntry(hash, po.objectId, computeAABB3(po.objectTypeIndex, po.dir, po.x, po.y, po.z));
 
-        if (!isPersistentObjectPositionInBound(newX, newY, newZ))
-            return null;
-
-        po.x = newX;
-        po.y = newY;
-        po.z = newZ;
-        po.dir = newDirection;
         return po;
     },
 
@@ -200,10 +230,14 @@ const PersistentObjectUpdateUtil =
     },
 };
 
-function isWallAt(room: Room, x: number, y: number, z: number, direction: Dir4): boolean
+//-------------------------------------------------------------------------------------
+// Wall Detection
+//-------------------------------------------------------------------------------------
+
+function isWallAt(room: Room, x: number, y: number, z: number, dir: Dir4): boolean
 {
     const collisionLayer = Math.min(Math.max(Math.floor(y * 2), COLLISION_LAYER_MIN), COLLISION_LAYER_MAX);
-    const {facingAxis, orientation} = DirUtil.dir4ToProperties(direction);
+    const {facingAxis, orientation} = DirUtil.dir4ToProperties(dir);
 
     if (facingAxis == "z")
     {
@@ -257,66 +291,43 @@ function isWallAt(room: Room, x: number, y: number, z: number, direction: Dir4):
     }
 }
 
+//-------------------------------------------------------------------------------------
+// Corner Wrapping (Simplified via direction arithmetic + axis decomposition)
+//-------------------------------------------------------------------------------------
+
 function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: number,
-    concave: boolean = false): {x: number, z: number, direction: Dir4} | null
+    concave: boolean = false): {x: number, z: number, dir: Dir4} | null
 {
     const movingRight = dx > 0;
 
-    let wrapDirection: Dir4;
-    switch (po.dir)
-    {
-        case "+z": wrapDirection = movingRight ? "+x" : "-x"; break;
-        case "-z": wrapDirection = movingRight ? "-x" : "+x"; break;
-        case "+x": wrapDirection = movingRight ? "-z" : "+z"; break;
-        case "-x": wrapDirection = movingRight ? "+z" : "-z"; break;
-    }
-    if (concave)
-    {
-        switch (wrapDirection)
-        {
-            case "+x": wrapDirection = "-x"; break;
-            case "-x": wrapDirection = "+x"; break;
-            case "+z": wrapDirection = "-z"; break;
-            case "-z": wrapDirection = "+z"; break;
-        }
-    }
+    // Direction: CW rotation when moving right at convex corner, CCW when left.
+    // Concave corners invert the rotation.
+    const clockwise = movingRight !== concave;
+    const wrapDir = clockwise ? DirUtil.rotateCW(po.dir) : DirUtil.rotateCCW(po.dir);
+
+    // Position: compute from axis decomposition instead of per-direction switch.
+    const {facingAxis, orientation} = DirUtil.dir4ToProperties(po.dir);
+    const tangent = DirUtil.localDxToWorldDxDz(po.dir, 1);
+    const tangentPositive = (tangent.worldDx > 0 || tangent.worldDz > 0);
+    const wallOffset = (orientation === "+") ? -1 : 0;
+    const cornerOffset = (movingRight === tangentPositive) ? 1 : 0;
+
+    const normalCoord = facingAxis === "z" ? po.z : po.x;
+    const tangentCoord = facingAxis === "z" ? po.x : po.z;
+
+    const wallIndex = normalCoord + wallOffset;
+    const slidingCell = Math.floor(tangentCoord);
 
     let newX: number, newZ: number;
-
-    switch (po.dir)
+    if (facingAxis === "z")
     {
-        case "+z":
-        {
-            const row = po.z - 1;
-            const col = Math.floor(po.x);
-            newX = movingRight ? col + 1 : col;
-            newZ = row + 0.5;
-            break;
-        }
-        case "-z":
-        {
-            const row = po.z;
-            const col = Math.floor(po.x);
-            newX = movingRight ? col : col + 1;
-            newZ = row + 0.5;
-            break;
-        }
-        case "+x":
-        {
-            const col = po.x - 1;
-            const row = Math.floor(po.z);
-            newX = col + 0.5;
-            newZ = movingRight ? row : row + 1;
-            break;
-        }
-        case "-x":
-        {
-            const col = po.x;
-            const row = Math.floor(po.z);
-            newX = col + 0.5;
-            newZ = movingRight ? row + 1 : row;
-            break;
-        }
+        newX = slidingCell + cornerOffset;
+        newZ = wallIndex + 0.5;
+    }
+    else
+    {
+        newX = wallIndex + 0.5;
+        newZ = slidingCell + cornerOffset;
     }
 
     if (concave)
@@ -326,41 +337,31 @@ function tryCornerWrap(room: Room, po: PersistentObject, dx: number, newY: numbe
         newZ += v.z;
     }
 
-    if (!isWallAt(room, newX, newY, newZ, wrapDirection))
+    if (!isWallAt(room, newX, newY, newZ, wrapDir))
         return null;
 
-    return {x: newX, z: newZ, direction: wrapDirection};
+    return {x: newX, z: newZ, dir: wrapDir};
 }
+
+//-------------------------------------------------------------------------------------
+// Block Support Check (Simplified via axis decomposition)
+//-------------------------------------------------------------------------------------
 
 function doesBlockSupportPersistentObject(
     po: PersistentObject, blockRow: number, blockCol: number): boolean
 {
-    switch (po.dir)
+    const {facingAxis, orientation} = DirUtil.dir4ToProperties(po.dir);
+    const wallOffset = (orientation === "+") ? -1 : 0;
+
+    if (facingAxis === "z")
     {
-        case "+z":
-        {
-            const wallRow = po.z - 1;
-            if (blockRow !== wallRow) return false;
-            return isBlockInSlidingRange(po.x, blockCol);
-        }
-        case "-z":
-        {
-            const wallRow = po.z;
-            if (blockRow !== wallRow) return false;
-            return isBlockInSlidingRange(po.x, blockCol);
-        }
-        case "+x":
-        {
-            const wallCol = po.x - 1;
-            if (blockCol !== wallCol) return false;
-            return isBlockInSlidingRange(po.z, blockRow);
-        }
-        case "-x":
-        {
-            const wallCol = po.x;
-            if (blockCol !== wallCol) return false;
-            return isBlockInSlidingRange(po.z, blockRow);
-        }
+        if (blockRow !== po.z + wallOffset) return false;
+        return isBlockInSlidingRange(po.x, blockCol);
+    }
+    else
+    {
+        if (blockCol !== po.x + wallOffset) return false;
+        return isBlockInSlidingRange(po.z, blockRow);
     }
 }
 

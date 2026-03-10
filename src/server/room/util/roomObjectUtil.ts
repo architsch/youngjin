@@ -1,9 +1,6 @@
-import AABB2 from "../../../shared/math/types/aabb2";
-import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
 import ObjectRuntimeMemory from "../../../shared/object/types/objectRuntimeMemory";
 import PhysicsManager from "../../../shared/physics/physicsManager";
-import { getColliderConfig } from "../../../shared/physics/util/physicsObjectUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 
@@ -39,23 +36,11 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
     }
     roomRuntimeMemory.objectRuntimeMemories[objectId] = objectRuntimeMemory;
 
-    const config = ObjectTypeConfigMap.getConfigByIndex(objectRuntimeMemory.objectSpawnParams.objectTypeIndex);
-    
-    const colliderConfig = getColliderConfig(config);
-    if (colliderConfig)
+    const colliderInfo = objectRuntimeMemory.objectSpawnParams.getColliderInfo();
+    if (colliderInfo)
     {
-        const halfSizeX = 0.5 * colliderConfig.hitboxSize.sizeX;
-        const halfSizeY = 0.5 * colliderConfig.hitboxSize.sizeZ;
-    
-        const hitbox: AABB2 = {
-            x: objectRuntimeMemory.objectSpawnParams.transform.x,
-            y: objectRuntimeMemory.objectSpawnParams.transform.z,
-            halfSizeX,
-            halfSizeY,
-        };
         PhysicsManager.addObject(roomID, objectId,
-            objectRuntimeMemory.objectSpawnParams.transform.y, hitbox,
-            colliderConfig.collisionLayerMaskAtGroundLevel);
+            objectRuntimeMemory.objectSpawnParams.transform.y, colliderInfo);
     }
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
@@ -89,9 +74,8 @@ export function removeObject(socketUserContext: SocketUserContext, objectId: str
     }
     delete roomRuntimeMemory.objectRuntimeMemories[objectId];
 
-    const config = ObjectTypeConfigMap.getConfigByIndex(objectRuntimeMemory.objectSpawnParams.objectTypeIndex);
-    const colliderConfig = getColliderConfig(config);
-    if (colliderConfig)
+    const colliderInfo = objectRuntimeMemory.objectSpawnParams.getColliderInfo();
+    if (colliderInfo)
         PhysicsManager.removeObject(roomID, objectId);
     
     const despawnParams = new ObjectDespawnParams(roomID, objectId);

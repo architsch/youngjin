@@ -7,6 +7,8 @@ import { ObjectMetadata } from "./objectMetadata";
 import EncodableMap from "../../networking/types/encodableMap";
 import { ObjectMetadataKey } from "./objectMetadataKey";
 import { setObjectMetadataObservable } from "../../system/sharedObservables";
+import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
+import { ColliderInfo } from "../../physics/types/colliderInfo";
 
 export default class ObjectSpawnParams extends EncodableData
 {
@@ -29,6 +31,13 @@ export default class ObjectSpawnParams extends EncodableData
         this.objectId = objectId;
         this.transform = transform;
         this.metadata = metadata;
+    }
+
+    getColliderInfo(): ColliderInfo | undefined
+    {
+        return PhysicsCollisionUtil.getColliderInfo(this.objectTypeIndex,
+            {x: this.transform.dirX, y: this.transform.dirY, z: this.transform.dirZ},
+            {x: this.transform.x, y: this.transform.y, z: this.transform.z});
     }
 
     getMetadata(key: ObjectMetadataKey): string

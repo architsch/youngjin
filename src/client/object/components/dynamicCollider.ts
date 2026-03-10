@@ -2,43 +2,17 @@ import * as THREE from "three";
 import Vec2 from "../../../shared/math/types/vec2";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import App from "../../app";
-import GameObjectComponent from "./gameObjectComponent";
-import AABB2 from "../../../shared/math/types/aabb2";
-import PhysicsObject from "../../../shared/physics/types/physicsObject";
-import { GROUND_LEVEL_OBJECT_Y, MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import Collider from "./collider";
 
-const vec3Temp = new THREE.Vector3();
-
-export default class DynamicCollider extends GameObjectComponent
+export default class DynamicCollider extends Collider
 {
-    private physicsObject: PhysicsObject | undefined;
     private nextPosition = new THREE.Vector3();
 
     async onSpawn(): Promise<void>
     {
-        const hitboxSize = this.componentConfig.hitboxSize;
-
-        this.gameObject.obj.getWorldDirection(vec3Temp);
-        const moreAlignedToXAxis = Math.abs(vec3Temp.x) > Math.abs(vec3Temp.z);
-        const reorientedSizeX = moreAlignedToXAxis ? hitboxSize.sizeZ : hitboxSize.sizeX;
-        const reorientedSizeZ = moreAlignedToXAxis ? hitboxSize.sizeX : hitboxSize.sizeZ;
-        const hitbox: AABB2 = {
-            x: this.gameObject.position.x,
-            y: this.gameObject.position.z,
-            halfSizeX: 0.5 * reorientedSizeX,
-            halfSizeY: 0.5 * reorientedSizeZ,
-        };
-
-        this.physicsObject = PhysicsManager.addObject(App.getCurrentRoom()!.id,
-            this.gameObject.params.objectId, this.gameObject.position.y, hitbox,
-            this.componentConfig.collisionLayerMaskAtGroundLevel);
-        
+        await super.onSpawn();
         this.nextPosition.copy(this.gameObject.position);
-    }
-
-    async onDespawn(): Promise<void>
-    {
-        PhysicsManager.removeObject(App.getCurrentRoom()!.id, this.gameObject.params.objectId);
     }
 
     update(deltaTime: number): void
@@ -57,7 +31,8 @@ export default class DynamicCollider extends GameObjectComponent
 
         // y-coordinate interpolation (based on the object's updated level)
         const p = this.gameObject.position;
-        const desiredY = GROUND_LEVEL_OBJECT_Y + 0.5 * this.physicsObject!.level;
+        const colliderInfo = this.physicsObject!.colliderInfo;
+        const desiredY = colliderInfo.colliderConfig.groundLevelY + 0.5 * colliderInfo.level;
         const desiredChangeInY = desiredY - p.y;
         if (Math.abs(desiredChangeInY) > NEAR_EPSILON)
         {
@@ -73,14 +48,13 @@ export default class DynamicCollider extends GameObjectComponent
 
     trySetPosition(pos: THREE.Vector3): void
     {
+        super.trySetPosition?.(pos);
         this.nextPosition.copy(pos);
     }
 
     forceSetPosition(pos: THREE.Vector3): void
     {
-        const targetPos: Vec2 = { x: pos.x, y: pos.z };
-        PhysicsManager.forceMoveObject(App.getCurrentRoom()!.id, this.gameObject.params.objectId, targetPos);
-        this.gameObject.position.copy(pos);
+        super.forceSetPosition?.(pos);
         this.nextPosition.copy(this.gameObject.position);
     }
 }

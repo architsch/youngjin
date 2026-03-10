@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import FirstPersonController from "../../firstPersonController";
-import PhysicsManager from "../../../../../shared/physics/physicsManager";
 import App from "../../../../app";
 import ObjectManager from "../../../objectManager";
 import PlayerProximityDetector from "../../playerProximityDetector";
@@ -8,6 +7,7 @@ import InstancedMeshGraphics from "../../instancedMeshGraphics";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import GameObject from "../../../types/gameObject";
+import PhysicsObjectUtil from "../../../../../shared/physics/util/physicsObjectUtil";
 
 const vec3Temp = new THREE.Vector3();
 const vec3Temp2 = new THREE.Vector3();
@@ -24,12 +24,11 @@ export default class FirstPersonProximityDetection
 
         if (currentRoom)
         {
-            const physicsObjects = PhysicsManager.getObjectsInDist(currentRoom.id,
+            const physicsObjects = PhysicsObjectUtil.getObjectsIn2DDist(currentRoom.id,
                 controller.gameObject.position.x, controller.gameObject.position.z, maxProximityDetectionDist);
             
-            for (const physicsObject of physicsObjects)
+            for (const objectId in physicsObjects)
             {
-                const objectId = physicsObject.objectId;
                 const obj = ObjectManager.getObjectById(objectId);
                 if (obj != undefined)
                 {

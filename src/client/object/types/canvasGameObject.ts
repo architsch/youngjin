@@ -67,6 +67,11 @@ export default class CanvasGameObject extends GameObject
         await super.onDespawn();
         this.instancedMeshGraphics.returnInstanceToPool(this.instanceId);
 
+        // Mark as despawned (in order to inform a potentially pending
+        // "loadImageImpl" task that the canvas's mesh instance is now obsolete
+        // so that the image shouldn't be loaded.)
+        this.instanceId = -1;
+
         CanvasGameObject.spawnedCanvasGameObjects.delete(this.params.objectId);
     }
 
@@ -98,6 +103,8 @@ export default class CanvasGameObject extends GameObject
 
     private async loadImageImpl()
     {
+        if (this.instanceId === -1) // Already despawned
+            return;
         if (!this.params.hasMetadata(ObjectMetadataKeyEnumMap.ImageURL))
             return;
         const imageURL = this.params.getMetadata(ObjectMetadataKeyEnumMap.ImageURL);

@@ -69,6 +69,14 @@ const DirUtil =
             default: throw new Error(`Unknown number for Dir4 :: ${n}`);
         }
     },
+    rotateCW: (dir: Dir4): Dir4 =>
+    {
+        return DirUtil.numberToDir4((DirUtil.dir4ToNumber(dir) + 1) % 4);
+    },
+    rotateCCW: (dir: Dir4): Dir4 =>
+    {
+        return DirUtil.numberToDir4((DirUtil.dir4ToNumber(dir) + 3) % 4);
+    },
 }
 
 export default DirUtil;

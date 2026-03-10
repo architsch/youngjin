@@ -81,7 +81,8 @@ async function tryAddPersistentObjectFromQuad(selection: VoxelQuadSelection,
     VoxelQuadSelection.unselect();
 
     // Add the persistent object locally (generates objectId and increments counter)
-    const po = PersistentObjectUpdateUtil.addPersistentObject(room, objectTypeIndex, dir, x, y, z, metadata);
+    const objectId = `p${++room.persistentObjectGroup.lastPersistentObjectId}`;
+    const po = PersistentObjectUpdateUtil.addPersistentObject(room, objectId, objectTypeIndex, dir, x, y, z, metadata);
     if (!po)
         return;
 

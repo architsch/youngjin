@@ -26,4 +26,5 @@ export default abstract class GameObjectComponent
     update?(deltaTime: number): void;
     trySetPosition?(position: THREE.Vector3): void;
     forceSetPosition?(position: THREE.Vector3): void;
+    forceSetDirection?(direction: THREE.Vector3): void;
 }

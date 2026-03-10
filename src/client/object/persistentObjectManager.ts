@@ -14,7 +14,6 @@ import { PERSISTENT_OBJ_TASK_TYPE_ADD, PERSISTENT_OBJ_TASK_TYPE_MOVE, PERSISTENT
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import { persistentObjectSelectionObservable } from "../system/clientObservables";
-import CanvasGameObject from "./types/canvasGameObject";
 import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
 import DirUtil from "../../shared/math/util/dirUtil";
 
@@ -40,9 +39,8 @@ const PersistentObjectManager =
                 case PERSISTENT_OBJ_TASK_TYPE_ADD:
                 {
                     const addParams = task as AddPersistentObjectParams;
-                    const po = PersistentObjectUpdateUtil.addPersistentObject(room, addParams.objectTypeIndex,
-                        addParams.dir, addParams.x, addParams.y, addParams.z, addParams.metadata,
-                        addParams.objectId);
+                    const po = PersistentObjectUpdateUtil.addPersistentObject(room, addParams.objectId, addParams.objectTypeIndex,
+                        addParams.dir, addParams.x, addParams.y, addParams.z, addParams.metadata);
                     if (po)
                     {
                         const dirVec = DirUtil.dir4ToVec3(addParams.dir);

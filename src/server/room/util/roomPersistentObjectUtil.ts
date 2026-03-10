@@ -71,7 +71,7 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
         return;
     }
 
-    const po = PersistentObjectUpdateUtil.addPersistentObject(room, params.objectTypeIndex,
+    const po = PersistentObjectUpdateUtil.addPersistentObject(room, params.objectId, params.objectTypeIndex,
         params.dir, params.x, params.y, params.z, params.metadata);
     if (!po)
     {
@@ -79,6 +79,10 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
         unicastToSender(socketUserContext, room, [new RemovePersistentObjectParams(params.objectId)]);
         return;
     }
+    
+    // Now that the persistentObject is successfully added, increment the ID counter by 1.
+    ++room.persistentObjectGroup.lastPersistentObjectId;
+
     broadcast(socketUserContext, room, params);
 }
 

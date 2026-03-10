@@ -6,5 +6,5 @@ export default interface PhysicsVoxel
 {
     voxel: Voxel;
     hitbox: AABB2;
-    intersectingObjects: PhysicsObject[];
+    intersectingObjects: PhysicsObject[]; // The purpose of this is to let us quickly find out objects that fall within a specific region in space, without having to scan the entire room.
 }

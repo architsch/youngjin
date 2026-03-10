@@ -13,7 +13,6 @@ import PersistentObjectUpdateUtil from "../../../../shared/object/util/persisten
 import { notificationMessageObservable, persistentObjectSelectionObservable } from "../../../system/clientObservables";
 import { MAX_IMAGE_URL_LENGTH } from "../../../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import CanvasGameObject from "../../../object/types/canvasGameObject";
 import DirUtil from "../../../../shared/math/util/dirUtil";
 
 export default function CanvasSelectionOptions(props: {selection: PersistentObjectSelection})
@@ -100,7 +99,7 @@ function tryMoveCanvas(selection: PersistentObjectSelection, dx: number, dy: num
 
     selection.gameObject.forceSetPosition(new THREE.Vector3(po.x, po.y, po.z));
     const dirVec = DirUtil.dir4ToVec3(po.dir);
-    selection.gameObject.obj.lookAt(new THREE.Vector3(
+    selection.gameObject.forceSetDirection(new THREE.Vector3(
         po.x + dirVec.x, po.y + dirVec.y, po.z + dirVec.z
     ));
     persistentObjectSelectionObservable.notify();

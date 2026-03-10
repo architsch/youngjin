@@ -8,7 +8,6 @@ export default interface ObjectTypeConfig
         spawnedByAny?: {
             dynamicCollider?: ColliderConfig,
             staticCollider?: ColliderConfig,
-            ghostCollider?: ColliderConfig,
             instancedMeshGraphics?: {
                 createInstanceIdPool: boolean,
             },
@@ -44,6 +43,7 @@ export default interface ObjectTypeConfig
 export type SpawnType = "spawnedByMe" | "spawnedByOther" | "spawnedByAny";
 
 export type ColliderConfig = {
-    collisionLayerMaskAtGroundLevel: number,
+    collisionLayerMaskAtGroundLevel: number, // 8-bit binary mask
+    groundLevelY: number, // y-coordinate of the object at which the ground level is located.
     hitboxSize: HitboxSize,
 };
