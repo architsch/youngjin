@@ -1,17 +1,15 @@
 import Vec2 from "../math/types/vec2";
 import Vector2DUtil from "../math/util/vector2DUtil";
 import PhysicsObject from "./types/physicsObject";
-import PhysicsVoxel from "./types/physicsVoxel";
 import PhysicsPosUpdateResult from "./types/physicsPosUpdateResult";
 import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
 import PhysicsRoom from "./types/physicsRoom";
 import PhysicsHitState from "./types/physicsHitState";
-import PhysicsObjectUtil from "./util/physicsObjectUtil";
 import PhysicsCollisionUtil from "./util/physicsCollisionUtil";
 import PhysicsVoxelUtil from "./util/physicsVoxelUtil";
 import VoxelQueryUtil from "../voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_NULL, MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../system/sharedConstants";
-import { ColliderInfo } from "./types/colliderInfo";
+import { ColliderState } from "./types/colliderState";
 import Vec3 from "../math/types/vec3";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
@@ -28,36 +26,14 @@ const PhysicsManager =
     {
         if (physicsRooms[roomRuntimeMemory.room.id] != undefined)
             throw new Error(`Physics-room already exists (roomID = ${roomRuntimeMemory.room.id})`);
-
-        const voxelGrid = roomRuntimeMemory.room.voxelGrid;
-
-        physicsRooms[roomRuntimeMemory.room.id] = {
-            room: roomRuntimeMemory.room,
-            voxels: voxelGrid.voxels.map(voxel => {
-                const row = voxel.row;
-                const col = voxel.col;
-                const intersectingObjects = new Array<PhysicsObject>(4);
-                intersectingObjects.length = 0;
-
-                const physicsVoxel: PhysicsVoxel = {
-                    voxel,
-                    hitbox: {x: col+0.5, y: row+0.5, halfSizeX: 0.5, halfSizeY: 0.5},
-                    intersectingObjects,
-                };
-                return physicsVoxel;
-            }),
-            objectById: {},
-        };
+        physicsRooms[roomRuntimeMemory.room.id] = new PhysicsRoom(roomRuntimeMemory.room);
 
         const persistentObjects = Object.values(roomRuntimeMemory.room.persistentObjectGroup.persistentObjectById);
         for (const po of persistentObjects)
         {
-            const colliderInfo = po.getColliderInfo();
-            if (colliderInfo)
-            {
-                PhysicsManager.addObject(roomRuntimeMemory.room.id, po.objectId,
-                    po.y, colliderInfo);
-            }
+            const colliderState = po.getObjectColliderState();
+            if (colliderState)
+                PhysicsManager.addObject(roomRuntimeMemory.room.id, po.objectId, po.objectTypeIndex, colliderState);
         }
     },
     unload: (roomID: string) =>
@@ -78,7 +54,7 @@ const PhysicsManager =
 
         return physicsRoom.objectById[objectId] != undefined;
     },
-    addObject: (roomID: string, objectId: string, posY: number, colliderInfo: ColliderInfo): PhysicsObject =>
+    addObject: (roomID: string, objectId: string, objectTypeIndex: number, colliderState: ColliderState): PhysicsObject =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRoom == undefined)
@@ -89,7 +65,7 @@ const PhysicsManager =
             console.warn(`PhysicsObjct is already added (roomID = ${roomID}, objectId = ${objectId})`);
             return physicsRoom.objectById[objectId];
         }
-        const newObject = new PhysicsObject(physicsRoom, objectId, colliderInfo);
+        const newObject = new PhysicsObject(physicsRoom, objectId, objectTypeIndex, colliderState);
         physicsRoom.objectById[objectId] = newObject;
         return newObject;
     },
@@ -116,7 +92,7 @@ const PhysicsManager =
         if (object == undefined)
             throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
 
-        let startPos: Vec2 = { x: object.colliderInfo.hitbox.x, y: object.colliderInfo.hitbox.y };
+        let startPos: Vec2 = { x: object.colliderState.hitbox.x, y: object.colliderState.hitbox.y };
 
         // Any attempt to move more for than the distance of 3 will force-sync the object back to its original location.
         const desyncDistSqr = Vector2DUtil.distSqr(targetPos, startPos);
@@ -130,10 +106,10 @@ const PhysicsManager =
         const dir = Vector2DUtil.normalize(Vector2DUtil.subtract(targetPos, startPos));
         startPos = Vector2DUtil.subtract(startPos, Vector2DUtil.scale(dir, 0.01));
 
-        const minIntersectableX = Math.min(startPos.x, targetPos.x) - object.colliderInfo.hitbox.halfSizeX;
-        const maxIntersectableX = Math.max(startPos.x, targetPos.x) + object.colliderInfo.hitbox.halfSizeX;
-        const minIntersectableY = Math.min(startPos.y, targetPos.y) - object.colliderInfo.hitbox.halfSizeY;
-        const maxIntersectableY = Math.max(startPos.y, targetPos.y) + object.colliderInfo.hitbox.halfSizeY;
+        const minIntersectableX = Math.min(startPos.x, targetPos.x) - object.colliderState.hitbox.halfSizeX;
+        const maxIntersectableX = Math.max(startPos.x, targetPos.x) + object.colliderState.hitbox.halfSizeX;
+        const minIntersectableY = Math.min(startPos.y, targetPos.y) - object.colliderState.hitbox.halfSizeY;
+        const maxIntersectableY = Math.max(startPos.y, targetPos.y) + object.colliderState.hitbox.halfSizeY;
         const minCol = Math.floor(minIntersectableX);
         const maxCol = Math.floor(maxIntersectableX);
         const minRow = Math.floor(minIntersectableY);
@@ -153,7 +129,7 @@ const PhysicsManager =
         
         const currTime = performance.now() * 0.001;
         const currVoxel = physicsRoom.voxels[Math.floor(startPos.y) * NUM_VOXEL_COLS + Math.floor(startPos.x)].voxel;
-        let objectMask = object.colliderInfo.collisionLayerMask;
+        let objectMask = object.colliderState.collisionLayerMask;
         const objectMaskAfterShift = objectMask << 1;
         let maxLayerAmongOverlappingVoxels = -9999;
 
@@ -175,13 +151,13 @@ const PhysicsManager =
 
                     if (canJumpOverToTargetVoxel)
                     {
-                        object.colliderInfo.level++;
-                        objectMask = object.colliderInfo.collisionLayerMask;
+                        object.colliderState.level++;
+                        objectMask = object.colliderState.collisionLayerMask;
                         object.lastLevelChangeTime = currTime;
                     }
                     else
                     {
-                        PhysicsCollisionUtil.pushBoxAgainstBox(object.colliderInfo.hitbox, targetPos, physicsVoxel.hitbox, hitStateTemp);
+                        PhysicsCollisionUtil.pushBoxAgainstBox(object.colliderState.hitbox, targetPos, physicsVoxel.hitbox, hitStateTemp);
                     }
                 }
 
@@ -192,12 +168,12 @@ const PhysicsManager =
         }
 
         // Object should fall down if it is suspended in thin air
-        if (object.colliderInfo.level > 0 &&
+        if (object.colliderState.level > 0 &&
             currTime >= object.lastLevelChangeTime + MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL &&
             object.getLowestCollisionLayer() > maxLayerAmongOverlappingVoxels+1)
         {
-            object.colliderInfo.level--;
-            objectMask = object.colliderInfo.collisionLayerMask;
+            object.colliderState.level--;
+            objectMask = object.colliderState.collisionLayerMask;
             object.lastLevelChangeTime = currTime;
         }
         
@@ -214,11 +190,11 @@ const PhysicsManager =
                         continue;
                     checkedObjectIds[otherObject.objectId] = true;
 
-                    const otherObjectMask = otherObject.colliderInfo.collisionLayerMask;
-                    if ((object.colliderInfo.hitbox.halfSizeX > 0 || object.colliderInfo.hitbox.halfSizeY > 0) &&
+                    const otherObjectMask = otherObject.colliderState.collisionLayerMask;
+                    if ((object.colliderState.hitbox.halfSizeX > 0 || object.colliderState.hitbox.halfSizeY > 0) &&
                         (objectMask & otherObjectMask) != 0)
                     {
-                        hitStateTemp = PhysicsCollisionUtil.pushBoxAgainstBox(object.colliderInfo.hitbox, targetPos, otherObject.colliderInfo.hitbox, hitStateTemp);
+                        hitStateTemp = PhysicsCollisionUtil.pushBoxAgainstBox(object.colliderState.hitbox, targetPos, otherObject.colliderState.hitbox, hitStateTemp);
                     }
                 }
             }
@@ -245,8 +221,8 @@ const PhysicsManager =
             const voxelsHitOnSlide = PhysicsVoxelUtil.getVoxelsInBox(physicsRoom, {
                 x: slidedHitPos.x,
                 y: slidedHitPos.y,
-                halfSizeX: object.colliderInfo.hitbox.halfSizeX,
-                halfSizeY: object.colliderInfo.hitbox.halfSizeY,
+                halfSizeX: object.colliderState.hitbox.halfSizeX,
+                halfSizeY: object.colliderState.hitbox.halfSizeY,
             });
             let slideBlocked = false;
             for (const physicsVoxel of voxelsHitOnSlide)
@@ -266,15 +242,15 @@ const PhysicsManager =
             }
         }
         
-        object.colliderInfo.hitbox.x = resolvedPos.x;
-        object.colliderInfo.hitbox.y = resolvedPos.y;
+        object.colliderState.hitbox.x = resolvedPos.x;
+        object.colliderState.hitbox.y = resolvedPos.y;
 
         object.addToIntersectingVoxels();
 
         return { resolvedPos, desyncDetected: false };
     },
-    updateCollider: (roomID: string, objectId: string, objectTypeIndex: number,
-        direction: Vec3, position: Vec3) =>
+    forceSetTransform: (roomID: string, objectId: string, objectTypeIndex: number,
+        position: Vec3, direction: Vec3) =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRooms[roomID] == undefined)
@@ -284,12 +260,12 @@ const PhysicsManager =
         if (object == undefined)
             throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
 
-        const colliderInfo = PhysicsCollisionUtil.getColliderInfo(objectTypeIndex, direction, position);
-        if (!colliderInfo)
-            throw new Error(`ColliderInfo couldn't be computed (objectId = ${objectId}, objectTypeIndex = ${objectTypeIndex})`);
+        const colliderState = PhysicsCollisionUtil.getObjectColliderState(objectTypeIndex, position, direction);
+        if (!colliderState)
+            throw new Error(`ColliderState couldn't be computed (objectId = ${objectId}, objectTypeIndex = ${objectTypeIndex})`);
         
         object.removeFromIntersectingVoxels();
-        object.colliderInfo = colliderInfo;
+        object.colliderState = colliderState;
         object.addToIntersectingVoxels();
     },
 }

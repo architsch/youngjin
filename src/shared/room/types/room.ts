@@ -3,8 +3,8 @@ import EncodableData from "../../networking/types/encodableData";
 import VoxelGrid from "../../voxel/types/voxelGrid";
 import PersistentObjectGroup from "../../object/types/persistentObjectGroup";
 import EncodableByteString from "../../networking/types/encodableByteString";
-import { RoomType, RoomTypeEnumMap } from "./roomType";
-import EncodableEnum from "../../networking/types/encodableEnum";
+import { RoomType } from "./roomType";
+import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
 
 export default class Room extends EncodableData
@@ -39,7 +39,7 @@ export default class Room extends EncodableData
     encode(bufferState: BufferState)
     {
         new EncodableByteString(this.id.length > 0 ? this.id : UNDEFINED_DOCUMENT_ID_CHAR).encode(bufferState);
-        new EncodableEnum(this.roomType, RoomTypeEnumMap).encode(bufferState);
+        new EncodableRawByteNumber(this.roomType).encode(bufferState);
         new EncodableByteString(this.ownerUserID).encode(bufferState);
         new EncodableByteString(this.texturePackPath).encode(bufferState);
         this.voxelGrid.encode(bufferState);
@@ -51,7 +51,7 @@ export default class Room extends EncodableData
         let id: string | undefined = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         if (id == UNDEFINED_DOCUMENT_ID_CHAR)
             id = undefined;
-        const roomType = (EncodableEnum.decodeWithParams(bufferState, RoomTypeEnumMap) as EncodableEnum).enumValue;
+        const roomType = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const ownerUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;

@@ -3,6 +3,10 @@ import Room from "../../room/types/room";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
+import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
+import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
+import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
+import { ObjectTagEnumMap } from "../../object/types/objectTag";
 
 const VoxelBlockUpdateUtil =
 {
@@ -27,7 +31,6 @@ const VoxelBlockUpdateUtil =
         return VoxelBlockUpdateUtil.canAddVoxelBlock(room, targetQuadIndex)
             && VoxelBlockUpdateUtil.canRemoveVoxelBlock(room, quadIndex);
     },
-
     moveVoxelBlock(room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
     {
@@ -73,7 +76,6 @@ const VoxelBlockUpdateUtil =
 
         return true;
     },
-
     addVoxelBlock(room: Room, quadIndex: number, quadTextureIndicesWithinLayer: number[]): boolean
     {
         if (!VoxelBlockUpdateUtil.canAddVoxelBlock(room, quadIndex))
@@ -106,9 +108,18 @@ const VoxelBlockUpdateUtil =
             return false;
         if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             return false;
+
+        // Check if removing the voxel block will cause any wall-attached object to lose its wall support.
+        const voxelBlockColliderState = PhysicsCollisionUtil.getVoxelBlockColliderState(row, col, collisionLayer);
+        const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
+        for (const collidingObject of Object.values(collidingObjects))
+        {
+            const config = ObjectTypeConfigMap.getConfigByIndex(collidingObject.objectTypeIndex);
+            if (config.tags.includes(ObjectTagEnumMap.AttachedToWall))
+                return false;
+        }
         return true;
     },
-
     removeVoxelBlock(room: Room, quadIndex: number): boolean
     {
         if (!VoxelBlockUpdateUtil.canRemoveVoxelBlock(room, quadIndex))

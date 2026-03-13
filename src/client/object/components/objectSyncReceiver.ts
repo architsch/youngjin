@@ -50,7 +50,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
 
         vec3Temp.lerpVectors(
             this.positionInterpRange[0], this.positionInterpRange[1], interpProgressNormalized);
-        this.gameObject.forceSetPosition(vec3Temp);
+        this.gameObject.forceSetTransform(vec3Temp, this.gameObject.direction);
 
         this.gameObject.quaternion.slerpQuaternions(
             this.quaternionInterpRange[0], this.quaternionInterpRange[1], interpProgressNormalized);
@@ -65,7 +65,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         }
         const p = params.resolvedPos;
         vec3Temp.set(p.x, this.gameObject.position.y, p.y);
-        this.gameObject.forceSetPosition(vec3Temp);
+        this.gameObject.forceSetTransform(vec3Temp, this.gameObject.direction);
         
         this.positionInterpRange[0].copy(vec3Temp);
         this.positionInterpRange[1].copy(vec3Temp);

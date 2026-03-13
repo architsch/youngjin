@@ -35,16 +35,7 @@ function canMoveVoxelBlock(selection: VoxelQuadSelection,
     const room = App.getCurrentRoom();
     if (!room)
         return false;
-
-    const quadIndex = selection.quadIndex;
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-    if (PersistentObjectUpdateUtil.wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
-        return false;
-
-    return VoxelBlockUpdateUtil.canMoveVoxelBlock(room, quadIndex, rowOffset, colOffset, collisionLayerOffset);
+    return VoxelBlockUpdateUtil.canMoveVoxelBlock(room, selection.quadIndex, rowOffset, colOffset, collisionLayerOffset);
 }
 
 function tryMoveVoxelBlock(selection: VoxelQuadSelection, rowOffset: number, colOffset: number, collisionLayerOffset: number)
@@ -153,16 +144,7 @@ function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
     const room = App.getCurrentRoom();
     if (!room)
         return false;
-
-    const quadIndex = selection.quadIndex;
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-    if (PersistentObjectUpdateUtil.wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
-        return false;
-
-    return VoxelBlockUpdateUtil.canRemoveVoxelBlock(room, quadIndex);
+    return VoxelBlockUpdateUtil.canRemoveVoxelBlock(room, selection.quadIndex);
 }
 
 function tryRemoveVoxelBlock(selection: VoxelQuadSelection)

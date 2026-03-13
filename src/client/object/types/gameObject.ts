@@ -114,55 +114,52 @@ export default abstract class GameObject
     }
 
     // This method works like "trySetPosition", but is intended to be invoked
-    // only in an exceptional case where the object's position must be set forcefully
+    // only in cases where the object's position/direction must be set forcefully rather than
+    // based on real-time physical collision.
     // (e.g. when the object's client-side position is out of sync with its server-side position,
     //      or when an object with a static collider needs to be relocated).
-    forceSetPosition(position: THREE.Vector3)
+    forceSetTransform(position: THREE.Vector3, direction: THREE.Vector3)
     {
-        // If there is a component which has the "forceSetPosition" method,
-        // invoke that "forceSetPosition" method.
-        // If such a method is not found, simply assign the given position vector
-        // to the GameObject's current position.
+        // If there is a component which has the "forceSetTransform" method,
+        // invoke that "forceSetTransform" method.
+        // If such a method is not found, simply assign the given parameters
+        // to the GameObject's current transform.
         let overrideFound = false;
         for (const component of Object.values(this.components))
         {
-            if (component.forceSetPosition)
+            if (component.forceSetTransform)
             {
                 if (overrideFound)
-                    throw new Error("Multiple components with the 'forceSetPosition' method detected. This is not allowed.");
+                    throw new Error("Multiple components with the 'forceSetTransform' method detected. This is not allowed.");
                 overrideFound = true;
-                component.forceSetPosition(position);
+                component.forceSetTransform(position, direction);
             }
         }
         if (!overrideFound)
-            this.position.copy(position);
-    }
-
-    // This method works like "forceSetPosition", but is intended to set the direction instead of position.
-    forceSetDirection(direction: THREE.Vector3)
-    {
-        // If there is a component which has the "forceSetDirection" method,
-        // invoke that "forceSetDirection" method.
-        // If such a method is not found, simply assign the given position vector
-        // to the GameObject's current position.
-        let overrideFound = false;
-        for (const component of Object.values(this.components))
         {
-            if (component.forceSetDirection)
-            {
-                if (overrideFound)
-                    throw new Error("Multiple components with the 'forceSetDirection' method detected. This is not allowed.");
-                overrideFound = true;
-                component.forceSetDirection(direction);
-            }
+            this.position = position;
+            this.direction = direction;
         }
-        if (!overrideFound)
-            this.obj.lookAt(direction);
     }
     
     // Aliases
     get position(): THREE.Vector3 { return this.obj.position; }
     set position(p: THREE.Vector3) { this.obj.position.set(p.x, p.y, p.z); }
+    get direction(): THREE.Vector3
+    {
+        const direction = new THREE.Vector3();
+        this.obj.getWorldDirection(direction);
+        return direction;
+    }
+    set direction(d: THREE.Vector3)
+    {
+        const target = new THREE.Vector3(
+            this.position.x + d.x,
+            this.position.y + d.y,
+            this.position.z + d.z
+        );
+        this.obj.lookAt(target);
+    }
     get rotation(): THREE.Euler { return this.obj.rotation; }
     set rotation(r: THREE.Euler) { this.obj.rotation.set(r.x, r.y, r.z); }
     get quaternion(): THREE.Quaternion { return this.obj.quaternion; }

@@ -36,12 +36,9 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
     }
     roomRuntimeMemory.objectRuntimeMemories[objectId] = objectRuntimeMemory;
 
-    const colliderInfo = objectRuntimeMemory.objectSpawnParams.getColliderInfo();
-    if (colliderInfo)
-    {
-        PhysicsManager.addObject(roomID, objectId,
-            objectRuntimeMemory.objectSpawnParams.transform.y, colliderInfo);
-    }
+    const colliderState = objectRuntimeMemory.objectSpawnParams.getObjectColliderState();
+    if (colliderState)
+        PhysicsManager.addObject(roomID, objectId, objectRuntimeMemory.objectSpawnParams.objectTypeIndex, colliderState);
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (!socketRoomContext)
@@ -74,8 +71,8 @@ export function removeObject(socketUserContext: SocketUserContext, objectId: str
     }
     delete roomRuntimeMemory.objectRuntimeMemories[objectId];
 
-    const colliderInfo = objectRuntimeMemory.objectSpawnParams.getColliderInfo();
-    if (colliderInfo)
+    const colliderState = objectRuntimeMemory.objectSpawnParams.getObjectColliderState();
+    if (colliderState)
         PhysicsManager.removeObject(roomID, objectId);
     
     const despawnParams = new ObjectDespawnParams(roomID, objectId);

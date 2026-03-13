@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import GameObject from "../../../object/types/gameObject";
-import { persistentObjectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { persistentObjectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable } from "../../../system/clientObservables";
+import VoxelQuadSelection from "./voxelQuadSelection";
 import MeshFactory from "../../factories/meshFactory";
 import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
@@ -71,9 +72,11 @@ persistentObjectSelectionObservable.addListener("persistentObjectSelection", asy
         selectionMeshClone!.visible = true;
 
         // If a persistent object is selected, the player's viewTarget should be that object's position.
-        // Also unselect any voxel quad selection.
         playerViewTargetPosObservable.set(new THREE.Vector3(go.position.x, go.position.y, go.position.z));
-        voxelQuadSelectionObservable.set(null);
+
+        // Also unselect any voxel quad selection (only if one is actually selected, to avoid circular triggering).
+        if (VoxelQuadSelection.isSelected())
+            VoxelQuadSelection.unselect();
     }
     else
     {

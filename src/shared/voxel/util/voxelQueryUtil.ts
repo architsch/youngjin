@@ -15,16 +15,6 @@ const VoxelQueryUtil =
         return room.voxelGrid.voxels[row * NUM_VOXEL_COLS + col];
     },
 
-    isVoxelQuadVisible(room: Room, row: number, col: number,
-        facingAxis: "x" | "y" | "z", orientation: "-" | "+", collisionLayer: number): boolean
-    {
-        const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, facingAxis, orientation, collisionLayer);
-        if (quadIndex < 0)
-            return false;
-        const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-        return (voxel.quadsMem.quads[quadIndex] & 0b10000000) !== 0;
-    },
-
     //-------------------------------------------------------------------------------------
     // Physics
     //-------------------------------------------------------------------------------------

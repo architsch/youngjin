@@ -31,8 +31,8 @@ export default class DynamicCollider extends Collider
 
         // y-coordinate interpolation (based on the object's updated level)
         const p = this.gameObject.position;
-        const colliderInfo = this.physicsObject!.colliderInfo;
-        const desiredY = colliderInfo.colliderConfig.groundLevelY + 0.5 * colliderInfo.level;
+        const colliderState = this.physicsObject!.colliderState;
+        const desiredY = colliderState.colliderConfig.groundLevelY + 0.5 * colliderState.level;
         const desiredChangeInY = desiredY - p.y;
         if (Math.abs(desiredChangeInY) > NEAR_EPSILON)
         {
@@ -52,9 +52,9 @@ export default class DynamicCollider extends Collider
         this.nextPosition.copy(pos);
     }
 
-    forceSetPosition(pos: THREE.Vector3): void
+    forceSetTransform(position: THREE.Vector3, direction: THREE.Vector3): void
     {
-        super.forceSetPosition?.(pos);
+        super.forceSetTransform?.(position, direction);
         this.nextPosition.copy(this.gameObject.position);
     }
 }

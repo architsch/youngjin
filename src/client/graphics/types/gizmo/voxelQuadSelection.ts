@@ -101,8 +101,9 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         selectionMeshClone.visible = true;
 
         // If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
-        // Also unselect any persistent object selection.
         playerViewTargetPosObservable.set(new THREE.Vector3(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ));
+
+        // Also unselect any persistent object selection.
         persistentObjectSelectionObservable.set(null);
     }
     else

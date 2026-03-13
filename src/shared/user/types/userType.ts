@@ -1,8 +1,6 @@
-import { EnumMap } from "../../networking/types/encodableEnum"
-
 export type UserType = number;
 
-export const UserTypeEnumMap: EnumMap =
+export const UserTypeEnumMap: Record<string, number> =
 {
     Admin: 0,
     Member: 1,

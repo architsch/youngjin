@@ -14,6 +14,8 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 import { getRoom } from "./roomCoreUtil";
+import PhysicsManager from "../../../shared/physics/physicsManager";
+import DirUtil from "../../../shared/math/util/dirUtil";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -83,6 +85,10 @@ function addPersistentObjectTask(socketUserContext: SocketUserContext, params: A
     // Now that the persistentObject is successfully added, increment the ID counter by 1.
     ++room.persistentObjectGroup.lastPersistentObjectId;
 
+    // If the PersistentObject has a collider, register its corresponding PhysicsObject.
+    const colliderState = po.getObjectColliderState();
+    if (colliderState)
+        PhysicsManager.addObject(room.id, po.objectId, po.objectTypeIndex, colliderState);
     broadcast(socketUserContext, room, params);
 }
 
@@ -112,6 +118,9 @@ function removePersistentObjectTask(socketUserContext: SocketUserContext, params
         }
         return;
     }
+    // Remove the PersistentObject's corresponding PhysicsObject (if it exists).
+    if (PhysicsManager.hasObject(room.id, removed.objectId))
+        PhysicsManager.removeObject(room.id, removed.objectId);
     broadcast(socketUserContext, room, params);
 }
 
@@ -145,6 +154,12 @@ function movePersistentObjectTask(socketUserContext: SocketUserContext, params: 
             ]);
         }
         return;
+    }
+    // If the PersistentObject has its corresponding PhysicsObject, update its transform.
+    if (PhysicsManager.hasObject(room.id, po.objectId))
+    {
+        PhysicsManager.forceSetTransform(room.id, po.objectId, po.objectTypeIndex,
+            {x: po.x, y: po.y, z: po.y}, DirUtil.dir4ToVec3(po.dir));
     }
     broadcast(socketUserContext, room, params);
 }

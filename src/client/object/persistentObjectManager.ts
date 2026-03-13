@@ -84,12 +84,11 @@ const PersistentObjectManager =
                         const existingObj = ObjectManager.getObjectById(objectId);
                         if (existingObj)
                         {
-                            existingObj.forceSetPosition(new THREE.Vector3(po.x, po.y, po.z));
-
                             const dirVec = DirUtil.dir4ToVec3(po.dir);
-                            existingObj.obj.lookAt(new THREE.Vector3(
-                                po.x + dirVec.x, po.y + dirVec.y, po.z + dirVec.z
-                            ));
+                            existingObj.forceSetTransform(
+                                new THREE.Vector3(po.x, po.y, po.z),
+                                new THREE.Vector3(dirVec.x, dirVec.y, dirVec.z)
+                            );
 
                             // If the moved object was selected by us, deactivate the selection
                             // since another user initiated the move.

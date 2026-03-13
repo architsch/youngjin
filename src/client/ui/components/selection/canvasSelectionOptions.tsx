@@ -97,11 +97,11 @@ function tryMoveCanvas(selection: PersistentObjectSelection, dx: number, dy: num
     if (!po)
         return;
 
-    selection.gameObject.forceSetPosition(new THREE.Vector3(po.x, po.y, po.z));
     const dirVec = DirUtil.dir4ToVec3(po.dir);
-    selection.gameObject.forceSetDirection(new THREE.Vector3(
-        po.x + dirVec.x, po.y + dirVec.y, po.z + dirVec.z
-    ));
+    selection.gameObject.forceSetTransform(
+        new THREE.Vector3(po.x, po.y, po.z),
+        new THREE.Vector3(dirVec.x, dirVec.y, dirVec.z)
+    );
     persistentObjectSelectionObservable.notify();
 
     SocketsClient.emitUpdatePersistentObjectGroup(new MovePersistentObjectParams(objectId, dx, dy, 0));

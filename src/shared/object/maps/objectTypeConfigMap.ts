@@ -1,4 +1,5 @@
 import ObjectTypeConfig from "../types/objectTypeConfig";
+import { ObjectTagEnumMap } from "../types/objectTag";
 
 // This map specifies all types of GameObject and their global configs.
 // Each config specifies all types of GameObjectComponents which must be included in the
@@ -6,6 +7,7 @@ import ObjectTypeConfig from "../types/objectTypeConfig";
 const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [0, { // This object represents each voxel in the room's voxelGrid. Each voxel consists of blocks, and each block consists of quads (aka "voxelQuads").
         objectType: "Voxel",
+        tags: [],
         components: {
             spawnedByAny: {
                 // Collider is not needed here because the physics system handles voxels under a separate logic.
@@ -17,6 +19,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     }],
     [1, { // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
         objectType: "Player",
+        tags: [],
         components: {
             spawnedByAny: {
                 dynamicCollider: {
@@ -51,7 +54,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     }],
     [2, { // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
         objectType: "Canvas",
-        isWallAttached: true,
+        tags: [ObjectTagEnumMap.AttachedToWall],
         components: {
             spawnedByAny: {
                 staticCollider: {

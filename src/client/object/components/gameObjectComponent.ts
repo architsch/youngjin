@@ -25,6 +25,5 @@ export default abstract class GameObjectComponent
     async onDespawn?(): Promise<void>;
     update?(deltaTime: number): void;
     trySetPosition?(position: THREE.Vector3): void;
-    forceSetPosition?(position: THREE.Vector3): void;
-    forceSetDirection?(direction: THREE.Vector3): void;
+    forceSetTransform?(position: THREE.Vector3, direction: THREE.Vector3): void;
 }

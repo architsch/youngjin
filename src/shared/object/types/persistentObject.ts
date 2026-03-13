@@ -6,7 +6,7 @@ import EncodableMap from "../../networking/types/encodableMap";
 import { Dir4 } from "../../math/types/dir4";
 import DirUtil from "../../math/util/dirUtil";
 import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
-import { ColliderInfo } from "../../physics/types/colliderInfo";
+import { ColliderState } from "../../physics/types/colliderState";
 
 export default class PersistentObject extends EncodableData
 {
@@ -31,11 +31,10 @@ export default class PersistentObject extends EncodableData
         this.metadata = metadata;
     }
 
-    getColliderInfo(): ColliderInfo | undefined
+    getObjectColliderState(): ColliderState | undefined
     {
-        return PhysicsCollisionUtil.getColliderInfo(this.objectTypeIndex,
-            DirUtil.dir4ToVec3(this.dir),
-            {x: this.x, y: this.y, z: this.z});
+        return PhysicsCollisionUtil.getObjectColliderState(this.objectTypeIndex,
+            {x: this.x, y: this.y, z: this.z}, DirUtil.dir4ToVec3(this.dir));
     }
 
     encode(bufferState: BufferState)

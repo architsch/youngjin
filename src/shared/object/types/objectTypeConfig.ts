@@ -1,9 +1,10 @@
-import { HitboxSize } from "../../physics/types/hitboxSize";
+import { ColliderConfig } from "../../physics/types/colliderConfig";
+import { ObjectTag } from "./objectTag";
 
 export default interface ObjectTypeConfig
 {
     objectType: string;
-    isWallAttached?: boolean; // TRUE if the object should always stay attached to the nearest wall (e.g. canvas)
+    tags: ObjectTag[];
     components: {
         spawnedByAny?: {
             dynamicCollider?: ColliderConfig,
@@ -41,9 +42,3 @@ export default interface ObjectTypeConfig
 }
 
 export type SpawnType = "spawnedByMe" | "spawnedByOther" | "spawnedByAny";
-
-export type ColliderConfig = {
-    collisionLayerMaskAtGroundLevel: number, // 8-bit binary mask
-    groundLevelY: number, // y-coordinate of the object at which the ground level is located.
-    hitboxSize: HitboxSize,
-};

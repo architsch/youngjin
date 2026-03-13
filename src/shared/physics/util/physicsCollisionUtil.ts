@@ -3,13 +3,29 @@ import Vec2 from "../../math/types/vec2";
 import PhysicsHitState from "../types/physicsHitState";
 import Geometry2DUtil from "../../math/util/geometry2DUtil";
 import Vec3 from "../../math/types/vec3";
-import { ColliderInfo } from "../types/colliderInfo";
+import { ColliderState } from "../types/colliderState";
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
+import { ColliderConfig } from "../types/colliderConfig";
+
+const voxelBlockColliderConfig: ColliderConfig = {
+    collisionLayerMaskAtGroundLevel: 1,
+    groundLevelY: 0,
+    hitboxSize: {sizeX: 1, sizeZ: 1},
+};
 
 const PhysicsCollisionUtil =
 {
-    getColliderInfo: (objectTypeIndex: number,
-        direction: Vec3, position: Vec3): ColliderInfo | undefined =>
+    getVoxelBlockColliderState: (row: number, col: number, collisionLayer: number): ColliderState =>
+    {
+        return {
+            hitbox: { x: 0.5 + col, y: 0.5 + row, halfSizeX: 0.5, halfSizeY: 0.5 },
+            level: collisionLayer,
+            collisionLayerMask: 1 << collisionLayer,
+            colliderConfig: voxelBlockColliderConfig
+        };
+    },
+    getObjectColliderState: (objectTypeIndex: number,
+        position: Vec3, direction: Vec3): ColliderState | undefined =>
     {
         const objectTypeConfig = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex);
         const components = objectTypeConfig.components;

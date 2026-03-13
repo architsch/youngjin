@@ -10,7 +10,6 @@ import UpdateVoxelGridTaskParams from "../../../shared/voxel/types/update/update
 import VoxelBlockUpdateUtil from "../../../shared/voxel/util/voxelBlockUpdateUtil";
 import VoxelQuadUpdateUtil from "../../../shared/voxel/util/voxelQuadUpdateUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import PersistentObjectUpdateUtil from "../../../shared/object/util/persistentObjectUpdateUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 import { getRoom } from "./roomCoreUtil";
@@ -54,13 +53,6 @@ function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVo
 
     // Capture source block textures before any modification attempt, for potential recovery.
     const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
-
-    if (PersistentObjectUpdateUtil.wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
-    {
-        console.warn(`Block move blocked: persistent object depends on this wall`);
-        sendMoveReversal(socketUserContext, room, params, sourceTextures);
-        return;
-    }
     if (!VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
     {
         console.error(`Voxel update failed (moveVoxelBlockTask) - params: ${JSON.stringify(params)}`);
@@ -101,13 +93,6 @@ function removeVoxelBlockTask(socketUserContext: SocketUserContext, params: Remo
 
     // Capture textures before any modification attempt, for potential recovery.
     const textures = captureBlockTextures(room, row, col, collisionLayer);
-
-    if (PersistentObjectUpdateUtil.wouldBlockRemovalBreakPersistentObject(room, row, col, collisionLayer))
-    {
-        console.warn(`Block removal blocked: persistent object depends on this wall`);
-        unicastToSender(socketUserContext, room, [new AddVoxelBlockParams(params.quadIndex, textures)]);
-        return;
-    }
     if (!VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex))
     {
         console.error(`Voxel update failed (removeVoxelBlockTask) - params: ${JSON.stringify(params)}`);

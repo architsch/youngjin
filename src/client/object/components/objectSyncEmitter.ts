@@ -69,7 +69,7 @@ export default class ObjectSyncEmitter extends GameObjectComponent
     {
         const p = params.resolvedPos;
         vec3Temp.set(p.x, this.gameObject.position.y, p.y);
-        this.gameObject.forceSetPosition(vec3Temp);
+        this.gameObject.forceSetTransform(vec3Temp, this.gameObject.direction);
         
         this.lastSyncedPosition.copy(vec3Temp);
         this.lastSyncTime = performance.now();

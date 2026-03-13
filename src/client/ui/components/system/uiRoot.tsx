@@ -18,18 +18,19 @@ import SignOutForm from "../form/signOutForm";
 import VisitMyRoomForm from "../form/visitMyRoomForm";
 import ConfigureMyRoomForm from "../form/configureMyRoomForm";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import { roomChangedObservable, userRoleObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
     const [popupType, setPopupType] = useState<PopupType>("none");
-    const [currentRoomID, setCurrentRoomID] = useState<string>("");
+    const [roomRuntimeMemory, setRoomRuntimeMemory] = useState<RoomRuntimeMemory>();
     const [userRole, setUserRole] = useState<UserRole>(UserRoleEnumMap.Visitor);
 
     useEffect(() => {
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
-            setCurrentRoomID(roomRuntimeMemory.room.id);
+            setRoomRuntimeMemory(roomRuntimeMemory);
         });
         userRoleObservable.addListener("ui_root", (role: UserRole) => {
             setUserRole(role);
@@ -46,13 +47,18 @@ export default function UIRoot({ env, user }: UIRootProps)
     const openConfigureMyRoomPopup = useCallback(() => setPopupType("configureMyRoom"), []);
     const closePopup = useCallback(() => setPopupType("none"), []);
 
-    const isVisitor = userRole === UserRoleEnumMap.Visitor;
+    const roomID = roomRuntimeMemory?.room.id;
+    const roomType = roomRuntimeMemory?.room.roomType;
+    const canModifyRoom =
+        userRole === UserRoleEnumMap.Owner ||
+        userRole === UserRoleEnumMap.Editor ||
+        roomType === RoomTypeEnumMap.Hub;
 
     return <>
         <UserRoomIdentity
             user={user}
             userRole={userRole}
-            currentRoomID={currentRoomID}
+            currentRoomID={roomID ?? ""}
             onAuthPromptButtonClick={openAuthPromptFormPopup}
             onSignOutButtonClick={openSignOutFormPopup}
             onVisitMyRoomButtonClick={openVisitMyRoomPopup}
@@ -60,8 +66,8 @@ export default function UIRoot({ env, user }: UIRootProps)
         />
         <DebugStats env={env}/>
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
-            {!isVisitor && <PersistentObjectSelectionMenu/>}
-            {!isVisitor && <VoxelQuadSelectionMenu/>}
+            {canModifyRoom && <PersistentObjectSelectionMenu/>}
+            {canModifyRoom && <VoxelQuadSelectionMenu/>}
             <Chat/>
         </div>
         <Tutorial user={user}/>
