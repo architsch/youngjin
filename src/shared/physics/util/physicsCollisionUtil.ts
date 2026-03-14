@@ -6,6 +6,7 @@ import Vec3 from "../../math/types/vec3";
 import { ColliderState } from "../types/colliderState";
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
 import { ColliderConfig } from "../types/colliderConfig";
+import PhysicsDebugUtil from "./physicsDebugUtil";
 
 const voxelBlockColliderConfig: ColliderConfig = {
     collisionLayerMaskAtGroundLevel: 1,
@@ -17,12 +18,14 @@ const PhysicsCollisionUtil =
 {
     getVoxelBlockColliderState: (row: number, col: number, collisionLayer: number): ColliderState =>
     {
-        return {
+        const state: ColliderState = {
             hitbox: { x: 0.5 + col, y: 0.5 + row, halfSizeX: 0.5, halfSizeY: 0.5 },
             level: collisionLayer,
             collisionLayerMask: 1 << collisionLayer,
             colliderConfig: voxelBlockColliderConfig
         };
+        PhysicsDebugUtil.tryShowColliderBox("voxelBlock", state, "#ffff00");
+        return state;
     },
     getObjectColliderState: (objectTypeIndex: number,
         position: Vec3, direction: Vec3): ColliderState | undefined =>
@@ -46,7 +49,9 @@ const PhysicsCollisionUtil =
         };
         const level = Math.round(2 * (position.y - colliderConfig.groundLevelY)); // Multiplying by 2 because each level is 0.5 high.
         const collisionLayerMask = colliderConfig.collisionLayerMaskAtGroundLevel << level;
-        return {hitbox, level, collisionLayerMask, colliderConfig};
+        const state: ColliderState = {hitbox, level, collisionLayerMask, colliderConfig};
+        PhysicsDebugUtil.tryShowColliderBox("object", state, "#ff00ff");
+        return state;
     },
     pushBoxAgainstBox: (sourceHitbox: AABB2, targetPos: Vec2, targetHitbox: AABB2, hitState: PhysicsHitState): PhysicsHitState =>
     {

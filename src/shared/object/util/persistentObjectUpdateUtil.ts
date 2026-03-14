@@ -14,6 +14,7 @@ import { ObjectTagEnumMap } from "../types/objectTag";
 import Vec3 from "../../math/types/vec3";
 import PhysicsObject from "../../physics/types/physicsObject";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
+import BitmaskUtil from "../../math/util/bitmaskUtil";
 
 const PersistentObjectUpdateUtil =
 {
@@ -213,7 +214,7 @@ const wallAttachedObjBlockingCond = (myObjectId: string, collidingObject: Physic
 function canPlaceObject(room: Room, objectId: string, objectTypeIndex: number,
     newPos: Vec3, newDirVec: Vec3): boolean
 {
-    // Check if the position is outside of the room's bounds.
+    // Object's center position must not be out of the room's boundaries.
 
     if (newPos.x < 1 || newPos.x > NUM_VOXEL_COLS-1 ||
         newPos.y <= 0 || newPos.y >= MAX_ROOM_Y ||
@@ -228,43 +229,56 @@ function canPlaceObject(room: Room, objectId: string, objectTypeIndex: number,
     if (!newColliderState)
         throw new Error(`new ColliderState not found (objectTypeIndex = ${objectTypeIndex})`);
 
-    // Check if the object's back side is not fully covered by wall (voxel blocks).
-
-    const smallBackOffset = Vector3DUtil.scale(newDirVec, -0.01);
-    const voxelProbeCenter = Vector3DUtil.add(newPos, smallBackOffset); // Step back a bit in order to scan the wall voxels that are sitting behind the object.
+    // (1) The object's back side must be fully covered (by voxel blocks).
+    // (2) The object's front side must be at least partially exposed.
     
+    const half = newColliderState.hitbox.halfSizeX;
     const newDir = DirUtil.vec3ToDir4(newDirVec);
-    const newDirVecCCW = DirUtil.dir4ToVec3(DirUtil.rotateCCW(newDir));
-    const newDirVecCW = DirUtil.dir4ToVec3(DirUtil.rotateCW(newDir));
-    const voxelProbeEndCCW = Vector3DUtil.add(voxelProbeCenter,
-        Vector3DUtil.scale(newDirVecCCW, newColliderState.hitbox.halfSizeX));
-    const voxelProbeEndCW = Vector3DUtil.add(voxelProbeCenter,
-        Vector3DUtil.scale(newDirVecCW, newColliderState.hitbox.halfSizeX));
-    
-    const row1 = Math.floor(voxelProbeEndCCW.z);
-    const row2 = Math.floor(voxelProbeEndCW.z);
-    const col1 = Math.floor(voxelProbeEndCCW.x);
-    const col2 = Math.floor(voxelProbeEndCW.x);
-    const rowStart = Math.min(row1, row2);
-    const rowEnd = Math.max(row1, row2);
-    const colStart = Math.min(col1, col2);
-    const colEnd = Math.max(col1, col2);
+    const objectMask = newColliderState.collisionLayerMask;
+    let frontExposureFound = false;
 
-    const oc = newColliderState.collisionLayerMask;
-    for (let row = rowStart; row <= rowEnd; ++row)
+    if (newDir == "+z" || newDir == "-z") // object is a horizontal line on the XZ plane (X = horizontal, Z = vertical)
     {
-        for (let col = colStart; col <= colEnd; ++col)
+        const backRow = Math.floor(newPos.z + 0.01 * (newDir == "+z" ? -1 : +1)); // apply a small backward offset is to scan voxels behind
+        const frontRow = Math.floor(newPos.z + 0.01 * (newDir == "+z" ? +1 : -1)); // apply a small forward offset to scan voxels in front
+        const leftCol = Math.floor(newPos.x - half);
+        const rightCol = Math.floor(newPos.x + half);
+        for (let col = leftCol; col <= rightCol; ++col)
         {
-            const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-            const vc = voxel.collisionLayerMask;
-            // Check if the 1s in 'oc' (object's collision mask) is a subset
-            // of the 1s in 'vc' (voxel's collision mask).
-            if (oc !== (oc & vc)) // Logic: If 'oc' is a subset of 'vc', then 'oc' should be equal to the intersection between 'oc' and 'vc'.
+            const backVoxel = VoxelQueryUtil.getVoxel(room, backRow, col);
+            const frontVoxel = VoxelQueryUtil.getVoxel(room, frontRow, col);
+            const backVoxelMask = backVoxel.collisionLayerMask;
+            const frontVoxelMask = frontVoxel.collisionLayerMask;
+
+            if (!BitmaskUtil.isSubsetOf(objectMask, backVoxelMask)) // (1) The object's back side must be fully covered (by voxel blocks).
                 return false;
+            if (!BitmaskUtil.isSubsetOf(objectMask, frontVoxelMask)) // (2) The object's front side must be at least partially exposed.
+                frontExposureFound = true;
         }
     }
+    else // object is a vertical line on the XZ plane (X = horizontal, Z = vertical)
+    {
+        const backCol = Math.floor(newPos.x + 0.01 * (newDir == "+x" ? -1 : +1)); // apply a small backward offset is to scan voxels behind
+        const frontCol = Math.floor(newPos.x + 0.01 * (newDir == "+x" ? +1 : -1)); // apply a small forward offset to scan voxels in front
+        const leftRow = Math.floor(newPos.z - half);
+        const rightRow = Math.floor(newPos.z + half);
+        for (let row = leftRow; row <= rightRow; ++row)
+        {
+            const backVoxel = VoxelQueryUtil.getVoxel(room, row, backCol);
+            const frontVoxel = VoxelQueryUtil.getVoxel(room, row, frontCol);
+            const backVoxelMask = backVoxel.collisionLayerMask;
+            const frontVoxelMask = frontVoxel.collisionLayerMask;
 
-    // Check if there is any wall-attached object which will collide with the new one.
+            if (!BitmaskUtil.isSubsetOf(objectMask, backVoxelMask)) // (1) The object's back side must be fully covered (by voxel blocks).
+                return false;
+            if (!BitmaskUtil.isSubsetOf(objectMask, frontVoxelMask)) // (2) The object's front side must be at least partially exposed.
+                frontExposureFound = true;
+        }
+    }
+    if (!frontExposureFound)
+        return false;
+
+    // The new object must not collide with any of the existing wall-attached objects.
 
     const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, newColliderState);
     for (const collidingObject of Object.values(collidingObjects))

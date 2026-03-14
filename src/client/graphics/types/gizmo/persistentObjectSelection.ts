@@ -3,7 +3,6 @@ import GameObject from "../../../object/types/gameObject";
 import { persistentObjectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable } from "../../../system/clientObservables";
 import VoxelQuadSelection from "./voxelQuadSelection";
 import MeshFactory from "../../factories/meshFactory";
-import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
@@ -52,24 +51,24 @@ export default class PersistentObjectSelection
     }
 }
 
-let selectionMeshClone: THREE.Mesh | null = null;
+let selectionLineSegmentsClone: THREE.LineSegments | null = null;
 
 persistentObjectSelectionObservable.addListener("persistentObjectSelection", async (selection: PersistentObjectSelection | null) => {
     if (selection)
     {
-        // Initialize the mesh if it hasn't been initialized yet.
-        if (selectionMeshClone == null)
+        // Initialize the line segments if they haven't been initialized yet.
+        if (selectionLineSegmentsClone == null)
         {
-            const mesh = await MeshFactory.loadMesh("Square", new WireframeMaterialParams("#00ff00"));
-            selectionMeshClone = mesh.clone();
-            GraphicsManager.getScene().add(selectionMeshClone);
+            const lineSegments = await MeshFactory.loadLineSegments("Square", "#00ff00");
+            selectionLineSegmentsClone = lineSegments.clone();
+            GraphicsManager.getScene().add(selectionLineSegmentsClone);
         }
 
         const go = selection.gameObject;
-        selectionMeshClone!.position.copy(go.position);
-        selectionMeshClone!.quaternion.copy(go.quaternion);
-        selectionMeshClone!.scale.copy(go.obj.scale);
-        selectionMeshClone!.visible = true;
+        selectionLineSegmentsClone!.position.copy(go.position);
+        selectionLineSegmentsClone!.quaternion.copy(go.quaternion);
+        selectionLineSegmentsClone!.scale.copy(go.obj.scale);
+        selectionLineSegmentsClone!.visible = true;
 
         // If a persistent object is selected, the player's viewTarget should be that object's position.
         playerViewTargetPosObservable.set(new THREE.Vector3(go.position.x, go.position.y, go.position.z));
@@ -80,8 +79,8 @@ persistentObjectSelectionObservable.addListener("persistentObjectSelection", asy
     }
     else
     {
-        if (selectionMeshClone != null)
-            selectionMeshClone.visible = false;
+        if (selectionLineSegmentsClone != null)
+            selectionLineSegmentsClone.visible = false;
     }
 
     // Is nothing selected at all? Then just set the viewTarget to NULL.
@@ -94,9 +93,9 @@ persistentObjectSelectionObservable.addListener("persistentObjectSelection", asy
 roomChangedObservable.addListener("persistentObjectSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
     PersistentObjectSelection.unselect();
 
-    if (selectionMeshClone)
+    if (selectionLineSegmentsClone)
     {
-        selectionMeshClone.removeFromParent();
-        selectionMeshClone = null;
+        selectionLineSegmentsClone.removeFromParent();
+        selectionLineSegmentsClone = null;
     }
 });

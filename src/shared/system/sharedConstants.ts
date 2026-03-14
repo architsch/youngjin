@@ -23,8 +23,7 @@ export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 // Physics
 
 export const NUM_COLLISION_LAYERS = 8; // Total number of collision layers which span the room's Y-axis
-export const COLLISION_LAYER_HEIGHT = 0.5; // Y-size of each collision layer
-export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * COLLISION_LAYER_HEIGHT; // 4
+export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * 0.5; // 4
 export const MID_ROOM_Y = 0.5 * MAX_ROOM_Y; // 2
 
 export const COLLISION_LAYER_00_TO_05 = 0; // y = [0.0, 0.5]

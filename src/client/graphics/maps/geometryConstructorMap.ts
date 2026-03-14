@@ -8,6 +8,16 @@ export const GeometryConstructorMap: { [geometryId: string]: () => THREE.BufferG
         writeZFacingUnitQuad();
         return makeGeometry();
     },
+    "Box": () =>
+    {
+        clear();
+        writeUnitSideBox(0);
+        writeYFacingUnitQuad();
+        translate(6, 0, 0.5, 0);
+        writeYMinusFacingUnitQuad();
+        translate(6, 0, -0.5, 0);
+        return makeGeometry();
+    },
 }
 
 const positionsTemp: number[] = [];

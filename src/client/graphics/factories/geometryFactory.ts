@@ -3,20 +3,31 @@ import { GeometryConstructorMap } from "../maps/geometryConstructorMap";
 
 const loadedGeometries: { [geometryId: string]: THREE.BufferGeometry } = {};
 
+type GeometryVariant = "default" | "edges";
+
 const GeometryFactory =
 {
-    load: async (geometryId: string): Promise<THREE.BufferGeometry> =>
+    load: async (geometryId: string, variant: GeometryVariant = "default"): Promise<THREE.BufferGeometry> =>
     {
-        const loadedGeometry = loadedGeometries[geometryId];
+        const cacheKey = variant === "default" ? geometryId : `${geometryId}-${variant}`;
+        const loadedGeometry = loadedGeometries[cacheKey];
         if (loadedGeometry != undefined)
             return loadedGeometry;
-        
+
         const geometryConstructor = GeometryConstructorMap[geometryId];
         if (geometryConstructor == undefined)
             throw new Error(`Geometry constructor not found (geometryId = ${geometryId})`);
-        const newGeometry = geometryConstructor();
-        loadedGeometries[geometryId] = newGeometry
-        return newGeometry;
+
+        const baseGeometry = geometryConstructor();
+        if (variant === "default")
+        {
+            loadedGeometries[cacheKey] = baseGeometry;
+            return baseGeometry;
+        }
+
+        const edgesGeometry = new THREE.EdgesGeometry(baseGeometry);
+        loadedGeometries[cacheKey] = edgesGeometry;
+        return edgesGeometry;
     },
     unloadAll: (): void =>
     {

@@ -6,6 +6,7 @@ import MaterialParams from "../types/material/materialParams";
 import GraphicsManager from "../graphicsManager";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
+const loadedLineSegments: { [id: string]: THREE.LineSegments } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
 
 const MeshFactory =
@@ -27,6 +28,19 @@ const MeshFactory =
         const newMesh = new THREE.Mesh(geometry, material);
         loadedMeshes[meshId] = newMesh;
         return newMesh;
+    },
+    loadLineSegments: async (geometryId: string, colorHex: string, depthTest: boolean = false): Promise<THREE.LineSegments> =>
+    {
+        const id = `${geometryId}-LineSegments-${colorHex}`;
+        const loaded = loadedLineSegments[id];
+        if (loaded != undefined)
+            return loaded;
+
+        const edgesGeometry = await GeometryFactory.load(geometryId, "edges");
+        const material = new THREE.LineBasicMaterial({ color: colorHex, depthTest });
+        const lineSegments = new THREE.LineSegments(edgesGeometry, material);
+        loadedLineSegments[id] = lineSegments;
+        return lineSegments;
     },
     loadInstancedMesh: async (geometryId: string, materialParams: MaterialParams,
         maxNumInstances: number, createInstanceIdPool: boolean): Promise<THREE.InstancedMesh> =>
@@ -78,11 +92,17 @@ const MeshFactory =
     },
     unloadAll: (): void =>
     {
-        const idsTemp: string[] = [];
+        const meshIds: string[] = [];
         for (const id of Object.keys(loadedMeshes))
-            idsTemp.push(id);
-        for (const id of idsTemp)
+            meshIds.push(id);
+        for (const id of meshIds)
             MeshFactory.unload(id);
+
+        const lineSegmentIds: string[] = [];
+        for (const id of Object.keys(loadedLineSegments))
+            lineSegmentIds.push(id);
+        for (const id of lineSegmentIds)
+            MeshFactory.unloadLineSegments(id);
     },
     unload: (meshId: string): void =>
     {
@@ -101,6 +121,18 @@ const MeshFactory =
         }
         mesh.removeFromParent();
         delete loadedMeshes[meshId];
+    },
+    unloadLineSegments: (id: string): void =>
+    {
+        const lineSegments = loadedLineSegments[id];
+        if (lineSegments == undefined)
+        {
+            console.error(`LineSegments is already unloaded (id = ${id})`);
+            return;
+        }
+        (lineSegments.material as THREE.LineBasicMaterial).dispose();
+        lineSegments.removeFromParent();
+        delete loadedLineSegments[id];
     },
 }
 

@@ -3,6 +3,7 @@ import TextureFactory from "../factories/textureFactory";
 import MaterialParams from "../types/material/materialParams";
 import WireframeMaterialParams from "../types/material/wireframeMaterialParams";
 import TexturePackMaterialParams from "../types/material/texturePackMaterialParams";
+import LineBasicMaterialParams from "../types/material/lineBasicMaterialParams";
 
 export const MaterialConstructorMap: { [materialType: string]:
     (params: MaterialParams) => Promise<THREE.Material> } =
@@ -30,6 +31,12 @@ export const MaterialConstructorMap: { [materialType: string]:
     {
         const p = params as WireframeMaterialParams;
         const newMaterial = new THREE.MeshBasicMaterial({ color: p.colorHex, wireframe: true, depthTest: false });
+        return newMaterial;
+    },
+    "LineBasic": async (params: MaterialParams) =>
+    {
+        const p = params as LineBasicMaterialParams;
+        const newMaterial = new THREE.LineBasicMaterial({ color: p.colorHex, depthTest: false });
         return newMaterial;
     },
 }

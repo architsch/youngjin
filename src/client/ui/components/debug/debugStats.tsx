@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import App from "../../../app";
 import ObjectManager from "../../../object/objectManager";
 import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { colliderDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../basic/button";
+import Checkbox from "../basic/checkbox";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 
 export default function DebugStats({env}: Props)
 {
     const [state, setState] = useState<DebugStatsState>({
         display: false, fpsDesc: "?", playerPosDesc: "?", voxelDesc: "", voxelQuadSelectionDesc: "",
+        colliderDebug: false,
     });
 
     useEffect(() => {
@@ -47,7 +50,7 @@ export default function DebugStats({env}: Props)
                 voxelDesc = `(row: ${v.row}, col: ${v.col}, collisionLayerMask: ${v.collisionLayerMask.toString(2)})`;
                 voxelQuadSelectionDesc = `(row: ${row}, col: ${col}, quad: (${orientation}${facingAxis} at layer ${collisionLayer}), texture: ${textureIndex})`;
             }
-            setState({...state, fpsDesc, playerPosDesc, voxelDesc, voxelQuadSelectionDesc});
+            setState(prev => ({...prev, fpsDesc, playerPosDesc, voxelDesc, voxelQuadSelectionDesc}));
         }, 250);
 
         return () => clearInterval(interval); // stop the clock
@@ -72,6 +75,16 @@ export default function DebugStats({env}: Props)
             <br/>User: {JSON.stringify(App.getUser())}
             {voxelDescLine}
             {voxelQuadSelectionDescLine}
+            <br/>
+            <Checkbox
+                label="Collider Debug"
+                size="xs"
+                checked={state.colliderDebug}
+                onChange={(checked) => {
+                    colliderDebugEnabledObservable.set(checked);
+                    setState({...state, colliderDebug: checked});
+                }}
+            />
         </div>}
     </div>;
 }
@@ -85,6 +98,7 @@ interface DebugStatsState
     playerPosDesc: string;
     voxelDesc: string;
     voxelQuadSelectionDesc: string;
+    colliderDebug: boolean;
 }
 
 interface Props

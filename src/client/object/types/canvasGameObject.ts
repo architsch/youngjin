@@ -42,24 +42,26 @@ export default class CanvasGameObject extends GameObject
         this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool();
         const tr = this.params.transform;
 
-        // (y = 0.0) -> (verticalStepIsOdd = 0)
-        // (y = 0.5) -> (verticalStepIsOdd = 1)
-        // (y = 1.0) -> (verticalStepIsOdd = 0)
-        // (y = 1.5) -> (verticalStepIsOdd = 1)
-        // ...
-        const horizontalValue = (tr.dirZ != 0) ? tr.x : tr.z;
-        const horizontalStepIsOdd = (horizontalValue * 2) % 2;
-        const verticalStepIsOdd = (tr.y * 2) % 2;
-        const overlapPreventionIndex = horizontalStepIsOdd + 2*verticalStepIsOdd; // in range [0, 3]
-        const zFightTieBreaker = 0.001 + 0.001 * overlapPreventionIndex;
-
         this.instancedMeshGraphics.updateInstanceTransform(
             this.instanceId,
-            0, 0, zFightTieBreaker,
+            0, 0, 0.001,
             tr.dirX, tr.dirY, tr.dirZ,
             1, 1, 1);
 
         this.loadImage();
+    }
+
+    forceSetTransform(position: THREE.Vector3, direction: THREE.Vector3)
+    {
+        super.forceSetTransform(position, direction);
+
+        if (this.instanceId === -1)
+            return;
+        this.instancedMeshGraphics.updateInstanceTransform(
+            this.instanceId,
+            0, 0, 0.001,
+            direction.x, direction.y, direction.z,
+            1, 1, 1);
     }
 
     async onDespawn(): Promise<void>

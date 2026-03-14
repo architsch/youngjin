@@ -29,17 +29,17 @@ export default function CanvasSelectionOptions(props: {selection: PersistentObje
                 disabled={!canRemoveCanvas(props.selection)}
                 onClick={() => tryRemoveCanvas(props.selection)}/>
             <Button name="Move Left" size="sm"
-                disabled={!canMoveCanvas(props.selection, -0.5, 0)}
-                onClick={() => tryMoveCanvas(props.selection, -0.5, 0)}/>
-            <Button name="Move Right" size="sm"
                 disabled={!canMoveCanvas(props.selection, 0.5, 0)}
                 onClick={() => tryMoveCanvas(props.selection, 0.5, 0)}/>
+            <Button name="Move Right" size="sm"
+                disabled={!canMoveCanvas(props.selection, -0.5, 0)}
+                onClick={() => tryMoveCanvas(props.selection, -0.5, 0)}/>
             <Button name="Move Up" size="sm"
-                disabled={!canMoveCanvas(props.selection, 0, 0.25)}
-                onClick={() => tryMoveCanvas(props.selection, 0, 0.25)}/>
+                disabled={!canMoveCanvas(props.selection, 0, 0.5)}
+                onClick={() => tryMoveCanvas(props.selection, 0, 0.5)}/>
             <Button name="Move Down" size="sm"
-                disabled={!canMoveCanvas(props.selection, 0, -0.25)}
-                onClick={() => tryMoveCanvas(props.selection, 0, -0.25)}/>
+                disabled={!canMoveCanvas(props.selection, 0, -0.5)}
+                onClick={() => tryMoveCanvas(props.selection, 0, -0.5)}/>
         </div>
         <div className="flex flex-row gap-2 items-center">
             <TextInput size="sm" placeholder="Image URL" textInput={imageURL} setTextInput={setImageURL}/>

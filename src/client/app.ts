@@ -8,6 +8,7 @@ import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
 import { roomChangedObservable, userRoleObservable } from "./system/clientObservables";
+import "./graphics/types/gizmo/colliderDebugGizmo";
 import UserRoleUpdateParams from "../shared/user/types/userRoleUpdateParams";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";

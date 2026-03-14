@@ -2,7 +2,6 @@ import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
 import { persistentObjectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import MeshFactory from "../../factories/meshFactory";
-import WireframeMaterialParams from "../material/wireframeMaterialParams";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -72,33 +71,33 @@ export default class VoxelQuadSelection
     }
 }
 
-let selectionMeshClone: THREE.Mesh | null = null;
+let selectionLineSegmentsClone: THREE.LineSegments | null = null;
 
 voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {
     if (selection)
     {
         // Initialize the mesh if it hasn't been initialized yet.
-        if (selectionMeshClone == null)
+        if (selectionLineSegmentsClone == null)
         {
-            const mesh = await MeshFactory.loadMesh("Square", new WireframeMaterialParams("#00ff00"));
-            selectionMeshClone = mesh.clone();
-            GraphicsManager.getScene().add(selectionMeshClone);
+            const lineSegments = await MeshFactory.loadLineSegments("Square", "#00ff00");
+            selectionLineSegmentsClone = lineSegments.clone();
+            GraphicsManager.getScene().add(selectionLineSegmentsClone);
         }
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
             VoxelQueryUtil.getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
 
-        selectionMeshClone!.scale.set(scaleX, scaleY, scaleZ);
-        selectionMeshClone!.position.set(
+        selectionLineSegmentsClone!.scale.set(scaleX, scaleY, scaleZ);
+        selectionLineSegmentsClone!.position.set(
             selection.voxel.col + 0.5 + offsetX,
             offsetY,
             selection.voxel.row + 0.5 + offsetZ
         );
-        const p = selectionMeshClone!.position;
+        const p = selectionLineSegmentsClone!.position;
         vec3Temp.set(p.x + dirX, p.y + dirY, p.z + dirZ);
-        selectionMeshClone!.lookAt(vec3Temp);
+        selectionLineSegmentsClone!.lookAt(vec3Temp);
 
-        selectionMeshClone.visible = true;
+        selectionLineSegmentsClone.visible = true;
 
         // If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
         playerViewTargetPosObservable.set(new THREE.Vector3(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ));
@@ -108,8 +107,8 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
     }
     else
     {
-        if (selectionMeshClone != null)
-            selectionMeshClone.visible = false;
+        if (selectionLineSegmentsClone != null)
+            selectionLineSegmentsClone.visible = false;
     }
 
     // Is nothing selected at all? Then just set the viewTarget to NULL.
@@ -122,9 +121,9 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
 roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
     VoxelQuadSelection.unselect();
 
-    if (selectionMeshClone)
+    if (selectionLineSegmentsClone)
     {
-        selectionMeshClone.removeFromParent();
-        selectionMeshClone = null;
+        selectionLineSegmentsClone.removeFromParent();
+        selectionLineSegmentsClone = null;
     }
 });
