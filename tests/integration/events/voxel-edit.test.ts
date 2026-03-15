@@ -21,7 +21,7 @@ describe("voxel edit events", () => {
 
     beforeEach(async () => {
         harness.reset();
-        harness.seedRoom(ROOM_ID, "Voxel Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         user = harness.connectUser();
         await harness.joinRoom(user, ROOM_ID);

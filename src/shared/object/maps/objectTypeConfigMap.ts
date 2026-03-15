@@ -7,6 +7,7 @@ import { ObjectTagEnumMap } from "../types/objectTag";
 const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [0, { // This object represents each voxel in the room's voxelGrid. Each voxel consists of blocks, and each block consists of quads (aka "voxelQuads").
         objectType: "Voxel",
+        persistent: false,
         tags: [],
         components: {
             spawnedByAny: {
@@ -19,6 +20,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     }],
     [1, { // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
         objectType: "Player",
+        persistent: false,
         tags: [],
         components: {
             spawnedByAny: {
@@ -54,6 +56,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     }],
     [2, { // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
         objectType: "Canvas",
+        persistent: true,
         tags: [ObjectTagEnumMap.AttachedToWall],
         components: {
             spawnedByAny: {

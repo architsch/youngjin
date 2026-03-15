@@ -20,7 +20,7 @@ const ROOM_ID = "lifecycle-room";
 describe("server lifecycle events", () => {
     beforeEach(() => {
         harness.reset();
-        harness.seedRoom(ROOM_ID, "Lifecycle Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
     });
 
     // ─── saveAllUserGameplayStates ───────────────────────────────────────────
@@ -55,7 +55,7 @@ describe("server lifecycle events", () => {
     // ─── Graceful shutdown ──────────────────────────────────────────────────
 
     it("graceful shutdown saves all rooms and all user states", async () => {
-        harness.seedRoom("room-2", "Room 2", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-2", RoomTypeEnumMap.Regular);
 
         const user1 = harness.connectUser({ id: "shutdown-u1", lastX: 10, lastZ: 12 });
         const user2 = harness.connectUser({ id: "shutdown-u2", lastX: 20, lastZ: 22 });
@@ -111,7 +111,7 @@ describe("server lifecycle events", () => {
 
         // Simulate server reboot: reset state and re-seed rooms
         harness.reset();
-        harness.seedRoom(ROOM_ID, "Lifecycle Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         // User reconnects with saved state (simulating DB lookup)
         const rebooted = harness.connectUser({
@@ -134,8 +134,8 @@ describe("server lifecycle events", () => {
     // ─── Multiple users across multiple rooms ───────────────────────────────
 
     it("graceful shutdown handles multiple users across multiple rooms", async () => {
-        harness.seedRoom("room-alpha", "Alpha", RoomTypeEnumMap.Regular);
-        harness.seedRoom("room-beta", "Beta", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-alpha", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-beta", RoomTypeEnumMap.Regular);
 
         const N = 6;
         const rooms = [ROOM_ID, "room-alpha", "room-beta"];

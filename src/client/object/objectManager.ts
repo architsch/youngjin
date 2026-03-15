@@ -9,23 +9,30 @@ import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
+import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
 import SpeechBubble from "./components/speechBubble";
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import ObjectSyncReceiver from "./components/objectSyncReceiver";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectSyncEmitter from "./components/objectSyncEmitter";
 import VoxelGameObject from "./types/voxelGameObject";
-import DirUtil from "../../shared/math/util/dirUtil";
 import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
 import { setObjectMetadataObservable } from "../../shared/system/sharedObservables";
+import { persistentObjectSelectionObservable } from "../system/clientObservables";
+import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
 const playerByUserID: {[userID: string]: GameObject} = {};
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
+
+// IDs of objects that were speculatively spawned by the client before server confirmation
+const speculativeSpawnObjectIds = new Set<string>();
 
 const ObjectManager =
 {
+    speculativeSpawnObjectIds,
     getObjectById: (objectId: string): GameObject | undefined =>
     {
         return gameObjects[objectId];
@@ -53,7 +60,6 @@ const ObjectManager =
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
         // Load voxels from the decoded voxelGrid
-        const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
         for (const voxel of roomRuntimeMemory.room.voxelGrid.voxels)
         {
             const gameObject = ObjectFactory.createClientSideObject(
@@ -69,13 +75,13 @@ const ObjectManager =
             await ObjectManager.spawnObject(gameObject);
         };
 
-        // Find the player's initial position for distance-based canvas loading order
+        // Find the player's initial position for distance-based loading order
         let playerX = 0, playerY = 0, playerZ = 0;
-        for (const mem of Object.values(roomRuntimeMemory.objectRuntimeMemories))
+        for (const obj of Object.values(roomRuntimeMemory.room.objectById))
         {
-            if (mem.objectSpawnParams.objectTypeIndex === playerTypeIndex)
+            if (obj.objectTypeIndex === playerTypeIndex)
             {
-                const t = mem.objectSpawnParams.transform;
+                const t = obj.transform;
                 playerX = t.x;
                 playerY = t.y;
                 playerZ = t.z;
@@ -83,38 +89,21 @@ const ObjectManager =
             }
         }
 
-        // Load objects from the decoded persistentObjectGroup, sorted by distance
+        // Load all objects from room.objectById, sorted by distance
         // from the player so that canvas images load nearest-first.
-        const persistentObjects = Object.values(roomRuntimeMemory.room.persistentObjectGroup.persistentObjectById);
-        persistentObjects.sort((a, b) =>
+        const objects = Object.values(roomRuntimeMemory.room.objectById);
+        objects.sort((a, b) =>
         {
-            const da = (a.x - playerX) ** 2 + (a.y - playerY) ** 2 + (a.z - playerZ) ** 2;
-            const db = (b.x - playerX) ** 2 + (b.y - playerY) ** 2 + (b.z - playerZ) ** 2;
+            const da = (a.transform.x - playerX) ** 2 + (a.transform.y - playerY) ** 2 + (a.transform.z - playerZ) ** 2;
+            const db = (b.transform.x - playerX) ** 2 + (b.transform.y - playerY) ** 2 + (b.transform.z - playerZ) ** 2;
             return da - db;
         });
-        for (const po of persistentObjects)
+        for (const obj of objects)
         {
-            const dirVec = DirUtil.dir4ToVec3(po.dir);
-            const objectSpawnParams = new ObjectSpawnParams(
-                roomRuntimeMemory.room.id,
-                "", // Persistent objects are not directly owned by anyone, so sourceUserID is empty.
-                "", // Persistent objects are not directly owned by anyone, so sourceUserName is empty.
-                po.objectTypeIndex,
-                po.objectId,
-                new ObjectTransform(po.x, po.y, po.z, dirVec.x, dirVec.y, dirVec.z),
-                po.metadata
-            );
-            const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
+            if (obj.objectTypeIndex == voxelTypeIndex)
+                throw new Error(`Voxel object is not allowed to spawn via objectById.`);
+            const gameObject = ObjectFactory.createServerSideObject(obj);
             await ObjectManager.spawnObject(gameObject);
-        }
-
-        // Load objects from objectRuntimeMemories
-        for (const objectRuntimeMemory of Object.values(roomRuntimeMemory.objectRuntimeMemories))
-        {
-            if (objectRuntimeMemory.objectSpawnParams.objectTypeIndex == voxelTypeIndex)
-                throw new Error(`Voxel object is not allowed to spawn via objectRuntimeMemories.`);
-            const object = ObjectFactory.createServerSideObject(objectRuntimeMemory.objectSpawnParams);
-            await ObjectManager.spawnObject(object);
         }
     },
     unload: async () =>
@@ -178,6 +167,10 @@ const ObjectManager =
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
+
+        const room = App.getCurrentRoom()!;
+        room.objectById[params.objectId] = params;
+
         const gameObject = ObjectFactory.createServerSideObject(params);
         await ObjectManager.spawnObject(gameObject);
     },
@@ -188,6 +181,20 @@ const ObjectManager =
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
+
+        const room = App.getCurrentRoom()!;
+
+        // If this is a rejection of our speculative spawn, roll back the counter
+        if (speculativeSpawnObjectIds.delete(params.objectId))
+            room.lastObjectId--;
+
+        delete room.objectById[params.objectId];
+
+        // If the removed object was selected, unselect it.
+        const sel = persistentObjectSelectionObservable.peek();
+        if (sel && sel.gameObject.params.objectId === params.objectId)
+            PersistentObjectSelection.unselect();
+
         await ObjectManager.despawnObject(params.objectId);
     },
     // When the client receives an ObjectMessageParams signal from the server,
@@ -212,6 +219,29 @@ const ObjectManager =
             (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectDesyncResolveReceived(params);
         if (object.components.objectSyncEmitter)
             (object.components.objectSyncEmitter as ObjectSyncEmitter).onObjectDesyncResolveReceived(params);
+    },
+    // When the client receives an ObjectMetadataSetParams signal from the server,
+    // the metadata change will be applied to the corresponding game object.
+    onObjectMetadataSetReceived: async (params: ObjectMetadataSetParams) => {
+        const success = await waitUntilSignalProcessingReady("objectMetadataSetParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+
+        const room = App.getCurrentRoom()!;
+        const obj = room.objectById[params.objectId];
+        if (obj)
+            obj.setMetadata(params.metadataKey, params.metadataValue);
+
+        const gameObject = ObjectManager.getObjectById(params.objectId);
+        if (gameObject)
+            gameObject.params.setMetadata(params.metadataKey, params.metadataValue);
+
+        // If the modified object was selected by us, deactivate the selection
+        // since another user initiated the metadata change.
+        const sel = persistentObjectSelectionObservable.peek();
+        if (sel && sel.gameObject.params.objectId === params.objectId)
+            PersistentObjectSelection.unselect();
     },
 }
 

@@ -35,7 +35,7 @@ async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
     if (!room)
         return null;
 
-    const roomRuntimeMemory = new RoomRuntimeMemory(room, {}, {}, UserRoleEnumMap.Visitor); // The "userRole" parameter value here is just a placeholder.
+    const roomRuntimeMemory = new RoomRuntimeMemory(room, {}, UserRoleEnumMap.Visitor); // The "userRole" parameter value here is just a placeholder.
     RoomManager.roomRuntimeMemories[roomID] = roomRuntimeMemory;
     RoomManager.socketRoomContexts[roomID] = new SocketRoomContext();
 

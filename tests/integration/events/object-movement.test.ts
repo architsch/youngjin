@@ -22,7 +22,7 @@ describe("object movement events", () => {
 
     beforeEach(async () => {
         harness.reset();
-        harness.seedRoom(ROOM_ID, "Movement Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
         users = [];
     });
 
@@ -42,15 +42,15 @@ describe("object movement events", () => {
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
 
-        const obj1 = harness.getPlayerObjectRuntimeMemory(u1.user.id);
-        const obj2 = harness.getPlayerObjectRuntimeMemory(u2.user.id);
+        const obj1 = harness.getPlayerObject(u1.user.id);
+        const obj2 = harness.getPlayerObject(u2.user.id);
 
         expect(obj1).toBeDefined();
         expect(obj2).toBeDefined();
-        expect(obj1.objectSpawnParams.transform.x).toBeCloseTo(10);
-        expect(obj1.objectSpawnParams.transform.z).toBeCloseTo(10);
-        expect(obj2.objectSpawnParams.transform.x).toBeCloseTo(20);
-        expect(obj2.objectSpawnParams.transform.z).toBeCloseTo(20);
+        expect(obj1!.transform.x).toBeCloseTo(10);
+        expect(obj1!.transform.z).toBeCloseTo(10);
+        expect(obj2!.transform.x).toBeCloseTo(20);
+        expect(obj2!.transform.z).toBeCloseTo(20);
     });
 
     // ─── Move own object ────────────────────────────────────────────────────
@@ -61,9 +61,9 @@ describe("object movement events", () => {
         harness.updateObjectTransform(u1, new ObjectTransform(12, 0, 12, 0, 0, 1));
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const obj = harness.getPlayerObjectRuntimeMemory(u1.user.id);
-        expect(obj.objectSpawnParams.transform.x).toBeDefined();
-        expect(obj.objectSpawnParams.transform.z).toBeDefined();
+        const obj = harness.getPlayerObject(u1.user.id);
+        expect(obj!.transform.x).toBeDefined();
+        expect(obj!.transform.z).toBeDefined();
     });
 
     // ─── Authority check ────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ describe("object movement events", () => {
 
         const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-        const u2ObjectId = harness.getPlayerObjectRuntimeMemory(u2.user.id).objectSpawnParams.objectId;
+        const u2ObjectId = harness.getPlayerObject(u2.user.id)!.objectId;
         RoomManager.updateObjectTransform(
             u1.socketUserContext, u2ObjectId,
             new ObjectTransform(15, 0, 15, 0, 0, 1)
@@ -86,9 +86,9 @@ describe("object movement events", () => {
         consoleSpy.mockRestore();
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const obj2 = harness.getPlayerObjectRuntimeMemory(u2.user.id);
-        expect(obj2.objectSpawnParams.transform.x).toBeCloseTo(20);
-        expect(obj2.objectSpawnParams.transform.z).toBeCloseTo(20);
+        const obj2 = harness.getPlayerObject(u2.user.id);
+        expect(obj2!.transform.x).toBeCloseTo(20);
+        expect(obj2!.transform.z).toBeCloseTo(20);
     });
 
     // ─── Objects removed on leave ───────────────────────────────────────────
@@ -98,13 +98,13 @@ describe("object movement events", () => {
         const u2 = await connectUserAtPosition(20, 20);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(2);
+        expect(Object.keys(roomMem.room.objectById)).toHaveLength(2);
 
         await harness.disconnectUser(u1, false);
 
-        expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(1);
-        expect(harness.getPlayerObjectRuntimeMemory(u2.user.id)).toBeDefined();
-        expect(harness.getPlayerObjectRuntimeMemory(u1.user.id)).toBeUndefined();
+        expect(Object.keys(roomMem.room.objectById)).toHaveLength(1);
+        expect(harness.getPlayerObject(u2.user.id)).toBeDefined();
+        expect(harness.getPlayerObject(u1.user.id)).toBeUndefined();
     });
 
     // ─── Error handling ─────────────────────────────────────────────────────
@@ -144,14 +144,14 @@ describe("object movement events", () => {
         for (let i = 0; i < 3; i++)
         {
             const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-            const tr = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
+            const tr = harness.getPlayerObject(ctx.user.id)!.transform;
             harness.updateObjectTransform(ctx,
                 new ObjectTransform(tr.x + 0.5, tr.y, tr.z + 0.5, tr.dirX, tr.dirY, tr.dirZ)
             );
         }
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const objTransform = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
+        const objTransform = harness.getPlayerObject(ctx.user.id)!.transform;
         const gameplayState = harness.getGameplayState(ctx)!;
 
         expect(gameplayState.lastX).toBe(objTransform.x);
@@ -171,7 +171,7 @@ describe("object movement events", () => {
         for (let step = 0; step < 5; step++)
         {
             const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-            const tr = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
+            const tr = harness.getPlayerObject(ctx.user.id)!.transform;
             harness.updateObjectTransform(ctx,
                 new ObjectTransform(Math.min(30, tr.x + 1), tr.y, Math.min(30, tr.z + 1), tr.dirX, tr.dirY, tr.dirZ)
             );

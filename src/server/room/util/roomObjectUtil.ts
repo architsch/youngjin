@@ -1,5 +1,5 @@
 import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
-import ObjectRuntimeMemory from "../../../shared/object/types/objectRuntimeMemory";
+import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
@@ -11,11 +11,11 @@ export function generateObjectId(): string
     return `s${++serverObjectIdCounter}`;
 }
 
-export function addObject(socketUserContext: SocketUserContext, objectRuntimeMemory: ObjectRuntimeMemory)
+export function addObject(socketUserContext: SocketUserContext, objectSpawnParams: ObjectSpawnParams)
 {
     const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
-    const objectId = objectRuntimeMemory.objectSpawnParams.objectId;
+    const objectId = objectSpawnParams.objectId;
 
     console.log(`RoomManager.addObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
     if (roomID == undefined)
@@ -29,22 +29,22 @@ export function addObject(socketUserContext: SocketUserContext, objectRuntimeMem
         console.error(`RoomManager.addObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-    if (roomRuntimeMemory.objectRuntimeMemories[objectId] != undefined)
+    if (roomRuntimeMemory.room.objectById[objectId] != undefined)
     {
-        console.error(`RoomManager.addObject :: ObjectRuntimeMemory already exists (roomID = ${roomID}, objectId = ${objectId})`);
+        console.error(`RoomManager.addObject :: Object already exists (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-    roomRuntimeMemory.objectRuntimeMemories[objectId] = objectRuntimeMemory;
+    roomRuntimeMemory.room.objectById[objectId] = objectSpawnParams;
 
-    const colliderState = objectRuntimeMemory.objectSpawnParams.getObjectColliderState();
+    const colliderState = objectSpawnParams.getObjectColliderState();
     if (colliderState)
-        PhysicsManager.addObject(roomID, objectId, objectRuntimeMemory.objectSpawnParams.objectTypeIndex, colliderState);
+        PhysicsManager.addObject(roomID, objectId, objectSpawnParams.objectTypeIndex, colliderState);
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (!socketRoomContext)
         console.error(`RoomManager.addObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
-        socketRoomContext.multicastSignal("objectSpawnParams", objectRuntimeMemory.objectSpawnParams, user.id);
+        socketRoomContext.multicastSignal("objectSpawnParams", objectSpawnParams, user.id);
 }
 
 export function removeObject(socketUserContext: SocketUserContext, objectId: string)
@@ -63,18 +63,18 @@ export function removeObject(socketUserContext: SocketUserContext, objectId: str
         console.error(`RoomManager.removeObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-    const objectRuntimeMemory = roomRuntimeMemory.objectRuntimeMemories[objectId];
-    if (objectRuntimeMemory == undefined)
+    const objectSpawnParams = roomRuntimeMemory.room.objectById[objectId];
+    if (objectSpawnParams == undefined)
     {
-        console.error(`RoomManager.removeObject :: ObjectRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
+        console.error(`RoomManager.removeObject :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-    delete roomRuntimeMemory.objectRuntimeMemories[objectId];
+    delete roomRuntimeMemory.room.objectById[objectId];
 
-    const colliderState = objectRuntimeMemory.objectSpawnParams.getObjectColliderState();
+    const colliderState = objectSpawnParams.getObjectColliderState();
     if (colliderState)
         PhysicsManager.removeObject(roomID, objectId);
-    
+
     const despawnParams = new ObjectDespawnParams(roomID, objectId);
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];

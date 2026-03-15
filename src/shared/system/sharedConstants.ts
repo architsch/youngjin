@@ -59,14 +59,7 @@ export const VOXEL_GRID_TASK_TYPE_ADD = 1;
 export const VOXEL_GRID_TASK_TYPE_REMOVE = 2;
 export const VOXEL_GRID_TASK_TYPE_TEX = 3;
 
-// Persistent Object Group Tasks
-
-export const PERSISTENT_OBJ_TASK_TYPE_ADD = 0;
-export const PERSISTENT_OBJ_TASK_TYPE_REMOVE = 1;
-export const PERSISTENT_OBJ_TASK_TYPE_MOVE = 2;
-export const PERSISTENT_OBJ_TASK_TYPE_SET_METADATA = 3;
-
-// Persistent Object Limits
+// Object Limits
 
 export const MAX_CANVASES_PER_ROOM = 64;
 export const MAX_IMAGE_URL_LENGTH = 512;

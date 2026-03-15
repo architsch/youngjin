@@ -23,10 +23,10 @@ export default function Chat()
                 () => ObjectManager.getMyPlayer() != undefined, 5000);
 
             const myPlayer = ObjectManager.getMyPlayer();
-            const playerMemory = myPlayer ? roomRuntimeMemory.objectRuntimeMemories[myPlayer.params.objectId] : undefined;
-            if (playerMemory?.objectSpawnParams.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage))
+            const playerObj = myPlayer ? roomRuntimeMemory.room.objectById[myPlayer.params.objectId] : undefined;
+            if (playerObj?.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage))
             {
-                const sentMessage = playerMemory.objectSpawnParams.getMetadata(ObjectMetadataKeyEnumMap.SentMessage);
+                const sentMessage = playerObj.getMetadata(ObjectMetadataKeyEnumMap.SentMessage);
                 setState(prev => ({...prev, sentMessage}));
             }
             else

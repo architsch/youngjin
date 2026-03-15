@@ -7,23 +7,28 @@ import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
+import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
+import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
 import { addUserToRoom, getUserGameplayState, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
 import { updateVoxelGrid } from "./util/roomVoxelUtil";
-import { updatePersistentObjectGroup } from "./util/roomPersistentObjectUtil";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
-import UpdatePersistentObjectGroupParams from "../../shared/object/types/update/updatePersistentObjectGroupParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
-import { OBJECT_MESSAGE_MAX_LENGTH, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { OBJECT_MESSAGE_MAX_LENGTH, ROOM_AUTO_SAVE_INTERVAL, MAX_CANVASES_PER_ROOM } from "../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import UserGameplayState from "../user/types/userGameplayState";
 import DBUserUtil from "../db/util/dbUserUtil";
 import DBUserRoomStateUtil from "../db/util/dbUserRoomStateUtil";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
 const currentRoomIDByUserID: {[userID: string]: string} = {};
+
+const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
 const RoomManager =
 {
@@ -43,7 +48,7 @@ const RoomManager =
             }
         }
 
-        const BATCH_SIZE = 5; // Saving too many rooms at once will introduce too much bandwidth, but saving too few rooms will slow down the whole process. We should pick a number that is neither too high nor too low.
+        const BATCH_SIZE = 5;
         for (let i = 0; i < roomsToSave.length; i += BATCH_SIZE)
         {
             await Promise.all(roomsToSave.slice(i, i + BATCH_SIZE).map(async (mem) =>
@@ -165,9 +170,144 @@ const RoomManager =
     {
         updateVoxelGrid(socketUserContext, params);
     },
-    updatePersistentObjectGroup: (socketUserContext: SocketUserContext, params: UpdatePersistentObjectGroupParams) =>
+    // Handle client-sent objectSpawnParams (e.g. adding a canvas)
+    handleObjectSpawn: (socketUserContext: SocketUserContext, params: ObjectSpawnParams) =>
     {
-        updatePersistentObjectGroup(socketUserContext, params);
+        const user = socketUserContext.user;
+        const roomID = currentRoomIDByUserID[user.id];
+        if (!roomID)
+        {
+            console.error(`RoomManager.handleObjectSpawn :: RoomID not found (userID = ${user.id})`);
+            return;
+        }
+        const roomRuntimeMemory = roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory)
+        {
+            console.error(`RoomManager.handleObjectSpawn :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            return;
+        }
+        const room = roomRuntimeMemory.room;
+
+        // Validate canvas limit
+        if (params.objectTypeIndex === canvasTypeIndex)
+        {
+            const canvasCount = Object.values(room.objectById)
+                .filter(obj => obj.objectTypeIndex === canvasTypeIndex).length;
+            if (canvasCount >= MAX_CANVASES_PER_ROOM)
+            {
+                console.error(`handleObjectSpawn :: Canvas limit reached (${MAX_CANVASES_PER_ROOM}) in room ${room.id}`);
+                // Send despawn back to undo the client's speculative add
+                socketUserContext.addPendingSignalToUser("objectDespawnParams",
+                    new ObjectDespawnParams(room.id, params.objectId));
+                return;
+            }
+        }
+
+        // Verify client's objectId matches expected server-side objectId
+        const expectedObjectId = `p${room.lastObjectId + 1}`;
+        if (params.objectId !== expectedObjectId)
+        {
+            console.error(`handleObjectSpawn :: ObjectId mismatch (expected=${expectedObjectId}, received=${params.objectId})`);
+            socketUserContext.addPendingSignalToUser("objectDespawnParams",
+                new ObjectDespawnParams(room.id, params.objectId));
+            return;
+        }
+
+        // Validate placement
+        const t = params.transform;
+        if (!ObjectUpdateUtil.canAddObject(room, params.objectTypeIndex, t.x, t.y, t.z, t.dirX, t.dirY, t.dirZ))
+        {
+            console.error(`handleObjectSpawn :: Placement validation failed (objectId=${params.objectId})`);
+            socketUserContext.addPendingSignalToUser("objectDespawnParams",
+                new ObjectDespawnParams(room.id, params.objectId));
+            return;
+        }
+
+        // Add the object
+        room.objectById[params.objectId] = params;
+        ++room.lastObjectId;
+
+        // Register physics
+        const colliderState = params.getObjectColliderState();
+        if (colliderState)
+            PhysicsManager.addObject(room.id, params.objectId, params.objectTypeIndex, colliderState);
+
+        room.dirty = true;
+
+        // Broadcast to other clients
+        const socketRoomContext = socketRoomContexts[roomID];
+        if (socketRoomContext)
+            socketRoomContext.multicastSignal("objectSpawnParams", params, user.id);
+    },
+    // Handle client-sent objectDespawnParams (e.g. removing a canvas)
+    handleObjectDespawn: (socketUserContext: SocketUserContext, params: ObjectDespawnParams) =>
+    {
+        const user = socketUserContext.user;
+        const roomID = currentRoomIDByUserID[user.id];
+        if (!roomID)
+        {
+            console.error(`RoomManager.handleObjectDespawn :: RoomID not found (userID = ${user.id})`);
+            return;
+        }
+        const roomRuntimeMemory = roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory)
+        {
+            console.error(`RoomManager.handleObjectDespawn :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            return;
+        }
+        const room = roomRuntimeMemory.room;
+        const existingObj = room.objectById[params.objectId];
+        if (!existingObj)
+        {
+            console.error(`RoomManager.handleObjectDespawn :: Object not found (objectId = ${params.objectId})`);
+            return;
+        }
+
+        // Remove the object
+        delete room.objectById[params.objectId];
+
+        // Unregister physics
+        if (PhysicsManager.hasObject(room.id, params.objectId))
+            PhysicsManager.removeObject(room.id, params.objectId);
+
+        room.dirty = true;
+
+        // Broadcast to other clients
+        const socketRoomContext = socketRoomContexts[roomID];
+        if (socketRoomContext)
+            socketRoomContext.multicastSignal("objectDespawnParams", params, user.id);
+    },
+    // Handle client-sent objectMetadataSetParams
+    handleObjectMetadataSet: (socketUserContext: SocketUserContext, params: ObjectMetadataSetParams) =>
+    {
+        const user = socketUserContext.user;
+        const roomID = currentRoomIDByUserID[user.id];
+        if (!roomID)
+        {
+            console.error(`RoomManager.handleObjectMetadataSet :: RoomID not found (userID = ${user.id})`);
+            return;
+        }
+        const roomRuntimeMemory = roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory)
+        {
+            console.error(`RoomManager.handleObjectMetadataSet :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            return;
+        }
+        const room = roomRuntimeMemory.room;
+
+        const obj = ObjectUpdateUtil.setObjectMetadata(room, params.objectId, params.metadataKey, params.metadataValue);
+        if (!obj)
+        {
+            console.error(`RoomManager.handleObjectMetadataSet :: Failed (objectId = ${params.objectId})`);
+            return;
+        }
+
+        room.dirty = true;
+
+        // Broadcast to other clients
+        const socketRoomContext = socketRoomContexts[roomID];
+        if (socketRoomContext)
+            socketRoomContext.multicastSignal("objectMetadataSetParams", params, user.id);
     },
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {
@@ -184,19 +324,19 @@ const RoomManager =
             console.error(`RoomManager.sendObjectMessage :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
-        const objectRuntimeMemory = roomRuntimeMemory.objectRuntimeMemories[params.senderObjectId];
-        if (objectRuntimeMemory == undefined)
+        const obj = roomRuntimeMemory.room.objectById[params.senderObjectId];
+        if (obj == undefined)
         {
-            console.error(`RoomManager.sendObjectMessage :: ObjectRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${params.senderObjectId})`);
+            console.error(`RoomManager.sendObjectMessage :: Object doesn't exist (roomID = ${roomID}, objectId = ${params.senderObjectId})`);
             return;
         }
-        if (objectRuntimeMemory.objectSpawnParams.sourceUserID != user.id)
+        if (obj.sourceUserID != user.id)
         {
             console.error(`RoomManager.sendObjectMessage :: User has no authority to control this object (roomID = ${roomID}, objectId = ${params.senderObjectId})`);
             return;
         }
         params.message = params.message.trim().substring(0, OBJECT_MESSAGE_MAX_LENGTH);
-        objectRuntimeMemory.objectSpawnParams.setMetadata(ObjectMetadataKeyEnumMap.SentMessage, params.message);
+        obj.setMetadata(ObjectMetadataKeyEnumMap.SentMessage, params.message);
 
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)
@@ -219,13 +359,13 @@ const RoomManager =
             console.error(`RoomManager.updateObjectTransform :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
-        const objectRuntimeMemory = roomRuntimeMemory.objectRuntimeMemories[objectId];
-        if (objectRuntimeMemory == undefined)
+        const obj = roomRuntimeMemory.room.objectById[objectId];
+        if (obj == undefined)
         {
-            console.error(`RoomManager.updateObjectTransform :: ObjectRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`RoomManager.updateObjectTransform :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
-        if (objectRuntimeMemory.objectSpawnParams.sourceUserID != user.id)
+        if (obj.sourceUserID != user.id)
         {
             console.error(`RoomManager.updateObjectTransform :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
             return;
@@ -235,7 +375,7 @@ const RoomManager =
         const result = PhysicsManager.tryMoveObject(roomID, objectId, targetPos);
         transform.x = result.resolvedPos.x;
         transform.z = result.resolvedPos.y;
-        Object.assign(objectRuntimeMemory.objectSpawnParams.transform, transform);
+        Object.assign(obj.transform, transform);
 
         if (result.desyncDetected)
         {

@@ -28,12 +28,12 @@ const PhysicsManager =
             throw new Error(`Physics-room already exists (roomID = ${roomRuntimeMemory.room.id})`);
         physicsRooms[roomRuntimeMemory.room.id] = new PhysicsRoom(roomRuntimeMemory.room);
 
-        const persistentObjects = Object.values(roomRuntimeMemory.room.persistentObjectGroup.persistentObjectById);
-        for (const po of persistentObjects)
+        const objects = Object.values(roomRuntimeMemory.room.objectById);
+        for (const obj of objects)
         {
-            const colliderState = po.getObjectColliderState();
+            const colliderState = obj.getObjectColliderState();
             if (colliderState)
-                PhysicsManager.addObject(roomRuntimeMemory.room.id, po.objectId, po.objectTypeIndex, colliderState);
+                PhysicsManager.addObject(roomRuntimeMemory.room.id, obj.objectId, obj.objectTypeIndex, colliderState);
         }
     },
     unload: (roomID: string) =>

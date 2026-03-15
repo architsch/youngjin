@@ -7,7 +7,10 @@ import { DBRow } from "../types/row/dbRow";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import VoxelGrid from "../../../shared/voxel/types/voxelGrid";
 import BufferState from "../../../shared/networking/types/bufferState";
-import PersistentObjectGroup from "../../../shared/object/types/persistentObjectGroup";
+import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import EncodableRaw4ByteNumber from "../../../shared/networking/types/encodableRaw4ByteNumber";
+import EncodableArray from "../../../shared/networking/types/encodableArray";
+import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
 import DBFileStorageUtil from "./dbFileStorageUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
@@ -33,7 +36,13 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.saveRoomContent", {roomID: room.id}, "low", "info");
         const bufferState = EncodingUtil.startEncoding();
         room.voxelGrid.encode(bufferState);
-        room.persistentObjectGroup.encode(bufferState);
+
+        // Encode only persistent objects
+        const persistentObjects = Object.values(room.objectById)
+            .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
+        new EncodableRaw4ByteNumber(room.lastObjectId).encode(bufferState);
+        new EncodableArray(persistentObjects, 65535).encode(bufferState);
+
         const buffer = Buffer.from(EncodingUtil.endEncoding(bufferState));
         return await DBFileStorageUtil.saveBinaryFile(getRoomContentFilePath(room.id), buffer);
     },
@@ -48,18 +57,18 @@ const DBRoomUtil =
     {
         LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, floorTextureIndex, wallTextureIndex,
             ceilingTextureIndex, texturePackPath}, "low", "info");
-        const {voxelGrid, persistentObjectGroup} =
+        const {voxelGrid} =
             RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
         const room = new Room(undefined, roomType, ownerUserID, texturePackPath,
-            voxelGrid, persistentObjectGroup);
+            voxelGrid);
         const dbRoom = getDBRoomFromRoom(room);
 
         const roomInsertResult = await new DBQuery<{id: string}>()
             .insertInto(COLLECTION_ROOMS)
             .values(dbRoom as DBRow)
             .run();
-        
+
         if (!roomInsertResult.success)
         {
             await DBRoomUtil.deleteRoomContent(room);
@@ -117,7 +126,15 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
 
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-    const persistentObjectGroup = PersistentObjectGroup.decode(bufferState) as PersistentObjectGroup;
+
+    const lastObjectId = (EncodableRaw4ByteNumber.decode(bufferState) as EncodableRaw4ByteNumber).n;
+    const objectArray = EncodableArray.decodeWithParams(bufferState, ObjectSpawnParams.decode, 65535) as EncodableArray;
+    const objectById: {[objectId: string]: ObjectSpawnParams} = {};
+    for (const element of objectArray.arr)
+    {
+        const obj = element as ObjectSpawnParams;
+        objectById[obj.objectId] = obj;
+    }
 
     return new Room(
         dbRoom.id,
@@ -125,7 +142,8 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
         dbRoom.ownerUserID,
         dbRoom.texturePackPath,
         voxelGrid,
-        persistentObjectGroup
+        objectById,
+        lastObjectId
     );
 }
 

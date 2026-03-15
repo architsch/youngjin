@@ -42,7 +42,7 @@ describe("randomized multiplayer scenarios (fast-check)", () => {
                 async (actions) => {
                     harness.reset();
                     for (const roomID of ROOM_IDS)
-                        harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+                        harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const connectedUsers: ConnectedUser[] = [];
 
@@ -66,7 +66,7 @@ describe("randomized multiplayer scenarios (fast-check)", () => {
                 async (actions) => {
                     harness.reset();
                     for (const roomID of ROOM_IDS)
-                        harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+                        harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const connectedUsers: ConnectedUser[] = [];
 
@@ -101,7 +101,7 @@ describe("randomized multiplayer scenarios (fast-check)", () => {
                 async (actions) => {
                     harness.reset();
                     for (const roomID of ROOM_IDS)
-                        harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+                        harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const connectedUsers: ConnectedUser[] = [];
 
@@ -131,7 +131,7 @@ describe("randomized multiplayer scenarios (fast-check)", () => {
                 async (actions) => {
                     harness.reset();
                     for (const roomID of ROOM_IDS)
-                        harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+                        harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const connectedUsers: ConnectedUser[] = [];
 
@@ -162,7 +162,7 @@ describe("randomized multiplayer scenarios (fast-check)", () => {
                 async (actions) => {
                     harness.reset();
                     for (const roomID of ROOM_IDS)
-                        harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+                        harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const connectedUsers: ConnectedUser[] = [];
 
@@ -288,7 +288,7 @@ describe("property-based: state persistence under random connect/disconnect (fas
                 async (actions) => {
                     harness.reset();
                     for (const roomID of PROP_ROOM_IDS)
-                        harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+                        harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const users: ConnectedUser[] = [];
                     const stateSnapshots: Array<{ x: number; z: number; roomID: string }> = [];
@@ -354,9 +354,9 @@ describe("property-based: state persistence under random connect/disconnect (fas
                     {
                         for (const uid of Object.keys(roomMem.participantUserIDs))
                         {
-                            const obj = harness.getPlayerObjectRuntimeMemory(uid);
+                            const obj = harness.getPlayerObject(uid);
                             expect(obj).toBeDefined();
-                            expect(obj.objectSpawnParams.sourceUserID).toBe(uid);
+                            expect(obj!.sourceUserID).toBe(uid);
                         }
                     }
 
@@ -380,7 +380,7 @@ describe("state persistence with simulated DB latency", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
         harness.reset();
         harness.setLatency(true, 0, 3);
-        harness.seedRoom(LATENCY_ROOM, "Latency Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(LATENCY_ROOM, RoomTypeEnumMap.Regular);
     });
 
     it("concurrent joins to unloaded room: loadRoom dedup holds under latency", async () => {
@@ -407,9 +407,9 @@ describe("state persistence with simulated DB latency", () => {
         const roomMem = RoomManager.roomRuntimeMemories[LATENCY_ROOM];
         for (let i = 0; i < N; i++)
         {
-            const obj = harness.getPlayerObjectRuntimeMemory(users[i].user.id);
+            const obj = harness.getPlayerObject(users[i].user.id);
             expect(obj).toBeDefined();
-            expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`lat-${i}`);
+            expect(obj!.metadata[0]?.str).toBe(`lat-${i}`);
         }
     }, 10_000);
 
@@ -497,18 +497,18 @@ describe("state persistence with simulated DB latency", () => {
         const roomMem = RoomManager.roomRuntimeMemories[LATENCY_ROOM];
         for (let i = 0; i < stayers.length; i++)
         {
-            const obj = harness.getPlayerObjectRuntimeMemory(stayers[i].user.id);
+            const obj = harness.getPlayerObject(stayers[i].user.id);
             expect(obj).toBeDefined();
-            expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`stayer-${i}`);
+            expect(obj!.metadata[0]?.str).toBe(`stayer-${i}`);
         }
         for (let i = 0; i < joiners.length; i++)
         {
-            const obj = harness.getPlayerObjectRuntimeMemory(joiners[i].user.id);
+            const obj = harness.getPlayerObject(joiners[i].user.id);
             expect(obj).toBeDefined();
-            expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`joiner-${i}`);
+            expect(obj!.metadata[0]?.str).toBe(`joiner-${i}`);
         }
         for (const ctx of leavers)
-            expect(harness.getPlayerObjectRuntimeMemory(ctx.user.id)).toBeUndefined();
+            expect(harness.getPlayerObject(ctx.user.id)).toBeUndefined();
 
         for (const expected of leaverStates)
         {
@@ -530,7 +530,7 @@ describe("state persistence with simulated DB latency", () => {
         await harness.joinRoom(user, LATENCY_ROOM);
 
         const roomMem = RoomManager.roomRuntimeMemories[LATENCY_ROOM];
-        const tr = harness.getPlayerObjectRuntimeMemory("lat-reconnect").objectSpawnParams.transform;
+        const tr = harness.getPlayerObject("lat-reconnect")!.transform;
         harness.updateObjectTransform(user,
             new ObjectTransform(
                 Math.min(30, tr.x + 1), tr.y, Math.min(30, tr.z + 1),
@@ -551,10 +551,10 @@ describe("state persistence with simulated DB latency", () => {
         });
         await harness.joinRoom(reconnected, LATENCY_ROOM);
 
-        const obj = harness.getPlayerObjectRuntimeMemory("lat-reconnect");
+        const obj = harness.getPlayerObject("lat-reconnect");
         expect(obj).toBeDefined();
-        expect(obj.objectSpawnParams.transform.x).toBeCloseTo(stateBeforeDisconnect.lastX, 0);
-        expect(obj.objectSpawnParams.transform.z).toBeCloseTo(stateBeforeDisconnect.lastZ, 0);
+        expect(obj!.transform.x).toBeCloseTo(stateBeforeDisconnect.lastX, 0);
+        expect(obj!.transform.z).toBeCloseTo(stateBeforeDisconnect.lastZ, 0);
 
         expect(Object.keys(roomMem.participantUserIDs)).toHaveLength(2);
     }, 10_000);
@@ -563,7 +563,7 @@ describe("state persistence with simulated DB latency", () => {
         const ROOM_COUNT = 4;
         const rooms = Array.from({ length: ROOM_COUNT }, (_, i) => `lat-multi-${i}`);
         for (const roomID of rooms)
-            harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+            harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
         const allUsers: ConnectedUser[] = [];
         for (let r = 0; r < ROOM_COUNT; r++)
@@ -648,7 +648,7 @@ describe("property-based with simulated DB latency (fast-check)", () => {
                     harness.reset();
                     harness.setLatency(true, 0, 3);
                     for (const roomID of LAT_ROOM_IDS)
-                        harness.seedRoom(roomID, roomID, RoomTypeEnumMap.Regular);
+                        harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const users: ConnectedUser[] = [];
 
@@ -735,9 +735,9 @@ describe("property-based with simulated DB latency (fast-check)", () => {
 
                     for (const [roomID, roomMem] of Object.entries(RoomManager.roomRuntimeMemories))
                     {
-                        for (const [objId, objMem] of Object.entries(roomMem.objectRuntimeMemories))
+                        for (const [objId, objMem] of Object.entries(roomMem.room.objectById))
                         {
-                            const sourceUser = objMem.objectSpawnParams.sourceUserID;
+                            const sourceUser = objMem.sourceUserID;
                             expect(roomMem.participantUserIDs[sourceUser]).toBe(true);
                         }
                     }

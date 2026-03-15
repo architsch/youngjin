@@ -1,5 +1,4 @@
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
-import ObjectRuntimeMemory from "../../../shared/object/types/objectRuntimeMemory";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
@@ -15,7 +14,7 @@ import { UserRole, UserRoleEnumMap } from "../../../shared/user/types/userRole";
 import UserRoleUpdateParams from "../../../shared/user/types/userRoleUpdateParams";
 import DBUserUtil from "../../db/util/dbUserUtil";
 
-const playerObjectRuntimeMemoryByUserID: {[userID: string]: ObjectRuntimeMemory} = {};
+const playerObjectByUserID: {[userID: string]: ObjectSpawnParams} = {};
 const userRoleByUserID: {[userID: string]: UserRole} = {};
 
 export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
@@ -43,7 +42,7 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
     const restoredMetadata: {[key: number]: EncodableByteString} = {};
     for (const key of Object.keys(playerMetadata))
         restoredMetadata[parseInt(key)] = new EncodableByteString(playerMetadata[key]);
-    const playerObjectRuntimeMemory = new ObjectRuntimeMemory(new ObjectSpawnParams(
+    const playerObjectSpawnParams = new ObjectSpawnParams(
         roomRuntimeMemory.room.id,
         user.id,
         user.userName,
@@ -51,9 +50,9 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
         generateObjectId(),
         playerObjectTransform,
         restoredMetadata
-    ));
-    addObject(socketUserContext, playerObjectRuntimeMemory);
-    playerObjectRuntimeMemoryByUserID[userID] = playerObjectRuntimeMemory;
+    );
+    addObject(socketUserContext, playerObjectSpawnParams);
+    playerObjectByUserID[userID] = playerObjectSpawnParams;
     userRoleByUserID[userID] = userRole;
 }
 
@@ -93,7 +92,7 @@ export async function removeUserFromRoom(socketUserContext: SocketUserContext, p
     }
     delete RoomManager.currentRoomIDByUserID[user.id];
     delete roomRuntimeMemory.participantUserIDs[user.id];
-    delete playerObjectRuntimeMemoryByUserID[user.id];
+    delete playerObjectByUserID[user.id];
     delete userRoleByUserID[user.id];
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
@@ -118,9 +117,9 @@ export function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): st
         return [];
     }
     const ids: string[] = [];
-    for (const [objectId, objectRuntimeMemory] of Object.entries(roomRuntimeMemory.objectRuntimeMemories))
+    for (const [objectId, obj] of Object.entries(roomRuntimeMemory.room.objectById))
     {
-        if (objectRuntimeMemory.objectSpawnParams.sourceUserID == userID)
+        if (obj.sourceUserID == userID)
             ids.push(objectId);
     }
     return ids;
@@ -130,14 +129,14 @@ export function getUserGameplayState(socketUserContext: SocketUserContext, roomR
     : UserGameplayState | undefined
 {
     const user = socketUserContext.user;
-    const playerObjectRuntimeMemory = playerObjectRuntimeMemoryByUserID[user.id];
-    if (!playerObjectRuntimeMemory)
+    const playerObject = playerObjectByUserID[user.id];
+    if (!playerObject)
     {
-        console.error(`getUserGameplayState :: Player's ObjectRuntimeMemory not found (userID = ${user.id})`);
+        console.error(`getUserGameplayState :: Player's ObjectSpawnParams not found (userID = ${user.id})`);
         return undefined;
     }
-    const tr = playerObjectRuntimeMemory.objectSpawnParams.transform;
-    const rawMetadata = playerObjectRuntimeMemory.objectSpawnParams.metadata;
+    const tr = playerObject.transform;
+    const rawMetadata = playerObject.metadata;
     const playerMetadata: {[key: string]: string} = {};
     for (const key of Object.keys(rawMetadata))
         playerMetadata[key] = rawMetadata[key as any].str;
@@ -159,16 +158,16 @@ export function getUserGameplayState(socketUserContext: SocketUserContext, roomR
     };
 }
 
-export function getPlayerObjectRuntimeMemory(userID: string): ObjectRuntimeMemory | undefined
+export function getPlayerObject(userID: string): ObjectSpawnParams | undefined
 {
-    return playerObjectRuntimeMemoryByUserID[userID];
+    return playerObjectByUserID[userID];
 }
 
 // WARNING: Use this method only in integration tests.
-export function clearPlayerObjectRuntimeMemories(): void
+export function clearPlayerObjects(): void
 {
-    for (const key in playerObjectRuntimeMemoryByUserID)
-        delete playerObjectRuntimeMemoryByUserID[key];
+    for (const key in playerObjectByUserID)
+        delete playerObjectByUserID[key];
     for (const key in userRoleByUserID)
         delete userRoleByUserID[key];
 }

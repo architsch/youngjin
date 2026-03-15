@@ -116,16 +116,16 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (!roomID) return;
             const roomMem = RoomManager.roomRuntimeMemories[roomID];
             if (!roomMem) return;
-            const obj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
+            const obj = harness.getPlayerObject(ctx.user.id);
             if (!obj) return;
-            const tr = obj.objectSpawnParams.transform;
+            const tr = obj.transform;
             const newTransform = new ObjectTransform(
                 Math.max(1, Math.min(31, tr.x + action.dx)),
                 tr.y,
                 Math.max(1, Math.min(31, tr.z + action.dz)),
                 tr.dirX, tr.dirY, tr.dirZ
             );
-            RoomManager.updateObjectTransform(ctx.socketUserContext, obj.objectSpawnParams.objectId, newTransform);
+            RoomManager.updateObjectTransform(ctx.socketUserContext, obj.objectId, newTransform);
             break;
         }
         case "sendMessage":
@@ -137,11 +137,11 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (!roomID) return;
             const roomMem = RoomManager.roomRuntimeMemories[roomID];
             if (!roomMem) return;
-            const playerObj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
+            const playerObj = harness.getPlayerObject(ctx.user.id);
             if (!playerObj) return;
             RoomManager.sendObjectMessage(
                 ctx.socketUserContext,
-                new ObjectMessageParams(playerObj.objectSpawnParams.objectId, action.message)
+                new ObjectMessageParams(playerObj.objectId, action.message)
             );
             break;
         }

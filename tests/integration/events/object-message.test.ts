@@ -20,7 +20,7 @@ const ROOM_ID = "msg-room";
 describe("object message events", () => {
     beforeEach(() => {
         harness.reset();
-        harness.seedRoom(ROOM_ID, "Message Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
     });
 
     it("sendObjectMessage sets SentMessage metadata on player object", async () => {
@@ -75,14 +75,14 @@ describe("object message events", () => {
 
         // Observer can see the sender's metadata in the room's object runtime memory
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const senderObj = harness.getPlayerObjectRuntimeMemory("sender");
+        const senderObj = harness.getPlayerObject("sender");
         expect(senderObj).toBeDefined();
-        expect(senderObj.objectSpawnParams.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe(true);
-        expect(senderObj.objectSpawnParams.getMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe("hi everyone");
+        expect(senderObj!.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe(true);
+        expect(senderObj!.getMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe("hi everyone");
     });
 
     it("message metadata not visible to users in different rooms", async () => {
-        harness.seedRoom("other-room", "Other Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom("other-room", RoomTypeEnumMap.Regular);
 
         const sender = harness.connectUser({ id: "room-a-user" });
         const otherUser = harness.connectUser({ id: "room-b-user" });
@@ -94,11 +94,11 @@ describe("object message events", () => {
         // The other room should not contain the sender's object
         const otherRoomMem = RoomManager.roomRuntimeMemories["other-room"];
         const senderObjectId = harness.getPlayerObjectId(sender);
-        expect(otherRoomMem.objectRuntimeMemories[senderObjectId!]).toBeUndefined();
+        expect(otherRoomMem.room.objectById[senderObjectId!]).toBeUndefined();
 
         // Sender's room should have the metadata
-        const senderObj = harness.getPlayerObjectRuntimeMemory("room-a-user");
-        expect(senderObj.objectSpawnParams.getMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe("room A only");
+        const senderObj = harness.getPlayerObject("room-a-user");
+        expect(senderObj!.getMetadata(ObjectMetadataKeyEnumMap.SentMessage)).toBe("room A only");
     });
 
     it("sending multiple messages updates metadata to the latest one", async () => {

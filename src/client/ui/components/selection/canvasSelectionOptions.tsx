@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import { useState } from "react";
 import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
 import Button from "../basic/button";
@@ -6,14 +5,12 @@ import TextInput from "../basic/textInput";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ObjectManager from "../../../object/objectManager";
-import RemovePersistentObjectParams from "../../../../shared/object/types/update/removePersistentObjectParams";
-import MovePersistentObjectParams from "../../../../shared/object/types/update/movePersistentObjectParams";
-import SetPersistentObjectMetadataParams from "../../../../shared/object/types/update/setPersistentObjectMetadataParams";
-import PersistentObjectUpdateUtil from "../../../../shared/object/util/persistentObjectUpdateUtil";
+import ObjectMetadataSetParams from "../../../../shared/object/types/objectMetadataSetParams";
+import ObjectDespawnParams from "../../../../shared/object/types/objectDespawnParams";
+import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import { notificationMessageObservable, persistentObjectSelectionObservable } from "../../../system/clientObservables";
 import { MAX_IMAGE_URL_LENGTH } from "../../../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import DirUtil from "../../../../shared/math/util/dirUtil";
 
 export default function CanvasSelectionOptions(props: {selection: PersistentObjectSelection})
 {
@@ -28,18 +25,7 @@ export default function CanvasSelectionOptions(props: {selection: PersistentObje
             <Button name="Remove" size="sm" color="red"
                 disabled={!canRemoveCanvas(props.selection)}
                 onClick={() => tryRemoveCanvas(props.selection)}/>
-            <Button name="Move Left" size="sm"
-                disabled={!canMoveCanvas(props.selection, 0.5, 0)}
-                onClick={() => tryMoveCanvas(props.selection, 0.5, 0)}/>
-            <Button name="Move Right" size="sm"
-                disabled={!canMoveCanvas(props.selection, -0.5, 0)}
-                onClick={() => tryMoveCanvas(props.selection, -0.5, 0)}/>
-            <Button name="Move Up" size="sm"
-                disabled={!canMoveCanvas(props.selection, 0, 0.5)}
-                onClick={() => tryMoveCanvas(props.selection, 0, 0.5)}/>
-            <Button name="Move Down" size="sm"
-                disabled={!canMoveCanvas(props.selection, 0, -0.5)}
-                onClick={() => tryMoveCanvas(props.selection, 0, -0.5)}/>
+            {/* TODO: Move buttons will be re-added after movement logic refactoring */}
         </div>
         <div className="flex flex-row gap-2 items-center">
             <TextInput size="sm" placeholder="Image URL" textInput={imageURL} setTextInput={setImageURL}/>
@@ -57,7 +43,7 @@ function canRemoveCanvas(selection: PersistentObjectSelection): boolean
         return false;
 
     const objectId = selection.gameObject.params.objectId;
-    return PersistentObjectUpdateUtil.canRemovePersistentObject(room, objectId);
+    return ObjectUpdateUtil.canRemoveObject(room, objectId);
 }
 
 function tryRemoveCanvas(selection: PersistentObjectSelection)
@@ -67,44 +53,13 @@ function tryRemoveCanvas(selection: PersistentObjectSelection)
 
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
-    const removed = PersistentObjectUpdateUtil.removePersistentObject(room, objectId);
+    const removed = ObjectUpdateUtil.removeObject(room, objectId);
     if (!removed)
         return;
 
     PersistentObjectSelection.unselect();
     ObjectManager.despawnObject(objectId);
-    SocketsClient.emitUpdatePersistentObjectGroup(new RemovePersistentObjectParams(objectId));
-}
-
-function canMoveCanvas(selection: PersistentObjectSelection, dx: number, dy: number): boolean
-{
-    const room = App.getCurrentRoom();
-    if (!room)
-        return false;
-
-    const objectId = selection.gameObject.params.objectId;
-    return PersistentObjectUpdateUtil.canMovePersistentObject(room, objectId, dx, dy, 0);
-}
-
-function tryMoveCanvas(selection: PersistentObjectSelection, dx: number, dy: number)
-{
-    if (!canMoveCanvas(selection, dx, dy))
-        return;
-
-    const room = App.getCurrentRoom()!;
-    const objectId = selection.gameObject.params.objectId;
-    const po = PersistentObjectUpdateUtil.movePersistentObject(room, objectId, dx, dy, 0);
-    if (!po)
-        return;
-
-    const dirVec = DirUtil.dir4ToVec3(po.dir);
-    selection.gameObject.forceSetTransform(
-        new THREE.Vector3(po.x, po.y, po.z),
-        new THREE.Vector3(dirVec.x, dirVec.y, dirVec.z)
-    );
-    persistentObjectSelectionObservable.notify();
-
-    SocketsClient.emitUpdatePersistentObjectGroup(new MovePersistentObjectParams(objectId, dx, dy, 0));
+    SocketsClient.emitObjectDespawn(new ObjectDespawnParams(room.id, objectId));
 }
 
 function canSetCanvasImageURL(selection: PersistentObjectSelection, imageURL: string): boolean
@@ -114,7 +69,7 @@ function canSetCanvasImageURL(selection: PersistentObjectSelection, imageURL: st
         return false;
 
     const objectId = selection.gameObject.params.objectId;
-    return PersistentObjectUpdateUtil.canSetPersistentObjectMetadata(room, objectId,
+    return ObjectUpdateUtil.canSetObjectMetadata(room, objectId,
         ObjectMetadataKeyEnumMap.ImageURL, imageURL);
 }
 
@@ -132,13 +87,13 @@ function trySetCanvasImageURL(selection: PersistentObjectSelection, imageURL: st
     }
 
     const objectId = selection.gameObject.params.objectId;
-    const po = PersistentObjectUpdateUtil.setPersistentObjectMetadata(room, objectId,
+    const obj = ObjectUpdateUtil.setObjectMetadata(room, objectId,
         ObjectMetadataKeyEnumMap.ImageURL, imageURL);
-    if (!po) return;
+    if (!obj) return;
 
     selection.gameObject.params.setMetadata(ObjectMetadataKeyEnumMap.ImageURL, imageURL);
 
     persistentObjectSelectionObservable.notify();
-    SocketsClient.emitUpdatePersistentObjectGroup(
-        new SetPersistentObjectMetadataParams(objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL));
+    SocketsClient.emitObjectMetadataSet(
+        new ObjectMetadataSetParams(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL));
 }

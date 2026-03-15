@@ -1,4 +1,3 @@
-import PersistentObjectGroup from "../object/types/persistentObjectGroup";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL } from "../system/sharedConstants";
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
@@ -10,7 +9,7 @@ const RoomGenerator =
 {
     generateEmptyRoom: (
         floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number
-    ): {voxelGrid: VoxelGrid, persistentObjectGroup: PersistentObjectGroup} =>
+    ): {voxelGrid: VoxelGrid} =>
     {
         const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
         const quadsMem = new VoxelQuadsRuntimeMemory();
@@ -21,7 +20,7 @@ const RoomGenerator =
         clearAllQuadsInVoxel(quadsMem.quads, VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(0, NUM_VOXEL_COLS-1));
         clearAllQuadsInVoxel(quadsMem.quads, VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(NUM_VOXEL_ROWS-1, 0));
         clearAllQuadsInVoxel(quadsMem.quads, VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(NUM_VOXEL_ROWS-1, NUM_VOXEL_COLS-1));
-        
+
         voxels[0] =
             new Voxel(quadsMem, 0, 0, 0b00000000);
         voxels[NUM_VOXEL_COLS-1] =
@@ -41,14 +40,14 @@ const RoomGenerator =
                 voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, 0b00000000);
             }
         }
-        
+
         // Initialize boundary wall quads
 
         for (let col = 1; col < NUM_VOXEL_ROWS-1; ++col)
         {
             applyWallTexture(quadsMem.quads, 0, col, "z", "+", wallTextureIndex);
             applyWallTexture(quadsMem.quads, NUM_VOXEL_ROWS-1, col, "z", "-", wallTextureIndex);
-            
+
             const lowerVoxel = new Voxel(quadsMem, 0, col, 0b11111111);
             voxels[col] = lowerVoxel;
             const upperVoxel = new Voxel(quadsMem, NUM_VOXEL_ROWS-1, col, 0b11111111);
@@ -63,7 +62,7 @@ const RoomGenerator =
         {
             applyWallTexture(quadsMem.quads, row, 0, "x", "+", wallTextureIndex);
             applyWallTexture(quadsMem.quads, row, NUM_VOXEL_COLS-1, "x", "-", wallTextureIndex);
-            
+
             const lowerVoxel = new Voxel(quadsMem, row, 0, 0b11111111);
             voxels[row * NUM_VOXEL_COLS] = lowerVoxel
             const upperVoxel = new Voxel(quadsMem, row, NUM_VOXEL_COLS-1, 0b11111111);
@@ -77,7 +76,6 @@ const RoomGenerator =
 
         return {
             voxelGrid: new VoxelGrid(voxels, quadsMem),
-            persistentObjectGroup: new PersistentObjectGroup({}),
         };
     },
 }

@@ -12,8 +12,8 @@ import { checkPlayerObjectsExist } from "../helpers/invariantCheckers";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import RoomManager from "../../../src/server/room/roomManager";
-import { getVoxel, getFirstVoxelQuadIndexInLayer } from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { addVoxelBlock } from "../../../src/shared/voxel/util/voxelBlockUpdateUtil";
+import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
+import VoxelBlockUpdateUtil from "../../../src/shared/voxel/util/voxelBlockUpdateUtil";
 
 describe("concurrent same-type events", () => {
     beforeEach(() => {
@@ -24,7 +24,7 @@ describe("concurrent same-type events", () => {
 
     describe("concurrent connections", () => {
         beforeEach(() => {
-            harness.seedRoom("hub", "hub");
+            harness.seedRoom("hub");
         });
 
         it("N users connecting simultaneously", async () => {
@@ -66,7 +66,7 @@ describe("concurrent same-type events", () => {
 
     describe("concurrent disconnections", () => {
         it("N users disconnecting simultaneously unloads room", async () => {
-            harness.seedRoom("hub", "hub");
+            harness.seedRoom("hub");
             const N = 15;
             const users: ConnectedUser[] = [];
 
@@ -87,7 +87,7 @@ describe("concurrent same-type events", () => {
         });
 
         it("concurrent disconnects with saveState=true save all states", async () => {
-            harness.seedRoom("save-room", "Save Room", RoomTypeEnumMap.Regular);
+            harness.seedRoom("save-room", RoomTypeEnumMap.Regular);
             const N = 8;
             const users: ConnectedUser[] = [];
             const positions: { x: number; z: number }[] = [];
@@ -123,7 +123,7 @@ describe("concurrent same-type events", () => {
         });
 
         it("concurrent disconnects after movement save final positions", async () => {
-            harness.seedRoom("move-room", "Move Room", RoomTypeEnumMap.Regular);
+            harness.seedRoom("move-room", RoomTypeEnumMap.Regular);
             const N = 6;
             const users: ConnectedUser[] = [];
 
@@ -166,7 +166,7 @@ describe("concurrent same-type events", () => {
 
     describe("concurrent room joins", () => {
         it("N users joining same unloaded room (load dedup via pendingLoads)", async () => {
-            harness.seedRoom("room-A", "Room A", RoomTypeEnumMap.Regular);
+            harness.seedRoom("room-A", RoomTypeEnumMap.Regular);
             expect(harness.isRoomLoaded("room-A")).toBe(false);
 
             const N = 10;
@@ -184,7 +184,7 @@ describe("concurrent same-type events", () => {
         });
 
         it("concurrent join to unloaded room: every user has a player object", async () => {
-            harness.seedRoom("obj-vis", "Object Vis", RoomTypeEnumMap.Regular);
+            harness.seedRoom("obj-vis", RoomTypeEnumMap.Regular);
 
             const N = 8;
             const users: ConnectedUser[] = [];
@@ -205,7 +205,7 @@ describe("concurrent same-type events", () => {
 
         it("concurrent join to unloaded room with DB latency: every user has a player object", async () => {
             harness.setLatency(true, 1, 5);
-            harness.seedRoom("lat-vis", "Latency Vis", RoomTypeEnumMap.Regular);
+            harness.seedRoom("lat-vis", RoomTypeEnumMap.Regular);
 
             const N = 6;
             const users: ConnectedUser[] = [];
@@ -218,11 +218,11 @@ describe("concurrent same-type events", () => {
             expect(harness.getRoomParticipantCount("lat-vis")).toBe(N);
 
             const roomMem = RoomManager.roomRuntimeMemories["lat-vis"];
-            expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(N);
+            expect(Object.keys(roomMem.room.objectById)).toHaveLength(N);
         });
 
         it("N users joining same loaded room", async () => {
-            harness.seedRoom("room-B", "Room B", RoomTypeEnumMap.Regular);
+            harness.seedRoom("room-B", RoomTypeEnumMap.Regular);
 
             const first = harness.connectUser();
             await harness.joinRoom(first, "room-B");
@@ -248,7 +248,7 @@ describe("concurrent same-type events", () => {
         const VOXEL_ROOM = "voxel-room";
 
         beforeEach(async () => {
-            harness.seedRoom(VOXEL_ROOM, "Voxel Room", RoomTypeEnumMap.Regular);
+            harness.seedRoom(VOXEL_ROOM, RoomTypeEnumMap.Regular);
         });
 
         it("multiple blocks added at different positions do not conflict", async () => {
@@ -266,15 +266,15 @@ describe("concurrent same-type events", () => {
 
             for (const [row, col] of positions)
             {
-                const quadIndex = getFirstVoxelQuadIndexInLayer(row, col, 0);
-                results.push(addVoxelBlock(roomMem.room, quadIndex, [0, 0, 0, 0]));
+                const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, 0);
+                results.push(VoxelBlockUpdateUtil.addVoxelBlock(roomMem.room, quadIndex, [0, 0, 0, 0]));
             }
 
             expect(results.every(r => r === true)).toBe(true);
 
             for (const [row, col] of positions)
             {
-                const voxel = getVoxel(roomMem.room, row, col);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, row, col);
                 expect(voxel).toBeDefined();
             }
         });
@@ -290,8 +290,8 @@ describe("concurrent same-type events", () => {
             {
                 for (let col = 2; col < 12; col++)
                 {
-                    const quadIndex = getFirstVoxelQuadIndexInLayer(row, col, 0);
-                    if (addVoxelBlock(roomMem.room, quadIndex, [0, 0, 0, 0]))
+                    const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, 0);
+                    if (VoxelBlockUpdateUtil.addVoxelBlock(roomMem.room, quadIndex, [0, 0, 0, 0]))
                         successCount++;
                 }
             }
@@ -304,7 +304,7 @@ describe("concurrent same-type events", () => {
 
     describe("concurrent object transforms", () => {
         it("N users updating transforms concurrently in same room", async () => {
-            harness.seedRoom("transform-room", "Transform Room", RoomTypeEnumMap.Regular);
+            harness.seedRoom("transform-room", RoomTypeEnumMap.Regular);
 
             const N = 8;
             const contexts: ConnectedUser[] = [];
@@ -320,7 +320,7 @@ describe("concurrent same-type events", () => {
             for (const ctx of contexts)
             {
                 const roomMem = RoomManager.roomRuntimeMemories["transform-room"];
-                const currentPos = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
+                const currentPos = harness.getPlayerObject(ctx.user.id)!.transform;
                 harness.updateObjectTransform(ctx,
                     new ObjectTransform(currentPos.x + 0.5, currentPos.y, currentPos.z + 0.5, 0, 0, 1)
                 );
@@ -329,10 +329,10 @@ describe("concurrent same-type events", () => {
             const roomMem = RoomManager.roomRuntimeMemories["transform-room"];
             for (const ctx of contexts)
             {
-                const obj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
+                const obj = harness.getPlayerObject(ctx.user.id);
                 expect(obj).toBeDefined();
-                expect(obj.objectSpawnParams.transform.x).toBeGreaterThan(0);
-                expect(obj.objectSpawnParams.transform.z).toBeGreaterThan(0);
+                expect(obj!.transform.x).toBeGreaterThan(0);
+                expect(obj!.transform.z).toBeGreaterThan(0);
             }
         });
     });

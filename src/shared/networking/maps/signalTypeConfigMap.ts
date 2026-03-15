@@ -1,6 +1,7 @@
 import ObjectDespawnParams from "../../object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../object/types/objectDesyncResolveParams";
 import ObjectMessageParams from "../../object/types/objectMessageParams";
+import ObjectMetadataSetParams from "../../object/types/objectMetadataSetParams";
 import UserRoleUpdateParams from "../../user/types/userRoleUpdateParams";
 import ObjectSpawnParams from "../../object/types/objectSpawnParams";
 import ObjectSyncParams from "../../object/types/objectSyncParams";
@@ -8,7 +9,6 @@ import UserCommandParams from "../../user/types/userCommandParams";
 import RoomChangeRequestParams from "../../room/types/roomChangeRequestParams";
 import RoomRuntimeMemory from "../../room/types/roomRuntimeMemory";
 import UpdateVoxelGridParams from "../../voxel/types/update/updateVoxelGridParams";
-import UpdatePersistentObjectGroupParams from "../../object/types/update/updatePersistentObjectGroupParams";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
 
@@ -24,13 +24,13 @@ import SignalTypeConfig from "../types/signalTypeConfig";
 //          (4) "tryUpdateLatestPendingSignalToUser" in "socketUserContext.ts"
 
 const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
-    [0, { // Unidirectional (client <- server)
+    [0, { // Bidirectional (client <-> server)
         // (Overall Flow):
-        // The server announces that an object has despawned.
-        // Each client receives the announcement and despawns the corresponding client-side object instance.
+        // Client can send to request despawning an object. Server validates and broadcasts to others.
+        // Server can also announce that an object has despawned (e.g. when a player leaves).
         signalType: "objectDespawnParams",
-        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
-        maxClientSideReceptionPeriod: 2000, // this handles the case in which another user's object despawns while the room is still loading on the client side, etc.
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => ObjectDespawnParams.decode(bufferState),
     }],
     [1, { // Unidirectional (client <- server)
@@ -51,13 +51,13 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         maxClientSideReceptionPeriod: 2000, // this handles the case in which another user's object sends a message while the room is still loading on the client side, etc.
         decode: (bufferState: BufferState) => ObjectMessageParams.decode(bufferState),
     }],
-    [3, { // Unidirectional (client <- server)
+    [3, { // Bidirectional (client <-> server)
         // (Overall Flow):
-        // The server announces that an object has spawned.
-        // Each client receives the announcement and spawns a corresponding client-side object instance.
+        // Client can send to request spawning an object. Server validates and broadcasts to others.
+        // Server can also announce that an object has spawned (e.g. when a player joins).
         signalType: "objectSpawnParams",
-        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
-        maxClientSideReceptionPeriod: 2000, // this handles the case in which another user's object spawns while the room is still loading on the client side, etc.
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => ObjectSpawnParams.decode(bufferState),
     }],
     [4, { // Bidirectional (client <-> server)
@@ -99,13 +99,12 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
     }],
     [8, { // Bidirectional (client <-> server)
         // (Overall Flow):
-        // The client makes an update to the existing client-side persistentObjectGroup, and reports this update to the server (i.e. "updatePersistentObjectGroupParams").
-        // The server applies this update to the server-side persistentObjectGroup, and also announces it to the other clients.
-        // The other clients receive the update info and sync up their client-side persistentObjectGroups accordingly.
-        signalType: "updatePersistentObjectGroupParams",
+        // The client sets metadata on an object (e.g. canvas image URL) and reports it to the server.
+        // The server validates and broadcasts to other clients.
+        signalType: "objectMetadataSetParams",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => UpdatePersistentObjectGroupParams.decode(bufferState),
+        decode: (bufferState: BufferState) => ObjectMetadataSetParams.decode(bufferState),
     }],
     [9, { // Unidirectional (client -> server)
         // (Overall Flow):

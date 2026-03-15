@@ -1,4 +1,3 @@
-import ObjectRuntimeMemory from "../../object/types/objectRuntimeMemory";
 import Room from "../types/room";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
@@ -11,17 +10,15 @@ export default class RoomRuntimeMemory extends EncodableData
 {
     room: Room;
     participantUserIDs: { [userID: string]: boolean };
-    objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory};
     lastSavedTimeInMillis: number;
     currentUserRole: UserRole; // The role of the user receiving this data (set before unicasting to a specific user)
 
     constructor(room: Room, participantUserIDs: { [userID: string]: boolean },
-        objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory}, currentUserRole: UserRole)
+        currentUserRole: UserRole)
     {
         super();
         this.room = room;
         this.participantUserIDs = participantUserIDs;
-        this.objectRuntimeMemories = objectRuntimeMemories;
         this.lastSavedTimeInMillis = Date.now();
         this.currentUserRole = currentUserRole;
     }
@@ -31,10 +28,6 @@ export default class RoomRuntimeMemory extends EncodableData
         this.room.encode(bufferState);
         new EncodableArray(
             Object.keys(this.participantUserIDs).map(x => new EncodableByteString(x)),
-            65535
-        ).encode(bufferState);
-        new EncodableArray(
-            Object.values(this.objectRuntimeMemories),
             65535
         ).encode(bufferState);
         new EncodableRawByteNumber(this.currentUserRole).encode(bufferState);
@@ -51,16 +44,8 @@ export default class RoomRuntimeMemory extends EncodableData
             participantUserIDs[(element as EncodableByteString).str] = true;
         }
 
-        const a2 = EncodableArray.decodeWithParams(bufferState, ObjectRuntimeMemory.decode, 65535) as EncodableArray;
-        const objectRuntimeMemories: {[objectId: string]: ObjectRuntimeMemory} = {};
-        for (const element of a2.arr)
-        {
-            const obj = (element as ObjectRuntimeMemory);
-            objectRuntimeMemories[obj.objectSpawnParams.objectId] = obj;
-        }
-
         const currentUserRole = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
 
-        return new RoomRuntimeMemory(room, participantUserIDs, objectRuntimeMemories, currentUserRole);
+        return new RoomRuntimeMemory(room, participantUserIDs, currentUserRole);
     }
 }

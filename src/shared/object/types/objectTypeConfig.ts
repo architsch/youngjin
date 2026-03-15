@@ -4,6 +4,7 @@ import { ObjectTag } from "./objectTag";
 export default interface ObjectTypeConfig
 {
     objectType: string;
+    persistent: boolean;
     tags: ObjectTag[];
     components: {
         spawnedByAny?: {

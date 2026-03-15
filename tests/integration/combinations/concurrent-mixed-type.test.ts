@@ -30,7 +30,7 @@ describe("concurrent mixed-type events", () => {
     // ─── Interleaved connects and disconnects ───────────────────────────────
 
     it("handles interleaved connects and disconnects", async () => {
-        harness.seedRoom("hub", "hub");
+        harness.seedRoom("hub");
         const TOTAL = 10;
         const users: ConnectedUser[] = [];
 
@@ -59,9 +59,9 @@ describe("concurrent mixed-type events", () => {
     // ─── Users switching between rooms ──────────────────────────────────────
 
     it("handles users switching between multiple rooms", async () => {
-        harness.seedRoom("room-1", "Room 1", RoomTypeEnumMap.Regular);
-        harness.seedRoom("room-2", "Room 2", RoomTypeEnumMap.Regular);
-        harness.seedRoom("room-3", "Room 3", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-1", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-2", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-3", RoomTypeEnumMap.Regular);
 
         const N = 12;
         const users: ConnectedUser[] = [];
@@ -91,7 +91,7 @@ describe("concurrent mixed-type events", () => {
     // ─── Last-user-leaving race ─────────────────────────────────────────────
 
     it("handles last-user-leaving race with new user joining", async () => {
-        harness.seedRoom("room-race", "Race Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-race", RoomTypeEnumMap.Regular);
 
         const leaver = harness.connectUser();
         await harness.joinRoom(leaver, "room-race");
@@ -111,7 +111,7 @@ describe("concurrent mixed-type events", () => {
     it("handles multiple rooms loading simultaneously", async () => {
         const ROOM_COUNT = 8;
         for (let i = 0; i < ROOM_COUNT; i++)
-            harness.seedRoom(`multi-${i}`, `Multi ${i}`, RoomTypeEnumMap.Regular);
+            harness.seedRoom(`multi-${i}`, RoomTypeEnumMap.Regular);
 
         const users: ConnectedUser[] = [];
         for (let i = 0; i < ROOM_COUNT; i++)
@@ -135,7 +135,7 @@ describe("concurrent mixed-type events", () => {
 
         for (let i = 0; i < ROOM_COUNT; i++)
         {
-            harness.seedRoom(`unload-${i}`, `Unload ${i}`, RoomTypeEnumMap.Regular);
+            harness.seedRoom(`unload-${i}`, RoomTypeEnumMap.Regular);
             const ctx = harness.connectUser();
             await harness.joinRoom(ctx, `unload-${i}`);
             users.push(ctx);
@@ -156,7 +156,7 @@ describe("concurrent mixed-type events", () => {
 
     it("users leaving while others join — persistence and visibility correct", async () => {
         const ROOM_ID = "churn-room";
-        harness.seedRoom(ROOM_ID, "Churn Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         const stayers: ConnectedUser[] = [];
         const leavers: ConnectedUser[] = [];
@@ -223,25 +223,25 @@ describe("concurrent mixed-type events", () => {
 
         for (let i = 0; i < stayers.length; i++)
         {
-            const obj = harness.getPlayerObjectRuntimeMemory(stayers[i].user.id);
+            const obj = harness.getPlayerObject(stayers[i].user.id);
             expect(obj).toBeDefined();
-            expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`stayer-${i}`);
+            expect(obj!.metadata[0]?.str).toBe(`stayer-${i}`);
         }
         for (let i = 0; i < joiners.length; i++)
         {
-            const obj = harness.getPlayerObjectRuntimeMemory(joiners[i].user.id);
+            const obj = harness.getPlayerObject(joiners[i].user.id);
             expect(obj).toBeDefined();
-            expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`joiner-${i}`);
+            expect(obj!.metadata[0]?.str).toBe(`joiner-${i}`);
         }
         for (const ctx of leavers)
-            expect(harness.getPlayerObjectRuntimeMemory(ctx.user.id)).toBeUndefined();
+            expect(harness.getPlayerObject(ctx.user.id)).toBeUndefined();
     });
 
     // ─── Reconnect while others present ─────────────────────────────────────
 
     it("reconnecting user's restored state is visible to observers", async () => {
         const ROOM_ID = "recon-room";
-        harness.seedRoom(ROOM_ID, "Recon Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         const userA = harness.connectUser({
             id: "user-A-recon", lastX: 8, lastZ: 20,
@@ -258,8 +258,8 @@ describe("concurrent mixed-type events", () => {
         expect(harness.isRoomLoaded(ROOM_ID)).toBe(true);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        expect(harness.getPlayerObjectRuntimeMemory("user-A-recon")).toBeUndefined();
-        expect(harness.getPlayerObjectRuntimeMemory("user-B-observer")).toBeDefined();
+        expect(harness.getPlayerObject("user-A-recon")).toBeUndefined();
+        expect(harness.getPlayerObject("user-B-observer")).toBeDefined();
 
         const saved = harness.savedGameplayStates[0];
         const reconnectedA = harness.connectUser({
@@ -270,17 +270,17 @@ describe("concurrent mixed-type events", () => {
         });
         await harness.joinRoom(reconnectedA, ROOM_ID);
 
-        const objA = harness.getPlayerObjectRuntimeMemory("user-A-recon");
+        const objA = harness.getPlayerObject("user-A-recon");
         expect(objA).toBeDefined();
-        expect(objA.objectSpawnParams.transform.x).toBeCloseTo(stateBeforeDisconnect.lastX, 0);
-        expect(objA.objectSpawnParams.transform.z).toBeCloseTo(stateBeforeDisconnect.lastZ, 0);
+        expect(objA!.transform.x).toBeCloseTo(stateBeforeDisconnect.lastX, 0);
+        expect(objA!.transform.z).toBeCloseTo(stateBeforeDisconnect.lastZ, 0);
 
         expect(Object.keys(roomMem.participantUserIDs)).toHaveLength(2);
     });
 
     it("multiple users reconnecting to unloaded room concurrently", async () => {
         const ROOM_ID = "multi-recon-room";
-        harness.seedRoom(ROOM_ID, "Multi Recon Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         const N = 4;
         const originalUsers: ConnectedUser[] = [];
@@ -301,7 +301,7 @@ describe("concurrent mixed-type events", () => {
             await harness.disconnectUser(ctx, true);
         expect(harness.isRoomLoaded(ROOM_ID)).toBe(false);
 
-        harness.seedRoom(ROOM_ID, "Multi Recon Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
         const reconnectedUsers: ConnectedUser[] = [];
         for (let i = 0; i < N; i++)
         {
@@ -322,17 +322,17 @@ describe("concurrent mixed-type events", () => {
         expect(results.every(r => r === true)).toBe(true);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(N);
+        expect(Object.keys(roomMem.room.objectById)).toHaveLength(N);
 
         for (let i = 0; i < N; i++)
         {
             const saved = harness.savedGameplayStates.find(
                 s => s.userID === `recon-user-${i}`
             )!;
-            const obj = harness.getPlayerObjectRuntimeMemory(`recon-user-${i}`);
+            const obj = harness.getPlayerObject(`recon-user-${i}`);
             expect(obj).toBeDefined();
-            expect(obj.objectSpawnParams.transform.x).toBeCloseTo(saved.lastX, 0);
-            expect(obj.objectSpawnParams.transform.z).toBeCloseTo(saved.lastZ, 0);
+            expect(obj!.transform.x).toBeCloseTo(saved.lastX, 0);
+            expect(obj!.transform.z).toBeCloseTo(saved.lastZ, 0);
         }
     });
 
@@ -340,7 +340,7 @@ describe("concurrent mixed-type events", () => {
 
     it("full lifecycle: load → play → disconnect → reload → state restored", async () => {
         const ROOM_ID = "lifecycle-room";
-        harness.seedRoom(ROOM_ID, "Lifecycle Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
         expect(harness.isRoomLoaded(ROOM_ID)).toBe(false);
 
         const userA = harness.connectUser({
@@ -367,7 +367,7 @@ describe("concurrent mixed-type events", () => {
         await harness.disconnectUser(userB, true);
         expect(harness.isRoomLoaded(ROOM_ID)).toBe(false);
 
-        harness.seedRoom(ROOM_ID, "Lifecycle Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         const reconnectedA = harness.connectUser({
             id: "lifecycle-A", lastRoomID: savedA.lastRoomID,
@@ -378,17 +378,17 @@ describe("concurrent mixed-type events", () => {
         await harness.joinRoom(reconnectedA, ROOM_ID);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const objA = harness.getPlayerObjectRuntimeMemory("lifecycle-A");
+        const objA = harness.getPlayerObject("lifecycle-A");
         expect(objA).toBeDefined();
-        expect(objA.objectSpawnParams.transform.x).toBeCloseTo(savedA.lastX, 0);
-        expect(objA.objectSpawnParams.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str).toBe("see ya");
+        expect(objA!.transform.x).toBeCloseTo(savedA.lastX, 0);
+        expect(objA!.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str).toBe("see ya");
     });
 
     // ─── Load/unload cycles ─────────────────────────────────────────────────
 
     it("state persists across multiple room load/unload cycles", async () => {
         const ROOM_ID = "cycle-room";
-        harness.seedRoom(ROOM_ID, "Cycle Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         const CYCLES = 3;
         let lastSavedX = 16;
@@ -397,7 +397,7 @@ describe("concurrent mixed-type events", () => {
         for (let cycle = 0; cycle < CYCLES; cycle++)
         {
             if (!harness.isRoomLoaded(ROOM_ID))
-                harness.seedRoom(ROOM_ID, "Cycle Room", RoomTypeEnumMap.Regular);
+                harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
             const ctx = harness.connectUser({
                 id: "cycle-user", lastRoomID: ROOM_ID,
@@ -410,7 +410,7 @@ describe("concurrent mixed-type events", () => {
             expect(state.lastZ).toBeCloseTo(lastSavedZ, 0);
 
             const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-            const tr = harness.getPlayerObjectRuntimeMemory(ctx.user.id).objectSpawnParams.transform;
+            const tr = harness.getPlayerObject(ctx.user.id)!.transform;
             harness.updateObjectTransform(ctx,
                 new ObjectTransform(
                     Math.min(30, tr.x + 1), tr.y, Math.min(30, tr.z + 1),
@@ -434,7 +434,7 @@ describe("concurrent mixed-type events", () => {
 
     it("mix of returning users (with saved state) and new users in same room", async () => {
         const ROOM_ID = "mixed-room";
-        harness.seedRoom(ROOM_ID, "Mixed Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         const returningA = harness.connectUser({
             id: "returning-A", lastX: 12, lastZ: 18,
@@ -445,7 +445,7 @@ describe("concurrent mixed-type events", () => {
         const actualStateAfterMove = harness.getGameplayState(returningA)!;
         await harness.disconnectUser(returningA, true);
 
-        harness.seedRoom(ROOM_ID, "Mixed Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         const savedA = harness.savedGameplayStates.find(s => s.userID === "returning-A")!;
         const reconnectedA = harness.connectUser({
@@ -466,20 +466,20 @@ describe("concurrent mixed-type events", () => {
         expect(resultNew).toBe(true);
 
         const roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        const objA = harness.getPlayerObjectRuntimeMemory("returning-A");
-        expect(objA.objectSpawnParams.transform.x).toBeCloseTo(actualStateAfterMove.lastX, 0);
+        const objA = harness.getPlayerObject("returning-A");
+        expect(objA!.transform.x).toBeCloseTo(actualStateAfterMove.lastX, 0);
 
-        const objNew = harness.getPlayerObjectRuntimeMemory("brand-new");
-        expect(objNew.objectSpawnParams.transform.x).toBeCloseTo(16, 0);
+        const objNew = harness.getPlayerObject("brand-new");
+        expect(objNew!.transform.x).toBeCloseTo(16, 0);
 
-        expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(2);
+        expect(Object.keys(roomMem.room.objectById)).toHaveLength(2);
     });
 
     // ─── Interleaved join/leave on fresh room ───────────────────────────────
 
     it("interleaved join/leave on a fresh room: state consistent through full lifecycle", async () => {
         const ROOM_ID = "interleave-room";
-        harness.seedRoom(ROOM_ID, "Interleave Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
         expect(harness.isRoomLoaded(ROOM_ID)).toBe(false);
 
         const userA = harness.connectUser({
@@ -498,7 +498,7 @@ describe("concurrent mixed-type events", () => {
         await harness.joinRoom(userB, ROOM_ID);
 
         let roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        expect(harness.getPlayerObjectRuntimeMemory("interleave-A").objectSpawnParams.transform.x)
+        expect(harness.getPlayerObject("interleave-A")!.transform.x)
             .toBeCloseTo(stateAfterAMove.lastX, 0);
 
         await harness.disconnectUser(userA, true);
@@ -511,10 +511,10 @@ describe("concurrent mixed-type events", () => {
         await harness.joinRoom(userC, ROOM_ID);
 
         roomMem = RoomManager.roomRuntimeMemories[ROOM_ID];
-        expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(2);
-        expect(harness.getPlayerObjectRuntimeMemory("interleave-B")).toBeDefined();
-        expect(harness.getPlayerObjectRuntimeMemory("interleave-C")).toBeDefined();
-        expect(harness.getPlayerObjectRuntimeMemory("interleave-A")).toBeUndefined();
+        expect(Object.keys(roomMem.room.objectById)).toHaveLength(2);
+        expect(harness.getPlayerObject("interleave-B")).toBeDefined();
+        expect(harness.getPlayerObject("interleave-C")).toBeDefined();
+        expect(harness.getPlayerObject("interleave-A")).toBeUndefined();
 
         await harness.disconnectUser(userB, true);
         await harness.disconnectUser(userC, true);

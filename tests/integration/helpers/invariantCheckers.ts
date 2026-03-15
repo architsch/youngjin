@@ -78,9 +78,9 @@ export function checkObjectOwnership(): void
 {
     for (const [roomID, roomMem] of Object.entries(RoomManager.roomRuntimeMemories))
     {
-        for (const [objId, objMem] of Object.entries(roomMem.objectRuntimeMemories))
+        for (const [objId, obj] of Object.entries(roomMem.room.objectById))
         {
-            const sourceUser = objMem.objectSpawnParams.sourceUserID;
+            const sourceUser = obj.sourceUserID;
             expect(roomMem.participantUserIDs[sourceUser]).toBe(true);
         }
     }
@@ -107,9 +107,9 @@ export function checkPlayerObjectsExist(): void
     {
         for (const uid of Object.keys(roomMem.participantUserIDs))
         {
-            const obj = harness.getPlayerObjectRuntimeMemory(uid);
+            const obj = harness.getPlayerObject(uid);
             expect(obj, `Player object missing for user ${uid} in room ${roomID}`).toBeDefined();
-            expect(obj.objectSpawnParams.sourceUserID).toBe(uid);
+            expect(obj.sourceUserID).toBe(uid);
         }
     }
 }
@@ -124,12 +124,12 @@ export function checkObjectTransformConsistency(connectedUsers: ConnectedUser[])
         const roomMem = RoomManager.roomRuntimeMemories[roomID];
         if (!roomMem) continue;
 
-        const obj = harness.getPlayerObjectRuntimeMemory(ctx.user.id);
+        const obj = harness.getPlayerObject(ctx.user.id);
         const state = harness.getGameplayState(ctx);
         if (obj && state)
         {
-            expect(state.lastX).toBe(obj.objectSpawnParams.transform.x);
-            expect(state.lastZ).toBe(obj.objectSpawnParams.transform.z);
+            expect(state.lastX).toBe(obj.transform.x);
+            expect(state.lastZ).toBe(obj.transform.z);
         }
     }
 }

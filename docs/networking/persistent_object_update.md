@@ -1,3 +1,5 @@
+(NOTE: This document has become obsolete since we decided to remove the explicit definition of "PersistentObject" from the codebase. This means that this document will need to be refactored to describe the generic object-update flows instead.)
+
 # Persistent Object Update Flows
 
 Reference: @src/shared/object/types/update/updatePersistentObjectGroupParams.ts , @src/shared/object/util/persistentObjectUpdateUtil.ts

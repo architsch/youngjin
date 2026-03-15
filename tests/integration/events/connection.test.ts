@@ -20,7 +20,7 @@ const ROOM_ID = "conn-room";
 describe("connection events", () => {
     beforeEach(() => {
         harness.reset();
-        harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
     });
 
     // ─── Basic connect ──────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ describe("connection events", () => {
 
         // Re-seed room if it was unloaded
         if (!harness.isRoomLoaded(ROOM_ID))
-            harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
+            harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         await harness.joinRoom(newCtx, ROOM_ID);
 
@@ -133,7 +133,7 @@ describe("connection events", () => {
         const newCtx = await harness.reconnectCaseB(ctx);
 
         // Re-seed room since it was unloaded (last user left)
-        harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
 
         await harness.joinRoom(newCtx, ROOM_ID);
 
@@ -176,7 +176,7 @@ describe("connection events", () => {
             expect(harness.isRoomLoaded(ROOM_ID)).toBe(false);
 
             // Re-seed for next cycle
-            harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
+            harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
         }
 
         expect(Object.keys(harness.UserManager.socketUserContexts)).toHaveLength(0);
@@ -248,7 +248,7 @@ describe("connection events", () => {
         await harness.disconnectUser(ctx1, true);
 
         const savedState = harness.savedGameplayStates[0];
-        harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
         const ctx2 = harness.connectUser({
             id: "persist-user", lastRoomID: savedState.lastRoomID,
             lastX: savedState.lastX, lastY: savedState.lastY, lastZ: savedState.lastZ,
@@ -283,7 +283,7 @@ describe("connection events", () => {
         const saved = harness.savedGameplayStates[0];
         expect(saved.playerMetadata).toEqual({ "0": "wave-emote", "1": "room-abc" });
 
-        harness.seedRoom(ROOM_ID, "Connection Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Regular);
         const ctx2 = harness.connectUser({
             id: "meta-user", lastRoomID: saved.lastRoomID,
             lastX: saved.lastX, lastY: saved.lastY, lastZ: saved.lastZ,

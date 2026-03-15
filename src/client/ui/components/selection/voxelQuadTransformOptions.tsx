@@ -9,7 +9,6 @@ import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
 import Room from "../../../../shared/room/types/room";
 import VoxelBlockUpdateUtil from "../../../../shared/voxel/util/voxelBlockUpdateUtil";
-import PersistentObjectUpdateUtil from "../../../../shared/object/util/persistentObjectUpdateUtil";
 
 export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSelection})
 {

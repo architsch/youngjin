@@ -25,7 +25,7 @@ describe("room join events", () => {
     // ─── Join unloaded room ─────────────────────────────────────────────────
 
     it("joining an unloaded room triggers loadRoom", async () => {
-        harness.seedRoom("unloaded-room", "Unloaded", RoomTypeEnumMap.Regular);
+        harness.seedRoom("unloaded-room", RoomTypeEnumMap.Regular);
         expect(harness.isRoomLoaded("unloaded-room")).toBe(false);
 
         const ctx = harness.connectUser();
@@ -39,7 +39,7 @@ describe("room join events", () => {
     // ─── Join loaded room ───────────────────────────────────────────────────
 
     it("joining an already-loaded room adds user without reloading", async () => {
-        harness.seedRoom("loaded-room", "Loaded", RoomTypeEnumMap.Regular);
+        harness.seedRoom("loaded-room", RoomTypeEnumMap.Regular);
 
         // First user loads the room
         const first = harness.connectUser();
@@ -65,9 +65,9 @@ describe("room join events", () => {
     // ─── Rapid room switching ───────────────────────────────────────────────
 
     it("handles a user rapidly switching rooms", async () => {
-        harness.seedRoom("rapid-1", "Rapid 1", RoomTypeEnumMap.Regular);
-        harness.seedRoom("rapid-2", "Rapid 2", RoomTypeEnumMap.Regular);
-        harness.seedRoom("rapid-3", "Rapid 3", RoomTypeEnumMap.Regular);
+        harness.seedRoom("rapid-1", RoomTypeEnumMap.Regular);
+        harness.seedRoom("rapid-2", RoomTypeEnumMap.Regular);
+        harness.seedRoom("rapid-3", RoomTypeEnumMap.Regular);
 
         const ctx = harness.connectUser();
 
@@ -94,7 +94,7 @@ describe("room join events", () => {
     // ─── Cross-user visibility ──────────────────────────────────────────────
 
     it("other users see the joining player's correct position", async () => {
-        harness.seedRoom("vis-room", "Visibility Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom("vis-room", RoomTypeEnumMap.Regular);
 
         const observer = harness.connectUser();
         await harness.joinRoom(observer, "vis-room");
@@ -103,16 +103,16 @@ describe("room join events", () => {
         await harness.joinRoom(joiner, "vis-room");
 
         const roomMem = RoomManager.roomRuntimeMemories["vis-room"];
-        const joinerObj = harness.getPlayerObjectRuntimeMemory(joiner.user.id);
+        const joinerObj = harness.getPlayerObject(joiner.user.id);
         expect(joinerObj).toBeDefined();
-        expect(joinerObj.objectSpawnParams.transform.x).toBeCloseTo(7);
-        expect(joinerObj.objectSpawnParams.transform.z).toBeCloseTo(28);
-        expect(joinerObj.objectSpawnParams.sourceUserID).toBe(joiner.user.id);
-        expect(joinerObj.objectSpawnParams.sourceUserName).toBe(joiner.user.userName);
+        expect(joinerObj!.transform.x).toBeCloseTo(7);
+        expect(joinerObj!.transform.z).toBeCloseTo(28);
+        expect(joinerObj!.sourceUserID).toBe(joiner.user.id);
+        expect(joinerObj!.sourceUserName).toBe(joiner.user.userName);
     });
 
     it("other users see the joining player's correct metadata", async () => {
-        harness.seedRoom("meta-vis-room", "Meta Vis Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom("meta-vis-room", RoomTypeEnumMap.Regular);
 
         const observer = harness.connectUser();
         await harness.joinRoom(observer, "meta-vis-room");
@@ -123,14 +123,14 @@ describe("room join events", () => {
         await harness.joinRoom(joiner, "meta-vis-room");
 
         const roomMem = RoomManager.roomRuntimeMemories["meta-vis-room"];
-        const joinerObj = harness.getPlayerObjectRuntimeMemory(joiner.user.id);
+        const joinerObj = harness.getPlayerObject(joiner.user.id);
         expect(joinerObj).toBeDefined();
-        expect(joinerObj.objectSpawnParams.metadata[0]?.str).toBe("custom-emote");
-        expect(joinerObj.objectSpawnParams.metadata[1]?.str).toBe("special-room");
+        expect(joinerObj!.metadata[0]?.str).toBe("custom-emote");
+        expect(joinerObj!.metadata[1]?.str).toBe("special-room");
     });
 
     it("all participants see consistent object state for every player", async () => {
-        harness.seedRoom("all-vis-room", "All Vis Room", RoomTypeEnumMap.Regular);
+        harness.seedRoom("all-vis-room", RoomTypeEnumMap.Regular);
 
         const N = 6;
         const users: ConnectedUser[] = [];
@@ -146,24 +146,24 @@ describe("room join events", () => {
         }
 
         const roomMem = RoomManager.roomRuntimeMemories["all-vis-room"];
-        expect(Object.keys(roomMem.objectRuntimeMemories)).toHaveLength(N);
+        expect(Object.keys(roomMem.room.objectById)).toHaveLength(N);
 
         for (let i = 0; i < N; i++)
         {
-            const obj = harness.getPlayerObjectRuntimeMemory(users[i].user.id);
+            const obj = harness.getPlayerObject(users[i].user.id);
             expect(obj).toBeDefined();
-            expect(obj.objectSpawnParams.transform.x).toBeCloseTo(5 + i * 4, 0);
-            expect(obj.objectSpawnParams.transform.z).toBeCloseTo(5 + i * 3, 0);
-            expect(obj.objectSpawnParams.metadata[0]?.str).toBe(`msg-${i}`);
-            expect(obj.objectSpawnParams.sourceUserID).toBe(users[i].user.id);
+            expect(obj!.transform.x).toBeCloseTo(5 + i * 4, 0);
+            expect(obj!.transform.z).toBeCloseTo(5 + i * 3, 0);
+            expect(obj.metadata[0]?.str).toBe(`msg-${i}`);
+            expect(obj.sourceUserID).toBe(users[i].user.id);
         }
     });
 
     // ─── Multi-room state independence ──────────────────────────────────────
 
     it("users in different rooms have independent gameplay states", async () => {
-        harness.seedRoom("room-X", "Room X", RoomTypeEnumMap.Regular);
-        harness.seedRoom("room-Y", "Room Y", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-X", RoomTypeEnumMap.Regular);
+        harness.seedRoom("room-Y", RoomTypeEnumMap.Regular);
 
         const userX = harness.connectUser({ lastX: 5, lastZ: 5 });
         const userY = harness.connectUser({ lastX: 25, lastZ: 25 });
@@ -190,8 +190,8 @@ describe("room join events", () => {
     // ─── Room switching saves state ─────────────────────────────────────────
 
     it("switching rooms saves state from previous room", async () => {
-        harness.seedRoom("switch-from", "Switch From", RoomTypeEnumMap.Regular);
-        harness.seedRoom("switch-to", "Switch To", RoomTypeEnumMap.Regular);
+        harness.seedRoom("switch-from", RoomTypeEnumMap.Regular);
+        harness.seedRoom("switch-to", RoomTypeEnumMap.Regular);
 
         const ctx = harness.connectUser({ lastX: 10, lastZ: 20 });
         await harness.joinRoom(ctx, "switch-from");
@@ -213,7 +213,7 @@ describe("room join events", () => {
     // ─── Last user leaving unloads room ─────────────────────────────────────
 
     it("room unloads when last user leaves", async () => {
-        harness.seedRoom("unload-test", "Unload Test", RoomTypeEnumMap.Regular);
+        harness.seedRoom("unload-test", RoomTypeEnumMap.Regular);
 
         const ctx = harness.connectUser();
         await harness.joinRoom(ctx, "unload-test");

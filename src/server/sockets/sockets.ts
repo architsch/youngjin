@@ -15,7 +15,9 @@ import { canUserModifyRoom, getUserGameplayState } from "../room/util/roomUserUt
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
-import UpdatePersistentObjectGroupParams from "../../shared/object/types/update/updatePersistentObjectGroupParams";
+import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
+import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
+import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
 import DBSearchUtil from "../db/util/dbSearchUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
@@ -155,15 +157,37 @@ const Sockets =
                 RoomManager.updateVoxelGrid(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("updatePersistentObjectGroupParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("objectSpawnParams", (buffer: ArrayBuffer) => {
                 if (!canUserModifyRoom(user.id))
                 {
-                    console.warn(`(Sockets) Rejected updatePersistentObjectGroupParams from Visitor (userID = ${user.id})`);
+                    console.warn(`(Sockets) Rejected objectSpawnParams from Visitor (userID = ${user.id})`);
                     return;
                 }
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = UpdatePersistentObjectGroupParams.decode(bufferState) as UpdatePersistentObjectGroupParams;
-                RoomManager.updatePersistentObjectGroup(socketUserContext, params);
+                const params = ObjectSpawnParams.decode(bufferState) as ObjectSpawnParams;
+                RoomManager.handleObjectSpawn(socketUserContext, params);
+            });
+
+            socketUserContext.onReceivedSignalFromUser("objectDespawnParams", (buffer: ArrayBuffer) => {
+                if (!canUserModifyRoom(user.id))
+                {
+                    console.warn(`(Sockets) Rejected objectDespawnParams from Visitor (userID = ${user.id})`);
+                    return;
+                }
+                const bufferState = new BufferState(new Uint8Array(buffer));
+                const params = ObjectDespawnParams.decode(bufferState) as ObjectDespawnParams;
+                RoomManager.handleObjectDespawn(socketUserContext, params);
+            });
+
+            socketUserContext.onReceivedSignalFromUser("objectMetadataSetParams", (buffer: ArrayBuffer) => {
+                if (!canUserModifyRoom(user.id))
+                {
+                    console.warn(`(Sockets) Rejected objectMetadataSetParams from Visitor (userID = ${user.id})`);
+                    return;
+                }
+                const bufferState = new BufferState(new Uint8Array(buffer));
+                const params = ObjectMetadataSetParams.decode(bufferState) as ObjectMetadataSetParams;
+                RoomManager.handleObjectMetadataSet(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("roomChangeRequestParams", async (buffer: ArrayBuffer) => {

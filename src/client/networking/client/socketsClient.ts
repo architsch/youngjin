@@ -4,6 +4,7 @@ import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
+import ObjectMetadataSetParams from "../../../shared/object/types/objectMetadataSetParams";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "../../system/types/thingsPoolEnv";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
@@ -21,12 +22,9 @@ import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVox
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import UserCommandParams from "../../../shared/user/types/userCommandParams";
-import UpdatePersistentObjectGroupParams from "../../../shared/object/types/update/updatePersistentObjectGroupParams";
-import UpdatePersistentObjectGroupTaskParams from "../../../shared/object/types/update/updatePersistentObjectGroupTaskParams";
 import UserRoleUpdateParams from "../../../shared/user/types/userRoleUpdateParams";
 import App from "../../app";
 import ObjectManager from "../../object/objectManager";
-import PersistentObjectManager from "../../object/persistentObjectManager";
 import VoxelManager from "../../voxel/voxelManager";
 
 let socket: Socket;
@@ -46,8 +44,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ObjectManager.onObjectMessageReceived(data as ObjectMessageParams),
     "updateVoxelGridParams": (data: EncodableData) =>
         VoxelManager.onUpdateVoxelGridReceived(data as UpdateVoxelGridParams),
-    "updatePersistentObjectGroupParams": (data: EncodableData) =>
-        PersistentObjectManager.onUpdatePersistentObjectGroupReceived(data as UpdatePersistentObjectGroupParams),
+    "objectMetadataSetParams": (data: EncodableData) =>
+        ObjectManager.onObjectMetadataSetReceived(data as ObjectMetadataSetParams),
     "userRoleUpdateParams": (data: EncodableData) =>
         App.onUserRoleUpdateReceived(data as UserRoleUpdateParams),
 }
@@ -195,16 +193,17 @@ const SocketsClient =
         }
         emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
     },
-    emitUpdatePersistentObjectGroup: (params: UpdatePersistentObjectGroupTaskParams) =>
+    emitObjectSpawn: (params: ObjectSpawnParams) =>
     {
-        const currentRoom = App.getCurrentRoom();
-        if (!currentRoom)
-        {
-            console.error("Modified a persistent object, but the current room doesn't exist.");
-            return;
-        }
-        emitWhenReady("updatePersistentObjectGroupParams",
-            new UpdatePersistentObjectGroupParams(currentRoom.id, [params]));
+        emitWhenReady("objectSpawnParams", params);
+    },
+    emitObjectDespawn: (params: ObjectDespawnParams) =>
+    {
+        emitWhenReady("objectDespawnParams", params);
+    },
+    emitObjectMetadataSet: (params: ObjectMetadataSetParams) =>
+    {
+        emitWhenReady("objectMetadataSetParams", params);
     },
 }
 

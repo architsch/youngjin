@@ -177,7 +177,7 @@ import RoomManager from "../../../src/server/room/roomManager";
 import UserManager from "../../../src/server/user/userManager";
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
-import { getUserGameplayState, getPlayerObjectRuntimeMemory, clearPlayerObjectRuntimeMemories } from "../../../src/server/room/util/roomUserUtil";
+import { getUserGameplayState, getPlayerObject, clearPlayerObjects } from "../../../src/server/room/util/roomUserUtil";
 import UserGameplayState from "../../../src/server/user/types/userGameplayState";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import ObjectMessageParams from "../../../src/shared/object/types/objectMessageParams";
@@ -237,7 +237,7 @@ export const harness = {
         }
         for (const uid in RoomManager.currentRoomIDByUserID)
             delete RoomManager.currentRoomIDByUserID[uid];
-        clearPlayerObjectRuntimeMemories();
+        clearPlayerObjects();
 
         // Reset in-memory DB stores
         resetStores();
@@ -372,9 +372,9 @@ export const harness = {
      */
     getPlayerObjectInRoom(ctx: ConnectedUser)
     {
-        const objMem = getPlayerObjectRuntimeMemory(ctx.user.id);
-        if (!objMem) return undefined;
-        return objMem.objectSpawnParams;
+        const obj = getPlayerObject(ctx.user.id);
+        if (!obj) return undefined;
+        return obj;
     },
 
     /**
@@ -557,15 +557,15 @@ export const harness = {
 
     getPlayerObjectId(ctx: ConnectedUser): string | undefined
     {
-        const playerMem = getPlayerObjectRuntimeMemory(ctx.user.id);
-        if (!playerMem) return undefined;
-        return playerMem.objectSpawnParams.objectId;
+        const playerObj = getPlayerObject(ctx.user.id);
+        if (!playerObj) return undefined;
+        return playerObj.objectId;
     },
 
     /**
      * Direct access to the underlying modules for advanced assertions.
      */
-    getPlayerObjectRuntimeMemory,
+    getPlayerObject,
     RoomManager,
     UserManager,
     PhysicsManager,
