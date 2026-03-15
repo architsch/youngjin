@@ -1,4 +1,3 @@
-import BitmaskUtil from "../../math/util/bitmaskUtil";
 import { colliderDebugBoxMap, colliderDebugEnabledObservable } from "../../system/sharedObservables";
 import ColliderDebugBox from "../types/colliderDebugBox";
 import { ColliderState } from "../types/colliderState";
@@ -9,20 +8,14 @@ const PhysicsDebugUtil =
     {
         if (colliderDebugEnabledObservable.peek())
         {
-            const mask = colliderState.collisionLayerMask;
-            if (!BitmaskUtil.allOnesAreContinuous(mask))
-                throw new Error(`Found a discontinuous collisionLayerMask (key = ${key}, mask = ${mask.toString(2)})`);
-            
-            const colliderSizeY = 0.5 * BitmaskUtil.countOnes(mask);
-            const colliderHalfSizeY = 0.5 * colliderSizeY;
-            const colliderMinY = 0.5 * colliderState.level;
-            const colliderCenterY = colliderMinY + colliderHalfSizeY;
-
+            const hitbox = colliderState.hitbox;
             const box: ColliderDebugBox = {
-                x: colliderState.hitbox.x, y: colliderCenterY, z: colliderState.hitbox.y,
-                halfSizeX: colliderState.hitbox.halfSizeX,
-                halfSizeY: colliderHalfSizeY,
-                halfSizeZ: colliderState.hitbox.halfSizeY,
+                x: hitbox.x,
+                y: hitbox.y,
+                z: hitbox.z,
+                halfSizeX: hitbox.halfSizeX,
+                halfSizeY: hitbox.halfSizeY,
+                halfSizeZ: hitbox.halfSizeZ,
                 colorHex,
             };
             if (!colliderDebugBoxMap.tryUpdate(key, () => box))

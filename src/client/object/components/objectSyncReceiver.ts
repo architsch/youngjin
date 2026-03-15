@@ -64,7 +64,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
             return;
         }
         const p = params.resolvedPos;
-        vec3Temp.set(p.x, this.gameObject.position.y, p.y);
+        vec3Temp.set(p.x, p.y, p.z);
         this.gameObject.forceSetTransform(vec3Temp, this.gameObject.direction);
         
         this.positionInterpRange[0].copy(vec3Temp);

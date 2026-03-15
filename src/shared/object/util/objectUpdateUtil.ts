@@ -12,7 +12,7 @@ import { ObjectTagEnumMap } from "../types/objectTag";
 import Vec3 from "../../math/types/vec3";
 import PhysicsObject from "../../physics/types/physicsObject";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
-import BitmaskUtil from "../../math/util/bitmaskUtil";
+import { COLLISION_LAYER_MIN, COLLISION_LAYER_MAX } from "../../system/sharedConstants";
 
 const ObjectUpdateUtil =
 {
@@ -51,9 +51,6 @@ const ObjectUpdateUtil =
         delete room.objectById[objectId];
         return removed;
     },
-
-    // TODO: Movement logic will be refactored later.
-    // canMoveObject and moveObject are left as stubs for now.
 
     canSetObjectMetadata(room: Room, objectId: string,
         metadataKey: number, metadataValue: string): boolean
@@ -109,9 +106,11 @@ function canPlaceObject(room: Room, objectId: string, objectTypeIndex: number,
 
     // (1) The object's back side must be fully covered (by voxel blocks).
     // (2) The object's front side must be at least partially exposed.
+    // We check voxel occupancy using the object's Y range against collision layers.
 
     const half = newColliderState.hitbox.halfSizeX;
-    const objectMask = newColliderState.collisionLayerMask;
+    const objBottomY = newColliderState.hitbox.y - newColliderState.hitbox.halfSizeY;
+    const objTopY = newColliderState.hitbox.y + newColliderState.hitbox.halfSizeY;
     let frontExposureFound = false;
 
     // Determine which direction the object faces for back/front scanning
@@ -129,12 +128,9 @@ function canPlaceObject(room: Room, objectId: string, objectTypeIndex: number,
         {
             const backVoxel = VoxelQueryUtil.getVoxel(room, backRow, col);
             const frontVoxel = VoxelQueryUtil.getVoxel(room, frontRow, col);
-            const backVoxelMask = backVoxel.collisionLayerMask;
-            const frontVoxelMask = frontVoxel.collisionLayerMask;
-
-            if (!BitmaskUtil.isSubsetOf(objectMask, backVoxelMask))
+            if (!voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
                 return false;
-            if (!BitmaskUtil.isSubsetOf(objectMask, frontVoxelMask))
+            if (!voxelCoversYRange(frontVoxel.collisionLayerMask, objBottomY, objTopY))
                 frontExposureFound = true;
         }
     }
@@ -148,12 +144,9 @@ function canPlaceObject(room: Room, objectId: string, objectTypeIndex: number,
         {
             const backVoxel = VoxelQueryUtil.getVoxel(room, row, backCol);
             const frontVoxel = VoxelQueryUtil.getVoxel(room, row, frontCol);
-            const backVoxelMask = backVoxel.collisionLayerMask;
-            const frontVoxelMask = frontVoxel.collisionLayerMask;
-
-            if (!BitmaskUtil.isSubsetOf(objectMask, backVoxelMask))
+            if (!voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
                 return false;
-            if (!BitmaskUtil.isSubsetOf(objectMask, frontVoxelMask))
+            if (!voxelCoversYRange(frontVoxel.collisionLayerMask, objBottomY, objTopY))
                 frontExposureFound = true;
         }
     }
@@ -171,6 +164,19 @@ function canPlaceObject(room: Room, objectId: string, objectTypeIndex: number,
         {
             return false;
         }
+    }
+    return true;
+}
+
+// Checks whether the voxel's occupied collision layers fully cover the given Y range.
+function voxelCoversYRange(collisionLayerMask: number, bottomY: number, topY: number): boolean
+{
+    const minLayer = Math.max(COLLISION_LAYER_MIN, Math.floor(bottomY * 2));
+    const maxLayer = Math.min(COLLISION_LAYER_MAX, Math.floor((topY - 0.001) * 2));
+    for (let layer = minLayer; layer <= maxLayer; ++layer)
+    {
+        if ((collisionLayerMask & (1 << layer)) === 0)
+            return false;
     }
     return true;
 }

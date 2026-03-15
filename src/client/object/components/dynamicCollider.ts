@@ -1,44 +1,68 @@
 import * as THREE from "three";
-import Vec2 from "../../../shared/math/types/vec2";
+import Vec3 from "../../../shared/math/types/vec3";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import App from "../../app";
-import { MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { GRAVITY_SPEED, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import Collider from "./collider";
 
 export default class DynamicCollider extends Collider
 {
     private nextPosition = new THREE.Vector3();
+    private nextDirection = new THREE.Vector3();
 
     async onSpawn(): Promise<void>
     {
         await super.onSpawn();
         this.nextPosition.copy(this.gameObject.position);
+        this.nextDirection.copy(this.gameObject.direction);
     }
 
     update(deltaTime: number): void
     {
-        // physics simulation (e.g. collision handling, floor level update, etc)
-        const targetPos: Vec2 = { x: this.nextPosition.x, y: this.nextPosition.z };
-        const result = PhysicsManager.tryMoveObject(App.getCurrentRoom()!.id, this.gameObject.params.objectId, targetPos);
+        // Compute the target position with gravity applied
+        const physicsY = this.physicsObject!.colliderState.hitbox.y
+            - this.physicsObject!.colliderState.hitbox.halfSizeY; // bottom Y of physics hitbox
+        const gravityY = physicsY - GRAVITY_SPEED * deltaTime;
+
+        const targetPos: Vec3 = {
+            x: this.nextPosition.x,
+            y: gravityY, // base Y (foot position) — trySetTransform expects base Y
+            z: this.nextPosition.z,
+        };
+        const targetDir: Vec3 = {
+            x: this.nextDirection.x,
+            y: this.nextDirection.y,
+            z: this.nextDirection.z,
+        };
+
+        // Physics simulation (3D collision handling, step-up, gravity)
+        const result = PhysicsManager.trySetTransform(
+            App.getCurrentRoom()!.id,
+            this.gameObject.params.objectId,
+            this.gameObject.params.objectTypeIndex,
+            targetPos, targetDir
+        );
+
+        // Apply XZ directly
         this.gameObject.position.set(
             result.resolvedPos.x,
             this.gameObject.position.y,
-            result.resolvedPos.y
+            result.resolvedPos.z
         );
         this.nextPosition.copy(this.gameObject.position);
+
         if (result.desyncDetected)
             console.warn(`Physics-position desync detected.`);
 
-        // y-coordinate interpolation (based on the object's updated level)
+        // Y-coordinate interpolation (smooth visual transition toward the physics-resolved Y)
         const p = this.gameObject.position;
-        const colliderState = this.physicsObject!.colliderState;
-        const desiredY = colliderState.colliderConfig.groundLevelY + 0.5 * colliderState.level;
+        const desiredY = result.resolvedPos.y; // already base Y (foot position)
         const desiredChangeInY = desiredY - p.y;
         if (Math.abs(desiredChangeInY) > NEAR_EPSILON)
         {
-            const delta = (0.5 * deltaTime / MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL) // based on the expectation that Y shifts by 0.5 during each span of "MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL" seconds.
-                * (desiredChangeInY >= 0 ? 1 : -1);
-            
+            const speed = Math.max(Math.abs(desiredChangeInY) / 0.15, 5); // at least 5 units/sec, or fast enough to reach in 0.15s
+            const delta = speed * deltaTime * (desiredChangeInY >= 0 ? 1 : -1);
+
             if (Math.abs(delta) >= Math.abs(desiredChangeInY))
                 p.set(p.x, desiredY, p.z);
             else
@@ -46,15 +70,16 @@ export default class DynamicCollider extends Collider
         }
     }
 
-    trySetPosition(pos: THREE.Vector3): void
+    trySetTransform(pos: THREE.Vector3, dir: THREE.Vector3): void
     {
-        super.trySetPosition?.(pos);
         this.nextPosition.copy(pos);
+        this.nextDirection.copy(dir);
     }
 
     forceSetTransform(position: THREE.Vector3, direction: THREE.Vector3): void
     {
         super.forceSetTransform?.(position, direction);
         this.nextPosition.copy(this.gameObject.position);
+        this.nextDirection.copy(this.gameObject.direction);
     }
 }

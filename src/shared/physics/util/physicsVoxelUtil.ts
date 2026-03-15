@@ -1,4 +1,4 @@
-import AABB2 from "../../math/types/aabb2";
+import AABB3 from "../../math/types/aabb3";
 import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import PhysicsRoom from "../types/physicsRoom";
 import PhysicsVoxel from "../types/physicsVoxel";
@@ -7,12 +7,13 @@ const voxelsTemp = new Array<PhysicsVoxel>();
 
 const PhysicsVoxelUtil =
 {
-    getVoxelsInBox: (physicsRoom: PhysicsRoom, box: AABB2): PhysicsVoxel[] =>
+    // Returns all voxels that the given AABB3's XZ footprint overlaps with.
+    getVoxelsInBox: (physicsRoom: PhysicsRoom, box: AABB3): PhysicsVoxel[] =>
     {
         voxelsTemp.length = 0;
-        const row1 = Math.max(0, Math.floor(box.y - box.halfSizeY));
+        const row1 = Math.max(0, Math.floor(box.z - box.halfSizeZ));
         const col1 = Math.max(0, Math.floor(box.x - box.halfSizeX));
-        const row2 = Math.min(NUM_VOXEL_ROWS-1, Math.floor(box.y + box.halfSizeY));
+        const row2 = Math.min(NUM_VOXEL_ROWS-1, Math.floor(box.z + box.halfSizeZ));
         const col2 = Math.min(NUM_VOXEL_COLS-1, Math.floor(box.x + box.halfSizeX));
         for (let row = row1; row <= row2; ++row)
         {

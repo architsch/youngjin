@@ -1,6 +1,6 @@
 import PhysicsManager from "../../shared/physics/physicsManager";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import Vec2 from "../../shared/math/types/vec2";
+import Vec3 from "../../shared/math/types/vec3";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
@@ -371,10 +371,12 @@ const RoomManager =
             return;
         }
 
-        const targetPos: Vec2 = { x: transform.x, y: transform.z };
-        const result = PhysicsManager.tryMoveObject(roomID, objectId, targetPos);
+        const targetPos: Vec3 = { x: transform.x, y: transform.y, z: transform.z };
+        const targetDir: Vec3 = { x: transform.dirX, y: transform.dirY, z: transform.dirZ };
+        const result = PhysicsManager.trySetTransform(roomID, objectId, obj.objectTypeIndex, targetPos, targetDir);
         transform.x = result.resolvedPos.x;
-        transform.z = result.resolvedPos.y;
+        transform.y = result.resolvedPos.y;
+        transform.z = result.resolvedPos.z;
         Object.assign(obj.transform, transform);
 
         if (result.desyncDetected)

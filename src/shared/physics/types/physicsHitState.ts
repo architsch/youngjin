@@ -1,7 +1,7 @@
-import LineSegment2 from "../../math/types/lineSegment2";
+import Vec3 from "../../math/types/vec3";
 
 export default interface PhysicsHitState
 {
     minHitRayScale: number;
-    hitLine: LineSegment2 | undefined;
+    hitNormal: Vec3 | undefined;
 }

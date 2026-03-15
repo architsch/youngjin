@@ -1,27 +1,23 @@
-import AABB2 from "../../math/types/aabb2";
-import Vec2 from "../../math/types/vec2";
-import PhysicsHitState from "../types/physicsHitState";
-import Geometry2DUtil from "../../math/util/geometry2DUtil";
+import AABB3 from "../../math/types/aabb3";
 import Vec3 from "../../math/types/vec3";
+import PhysicsHitState from "../types/physicsHitState";
+import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import { ColliderState } from "../types/colliderState";
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
 import { ColliderConfig } from "../types/colliderConfig";
 import PhysicsDebugUtil from "./physicsDebugUtil";
 
 const voxelBlockColliderConfig: ColliderConfig = {
-    collisionLayerMaskAtGroundLevel: 1,
-    groundLevelY: 0,
-    hitboxSize: {sizeX: 1, sizeZ: 1},
+    hitboxSize: {sizeX: 1, sizeY: 0.5, sizeZ: 1},
 };
 
 const PhysicsCollisionUtil =
 {
     getVoxelBlockColliderState: (row: number, col: number, collisionLayer: number): ColliderState =>
     {
+        const centerY = collisionLayer * 0.5 + 0.25;
         const state: ColliderState = {
-            hitbox: { x: 0.5 + col, y: 0.5 + row, halfSizeX: 0.5, halfSizeY: 0.5 },
-            level: collisionLayer,
-            collisionLayerMask: 1 << collisionLayer,
+            hitbox: { x: 0.5 + col, y: centerY, z: 0.5 + row, halfSizeX: 0.5, halfSizeY: 0.25, halfSizeZ: 0.5 },
             colliderConfig: voxelBlockColliderConfig
         };
         PhysicsDebugUtil.tryShowColliderBox("voxelBlock", state, "#ffff00");
@@ -41,25 +37,25 @@ const PhysicsCollisionUtil =
         const moreAlignedWithXAxis = Math.abs(direction.x) > Math.abs(direction.z);
         const reorientedSizeX = moreAlignedWithXAxis ? hitboxSize.sizeZ : hitboxSize.sizeX;
         const reorientedSizeZ = moreAlignedWithXAxis ? hitboxSize.sizeX : hitboxSize.sizeZ;
-        const hitbox: AABB2 = {
+        const hitbox: AABB3 = {
             x: position.x,
-            y: position.z,
+            y: position.y + hitboxSize.sizeY * 0.5,
+            z: position.z,
             halfSizeX: 0.5 * reorientedSizeX,
-            halfSizeY: 0.5 * reorientedSizeZ,
+            halfSizeY: 0.5 * hitboxSize.sizeY,
+            halfSizeZ: 0.5 * reorientedSizeZ,
         };
-        const level = Math.round(2 * (position.y - colliderConfig.groundLevelY)); // Multiplying by 2 because each level is 0.5 high.
-        const collisionLayerMask = colliderConfig.collisionLayerMaskAtGroundLevel << level;
-        const state: ColliderState = {hitbox, level, collisionLayerMask, colliderConfig};
+        const state: ColliderState = {hitbox, colliderConfig};
         PhysicsDebugUtil.tryShowColliderBox("object", state, "#ff00ff");
         return state;
     },
-    pushBoxAgainstBox: (sourceHitbox: AABB2, targetPos: Vec2, targetHitbox: AABB2, hitState: PhysicsHitState): PhysicsHitState =>
+    pushBoxAgainstBox: (sourceHitbox: AABB3, targetPos: Vec3, targetHitbox: AABB3, hitState: PhysicsHitState): PhysicsHitState =>
     {
-        const result = Geometry2DUtil.castAABBAgainstAABB(sourceHitbox, targetPos, targetHitbox);
+        const result = Geometry3DUtil.castAABBAgainstAABB(sourceHitbox, targetPos, targetHitbox);
         if (result.hitRayScale <= hitState.minHitRayScale)
         {
             hitState.minHitRayScale = result.hitRayScale;
-            hitState.hitLine = result.hitLine;
+            hitState.hitNormal = result.hitNormal;
         }
         return hitState;
     }

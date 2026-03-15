@@ -25,9 +25,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         components: {
             spawnedByAny: {
                 dynamicCollider: {
-                    collisionLayerMaskAtGroundLevel: 0b00011111,
-                    groundLevelY: 0,
-                    hitboxSize: {sizeX: 0.6, sizeZ: 0.6},
+                    hitboxSize: {sizeX: 0.6, sizeY: 2.5, sizeZ: 0.6},
                 },
                 speechBubble: {
                     yOffset: 2.4,
@@ -61,9 +59,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         components: {
             spawnedByAny: {
                 staticCollider: {
-                    collisionLayerMaskAtGroundLevel: 0b00000011,
-                    groundLevelY: 0.5,
-                    hitboxSize: {sizeX: 0.99, sizeZ: 0.001},
+                    hitboxSize: {sizeX: 0.99, sizeY: 0.99, sizeZ: 0.001},
                 },
                 instancedMeshGraphics: {
                     createInstanceIdPool: true,

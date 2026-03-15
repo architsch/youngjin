@@ -1,4 +1,4 @@
-import Geometry2DUtil from "../../math/util/geometry2DUtil";
+import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import PhysicsManager from "../physicsManager";
 import { ColliderState } from "../types/colliderState";
 import PhysicsObject from "../types/physicsObject";
@@ -21,8 +21,7 @@ const PhysicsObjectUtil =
             {
                 if (objs[obj.objectId] != undefined)
                     continue;
-                if ((obj.colliderState.collisionLayerMask & volumeColliderState.collisionLayerMask) != 0 &&
-                    Geometry2DUtil.AABBsOverlap(volumeColliderState.hitbox, obj.colliderState.hitbox))
+                if (Geometry3DUtil.AABBsOverlap(volumeColliderState.hitbox, obj.colliderState.hitbox))
                 {
                     objs[obj.objectId] = obj;
                 }
@@ -31,7 +30,7 @@ const PhysicsObjectUtil =
         return objs;
     },
     getObjectsIn2DDist: (roomID: string,
-        centerX: number, centerY: number, dist: number): {[objectId: string]: PhysicsObject} =>
+        centerX: number, centerZ: number, dist: number): {[objectId: string]: PhysicsObject} =>
     {
         const physicsRoom = PhysicsManager.physicsRooms[roomID];
         if (PhysicsManager.physicsRooms[roomID] == undefined)
@@ -39,9 +38,11 @@ const PhysicsObjectUtil =
 
         const voxels = PhysicsVoxelUtil.getVoxelsInBox(physicsRoom, {
             x: centerX,
-            y: centerY,
+            y: 0,
+            z: centerZ,
             halfSizeX: dist,
-            halfSizeY: dist,
+            halfSizeY: 1000,
+            halfSizeZ: dist,
         });
         const objs: {[objectId: string]: PhysicsObject} = {};
         for (const voxel of voxels)
@@ -51,8 +52,8 @@ const PhysicsObjectUtil =
                 if (objs[obj.objectId] != undefined)
                     continue;
                 const offsetX = obj.colliderState.hitbox.x - centerX;
-                const offsetY = obj.colliderState.hitbox.y - centerY;
-                const distSqr = offsetX*offsetX + offsetY*offsetY;
+                const offsetZ = obj.colliderState.hitbox.z - centerZ;
+                const distSqr = offsetX*offsetX + offsetZ*offsetZ;
                 if (distSqr <= dist * dist)
                     objs[obj.objectId] = obj;
             }

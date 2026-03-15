@@ -1,1 +1,1 @@
-export type HitboxSize = {sizeX: number, sizeZ: number};
+export type HitboxSize = {sizeX: number, sizeY: number, sizeZ: number};

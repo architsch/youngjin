@@ -37,7 +37,7 @@ export default abstract class GameObject
             this.params.transform.z + this.params.transform.dirZ
         );
         this.obj.lookAt(vec3Temp);
-        
+
         this.config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
         for (const [spawnType, componentConfigs] of Object.entries(this.config.components))
         {
@@ -88,42 +88,37 @@ export default abstract class GameObject
         return this.params.sourceUserID == App.getUser().id;
     }
 
-    // Checks to see if the position-updating process should be regulated by one of the components
-    // (e.g. collider updating the object's position based on physics).
-    // If there is one, let that component intercept the position-updating process.
-    // If not, just assign the given position to the object's current position.
-    trySetPosition(position: THREE.Vector3)
+    // Checks to see if the transform-updating process should be regulated by one of the components
+    // (e.g. collider updating the object's transform based on physics).
+    // If there is one, let that component intercept the transform-updating process.
+    // If not, just assign the given position/direction to the object's current transform.
+    trySetTransform(position: THREE.Vector3, direction: THREE.Vector3)
     {
-        // If there is a component which has the "trySetPosition" method,
-        // invoke that "trySetPosition" method.
-        // If such a method is not found, simply assign the given position vector
-        // to the GameObject's current position.
         let overrideFound = false;
         for (const component of Object.values(this.components))
         {
-            if (component.trySetPosition)
+            if (component.trySetTransform)
             {
                 if (overrideFound)
-                    throw new Error("Multiple components with the 'trySetPosition' method detected. This is not allowed.");
+                    throw new Error("Multiple components with the 'trySetTransform' method detected. This is not allowed.");
                 overrideFound = true;
-                component.trySetPosition(position);
+                component.trySetTransform(position, direction);
             }
         }
         if (!overrideFound)
+        {
             this.position.copy(position);
+            this.direction = direction;
+        }
     }
 
-    // This method works like "trySetPosition", but is intended to be invoked
+    // This method works like "trySetTransform", but is intended to be invoked
     // only in cases where the object's position/direction must be set forcefully rather than
     // based on real-time physical collision.
     // (e.g. when the object's client-side position is out of sync with its server-side position,
     //      or when an object with a static collider needs to be relocated).
     forceSetTransform(position: THREE.Vector3, direction: THREE.Vector3)
     {
-        // If there is a component which has the "forceSetTransform" method,
-        // invoke that "forceSetTransform" method.
-        // If such a method is not found, simply assign the given parameters
-        // to the GameObject's current transform.
         let overrideFound = false;
         for (const component of Object.values(this.components))
         {
@@ -141,7 +136,7 @@ export default abstract class GameObject
             this.direction = direction;
         }
     }
-    
+
     // Aliases
     get position(): THREE.Vector3 { return this.obj.position; }
     set position(p: THREE.Vector3) { this.obj.position.set(p.x, p.y, p.z); }

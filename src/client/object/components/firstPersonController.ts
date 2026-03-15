@@ -57,7 +57,7 @@ export default class FirstPersonController extends GameObjectComponent
         {
             objTemp.copy(this.gameObject.obj, false);
             objTemp.translateZ(-9 * deltaTime * this.dy);
-            this.gameObject.trySetPosition(objTemp.position);
+            this.gameObject.trySetTransform(objTemp.position, this.gameObject.direction);
         }
         this.dx = 0;
         this.dy = 0;
