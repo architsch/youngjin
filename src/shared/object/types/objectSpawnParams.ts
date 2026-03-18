@@ -36,8 +36,7 @@ export default class ObjectSpawnParams extends EncodableData
     getObjectColliderState(): ColliderState | undefined
     {
         return PhysicsCollisionUtil.getObjectColliderState(this.objectTypeIndex,
-            {x: this.transform.x, y: this.transform.y, z: this.transform.z},
-            {x: this.transform.dirX, y: this.transform.dirY, z: this.transform.dirZ});
+            this.transform.pos, this.transform.dir);
     }
 
     getMetadata(key: ObjectMetadataKey): string

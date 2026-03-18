@@ -153,7 +153,7 @@ const RoomManager =
             userRole = UserRoleEnumMap.Owner;
 
         addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
-            new ObjectTransform(lastX, lastY, lastZ, lastDirX, lastDirY, lastDirZ),
+            new ObjectTransform({x: lastX, y: lastY, z: lastZ}, {x: lastDirX, y: lastDirY, z: lastDirZ}),
             playerMetadata, userRole
         );
 
@@ -216,7 +216,7 @@ const RoomManager =
 
         // Validate placement
         const t = params.transform;
-        if (!ObjectUpdateUtil.canAddObject(room, params.objectTypeIndex, t.x, t.y, t.z, t.dirX, t.dirY, t.dirZ))
+        if (!ObjectUpdateUtil.canAddObject(room, params.objectTypeIndex, t.pos, t.dir))
         {
             console.error(`handleObjectSpawn :: Placement validation failed (objectId=${params.objectId})`);
             socketUserContext.addPendingSignalToUser("objectDespawnParams",
@@ -413,12 +413,12 @@ const RoomManager =
             return;
         }
 
-        const targetPos: Vec3 = { x: transform.x, y: transform.y, z: transform.z };
-        const targetDir: Vec3 = { x: transform.dirX, y: transform.dirY, z: transform.dirZ };
+        const targetPos: Vec3 = { ...transform.pos };
+        const targetDir: Vec3 = { ...transform.dir };
         const result = PhysicsManager.trySetTransform(roomID, objectId, obj.objectTypeIndex, targetPos, targetDir);
-        transform.x = result.resolvedPos.x;
-        transform.y = result.resolvedPos.y;
-        transform.z = result.resolvedPos.z;
+        transform.pos.x = result.resolvedPos.x;
+        transform.pos.y = result.resolvedPos.y;
+        transform.pos.z = result.resolvedPos.z;
         Object.assign(obj.transform, transform);
 
         if (result.desyncDetected)

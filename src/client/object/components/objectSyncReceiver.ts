@@ -83,9 +83,9 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         this.lastSyncTime = performance.now();
 
         this.positionInterpRange[0].copy(this.gameObject.position);
-        this.positionInterpRange[1].set(params.transform.x, params.transform.y, params.transform.z);
+        this.positionInterpRange[1].set(params.transform.pos.x, params.transform.pos.y, params.transform.pos.z);
 
-        vec3Temp.set(params.transform.dirX, params.transform.dirY, params.transform.dirZ);
+        vec3Temp.set(params.transform.dir.x, params.transform.dir.y, params.transform.dir.z);
         tempObj.lookAt(vec3Temp);
 
         this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);

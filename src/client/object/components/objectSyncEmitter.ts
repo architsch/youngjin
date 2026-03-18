@@ -51,12 +51,8 @@ export default class ObjectSyncEmitter extends GameObjectComponent
                 const params = new ObjectSyncParams(
                     this.gameObject.params.objectId,
                     new ObjectTransform(
-                        this.lastSyncedPosition.x,
-                        this.lastSyncedPosition.y,
-                        this.lastSyncedPosition.z,
-                        vec3Temp.x,
-                        vec3Temp.y,
-                        vec3Temp.z
+                        {x: this.lastSyncedPosition.x, y: this.lastSyncedPosition.y, z: this.lastSyncedPosition.z},
+                        {x: vec3Temp.x, y: vec3Temp.y, z: vec3Temp.z}
                     )
                 );
                 SocketsClient.emitObjectSync(params);

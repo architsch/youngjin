@@ -54,7 +54,7 @@ function canAddObjectFromQuad(selection: VoxelQuadSelection,
     const y = 0.5 * (offsetY < MID_ROOM_Y ? Math.ceil(2 * offsetY) : Math.floor(2 * offsetY));
     const z = voxel.row + 0.5 + offsetZ;
 
-    return ObjectUpdateUtil.canAddObject(room, objectTypeIndex, x, y, z, dirX, dirY, dirZ);
+    return ObjectUpdateUtil.canAddObject(room, objectTypeIndex, {x, y, z}, {x: dirX, y: dirY, z: dirZ});
 }
 
 async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
@@ -80,11 +80,11 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
     const objectSpawnParams = new ObjectSpawnParams(
         room.id, "", "", objectTypeIndex,
         objectId,
-        new ObjectTransform(x, y, z, dirX, dirY, dirZ),
+        new ObjectTransform({x, y, z}, {x: dirX, y: dirY, z: dirZ}),
         metadata
     );
     const obj = ObjectUpdateUtil.addObject(room, objectId, objectTypeIndex,
-        x, y, z, dirX, dirY, dirZ, metadata);
+        {x, y, z}, {x: dirX, y: dirY, z: dirZ}, metadata);
     if (!obj)
         return;
 

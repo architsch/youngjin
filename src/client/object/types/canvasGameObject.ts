@@ -45,7 +45,7 @@ export default class CanvasGameObject extends GameObject
         this.instancedMeshGraphics.updateInstanceTransform(
             this.instanceId,
             0, 0, 0.001,
-            tr.dirX, tr.dirY, tr.dirZ,
+            tr.dir.x, tr.dir.y, tr.dir.z,
             1, 1, 1);
 
         this.loadImage();

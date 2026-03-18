@@ -78,7 +78,7 @@ async function updateGizmos(selection: PersistentObjectSelection)
     // Calculate the canvas's local right vector.
     // The canvas direction vector points forward (away from the wall).
     // The local right vector is perpendicular to both direction and world up.
-    vec3Dir.set(go.params.transform.dirX, go.params.transform.dirY, go.params.transform.dirZ);
+    vec3Dir.set(go.params.transform.dir.x, go.params.transform.dir.y, go.params.transform.dir.z);
 
     // For wall-attached objects, direction is in the XZ plane.
     // Local right = cross(direction, up), but since the canvas faces outward,
@@ -138,8 +138,8 @@ function tryMoveCanvas(selection: PersistentObjectSelection,
     const go = selection.gameObject;
     const t = moved.transform;
     go.forceSetTransform(
-        new THREE.Vector3(t.x, t.y, t.z),
-        new THREE.Vector3(t.dirX, t.dirY, t.dirZ)
+        new THREE.Vector3(t.pos.x, t.pos.y, t.pos.z),
+        new THREE.Vector3(t.dir.x, t.dir.y, t.dir.z)
     );
 
     // Notify the observable to update the selection outline and gizmo positions

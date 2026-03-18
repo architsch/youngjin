@@ -30,11 +30,11 @@ export default abstract class GameObject
         this.params = params;
 
         GraphicsManager.addObjectToScene(this.obj);
-        this.position.set(this.params.transform.x, this.params.transform.y, this.params.transform.z);
+        this.position.set(this.params.transform.pos.x, this.params.transform.pos.y, this.params.transform.pos.z);
         vec3Temp.set(
-            this.params.transform.x + this.params.transform.dirX,
-            this.params.transform.y + this.params.transform.dirY,
-            this.params.transform.z + this.params.transform.dirZ
+            this.params.transform.pos.x + this.params.transform.dir.x,
+            this.params.transform.pos.y + this.params.transform.dir.y,
+            this.params.transform.pos.z + this.params.transform.dir.z
         );
         this.obj.lookAt(vec3Temp);
 

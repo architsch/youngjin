@@ -69,8 +69,8 @@ const ObjectManager =
                 roomRuntimeMemory.room.id,
                 voxelTypeIndex,
                 new ObjectTransform(
-                    voxel.col + 0.5, 0, voxel.row + 0.5,
-                    0, 0, 1
+                    {x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5},
+                    {x: 0, y: 0, z: 1}
                 )
             );
             const voxelGameObject = gameObject as VoxelGameObject;
@@ -85,9 +85,9 @@ const ObjectManager =
             if (obj.objectTypeIndex === playerTypeIndex)
             {
                 const t = obj.transform;
-                playerX = t.x;
-                playerY = t.y;
-                playerZ = t.z;
+                playerX = t.pos.x;
+                playerY = t.pos.y;
+                playerZ = t.pos.z;
                 break;
             }
         }
@@ -97,8 +97,8 @@ const ObjectManager =
         const objects = Object.values(roomRuntimeMemory.room.objectById);
         objects.sort((a, b) =>
         {
-            const da = (a.transform.x - playerX) ** 2 + (a.transform.y - playerY) ** 2 + (a.transform.z - playerZ) ** 2;
-            const db = (b.transform.x - playerX) ** 2 + (b.transform.y - playerY) ** 2 + (b.transform.z - playerZ) ** 2;
+            const da = (a.transform.pos.x - playerX) ** 2 + (a.transform.pos.y - playerY) ** 2 + (a.transform.pos.z - playerZ) ** 2;
+            const db = (b.transform.pos.x - playerX) ** 2 + (b.transform.pos.y - playerY) ** 2 + (b.transform.pos.z - playerZ) ** 2;
             return da - db;
         });
         for (const obj of objects)
@@ -264,8 +264,8 @@ const ObjectManager =
         {
             const t = moved.transform;
             gameObject.forceSetTransform(
-                new THREE.Vector3(t.x, t.y, t.z),
-                new THREE.Vector3(t.dirX, t.dirY, t.dirZ)
+                new THREE.Vector3(t.pos.x, t.pos.y, t.pos.z),
+                new THREE.Vector3(t.dir.x, t.dir.y, t.dir.z)
             );
         }
 

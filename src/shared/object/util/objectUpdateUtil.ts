@@ -19,21 +19,21 @@ import DirUtil from "../../math/util/dirUtil";
 const ObjectUpdateUtil =
 {
     canAddObject(room: Room, objectTypeIndex: number,
-        x: number, y: number, z: number, dirX: number, dirY: number, dirZ: number): boolean
+        pos: Vec3, dir: Vec3): boolean
     {
-        return canPlaceObject(room, "", objectTypeIndex, {x, y, z}, {x: dirX, y: dirY, z: dirZ});
+        return canPlaceObject(room, "", objectTypeIndex, pos, dir);
     },
     addObject(room: Room, objectId: string, objectTypeIndex: number,
-        x: number, y: number, z: number, dirX: number, dirY: number, dirZ: number,
+        pos: Vec3, dir: Vec3,
         metadata: ObjectMetadata = {}, sourceUserID: string = "", sourceUserName: string = ""): ObjectSpawnParams | null
     {
-        if (!ObjectUpdateUtil.canAddObject(room, objectTypeIndex, x, y, z, dirX, dirY, dirZ))
+        if (!ObjectUpdateUtil.canAddObject(room, objectTypeIndex, pos, dir))
         {
-            console.error(`ObjectUpdateUtil.addObject :: Failed (x=${x}, y=${y}, z=${z})`);
+            console.error(`ObjectUpdateUtil.addObject :: Failed (x=${pos.x}, y=${pos.y}, z=${pos.z})`);
             return null;
         }
         const obj = new ObjectSpawnParams(room.id, sourceUserID, sourceUserName,
-            objectTypeIndex, objectId, new ObjectTransform(x, y, z, dirX, dirY, dirZ), metadata);
+            objectTypeIndex, objectId, new ObjectTransform({...pos}, {...dir}), metadata);
         room.objectById[objectId] = obj;
         return obj;
     },
@@ -73,13 +73,13 @@ const ObjectUpdateUtil =
         const obj = room.objectById[objectId];
         const result = getMoveResult(room, obj, dx, dy, dz)!;
 
-        obj.transform.x = result.newPos.x;
-        obj.transform.y = result.newPos.y;
-        obj.transform.z = result.newPos.z;
+        obj.transform.pos.x = result.newPos.x;
+        obj.transform.pos.y = result.newPos.y;
+        obj.transform.pos.z = result.newPos.z;
 
-        obj.transform.dirX = result.newDir.x;
-        obj.transform.dirY = result.newDir.y;
-        obj.transform.dirZ = result.newDir.z;
+        obj.transform.dir.x = result.newDir.x;
+        obj.transform.dir.y = result.newDir.y;
+        obj.transform.dir.z = result.newDir.z;
         return obj;
     },
 
@@ -124,8 +124,8 @@ function getMoveResult(room: Room, obj: ObjectSpawnParams,
     }
     else // standalone object
     {
-        const newPos = {x: obj.transform.x + dx, y: obj.transform.y + dy, z: obj.transform.z + dz};
-        const newDir = { x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ };
+        const newPos = {x: obj.transform.pos.x + dx, y: obj.transform.pos.y + dy, z: obj.transform.pos.z + dz};
+        const newDir = { x: obj.transform.dir.x, y: obj.transform.dir.y, z: obj.transform.dir.z };
 
         if (canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
             return {newPos, newDir};
@@ -136,8 +136,8 @@ function getMoveResult(room: Room, obj: ObjectSpawnParams,
 function getVerticalMoveResult(room: Room, obj: ObjectSpawnParams,
     moveUp: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const pos = {x: obj.transform.x, y: obj.transform.y, z: obj.transform.z};
-    const dir = {x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ};
+    const pos = {...obj.transform.pos};
+    const dir = {...obj.transform.dir};
 
     const newPos = {x: pos.x, y: pos.y + (moveUp ? 0.5 : -0.5), z: pos.z};
     const newDir = dir;
@@ -166,8 +166,8 @@ function getHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
 function getStraightHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
     moveRight: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const pos = {x: obj.transform.x, y: obj.transform.y, z: obj.transform.z};
-    const dir = {x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ};
+    const pos = {...obj.transform.pos};
+    const dir = {...obj.transform.dir};
 
     const dir4 = DirUtil.vec3ToDir4(dir);
     const dir4CCW = DirUtil.rotateCCW(dir4);
@@ -185,8 +185,8 @@ function getStraightHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
 function getCornerWrappedHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
     moveRight: boolean, tryConcaveWrap: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const pos = {x: obj.transform.x, y: obj.transform.y, z: obj.transform.z};
-    const dir = {x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ};
+    const pos = {...obj.transform.pos};
+    const dir = {...obj.transform.dir};
 
     const dir4 = DirUtil.vec3ToDir4(dir);
     const dir4CCW = DirUtil.rotateCCW(dir4);
