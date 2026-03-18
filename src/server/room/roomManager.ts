@@ -10,6 +10,7 @@ import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
+import ObjectMoveParams from "../../shared/object/types/objectMoveParams";
 import { addUserToRoom, getUserGameplayState, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
 import { updateVoxelGrid } from "./util/roomVoxelUtil";
@@ -308,6 +309,47 @@ const RoomManager =
         const socketRoomContext = socketRoomContexts[roomID];
         if (socketRoomContext)
             socketRoomContext.multicastSignal("objectMetadataSetParams", params, user.id);
+    },
+    // Handle client-sent objectMoveParams (e.g. moving a canvas)
+    handleObjectMove: (socketUserContext: SocketUserContext, params: ObjectMoveParams) =>
+    {
+        const user = socketUserContext.user;
+        const roomID = currentRoomIDByUserID[user.id];
+        if (!roomID)
+        {
+            console.error(`RoomManager.handleObjectMove :: RoomID not found (userID = ${user.id})`);
+            return;
+        }
+        const roomRuntimeMemory = roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory)
+        {
+            console.error(`RoomManager.handleObjectMove :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            return;
+        }
+        const room = roomRuntimeMemory.room;
+
+        const moved = ObjectUpdateUtil.moveObject(room, params.objectId, params.dx, params.dy, params.dz);
+        if (!moved)
+        {
+            console.error(`RoomManager.handleObjectMove :: Failed (objectId = ${params.objectId})`);
+            return;
+        }
+
+        // Update physics
+        if (PhysicsManager.hasObject(room.id, params.objectId))
+        {
+            PhysicsManager.removeObject(room.id, params.objectId);
+            const colliderState = moved.getObjectColliderState();
+            if (colliderState)
+                PhysicsManager.addObject(room.id, params.objectId, moved.objectTypeIndex, colliderState);
+        }
+
+        room.dirty = true;
+
+        // Broadcast to other clients
+        const socketRoomContext = socketRoomContexts[roomID];
+        if (socketRoomContext)
+            socketRoomContext.multicastSignal("objectMoveParams", params, user.id);
     },
     sendObjectMessage: (socketUserContext: SocketUserContext, params: ObjectMessageParams) =>
     {

@@ -18,6 +18,7 @@ import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGr
 import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
+import ObjectMoveParams from "../../shared/object/types/objectMoveParams";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
 import DBSearchUtil from "../db/util/dbSearchUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
@@ -188,6 +189,17 @@ const Sockets =
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMetadataSetParams.decode(bufferState) as ObjectMetadataSetParams;
                 RoomManager.handleObjectMetadataSet(socketUserContext, params);
+            });
+
+            socketUserContext.onReceivedSignalFromUser("objectMoveParams", (buffer: ArrayBuffer) => {
+                if (!canUserModifyRoom(user.id))
+                {
+                    console.warn(`(Sockets) Rejected objectMoveParams from Visitor (userID = ${user.id})`);
+                    return;
+                }
+                const bufferState = new BufferState(new Uint8Array(buffer));
+                const params = ObjectMoveParams.decode(bufferState) as ObjectMoveParams;
+                RoomManager.handleObjectMove(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("roomChangeRequestParams", async (buffer: ArrayBuffer) => {

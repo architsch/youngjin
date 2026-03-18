@@ -13,6 +13,8 @@ import Vec3 from "../../math/types/vec3";
 import PhysicsObject from "../../physics/types/physicsObject";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MIN, COLLISION_LAYER_MAX } from "../../system/sharedConstants";
+import Vector3DUtil from "../../math/util/vector3DUtil";
+import DirUtil from "../../math/util/dirUtil";
 
 const ObjectUpdateUtil =
 {
@@ -52,6 +54,35 @@ const ObjectUpdateUtil =
         return removed;
     },
 
+    canMoveObject(room: Room, objectId: string,
+        dx: number, dy: number, dz: number): boolean
+    {
+        const obj = room.objectById[objectId];
+        if (!obj)
+            return false;
+        return getMoveResult(room, obj, dx, dy, dz) != undefined;
+    },
+    moveObject(room: Room, objectId: string,
+        dx: number, dy: number, dz: number): ObjectSpawnParams | null
+    {
+        if (!ObjectUpdateUtil.canMoveObject(room, objectId, dx, dy, dz))
+        {
+            console.error(`ObjectUpdateUtil.moveObject :: Failed (objectId=${objectId}, dx=${dx}, dy=${dy}, dz=${dz})`);
+            return null;
+        }
+        const obj = room.objectById[objectId];
+        const result = getMoveResult(room, obj, dx, dy, dz)!;
+
+        obj.transform.x = result.newPos.x;
+        obj.transform.y = result.newPos.y;
+        obj.transform.z = result.newPos.z;
+
+        obj.transform.dirX = result.newDir.x;
+        obj.transform.dirY = result.newDir.y;
+        obj.transform.dirZ = result.newDir.z;
+        return obj;
+    },
+
     canSetObjectMetadata(room: Room, objectId: string,
         metadataKey: number, metadataValue: string): boolean
     {
@@ -75,6 +106,105 @@ const ObjectUpdateUtil =
         obj.metadata[metadataKey] = new EncodableByteString(metadataValue);
         return obj;
     },
+}
+
+function getMoveResult(room: Room, obj: ObjectSpawnParams,
+    dx: number, dy: number, dz: number): {newPos: Vec3, newDir: Vec3} | undefined
+{
+    const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
+    if (config.tags.includes(ObjectTagEnumMap.AttachedToWall)) // wall-attached object
+    {
+        if (dz != 0)
+            throw new Error(`Change in z-coordinate is not allowed in a wall-attached object.`);
+        else if (dx != 0 && dy == 0) // For a wall-attached object, the "dx" value is interpreted as a movement along its 'local' x-axis (NOT the global x-axis).
+            return getHorizontalMoveResult(room, obj, dx > 0);
+        else if (dx == 0 && dy != 0)
+            return getVerticalMoveResult(room, obj, dy > 0);
+        throw new Error(`Diagonal movement (dx != 0 && dy != 0) or zero movement (dx == 0 && dy == 0) is not allowed in a wall-attached object.`);
+    }
+    else // standalone object
+    {
+        const newPos = {x: obj.transform.x + dx, y: obj.transform.y + dy, z: obj.transform.z + dz};
+        const newDir = { x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ };
+
+        if (canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
+            return {newPos, newDir};
+        return undefined;
+    }
+}
+
+function getVerticalMoveResult(room: Room, obj: ObjectSpawnParams,
+    moveUp: boolean): {newPos: Vec3, newDir: Vec3} | undefined
+{
+    const pos = {x: obj.transform.x, y: obj.transform.y, z: obj.transform.z};
+    const dir = {x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ};
+
+    const newPos = {x: pos.x, y: pos.y + (moveUp ? 0.5 : -0.5), z: pos.z};
+    const newDir = dir;
+
+    if (canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
+        return {newPos, newDir};
+    return undefined;
+}
+
+function getHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
+    moveRight: boolean): {newPos: Vec3, newDir: Vec3} | undefined
+{
+    let result: {newPos: Vec3, newDir: Vec3} | undefined;
+    // Try concave wrap first.
+    result = getCornerWrappedHorizontalMoveResult(room, obj, moveRight, true);
+    if (result)
+        return result;
+    // If failed, try straight move next.
+    result = getStraightHorizontalMoveResult(room, obj, moveRight);
+    if (result)
+        return result;
+    // If failed, try convex wrap next.
+    return getCornerWrappedHorizontalMoveResult(room, obj, moveRight, false);
+}
+
+function getStraightHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
+    moveRight: boolean): {newPos: Vec3, newDir: Vec3} | undefined
+{
+    const pos = {x: obj.transform.x, y: obj.transform.y, z: obj.transform.z};
+    const dir = {x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ};
+
+    const dir4 = DirUtil.vec3ToDir4(dir);
+    const dir4CCW = DirUtil.rotateCCW(dir4);
+    const dirCCW = DirUtil.dir4ToVec3(dir4CCW);
+
+    const offset = Vector3DUtil.scale(dirCCW, moveRight ? 0.5 : -0.5);
+    const newPos = Vector3DUtil.add(pos, offset);
+    const newDir = dir;
+
+    if (canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
+        return {newPos, newDir};
+    return undefined;
+}
+
+function getCornerWrappedHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
+    moveRight: boolean, tryConcaveWrap: boolean): {newPos: Vec3, newDir: Vec3} | undefined
+{
+    const pos = {x: obj.transform.x, y: obj.transform.y, z: obj.transform.z};
+    const dir = {x: obj.transform.dirX, y: obj.transform.dirY, z: obj.transform.dirZ};
+
+    const dir4 = DirUtil.vec3ToDir4(dir);
+    const dir4CCW = DirUtil.rotateCCW(dir4);
+    const dirCCW = DirUtil.dir4ToVec3(dir4CCW);
+
+    const colliderState = PhysicsCollisionUtil.getObjectColliderState(obj.objectTypeIndex, pos, dir);
+    if (!colliderState)
+        throw new Error(`ColliderState not found (objectTypeIndex = ${obj.objectTypeIndex})`);
+
+    const offset1 = Vector3DUtil.scale(dir, (tryConcaveWrap ? 1 : -1) * colliderState.hitbox.halfSizeX);
+    const offset2 = Vector3DUtil.scale(dirCCW, (moveRight ? 1 : -1) * colliderState.hitbox.halfSizeX);
+
+    const newPos = Vector3DUtil.add(Vector3DUtil.add(pos, offset1), offset2);
+    const newDir = Vector3DUtil.scale(dirCCW, (tryConcaveWrap != moveRight) ? 1 : -1);
+
+    if (canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
+        return {newPos, newDir};
+    return undefined;
 }
 
 const standaloneObjBlockingCond = (myObjectId: string, collidingObject: PhysicsObject) => {

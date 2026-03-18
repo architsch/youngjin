@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import GameObject from "../object/types/gameObject";
 import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
 import ObjectFactory from "./factories/objectFactory";
@@ -10,6 +11,8 @@ import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMa
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
 import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
+import ObjectMoveParams from "../../shared/object/types/objectMoveParams";
+import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import SpeechBubble from "./components/speechBubble";
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import ObjectSyncReceiver from "./components/objectSyncReceiver";
@@ -239,6 +242,35 @@ const ObjectManager =
 
         // If the modified object was selected by us, deactivate the selection
         // since another user initiated the metadata change.
+        const sel = persistentObjectSelectionObservable.peek();
+        if (sel && sel.gameObject.params.objectId === params.objectId)
+            PersistentObjectSelection.unselect();
+    },
+    // When the client receives an ObjectMoveParams signal from the server,
+    // the move will be applied to the corresponding game object.
+    onObjectMoveReceived: async (params: ObjectMoveParams) => {
+        const success = await waitUntilSignalProcessingReady("objectMoveParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+
+        const room = App.getCurrentRoom()!;
+        const moved = ObjectUpdateUtil.moveObject(room, params.objectId, params.dx, params.dy, params.dz);
+        if (!moved)
+            return;
+
+        const gameObject = ObjectManager.getObjectById(params.objectId);
+        if (gameObject)
+        {
+            const t = moved.transform;
+            gameObject.forceSetTransform(
+                new THREE.Vector3(t.x, t.y, t.z),
+                new THREE.Vector3(t.dirX, t.dirY, t.dirZ)
+            );
+        }
+
+        // If the moved object was selected by us, deactivate the selection
+        // since another user initiated the move.
         const sel = persistentObjectSelectionObservable.peek();
         if (sel && sel.gameObject.params.objectId === params.objectId)
             PersistentObjectSelection.unselect();

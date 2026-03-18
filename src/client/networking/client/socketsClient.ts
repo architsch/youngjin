@@ -5,6 +5,7 @@ import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
 import ObjectMetadataSetParams from "../../../shared/object/types/objectMetadataSetParams";
+import ObjectMoveParams from "../../../shared/object/types/objectMoveParams";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import ThingsPoolEnv from "../../system/types/thingsPoolEnv";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
@@ -46,6 +47,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         VoxelManager.onUpdateVoxelGridReceived(data as UpdateVoxelGridParams),
     "objectMetadataSetParams": (data: EncodableData) =>
         ObjectManager.onObjectMetadataSetReceived(data as ObjectMetadataSetParams),
+    "objectMoveParams": (data: EncodableData) =>
+        ObjectManager.onObjectMoveReceived(data as ObjectMoveParams),
     "userRoleUpdateParams": (data: EncodableData) =>
         App.onUserRoleUpdateReceived(data as UserRoleUpdateParams),
 }
@@ -204,6 +207,10 @@ const SocketsClient =
     emitObjectMetadataSet: (params: ObjectMetadataSetParams) =>
     {
         emitWhenReady("objectMetadataSetParams", params);
+    },
+    emitObjectMove: (params: ObjectMoveParams) =>
+    {
+        emitWhenReady("objectMoveParams", params);
     },
 }
 

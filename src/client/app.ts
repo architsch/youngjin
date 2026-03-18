@@ -9,6 +9,8 @@ import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
 import { roomChangedObservable, userRoleObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
+import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
+import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
 import UserRoleUpdateParams from "../shared/user/types/userRoleUpdateParams";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";

@@ -2,6 +2,7 @@ import ObjectDespawnParams from "../../object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../object/types/objectDesyncResolveParams";
 import ObjectMessageParams from "../../object/types/objectMessageParams";
 import ObjectMetadataSetParams from "../../object/types/objectMetadataSetParams";
+import ObjectMoveParams from "../../object/types/objectMoveParams";
 import UserRoleUpdateParams from "../../user/types/userRoleUpdateParams";
 import ObjectSpawnParams from "../../object/types/objectSpawnParams";
 import ObjectSyncParams from "../../object/types/objectSyncParams";
@@ -123,6 +124,15 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 2000, // this handles the case in which the role update arrives while the room is still loading on the client side, etc.
         decode: (bufferState: BufferState) => UserRoleUpdateParams.decode(bufferState),
+    }],
+    [11, { // Bidirectional (client <-> server)
+        // (Overall Flow):
+        // The client moves a persistent object (e.g. canvas) and reports it to the server.
+        // The server validates and broadcasts to other clients.
+        signalType: "objectMoveParams",
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => ObjectMoveParams.decode(bufferState),
     }],
 ];
 

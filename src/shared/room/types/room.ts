@@ -8,7 +8,6 @@ import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumbe
 import EncodableRaw4ByteNumber from "../../networking/types/encodableRaw4ByteNumber";
 import EncodableArray from "../../networking/types/encodableArray";
 import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
-import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
 
 export default class Room extends EncodableData
 {
@@ -51,11 +50,10 @@ export default class Room extends EncodableData
         new EncodableByteString(this.texturePackPath).encode(bufferState);
         this.voxelGrid.encode(bufferState);
 
-        // Encode only persistent objects
-        const persistentObjects = Object.values(this.objectById)
-            .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
+        // Encode all objects (DB persistence filters to persistent-only separately in saveRoomContent)
+        const allObjects = Object.values(this.objectById);
         new EncodableRaw4ByteNumber(this.lastObjectId).encode(bufferState);
-        new EncodableArray(persistentObjects, 65535).encode(bufferState);
+        new EncodableArray(allObjects, 65535).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData

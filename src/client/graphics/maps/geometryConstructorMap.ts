@@ -2,6 +2,8 @@ import * as THREE from "three";
 
 export const GeometryConstructorMap: { [geometryId: string]: () => THREE.BufferGeometry } =
 {
+    "ArrowCone": () => new THREE.ConeGeometry(0.045, 0.09, 8),
+    "ArrowCylinder": () => new THREE.CylinderGeometry(0.015, 0.015, 0.1, 6),
     "Square": () =>
     {
         clear();

@@ -1,0 +1,163 @@
+import * as THREE from "three";
+import PersistentObjectSelection from "./persistentObjectSelection";
+import { persistentObjectSelectionObservable, roomChangedObservable } from "../../../system/clientObservables";
+import GraphicsManager from "../../graphicsManager";
+import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
+import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
+import App from "../../../app";
+import SocketsClient from "../../../networking/client/socketsClient";
+import ObjectMoveParams from "../../../../shared/object/types/objectMoveParams";
+import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
+import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
+
+const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+
+// Arrow definitions for canvas:
+//   +x (local right), -x (local left), +y (up), -y (down)
+// dx/dy/dz passed to moveObject (note: for wall-attached objects, dx is local x-axis)
+const arrowDefs = [
+    { dir: "+x", dx: 0.5, dy: 0, dz: 0 },  // local right
+    { dir: "-x", dx: -0.5, dy: 0, dz: 0 },  // local left
+    { dir: "+y", dx: 0, dy: 0.5, dz: 0 },   // up
+    { dir: "-y", dx: 0, dy: -0.5, dz: 0 },  // down
+];
+
+// Canvas is a 1x1 square. Arrows are placed at the edges.
+const EDGE_OFFSET = 0.6; // slightly beyond the edge of the 0.5-unit half-size square
+
+let arrows: WorldSpaceArrow[] = [];
+let initialized = false;
+
+const vec3Dir = new THREE.Vector3();
+const vec3Right = new THREE.Vector3();
+const vec3Up = new THREE.Vector3(0, 1, 0);
+
+async function ensureInitialized()
+{
+    if (initialized) return;
+    initialized = true;
+
+    const scene = GraphicsManager.getScene();
+
+    for (const def of arrowDefs)
+    {
+        const arrow = await WorldSpaceArrow.create(def.dir, "#00ccff");
+        arrow.addToParent(scene);
+        arrow.setVisible(false);
+        arrows.push(arrow);
+    }
+}
+
+function hideAll()
+{
+    for (const arrow of arrows)
+        arrow.setVisible(false);
+}
+
+async function updateGizmos(selection: PersistentObjectSelection)
+{
+    const go = selection.gameObject;
+    if (go.params.objectTypeIndex !== canvasTypeIndex)
+    {
+        hideAll();
+        return;
+    }
+
+    await ensureInitialized();
+
+    const room = App.getCurrentRoom();
+    if (!room)
+    {
+        hideAll();
+        return;
+    }
+
+    const objectId = go.params.objectId;
+    const pos = go.position;
+
+    // Calculate the canvas's local right vector.
+    // The canvas direction vector points forward (away from the wall).
+    // The local right vector is perpendicular to both direction and world up.
+    vec3Dir.set(go.params.transform.dirX, go.params.transform.dirY, go.params.transform.dirZ);
+
+    // For wall-attached objects, direction is in the XZ plane.
+    // Local right = cross(direction, up), but since the canvas faces outward,
+    // we need cross(up, direction) for correct handedness matching the moveObject logic.
+    // Actually, the DirUtil CCW rotation gives us the perpendicular direction.
+    // Let's compute it directly: right = normalize(cross(up, dir))
+    vec3Right.crossVectors(vec3Up, vec3Dir).normalize();
+
+    for (let i = 0; i < arrowDefs.length; ++i)
+    {
+        const def = arrowDefs[i];
+        const arrow = arrows[i];
+        const canMove = ObjectUpdateUtil.canMoveObject(room, objectId, def.dx, def.dy, def.dz);
+
+        arrow.setVisible(canMove);
+
+        // Calculate arrow position: at the edge of the canvas square
+        let arrowX = pos.x;
+        let arrowY = pos.y;
+        let arrowZ = pos.z;
+
+        if (def.dx !== 0) // horizontal movement (local x-axis)
+        {
+            // Place arrow along the local right direction at the edge
+            const sign = def.dx > 0 ? 1 : -1;
+            arrowX += vec3Right.x * EDGE_OFFSET * sign;
+            arrowY += vec3Right.y * EDGE_OFFSET * sign;
+            arrowZ += vec3Right.z * EDGE_OFFSET * sign;
+        }
+        else if (def.dy !== 0) // vertical movement
+        {
+            const sign = def.dy > 0 ? 1 : -1;
+            arrowY += EDGE_OFFSET * sign;
+        }
+
+        arrow.setPosition(arrowX, arrowY, arrowZ);
+        arrow.setOnClick(canMove ? () => {
+            tryMoveCanvas(selection, def.dx, def.dy, def.dz);
+        } : null);
+    }
+}
+
+function tryMoveCanvas(selection: PersistentObjectSelection,
+    dx: number, dy: number, dz: number)
+{
+    const room = App.getCurrentRoom();
+    if (!room) return;
+
+    const objectId = selection.gameObject.params.objectId;
+    if (!ObjectUpdateUtil.canMoveObject(room, objectId, dx, dy, dz))
+        return;
+
+    const moved = ObjectUpdateUtil.moveObject(room, objectId, dx, dy, dz);
+    if (!moved) return;
+
+    // Update the game object's visual transform
+    const go = selection.gameObject;
+    const t = moved.transform;
+    go.forceSetTransform(
+        new THREE.Vector3(t.x, t.y, t.z),
+        new THREE.Vector3(t.dirX, t.dirY, t.dirZ)
+    );
+
+    // Notify the observable to update the selection outline and gizmo positions
+    persistentObjectSelectionObservable.notify();
+
+    // Emit to server
+    SocketsClient.emitObjectMove(new ObjectMoveParams(room.id, objectId, dx, dy, dz));
+}
+
+// --- Observable listeners ---
+
+persistentObjectSelectionObservable.addListener("canvasWorldSpaceGizmos", async (selection: PersistentObjectSelection | null) => {
+    if (selection)
+        await updateGizmos(selection);
+    else
+        hideAll();
+});
+
+roomChangedObservable.addListener("canvasWorldSpaceGizmos", (_roomRuntimeMemory: RoomRuntimeMemory) => {
+    hideAll();
+});
