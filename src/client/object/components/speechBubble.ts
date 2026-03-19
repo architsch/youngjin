@@ -2,9 +2,10 @@ import * as THREE from "three";
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
-import ObjectMessageParams from "../../../shared/object/types/objectMessageParams";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import ObjectMetadataSetParams from "../../../shared/object/types/objectMetadataSetParams";
 import SocketsClient from "../../networking/client/socketsClient";
-import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import App from "../../app";
 
 export default class SpeechBubble extends GameObjectComponent
 {
@@ -23,7 +24,7 @@ export default class SpeechBubble extends GameObjectComponent
         let initialMessage = "";
         if (this.gameObject.params.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage)) // The object has a sent message.
             initialMessage = this.gameObject.params.getMetadata(ObjectMetadataKeyEnumMap.SentMessage);
-        this.setMessage(initialMessage, false);
+        this.displayMessage(initialMessage);
     }
 
     async onDespawn(): Promise<void>
@@ -49,44 +50,50 @@ export default class SpeechBubble extends GameObjectComponent
 
     setMessage(message: string, broadcastToServer: boolean)
     {
-        if (this.shouldShowMessage())
-        {
-            if (this.componentConfig.prependUserNameToMessage)
-            {
-                const userName = this.gameObject.params.sourceUserName;
-                message = `<span style="color:#707070;">${userName + (message.length > 0 ? ":<br/>" : "")}</span>${message}`;
-            }
-
-            if (message.length > 0)
-            {
-                this.showSpeechBubble();
-                this.textElement!.innerHTML = message;
-            }
-            else // Message is empty
-            {
-                this.hideSpeechBubble();
-            }
-        }
+        this.displayMessage(message);
 
         if (broadcastToServer)
         {
-            const params = new ObjectMessageParams(this.gameObject.params.objectId, message);
-            SocketsClient.emitObjectMessage(params);
+            const room = App.getCurrentRoom();
+            if (!room)
+            {
+                console.error("SpeechBubble.setMessage :: Current room not found");
+                return;
+            }
+            const params = new ObjectMetadataSetParams(
+                room.id, this.gameObject.params.objectId,
+                ObjectMetadataKeyEnumMap.SentMessage, message);
+            SocketsClient.emitObjectMetadataSet(params);
         }
     }
 
-    // This method gets called when a message is received from the server.
-    onObjectMessageReceived(params: ObjectMessageParams): void
+    onSetMetadata(key: ObjectMetadataKey, value: string): void
     {
-        if (params.senderObjectId != this.gameObject.params.objectId)
-        {
-            console.error(`Object-message was received by a different object (senderObjectId = ${params.senderObjectId}, receiverObjectId = ${this.gameObject.params.objectId})`);
+        if (key !== ObjectMetadataKeyEnumMap.SentMessage)
             return;
+        this.displayMessage(value);
+    }
+
+    private displayMessage(message: string): void
+    {
+        if (!this.shouldShowMessage())
+            return;
+
+        if (this.componentConfig.prependUserNameToMessage)
+        {
+            const userName = this.gameObject.params.sourceUserName;
+            message = `<span style="color:#707070;">${userName + (message.length > 0 ? ":<br/>" : "")}</span>${message}`;
         }
-        // Display the received message on the client side if applicable.
-        // Don't send the message back to the server because doing so will
-        // cause the message to propagate back and forth over and over.
-        this.setMessage(params.message, false);
+
+        if (message.length > 0)
+        {
+            this.showSpeechBubble();
+            this.textElement!.innerHTML = message;
+        }
+        else // Message is empty
+        {
+            this.hideSpeechBubble();
+        }
     }
 
     private showSpeechBubble(): void

@@ -1,7 +1,7 @@
 import EncodableByteString from "../../networking/types/encodableByteString";
 import Room from "../../room/types/room";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_IMAGE_URL_LENGTH, MAX_ROOM_Y } from "../../system/sharedConstants";
-import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
+import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_ROOM_Y } from "../../system/sharedConstants";
+import ObjectMetadataEntryMap from "../maps/objectMetadataEntryMap";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import { ObjectMetadata } from "../types/objectMetadata";
 import ObjectSpawnParams from "../types/objectSpawnParams";
@@ -83,27 +83,23 @@ const ObjectUpdateUtil =
         return obj;
     },
 
-    canSetObjectMetadata(room: Room, objectId: string,
-        metadataKey: number, metadataValue: string): boolean
+    canSetObjectMetadata(room: Room, objectId: string): boolean
     {
         const obj = room.objectById[objectId];
         if (!obj)
-            return false;
-        if (metadataKey === ObjectMetadataKeyEnumMap.ImageURL
-            && metadataValue.length > MAX_IMAGE_URL_LENGTH)
             return false;
         return true;
     },
     setObjectMetadata(room: Room, objectId: string,
         metadataKey: number, metadataValue: string): ObjectSpawnParams | null
     {
-        if (!ObjectUpdateUtil.canSetObjectMetadata(room, objectId, metadataKey, metadataValue))
+        if (!ObjectUpdateUtil.canSetObjectMetadata(room, objectId))
         {
             console.error(`ObjectUpdateUtil.setObjectMetadata :: Failed (objectId=${objectId})`);
             return null;
         }
         const obj = room.objectById[objectId];
-        obj.metadata[metadataKey] = new EncodableByteString(metadataValue);
+        obj.metadata[metadataKey] = new EncodableByteString(ObjectMetadataEntryMap.preprocess(metadataKey, metadataValue));
         return obj;
     },
 }

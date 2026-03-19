@@ -25,12 +25,11 @@ export default function CanvasSelectionOptions(props: {selection: PersistentObje
             <Button name="Remove" size="sm" color="red"
                 disabled={!canRemoveCanvas(props.selection)}
                 onClick={() => tryRemoveCanvas(props.selection)}/>
-            {/* TODO: Move buttons will be re-added after movement logic refactoring */}
         </div>
         <div className="flex flex-row gap-2 items-center">
             <TextInput size="sm" placeholder="Image URL" textInput={imageURL} setTextInput={setImageURL}/>
             <Button name="Set URL" size="sm" color="green"
-                disabled={!canSetCanvasImageURL(props.selection, imageURL)}
+                disabled={!canSetCanvasImageURL(props.selection)}
                 onClick={() => trySetCanvasImageURL(props.selection, imageURL)}/>
         </div>
     </div>;
@@ -62,20 +61,19 @@ function tryRemoveCanvas(selection: PersistentObjectSelection)
     SocketsClient.emitObjectDespawn(new ObjectDespawnParams(room.id, objectId));
 }
 
-function canSetCanvasImageURL(selection: PersistentObjectSelection, imageURL: string): boolean
+function canSetCanvasImageURL(selection: PersistentObjectSelection): boolean
 {
     const room = App.getCurrentRoom();
     if (!room)
         return false;
 
     const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canSetObjectMetadata(room, objectId,
-        ObjectMetadataKeyEnumMap.ImageURL, imageURL);
+    return ObjectUpdateUtil.canSetObjectMetadata(room, objectId);
 }
 
 function trySetCanvasImageURL(selection: PersistentObjectSelection, imageURL: string)
 {
-    if (!canSetCanvasImageURL(selection, imageURL))
+    if (!canSetCanvasImageURL(selection))
         return;
 
     const room = App.getCurrentRoom()!;

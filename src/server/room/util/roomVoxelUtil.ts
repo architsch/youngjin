@@ -1,6 +1,8 @@
 import EncodableData from "../../../shared/networking/types/encodableData";
 import Room from "../../../shared/room/types/room";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../shared/system/sharedConstants";
+import { UserRoleEnumMap } from "../../../shared/user/types/userRole";
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
@@ -13,9 +15,30 @@ import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 import { getRoom } from "./roomCoreUtil";
+import { getUserRole } from "./roomUserUtil";
+
+function canUserModifyVoxel(userID: string): boolean
+{
+    const role = getUserRole(userID);
+    if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
+        return true;
+    const roomID = RoomManager.currentRoomIDByUserID[userID];
+    if (roomID)
+    {
+        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        if (roomRuntimeMemory && roomRuntimeMemory.room.roomType === RoomTypeEnumMap.Hub)
+            return true;
+    }
+    return false;
+}
 
 export function updateVoxelGrid(socketUserContext: SocketUserContext, params: UpdateVoxelGridParams)
 {
+    if (!canUserModifyVoxel(socketUserContext.user.id))
+    {
+        console.warn(`(RoomVoxelUtil) Rejected updateVoxelGridParams from Visitor (userID = ${socketUserContext.user.id})`);
+        return;
+    }
     for (const task of params.tasks)
     {
         switch (task.type)

@@ -7,11 +7,10 @@ import * as cookie from "cookie";
 import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import ObjectMessageParams from "../../shared/object/types/objectMessageParams"
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
 import RoomManager from "../room/roomManager";
-import { canUserModifyRoom, getUserGameplayState } from "../room/util/roomUserUtil";
+import { getUserGameplayState } from "../room/util/roomUserUtil";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
@@ -135,12 +134,6 @@ const Sockets =
                 RoomManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
 
-            socketUserContext.onReceivedSignalFromUser("objectMessageParams", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = ObjectMessageParams.decode(bufferState) as ObjectMessageParams;
-                RoomManager.sendObjectMessage(socketUserContext, params);
-            });
-
             socketUserContext.onReceivedSignalFromUser("userCommandParams", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UserCommandParams.decode(bufferState) as UserCommandParams;
@@ -148,55 +141,30 @@ const Sockets =
             });
 
             socketUserContext.onReceivedSignalFromUser("updateVoxelGridParams", (buffer: ArrayBuffer) => {
-                if (!canUserModifyRoom(user.id))
-                {
-                    console.warn(`(Sockets) Rejected updateVoxelGridParams from Visitor (userID = ${user.id})`);
-                    return;
-                }
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UpdateVoxelGridParams.decode(bufferState) as UpdateVoxelGridParams;
                 RoomManager.updateVoxelGrid(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("objectSpawnParams", (buffer: ArrayBuffer) => {
-                if (!canUserModifyRoom(user.id))
-                {
-                    console.warn(`(Sockets) Rejected objectSpawnParams from Visitor (userID = ${user.id})`);
-                    return;
-                }
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectSpawnParams.decode(bufferState) as ObjectSpawnParams;
                 RoomManager.handleObjectSpawn(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("objectDespawnParams", (buffer: ArrayBuffer) => {
-                if (!canUserModifyRoom(user.id))
-                {
-                    console.warn(`(Sockets) Rejected objectDespawnParams from Visitor (userID = ${user.id})`);
-                    return;
-                }
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectDespawnParams.decode(bufferState) as ObjectDespawnParams;
                 RoomManager.handleObjectDespawn(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("objectMetadataSetParams", (buffer: ArrayBuffer) => {
-                if (!canUserModifyRoom(user.id))
-                {
-                    console.warn(`(Sockets) Rejected objectMetadataSetParams from Visitor (userID = ${user.id})`);
-                    return;
-                }
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMetadataSetParams.decode(bufferState) as ObjectMetadataSetParams;
                 RoomManager.handleObjectMetadataSet(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("objectMoveParams", (buffer: ArrayBuffer) => {
-                if (!canUserModifyRoom(user.id))
-                {
-                    console.warn(`(Sockets) Rejected objectMoveParams from Visitor (userID = ${user.id})`);
-                    return;
-                }
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = ObjectMoveParams.decode(bufferState) as ObjectMoveParams;
                 RoomManager.handleObjectMove(socketUserContext, params);

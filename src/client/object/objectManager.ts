@@ -9,11 +9,10 @@ import ObjectTransform from "../../shared/object/types/objectTransform";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
-import ObjectMessageParams from "../../shared/object/types/objectMessageParams";
 import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
 import ObjectMoveParams from "../../shared/object/types/objectMoveParams";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
-import SpeechBubble from "./components/speechBubble";
+import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import ObjectSyncReceiver from "./components/objectSyncReceiver";
 import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
@@ -200,17 +199,6 @@ const ObjectManager =
 
         await ObjectManager.despawnObject(params.objectId);
     },
-    // When the client receives an ObjectMessageParams signal from the server,
-    // the given message will be displayed as soon as the message's sender object is found.
-    onObjectMessageReceived: async (params: ObjectMessageParams) => {
-        const success = await waitUntilSignalProcessingReady("objectMessageParams",
-            () => ObjectManager.getObjectById(params.senderObjectId) != undefined);
-        if (!success)
-            return;
-        const senderObject = ObjectManager.getObjectById(params.senderObjectId)!;
-        const speechBubble = senderObject.components.speechBubble as SpeechBubble;
-        speechBubble.onObjectMessageReceived(params);
-    },
     onObjectSyncReceived: async (params: ObjectSyncParams) => {
         const object = ObjectManager.getObjectById(params.objectId)!;
         if (object.components.objectSyncReceiver)
@@ -241,10 +229,13 @@ const ObjectManager =
             gameObject.params.setMetadata(params.metadataKey, params.metadataValue);
 
         // If the modified object was selected by us, deactivate the selection
-        // since another user initiated the metadata change.
-        const sel = persistentObjectSelectionObservable.peek();
-        if (sel && sel.gameObject.params.objectId === params.objectId)
-            PersistentObjectSelection.unselect();
+        // since another user initiated the metadata change (only for metadata types that require it).
+        if (ObjectMetadataEntryMap.shouldUnselectObjectOnSet(params.metadataKey))
+        {
+            const sel = persistentObjectSelectionObservable.peek();
+            if (sel && sel.gameObject.params.objectId === params.objectId)
+                PersistentObjectSelection.unselect();
+        }
     },
     // When the client receives an ObjectMoveParams signal from the server,
     // the move will be applied to the corresponding game object.

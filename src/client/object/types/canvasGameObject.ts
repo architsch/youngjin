@@ -79,6 +79,7 @@ export default class CanvasGameObject extends GameObject
 
     onSetMetadata(key: ObjectMetadataKey, value: string)
     {
+        super.onSetMetadata(key, value);
         this.loadImage();
     }
 

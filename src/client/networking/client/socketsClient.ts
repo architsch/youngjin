@@ -1,5 +1,4 @@
 import { io, Socket } from "socket.io-client";
-import ObjectMessageParams from "../../../shared/object/types/objectMessageParams";
 import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
 import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
 import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
@@ -41,8 +40,6 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ObjectManager.onObjectSpawnReceived(data as ObjectSpawnParams),
     "objectDespawnParams": (data: EncodableData) =>
         ObjectManager.onObjectDespawnReceived(data as ObjectDespawnParams),
-    "objectMessageParams": (data: EncodableData) =>
-        ObjectManager.onObjectMessageReceived(data as ObjectMessageParams),
     "updateVoxelGridParams": (data: EncodableData) =>
         VoxelManager.onUpdateVoxelGridReceived(data as UpdateVoxelGridParams),
     "objectMetadataSetParams": (data: EncodableData) =>
@@ -148,7 +145,6 @@ const SocketsClient =
     },
 
     emitObjectSync: (params: ObjectSyncParams) => emitWhenReady("objectSyncParams", params),
-    emitObjectMessage: (params: ObjectMessageParams) => emitWhenReady("objectMessageParams", params),
     emitUserCommand: (params: UserCommandParams) => emitWhenReady("userCommandParams", params),
     tryEmitRoomChangeRequest: (params: RoomChangeRequestParams) => {
         if (tryStartClientProcess("roomChange", 1, 1))

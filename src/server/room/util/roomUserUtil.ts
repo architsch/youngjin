@@ -9,7 +9,6 @@ import { unloadRoom } from "./roomCoreUtil";
 import { addObject, generateObjectId, removeObject } from "./roomObjectUtil";
 import DBRoomUtil from "../../db/util/dbRoomUtil";
 import UserGameplayState from "../../user/types/userGameplayState";
-import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { UserRole, UserRoleEnumMap } from "../../../shared/user/types/userRole";
 import UserRoleUpdateParams from "../../../shared/user/types/userRoleUpdateParams";
 import DBUserUtil from "../../db/util/dbUserUtil";
@@ -191,19 +190,3 @@ export function getUserRole(userID: string): UserRole
     return userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
 }
 
-export function canUserModifyRoom(userID: string): boolean
-{
-    const role = userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
-    if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
-        return true;
-
-    // Allow any user to modify rooms of type Hub.
-    const roomID = RoomManager.currentRoomIDByUserID[userID];
-    if (roomID)
-    {
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
-        if (roomRuntimeMemory && roomRuntimeMemory.room.roomType === RoomTypeEnumMap.Hub)
-            return true;
-    }
-    return false;
-}

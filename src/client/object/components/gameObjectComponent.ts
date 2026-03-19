@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import GameObject from "../types/gameObject";
+import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
 
 // Whenever you are implementing a new GameObjectComponent type, you must:
 //      (1) Create a class for the new type and make sure that it inherits from GameObjectComponent.
@@ -26,4 +27,5 @@ export default abstract class GameObjectComponent
     update?(deltaTime: number): void;
     trySetTransform?(position: THREE.Vector3, direction: THREE.Vector3): void;
     forceSetTransform?(position: THREE.Vector3, direction: THREE.Vector3): void;
+    onSetMetadata?(key: ObjectMetadataKey, value: string): void;
 }

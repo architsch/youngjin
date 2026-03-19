@@ -1,6 +1,5 @@
 import ObjectDespawnParams from "../../object/types/objectDespawnParams";
 import ObjectDesyncResolveParams from "../../object/types/objectDesyncResolveParams";
-import ObjectMessageParams from "../../object/types/objectMessageParams";
 import ObjectMetadataSetParams from "../../object/types/objectMetadataSetParams";
 import ObjectMoveParams from "../../object/types/objectMoveParams";
 import UserRoleUpdateParams from "../../user/types/userRoleUpdateParams";
@@ -12,6 +11,7 @@ import RoomRuntimeMemory from "../../room/types/roomRuntimeMemory";
 import UpdateVoxelGridParams from "../../voxel/types/update/updateVoxelGridParams";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
+
 
 // (Requirements for signal routing):
 // 1. Things needed when transmitting a signal from the client to the server (client -> server):
@@ -42,15 +42,6 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 0, // should be 0 because, even if a signal fails to be applied immediately due to circumstances, a subsequent sync-up signal will resolve the discrepancy in the object's transform anyways.
         decode: (bufferState: BufferState) => ObjectDesyncResolveParams.decode(bufferState),
-    }],
-    [2, { // Bidirectional (client <-> server)
-        // (Overall Flow):
-        // Each client sends its own object's message to the server.
-        // The server broadcasts the received message to the other clients.
-        signalType: "objectMessageParams",
-        minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000, // this handles the case in which another user's object sends a message while the room is still loading on the client side, etc.
-        decode: (bufferState: BufferState) => ObjectMessageParams.decode(bufferState),
     }],
     [3, { // Bidirectional (client <-> server)
         // (Overall Flow):
