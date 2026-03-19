@@ -187,7 +187,7 @@ function tryMoveVoxelBlock(selection: VoxelQuadSelection,
             VoxelQuadSelection.trySelect(newVoxel,
                 VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, (orientation == "-") ? "+" : "-", newCollisionLayer));
         }
-        SocketsClient.emitMoveVoxelBlock(new MoveVoxelBlockParams(quadIndex, rowOffset, colOffset, collisionLayerOffset));
+        SocketsClient.emitMoveVoxelBlock(new MoveVoxelBlockParams(room.id, quadIndex, rowOffset, colOffset, collisionLayerOffset));
     }
 }
 
@@ -258,7 +258,7 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
     if (VoxelBlockUpdateUtil.addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
     {
         VoxelQuadSelection.trySelect(VoxelQueryUtil.getVoxel(room, newRow, newCol), targetQuadIndex);
-        SocketsClient.emitAddVoxelBlock(new AddVoxelBlockParams(targetQuadIndex, quadTextureIndicesWithinLayer));
+        SocketsClient.emitAddVoxelBlock(new AddVoxelBlockParams(room.id, targetQuadIndex, quadTextureIndicesWithinLayer));
     }
 }
 
@@ -319,7 +319,7 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
         if (!found)
             VoxelQuadSelection.unselect();
 
-        SocketsClient.emitRemoveVoxelBlock(new RemoveVoxelBlockParams(quadIndex));
+        SocketsClient.emitRemoveVoxelBlock(new RemoveVoxelBlockParams(room.id, quadIndex));
     }
 }
 

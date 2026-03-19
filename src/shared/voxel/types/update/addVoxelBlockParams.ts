@@ -1,24 +1,27 @@
 import BufferState from "../../../networking/types/bufferState";
+import EncodableByteString from "../../../networking/types/encodableByteString";
 import EncodableData from "../../../networking/types/encodableData";
 import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
-import { NUM_VOXEL_QUADS_PER_COLLISION_LAYER, VOXEL_GRID_TASK_TYPE_ADD } from "../../../system/sharedConstants";
-import UpdateVoxelGridTaskParams from "./updateVoxelGridTaskParams";
+import { NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../system/sharedConstants";
 
-export default class AddVoxelBlockParams extends UpdateVoxelGridTaskParams
+export default class AddVoxelBlockParams extends EncodableData
 {
+    roomID: string;
     quadIndex: number;
     quadTextureIndicesWithinLayer: number[];
 
-    constructor(quadIndex: number, quadTextureIndicesWithinLayer: number[])
+    constructor(roomID: string, quadIndex: number, quadTextureIndicesWithinLayer: number[])
     {
-        super(VOXEL_GRID_TASK_TYPE_ADD);
+        super();
+        this.roomID = roomID;
         this.quadIndex = quadIndex;
         this.quadTextureIndicesWithinLayer = quadTextureIndicesWithinLayer;
     }
 
     encode(bufferState: BufferState)
     {
+        new EncodableByteString(this.roomID).encode(bufferState);
         new EncodableRaw2ByteNumber(this.quadIndex).encode(bufferState);
 
         for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
@@ -27,12 +30,13 @@ export default class AddVoxelBlockParams extends UpdateVoxelGridTaskParams
 
     static decode(bufferState: BufferState): EncodableData
     {
+        const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
 
         const quadTextureIndicesWithinLayer = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
         for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
             quadTextureIndicesWithinLayer[i] = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
 
-        return new AddVoxelBlockParams(quadIndex, quadTextureIndicesWithinLayer);
+        return new AddVoxelBlockParams(roomID, quadIndex, quadTextureIndicesWithinLayer);
     }
 }

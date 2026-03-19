@@ -54,13 +54,6 @@ export const NUM_VOXEL_QUADS_PER_VOXEL =
 
 export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 51200
 
-// Voxel Grid Tasks
-
-export const VOXEL_GRID_TASK_TYPE_MOVE = 0;
-export const VOXEL_GRID_TASK_TYPE_ADD = 1;
-export const VOXEL_GRID_TASK_TYPE_REMOVE = 2;
-export const VOXEL_GRID_TASK_TYPE_TEX = 3;
-
 // Object Limits
 
 export const MAX_CANVASES_PER_ROOM = 64;

@@ -8,10 +8,12 @@ import ObjectSyncParams from "../../object/types/objectSyncParams";
 import UserCommandParams from "../../user/types/userCommandParams";
 import RoomChangeRequestParams from "../../room/types/roomChangeRequestParams";
 import RoomRuntimeMemory from "../../room/types/roomRuntimeMemory";
-import UpdateVoxelGridParams from "../../voxel/types/update/updateVoxelGridParams";
+import AddVoxelBlockParams from "../../voxel/types/update/addVoxelBlockParams";
+import MoveVoxelBlockParams from "../../voxel/types/update/moveVoxelBlockParams";
+import RemoveVoxelBlockParams from "../../voxel/types/update/removeVoxelBlockParams";
+import SetVoxelQuadTextureParams from "../../voxel/types/update/setVoxelQuadTextureParams";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
-
 
 // (Requirements for signal routing):
 // 1. Things needed when transmitting a signal from the client to the server (client -> server):
@@ -81,13 +83,39 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
     }],
     [7, { // Bidirectional (client <-> server)
         // (Overall Flow):
-        // The client makes an update to the existing client-side voxelGrid, and reports this update to the server (i.e. "updateVoxelGridParams").
-        // The server applies this update to the server-side voxelGrid, and also announces it to the other clients.
-        // The other clients receive the update info and sync up their client-side voxelGrids accordingly.
-        signalType: "updateVoxelGridParams",
-        minClientToServerSendInterval: 0, // should be 0 because voxelGrid-update may happen at an extremely high frequency.
-        maxClientSideReceptionPeriod: 2000, // this handles the case in which another user modifies the voxelGrid while the room is still loading on the client side, etc.
-        decode: (bufferState: BufferState) => UpdateVoxelGridParams.decode(bufferState),
+        // The client adds a voxel block and reports it to the server.
+        // The server validates and broadcasts to other clients.
+        signalType: "addVoxelBlockParams",
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => AddVoxelBlockParams.decode(bufferState),
+    }],
+    [12, { // Bidirectional (client <-> server)
+        // (Overall Flow):
+        // The client moves a voxel block and reports it to the server.
+        // The server validates and broadcasts to other clients.
+        signalType: "moveVoxelBlockParams",
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => MoveVoxelBlockParams.decode(bufferState),
+    }],
+    [13, { // Bidirectional (client <-> server)
+        // (Overall Flow):
+        // The client removes a voxel block and reports it to the server.
+        // The server validates and broadcasts to other clients.
+        signalType: "removeVoxelBlockParams",
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => RemoveVoxelBlockParams.decode(bufferState),
+    }],
+    [14, { // Bidirectional (client <-> server)
+        // (Overall Flow):
+        // The client sets a voxel quad's texture and reports it to the server.
+        // The server validates and broadcasts to other clients.
+        signalType: "setVoxelQuadTextureParams",
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => SetVoxelQuadTextureParams.decode(bufferState),
     }],
     [8, { // Bidirectional (client <-> server)
         // (Overall Flow):

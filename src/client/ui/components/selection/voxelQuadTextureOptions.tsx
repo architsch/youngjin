@@ -52,7 +52,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     collisionLayer, textureIndex))
                 {
                     voxelQuadSelectionObservable.notify();
-                    SocketsClient.emitSetVoxelQuadTexture(new SetVoxelQuadTextureParams(quadIndex, textureIndex));
+                    SocketsClient.emitSetVoxelQuadTexture(new SetVoxelQuadTextureParams(room.id, quadIndex, textureIndex));
                 }
             };
             return <AtlasCellSprite

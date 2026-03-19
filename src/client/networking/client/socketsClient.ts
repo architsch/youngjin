@@ -16,7 +16,6 @@ import RoomChangeRequestParams from "../../../shared/room/types/roomChangeReques
 import { connectionStateObservable } from "../../system/clientObservables";
 import { tryStartClientProcess } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
-import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
 import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
@@ -40,8 +39,14 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ObjectManager.onObjectSpawnReceived(data as ObjectSpawnParams),
     "objectDespawnParams": (data: EncodableData) =>
         ObjectManager.onObjectDespawnReceived(data as ObjectDespawnParams),
-    "updateVoxelGridParams": (data: EncodableData) =>
-        VoxelManager.onUpdateVoxelGridReceived(data as UpdateVoxelGridParams),
+    "addVoxelBlockParams": (data: EncodableData) =>
+        VoxelManager.onAddVoxelBlockReceived(data as AddVoxelBlockParams),
+    "moveVoxelBlockParams": (data: EncodableData) =>
+        VoxelManager.onMoveVoxelBlockReceived(data as MoveVoxelBlockParams),
+    "removeVoxelBlockParams": (data: EncodableData) =>
+        VoxelManager.onRemoveVoxelBlockReceived(data as RemoveVoxelBlockParams),
+    "setVoxelQuadTextureParams": (data: EncodableData) =>
+        VoxelManager.onSetVoxelQuadTextureReceived(data as SetVoxelQuadTextureParams),
     "objectMetadataSetParams": (data: EncodableData) =>
         ObjectManager.onObjectMetadataSetReceived(data as ObjectMetadataSetParams),
     "objectMoveParams": (data: EncodableData) =>
@@ -154,43 +159,19 @@ const SocketsClient =
     },
     emitMoveVoxelBlock: (params: MoveVoxelBlockParams) =>
     {
-        const currentRoom = App.getCurrentRoom();
-        if (!currentRoom)
-        {
-            console.error("Modified a voxel, but the current room doesn't exist.");
-            return;
-        }
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+        emitWhenReady("moveVoxelBlockParams", params);
     },
     emitAddVoxelBlock: (params: AddVoxelBlockParams) =>
     {
-        const currentRoom = App.getCurrentRoom();
-        if (!currentRoom)
-        {
-            console.error("Modified a voxel, but the current room doesn't exist.");
-            return;
-        }
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+        emitWhenReady("addVoxelBlockParams", params);
     },
     emitRemoveVoxelBlock: (params: RemoveVoxelBlockParams) =>
     {
-        const currentRoom = App.getCurrentRoom();
-        if (!currentRoom)
-        {
-            console.error("Modified a voxel, but the current room doesn't exist.");
-            return;
-        }
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+        emitWhenReady("removeVoxelBlockParams", params);
     },
     emitSetVoxelQuadTexture: (params: SetVoxelQuadTextureParams) =>
     {
-        const currentRoom = App.getCurrentRoom();
-        if (!currentRoom)
-        {
-            console.error("Modified a voxel, but the current room doesn't exist.");
-            return;
-        }
-        emitWhenReady("updateVoxelGridParams", new UpdateVoxelGridParams(currentRoom.id, [params]));
+        emitWhenReady("setVoxelQuadTextureParams", params);
     },
     emitObjectSpawn: (params: ObjectSpawnParams) =>
     {

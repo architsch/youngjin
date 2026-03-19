@@ -1,21 +1,22 @@
 import BufferState from "../../../networking/types/bufferState";
+import EncodableByteString from "../../../networking/types/encodableByteString";
 import EncodableData from "../../../networking/types/encodableData";
 import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawSignedByteNumber from "../../../networking/types/encodableRawSignedByteNumber";
-import { VOXEL_GRID_TASK_TYPE_MOVE } from "../../../system/sharedConstants";
-import UpdateVoxelGridTaskParams from "./updateVoxelGridTaskParams";
 
-export default class MoveVoxelBlockParams extends UpdateVoxelGridTaskParams
+export default class MoveVoxelBlockParams extends EncodableData
 {
+    roomID: string;
     quadIndex: number;
     rowOffset: number;
     colOffset: number;
     collisionLayerOffset: number;
 
-    constructor(quadIndex: number,
+    constructor(roomID: string, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number)
     {
-        super(VOXEL_GRID_TASK_TYPE_MOVE);
+        super();
+        this.roomID = roomID;
         this.quadIndex = quadIndex;
         this.rowOffset = rowOffset;
         this.colOffset = colOffset;
@@ -24,6 +25,7 @@ export default class MoveVoxelBlockParams extends UpdateVoxelGridTaskParams
 
     encode(bufferState: BufferState)
     {
+        new EncodableByteString(this.roomID).encode(bufferState);
         new EncodableRaw2ByteNumber(this.quadIndex).encode(bufferState);
         new EncodableRawSignedByteNumber(this.rowOffset).encode(bufferState);
         new EncodableRawSignedByteNumber(this.colOffset).encode(bufferState);
@@ -32,10 +34,11 @@ export default class MoveVoxelBlockParams extends UpdateVoxelGridTaskParams
 
     static decode(bufferState: BufferState): EncodableData
     {
+        const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
         const rowOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
         const colOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
         const collisionLayerOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
-        return new MoveVoxelBlockParams(quadIndex, rowOffset, colOffset, collisionLayerOffset);
+        return new MoveVoxelBlockParams(roomID, quadIndex, rowOffset, colOffset, collisionLayerOffset);
     }
 }

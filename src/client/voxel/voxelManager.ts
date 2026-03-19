@@ -5,12 +5,11 @@ import ObjectManager from "../object/objectManager";
 import App from "../app";
 import VoxelBlockUpdateUtil from "../../shared/voxel/util/voxelBlockUpdateUtil";
 import VoxelQuadUpdateUtil from "../../shared/voxel/util/voxelQuadUpdateUtil";
-import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
 import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
-import { NUM_VOXEL_QUADS_PER_ROOM, VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../shared/system/sharedConstants";
+import { NUM_VOXEL_QUADS_PER_ROOM } from "../../shared/system/sharedConstants";
 import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
@@ -20,79 +19,88 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const VoxelManager =
 {
-    // When the client receives an UpdateVoxelGridParams signal from the server,
-    // the given voxelGrid-update will be applied as soon as the room to which it belongs is available.
-    onUpdateVoxelGridReceived: async (params: UpdateVoxelGridParams) => {
-        const success = await waitUntilSignalProcessingReady("updateVoxelGridParams",
+    onAddVoxelBlockReceived: async (params: AddVoxelBlockParams) => {
+        const success = await waitUntilSignalProcessingReady("addVoxelBlockParams",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
 
         const room = App.getCurrentRoom()!;
-        for (const task of params.tasks)
-        {
-            switch (task.type)
-            {
-                case VOXEL_GRID_TASK_TYPE_MOVE:
-                    const moveParams = task as MoveVoxelBlockParams;
-                    VoxelBlockUpdateUtil.moveVoxelBlock(room, moveParams.quadIndex, moveParams.rowOffset, moveParams.colOffset, moveParams.collisionLayerOffset);
-                    break;
-                case VOXEL_GRID_TASK_TYPE_ADD:
-                    const addParams = task as AddVoxelBlockParams;
-                    VoxelBlockUpdateUtil.addVoxelBlock(room, addParams.quadIndex, addParams.quadTextureIndicesWithinLayer);
-                    break;
-                case VOXEL_GRID_TASK_TYPE_REMOVE:
-                    const removeParams = task as RemoveVoxelBlockParams;
-                    VoxelBlockUpdateUtil.removeVoxelBlock(room, removeParams.quadIndex);
-                    break;
-                case VOXEL_GRID_TASK_TYPE_TEX:
-                    const texParams = task as SetVoxelQuadTextureParams;
-                    const quadIndex = texParams.quadIndex;
-                    const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-                    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-                    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-                    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-                    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-                    if (!voxel)
-                    {
-                        console.error(`Voxel update failed (VOXEL_GRID_TASK_TYPE_TEX) - voxel not found - params: ${JSON.stringify(params)}`);
-                        return;
-                    }
-                    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-                    VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, texParams.textureIndex);
-                    break;
-                default:
-                    console.error(`Unknown task type :: ${task.type}`);
-                    break;
-            }
-        }
-
-        // After the voxelGrid mutation is applied, refresh the voxelQuad selection
-        // to ensure it stays in sync with the updated grid state.
-        const existingSelection = voxelQuadSelectionObservable.peek();
-        if (existingSelection != null)
-        {
-            const quadIndex = existingSelection.quadIndex;
-
-            // If the quadIndex doesn't even make sense, just unselect.
-            if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
-            {
-                VoxelQuadSelection.unselect();
-                return;
-            }
-
-            // If the quad is hidden, just unselect.
-            const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
-            if ((quad & 0b10000000) == 0)
-            {
-                VoxelQuadSelection.unselect();
-                return;
-            }
-
-            // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
-            voxelQuadSelectionObservable.notify();
-        }
+        VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer);
+        refreshSelection();
     },
+
+    onMoveVoxelBlockReceived: async (params: MoveVoxelBlockParams) => {
+        const success = await waitUntilSignalProcessingReady("moveVoxelBlockParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+
+        const room = App.getCurrentRoom()!;
+        VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset);
+        refreshSelection();
+    },
+
+    onRemoveVoxelBlockReceived: async (params: RemoveVoxelBlockParams) => {
+        const success = await waitUntilSignalProcessingReady("removeVoxelBlockParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+
+        const room = App.getCurrentRoom()!;
+        VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex);
+        refreshSelection();
+    },
+
+    onSetVoxelQuadTextureReceived: async (params: SetVoxelQuadTextureParams) => {
+        const success = await waitUntilSignalProcessingReady("setVoxelQuadTextureParams",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+        if (!success)
+            return;
+
+        const room = App.getCurrentRoom()!;
+        const quadIndex = params.quadIndex;
+        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const voxel = VoxelQueryUtil.getVoxel(room, row, col);
+        if (!voxel)
+        {
+            console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - params: ${JSON.stringify(params)}`);
+            return;
+        }
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex);
+        refreshSelection();
+    },
+}
+
+function refreshSelection()
+{
+    const existingSelection = voxelQuadSelectionObservable.peek();
+    if (existingSelection != null)
+    {
+        const quadIndex = existingSelection.quadIndex;
+
+        // If the quadIndex doesn't even make sense, just unselect.
+        if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
+        {
+            VoxelQuadSelection.unselect();
+            return;
+        }
+
+        // If the quad is hidden, just unselect.
+        const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
+        if ((quad & 0b10000000) == 0)
+        {
+            VoxelQuadSelection.unselect();
+            return;
+        }
+
+        // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
+        voxelQuadSelectionObservable.notify();
+    }
 }
 
 voxelQuadChangeObservable.addListener("voxelManager", async (change: VoxelQuadChange) => {

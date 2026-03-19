@@ -1,14 +1,12 @@
 import EncodableData from "../../../shared/networking/types/encodableData";
 import Room from "../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, VOXEL_GRID_TASK_TYPE_ADD, VOXEL_GRID_TASK_TYPE_MOVE, VOXEL_GRID_TASK_TYPE_REMOVE, VOXEL_GRID_TASK_TYPE_TEX } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../shared/system/sharedConstants";
 import { UserRoleEnumMap } from "../../../shared/user/types/userRole";
 import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
 import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
 import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
 import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
-import UpdateVoxelGridParams from "../../../shared/voxel/types/update/updateVoxelGridParams";
-import UpdateVoxelGridTaskParams from "../../../shared/voxel/types/update/updateVoxelGridTaskParams";
 import VoxelBlockUpdateUtil from "../../../shared/voxel/util/voxelBlockUpdateUtil";
 import VoxelQuadUpdateUtil from "../../../shared/voxel/util/voxelQuadUpdateUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
@@ -32,42 +30,17 @@ function canUserModifyVoxel(userID: string): boolean
     return false;
 }
 
-export function updateVoxelGrid(socketUserContext: SocketUserContext, params: UpdateVoxelGridParams)
+export function moveVoxelBlock(socketUserContext: SocketUserContext, params: MoveVoxelBlockParams)
 {
     if (!canUserModifyVoxel(socketUserContext.user.id))
     {
-        console.warn(`(RoomVoxelUtil) Rejected updateVoxelGridParams from Visitor (userID = ${socketUserContext.user.id})`);
+        console.warn(`(RoomVoxelUtil) Rejected moveVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
         return;
     }
-    for (const task of params.tasks)
-    {
-        switch (task.type)
-        {
-            case VOXEL_GRID_TASK_TYPE_MOVE:
-                moveVoxelBlockTask(socketUserContext, task as MoveVoxelBlockParams);
-                break;
-            case VOXEL_GRID_TASK_TYPE_ADD:
-                addVoxelBlockTask(socketUserContext, task as AddVoxelBlockParams);
-                break;
-            case VOXEL_GRID_TASK_TYPE_REMOVE:
-                removeVoxelBlockTask(socketUserContext, task as RemoveVoxelBlockParams);
-                break;
-            case VOXEL_GRID_TASK_TYPE_TEX:
-                setVoxelQuadTextureTask(socketUserContext, task as SetVoxelQuadTextureParams);
-                break;
-            default:
-                console.error(`Unknown task type :: ${task.type}`);
-                break;
-        }
-    }
-}
-
-function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVoxelBlockParams)
-{
     const room = getRoom(socketUserContext);
     if (!room)
     {
-        console.error(`Voxel update failed (moveVoxelBlockTask) - room not found`);
+        console.error(`Voxel update failed (moveVoxelBlock) - room not found`);
         return;
     }
     const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
@@ -78,36 +51,47 @@ function moveVoxelBlockTask(socketUserContext: SocketUserContext, params: MoveVo
     const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
     if (!VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
     {
-        console.error(`Voxel update failed (moveVoxelBlockTask) - params: ${JSON.stringify(params)}`);
+        console.error(`Voxel update failed (moveVoxelBlock) - params: ${JSON.stringify(params)}`);
         sendMoveReversal(socketUserContext, room, params, sourceTextures);
         return;
     }
-    broadcast(socketUserContext, room, params);
+    broadcast(socketUserContext, room, "moveVoxelBlockParams", params);
 }
 
-function addVoxelBlockTask(socketUserContext: SocketUserContext, params: AddVoxelBlockParams)
+export function addVoxelBlock(socketUserContext: SocketUserContext, params: AddVoxelBlockParams)
 {
+    if (!canUserModifyVoxel(socketUserContext.user.id))
+    {
+        console.warn(`(RoomVoxelUtil) Rejected addVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+        return;
+    }
     const room = getRoom(socketUserContext);
     if (!room)
     {
-        console.error(`Voxel update failed (addVoxelBlockTask) - room not found`);
+        console.error(`Voxel update failed (addVoxelBlock) - room not found`);
         return;
     }
     if (!VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
     {
-        console.error(`Voxel update failed (addVoxelBlockTask) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, room, [new RemoveVoxelBlockParams(params.quadIndex)]);
+        console.error(`Voxel update failed (addVoxelBlock) - params: ${JSON.stringify(params)}`);
+        unicastToSender(socketUserContext, "removeVoxelBlockParams",
+            new RemoveVoxelBlockParams(room.id, params.quadIndex));
         return;
     }
-    broadcast(socketUserContext, room, params);
+    broadcast(socketUserContext, room, "addVoxelBlockParams", params);
 }
 
-function removeVoxelBlockTask(socketUserContext: SocketUserContext, params: RemoveVoxelBlockParams)
+export function removeVoxelBlock(socketUserContext: SocketUserContext, params: RemoveVoxelBlockParams)
 {
+    if (!canUserModifyVoxel(socketUserContext.user.id))
+    {
+        console.warn(`(RoomVoxelUtil) Rejected removeVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+        return;
+    }
     const room = getRoom(socketUserContext);
     if (!room)
     {
-        console.error(`Voxel update failed (removeVoxelBlockTask) - room not found`);
+        console.error(`Voxel update failed (removeVoxelBlock) - room not found`);
         return;
     }
     const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
@@ -118,19 +102,25 @@ function removeVoxelBlockTask(socketUserContext: SocketUserContext, params: Remo
     const textures = captureBlockTextures(room, row, col, collisionLayer);
     if (!VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex))
     {
-        console.error(`Voxel update failed (removeVoxelBlockTask) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, room, [new AddVoxelBlockParams(params.quadIndex, textures)]);
+        console.error(`Voxel update failed (removeVoxelBlock) - params: ${JSON.stringify(params)}`);
+        unicastToSender(socketUserContext, "addVoxelBlockParams",
+            new AddVoxelBlockParams(room.id, params.quadIndex, textures));
         return;
     }
-    broadcast(socketUserContext, room, params);
+    broadcast(socketUserContext, room, "removeVoxelBlockParams", params);
 }
 
-function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: SetVoxelQuadTextureParams)
+export function setVoxelQuadTexture(socketUserContext: SocketUserContext, params: SetVoxelQuadTextureParams)
 {
+    if (!canUserModifyVoxel(socketUserContext.user.id))
+    {
+        console.warn(`(RoomVoxelUtil) Rejected setVoxelQuadTextureParams from Visitor (userID = ${socketUserContext.user.id})`);
+        return;
+    }
     const room = getRoom(socketUserContext);
     if (!room)
     {
-        console.error(`Voxel update failed (setVoxelQuadTextureTask) - room not found - params: ${JSON.stringify(params)}`);
+        console.error(`Voxel update failed (setVoxelQuadTexture) - room not found - params: ${JSON.stringify(params)}`);
         return;
     }
     const quadIndex = params.quadIndex;
@@ -139,7 +129,7 @@ function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: S
     const voxel = VoxelQueryUtil.getVoxel(room, row, col);
     if (!voxel)
     {
-        console.error(`Voxel update failed (setVoxelQuadTextureTask) - voxel not found - params: ${JSON.stringify(params)}`);
+        console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - params: ${JSON.stringify(params)}`);
         return;
     }
     const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
@@ -151,11 +141,12 @@ function setVoxelQuadTextureTask(socketUserContext: SocketUserContext, params: S
 
     if (!VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
     {
-        console.error(`Voxel update failed (setVoxelQuadTextureTask) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, room, [new SetVoxelQuadTextureParams(quadIndex, oldTextureIndex)]);
+        console.error(`Voxel update failed (setVoxelQuadTexture) - params: ${JSON.stringify(params)}`);
+        unicastToSender(socketUserContext, "setVoxelQuadTextureParams",
+            new SetVoxelQuadTextureParams(room.id, quadIndex, oldTextureIndex));
         return;
     }
-    broadcast(socketUserContext, room, params);
+    broadcast(socketUserContext, room, "setVoxelQuadTextureParams", params);
 }
 
 function captureBlockTextures(room: Room, row: number, col: number, collisionLayer: number): number[]
@@ -183,29 +174,20 @@ function sendMoveReversal(socketUserContext: SocketUserContext, room: Room,
     const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row + params.rowOffset, col + params.colOffset,
         "y", "-", newCollisionLayer);
 
-    unicastToSender(socketUserContext, room, [
-        new RemoveVoxelBlockParams(targetQuadIndex),
-        new AddVoxelBlockParams(params.quadIndex, sourceTextures),
-    ]);
+    unicastToSender(socketUserContext, "removeVoxelBlockParams",
+        new RemoveVoxelBlockParams(room.id, targetQuadIndex));
+    unicastToSender(socketUserContext, "addVoxelBlockParams",
+        new AddVoxelBlockParams(room.id, params.quadIndex, sourceTextures));
 }
 
-function unicastToSender(socketUserContext: SocketUserContext, room: Room,
-    tasks: UpdateVoxelGridTaskParams[])
+function unicastToSender(socketUserContext: SocketUserContext,
+    signalType: string, signal: EncodableData)
 {
-    const success = socketUserContext.tryUpdateLatestPendingSignalToUser("updateVoxelGridParams", (existingSignal: EncodableData) => {
-        const updateVoxelGridParams = existingSignal as UpdateVoxelGridParams;
-        for (const task of tasks)
-            updateVoxelGridParams.tasks.push(task);
-    });
-    if (!success)
-    {
-        socketUserContext.addPendingSignalToUser("updateVoxelGridParams",
-            new UpdateVoxelGridParams(room.id, tasks));
-    }
+    socketUserContext.addPendingSignalToUser(signalType, signal);
 }
 
 function broadcast(socketUserContext: SocketUserContext, room: Room,
-    signal: EncodableData)
+    signalType: string, signal: EncodableData)
 {
     room.dirty = true; // Mark the room as dirty since its voxel grid has been modified.
 
@@ -219,15 +201,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
             if (user.id != kvp[0]) // Exclude the broadcast sender from the group of broadcast recipients (in order to prevent an infinite cycle).
             {
                 const ctx = kvp[1];
-                const success = ctx.tryUpdateLatestPendingSignalToUser("updateVoxelGridParams", (existingSignal: EncodableData) => {
-                    const updateVoxelGridParams = existingSignal as UpdateVoxelGridParams;
-                    updateVoxelGridParams.tasks.push(signal as UpdateVoxelGridTaskParams);
-                });
-                if (!success)
-                {
-                    ctx.addPendingSignalToUser("updateVoxelGridParams",
-                        new UpdateVoxelGridParams(room.id, [signal as UpdateVoxelGridTaskParams]));
-                }
+                ctx.addPendingSignalToUser(signalType, signal);
             }
         });
     }

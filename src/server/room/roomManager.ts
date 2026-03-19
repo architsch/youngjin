@@ -9,8 +9,11 @@ import SocketRoomContext from "../sockets/types/socketRoomContext";
 import { addUserToRoom, getUserGameplayState, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
 import { handleObjectSpawn, handleObjectDespawn, handleObjectMetadataSet, handleObjectMove } from "./util/roomObjectUtil";
-import { updateVoxelGrid } from "./util/roomVoxelUtil";
-import UpdateVoxelGridParams from "../../shared/voxel/types/update/updateVoxelGridParams";
+import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock, setVoxelQuadTexture } from "./util/roomVoxelUtil";
+import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
+import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
+import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
+import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import UserGameplayState from "../user/types/userGameplayState";
@@ -158,9 +161,21 @@ const RoomManager =
             socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.id);
         return true;
     },
-    updateVoxelGrid: (socketUserContext: SocketUserContext, params: UpdateVoxelGridParams) =>
+    addVoxelBlock: (socketUserContext: SocketUserContext, params: AddVoxelBlockParams) =>
     {
-        updateVoxelGrid(socketUserContext, params);
+        addVoxelBlock(socketUserContext, params);
+    },
+    moveVoxelBlock: (socketUserContext: SocketUserContext, params: MoveVoxelBlockParams) =>
+    {
+        moveVoxelBlock(socketUserContext, params);
+    },
+    removeVoxelBlock: (socketUserContext: SocketUserContext, params: RemoveVoxelBlockParams) =>
+    {
+        removeVoxelBlock(socketUserContext, params);
+    },
+    setVoxelQuadTexture: (socketUserContext: SocketUserContext, params: SetVoxelQuadTextureParams) =>
+    {
+        setVoxelQuadTexture(socketUserContext, params);
     },
     handleObjectSpawn,
     handleObjectDespawn,
