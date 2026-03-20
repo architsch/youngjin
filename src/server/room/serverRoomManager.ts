@@ -1,26 +1,91 @@
+import PhysicsManager from "../../shared/physics/physicsManager";
+import Room from "../../shared/room/types/room";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../../shared/room/types/roomChangedSignal";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
-import RoomUserUtil from "./util/roomUserUtil";
-import RoomCoreUtil from "./util/roomCoreUtil";
+import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
-import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
-import UserGameplayState from "../user/types/userGameplayState";
 import DBUserUtil from "../db/util/dbUserUtil";
 import DBUserRoomStateUtil from "../db/util/dbUserRoomStateUtil";
+import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import UserGameplayState from "../user/types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
 const currentRoomIDByUserID: {[userID: string]: string} = {};
+const pendingLoads: {[roomID: string]: Promise<RoomRuntimeMemory | null>} = {};
 
-const RoomManager =
+async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
+{
+    const room = await DBRoomUtil.getRoomContent(roomID);
+    if (!room)
+        return null;
+
+    const roomRuntimeMemory = new RoomRuntimeMemory(room, {});
+    ServerRoomManager.roomRuntimeMemories[roomID] = roomRuntimeMemory;
+    ServerRoomManager.socketRoomContexts[roomID] = new SocketRoomContext();
+
+    PhysicsManager.load(roomRuntimeMemory);
+    return roomRuntimeMemory;
+}
+
+const ServerRoomManager =
 {
     roomRuntimeMemories,
     socketRoomContexts,
     currentRoomIDByUserID,
+    loadRoom: async (roomID: string): Promise<RoomRuntimeMemory | null> =>
+    {
+        console.log(`ServerRoomManager.loadRoom :: roomID = ${roomID}`);
+        if (ServerRoomManager.roomRuntimeMemories[roomID] != undefined)
+            return ServerRoomManager.roomRuntimeMemories[roomID];
+
+        if (pendingLoads[roomID] != undefined)
+            return pendingLoads[roomID];
+
+        pendingLoads[roomID] = _loadRoom(roomID);
+        try
+        {
+            return await pendingLoads[roomID];
+        }
+        finally
+        {
+            delete pendingLoads[roomID];
+        }
+    },
+    unloadRoom: (roomID: string) =>
+    {
+        console.log(`ServerRoomManager.unloadRoom :: roomID = ${roomID}`);
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (ServerRoomManager.roomRuntimeMemories[roomID] == undefined)
+            throw new Error(`ServerRoomManager.unloadRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        if (Object.keys(roomRuntimeMemory.participantUserIDs).length > 0)
+            throw new Error(`ServerRoomManager.unloadRoom :: There are still participants in the room (participants = [${JSON.stringify(roomRuntimeMemory.participantUserIDs)}])`);
+        delete ServerRoomManager.roomRuntimeMemories[roomID];
+        delete ServerRoomManager.socketRoomContexts[roomID];
+
+        PhysicsManager.unload(roomID);
+    },
+    getRoom: (socketUserContext: SocketUserContext): Room | undefined =>
+    {
+        const user = socketUserContext.user;
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        if (roomID == undefined)
+        {
+            console.error(`getRoom :: RoomID not found (userID = ${user.id})`);
+            return undefined;
+        }
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (roomRuntimeMemory == undefined)
+        {
+            console.error(`getRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            return undefined;
+        }
+        return roomRuntimeMemory.room;
+    },
     saveRooms: async (force: boolean = false) =>
     {
         const currTimeInMillis = Date.now();
@@ -44,10 +109,10 @@ const RoomManager =
                 {
                     mem.lastSavedTimeInMillis = Date.now();
                     mem.room.dirty = false;
-                    console.log(`RoomManager.saveRooms :: Saved room (roomID = ${mem.room.id})`);
+                    console.log(`ServerRoomManager.saveRooms :: Saved room (roomID = ${mem.room.id})`);
                 }
                 else
-                    console.error(`RoomManager.saveRooms :: Failed to save room (roomID = ${mem.room.id})`);
+                    console.error(`ServerRoomManager.saveRooms :: Failed to save room (roomID = ${mem.room.id})`);
             }));
         }
     },
@@ -60,16 +125,16 @@ const RoomManager =
             const roomRuntimeMemory = roomRuntimeMemories[roomID];
             if (!roomRuntimeMemory)
             {
-                console.error(`RoomManager.saveAllUserGameplayStates :: RoomRuntimeMemory not found (roomID = ${roomID})`);
+                console.error(`ServerRoomManager.saveAllUserGameplayStates :: RoomRuntimeMemory not found (roomID = ${roomID})`);
                 continue;
             }
             const socketUserContext = socketUserContextsByUserID[userID];
             if (!socketUserContext)
             {
-                console.error(`RoomManager.saveAllUserGameplayStates :: SocketUserContext not found (userID = ${userID})`);
+                console.error(`ServerRoomManager.saveAllUserGameplayStates :: SocketUserContext not found (userID = ${userID})`);
                 continue;
             }
-            const gameplayState = RoomUserUtil.getUserGameplayState(socketUserContext, roomRuntimeMemory);
+            const gameplayState = ServerUserManager.getUserGameplayState(socketUserContext, roomRuntimeMemory);
             if (gameplayState)
                 gameplayStates.push(gameplayState);
         }
@@ -80,15 +145,15 @@ const RoomManager =
         saveGameplayState: boolean, cachedGameplayState?: UserGameplayState): Promise<boolean> =>
     {
         const user = socketUserContext.user;
-        console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
-        await RoomUserUtil.removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
+        console.log(`ServerRoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
+        await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
         if (!roomID)
             return false;
 
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
-            const mem = await RoomCoreUtil.loadRoom(roomID);
+            const mem = await ServerRoomManager.loadRoom(roomID);
             if (mem)
                 roomRuntimeMemory = mem;
         }
@@ -137,7 +202,7 @@ const RoomManager =
         if (roomRuntimeMemory.room.ownerUserID === user.id)
             userRole = UserRoleEnumMap.Owner;
 
-        RoomUserUtil.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
+        ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
             new ObjectTransform({x: lastX, y: lastY, z: lastZ}, {x: lastDirX, y: lastDirY, z: lastDirZ}),
             playerMetadata, userRole
         );
@@ -146,7 +211,7 @@ const RoomManager =
         const roomChangedSignal = new RoomChangedSignal(roomRuntimeMemory, userRole);
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)
-            console.error(`RoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
+            console.error(`ServerRoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
         else // Send the room data to the user who is added to the room.
             socketRoomContext.unicastSignal("roomChangedSignal", roomChangedSignal, user.id);
         return true;
@@ -159,8 +224,8 @@ setInterval(async () => {
     if (savingInProgress)
         return;
     savingInProgress = true;
-    await RoomManager.saveRooms();
+    await ServerRoomManager.saveRooms();
     savingInProgress = false;
 }, 3000);
 
-export default RoomManager;
+export default ServerRoomManager;

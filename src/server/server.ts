@@ -6,7 +6,7 @@ import hpp from "hpp";
 import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
 import Sockets from "./sockets/sockets";
-import RoomManager from "./room/roomManager";
+import ServerRoomManager from "./room/serverRoomManager";
 import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
@@ -134,7 +134,7 @@ ${LatencySimUtil.getConfigSummary()}
         console.log(`[${signal}] Graceful shutdown initiated...`);
         console.log("Saving all rooms and user gameplay states before shutdown...");
 
-        await RoomManager.saveRooms(true);
+        await ServerRoomManager.saveRooms(true);
         console.log("All rooms saved.");
 
         await Sockets.saveAndDisconnectAllUsers();

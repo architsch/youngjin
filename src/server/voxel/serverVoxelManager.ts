@@ -1,29 +1,28 @@
-import EncodableData from "../../../shared/networking/types/encodableData";
-import Room from "../../../shared/room/types/room";
-import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../shared/system/sharedConstants";
-import { UserRoleEnumMap } from "../../../shared/user/types/userRole";
-import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
-import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
-import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
-import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import VoxelBlockUpdateUtil from "../../../shared/voxel/util/voxelBlockUpdateUtil";
-import VoxelQuadUpdateUtil from "../../../shared/voxel/util/voxelQuadUpdateUtil";
-import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import SocketUserContext from "../../sockets/types/socketUserContext";
-import RoomManager from "../roomManager";
-import RoomCoreUtil from "./roomCoreUtil";
-import RoomUserUtil from "./roomUserUtil";
+import EncodableData from "../../shared/networking/types/encodableData";
+import Room from "../../shared/room/types/room";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../shared/system/sharedConstants";
+import { UserRoleEnumMap } from "../../shared/user/types/userRole";
+import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
+import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
+import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
+import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import VoxelBlockUpdateUtil from "../../shared/voxel/util/voxelBlockUpdateUtil";
+import VoxelQuadUpdateUtil from "../../shared/voxel/util/voxelQuadUpdateUtil";
+import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
+import SocketUserContext from "../sockets/types/socketUserContext";
+import ServerRoomManager from "../room/serverRoomManager";
+import ServerUserManager from "../user/serverUserManager";
 
 function canUserModifyVoxel(userID: string): boolean
 {
-    const role = RoomUserUtil.getUserRole(userID);
+    const role = ServerUserManager.getUserRole(userID);
     if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
         return true;
-    const roomID = RoomManager.currentRoomIDByUserID[userID];
+    const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
     if (roomID)
     {
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory && roomRuntimeMemory.room.roomType === RoomTypeEnumMap.Hub)
             return true;
     }
@@ -73,7 +72,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
     room.dirty = true; // Mark the room as dirty since its voxel grid has been modified.
 
     const user = socketUserContext.user;
-    const socketRoomContext = RoomManager.socketRoomContexts[room.id];
+    const socketRoomContext = ServerRoomManager.socketRoomContexts[room.id];
     if (!socketRoomContext)
         console.error(`SocketRoomContext not found (roomID = ${room.id})`);
     else
@@ -88,16 +87,16 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
     }
 }
 
-const RoomVoxelUtil =
+const ServerVoxelManager =
 {
     moveVoxelBlock: (socketUserContext: SocketUserContext, params: MoveVoxelBlockSignal) =>
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {
-            console.warn(`(RoomVoxelUtil) Rejected moveVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+            console.warn(`(ServerVoxelManager) Rejected moveVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
             return;
         }
-        const room = RoomCoreUtil.getRoom(socketUserContext);
+        const room = ServerRoomManager.getRoom(socketUserContext);
         if (!room)
         {
             console.error(`Voxel update failed (moveVoxelBlock) - room not found`);
@@ -121,10 +120,10 @@ const RoomVoxelUtil =
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {
-            console.warn(`(RoomVoxelUtil) Rejected addVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+            console.warn(`(ServerVoxelManager) Rejected addVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
             return;
         }
-        const room = RoomCoreUtil.getRoom(socketUserContext);
+        const room = ServerRoomManager.getRoom(socketUserContext);
         if (!room)
         {
             console.error(`Voxel update failed (addVoxelBlock) - room not found`);
@@ -143,10 +142,10 @@ const RoomVoxelUtil =
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {
-            console.warn(`(RoomVoxelUtil) Rejected removeVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+            console.warn(`(ServerVoxelManager) Rejected removeVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
             return;
         }
-        const room = RoomCoreUtil.getRoom(socketUserContext);
+        const room = ServerRoomManager.getRoom(socketUserContext);
         if (!room)
         {
             console.error(`Voxel update failed (removeVoxelBlock) - room not found`);
@@ -171,10 +170,10 @@ const RoomVoxelUtil =
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {
-            console.warn(`(RoomVoxelUtil) Rejected setVoxelQuadTextureParams from Visitor (userID = ${socketUserContext.user.id})`);
+            console.warn(`(ServerVoxelManager) Rejected setVoxelQuadTextureParams from Visitor (userID = ${socketUserContext.user.id})`);
             return;
         }
-        const room = RoomCoreUtil.getRoom(socketUserContext);
+        const room = ServerRoomManager.getRoom(socketUserContext);
         if (!room)
         {
             console.error(`Voxel update failed (setVoxelQuadTexture) - room not found - params: ${JSON.stringify(params)}`);
@@ -207,4 +206,4 @@ const RoomVoxelUtil =
     },
 }
 
-export default RoomVoxelUtil;
+export default ServerVoxelManager;

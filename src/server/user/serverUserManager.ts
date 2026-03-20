@@ -1,27 +1,27 @@
-import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
-import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import EncodableByteString from "../../../shared/networking/types/encodableByteString";
-import ObjectTransform from "../../../shared/object/types/objectTransform";
-import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
-import SocketUserContext from "../../sockets/types/socketUserContext";
-import RoomManager from "../roomManager";
-import RoomCoreUtil from "./roomCoreUtil";
-import RoomObjectUtil from "./roomObjectUtil";
-import DBRoomUtil from "../../db/util/dbRoomUtil";
-import UserGameplayState from "../../user/types/userGameplayState";
-import { UserRole, UserRoleEnumMap } from "../../../shared/user/types/userRole";
-import SetUserRoleSignal from "../../../shared/user/types/setUserRoleSignal";
-import DBUserUtil from "../../db/util/dbUserUtil";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import AddObjectSignal from "../../shared/object/types/addObjectSignal";
+import EncodableByteString from "../../shared/networking/types/encodableByteString";
+import ObjectTransform from "../../shared/object/types/objectTransform";
+import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
+import SocketUserContext from "../sockets/types/socketUserContext";
+import ServerRoomManager from "../room/serverRoomManager";
+import ServerObjectManager from "../object/serverObjectManager";
+import DBRoomUtil from "../db/util/dbRoomUtil";
+import UserGameplayState from "./types/userGameplayState";
+import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
+import SetUserRoleSignal from "../../shared/user/types/setUserRoleSignal";
+import DBUserUtil from "../db/util/dbUserUtil";
 
+const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
 const userRoleByUserID: {[userID: string]: UserRole} = {};
 
 function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): string[]
 {
-    const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+    const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
     if (roomRuntimeMemory == undefined)
     {
-        console.error(`RoomManager.getIdsOfObjectsSpawnedByUser :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        console.error(`ServerUserManager.getIdsOfObjectsSpawnedByUser :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
         return [];
     }
     const ids: string[] = [];
@@ -33,26 +33,43 @@ function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): string[]
     return ids;
 }
 
-const RoomUserUtil =
+const ServerUserManager =
 {
+    socketUserContexts,
+    addUser: (socketUserContext: SocketUserContext) =>
+    {
+        socketUserContexts[socketUserContext.user.id] = socketUserContext;
+    },
+    removeUser: (userID: string) =>
+    {
+        delete socketUserContexts[userID];
+    },
+    getSocketUserContext: (userID: string): SocketUserContext | undefined =>
+    {
+        return socketUserContexts[userID];
+    },
+    hasUser: (userID: string): boolean =>
+    {
+        return socketUserContexts[userID] != undefined;
+    },
     addUserToRoom: (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
         userID: string, playerObjectTransform: ObjectTransform, playerMetadata: {[key: string]: string},
         userRole: UserRole) =>
     {
         const user = socketUserContext.user;
 
-        console.log(`RoomManager.addUserToRoom :: roomID = ${roomRuntimeMemory.room.id}, userID = ${userID}`);
+        console.log(`ServerUserManager.addUserToRoom :: roomID = ${roomRuntimeMemory.room.id}, userID = ${userID}`);
         if (roomRuntimeMemory.participantUserIDs[userID] != undefined)
         {
-            console.error(`RoomManager.addUserToRoom :: User is already registered (roomID = ${roomRuntimeMemory.room.id}, userID = ${userID})`);
+            console.error(`ServerUserManager.addUserToRoom :: User is already registered (roomID = ${roomRuntimeMemory.room.id}, userID = ${userID})`);
             return;
         }
-        RoomManager.currentRoomIDByUserID[userID] = roomRuntimeMemory.room.id;
+        ServerRoomManager.currentRoomIDByUserID[userID] = roomRuntimeMemory.room.id;
         roomRuntimeMemory.participantUserIDs[userID] = true;
 
-        const socketRoomContext = RoomManager.socketRoomContexts[roomRuntimeMemory.room.id];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomRuntimeMemory.room.id];
         if (!socketRoomContext)
-            console.error(`RoomManager.addUserToRoom :: SocketRoomContext not found (roomID = ${roomRuntimeMemory.room.id})`);
+            console.error(`ServerUserManager.addUserToRoom :: SocketRoomContext not found (roomID = ${roomRuntimeMemory.room.id})`);
         else
             socketRoomContext.addSocketUserContext(userID, socketUserContext);
 
@@ -65,11 +82,11 @@ const RoomUserUtil =
             user.id,
             user.userName,
             ObjectTypeConfigMap.getIndexByType("Player"),
-            RoomObjectUtil.generateObjectId(),
+            ServerObjectManager.generateObjectId(),
             playerObjectTransform,
             restoredMetadata
         );
-        RoomObjectUtil.addObject(socketUserContext, playerAddObjectSignal);
+        ServerObjectManager.addObject(socketUserContext, playerAddObjectSignal);
         playerObjectByUserID[userID] = playerAddObjectSignal;
         userRoleByUserID[userID] = userRole;
     },
@@ -77,51 +94,51 @@ const RoomUserUtil =
         saveGameplayState: boolean) =>
     {
         const user = socketUserContext.user;
-        const roomID = RoomManager.currentRoomIDByUserID[user.id];
-        console.log(`RoomManager.removeUserFromRoom :: roomID = ${roomID}, userID = ${user.id}`);
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        console.log(`ServerUserManager.removeUserFromRoom :: roomID = ${roomID}, userID = ${user.id}`);
         if (roomID == undefined)
         {
             if (prevRoomShouldExist) // This may happen when the client disconnects before joining the very first room.
-                console.warn(`RoomManager.removeUserFromRoom :: Previous room not found :: userID = ${user.id}`);
+                console.warn(`ServerUserManager.removeUserFromRoom :: Previous room not found :: userID = ${user.id}`);
             return;
         }
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory == undefined)
         {
-            console.error(`RoomManager.removeUserFromRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            console.error(`ServerUserManager.removeUserFromRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
         if (saveGameplayState)
         {
-            const gameplayState = RoomUserUtil.getUserGameplayState(socketUserContext, roomRuntimeMemory);
+            const gameplayState = ServerUserManager.getUserGameplayState(socketUserContext, roomRuntimeMemory);
             if (gameplayState)
                 await DBUserUtil.saveUserGameplayState(gameplayState);
         }
 
         const objectIds = getIdsOfObjectsSpawnedByUser(roomID, user.id);
         for (const objectId of objectIds)
-            RoomObjectUtil.removeObject(socketUserContext, objectId);
+            ServerObjectManager.removeObject(socketUserContext, objectId);
 
         if (roomRuntimeMemory.participantUserIDs[user.id] == undefined)
         {
-            console.error(`RoomManager.removeUserFromRoom :: User is not registered as the room's participant (userID = ${user.id}, roomID = ${roomID})`);
+            console.error(`ServerUserManager.removeUserFromRoom :: User is not registered as the room's participant (userID = ${user.id}, roomID = ${roomID})`);
             return;
         }
-        delete RoomManager.currentRoomIDByUserID[user.id];
+        delete ServerRoomManager.currentRoomIDByUserID[user.id];
         delete roomRuntimeMemory.participantUserIDs[user.id];
         delete playerObjectByUserID[user.id];
         delete userRoleByUserID[user.id];
 
-        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (!socketRoomContext)
-            console.error(`RoomManager.removeUserFromRoom :: SocketRoomContext not found (roomID = ${roomID})`);
+            console.error(`ServerUserManager.removeUserFromRoom :: SocketRoomContext not found (roomID = ${roomID})`);
         else
             socketRoomContext.removeSocketUserContext(user.id);
 
         if (Object.keys(roomRuntimeMemory.participantUserIDs).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
-                RoomCoreUtil.unloadRoom(roomID);
+                ServerRoomManager.unloadRoom(roomID);
         }
     },
     getUserGameplayState: (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory)
@@ -174,7 +191,7 @@ const RoomUserUtil =
         userRoleByUserID[userID] = userRole;
 
         // Broadcast the role update to all clients in the room.
-        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (!socketRoomContext)
             return;
 
@@ -187,5 +204,4 @@ const RoomUserUtil =
     },
 }
 
-export default RoomUserUtil;
-
+export default ServerUserManager;

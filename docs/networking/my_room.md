@@ -11,7 +11,7 @@ Reference: @src/client/ui/components/form/visitMyRoomForm.tsx , @src/client/ui/c
         4. The client updates `user.ownedRoomID` with the returned `roomID`, then emits a `RequestRoomChangeSignal` via `SocketsClient.tryEmitRequestRoomChangeSignal`.
     - If the user already owns a room (`ownedRoomID` is non-empty):
         1. The client directly emits a `RequestRoomChangeSignal` via `SocketsClient.tryEmitRequestRoomChangeSignal`, using the existing `ownedRoomID`.
-2. The server receives the `RequestRoomChangeSignal` and calls `RoomManager.changeUserRoom()`, moving the user into their room.
+2. The server receives the `RequestRoomChangeSignal` and calls `ServerRoomManager.changeUserRoom()`, moving the user into their room.
 
 ## Copy Room URL
 1. `ConfigureMyRoomForm` computes the room URL on the client as `${window.location.origin}/mypage/${roomID}`.

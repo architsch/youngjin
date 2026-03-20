@@ -26,7 +26,7 @@ Reference: @views/page/dynamic/mypage.ejs , @src/server/networking/router/api/us
     3. It looks up the user in Firestore via `DBUserUtil.findUserById`.
     4. It attaches the `User` object to `socket.handshake.auth` for use by the connection handler.
     5. If any step fails (no cookie, invalid token, user not found), the connection is rejected with an error URL pointing to an auth-failure page.
-9. Once the socket connection is established, the server creates a `SocketUserContext`, registers the user in `UserManager`, and joins the user to a room (see `user_state_management.md` for room-joining details).
+9. Once the socket connection is established, the server creates a `SocketUserContext`, registers the user in `ServerUserManager`, and joins the user to a room (see `user_state_management.md` for room-joining details).
 10. The server unicasts a `RoomChangedSignal` (which bundles the room's `RoomRuntimeMemory` and the user's current role) to the client, and the client initializes the game based on it.
 
 ## Client Sign-In & Sign-Up

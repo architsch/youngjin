@@ -1,20 +1,20 @@
-import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
-import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
-import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
-import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEntryMap";
-import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
-import PhysicsManager from "../../../shared/physics/physicsManager";
-import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import { MAX_CANVASES_PER_ROOM } from "../../../shared/system/sharedConstants";
-import { UserRoleEnumMap } from "../../../shared/user/types/userRole";
-import SocketUserContext from "../../sockets/types/socketUserContext";
-import RoomManager from "../roomManager";
-import RoomUserUtil from "./roomUserUtil";
-import ObjectTransform from "../../../shared/object/types/objectTransform";
-import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
-import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
-import Vec3 from "../../../shared/math/types/vec3";
+import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
+import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
+import AddObjectSignal from "../../shared/object/types/addObjectSignal";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
+import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
+import PhysicsManager from "../../shared/physics/physicsManager";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import { MAX_CANVASES_PER_ROOM } from "../../shared/system/sharedConstants";
+import { UserRoleEnumMap } from "../../shared/user/types/userRole";
+import SocketUserContext from "../sockets/types/socketUserContext";
+import ServerRoomManager from "../room/serverRoomManager";
+import ServerUserManager from "../user/serverUserManager";
+import ObjectTransform from "../../shared/object/types/objectTransform";
+import ResolveObjectTransformDesyncSignal from "../../shared/object/types/resolveObjectTransformDesyncSignal";
+import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
+import Vec3 from "../../shared/math/types/vec3";
 
 let serverObjectIdCounter = 0;
 
@@ -24,13 +24,13 @@ function canUserModifyObject(userID: string, obj: AddObjectSignal): boolean
 {
     if (obj.sourceUserID === userID)
         return true;
-    const role = RoomUserUtil.getUserRole(userID);
+    const role = ServerUserManager.getUserRole(userID);
     if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
         return true;
-    const roomID = RoomManager.currentRoomIDByUserID[userID];
+    const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
     if (roomID)
     {
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory && roomRuntimeMemory.room.roomType === RoomTypeEnumMap.Hub)
             return true;
     }
@@ -42,13 +42,13 @@ function markDirtyIfPersistent(obj: AddObjectSignal, roomID: string): void
     const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
     if (config.persistent)
     {
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory)
             roomRuntimeMemory.room.dirty = true;
     }
 }
 
-const RoomObjectUtil =
+const ServerObjectManager =
 {
     generateObjectId: (): string =>
     {
@@ -57,24 +57,24 @@ const RoomObjectUtil =
     addObject: (socketUserContext: SocketUserContext, addObjectSignal: AddObjectSignal) =>
     {
         const user = socketUserContext.user;
-        const roomID = RoomManager.currentRoomIDByUserID[user.id];
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const objectId = addObjectSignal.objectId;
 
-        console.log(`RoomManager.addObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
+        console.log(`ServerObjectManager.addObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
         if (roomID == undefined)
         {
-            console.error(`RoomManager.addObject :: RoomID not found (userID = ${user.id}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.addObject :: RoomID not found (userID = ${user.id}, objectId = ${objectId})`);
             return;
         }
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory == undefined)
         {
-            console.error(`RoomManager.addObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.addObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
         if (roomRuntimeMemory.room.objectById[objectId] != undefined)
         {
-            console.error(`RoomManager.addObject :: Object already exists (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.addObject :: Object already exists (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
         roomRuntimeMemory.room.objectById[objectId] = addObjectSignal;
@@ -83,32 +83,32 @@ const RoomObjectUtil =
         if (colliderState)
             PhysicsManager.addObject(roomID, objectId, addObjectSignal.objectTypeIndex, colliderState);
 
-        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (!socketRoomContext)
-            console.error(`RoomManager.addObject :: SocketRoomContext not found (roomID = ${roomID})`);
+            console.error(`ServerObjectManager.addObject :: SocketRoomContext not found (roomID = ${roomID})`);
         else
             socketRoomContext.multicastSignal("addObjectSignal", addObjectSignal, user.id);
     },
     removeObject: (socketUserContext: SocketUserContext, objectId: string) =>
     {
         const user = socketUserContext.user;
-        const roomID = RoomManager.currentRoomIDByUserID[user.id];
-        console.log(`RoomManager.removeObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        console.log(`ServerObjectManager.removeObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
         if (roomID == undefined)
         {
-            console.error(`RoomManager.removeObject :: RoomID not found (userID = ${user.id}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.removeObject :: RoomID not found (userID = ${user.id}, objectId = ${objectId})`);
             return;
         }
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory == undefined)
         {
-            console.error(`RoomManager.removeObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.removeObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
         const addObjectSignal = roomRuntimeMemory.room.objectById[objectId];
         if (addObjectSignal == undefined)
         {
-            console.error(`RoomManager.removeObject :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.removeObject :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
         delete roomRuntimeMemory.room.objectById[objectId];
@@ -119,9 +119,9 @@ const RoomObjectUtil =
 
         const removeSignal = new RemoveObjectSignal(roomID, objectId);
 
-        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (!socketRoomContext)
-            console.error(`RoomManager.removeObject :: SocketRoomContext not found (roomID = ${roomID})`);
+            console.error(`ServerObjectManager.removeObject :: SocketRoomContext not found (roomID = ${roomID})`);
         else
             socketRoomContext.multicastSignal("removeObjectSignal", removeSignal, user.id);
     },
@@ -129,23 +129,23 @@ const RoomObjectUtil =
     onAddObjectSignalReceived: (socketUserContext: SocketUserContext, params: AddObjectSignal) =>
     {
         const user = socketUserContext.user;
-        const roomID = RoomManager.currentRoomIDByUserID[user.id];
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         if (!roomID)
         {
-            console.error(`RoomManager.onAddObjectSignalReceived :: RoomID not found (userID = ${user.id})`);
+            console.error(`ServerObjectManager.onAddObjectSignalReceived :: RoomID not found (userID = ${user.id})`);
             return;
         }
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
-            console.error(`RoomManager.onAddObjectSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            console.error(`ServerObjectManager.onAddObjectSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
         const room = roomRuntimeMemory.room;
 
         if (!canUserModifyObject(user.id, params))
         {
-            console.warn(`(RoomObjectUtil) Rejected addObjectSignal from unauthorized user (userID = ${user.id})`);
+            console.warn(`(ServerObjectManager) Rejected addObjectSignal from unauthorized user (userID = ${user.id})`);
             return;
         }
 
@@ -195,7 +195,7 @@ const RoomObjectUtil =
         markDirtyIfPersistent(params, roomID);
 
         // Broadcast to other clients
-        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (socketRoomContext)
             socketRoomContext.multicastSignal("addObjectSignal", params, user.id);
     },
@@ -203,29 +203,29 @@ const RoomObjectUtil =
     onRemoveObjectSignalReceived: (socketUserContext: SocketUserContext, params: RemoveObjectSignal) =>
     {
         const user = socketUserContext.user;
-        const roomID = RoomManager.currentRoomIDByUserID[user.id];
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         if (!roomID)
         {
-            console.error(`RoomManager.onRemoveObjectSignalReceived :: RoomID not found (userID = ${user.id})`);
+            console.error(`ServerObjectManager.onRemoveObjectSignalReceived :: RoomID not found (userID = ${user.id})`);
             return;
         }
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
-            console.error(`RoomManager.onRemoveObjectSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            console.error(`ServerObjectManager.onRemoveObjectSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
         const room = roomRuntimeMemory.room;
         const existingObj = room.objectById[params.objectId];
         if (!existingObj)
         {
-            console.error(`RoomManager.onRemoveObjectSignalReceived :: Object not found (objectId = ${params.objectId})`);
+            console.error(`ServerObjectManager.onRemoveObjectSignalReceived :: Object not found (objectId = ${params.objectId})`);
             return;
         }
 
         if (!canUserModifyObject(user.id, existingObj))
         {
-            console.warn(`(RoomObjectUtil) Rejected removeObjectSignal from unauthorized user (userID = ${user.id})`);
+            console.warn(`(ServerObjectManager) Rejected removeObjectSignal from unauthorized user (userID = ${user.id})`);
             return;
         }
 
@@ -239,7 +239,7 @@ const RoomObjectUtil =
         markDirtyIfPersistent(existingObj, roomID);
 
         // Broadcast to other clients
-        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (socketRoomContext)
             socketRoomContext.multicastSignal("removeObjectSignal", params, user.id);
     },
@@ -247,16 +247,16 @@ const RoomObjectUtil =
     onSetObjectMetadataSignalReceived: (socketUserContext: SocketUserContext, params: SetObjectMetadataSignal) =>
     {
         const user = socketUserContext.user;
-        const roomID = RoomManager.currentRoomIDByUserID[user.id];
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         if (!roomID)
         {
-            console.error(`RoomManager.onSetObjectMetadataSignalReceived :: RoomID not found (userID = ${user.id})`);
+            console.error(`ServerObjectManager.onSetObjectMetadataSignalReceived :: RoomID not found (userID = ${user.id})`);
             return;
         }
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
-            console.error(`RoomManager.onSetObjectMetadataSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            console.error(`ServerObjectManager.onSetObjectMetadataSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
         const room = roomRuntimeMemory.room;
@@ -264,13 +264,13 @@ const RoomObjectUtil =
         const existingObj = room.objectById[params.objectId];
         if (!existingObj)
         {
-            console.error(`RoomManager.onSetObjectMetadataSignalReceived :: Object not found (objectId = ${params.objectId})`);
+            console.error(`ServerObjectManager.onSetObjectMetadataSignalReceived :: Object not found (objectId = ${params.objectId})`);
             return;
         }
 
         if (!canUserModifyObject(user.id, existingObj))
         {
-            console.warn(`(RoomObjectUtil) Rejected setObjectMetadataSignal from unauthorized user (userID = ${user.id})`);
+            console.warn(`(ServerObjectManager) Rejected setObjectMetadataSignal from unauthorized user (userID = ${user.id})`);
             return;
         }
 
@@ -280,14 +280,14 @@ const RoomObjectUtil =
         const obj = ObjectUpdateUtil.setObjectMetadata(room, params.objectId, params.metadataKey, params.metadataValue);
         if (!obj)
         {
-            console.error(`RoomManager.onSetObjectMetadataSignalReceived :: Failed (objectId = ${params.objectId})`);
+            console.error(`ServerObjectManager.onSetObjectMetadataSignalReceived :: Failed (objectId = ${params.objectId})`);
             return;
         }
 
         markDirtyIfPersistent(obj, roomID);
 
         // Broadcast to other clients
-        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (socketRoomContext)
             socketRoomContext.multicastSignal("setObjectMetadataSignal", params, user.id);
     },
@@ -295,27 +295,27 @@ const RoomObjectUtil =
     updateObjectTransform: (socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform) =>
     {
         const user = socketUserContext.user;
-        const roomID = RoomManager.currentRoomIDByUserID[user.id];
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         if (roomID == undefined)
         {
-            console.error(`RoomManager.updateObjectTransform :: RoomID not found (userID = ${user.id})`);
+            console.error(`ServerObjectManager.updateObjectTransform :: RoomID not found (userID = ${user.id})`);
             return;
         }
-        const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory == undefined)
         {
-            console.error(`RoomManager.updateObjectTransform :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            console.error(`ServerObjectManager.updateObjectTransform :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
         const obj = roomRuntimeMemory.room.objectById[objectId];
         if (obj == undefined)
         {
-            console.error(`RoomManager.updateObjectTransform :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.updateObjectTransform :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
         if (obj.sourceUserID != user.id)
         {
-            console.error(`RoomManager.updateObjectTransform :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.updateObjectTransform :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
 
@@ -336,18 +336,18 @@ const RoomObjectUtil =
             if (result.desyncDetected)
             {
                 const desyncSignal = new ResolveObjectTransformDesyncSignal(objectId, result.resolvedPos);
-                const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+                const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
                 if (!socketRoomContext)
-                    console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+                    console.error(`ServerObjectManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
                 else // Broadcast to everyone.
                     socketRoomContext.multicastSignal("resolveObjectTransformDesyncSignal", desyncSignal);
             }
             else
             {
                 const syncSignal = new SetObjectTransformSignal(objectId, transform);
-                const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+                const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
                 if (!socketRoomContext)
-                    console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+                    console.error(`ServerObjectManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
                 else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
                     socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
             }
@@ -361,13 +361,13 @@ const RoomObjectUtil =
             markDirtyIfPersistent(obj, roomID);
 
             const syncSignal = new SetObjectTransformSignal(objectId, transform);
-            const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+            const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
             if (!socketRoomContext)
-                console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+                console.error(`ServerObjectManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
             else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
                 socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
         }
     },
 }
 
-export default RoomObjectUtil;
+export default ServerObjectManager;
