@@ -1,13 +1,13 @@
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import GameObject from "../types/gameObject";
 import VoxelGameObject from "../types/voxelGameObject";
 import PlayerGameObject from "../types/playerGameObject";
 import CanvasGameObject from "../types/canvasGameObject";
 
 export const ObjectConstructorMap: {[objectType: string]:
-    (params: ObjectSpawnParams) => GameObject} =
+    (params: AddObjectSignal) => GameObject} =
 {
-    "Voxel": (params: ObjectSpawnParams): GameObject => new VoxelGameObject(params),
-    "Player": (params: ObjectSpawnParams): GameObject => new PlayerGameObject(params),
-    "Canvas": (params: ObjectSpawnParams): GameObject => new CanvasGameObject(params),
+    "Voxel": (params: AddObjectSignal): GameObject => new VoxelGameObject(params),
+    "Player": (params: AddObjectSignal): GameObject => new PlayerGameObject(params),
+    "Canvas": (params: AddObjectSignal): GameObject => new CanvasGameObject(params),
 }

@@ -7,7 +7,7 @@ import { DBRow } from "../types/row/dbRow";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import VoxelGrid from "../../../shared/voxel/types/voxelGrid";
 import BufferState from "../../../shared/networking/types/bufferState";
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import EncodableRaw4ByteNumber from "../../../shared/networking/types/encodableRaw4ByteNumber";
 import EncodableArray from "../../../shared/networking/types/encodableArray";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
@@ -128,11 +128,11 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
 
     const lastObjectId = (EncodableRaw4ByteNumber.decode(bufferState) as EncodableRaw4ByteNumber).n;
-    const objectArray = EncodableArray.decodeWithParams(bufferState, ObjectSpawnParams.decode, 65535) as EncodableArray;
-    const objectById: {[objectId: string]: ObjectSpawnParams} = {};
+    const objectArray = EncodableArray.decodeWithParams(bufferState, AddObjectSignal.decode, 65535) as EncodableArray;
+    const objectById: {[objectId: string]: AddObjectSignal} = {};
     for (const element of objectArray.arr)
     {
-        const obj = element as ObjectSpawnParams;
+        const obj = element as AddObjectSignal;
         objectById[obj.objectId] = obj;
     }
 

@@ -1,5 +1,6 @@
 import ObjectManager from "./object/objectManager";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
+import RoomChangedSignal from "../shared/room/types/roomChangedSignal";
 import ThingsPoolEnv from "./system/types/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
@@ -11,7 +12,7 @@ import { roomChangedObservable, userRoleObservable } from "./system/clientObserv
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
-import UserRoleUpdateParams from "../shared/user/types/userRoleUpdateParams";
+import SetUserRoleSignal from "../shared/user/types/setUserRoleSignal";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 
@@ -60,11 +61,11 @@ const App =
     {
         userRoleObservable.set(role);
     },
-    onUserRoleUpdateReceived: async (params: UserRoleUpdateParams) => {
+    onSetUserRoleSignalReceived: async (params: SetUserRoleSignal) => {
         // If this is a UserRole update on the current user's player, update the app-level role.
         if (params.userID !== App.getUser()?.id)
             return;
-        const success = await waitUntilSignalProcessingReady("userRoleUpdateParams",
+        const success = await waitUntilSignalProcessingReady("setUserRoleSignal",
             () => params.roomID === App.getCurrentRoom()?.id);
         if (!success)
             return;
@@ -74,26 +75,26 @@ const App =
     {
         return currentRoom!.voxelGrid.quadsMem.quads;
     },
-    // When this method receives a RoomRuntimeMemory signal from the server,
+    // When this method receives a RoomChangedSignal from the server,
     // the given room will be loaded on the client side immediately
     // (The previous room will be unloaded - if it exists).
-    changeRoom: async (roomRuntimeMemory: RoomRuntimeMemory) =>
+    onRoomChangedSignalReceived: async (roomChangedSignal: RoomChangedSignal) =>
     {
         if (currentRoom != undefined)
             await unloadCurrentRoom();
-        await loadRoom(roomRuntimeMemory);
+        await loadRoom(roomChangedSignal.roomRuntimeMemory, roomChangedSignal.currentUserRole);
 
         endClientProcess("roomChange");
-        roomChangedObservable.set(roomRuntimeMemory);
+        roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
     },
 }
 
-async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
+async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: UserRole)
 {
     currentRoom = roomRuntimeMemory.room;
 
-    // Read the current user's role directly from the RoomRuntimeMemory
-    userRoleObservable.set(roomRuntimeMemory.currentUserRole);
+    // Read the current user's role from the RoomChangedSignal
+    userRoleObservable.set(currentUserRole);
 
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
@@ -124,7 +125,7 @@ function update()
     if (deltaTimePending >= minSecondsPerFrame) // Tick
     {
         deltaTimePending -= deltaTime;
-        
+
         ObjectManager.update(deltaTime);
         GraphicsManager.update(App.getFPS());
 

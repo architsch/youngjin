@@ -5,7 +5,7 @@ import EncodableByteString from "../../networking/types/encodableByteString";
 import EncodableByteVec3 from "../../networking/types/encodableByteVec3";
 import { MAX_ROOM_Y } from "../../system/sharedConstants";
 
-export default class ObjectDesyncResolveParams extends EncodableData
+export default class ResolveObjectTransformDesyncSignal extends EncodableData
 {
     objectId: string;
     resolvedPos: Vec3;
@@ -27,6 +27,6 @@ export default class ObjectDesyncResolveParams extends EncodableData
     {
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const resolvedPos = (EncodableByteVec3.decodeWithParams(bufferState, 0, 32, -1, MAX_ROOM_Y + 1) as EncodableByteVec3).v;
-        return new ObjectDesyncResolveParams(objectId, resolvedPos);
+        return new ResolveObjectTransformDesyncSignal(objectId, resolvedPos);
     }
 }

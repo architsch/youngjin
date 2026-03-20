@@ -5,7 +5,7 @@ import Form from "../basic/form";
 import User from "../../../../shared/user/types/user";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import SocketsClient from "../../../networking/client/socketsClient";
-import RoomChangeRequestParams from "../../../../shared/room/types/roomChangeRequestParams";
+import RequestRoomChangeSignal from "../../../../shared/room/types/requestRoomChangeSignal";
 
 export default function VisitMyRoomForm({ user, onCancel }: Props)
 {
@@ -28,7 +28,7 @@ async function visitMyRoom(user: User, onCancel: () => void): Promise<void>
             const roomID = response.data.roomID;
             user.ownedRoomID = roomID;
             onCancel();
-            SocketsClient.tryEmitRoomChangeRequest(new RoomChangeRequestParams(roomID));
+            SocketsClient.tryEmitRequestRoomChangeSignal(new RequestRoomChangeSignal(roomID));
         }
         else
         {
@@ -40,7 +40,7 @@ async function visitMyRoom(user: User, onCancel: () => void): Promise<void>
     {
         // User already owns a room — visit it
         onCancel();
-        SocketsClient.tryEmitRoomChangeRequest(new RoomChangeRequestParams(user.ownedRoomID));
+        SocketsClient.tryEmitRequestRoomChangeSignal(new RequestRoomChangeSignal(user.ownedRoomID));
     }
 }
 

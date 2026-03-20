@@ -1,6 +1,5 @@
-import * as THREE from "three";
 import GameObject from "../object/types/gameObject";
-import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import ObjectFactory from "./factories/objectFactory";
 import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
@@ -8,15 +7,13 @@ import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
-import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
-import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
-import ObjectMoveParams from "../../shared/object/types/objectMoveParams";
-import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
+import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
+import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
-import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
-import ObjectSyncReceiver from "./components/objectSyncReceiver";
-import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
-import ObjectSyncEmitter from "./components/objectSyncEmitter";
+import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
+import ObjectTransformReceiver from "./components/objectTransformReceiver";
+import ResolveObjectTransformDesyncSignal from "../../shared/object/types/resolveObjectTransformDesyncSignal";
+import ObjectTransformEmitter from "./components/objectTransformEmitter";
 import VoxelGameObject from "./types/voxelGameObject";
 import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
 import { setObjectMetadataObservable } from "../../shared/system/sharedObservables";
@@ -162,10 +159,10 @@ const ObjectManager =
             console.error(`Object (ID = ${objectId}) has already been despawned.`);
         }
     },
-    // When the client receives an ObjectSpawnParams signal from the server,
+    // When the client receives an AddObjectSignal from the server,
     // the given object will spawn as soon as the room to which it belongs is available.
-    onObjectSpawnReceived: async (params: ObjectSpawnParams) => {
-        const success = await waitUntilSignalProcessingReady("objectSpawnParams",
+    onAddObjectSignalReceived: async (params: AddObjectSignal) => {
+        const success = await waitUntilSignalProcessingReady("addObjectSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
@@ -176,10 +173,10 @@ const ObjectManager =
         const gameObject = ObjectFactory.createServerSideObject(params);
         await ObjectManager.spawnObject(gameObject);
     },
-    // When the client receives an ObjectDespawnParams signal from the server,
+    // When the client receives a RemoveObjectSignal from the server,
     // the given object will despawn as soon as the room to which it belongs is available.
-    onObjectDespawnReceived: async (params: ObjectDespawnParams) => {
-        const success = await waitUntilSignalProcessingReady("objectDespawnParams",
+    onRemoveObjectSignalReceived: async (params: RemoveObjectSignal) => {
+        const success = await waitUntilSignalProcessingReady("removeObjectSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
@@ -199,22 +196,22 @@ const ObjectManager =
 
         await ObjectManager.despawnObject(params.objectId);
     },
-    onObjectSyncReceived: async (params: ObjectSyncParams) => {
+    onSetObjectTransformSignalReceived: async (params: SetObjectTransformSignal) => {
         const object = ObjectManager.getObjectById(params.objectId)!;
-        if (object.components.objectSyncReceiver)
-            (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectSyncReceived(params);
+        if (object.components.objectTransformReceiver)
+            (object.components.objectTransformReceiver as ObjectTransformReceiver).onSetObjectTransformSignalReceived(params);
     },
-    onObjectDesyncResolveReceived: async (params: ObjectDesyncResolveParams) => {
+    onResolveObjectTransformDesyncSignalReceived: async (params: ResolveObjectTransformDesyncSignal) => {
         const object = ObjectManager.getObjectById(params.objectId)!;
-        if (object.components.objectSyncReceiver)
-            (object.components.objectSyncReceiver as ObjectSyncReceiver).onObjectDesyncResolveReceived(params);
-        if (object.components.objectSyncEmitter)
-            (object.components.objectSyncEmitter as ObjectSyncEmitter).onObjectDesyncResolveReceived(params);
+        if (object.components.objectTransformReceiver)
+            (object.components.objectTransformReceiver as ObjectTransformReceiver).onResolveObjectTransformDesyncSignalReceived(params);
+        if (object.components.objectTransformEmitter)
+            (object.components.objectTransformEmitter as ObjectTransformEmitter).onResolveObjectTransformDesyncSignalReceived(params);
     },
-    // When the client receives an ObjectMetadataSetParams signal from the server,
+    // When the client receives a SetObjectMetadataSignal from the server,
     // the metadata change will be applied to the corresponding game object.
-    onObjectMetadataSetReceived: async (params: ObjectMetadataSetParams) => {
-        const success = await waitUntilSignalProcessingReady("objectMetadataSetParams",
+    onSetObjectMetadataSignalReceived: async (params: SetObjectMetadataSignal) => {
+        const success = await waitUntilSignalProcessingReady("setObjectMetadataSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
@@ -236,35 +233,6 @@ const ObjectManager =
             if (sel && sel.gameObject.params.objectId === params.objectId)
                 PersistentObjectSelection.unselect();
         }
-    },
-    // When the client receives an ObjectMoveParams signal from the server,
-    // the move will be applied to the corresponding game object.
-    onObjectMoveReceived: async (params: ObjectMoveParams) => {
-        const success = await waitUntilSignalProcessingReady("objectMoveParams",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
-        if (!success)
-            return;
-
-        const room = App.getCurrentRoom()!;
-        const moved = ObjectUpdateUtil.moveObject(room, params.objectId, params.dx, params.dy, params.dz);
-        if (!moved)
-            return;
-
-        const gameObject = ObjectManager.getObjectById(params.objectId);
-        if (gameObject)
-        {
-            const t = moved.transform;
-            gameObject.forceSetTransform(
-                new THREE.Vector3(t.pos.x, t.pos.y, t.pos.z),
-                new THREE.Vector3(t.dir.x, t.dir.y, t.dir.z)
-            );
-        }
-
-        // If the moved object was selected by us, deactivate the selection
-        // since another user initiated the move.
-        const sel = persistentObjectSelectionObservable.peek();
-        if (sel && sel.gameObject.params.objectId === params.objectId)
-            PersistentObjectSelection.unselect();
     },
 }
 

@@ -1,5 +1,5 @@
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
@@ -10,10 +10,10 @@ import { addObject, generateObjectId, removeObject } from "./roomObjectUtil";
 import DBRoomUtil from "../../db/util/dbRoomUtil";
 import UserGameplayState from "../../user/types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../../shared/user/types/userRole";
-import UserRoleUpdateParams from "../../../shared/user/types/userRoleUpdateParams";
+import SetUserRoleSignal from "../../../shared/user/types/setUserRoleSignal";
 import DBUserUtil from "../../db/util/dbUserUtil";
 
-const playerObjectByUserID: {[userID: string]: ObjectSpawnParams} = {};
+const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
 const userRoleByUserID: {[userID: string]: UserRole} = {};
 
 export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
@@ -41,7 +41,7 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
     const restoredMetadata: {[key: number]: EncodableByteString} = {};
     for (const key of Object.keys(playerMetadata))
         restoredMetadata[parseInt(key)] = new EncodableByteString(playerMetadata[key]);
-    const playerObjectSpawnParams = new ObjectSpawnParams(
+    const playerAddObjectSignal = new AddObjectSignal(
         roomRuntimeMemory.room.id,
         user.id,
         user.userName,
@@ -50,8 +50,8 @@ export function addUserToRoom(socketUserContext: SocketUserContext, roomRuntimeM
         playerObjectTransform,
         restoredMetadata
     );
-    addObject(socketUserContext, playerObjectSpawnParams);
-    playerObjectByUserID[userID] = playerObjectSpawnParams;
+    addObject(socketUserContext, playerAddObjectSignal);
+    playerObjectByUserID[userID] = playerAddObjectSignal;
     userRoleByUserID[userID] = userRole;
 }
 
@@ -131,7 +131,7 @@ export function getUserGameplayState(socketUserContext: SocketUserContext, roomR
     const playerObject = playerObjectByUserID[user.id];
     if (!playerObject)
     {
-        console.error(`getUserGameplayState :: Player's ObjectSpawnParams not found (userID = ${user.id})`);
+        console.error(`getUserGameplayState :: Player's AddObjectSignal not found (userID = ${user.id})`);
         return undefined;
     }
     const tr = playerObject.transform;
@@ -157,7 +157,7 @@ export function getUserGameplayState(socketUserContext: SocketUserContext, roomR
     };
 }
 
-export function getPlayerObject(userID: string): ObjectSpawnParams | undefined
+export function getPlayerObject(userID: string): AddObjectSignal | undefined
 {
     return playerObjectByUserID[userID];
 }
@@ -181,8 +181,8 @@ export function syncUserRoleInMemory(userID: string, roomID: string, userRole: U
     if (!socketRoomContext)
         return;
 
-    const params = new UserRoleUpdateParams(userID, roomID, userRole);
-    socketRoomContext.multicastSignal("userRoleUpdateParams", params);
+    const params = new SetUserRoleSignal(userID, roomID, userRole);
+    socketRoomContext.multicastSignal("setUserRoleSignal", params);
 }
 
 export function getUserRole(userID: string): UserRole

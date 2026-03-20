@@ -10,7 +10,7 @@ import { setObjectMetadataObservable } from "../../system/sharedObservables";
 import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
 import { ColliderState } from "../../physics/types/colliderState";
 
-export default class ObjectSpawnParams extends EncodableData
+export default class AddObjectSignal extends EncodableData
 {
     roomID: string;
     sourceUserID: string;
@@ -88,6 +88,6 @@ export default class ObjectSpawnParams extends EncodableData
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const transform = ObjectTransform.decode(bufferState) as ObjectTransform;
         const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
-        return new ObjectSpawnParams(roomID, sourceUserID, sourceUserName, objectTypeIndex, objectId, transform, metadata);
+        return new AddObjectSignal(roomID, sourceUserID, sourceUserName, objectTypeIndex, objectId, transform, metadata);
     }
 }

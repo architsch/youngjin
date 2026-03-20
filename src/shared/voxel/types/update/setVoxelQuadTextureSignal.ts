@@ -4,7 +4,7 @@ import EncodableData from "../../../networking/types/encodableData";
 import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
 
-export default class SetVoxelQuadTextureParams extends EncodableData
+export default class SetVoxelQuadTextureSignal extends EncodableData
 {
     roomID: string;
     quadIndex: number;
@@ -30,6 +30,6 @@ export default class SetVoxelQuadTextureParams extends EncodableData
         const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
         const textureIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        return new SetVoxelQuadTextureParams(roomID, quadIndex, textureIndex);
+        return new SetVoxelQuadTextureSignal(roomID, quadIndex, textureIndex);
     }
 }

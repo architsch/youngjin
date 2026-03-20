@@ -3,10 +3,10 @@ import Room from "../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../shared/system/sharedConstants";
 import { UserRoleEnumMap } from "../../../shared/user/types/userRole";
-import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
-import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
-import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
-import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
+import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
+import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
+import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
+import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import VoxelBlockUpdateUtil from "../../../shared/voxel/util/voxelBlockUpdateUtil";
 import VoxelQuadUpdateUtil from "../../../shared/voxel/util/voxelQuadUpdateUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
@@ -30,7 +30,7 @@ function canUserModifyVoxel(userID: string): boolean
     return false;
 }
 
-export function moveVoxelBlock(socketUserContext: SocketUserContext, params: MoveVoxelBlockParams)
+export function moveVoxelBlock(socketUserContext: SocketUserContext, params: MoveVoxelBlockSignal)
 {
     if (!canUserModifyVoxel(socketUserContext.user.id))
     {
@@ -55,10 +55,10 @@ export function moveVoxelBlock(socketUserContext: SocketUserContext, params: Mov
         sendMoveReversal(socketUserContext, room, params, sourceTextures);
         return;
     }
-    broadcast(socketUserContext, room, "moveVoxelBlockParams", params);
+    broadcast(socketUserContext, room, "moveVoxelBlockSignal", params);
 }
 
-export function addVoxelBlock(socketUserContext: SocketUserContext, params: AddVoxelBlockParams)
+export function addVoxelBlock(socketUserContext: SocketUserContext, params: AddVoxelBlockSignal)
 {
     if (!canUserModifyVoxel(socketUserContext.user.id))
     {
@@ -74,14 +74,14 @@ export function addVoxelBlock(socketUserContext: SocketUserContext, params: AddV
     if (!VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
     {
         console.error(`Voxel update failed (addVoxelBlock) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, "removeVoxelBlockParams",
-            new RemoveVoxelBlockParams(room.id, params.quadIndex));
+        unicastToSender(socketUserContext, "removeVoxelBlockSignal",
+            new RemoveVoxelBlockSignal(room.id, params.quadIndex));
         return;
     }
-    broadcast(socketUserContext, room, "addVoxelBlockParams", params);
+    broadcast(socketUserContext, room, "addVoxelBlockSignal", params);
 }
 
-export function removeVoxelBlock(socketUserContext: SocketUserContext, params: RemoveVoxelBlockParams)
+export function removeVoxelBlock(socketUserContext: SocketUserContext, params: RemoveVoxelBlockSignal)
 {
     if (!canUserModifyVoxel(socketUserContext.user.id))
     {
@@ -103,14 +103,14 @@ export function removeVoxelBlock(socketUserContext: SocketUserContext, params: R
     if (!VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex))
     {
         console.error(`Voxel update failed (removeVoxelBlock) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, "addVoxelBlockParams",
-            new AddVoxelBlockParams(room.id, params.quadIndex, textures));
+        unicastToSender(socketUserContext, "addVoxelBlockSignal",
+            new AddVoxelBlockSignal(room.id, params.quadIndex, textures));
         return;
     }
-    broadcast(socketUserContext, room, "removeVoxelBlockParams", params);
+    broadcast(socketUserContext, room, "removeVoxelBlockSignal", params);
 }
 
-export function setVoxelQuadTexture(socketUserContext: SocketUserContext, params: SetVoxelQuadTextureParams)
+export function setVoxelQuadTexture(socketUserContext: SocketUserContext, params: SetVoxelQuadTextureSignal)
 {
     if (!canUserModifyVoxel(socketUserContext.user.id))
     {
@@ -142,11 +142,11 @@ export function setVoxelQuadTexture(socketUserContext: SocketUserContext, params
     if (!VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
     {
         console.error(`Voxel update failed (setVoxelQuadTexture) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, "setVoxelQuadTextureParams",
-            new SetVoxelQuadTextureParams(room.id, quadIndex, oldTextureIndex));
+        unicastToSender(socketUserContext, "setVoxelQuadTextureSignal",
+            new SetVoxelQuadTextureSignal(room.id, quadIndex, oldTextureIndex));
         return;
     }
-    broadcast(socketUserContext, room, "setVoxelQuadTextureParams", params);
+    broadcast(socketUserContext, room, "setVoxelQuadTextureSignal", params);
 }
 
 function captureBlockTextures(room: Room, row: number, col: number, collisionLayer: number): number[]
@@ -159,7 +159,7 @@ function captureBlockTextures(room: Room, row: number, col: number, collisionLay
 }
 
 function sendMoveReversal(socketUserContext: SocketUserContext, room: Room,
-    params: MoveVoxelBlockParams, sourceTextures: number[])
+    params: MoveVoxelBlockSignal, sourceTextures: number[])
 {
     // The client applied the move optimistically: added block at target, removed block at source.
     // To reverse: remove the block at the target and re-add the block at the source.
@@ -174,10 +174,10 @@ function sendMoveReversal(socketUserContext: SocketUserContext, room: Room,
     const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row + params.rowOffset, col + params.colOffset,
         "y", "-", newCollisionLayer);
 
-    unicastToSender(socketUserContext, "removeVoxelBlockParams",
-        new RemoveVoxelBlockParams(room.id, targetQuadIndex));
-    unicastToSender(socketUserContext, "addVoxelBlockParams",
-        new AddVoxelBlockParams(room.id, params.quadIndex, sourceTextures));
+    unicastToSender(socketUserContext, "removeVoxelBlockSignal",
+        new RemoveVoxelBlockSignal(room.id, targetQuadIndex));
+    unicastToSender(socketUserContext, "addVoxelBlockSignal",
+        new AddVoxelBlockSignal(room.id, params.quadIndex, sourceTextures));
 }
 
 function unicastToSender(socketUserContext: SocketUserContext,

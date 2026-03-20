@@ -27,11 +27,11 @@ export default interface ObjectTypeConfig
         spawnedByMe?: {
             firstPersonController?: {
             },
-            objectSyncEmitter?: {
+            objectTransformEmitter?: {
             },
         },
         spawnedByOther?: {
-            objectSyncReceiver?: {
+            objectTransformReceiver?: {
             },
             modelGraphics?: {
                 path: string,

@@ -4,7 +4,7 @@ import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection
 import AtlasCellSprite from "../basic/atlasCellSprite";
 import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import SocketsClient from "../../../networking/client/socketsClient";
-import SetVoxelQuadTextureParams from "../../../../shared/voxel/types/update/setVoxelQuadTextureParams";
+import SetVoxelQuadTextureSignal from "../../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import App from "../../../app";
 import VoxelQuadUpdateUtil from "../../../../shared/voxel/util/voxelQuadUpdateUtil";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -52,7 +52,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     collisionLayer, textureIndex))
                 {
                     voxelQuadSelectionObservable.notify();
-                    SocketsClient.emitSetVoxelQuadTexture(new SetVoxelQuadTextureParams(room.id, quadIndex, textureIndex));
+                    SocketsClient.emitSetVoxelQuadTextureSignal(new SetVoxelQuadTextureSignal(room.id, quadIndex, textureIndex));
                 }
             };
             return <AtlasCellSprite

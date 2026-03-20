@@ -7,24 +7,25 @@ import * as cookie from "cookie";
 import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
-import RoomChangeRequestParams from "../../shared/room/types/roomChangeRequestParams";
+import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
+import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomManager from "../room/roomManager";
 import { getUserGameplayState } from "../room/util/roomUserUtil";
+import { onAddObjectSignalReceived, onRemoveObjectSignalReceived, onSetObjectMetadataSignalReceived, updateObjectTransform } from "../room/util/roomObjectUtil";
+import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock, setVoxelQuadTexture } from "../room/util/roomVoxelUtil";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
-import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
-import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
-import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
-import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
-import ObjectSpawnParams from "../../shared/object/types/objectSpawnParams";
-import ObjectDespawnParams from "../../shared/object/types/objectDespawnParams";
-import ObjectMetadataSetParams from "../../shared/object/types/objectMetadataSetParams";
-import ObjectMoveParams from "../../shared/object/types/objectMoveParams";
+import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
+import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
+import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
+import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import AddObjectSignal from "../../shared/object/types/addObjectSignal";
+import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
+import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
 import DBSearchUtil from "../db/util/dbSearchUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
-import UserCommandParams from "../../shared/user/types/userCommandParams";
+import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import UserCommandUtil from "../user/util/userCommandUtil";
 import UserGameplayState from "../user/types/userGameplayState";
 import LatencySimUtil from "../system/util/latencySimUtil";
@@ -131,69 +132,63 @@ const Sockets =
             delete staleSocketFirstDetectedAt[user.id];
             UserManager.addUser(socketUserContext);
 
-            socketUserContext.onReceivedSignalFromUser("objectSyncParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("setObjectTransformSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = ObjectSyncParams.decode(bufferState) as ObjectSyncParams;
-                RoomManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
+                const params = SetObjectTransformSignal.decode(bufferState) as SetObjectTransformSignal;
+                updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
 
-            socketUserContext.onReceivedSignalFromUser("userCommandParams", async (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("userCommandSignal", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = UserCommandParams.decode(bufferState) as UserCommandParams;
+                const params = UserCommandSignal.decode(bufferState) as UserCommandSignal;
                 await UserCommandUtil.handleCommand(user, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("addVoxelBlockParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = AddVoxelBlockParams.decode(bufferState) as AddVoxelBlockParams;
-                RoomManager.addVoxelBlock(socketUserContext, params);
+                const params = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
+                addVoxelBlock(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("moveVoxelBlockParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("moveVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = MoveVoxelBlockParams.decode(bufferState) as MoveVoxelBlockParams;
-                RoomManager.moveVoxelBlock(socketUserContext, params);
+                const params = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
+                moveVoxelBlock(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("removeVoxelBlockParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("removeVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = RemoveVoxelBlockParams.decode(bufferState) as RemoveVoxelBlockParams;
-                RoomManager.removeVoxelBlock(socketUserContext, params);
+                const params = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
+                removeVoxelBlock(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = SetVoxelQuadTextureParams.decode(bufferState) as SetVoxelQuadTextureParams;
-                RoomManager.setVoxelQuadTexture(socketUserContext, params);
+                const params = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
+                setVoxelQuadTexture(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("objectSpawnParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = ObjectSpawnParams.decode(bufferState) as ObjectSpawnParams;
-                RoomManager.handleObjectSpawn(socketUserContext, params);
+                const params = AddObjectSignal.decode(bufferState) as AddObjectSignal;
+                onAddObjectSignalReceived(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("objectDespawnParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("removeObjectSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = ObjectDespawnParams.decode(bufferState) as ObjectDespawnParams;
-                RoomManager.handleObjectDespawn(socketUserContext, params);
+                const params = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
+                onRemoveObjectSignalReceived(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("objectMetadataSetParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("setObjectMetadataSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = ObjectMetadataSetParams.decode(bufferState) as ObjectMetadataSetParams;
-                RoomManager.handleObjectMetadataSet(socketUserContext, params);
+                const params = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
+                onSetObjectMetadataSignalReceived(socketUserContext, params);
             });
 
-            socketUserContext.onReceivedSignalFromUser("objectMoveParams", (buffer: ArrayBuffer) => {
+            socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = ObjectMoveParams.decode(bufferState) as ObjectMoveParams;
-                RoomManager.handleObjectMove(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("roomChangeRequestParams", async (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = RoomChangeRequestParams.decode(bufferState) as RoomChangeRequestParams;
+                const params = RequestRoomChangeSignal.decode(bufferState) as RequestRoomChangeSignal;
                 await RoomManager.changeUserRoom(socketUserContext, params.roomID, true, false);
             });
 

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import GraphicsManager from "../../graphics/graphicsManager";
 import App from "../../app";
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import GameObjectComponent from "../components/gameObjectComponent";
 import ObjectComponentFactory from "../factories/objectComponentFactory";
@@ -19,13 +19,13 @@ const vec3Temp = new THREE.Vector3();
 //      (2) Make appropriate modifications to the existing type's entry in ObjectTypeConfigMap.
 export default abstract class GameObject
 {
-    params: ObjectSpawnParams; // When a GameObject spawns, use these parameters to initialize it.
+    params: AddObjectSignal; // When a GameObject spawns, use these parameters to initialize it.
     obj: THREE.Object3D = new THREE.Object3D(); // This Three.js object holds the GameObject's transform attributes such as position, rotation, and scale.
     config: ObjectTypeConfig;
     components: {[componentName: string]: GameObjectComponent} = {};
     spawnFinished: boolean = false;
 
-    constructor(params: ObjectSpawnParams)
+    constructor(params: AddObjectSignal)
     {
         this.params = params;
 

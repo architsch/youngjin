@@ -40,7 +40,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             },
             spawnedByMe: {
                 firstPersonController: {},
-                objectSyncEmitter: {},
+                objectTransformEmitter: {},
             },
             spawnedByOther: {
                 modelGraphics: {
@@ -48,7 +48,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                     localPosition: {x: 0, y: 1.22, z: 0},
                     scale: {x: 0.3, y: 0.3, z: 0.3},
                 },
-                objectSyncReceiver: {},
+                objectTransformReceiver: {},
             },
         },
     }],

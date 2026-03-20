@@ -4,7 +4,7 @@ import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_ROOM_Y } from "../../system/sharedC
 import ObjectMetadataEntryMap from "../maps/objectMetadataEntryMap";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import { ObjectMetadata } from "../types/objectMetadata";
-import ObjectSpawnParams from "../types/objectSpawnParams";
+import AddObjectSignal from "../types/addObjectSignal";
 import ObjectTransform from "../types/objectTransform";
 import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
@@ -25,14 +25,14 @@ const ObjectUpdateUtil =
     },
     addObject(room: Room, objectId: string, objectTypeIndex: number,
         pos: Vec3, dir: Vec3,
-        metadata: ObjectMetadata = {}, sourceUserID: string = "", sourceUserName: string = ""): ObjectSpawnParams | null
+        metadata: ObjectMetadata = {}, sourceUserID: string = "", sourceUserName: string = ""): AddObjectSignal | null
     {
         if (!ObjectUpdateUtil.canAddObject(room, objectTypeIndex, pos, dir))
         {
             console.error(`ObjectUpdateUtil.addObject :: Failed (x=${pos.x}, y=${pos.y}, z=${pos.z})`);
             return null;
         }
-        const obj = new ObjectSpawnParams(room.id, sourceUserID, sourceUserName,
+        const obj = new AddObjectSignal(room.id, sourceUserID, sourceUserName,
             objectTypeIndex, objectId, new ObjectTransform({...pos}, {...dir}), metadata);
         room.objectById[objectId] = obj;
         return obj;
@@ -42,7 +42,7 @@ const ObjectUpdateUtil =
     {
         return room.objectById[objectId] != undefined;
     },
-    removeObject(room: Room, objectId: string): ObjectSpawnParams | null
+    removeObject(room: Room, objectId: string): AddObjectSignal | null
     {
         if (!ObjectUpdateUtil.canRemoveObject(room, objectId))
         {
@@ -63,7 +63,7 @@ const ObjectUpdateUtil =
         return getMoveResult(room, obj, dx, dy, dz) != undefined;
     },
     moveObject(room: Room, objectId: string,
-        dx: number, dy: number, dz: number): ObjectSpawnParams | null
+        dx: number, dy: number, dz: number): AddObjectSignal | null
     {
         if (!ObjectUpdateUtil.canMoveObject(room, objectId, dx, dy, dz))
         {
@@ -91,7 +91,7 @@ const ObjectUpdateUtil =
         return true;
     },
     setObjectMetadata(room: Room, objectId: string,
-        metadataKey: number, metadataValue: string): ObjectSpawnParams | null
+        metadataKey: number, metadataValue: string): AddObjectSignal | null
     {
         if (!ObjectUpdateUtil.canSetObjectMetadata(room, objectId))
         {
@@ -104,7 +104,7 @@ const ObjectUpdateUtil =
     },
 }
 
-function getMoveResult(room: Room, obj: ObjectSpawnParams,
+function getMoveResult(room: Room, obj: AddObjectSignal,
     dx: number, dy: number, dz: number): {newPos: Vec3, newDir: Vec3} | undefined
 {
     const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
@@ -129,7 +129,7 @@ function getMoveResult(room: Room, obj: ObjectSpawnParams,
     }
 }
 
-function getVerticalMoveResult(room: Room, obj: ObjectSpawnParams,
+function getVerticalMoveResult(room: Room, obj: AddObjectSignal,
     moveUp: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
     const pos = {...obj.transform.pos};
@@ -143,7 +143,7 @@ function getVerticalMoveResult(room: Room, obj: ObjectSpawnParams,
     return undefined;
 }
 
-function getHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
+function getHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
     let result: {newPos: Vec3, newDir: Vec3} | undefined;
@@ -159,7 +159,7 @@ function getHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
     return getCornerWrappedHorizontalMoveResult(room, obj, moveRight, false);
 }
 
-function getStraightHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
+function getStraightHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
     const pos = {...obj.transform.pos};
@@ -178,7 +178,7 @@ function getStraightHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
     return undefined;
 }
 
-function getCornerWrappedHorizontalMoveResult(room: Room, obj: ObjectSpawnParams,
+function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean, tryConcaveWrap: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
     const pos = {...obj.transform.pos};

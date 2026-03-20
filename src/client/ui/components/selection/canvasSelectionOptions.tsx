@@ -5,8 +5,8 @@ import TextInput from "../basic/textInput";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ObjectManager from "../../../object/objectManager";
-import ObjectMetadataSetParams from "../../../../shared/object/types/objectMetadataSetParams";
-import ObjectDespawnParams from "../../../../shared/object/types/objectDespawnParams";
+import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
+import RemoveObjectSignal from "../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import { notificationMessageObservable, persistentObjectSelectionObservable } from "../../../system/clientObservables";
 import { MAX_IMAGE_URL_LENGTH } from "../../../../shared/system/sharedConstants";
@@ -58,7 +58,7 @@ function tryRemoveCanvas(selection: PersistentObjectSelection)
 
     PersistentObjectSelection.unselect();
     ObjectManager.despawnObject(objectId);
-    SocketsClient.emitObjectDespawn(new ObjectDespawnParams(room.id, objectId));
+    SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
 }
 
 function canSetCanvasImageURL(selection: PersistentObjectSelection): boolean
@@ -92,6 +92,6 @@ function trySetCanvasImageURL(selection: PersistentObjectSelection, imageURL: st
     selection.gameObject.params.setMetadata(ObjectMetadataKeyEnumMap.ImageURL, imageURL);
 
     persistentObjectSelectionObservable.notify();
-    SocketsClient.emitObjectMetadataSet(
-        new ObjectMetadataSetParams(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL));
+    SocketsClient.emitSetObjectMetadataSignal(
+        new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL));
 }

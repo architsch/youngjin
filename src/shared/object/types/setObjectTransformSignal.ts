@@ -1,29 +1,30 @@
+import ObjectTransform from "./objectTransform";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
 import EncodableByteString from "../../networking/types/encodableByteString";
 
-export default class ObjectDespawnParams extends EncodableData
+export default class SetObjectTransformSignal extends EncodableData
 {
-    roomID: string;
     objectId: string;
+    transform: ObjectTransform;
 
-    constructor(roomID: string, objectId: string)
+    constructor(objectId: string, transform: ObjectTransform)
     {
         super();
-        this.roomID = roomID;
         this.objectId = objectId;
+        this.transform = transform;
     }
 
     encode(bufferState: BufferState)
     {
-        new EncodableByteString(this.roomID).encode(bufferState);
         new EncodableByteString(this.objectId).encode(bufferState);
+        this.transform.encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        return new ObjectDespawnParams(roomID, objectId);
+        const transform = ObjectTransform.decode(bufferState) as ObjectTransform;
+        return new SetObjectTransformSignal(objectId, transform);
     }
 }

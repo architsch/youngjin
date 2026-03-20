@@ -5,7 +5,7 @@ import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2Byte
 import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNumber";
 import { NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../system/sharedConstants";
 
-export default class AddVoxelBlockParams extends EncodableData
+export default class AddVoxelBlockSignal extends EncodableData
 {
     roomID: string;
     quadIndex: number;
@@ -37,6 +37,6 @@ export default class AddVoxelBlockParams extends EncodableData
         for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
             quadTextureIndicesWithinLayer[i] = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
 
-        return new AddVoxelBlockParams(roomID, quadIndex, quadTextureIndicesWithinLayer);
+        return new AddVoxelBlockSignal(roomID, quadIndex, quadTextureIndicesWithinLayer);
     }
 }

@@ -2,7 +2,7 @@ import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
 import EncodableByteString from "../../networking/types/encodableByteString";
 
-export default class UserCommandParams extends EncodableData
+export default class UserCommandSignal extends EncodableData
 {
     message: string;
 
@@ -20,6 +20,6 @@ export default class UserCommandParams extends EncodableData
     static decode(bufferState: BufferState): EncodableData
     {
         const message = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        return new UserCommandParams(message);
+        return new UserCommandSignal(message);
     }
 }

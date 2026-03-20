@@ -1,14 +1,14 @@
 # User State Management Flows
 
-Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/roomRuntimeMemory.ts , @src/server/sockets/sockets.ts , @src/client/networking/client/socketsClient.ts
+Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/roomRuntimeMemory.ts , @src/shared/room/types/roomChangedSignal.ts , @src/server/sockets/sockets.ts , @src/client/networking/client/socketsClient.ts
 
 ## When the user moves from one room to another without loading a new "/mypage"
-1. The client sends a `RoomChangeRequestParams` (with the target room's ID) to the server via `SocketsClient.tryEmitRoomChangeRequest`. This also starts a client-side `roomChange` process that blocks further room change requests until the current one completes.
-2. The server receives the `RoomChangeRequestParams` and calls `RoomManager.changeUserRoom` with the target room ID.
+1. The client sends a `RequestRoomChangeSignal` (with the target room's ID) to the server via `SocketsClient.tryEmitRequestRoomChangeSignal`. This also starts a client-side `roomChange` process that blocks further room change requests until the current one completes.
+2. The server receives the `RequestRoomChangeSignal` and calls `RoomManager.changeUserRoom` with the target room ID.
 3. `RoomManager.changeUserRoom` removes the user from the previous room (despawning the user's player object and cleaning up the room's runtime memory), without saving gameplay state to the DB (since the user is staying connected and state is still in runtime memory).
 4. `RoomManager.changeUserRoom` loads the target room (from in-memory cache if available, otherwise from Firestore), restores the user's position/direction/metadata (from DB lookup, or defaults if none exists), and adds the user to the new room.
-5. The server unicasts the new room's `RoomRuntimeMemory` (including the user's role) to the client.
-6. The client receives the `RoomRuntimeMemory` and calls `App.changeRoom`, which unloads the previous room (graphics, physics, objects) and loads the new room from the received data. The client-side `roomChange` process then ends.
+5. The server unicasts a `RoomChangedSignal` (which bundles the room's `RoomRuntimeMemory` and the user's current role) to the client.
+6. The client receives the `RoomChangedSignal` and calls `App.onRoomChangedSignalReceived`, which unloads the previous room (graphics, physics, objects) and loads the new room from the received data. The client-side `roomChange` process then ends.
 
 ## When the user opens "/mypage" without including a room's ID in its URL
 1. The user sends a `/mypage` HTTP request to the server.
@@ -17,9 +17,9 @@ Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/
 4. The server authenticates the socket (via `authMiddleware`) and establishes the connection.
 5. The server determines which room the user should join. Since `targetRoomID` is empty, it falls back to `user.lastRoomID` (the room the user was last in, as stored in the DB).
 6. The server calls `RoomManager.changeUserRoom` with the preferred room ID.
-    - If the room exists and the user successfully joins it, the server unicasts the room's `RoomRuntimeMemory` to the client.
+    - If the room exists and the user successfully joins it, the server unicasts a `RoomChangedSignal` to the client.
     - If the room does not exist (or joining fails), the server falls back to a Hub room (checked in-memory first, then via Firestore query) and joins the user to that room instead.
-7. The client receives the `RoomRuntimeMemory` and calls `App.changeRoom`, which loads the room and initializes the game (graphics, physics, objects) based on the received data. The client-side `roomChange` process then ends.
+7. The client receives the `RoomChangedSignal` and calls `App.onRoomChangedSignalReceived`, which loads the room and initializes the game (graphics, physics, objects) based on the received data. The client-side `roomChange` process then ends.
 
 ## When the user opens "/mypage" with a room's ID in its URL
 1. The user sends a `/mypage/:roomID` HTTP request to the server.
@@ -28,9 +28,9 @@ Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/
 4. The server authenticates the socket (via `authMiddleware`) and establishes the connection.
 5. The server determines which room the user should join. Since `targetRoomID` is non-empty, it takes priority over `user.lastRoomID`.
 6. The server calls `RoomManager.changeUserRoom` with the URL-specified room ID.
-    - If the room exists and the user successfully joins it, the server unicasts the room's `RoomRuntimeMemory` to the client.
+    - If the room exists and the user successfully joins it, the server unicasts a `RoomChangedSignal` to the client.
     - If the room does not exist (or joining fails), the server falls back to a Hub room (checked in-memory first, then via Firestore query) and joins the user to that room instead.
-7. The client receives the `RoomRuntimeMemory` and calls `App.changeRoom`, which loads the room and initializes the game (graphics, physics, objects) based on the received data. The client-side `roomChange` process then ends.
+7. The client receives the `RoomChangedSignal` and calls `App.onRoomChangedSignalReceived`, which loads the room and initializes the game (graphics, physics, objects) based on the received data. The client-side `roomChange` process then ends.
 
 ## When the user closes the page and reopens it
 1. When the page is closed, the socket disconnects.
@@ -52,7 +52,7 @@ Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/
     - **Case B: Old socket's disconnect fires BEFORE the new socket connects** (common on higher-latency environments).
         1. The old socket's `disconnect` handler caches the gameplay state in `recentDisconnectGameplayStates` and saves it to the DB.
         2. The new socket connects. The server finds the cached gameplay state and restores from it (avoiding a potential race condition with the DB write).
-2. In both cases, the user's room and position are preserved seamlessly. The client receives `RoomRuntimeMemory` and initializes the game as usual.
+2. In both cases, the user's room and position are preserved seamlessly. The client receives a `RoomChangedSignal` and initializes the game as usual.
 
 ## When the user duplicates the current browser tab
 1. The new tab opens `/mypage` (or `/mypage/:roomID`), which triggers a new socket connection.
@@ -60,7 +60,7 @@ Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/
 3. The server captures the existing session's gameplay state from runtime memory.
 4. The server removes the old user from `UserManager` and from its room, then sends a `forceRedirect` to the old socket, redirecting the original tab to an "auth-duplication" error page. The old socket is then disconnected.
 5. The server proceeds with the new connection (from the duplicated tab), passing the captured gameplay state as `cachedGameplayState` to `RoomManager.changeUserRoom`. The user joins the room at the same position as before.
-6. The client in the new tab receives `RoomRuntimeMemory` and initializes the game as usual.
+6. The client in the new tab receives a `RoomChangedSignal` and initializes the game as usual.
 
 ## When the server crashes unexpectedly
 1. All in-memory state (runtime memories, cached gameplay states, socket contexts) is lost instantly. No graceful shutdown logic runs.

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import GameObject from "./gameObject";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import ObjectManager from "../objectManager";
 import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
@@ -17,7 +17,7 @@ export default class CanvasGameObject extends GameObject
 
     private instanceId: number = -1;
 
-    constructor(params: ObjectSpawnParams)
+    constructor(params: AddObjectSignal)
     {
         super(params);
 

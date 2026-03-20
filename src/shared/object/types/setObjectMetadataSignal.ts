@@ -3,7 +3,7 @@ import EncodableData from "../../networking/types/encodableData";
 import EncodableByteString from "../../networking/types/encodableByteString";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 
-export default class ObjectMetadataSetParams extends EncodableData
+export default class SetObjectMetadataSignal extends EncodableData
 {
     roomID: string;
     objectId: string;
@@ -33,6 +33,6 @@ export default class ObjectMetadataSetParams extends EncodableData
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const metadataKey = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const metadataValue = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        return new ObjectMetadataSetParams(roomID, objectId, metadataKey, metadataValue);
+        return new SetObjectMetadataSignal(roomID, objectId, metadataKey, metadataValue);
     }
 }

@@ -1,7 +1,6 @@
-import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
-import ObjectMetadataSetParams from "../../../shared/object/types/objectMetadataSetParams";
-import ObjectMoveParams from "../../../shared/object/types/objectMoveParams";
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
+import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
@@ -12,12 +11,16 @@ import { UserRoleEnumMap } from "../../../shared/user/types/userRole";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
 import { getUserRole } from "./roomUserUtil";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
+import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import Vec3 from "../../../shared/math/types/vec3";
 
 let serverObjectIdCounter = 0;
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
-function canUserModifyObject(userID: string, obj: ObjectSpawnParams): boolean
+function canUserModifyObject(userID: string, obj: AddObjectSignal): boolean
 {
     if (obj.sourceUserID === userID)
         return true;
@@ -34,7 +37,7 @@ function canUserModifyObject(userID: string, obj: ObjectSpawnParams): boolean
     return false;
 }
 
-function markDirtyIfPersistent(obj: ObjectSpawnParams, roomID: string): void
+function markDirtyIfPersistent(obj: AddObjectSignal, roomID: string): void
 {
     const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
     if (config.persistent)
@@ -50,11 +53,11 @@ export function generateObjectId(): string
     return `s${++serverObjectIdCounter}`;
 }
 
-export function addObject(socketUserContext: SocketUserContext, objectSpawnParams: ObjectSpawnParams)
+export function addObject(socketUserContext: SocketUserContext, addObjectSignal: AddObjectSignal)
 {
     const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
-    const objectId = objectSpawnParams.objectId;
+    const objectId = addObjectSignal.objectId;
 
     console.log(`RoomManager.addObject :: roomID = ${roomID}, userID = ${user.id}, objectId = ${objectId}`);
     if (roomID == undefined)
@@ -73,17 +76,17 @@ export function addObject(socketUserContext: SocketUserContext, objectSpawnParam
         console.error(`RoomManager.addObject :: Object already exists (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-    roomRuntimeMemory.room.objectById[objectId] = objectSpawnParams;
+    roomRuntimeMemory.room.objectById[objectId] = addObjectSignal;
 
-    const colliderState = objectSpawnParams.getObjectColliderState();
+    const colliderState = addObjectSignal.getObjectColliderState();
     if (colliderState)
-        PhysicsManager.addObject(roomID, objectId, objectSpawnParams.objectTypeIndex, colliderState);
+        PhysicsManager.addObject(roomID, objectId, addObjectSignal.objectTypeIndex, colliderState);
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (!socketRoomContext)
         console.error(`RoomManager.addObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
-        socketRoomContext.multicastSignal("objectSpawnParams", objectSpawnParams, user.id);
+        socketRoomContext.multicastSignal("addObjectSignal", addObjectSignal, user.id);
 }
 
 export function removeObject(socketUserContext: SocketUserContext, objectId: string)
@@ -102,48 +105,48 @@ export function removeObject(socketUserContext: SocketUserContext, objectId: str
         console.error(`RoomManager.removeObject :: RoomRuntimeMemory doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-    const objectSpawnParams = roomRuntimeMemory.room.objectById[objectId];
-    if (objectSpawnParams == undefined)
+    const addObjectSignal = roomRuntimeMemory.room.objectById[objectId];
+    if (addObjectSignal == undefined)
     {
         console.error(`RoomManager.removeObject :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
     delete roomRuntimeMemory.room.objectById[objectId];
 
-    const colliderState = objectSpawnParams.getObjectColliderState();
+    const colliderState = addObjectSignal.getObjectColliderState();
     if (colliderState)
         PhysicsManager.removeObject(roomID, objectId);
 
-    const despawnParams = new ObjectDespawnParams(roomID, objectId);
+    const removeSignal = new RemoveObjectSignal(roomID, objectId);
 
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (!socketRoomContext)
         console.error(`RoomManager.removeObject :: SocketRoomContext not found (roomID = ${roomID})`);
     else
-        socketRoomContext.multicastSignal("objectDespawnParams", despawnParams, user.id);
+        socketRoomContext.multicastSignal("removeObjectSignal", removeSignal, user.id);
 }
 
-// Handle client-sent objectSpawnParams (e.g. adding a canvas)
-export function handleObjectSpawn(socketUserContext: SocketUserContext, params: ObjectSpawnParams)
+// Handle client-sent addObjectSignal (e.g. adding a canvas)
+export function onAddObjectSignalReceived(socketUserContext: SocketUserContext, params: AddObjectSignal)
 {
     const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
     if (!roomID)
     {
-        console.error(`RoomManager.handleObjectSpawn :: RoomID not found (userID = ${user.id})`);
+        console.error(`RoomManager.onAddObjectSignalReceived :: RoomID not found (userID = ${user.id})`);
         return;
     }
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
     if (!roomRuntimeMemory)
     {
-        console.error(`RoomManager.handleObjectSpawn :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        console.error(`RoomManager.onAddObjectSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
         return;
     }
     const room = roomRuntimeMemory.room;
 
     if (!canUserModifyObject(user.id, params))
     {
-        console.warn(`(RoomObjectUtil) Rejected objectSpawnParams from unauthorized user (userID = ${user.id})`);
+        console.warn(`(RoomObjectUtil) Rejected addObjectSignal from unauthorized user (userID = ${user.id})`);
         return;
     }
 
@@ -154,9 +157,9 @@ export function handleObjectSpawn(socketUserContext: SocketUserContext, params: 
             .filter(obj => obj.objectTypeIndex === canvasTypeIndex).length;
         if (canvasCount >= MAX_CANVASES_PER_ROOM)
         {
-            console.error(`handleObjectSpawn :: Canvas limit reached (${MAX_CANVASES_PER_ROOM}) in room ${room.id}`);
-            socketUserContext.addPendingSignalToUser("objectDespawnParams",
-                new ObjectDespawnParams(room.id, params.objectId));
+            console.error(`onAddObjectSignalReceived :: Canvas limit reached (${MAX_CANVASES_PER_ROOM}) in room ${room.id}`);
+            socketUserContext.addPendingSignalToUser("removeObjectSignal",
+                new RemoveObjectSignal(room.id, params.objectId));
             return;
         }
     }
@@ -165,9 +168,9 @@ export function handleObjectSpawn(socketUserContext: SocketUserContext, params: 
     const expectedObjectId = `p${room.lastObjectId + 1}`;
     if (params.objectId !== expectedObjectId)
     {
-        console.error(`handleObjectSpawn :: ObjectId mismatch (expected=${expectedObjectId}, received=${params.objectId})`);
-        socketUserContext.addPendingSignalToUser("objectDespawnParams",
-            new ObjectDespawnParams(room.id, params.objectId));
+        console.error(`onAddObjectSignalReceived :: ObjectId mismatch (expected=${expectedObjectId}, received=${params.objectId})`);
+        socketUserContext.addPendingSignalToUser("removeObjectSignal",
+            new RemoveObjectSignal(room.id, params.objectId));
         return;
     }
 
@@ -175,9 +178,9 @@ export function handleObjectSpawn(socketUserContext: SocketUserContext, params: 
     const t = params.transform;
     if (!ObjectUpdateUtil.canAddObject(room, params.objectTypeIndex, t.pos, t.dir))
     {
-        console.error(`handleObjectSpawn :: Placement validation failed (objectId=${params.objectId})`);
-        socketUserContext.addPendingSignalToUser("objectDespawnParams",
-            new ObjectDespawnParams(room.id, params.objectId));
+        console.error(`onAddObjectSignalReceived :: Placement validation failed (objectId=${params.objectId})`);
+        socketUserContext.addPendingSignalToUser("removeObjectSignal",
+            new RemoveObjectSignal(room.id, params.objectId));
         return;
     }
 
@@ -195,36 +198,36 @@ export function handleObjectSpawn(socketUserContext: SocketUserContext, params: 
     // Broadcast to other clients
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (socketRoomContext)
-        socketRoomContext.multicastSignal("objectSpawnParams", params, user.id);
+        socketRoomContext.multicastSignal("addObjectSignal", params, user.id);
 }
 
-// Handle client-sent objectDespawnParams (e.g. removing a canvas)
-export function handleObjectDespawn(socketUserContext: SocketUserContext, params: ObjectDespawnParams)
+// Handle client-sent removeObjectSignal (e.g. removing a canvas)
+export function onRemoveObjectSignalReceived(socketUserContext: SocketUserContext, params: RemoveObjectSignal)
 {
     const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
     if (!roomID)
     {
-        console.error(`RoomManager.handleObjectDespawn :: RoomID not found (userID = ${user.id})`);
+        console.error(`RoomManager.onRemoveObjectSignalReceived :: RoomID not found (userID = ${user.id})`);
         return;
     }
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
     if (!roomRuntimeMemory)
     {
-        console.error(`RoomManager.handleObjectDespawn :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        console.error(`RoomManager.onRemoveObjectSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
         return;
     }
     const room = roomRuntimeMemory.room;
     const existingObj = room.objectById[params.objectId];
     if (!existingObj)
     {
-        console.error(`RoomManager.handleObjectDespawn :: Object not found (objectId = ${params.objectId})`);
+        console.error(`RoomManager.onRemoveObjectSignalReceived :: Object not found (objectId = ${params.objectId})`);
         return;
     }
 
     if (!canUserModifyObject(user.id, existingObj))
     {
-        console.warn(`(RoomObjectUtil) Rejected objectDespawnParams from unauthorized user (userID = ${user.id})`);
+        console.warn(`(RoomObjectUtil) Rejected removeObjectSignal from unauthorized user (userID = ${user.id})`);
         return;
     }
 
@@ -240,23 +243,23 @@ export function handleObjectDespawn(socketUserContext: SocketUserContext, params
     // Broadcast to other clients
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (socketRoomContext)
-        socketRoomContext.multicastSignal("objectDespawnParams", params, user.id);
+        socketRoomContext.multicastSignal("removeObjectSignal", params, user.id);
 }
 
-// Handle client-sent objectMetadataSetParams
-export function handleObjectMetadataSet(socketUserContext: SocketUserContext, params: ObjectMetadataSetParams)
+// Handle client-sent setObjectMetadataSignal
+export function onSetObjectMetadataSignalReceived(socketUserContext: SocketUserContext, params: SetObjectMetadataSignal)
 {
     const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
     if (!roomID)
     {
-        console.error(`RoomManager.handleObjectMetadataSet :: RoomID not found (userID = ${user.id})`);
+        console.error(`RoomManager.onSetObjectMetadataSignalReceived :: RoomID not found (userID = ${user.id})`);
         return;
     }
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
     if (!roomRuntimeMemory)
     {
-        console.error(`RoomManager.handleObjectMetadataSet :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        console.error(`RoomManager.onSetObjectMetadataSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
         return;
     }
     const room = roomRuntimeMemory.room;
@@ -264,13 +267,13 @@ export function handleObjectMetadataSet(socketUserContext: SocketUserContext, pa
     const existingObj = room.objectById[params.objectId];
     if (!existingObj)
     {
-        console.error(`RoomManager.handleObjectMetadataSet :: Object not found (objectId = ${params.objectId})`);
+        console.error(`RoomManager.onSetObjectMetadataSignalReceived :: Object not found (objectId = ${params.objectId})`);
         return;
     }
 
     if (!canUserModifyObject(user.id, existingObj))
     {
-        console.warn(`(RoomObjectUtil) Rejected objectMetadataSetParams from unauthorized user (userID = ${user.id})`);
+        console.warn(`(RoomObjectUtil) Rejected setObjectMetadataSignal from unauthorized user (userID = ${user.id})`);
         return;
     }
 
@@ -280,7 +283,7 @@ export function handleObjectMetadataSet(socketUserContext: SocketUserContext, pa
     const obj = ObjectUpdateUtil.setObjectMetadata(room, params.objectId, params.metadataKey, params.metadataValue);
     if (!obj)
     {
-        console.error(`RoomManager.handleObjectMetadataSet :: Failed (objectId = ${params.objectId})`);
+        console.error(`RoomManager.onSetObjectMetadataSignalReceived :: Failed (objectId = ${params.objectId})`);
         return;
     }
 
@@ -289,60 +292,83 @@ export function handleObjectMetadataSet(socketUserContext: SocketUserContext, pa
     // Broadcast to other clients
     const socketRoomContext = RoomManager.socketRoomContexts[roomID];
     if (socketRoomContext)
-        socketRoomContext.multicastSignal("objectMetadataSetParams", params, user.id);
+        socketRoomContext.multicastSignal("setObjectMetadataSignal", params, user.id);
 }
 
-// Handle client-sent objectMoveParams (e.g. moving a canvas)
-export function handleObjectMove(socketUserContext: SocketUserContext, params: ObjectMoveParams)
+// Handle client-sent setObjectTransformSignal (object transform sync)
+export function updateObjectTransform(socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform)
 {
     const user = socketUserContext.user;
     const roomID = RoomManager.currentRoomIDByUserID[user.id];
-    if (!roomID)
+    if (roomID == undefined)
     {
-        console.error(`RoomManager.handleObjectMove :: RoomID not found (userID = ${user.id})`);
+        console.error(`RoomManager.updateObjectTransform :: RoomID not found (userID = ${user.id})`);
         return;
     }
     const roomRuntimeMemory = RoomManager.roomRuntimeMemories[roomID];
-    if (!roomRuntimeMemory)
+    if (roomRuntimeMemory == undefined)
     {
-        console.error(`RoomManager.handleObjectMove :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        console.error(`RoomManager.updateObjectTransform :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
         return;
     }
-    const room = roomRuntimeMemory.room;
-
-    const existingObj = room.objectById[params.objectId];
-    if (!existingObj)
+    const obj = roomRuntimeMemory.room.objectById[objectId];
+    if (obj == undefined)
     {
-        console.error(`RoomManager.handleObjectMove :: Object not found (objectId = ${params.objectId})`);
+        console.error(`RoomManager.updateObjectTransform :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
-
-    if (!canUserModifyObject(user.id, existingObj))
+    if (obj.sourceUserID != user.id)
     {
-        console.warn(`(RoomObjectUtil) Rejected objectMoveParams from unauthorized user (userID = ${user.id})`);
+        console.error(`RoomManager.updateObjectTransform :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
         return;
     }
 
-    const moved = ObjectUpdateUtil.moveObject(room, params.objectId, params.dx, params.dy, params.dz);
-    if (!moved)
+    const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
+    const hasDynamicCollider = config.components.spawnedByAny?.dynamicCollider != null;
+
+    const targetPos: Vec3 = { ...transform.pos };
+    const targetDir: Vec3 = { ...transform.dir };
+
+    if (hasDynamicCollider)
     {
-        console.error(`RoomManager.handleObjectMove :: Failed (objectId = ${params.objectId})`);
-        return;
-    }
+        const result = PhysicsManager.trySetTransform(roomID, objectId, obj.objectTypeIndex, targetPos, targetDir);
+        transform.pos.x = result.resolvedPos.x;
+        transform.pos.y = result.resolvedPos.y;
+        transform.pos.z = result.resolvedPos.z;
+        Object.assign(obj.transform, transform);
 
-    // Update physics
-    if (PhysicsManager.hasObject(room.id, params.objectId))
+        if (result.desyncDetected)
+        {
+            const desyncSignal = new ResolveObjectTransformDesyncSignal(objectId, result.resolvedPos);
+            const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+            if (!socketRoomContext)
+                console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+            else // Broadcast to everyone.
+                socketRoomContext.multicastSignal("resolveObjectTransformDesyncSignal", desyncSignal);
+        }
+        else
+        {
+            const syncSignal = new SetObjectTransformSignal(objectId, transform);
+            const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+            if (!socketRoomContext)
+                console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+            else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
+                socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
+        }
+    }
+    else
     {
-        PhysicsManager.removeObject(room.id, params.objectId);
-        const colliderState = moved.getObjectColliderState();
-        if (colliderState)
-            PhysicsManager.addObject(room.id, params.objectId, moved.objectTypeIndex, colliderState);
+        // No dynamic collider - force set the transform without physics validation.
+        PhysicsManager.forceSetTransform(roomID, objectId, obj.objectTypeIndex, targetPos, targetDir);
+        Object.assign(obj.transform, transform);
+
+        markDirtyIfPersistent(obj, roomID);
+
+        const syncSignal = new SetObjectTransformSignal(objectId, transform);
+        const socketRoomContext = RoomManager.socketRoomContexts[roomID];
+        if (!socketRoomContext)
+            console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+        else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
+            socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
     }
-
-    markDirtyIfPersistent(moved, roomID);
-
-    // Broadcast to other clients
-    const socketRoomContext = RoomManager.socketRoomContexts[roomID];
-    if (socketRoomContext)
-        socketRoomContext.multicastSignal("objectMoveParams", params, user.id);
 }

@@ -3,7 +3,7 @@ import EncodableByteString from "../../../networking/types/encodableByteString";
 import EncodableData from "../../../networking/types/encodableData";
 import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 
-export default class RemoveVoxelBlockParams extends EncodableData
+export default class RemoveVoxelBlockSignal extends EncodableData
 {
     roomID: string;
     quadIndex: number;
@@ -25,6 +25,6 @@ export default class RemoveVoxelBlockParams extends EncodableData
     {
         const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
-        return new RemoveVoxelBlockParams(roomID, quadIndex);
+        return new RemoveVoxelBlockSignal(roomID, quadIndex);
     }
 }

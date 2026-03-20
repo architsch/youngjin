@@ -27,7 +27,7 @@ Reference: @views/page/dynamic/mypage.ejs , @src/server/networking/router/api/us
     4. It attaches the `User` object to `socket.handshake.auth` for use by the connection handler.
     5. If any step fails (no cookie, invalid token, user not found), the connection is rejected with an error URL pointing to an auth-failure page.
 9. Once the socket connection is established, the server creates a `SocketUserContext`, registers the user in `UserManager`, and joins the user to a room (see `user_state_management.md` for room-joining details).
-10. The server unicasts the room's `RoomRuntimeMemory` to the client, and the client initializes the game based on it.
+10. The server unicasts a `RoomChangedSignal` (which bundles the room's `RoomRuntimeMemory` and the user's current role) to the client, and the client initializes the game based on it.
 
 ## Client Sign-In & Sign-Up
 1. If the client (user) is playing as a guest, he/she can sign up by selecting one of the auth providers (such as Google OAuth2). The client calls `UserAPIClient.loginWithGoogle()`, which redirects the browser to the server's `/user/login_google` endpoint.

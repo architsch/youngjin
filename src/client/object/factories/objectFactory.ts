@@ -1,4 +1,4 @@
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import GameObject from "../types/gameObject";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import App from "../../app";
@@ -15,7 +15,7 @@ const ObjectFactory =
     createClientSideObject: (roomID: string, objectTypeIndex: number, transform: ObjectTransform, metadata: ObjectMetadata = {}): GameObject =>
     {
         const user = App.getUser();
-        const params = new ObjectSpawnParams(
+        const params = new AddObjectSignal(
             roomID,
             user.id,
             user.userName,
@@ -29,7 +29,7 @@ const ObjectFactory =
     },
     // This method is called when the client is instantiating an object
     // that belongs to the server.
-    createServerSideObject: (params: ObjectSpawnParams): GameObject =>
+    createServerSideObject: (params: AddObjectSignal): GameObject =>
     {
         const objectType = ObjectTypeConfigMap.getConfigByIndex(params.objectTypeIndex).objectType;
         return ObjectConstructorMap[objectType](params);

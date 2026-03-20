@@ -1,11 +1,11 @@
 import LogUtil from "../../../shared/system/util/logUtil";
-import UserCommandParams from "../../../shared/user/types/userCommandParams";
+import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import User from "../../../shared/user/types/user";
 import DBUserUtil from "../../db/util/dbUserUtil";
 
 const UserCommandUtil =
 {
-    handleCommand: async (user: User, params: UserCommandParams): Promise<void> =>
+    handleCommand: async (user: User, params: UserCommandSignal): Promise<void> =>
     {
         const words = params.message.split(" ");
         if (words.length == 0)
@@ -27,7 +27,7 @@ const UserCommandUtil =
     },
 }
 
-async function handleTutorialStepCommand(user: User, words: string[], params: UserCommandParams): Promise<void>
+async function handleTutorialStepCommand(user: User, words: string[], params: UserCommandSignal): Promise<void>
 {
     if (words.length < 2)
     {

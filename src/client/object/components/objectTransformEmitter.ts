@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
 import SocketsClient from "../../networking/client/socketsClient";
-import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
+import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
@@ -14,7 +14,7 @@ const minSyncAngle = 0.01;
 
 const vec3Temp = new THREE.Vector3();
 
-export default class ObjectSyncEmitter extends GameObjectComponent
+export default class ObjectTransformEmitter extends GameObjectComponent
 {
     private lastSyncTime: number = 0;
     private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
@@ -48,20 +48,20 @@ export default class ObjectSyncEmitter extends GameObjectComponent
 
                 vec3Temp.setFromEuler(this.lastSyncedRotation).normalize();
                 this.gameObject.obj.getWorldDirection(vec3Temp);
-                const params = new ObjectSyncParams(
+                const params = new SetObjectTransformSignal(
                     this.gameObject.params.objectId,
                     new ObjectTransform(
                         {x: this.lastSyncedPosition.x, y: this.lastSyncedPosition.y, z: this.lastSyncedPosition.z},
                         {x: vec3Temp.x, y: vec3Temp.y, z: vec3Temp.z}
                     )
                 );
-                SocketsClient.emitObjectSync(params);
-                //console.log(`(ObjectSyncEmitter) emitObjectSync :: ${JSON.stringify(params)}`);
+                SocketsClient.emitSetObjectTransformSignal(params);
+                //console.log(`(ObjectTransformEmitter) emitSetObjectTransformSignal :: ${JSON.stringify(params)}`);
             }
         }
     }
 
-    onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
+    onResolveObjectTransformDesyncSignalReceived(params: ResolveObjectTransformDesyncSignal): void
     {
         const p = params.resolvedPos;
         vec3Temp.set(p.x, p.y, p.z);

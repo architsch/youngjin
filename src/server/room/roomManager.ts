@@ -1,19 +1,10 @@
-import PhysicsManager from "../../shared/physics/physicsManager";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import Vec3 from "../../shared/math/types/vec3";
+import RoomChangedSignal from "../../shared/room/types/roomChangedSignal";
 import ObjectTransform from "../../shared/object/types/objectTransform";
-import ObjectDesyncResolveParams from "../../shared/object/types/objectDesyncResolveParams";
-import ObjectSyncParams from "../../shared/object/types/objectSyncParams";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import { addUserToRoom, getUserGameplayState, removeUserFromRoom } from "./util/roomUserUtil";
 import { loadRoom } from "./util/roomCoreUtil";
-import { handleObjectSpawn, handleObjectDespawn, handleObjectMetadataSet, handleObjectMove } from "./util/roomObjectUtil";
-import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock, setVoxelQuadTexture } from "./util/roomVoxelUtil";
-import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
-import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
-import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
-import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import UserGameplayState from "../user/types/userGameplayState";
@@ -151,89 +142,14 @@ const RoomManager =
             playerMetadata, userRole
         );
 
-        // Set the joining user's role on the shared RoomRuntimeMemory before unicasting.
-        // (Safe because Node.js is single-threaded and encode happens synchronously.)
-        roomRuntimeMemory.currentUserRole = userRole;
+        // Wrap the room memory and user role in a RoomChangedSignal and unicast to the joining user.
+        const roomChangedSignal = new RoomChangedSignal(roomRuntimeMemory, userRole);
         const socketRoomContext = socketRoomContexts[roomID];
         if (!socketRoomContext)
             console.error(`RoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
         else // Send the room data to the user who is added to the room.
-            socketRoomContext.unicastSignal("roomRuntimeMemory", roomRuntimeMemory, user.id);
+            socketRoomContext.unicastSignal("roomChangedSignal", roomChangedSignal, user.id);
         return true;
-    },
-    addVoxelBlock: (socketUserContext: SocketUserContext, params: AddVoxelBlockParams) =>
-    {
-        addVoxelBlock(socketUserContext, params);
-    },
-    moveVoxelBlock: (socketUserContext: SocketUserContext, params: MoveVoxelBlockParams) =>
-    {
-        moveVoxelBlock(socketUserContext, params);
-    },
-    removeVoxelBlock: (socketUserContext: SocketUserContext, params: RemoveVoxelBlockParams) =>
-    {
-        removeVoxelBlock(socketUserContext, params);
-    },
-    setVoxelQuadTexture: (socketUserContext: SocketUserContext, params: SetVoxelQuadTextureParams) =>
-    {
-        setVoxelQuadTexture(socketUserContext, params);
-    },
-    handleObjectSpawn,
-    handleObjectDespawn,
-    handleObjectMetadataSet,
-    handleObjectMove,
-    updateObjectTransform: (socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform) =>
-    {
-        const user = socketUserContext.user;
-        const roomID = currentRoomIDByUserID[user.id];
-        if (roomID == undefined)
-        {
-            console.error(`RoomManager.updateObjectTransform :: RoomID not found (userID = ${user.id})`);
-            return;
-        }
-        const roomRuntimeMemory = roomRuntimeMemories[roomID];
-        if (roomRuntimeMemory == undefined)
-        {
-            console.error(`RoomManager.updateObjectTransform :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
-            return;
-        }
-        const obj = roomRuntimeMemory.room.objectById[objectId];
-        if (obj == undefined)
-        {
-            console.error(`RoomManager.updateObjectTransform :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
-            return;
-        }
-        if (obj.sourceUserID != user.id)
-        {
-            console.error(`RoomManager.updateObjectTransform :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
-            return;
-        }
-
-        const targetPos: Vec3 = { ...transform.pos };
-        const targetDir: Vec3 = { ...transform.dir };
-        const result = PhysicsManager.trySetTransform(roomID, objectId, obj.objectTypeIndex, targetPos, targetDir);
-        transform.pos.x = result.resolvedPos.x;
-        transform.pos.y = result.resolvedPos.y;
-        transform.pos.z = result.resolvedPos.z;
-        Object.assign(obj.transform, transform);
-
-        if (result.desyncDetected)
-        {
-            const params = new ObjectDesyncResolveParams(objectId, result.resolvedPos);
-            const socketRoomContext = socketRoomContexts[roomID];
-            if (!socketRoomContext)
-                console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
-            else // Broadcast to everyone.
-                socketRoomContext.multicastSignal("objectDesyncResolveParams", params);
-        }
-        else
-        {
-            const params = new ObjectSyncParams(objectId, transform);
-            const socketRoomContext = socketRoomContexts[roomID];
-            if (!socketRoomContext)
-                console.error(`RoomManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
-            else // Broadcast to everyone except the one who sent the objectSyncParams.
-                socketRoomContext.multicastSignal("objectSyncParams", params, user.id);
-        }
     },
 }
 

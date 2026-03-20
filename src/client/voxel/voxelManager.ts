@@ -1,14 +1,14 @@
 import { voxelQuadSelectionObservable } from "../system/clientObservables";
-import MoveVoxelBlockParams from "../../shared/voxel/types/update/moveVoxelBlockParams";
+import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import Room from "../../shared/room/types/room";
 import ObjectManager from "../object/objectManager";
 import App from "../app";
 import VoxelBlockUpdateUtil from "../../shared/voxel/util/voxelBlockUpdateUtil";
 import VoxelQuadUpdateUtil from "../../shared/voxel/util/voxelQuadUpdateUtil";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
-import AddVoxelBlockParams from "../../shared/voxel/types/update/addVoxelBlockParams";
-import RemoveVoxelBlockParams from "../../shared/voxel/types/update/removeVoxelBlockParams";
-import SetVoxelQuadTextureParams from "../../shared/voxel/types/update/setVoxelQuadTextureParams";
+import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
+import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
+import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import { NUM_VOXEL_QUADS_PER_ROOM } from "../../shared/system/sharedConstants";
 import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
@@ -19,8 +19,8 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const VoxelManager =
 {
-    onAddVoxelBlockReceived: async (params: AddVoxelBlockParams) => {
-        const success = await waitUntilSignalProcessingReady("addVoxelBlockParams",
+    onAddVoxelBlockSignalReceived: async (params: AddVoxelBlockSignal) => {
+        const success = await waitUntilSignalProcessingReady("addVoxelBlockSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
@@ -30,8 +30,8 @@ const VoxelManager =
         refreshSelection();
     },
 
-    onMoveVoxelBlockReceived: async (params: MoveVoxelBlockParams) => {
-        const success = await waitUntilSignalProcessingReady("moveVoxelBlockParams",
+    onMoveVoxelBlockSignalReceived: async (params: MoveVoxelBlockSignal) => {
+        const success = await waitUntilSignalProcessingReady("moveVoxelBlockSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
@@ -41,8 +41,8 @@ const VoxelManager =
         refreshSelection();
     },
 
-    onRemoveVoxelBlockReceived: async (params: RemoveVoxelBlockParams) => {
-        const success = await waitUntilSignalProcessingReady("removeVoxelBlockParams",
+    onRemoveVoxelBlockSignalReceived: async (params: RemoveVoxelBlockSignal) => {
+        const success = await waitUntilSignalProcessingReady("removeVoxelBlockSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;
@@ -52,8 +52,8 @@ const VoxelManager =
         refreshSelection();
     },
 
-    onSetVoxelQuadTextureReceived: async (params: SetVoxelQuadTextureParams) => {
-        const success = await waitUntilSignalProcessingReady("setVoxelQuadTextureParams",
+    onSetVoxelQuadTextureSignalReceived: async (params: SetVoxelQuadTextureSignal) => {
+        const success = await waitUntilSignalProcessingReady("setVoxelQuadTextureSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
         if (!success)
             return;

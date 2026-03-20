@@ -11,7 +11,7 @@ import { MAX_CANVASES_PER_ROOM, MID_ROOM_Y } from "../../../../shared/system/sha
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import ObjectFactory from "../../../object/factories/objectFactory";
 import ObjectManager from "../../../object/objectManager";
-import ObjectSpawnParams from "../../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
 
@@ -77,7 +77,7 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
 
     // Add the object locally (generates objectId and increments counter)
     const objectId = `p${++room.lastObjectId}`;
-    const objectSpawnParams = new ObjectSpawnParams(
+    const objectSpawnParams = new AddObjectSignal(
         room.id, "", "", objectTypeIndex,
         objectId,
         new ObjectTransform({x, y, z}, {x: dirX, y: dirY, z: dirZ}),
@@ -92,7 +92,7 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
     ObjectManager.speculativeSpawnObjectIds.add(objectId);
 
     // Send to server
-    SocketsClient.emitObjectSpawn(objectSpawnParams);
+    SocketsClient.emitAddObjectSignal(objectSpawnParams);
 
     // Spawn the game object locally
     const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);

@@ -4,7 +4,7 @@ import EncodableData from "../../../networking/types/encodableData";
 import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawSignedByteNumber from "../../../networking/types/encodableRawSignedByteNumber";
 
-export default class MoveVoxelBlockParams extends EncodableData
+export default class MoveVoxelBlockSignal extends EncodableData
 {
     roomID: string;
     quadIndex: number;
@@ -39,6 +39,6 @@ export default class MoveVoxelBlockParams extends EncodableData
         const rowOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
         const colOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
         const collisionLayerOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
-        return new MoveVoxelBlockParams(roomID, quadIndex, rowOffset, colOffset, collisionLayerOffset);
+        return new MoveVoxelBlockSignal(roomID, quadIndex, rowOffset, colOffset, collisionLayerOffset);
     }
 }

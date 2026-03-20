@@ -3,7 +3,7 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import ObjectMetadataSetParams from "../../../shared/object/types/objectMetadataSetParams";
+import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import SocketsClient from "../../networking/client/socketsClient";
 import App from "../../app";
 
@@ -60,10 +60,10 @@ export default class SpeechBubble extends GameObjectComponent
                 console.error("SpeechBubble.setMessage :: Current room not found");
                 return;
             }
-            const params = new ObjectMetadataSetParams(
+            const params = new SetObjectMetadataSignal(
                 room.id, this.gameObject.params.objectId,
                 ObjectMetadataKeyEnumMap.SentMessage, message);
-            SocketsClient.emitObjectMetadataSet(params);
+            SocketsClient.emitSetObjectMetadataSignal(params);
         }
     }
 

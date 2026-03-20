@@ -4,7 +4,7 @@ import EncodableByteString from "../../networking/types/encodableByteString";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import { UserRole } from "./userRole";
 
-export default class UserRoleUpdateParams extends EncodableData
+export default class SetUserRoleSignal extends EncodableData
 {
     userID: string;
     roomID: string;
@@ -30,6 +30,6 @@ export default class UserRoleUpdateParams extends EncodableData
         const userID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const userRole = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        return new UserRoleUpdateParams(userID, roomID, userRole);
+        return new SetUserRoleSignal(userID, roomID, userRole);
     }
 }

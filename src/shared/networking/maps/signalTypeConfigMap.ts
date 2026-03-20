@@ -1,17 +1,16 @@
-import ObjectDespawnParams from "../../object/types/objectDespawnParams";
-import ObjectDesyncResolveParams from "../../object/types/objectDesyncResolveParams";
-import ObjectMetadataSetParams from "../../object/types/objectMetadataSetParams";
-import ObjectMoveParams from "../../object/types/objectMoveParams";
-import UserRoleUpdateParams from "../../user/types/userRoleUpdateParams";
-import ObjectSpawnParams from "../../object/types/objectSpawnParams";
-import ObjectSyncParams from "../../object/types/objectSyncParams";
-import UserCommandParams from "../../user/types/userCommandParams";
-import RoomChangeRequestParams from "../../room/types/roomChangeRequestParams";
-import RoomRuntimeMemory from "../../room/types/roomRuntimeMemory";
-import AddVoxelBlockParams from "../../voxel/types/update/addVoxelBlockParams";
-import MoveVoxelBlockParams from "../../voxel/types/update/moveVoxelBlockParams";
-import RemoveVoxelBlockParams from "../../voxel/types/update/removeVoxelBlockParams";
-import SetVoxelQuadTextureParams from "../../voxel/types/update/setVoxelQuadTextureParams";
+import RemoveObjectSignal from "../../object/types/removeObjectSignal";
+import ResolveObjectTransformDesyncSignal from "../../object/types/resolveObjectTransformDesyncSignal";
+import SetObjectMetadataSignal from "../../object/types/setObjectMetadataSignal";
+import SetUserRoleSignal from "../../user/types/setUserRoleSignal";
+import AddObjectSignal from "../../object/types/addObjectSignal";
+import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
+import UserCommandSignal from "../../user/types/userCommandSignal";
+import RequestRoomChangeSignal from "../../room/types/requestRoomChangeSignal";
+import RoomChangedSignal from "../../room/types/roomChangedSignal";
+import AddVoxelBlockSignal from "../../voxel/types/update/addVoxelBlockSignal";
+import MoveVoxelBlockSignal from "../../voxel/types/update/moveVoxelBlockSignal";
+import RemoveVoxelBlockSignal from "../../voxel/types/update/removeVoxelBlockSignal";
+import SetVoxelQuadTextureSignal from "../../voxel/types/update/setVoxelQuadTextureSignal";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
 
@@ -29,129 +28,120 @@ import SignalTypeConfig from "../types/signalTypeConfig";
 const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
     [0, { // Bidirectional (client <-> server)
         // (Overall Flow):
-        // Client can send to request despawning an object. Server validates and broadcasts to others.
-        // Server can also announce that an object has despawned (e.g. when a player leaves).
-        signalType: "objectDespawnParams",
+        // Client can send to request removing an object. Server validates and broadcasts to others.
+        // Server can also announce that an object has been removed (e.g. when a player leaves).
+        signalType: "removeObjectSignal",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => ObjectDespawnParams.decode(bufferState),
+        decode: (bufferState: BufferState) => RemoveObjectSignal.decode(bufferState),
     }],
     [1, { // Unidirectional (client <- server)
         // (Overall Flow):
         // When a client-side PhysicsObject is not in sync with the corresponding server-side PhysicsObject, the server reports this incident to the client who owns that object.
         // The desynced client adjusts the problematic PhysicsObject to let it sync up with the server-side PhysicsObject.
-        signalType: "objectDesyncResolveParams",
+        signalType: "resolveObjectTransformDesyncSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 0, // should be 0 because, even if a signal fails to be applied immediately due to circumstances, a subsequent sync-up signal will resolve the discrepancy in the object's transform anyways.
-        decode: (bufferState: BufferState) => ObjectDesyncResolveParams.decode(bufferState),
+        decode: (bufferState: BufferState) => ResolveObjectTransformDesyncSignal.decode(bufferState),
     }],
     [3, { // Bidirectional (client <-> server)
         // (Overall Flow):
-        // Client can send to request spawning an object. Server validates and broadcasts to others.
-        // Server can also announce that an object has spawned (e.g. when a player joins).
-        signalType: "objectSpawnParams",
+        // Client can send to request adding an object. Server validates and broadcasts to others.
+        // Server can also announce that an object has been added (e.g. when a player joins).
+        signalType: "addObjectSignal",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => ObjectSpawnParams.decode(bufferState),
+        decode: (bufferState: BufferState) => AddObjectSignal.decode(bufferState),
     }],
     [4, { // Bidirectional (client <-> server)
         // (Overall Flow):
         // Each client sends its own object's transform (e.g. position, direction) to the server.
         // The server broadcasts the received transform to the other clients.
-        signalType: "objectSyncParams",
+        signalType: "setObjectTransformSignal",
         minClientToServerSendInterval: 0, // should be 0 because object-syncing may happen at an extremely high frequency.
         maxClientSideReceptionPeriod: 0, // should be 0 because, even if a signal fails to be applied immediately due to circumstances, a subsequent sync-up signal will resolve the discrepancy in the object's transform anyways.
-        decode: (bufferState: BufferState) => ObjectSyncParams.decode(bufferState),
+        decode: (bufferState: BufferState) => SetObjectTransformSignal.decode(bufferState),
     }],
     [5, { // Unidirectional (client -> server)
         // (Overall Flow):
-        // The client sends its request to join a room to the server (i.e. "roomChangeRequestParams").
-        signalType: "roomChangeRequestParams",
+        // The client sends its request to join a room to the server (i.e. "requestRoomChangeSignal").
+        signalType: "requestRoomChangeSignal",
         minClientToServerSendInterval: 2000, // This is necessary because this signal may cost a DB query each time it gets sent.
         maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
-        decode: (bufferState: BufferState) => RoomChangeRequestParams.decode(bufferState),
+        decode: (bufferState: BufferState) => RequestRoomChangeSignal.decode(bufferState),
     }],
     [6, { // Unidirectional (client <- server)
         // (Overall Flow):
-        // The server processes the "roomChangeRequestParams" which was sent by the client.
-        // The server sends the room's "roomRuntimeMemory" to the client.
-        // The client receives the "roomRuntimeMemory" and loads the client-side instance of the room based on it.
-        signalType: "roomRuntimeMemory",
+        // The server processes the "requestRoomChangeSignal" which was sent by the client.
+        // The server sends the "roomChangedSignal" to the client.
+        // The client receives the "roomChangedSignal" and loads the client-side instance of the room based on it.
+        signalType: "roomChangedSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 0, // should be 0 because room-loading must be immediate on the client side.
-        decode: (bufferState: BufferState) => RoomRuntimeMemory.decode(bufferState),
+        decode: (bufferState: BufferState) => RoomChangedSignal.decode(bufferState),
     }],
     [7, { // Bidirectional (client <-> server)
         // (Overall Flow):
         // The client adds a voxel block and reports it to the server.
         // The server validates and broadcasts to other clients.
-        signalType: "addVoxelBlockParams",
+        signalType: "addVoxelBlockSignal",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => AddVoxelBlockParams.decode(bufferState),
+        decode: (bufferState: BufferState) => AddVoxelBlockSignal.decode(bufferState),
     }],
     [12, { // Bidirectional (client <-> server)
         // (Overall Flow):
         // The client moves a voxel block and reports it to the server.
         // The server validates and broadcasts to other clients.
-        signalType: "moveVoxelBlockParams",
+        signalType: "moveVoxelBlockSignal",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => MoveVoxelBlockParams.decode(bufferState),
+        decode: (bufferState: BufferState) => MoveVoxelBlockSignal.decode(bufferState),
     }],
     [13, { // Bidirectional (client <-> server)
         // (Overall Flow):
         // The client removes a voxel block and reports it to the server.
         // The server validates and broadcasts to other clients.
-        signalType: "removeVoxelBlockParams",
+        signalType: "removeVoxelBlockSignal",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => RemoveVoxelBlockParams.decode(bufferState),
+        decode: (bufferState: BufferState) => RemoveVoxelBlockSignal.decode(bufferState),
     }],
     [14, { // Bidirectional (client <-> server)
         // (Overall Flow):
         // The client sets a voxel quad's texture and reports it to the server.
         // The server validates and broadcasts to other clients.
-        signalType: "setVoxelQuadTextureParams",
+        signalType: "setVoxelQuadTextureSignal",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => SetVoxelQuadTextureParams.decode(bufferState),
+        decode: (bufferState: BufferState) => SetVoxelQuadTextureSignal.decode(bufferState),
     }],
     [8, { // Bidirectional (client <-> server)
         // (Overall Flow):
         // The client sets metadata on an object (e.g. canvas image URL) and reports it to the server.
         // The server validates and broadcasts to other clients.
-        signalType: "objectMetadataSetParams",
+        signalType: "setObjectMetadataSignal",
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => ObjectMetadataSetParams.decode(bufferState),
+        decode: (bufferState: BufferState) => SetObjectMetadataSignal.decode(bufferState),
     }],
     [9, { // Unidirectional (client -> server)
         // (Overall Flow):
         // The client sends a user-generated command (e.g. a command to increase the user's tutorialStep) to the server.
         // The server processes the command.
-        signalType: "userCommandParams",
+        signalType: "userCommandSignal",
         minClientToServerSendInterval: 1000, // This is necessary because this signal may cost a DB query each time it gets sent.
         maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
-        decode: (bufferState: BufferState) => UserCommandParams.decode(bufferState),
+        decode: (bufferState: BufferState) => UserCommandSignal.decode(bufferState),
     }],
     [10, { // Unidirectional (client <- server)
         // (Overall Flow):
         // The server updates a user's role in the current room and announces the update to all clients in the room.
         // Each client receives the update and applies the new role (e.g. updating UI permissions).
-        signalType: "userRoleUpdateParams",
+        signalType: "setUserRoleSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 2000, // this handles the case in which the role update arrives while the room is still loading on the client side, etc.
-        decode: (bufferState: BufferState) => UserRoleUpdateParams.decode(bufferState),
-    }],
-    [11, { // Bidirectional (client <-> server)
-        // (Overall Flow):
-        // The client moves a persistent object (e.g. canvas) and reports it to the server.
-        // The server validates and broadcasts to other clients.
-        signalType: "objectMoveParams",
-        minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => ObjectMoveParams.decode(bufferState),
+        decode: (bufferState: BufferState) => SetUserRoleSignal.decode(bufferState),
     }],
 ];
 

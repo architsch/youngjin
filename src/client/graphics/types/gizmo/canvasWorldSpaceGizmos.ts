@@ -6,7 +6,8 @@ import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceA
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
-import ObjectMoveParams from "../../../../shared/object/types/objectMoveParams";
+import SetObjectTransformSignal from "../../../../shared/object/types/setObjectTransformSignal";
+import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 
@@ -146,7 +147,14 @@ function tryMoveCanvas(selection: PersistentObjectSelection,
     persistentObjectSelectionObservable.notify();
 
     // Emit to server
-    SocketsClient.emitObjectMove(new ObjectMoveParams(room.id, objectId, dx, dy, dz));
+    SocketsClient.emitSetObjectTransformSignal(
+        new SetObjectTransformSignal(objectId,
+            new ObjectTransform(
+                {x: t.pos.x, y: t.pos.y, z: t.pos.z},
+                {x: t.dir.x, y: t.dir.y, z: t.dir.z}
+            )
+        )
+    );
 }
 
 // --- Observable listeners ---

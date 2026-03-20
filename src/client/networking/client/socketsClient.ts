@@ -1,27 +1,26 @@
 import { io, Socket } from "socket.io-client";
-import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
-import ObjectDespawnParams from "../../../shared/object/types/objectDespawnParams";
-import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
-import ObjectMetadataSetParams from "../../../shared/object/types/objectMetadataSetParams";
-import ObjectMoveParams from "../../../shared/object/types/objectMoveParams";
-import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
+import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
+import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
+import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
+import RoomChangedSignal from "../../../shared/room/types/roomChangedSignal";
 import ThingsPoolEnv from "../../system/types/thingsPoolEnv";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import EncodableArray from "../../../shared/networking/types/encodableArray";
 import EncodableRawByteNumber from "../../../shared/networking/types/encodableRawByteNumber";
 import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../../shared/networking/types/encodableData";
-import RoomChangeRequestParams from "../../../shared/room/types/roomChangeRequestParams";
+import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import { connectionStateObservable } from "../../system/clientObservables";
 import { tryStartClientProcess } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
-import SetVoxelQuadTextureParams from "../../../shared/voxel/types/update/setVoxelQuadTextureParams";
-import RemoveVoxelBlockParams from "../../../shared/voxel/types/update/removeVoxelBlockParams";
-import AddVoxelBlockParams from "../../../shared/voxel/types/update/addVoxelBlockParams";
-import MoveVoxelBlockParams from "../../../shared/voxel/types/update/moveVoxelBlockParams";
-import UserCommandParams from "../../../shared/user/types/userCommandParams";
-import UserRoleUpdateParams from "../../../shared/user/types/userRoleUpdateParams";
+import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
+import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
+import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
+import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
+import SetUserRoleSignal from "../../../shared/user/types/setUserRoleSignal";
 import App from "../../app";
 import ObjectManager from "../../object/objectManager";
 import VoxelManager from "../../voxel/voxelManager";
@@ -29,30 +28,28 @@ import VoxelManager from "../../voxel/voxelManager";
 let socket: Socket;
 
 const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
-    "roomRuntimeMemory": (data: EncodableData) =>
-        App.changeRoom(data as RoomRuntimeMemory),
-    "objectSyncParams": (data: EncodableData) =>
-        ObjectManager.onObjectSyncReceived(data as ObjectSyncParams),
-    "objectDesyncResolveParams": (data: EncodableData) =>
-        ObjectManager.onObjectDesyncResolveReceived(data as ObjectDesyncResolveParams),
-    "objectSpawnParams": (data: EncodableData) =>
-        ObjectManager.onObjectSpawnReceived(data as ObjectSpawnParams),
-    "objectDespawnParams": (data: EncodableData) =>
-        ObjectManager.onObjectDespawnReceived(data as ObjectDespawnParams),
-    "addVoxelBlockParams": (data: EncodableData) =>
-        VoxelManager.onAddVoxelBlockReceived(data as AddVoxelBlockParams),
-    "moveVoxelBlockParams": (data: EncodableData) =>
-        VoxelManager.onMoveVoxelBlockReceived(data as MoveVoxelBlockParams),
-    "removeVoxelBlockParams": (data: EncodableData) =>
-        VoxelManager.onRemoveVoxelBlockReceived(data as RemoveVoxelBlockParams),
-    "setVoxelQuadTextureParams": (data: EncodableData) =>
-        VoxelManager.onSetVoxelQuadTextureReceived(data as SetVoxelQuadTextureParams),
-    "objectMetadataSetParams": (data: EncodableData) =>
-        ObjectManager.onObjectMetadataSetReceived(data as ObjectMetadataSetParams),
-    "objectMoveParams": (data: EncodableData) =>
-        ObjectManager.onObjectMoveReceived(data as ObjectMoveParams),
-    "userRoleUpdateParams": (data: EncodableData) =>
-        App.onUserRoleUpdateReceived(data as UserRoleUpdateParams),
+    "roomChangedSignal": (data: EncodableData) =>
+        App.onRoomChangedSignalReceived(data as RoomChangedSignal),
+    "setObjectTransformSignal": (data: EncodableData) =>
+        ObjectManager.onSetObjectTransformSignalReceived(data as SetObjectTransformSignal),
+    "resolveObjectTransformDesyncSignal": (data: EncodableData) =>
+        ObjectManager.onResolveObjectTransformDesyncSignalReceived(data as ResolveObjectTransformDesyncSignal),
+    "addObjectSignal": (data: EncodableData) =>
+        ObjectManager.onAddObjectSignalReceived(data as AddObjectSignal),
+    "removeObjectSignal": (data: EncodableData) =>
+        ObjectManager.onRemoveObjectSignalReceived(data as RemoveObjectSignal),
+    "addVoxelBlockSignal": (data: EncodableData) =>
+        VoxelManager.onAddVoxelBlockSignalReceived(data as AddVoxelBlockSignal),
+    "moveVoxelBlockSignal": (data: EncodableData) =>
+        VoxelManager.onMoveVoxelBlockSignalReceived(data as MoveVoxelBlockSignal),
+    "removeVoxelBlockSignal": (data: EncodableData) =>
+        VoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
+    "setVoxelQuadTextureSignal": (data: EncodableData) =>
+        VoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
+    "setObjectMetadataSignal": (data: EncodableData) =>
+        ObjectManager.onSetObjectMetadataSignalReceived(data as SetObjectMetadataSignal),
+    "setUserRoleSignal": (data: EncodableData) =>
+        App.onSetUserRoleSignalReceived(data as SetUserRoleSignal),
 }
 
 const lastSignalSentTimes: {[signalType: string]: number} = {};
@@ -86,7 +83,7 @@ const SocketsClient =
             if (hasConnectedBefore)
             {
                 // Reconnection: start a new roomChange process so the server's
-                // auto-join flow (which sends roomRuntimeMemory) can complete.
+                // auto-join flow (which sends roomChangedSignal) can complete.
                 tryStartClientProcess("roomChange", 1, 0);
             }
             hasConnectedBefore = true;
@@ -149,45 +146,41 @@ const SocketsClient =
         });
     },
 
-    emitObjectSync: (params: ObjectSyncParams) => emitWhenReady("objectSyncParams", params),
-    emitUserCommand: (params: UserCommandParams) => emitWhenReady("userCommandParams", params),
-    tryEmitRoomChangeRequest: (params: RoomChangeRequestParams) => {
+    emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
+    emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),
+    tryEmitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
         if (tryStartClientProcess("roomChange", 1, 1))
-            emitWhenReady("roomChangeRequestParams", params);
+            emitWhenReady("requestRoomChangeSignal", params);
         else
             console.warn("Cannot change room because 'roomChange' process is ongoing.");
     },
-    emitMoveVoxelBlock: (params: MoveVoxelBlockParams) =>
+    emitMoveVoxelBlockSignal: (params: MoveVoxelBlockSignal) =>
     {
-        emitWhenReady("moveVoxelBlockParams", params);
+        emitWhenReady("moveVoxelBlockSignal", params);
     },
-    emitAddVoxelBlock: (params: AddVoxelBlockParams) =>
+    emitAddVoxelBlockSignal: (params: AddVoxelBlockSignal) =>
     {
-        emitWhenReady("addVoxelBlockParams", params);
+        emitWhenReady("addVoxelBlockSignal", params);
     },
-    emitRemoveVoxelBlock: (params: RemoveVoxelBlockParams) =>
+    emitRemoveVoxelBlockSignal: (params: RemoveVoxelBlockSignal) =>
     {
-        emitWhenReady("removeVoxelBlockParams", params);
+        emitWhenReady("removeVoxelBlockSignal", params);
     },
-    emitSetVoxelQuadTexture: (params: SetVoxelQuadTextureParams) =>
+    emitSetVoxelQuadTextureSignal: (params: SetVoxelQuadTextureSignal) =>
     {
-        emitWhenReady("setVoxelQuadTextureParams", params);
+        emitWhenReady("setVoxelQuadTextureSignal", params);
     },
-    emitObjectSpawn: (params: ObjectSpawnParams) =>
+    emitAddObjectSignal: (params: AddObjectSignal) =>
     {
-        emitWhenReady("objectSpawnParams", params);
+        emitWhenReady("addObjectSignal", params);
     },
-    emitObjectDespawn: (params: ObjectDespawnParams) =>
+    emitRemoveObjectSignal: (params: RemoveObjectSignal) =>
     {
-        emitWhenReady("objectDespawnParams", params);
+        emitWhenReady("removeObjectSignal", params);
     },
-    emitObjectMetadataSet: (params: ObjectMetadataSetParams) =>
+    emitSetObjectMetadataSignal: (params: SetObjectMetadataSignal) =>
     {
-        emitWhenReady("objectMetadataSetParams", params);
-    },
-    emitObjectMove: (params: ObjectMoveParams) =>
-    {
-        emitWhenReady("objectMoveParams", params);
+        emitWhenReady("setObjectMetadataSignal", params);
     },
 }
 

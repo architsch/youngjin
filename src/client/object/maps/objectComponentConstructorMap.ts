@@ -3,8 +3,8 @@ import FirstPersonController from "../components/firstPersonController";
 import GameObjectComponent from "../components/gameObjectComponent";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import ModelGraphics from "../components/modelGraphics";
-import ObjectSyncEmitter from "../components/objectSyncEmitter";
-import ObjectSyncReceiver from "../components/objectSyncReceiver";
+import ObjectTransformEmitter from "../components/objectTransformEmitter";
+import ObjectTransformReceiver from "../components/objectTransformReceiver";
 import PlayerProximityDetector from "../components/playerProximityDetector";
 import SpeechBubble from "../components/speechBubble";
 import StaticCollider from "../components/staticCollider";
@@ -23,10 +23,10 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new InstancedMeshGraphics(parentObject, componentConfig),
     "modelGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new ModelGraphics(parentObject, componentConfig),
-    "objectSyncEmitter": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new ObjectSyncEmitter(parentObject, componentConfig),
-    "objectSyncReceiver": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new ObjectSyncReceiver(parentObject, componentConfig),
+    "objectTransformEmitter": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new ObjectTransformEmitter(parentObject, componentConfig),
+    "objectTransformReceiver": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new ObjectTransformReceiver(parentObject, componentConfig),
     "speechBubble": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new SpeechBubble(parentObject, componentConfig),
     "playerProximityDetector": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>

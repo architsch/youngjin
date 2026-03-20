@@ -9,7 +9,7 @@ import App from "../../app";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
-import ObjectSpawnParams from "../../../shared/object/types/objectSpawnParams";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 
 let isDevMode: boolean | undefined;
 
@@ -21,7 +21,7 @@ export default class VoxelGameObject extends GameObject
 
     private voxel: Voxel | undefined;
 
-    constructor(params: ObjectSpawnParams)
+    constructor(params: AddObjectSignal)
     {
         super(params);
 

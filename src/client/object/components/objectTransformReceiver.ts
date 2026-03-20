@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import ObjectSyncParams from "../../../shared/object/types/objectSyncParams";
-import ObjectDesyncResolveParams from "../../../shared/object/types/objectDesyncResolveParams";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
@@ -13,7 +13,7 @@ const vec3Temp = new THREE.Vector3();
 const tempObj = new THREE.Object3D();
 tempObj.position.set(0, 0, 0);
 
-export default class ObjectSyncReceiver extends GameObjectComponent
+export default class ObjectTransformReceiver extends GameObjectComponent
 {
     private lastSyncTime: number = 0;
     private positionInterpRange: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3()];
@@ -24,7 +24,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         super(gameObject, componentConfig);
 
         if (this.gameObject.isMine())
-            throw new Error("User's own object is not allowed to have the ObjectSyncEmitter component.");
+            throw new Error("User's own object is not allowed to have the ObjectTransformReceiver component.");
 
         this.lastSyncTime = performance.now();
 
@@ -56,7 +56,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
             this.quaternionInterpRange[0], this.quaternionInterpRange[1], interpProgressNormalized);
     }
 
-    onObjectDesyncResolveReceived(params: ObjectDesyncResolveParams): void
+    onResolveObjectTransformDesyncSignalReceived(params: ResolveObjectTransformDesyncSignal): void
     {
         if (this.gameObject.params.objectId != params.objectId)
         {
@@ -73,7 +73,7 @@ export default class ObjectSyncReceiver extends GameObjectComponent
         this.lastSyncTime = performance.now();
     }
 
-    onObjectSyncReceived(params: ObjectSyncParams): void
+    onSetObjectTransformSignalReceived(params: SetObjectTransformSignal): void
     {
         if (this.gameObject.params.objectId != params.objectId)
         {

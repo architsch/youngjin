@@ -1,7 +1,7 @@
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
 import VoxelGrid from "../../voxel/types/voxelGrid";
-import ObjectSpawnParams from "../../object/types/objectSpawnParams";
+import AddObjectSignal from "../../object/types/addObjectSignal";
 import EncodableByteString from "../../networking/types/encodableByteString";
 import { RoomType } from "./roomType";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
@@ -16,14 +16,14 @@ export default class Room extends EncodableData
     ownerUserID: string;
     texturePackPath: string;
     voxelGrid: VoxelGrid;
-    objectById: {[objectId: string]: ObjectSpawnParams};
+    objectById: {[objectId: string]: AddObjectSignal};
     lastObjectId: number;
     dirty: boolean;
 
     constructor(id: string | undefined, roomType: RoomType, ownerUserID: string,
         texturePackPath: string,
         voxelGrid: VoxelGrid,
-        objectById: {[objectId: string]: ObjectSpawnParams} = {},
+        objectById: {[objectId: string]: AddObjectSignal} = {},
         lastObjectId: number = 0)
     {
         super();
@@ -67,11 +67,11 @@ export default class Room extends EncodableData
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
 
         const lastObjectId = (EncodableRaw4ByteNumber.decode(bufferState) as EncodableRaw4ByteNumber).n;
-        const objectArray = EncodableArray.decodeWithParams(bufferState, ObjectSpawnParams.decode, 65535) as EncodableArray;
-        const objectById: {[objectId: string]: ObjectSpawnParams} = {};
+        const objectArray = EncodableArray.decodeWithParams(bufferState, AddObjectSignal.decode, 65535) as EncodableArray;
+        const objectById: {[objectId: string]: AddObjectSignal} = {};
         for (const element of objectArray.arr)
         {
-            const obj = element as ObjectSpawnParams;
+            const obj = element as AddObjectSignal;
             objectById[obj.objectId] = obj;
         }
 
