@@ -12,12 +12,12 @@ import VoxelQuadUpdateUtil from "../../../shared/voxel/util/voxelQuadUpdateUtil"
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import RoomManager from "../roomManager";
-import { getRoom } from "./roomCoreUtil";
-import { getUserRole } from "./roomUserUtil";
+import RoomCoreUtil from "./roomCoreUtil";
+import RoomUserUtil from "./roomUserUtil";
 
 function canUserModifyVoxel(userID: string): boolean
 {
-    const role = getUserRole(userID);
+    const role = RoomUserUtil.getUserRole(userID);
     if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
         return true;
     const roomID = RoomManager.currentRoomIDByUserID[userID];
@@ -28,125 +28,6 @@ function canUserModifyVoxel(userID: string): boolean
             return true;
     }
     return false;
-}
-
-export function moveVoxelBlock(socketUserContext: SocketUserContext, params: MoveVoxelBlockSignal)
-{
-    if (!canUserModifyVoxel(socketUserContext.user.id))
-    {
-        console.warn(`(RoomVoxelUtil) Rejected moveVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
-        return;
-    }
-    const room = getRoom(socketUserContext);
-    if (!room)
-    {
-        console.error(`Voxel update failed (moveVoxelBlock) - room not found`);
-        return;
-    }
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
-
-    // Capture source block textures before any modification attempt, for potential recovery.
-    const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
-    if (!VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
-    {
-        console.error(`Voxel update failed (moveVoxelBlock) - params: ${JSON.stringify(params)}`);
-        sendMoveReversal(socketUserContext, room, params, sourceTextures);
-        return;
-    }
-    broadcast(socketUserContext, room, "moveVoxelBlockSignal", params);
-}
-
-export function addVoxelBlock(socketUserContext: SocketUserContext, params: AddVoxelBlockSignal)
-{
-    if (!canUserModifyVoxel(socketUserContext.user.id))
-    {
-        console.warn(`(RoomVoxelUtil) Rejected addVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
-        return;
-    }
-    const room = getRoom(socketUserContext);
-    if (!room)
-    {
-        console.error(`Voxel update failed (addVoxelBlock) - room not found`);
-        return;
-    }
-    if (!VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
-    {
-        console.error(`Voxel update failed (addVoxelBlock) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, "removeVoxelBlockSignal",
-            new RemoveVoxelBlockSignal(room.id, params.quadIndex));
-        return;
-    }
-    broadcast(socketUserContext, room, "addVoxelBlockSignal", params);
-}
-
-export function removeVoxelBlock(socketUserContext: SocketUserContext, params: RemoveVoxelBlockSignal)
-{
-    if (!canUserModifyVoxel(socketUserContext.user.id))
-    {
-        console.warn(`(RoomVoxelUtil) Rejected removeVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
-        return;
-    }
-    const room = getRoom(socketUserContext);
-    if (!room)
-    {
-        console.error(`Voxel update failed (removeVoxelBlock) - room not found`);
-        return;
-    }
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
-
-    // Capture textures before any modification attempt, for potential recovery.
-    const textures = captureBlockTextures(room, row, col, collisionLayer);
-    if (!VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex))
-    {
-        console.error(`Voxel update failed (removeVoxelBlock) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, "addVoxelBlockSignal",
-            new AddVoxelBlockSignal(room.id, params.quadIndex, textures));
-        return;
-    }
-    broadcast(socketUserContext, room, "removeVoxelBlockSignal", params);
-}
-
-export function setVoxelQuadTexture(socketUserContext: SocketUserContext, params: SetVoxelQuadTextureSignal)
-{
-    if (!canUserModifyVoxel(socketUserContext.user.id))
-    {
-        console.warn(`(RoomVoxelUtil) Rejected setVoxelQuadTextureParams from Visitor (userID = ${socketUserContext.user.id})`);
-        return;
-    }
-    const room = getRoom(socketUserContext);
-    if (!room)
-    {
-        console.error(`Voxel update failed (setVoxelQuadTexture) - room not found - params: ${JSON.stringify(params)}`);
-        return;
-    }
-    const quadIndex = params.quadIndex;
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-    if (!voxel)
-    {
-        console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - params: ${JSON.stringify(params)}`);
-        return;
-    }
-    const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-    // Capture old texture for potential recovery.
-    const oldTextureIndex = voxel.quadsMem.quads[quadIndex] & 0b01111111;
-
-    if (!VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
-    {
-        console.error(`Voxel update failed (setVoxelQuadTexture) - params: ${JSON.stringify(params)}`);
-        unicastToSender(socketUserContext, "setVoxelQuadTextureSignal",
-            new SetVoxelQuadTextureSignal(room.id, quadIndex, oldTextureIndex));
-        return;
-    }
-    broadcast(socketUserContext, room, "setVoxelQuadTextureSignal", params);
 }
 
 function captureBlockTextures(room: Room, row: number, col: number, collisionLayer: number): number[]
@@ -206,3 +87,124 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
         });
     }
 }
+
+const RoomVoxelUtil =
+{
+    moveVoxelBlock: (socketUserContext: SocketUserContext, params: MoveVoxelBlockSignal) =>
+    {
+        if (!canUserModifyVoxel(socketUserContext.user.id))
+        {
+            console.warn(`(RoomVoxelUtil) Rejected moveVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+            return;
+        }
+        const room = RoomCoreUtil.getRoom(socketUserContext);
+        if (!room)
+        {
+            console.error(`Voxel update failed (moveVoxelBlock) - room not found`);
+            return;
+        }
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+
+        // Capture source block textures before any modification attempt, for potential recovery.
+        const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
+        if (!VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
+        {
+            console.error(`Voxel update failed (moveVoxelBlock) - params: ${JSON.stringify(params)}`);
+            sendMoveReversal(socketUserContext, room, params, sourceTextures);
+            return;
+        }
+        broadcast(socketUserContext, room, "moveVoxelBlockSignal", params);
+    },
+    addVoxelBlock: (socketUserContext: SocketUserContext, params: AddVoxelBlockSignal) =>
+    {
+        if (!canUserModifyVoxel(socketUserContext.user.id))
+        {
+            console.warn(`(RoomVoxelUtil) Rejected addVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+            return;
+        }
+        const room = RoomCoreUtil.getRoom(socketUserContext);
+        if (!room)
+        {
+            console.error(`Voxel update failed (addVoxelBlock) - room not found`);
+            return;
+        }
+        if (!VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
+        {
+            console.error(`Voxel update failed (addVoxelBlock) - params: ${JSON.stringify(params)}`);
+            unicastToSender(socketUserContext, "removeVoxelBlockSignal",
+                new RemoveVoxelBlockSignal(room.id, params.quadIndex));
+            return;
+        }
+        broadcast(socketUserContext, room, "addVoxelBlockSignal", params);
+    },
+    removeVoxelBlock: (socketUserContext: SocketUserContext, params: RemoveVoxelBlockSignal) =>
+    {
+        if (!canUserModifyVoxel(socketUserContext.user.id))
+        {
+            console.warn(`(RoomVoxelUtil) Rejected removeVoxelBlockParams from Visitor (userID = ${socketUserContext.user.id})`);
+            return;
+        }
+        const room = RoomCoreUtil.getRoom(socketUserContext);
+        if (!room)
+        {
+            console.error(`Voxel update failed (removeVoxelBlock) - room not found`);
+            return;
+        }
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+
+        // Capture textures before any modification attempt, for potential recovery.
+        const textures = captureBlockTextures(room, row, col, collisionLayer);
+        if (!VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex))
+        {
+            console.error(`Voxel update failed (removeVoxelBlock) - params: ${JSON.stringify(params)}`);
+            unicastToSender(socketUserContext, "addVoxelBlockSignal",
+                new AddVoxelBlockSignal(room.id, params.quadIndex, textures));
+            return;
+        }
+        broadcast(socketUserContext, room, "removeVoxelBlockSignal", params);
+    },
+    setVoxelQuadTexture: (socketUserContext: SocketUserContext, params: SetVoxelQuadTextureSignal) =>
+    {
+        if (!canUserModifyVoxel(socketUserContext.user.id))
+        {
+            console.warn(`(RoomVoxelUtil) Rejected setVoxelQuadTextureParams from Visitor (userID = ${socketUserContext.user.id})`);
+            return;
+        }
+        const room = RoomCoreUtil.getRoom(socketUserContext);
+        if (!room)
+        {
+            console.error(`Voxel update failed (setVoxelQuadTexture) - room not found - params: ${JSON.stringify(params)}`);
+            return;
+        }
+        const quadIndex = params.quadIndex;
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const voxel = VoxelQueryUtil.getVoxel(room, row, col);
+        if (!voxel)
+        {
+            console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - params: ${JSON.stringify(params)}`);
+            return;
+        }
+        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
+        // Capture old texture for potential recovery.
+        const oldTextureIndex = voxel.quadsMem.quads[quadIndex] & 0b01111111;
+
+        if (!VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
+        {
+            console.error(`Voxel update failed (setVoxelQuadTexture) - params: ${JSON.stringify(params)}`);
+            unicastToSender(socketUserContext, "setVoxelQuadTextureSignal",
+                new SetVoxelQuadTextureSignal(room.id, quadIndex, oldTextureIndex));
+            return;
+        }
+        broadcast(socketUserContext, room, "setVoxelQuadTextureSignal", params);
+    },
+}
+
+export default RoomVoxelUtil;

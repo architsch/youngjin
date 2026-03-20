@@ -3,8 +3,8 @@ import RoomChangedSignal from "../../shared/room/types/roomChangedSignal";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
-import { addUserToRoom, getUserGameplayState, removeUserFromRoom } from "./util/roomUserUtil";
-import { loadRoom } from "./util/roomCoreUtil";
+import RoomUserUtil from "./util/roomUserUtil";
+import RoomCoreUtil from "./util/roomCoreUtil";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import UserGameplayState from "../user/types/userGameplayState";
@@ -69,7 +69,7 @@ const RoomManager =
                 console.error(`RoomManager.saveAllUserGameplayStates :: SocketUserContext not found (userID = ${userID})`);
                 continue;
             }
-            const gameplayState = getUserGameplayState(socketUserContext, roomRuntimeMemory);
+            const gameplayState = RoomUserUtil.getUserGameplayState(socketUserContext, roomRuntimeMemory);
             if (gameplayState)
                 gameplayStates.push(gameplayState);
         }
@@ -81,14 +81,14 @@ const RoomManager =
     {
         const user = socketUserContext.user;
         console.log(`RoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
-        await removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
+        await RoomUserUtil.removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
         if (!roomID)
             return false;
 
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
-            const mem = await loadRoom(roomID);
+            const mem = await RoomCoreUtil.loadRoom(roomID);
             if (mem)
                 roomRuntimeMemory = mem;
         }
@@ -137,7 +137,7 @@ const RoomManager =
         if (roomRuntimeMemory.room.ownerUserID === user.id)
             userRole = UserRoleEnumMap.Owner;
 
-        addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
+        RoomUserUtil.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
             new ObjectTransform({x: lastX, y: lastY, z: lastZ}, {x: lastDirX, y: lastDirY, z: lastDirZ}),
             playerMetadata, userRole
         );

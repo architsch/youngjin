@@ -10,7 +10,7 @@ import DBRoomUtil from "../../../db/util/dbRoomUtil";
 import DBUserRoomStateUtil from "../../../db/util/dbUserRoomStateUtil";
 import DBSearchUtil from "../../../db/util/dbSearchUtil";
 import AddressUtil from "../../util/addressUtil";
-import { syncUserRoleInMemory } from "../../../room/util/roomUserUtil";
+import RoomUserUtil from "../../../room/util/roomUserUtil";
 
 const RoomRouter = express.Router();
 
@@ -134,7 +134,7 @@ RoomRouter.post("/set_room_user_role", UserIdentificationUtil.identifyRegistered
     await DBUserRoomStateUtil.setUserRole(targetUser.id as string, targetUser.userName, targetUser.email, dbUser.ownedRoomID, userRole);
 
     // Sync the role change in the server's in-memory state and broadcast to clients.
-    syncUserRoleInMemory(targetUser.id as string, dbUser.ownedRoomID, userRole);
+    RoomUserUtil.syncUserRoleInMemory(targetUser.id as string, dbUser.ownedRoomID, userRole);
 
     res.status(200).send("User role updated.");
 });

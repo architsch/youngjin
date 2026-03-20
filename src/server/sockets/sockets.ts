@@ -10,9 +10,9 @@ import DBUserUtil from "../db/util/dbUserUtil";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomManager from "../room/roomManager";
-import { getUserGameplayState } from "../room/util/roomUserUtil";
-import { onAddObjectSignalReceived, onRemoveObjectSignalReceived, onSetObjectMetadataSignalReceived, updateObjectTransform } from "../room/util/roomObjectUtil";
-import { addVoxelBlock, moveVoxelBlock, removeVoxelBlock, setVoxelQuadTexture } from "../room/util/roomVoxelUtil";
+import RoomUserUtil from "../room/util/roomUserUtil";
+import RoomObjectUtil from "../room/util/roomObjectUtil";
+import RoomVoxelUtil from "../room/util/roomVoxelUtil";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
@@ -102,7 +102,7 @@ const Sockets =
                 const oldContext = UserManager.getSocketUserContext(user.id)!;
                 const oldRoomID = RoomManager.currentRoomIDByUserID[user.id];
                 const oldRoomMemory = oldRoomID ? RoomManager.roomRuntimeMemories[oldRoomID] : undefined;
-                cachedGameplayState = oldRoomMemory ? getUserGameplayState(oldContext, oldRoomMemory) : undefined;
+                cachedGameplayState = oldRoomMemory ? RoomUserUtil.getUserGameplayState(oldContext, oldRoomMemory) : undefined;
 
                 UserManager.removeUser(user.id);
                 await RoomManager.changeUserRoom(oldContext, undefined, false, true);
@@ -135,7 +135,7 @@ const Sockets =
             socketUserContext.onReceivedSignalFromUser("setObjectTransformSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = SetObjectTransformSignal.decode(bufferState) as SetObjectTransformSignal;
-                updateObjectTransform(socketUserContext, params.objectId, params.transform);
+                RoomObjectUtil.updateObjectTransform(socketUserContext, params.objectId, params.transform);
             });
 
             socketUserContext.onReceivedSignalFromUser("userCommandSignal", async (buffer: ArrayBuffer) => {
@@ -147,43 +147,43 @@ const Sockets =
             socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
-                addVoxelBlock(socketUserContext, params);
+                RoomVoxelUtil.addVoxelBlock(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("moveVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
-                moveVoxelBlock(socketUserContext, params);
+                RoomVoxelUtil.moveVoxelBlock(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("removeVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
-                removeVoxelBlock(socketUserContext, params);
+                RoomVoxelUtil.removeVoxelBlock(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
-                setVoxelQuadTexture(socketUserContext, params);
+                RoomVoxelUtil.setVoxelQuadTexture(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = AddObjectSignal.decode(bufferState) as AddObjectSignal;
-                onAddObjectSignalReceived(socketUserContext, params);
+                RoomObjectUtil.onAddObjectSignalReceived(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("removeObjectSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
-                onRemoveObjectSignalReceived(socketUserContext, params);
+                RoomObjectUtil.onRemoveObjectSignalReceived(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("setObjectMetadataSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
-                onSetObjectMetadataSignalReceived(socketUserContext, params);
+                RoomObjectUtil.onSetObjectMetadataSignalReceived(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
@@ -211,7 +211,7 @@ const Sockets =
                 // middleware queries the DB.
                 const roomID = RoomManager.currentRoomIDByUserID[user.id];
                 const roomMem = roomID ? RoomManager.roomRuntimeMemories[roomID] : undefined;
-                const gameplayState = roomMem ? getUserGameplayState(socketUserContext, roomMem) : undefined;
+                const gameplayState = roomMem ? RoomUserUtil.getUserGameplayState(socketUserContext, roomMem) : undefined;
                 if (gameplayState)
                     recentDisconnectGameplayStates[user.id] = {state: gameplayState, timestamp: Date.now()};
 
