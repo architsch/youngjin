@@ -29,7 +29,7 @@ const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 // IDs of objects that were speculatively spawned by the client before server confirmation
 const speculativeSpawnObjectIds = new Set<string>();
 
-const ObjectManager =
+const ClientObjectManager =
 {
     speculativeSpawnObjectIds,
     getObjectById: (objectId: string): GameObject | undefined =>
@@ -71,7 +71,7 @@ const ObjectManager =
             );
             const voxelGameObject = gameObject as VoxelGameObject;
             voxelGameObject.setVoxel(voxel);
-            await ObjectManager.spawnObject(gameObject);
+            await ClientObjectManager.spawnObject(gameObject);
         };
 
         // Find the player's initial position for distance-based loading order
@@ -102,7 +102,7 @@ const ObjectManager =
             if (obj.objectTypeIndex == voxelTypeIndex)
                 throw new Error(`Voxel object is not allowed to spawn via objectById.`);
             const gameObject = ObjectFactory.createServerSideObject(obj);
-            await ObjectManager.spawnObject(gameObject);
+            await ClientObjectManager.spawnObject(gameObject);
         }
     },
     unload: async () =>
@@ -110,7 +110,7 @@ const ObjectManager =
         // Unload objects
         for (const key of Object.keys(gameObjects))
         {
-            await ObjectManager.despawnObject(key);
+            await ClientObjectManager.despawnObject(key);
             delete gameObjects[key];
         }
         for (const key of Object.keys(updatableGameObjects))
@@ -171,7 +171,7 @@ const ObjectManager =
         room.objectById[params.objectId] = params;
 
         const gameObject = ObjectFactory.createServerSideObject(params);
-        await ObjectManager.spawnObject(gameObject);
+        await ClientObjectManager.spawnObject(gameObject);
     },
     // When the client receives a RemoveObjectSignal from the server,
     // the given object will despawn as soon as the room to which it belongs is available.
@@ -194,15 +194,15 @@ const ObjectManager =
         if (sel && sel.gameObject.params.objectId === params.objectId)
             PersistentObjectSelection.unselect();
 
-        await ObjectManager.despawnObject(params.objectId);
+        await ClientObjectManager.despawnObject(params.objectId);
     },
     onSetObjectTransformSignalReceived: async (params: SetObjectTransformSignal) => {
-        const object = ObjectManager.getObjectById(params.objectId)!;
+        const object = ClientObjectManager.getObjectById(params.objectId)!;
         if (object.components.objectTransformReceiver)
             (object.components.objectTransformReceiver as ObjectTransformReceiver).onSetObjectTransformSignalReceived(params);
     },
     onResolveObjectTransformDesyncSignalReceived: async (params: ResolveObjectTransformDesyncSignal) => {
-        const object = ObjectManager.getObjectById(params.objectId)!;
+        const object = ClientObjectManager.getObjectById(params.objectId)!;
         if (object.components.objectTransformReceiver)
             (object.components.objectTransformReceiver as ObjectTransformReceiver).onResolveObjectTransformDesyncSignalReceived(params);
         if (object.components.objectTransformEmitter)
@@ -221,7 +221,7 @@ const ObjectManager =
         if (obj)
             obj.setMetadata(params.metadataKey, params.metadataValue);
 
-        const gameObject = ObjectManager.getObjectById(params.objectId);
+        const gameObject = ClientObjectManager.getObjectById(params.objectId);
         if (gameObject)
             gameObject.params.setMetadata(params.metadataKey, params.metadataValue);
 
@@ -236,8 +236,8 @@ const ObjectManager =
     },
 }
 
-setObjectMetadataObservable.addListener("objectManager", async (change: {objectId: string, key: ObjectMetadataKey, value: string}) => {
-    const gameObject = ObjectManager.getObjectById(change.objectId);
+setObjectMetadataObservable.addListener("clientObjectManager", async (change: {objectId: string, key: ObjectMetadataKey, value: string}) => {
+    const gameObject = ClientObjectManager.getObjectById(change.objectId);
     if (gameObject)
         gameObject.onSetMetadata(change.key, change.value);
     else
@@ -247,4 +247,4 @@ setObjectMetadataObservable.addListener("objectManager", async (change: {objectI
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
 
-export default ObjectManager;
+export default ClientObjectManager;

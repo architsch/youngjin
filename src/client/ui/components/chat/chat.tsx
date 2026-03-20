@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import ChatTextInput from "./chatTextInput";
 import ChatSendButton from "./chatSendButton";
 import ChatSentMessage from "./chatSentMessage";
-import ObjectManager from "../../../object/objectManager";
+import ClientObjectManager from "../../../object/clientObjectManager";
 import SpeechBubble from "../../../object/components/speechBubble";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import { roomChangedObservable } from "../../../system/clientObservables";
@@ -20,9 +20,9 @@ export default function Chat()
             if (!user)
                 return;
             await AsyncUtil.waitUntilSuccess(
-                () => ObjectManager.getMyPlayer() != undefined, 5000);
+                () => ClientObjectManager.getMyPlayer() != undefined, 5000);
 
-            const myPlayer = ObjectManager.getMyPlayer();
+            const myPlayer = ClientObjectManager.getMyPlayer();
             const playerObj = myPlayer ? roomRuntimeMemory.room.objectById[myPlayer.params.objectId] : undefined;
             if (playerObj?.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage))
             {
@@ -44,7 +44,7 @@ export default function Chat()
         if (message.length == 0)
             return;
 
-        const player = ObjectManager.getMyPlayer();
+        const player = ClientObjectManager.getMyPlayer();
         if (!player)
         {
             console.error(`MyPlayer not found`);
@@ -62,7 +62,7 @@ export default function Chat()
             console.error(`No sent message to clear`);
             return;
         }
-        const player = ObjectManager.getMyPlayer();
+        const player = ClientObjectManager.getMyPlayer();
         if (!player)
         {
             console.error(`MyPlayer not found`);

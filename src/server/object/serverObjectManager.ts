@@ -292,30 +292,30 @@ const ServerObjectManager =
             socketRoomContext.multicastSignal("setObjectMetadataSignal", params, user.id);
     },
     // Handle client-sent setObjectTransformSignal (object transform sync)
-    updateObjectTransform: (socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform) =>
+    onSetObjectTransformSignalReceived: (socketUserContext: SocketUserContext, objectId: string, transform: ObjectTransform) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         if (roomID == undefined)
         {
-            console.error(`ServerObjectManager.updateObjectTransform :: RoomID not found (userID = ${user.id})`);
+            console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: RoomID not found (userID = ${user.id})`);
             return;
         }
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (roomRuntimeMemory == undefined)
         {
-            console.error(`ServerObjectManager.updateObjectTransform :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+            console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
         const obj = roomRuntimeMemory.room.objectById[objectId];
         if (obj == undefined)
         {
-            console.error(`ServerObjectManager.updateObjectTransform :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
         if (obj.sourceUserID != user.id)
         {
-            console.error(`ServerObjectManager.updateObjectTransform :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
+            console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
 
@@ -338,7 +338,7 @@ const ServerObjectManager =
                 const desyncSignal = new ResolveObjectTransformDesyncSignal(objectId, result.resolvedPos);
                 const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
                 if (!socketRoomContext)
-                    console.error(`ServerObjectManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+                    console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: SocketRoomContext not found (roomID = ${roomID})`);
                 else // Broadcast to everyone.
                     socketRoomContext.multicastSignal("resolveObjectTransformDesyncSignal", desyncSignal);
             }
@@ -347,7 +347,7 @@ const ServerObjectManager =
                 const syncSignal = new SetObjectTransformSignal(objectId, transform);
                 const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
                 if (!socketRoomContext)
-                    console.error(`ServerObjectManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+                    console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: SocketRoomContext not found (roomID = ${roomID})`);
                 else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
                     socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
             }
@@ -363,7 +363,7 @@ const ServerObjectManager =
             const syncSignal = new SetObjectTransformSignal(objectId, transform);
             const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
             if (!socketRoomContext)
-                console.error(`ServerObjectManager.updateObjectTransform :: SocketRoomContext not found (roomID = ${roomID})`);
+                console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: SocketRoomContext not found (roomID = ${roomID})`);
             else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
                 socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
         }

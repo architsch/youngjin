@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import FirstPersonController from "../../firstPersonController";
 import App from "../../../../app";
-import ObjectManager from "../../../objectManager";
+import ClientObjectManager from "../../../clientObjectManager";
 import PlayerProximityDetector from "../../playerProximityDetector";
 import InstancedMeshGraphics from "../../instancedMeshGraphics";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
@@ -29,7 +29,7 @@ export default class FirstPersonProximityDetection
             
             for (const objectId in physicsObjects)
             {
-                const obj = ObjectManager.getObjectById(objectId);
+                const obj = ClientObjectManager.getObjectById(objectId);
                 if (obj != undefined)
                 {
                     if (obj.spawnFinished)
@@ -40,7 +40,7 @@ export default class FirstPersonProximityDetection
                     }
                 }
                 else
-                    console.error(`PhysicsObject with ID '${objectId}' not found in ObjectManager.`);
+                    console.error(`PhysicsObject with ID '${objectId}' not found in ClientObjectManager.`);
             }
         }
     }

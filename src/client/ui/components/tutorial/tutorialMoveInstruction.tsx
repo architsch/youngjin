@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { useEffect } from "react";
-import ObjectManager from "../../../object/objectManager";
+import ClientObjectManager from "../../../object/clientObjectManager";
 import ScreenCenterText from "../basic/screenCenterText";
 
 const initialPlayerPos: THREE.Vector3 = new THREE.Vector3();
@@ -15,7 +15,7 @@ export default function TutorialMoveInstruction({incrementTutorialStep}
         let firstTime = true;
 
         const interval = setInterval(() => { // start the clock
-            const myPlayer = ObjectManager.getMyPlayer();
+            const myPlayer = ClientObjectManager.getMyPlayer();
             if (myPlayer)
             {
                 currPlayerPos.copy(myPlayer.position);

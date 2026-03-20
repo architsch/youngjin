@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import hpp from "hpp";
 import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
-import Sockets from "./sockets/sockets";
+import SocketsServer from "./sockets/socketsServer";
 import ServerRoomManager from "./room/serverRoomManager";
 import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
@@ -116,7 +116,7 @@ ${LatencySimUtil.getConfigSummary()}
     });
     
     // socket connection
-    Sockets.init(server);
+    SocketsServer.init(server);
 
     // Clean up stale guest accounts regularly (rotating through tiers to spread DB load)
     let cleanupPhase = 0;
@@ -137,7 +137,7 @@ ${LatencySimUtil.getConfigSummary()}
         await ServerRoomManager.saveRooms(true);
         console.log("All rooms saved.");
 
-        await Sockets.saveAndDisconnectAllUsers();
+        await SocketsServer.saveAndDisconnectAllUsers();
         console.log("All users saved and disconnected.");
 
         server.close(() =>

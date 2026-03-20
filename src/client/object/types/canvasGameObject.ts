@@ -4,7 +4,7 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/obj
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
-import ObjectManager from "../objectManager";
+import ClientObjectManager from "../clientObjectManager";
 import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import PersistentObjectSelection from "../../graphics/types/gizmo/persistentObjectSelection";
 
@@ -85,7 +85,7 @@ export default class CanvasGameObject extends GameObject
 
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        const player = ObjectManager.getMyPlayer();
+        const player = ClientObjectManager.getMyPlayer();
         if (player == undefined)
         {
             console.error("My player not found in CanvasGameObject's onClick.");

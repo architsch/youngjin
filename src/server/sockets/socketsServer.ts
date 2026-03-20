@@ -35,7 +35,7 @@ let signalProcessingInterval: NodeJS.Timeout;
 const recentDisconnectGameplayStates: {[userID: string]: {state: UserGameplayState, timestamp: number}} = {};
 const staleSocketFirstDetectedAt: {[userID: string]: number} = {};
 
-const Sockets =
+const SocketsServer =
 {
     init: (server: http.Server): void =>
     {
@@ -84,7 +84,7 @@ const Sockets =
         io.on("connection", async (socket: socketIO.Socket) => {
             const socketUserContext = new SocketUserContext(socket);
             const user = socketUserContext.user;
-            console.log(`(Sockets) Client connected :: ${JSON.stringify(user)}`);
+            console.log(`(SocketsServer) Client connected :: ${JSON.stringify(user)}`);
 
             // Cached gameplay state from a previous session (used for reconnection).
             // This is passed to changeUserRoom so it can restore position without a DB lookup.
@@ -97,7 +97,7 @@ const Sockets =
                 // browser window connects to the server while the original tab is still connected).
                 // Capture the old session's gameplay state from runtime memory, clean it up,
                 // and pass it to changeUserRoom so the player spawns at the correct position.
-                console.warn(`(Sockets) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
+                console.warn(`(SocketsServer) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
                 const oldContext = ServerUserManager.getSocketUserContext(user.id)!;
                 const oldRoomID = ServerRoomManager.currentRoomIDByUserID[user.id];
                 const oldRoomMemory = oldRoomID ? ServerRoomManager.roomRuntimeMemories[oldRoomID] : undefined;
@@ -122,7 +122,7 @@ const Sockets =
                 const cached = recentDisconnectGameplayStates[user.id];
                 if (cached)
                 {
-                    console.log(`(Sockets) Restoring cached gameplay state for userID = ${user.id}`);
+                    console.log(`(SocketsServer) Restoring cached gameplay state for userID = ${user.id}`);
                     cachedGameplayState = cached.state;
                     user.lastRoomID = cached.state.lastRoomID;
                 }
@@ -134,37 +134,37 @@ const Sockets =
             socketUserContext.onReceivedSignalFromUser("setObjectTransformSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = SetObjectTransformSignal.decode(bufferState) as SetObjectTransformSignal;
-                ServerObjectManager.updateObjectTransform(socketUserContext, params.objectId, params.transform);
+                ServerObjectManager.onSetObjectTransformSignalReceived(socketUserContext, params.objectId, params.transform);
             });
 
             socketUserContext.onReceivedSignalFromUser("userCommandSignal", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = UserCommandSignal.decode(bufferState) as UserCommandSignal;
-                await UserCommandUtil.handleCommand(user, params);
+                await UserCommandUtil.onUserCommandSignalReceived(user, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
-                ServerVoxelManager.addVoxelBlock(socketUserContext, params);
+                ServerVoxelManager.onAddVoxelBlockSignalReceived(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("moveVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
-                ServerVoxelManager.moveVoxelBlock(socketUserContext, params);
+                ServerVoxelManager.onMoveVoxelBlockSignalReceived(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("removeVoxelBlockSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
-                ServerVoxelManager.removeVoxelBlock(socketUserContext, params);
+                ServerVoxelManager.onRemoveVoxelBlockSignalReceived(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
-                ServerVoxelManager.setVoxelQuadTexture(socketUserContext, params);
+                ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(socketUserContext, params);
             });
 
             socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
@@ -188,11 +188,11 @@ const Sockets =
             socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
                 const bufferState = new BufferState(new Uint8Array(buffer));
                 const params = RequestRoomChangeSignal.decode(bufferState) as RequestRoomChangeSignal;
-                await ServerRoomManager.changeUserRoom(socketUserContext, params.roomID, true, false);
+                await ServerRoomManager.onRequestRoomChangeSignalReceived(socketUserContext, params);
             });
 
             socket.on("disconnect", async () => {
-                console.log(`(Sockets) Client disconnected :: ${JSON.stringify(user)}`);
+                console.log(`(SocketsServer) Client disconnected :: ${JSON.stringify(user)}`);
 
                 if (ServerUserManager.getSocketUserContext(user.id) != socketUserContext)
                 {
@@ -200,7 +200,7 @@ const Sockets =
                     // refresh), or was cleaned up earlier.  The replacement logic in
                     // the connection handler already captured the gameplay state, so
                     // there is nothing left to do.
-                    console.warn(`(Sockets) Skipping stale disconnect handler (userID = ${user.id})`);
+                    console.warn(`(SocketsServer) Skipping stale disconnect handler (userID = ${user.id})`);
                     return;
                 }
 
@@ -277,7 +277,7 @@ const Sockets =
                     }
                     else if (currTime - staleSocketFirstDetectedAt[userID] > 5000)
                     {
-                        console.warn(`(Sockets) Stale socket detected, cleaning up :: userID = ${userID}`);
+                        console.warn(`(SocketsServer) Stale socket detected, cleaning up :: userID = ${userID}`);
                         delete staleSocketFirstDetectedAt[userID];
                         ServerUserManager.removeUser(userID);
                         await ServerRoomManager.changeUserRoom(ctx, undefined, false, true);
@@ -362,4 +362,4 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
     }
 }
 
-export default Sockets;
+export default SocketsServer;

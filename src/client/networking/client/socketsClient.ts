@@ -22,8 +22,8 @@ import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBl
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import SetUserRoleSignal from "../../../shared/user/types/setUserRoleSignal";
 import App from "../../app";
-import ObjectManager from "../../object/objectManager";
-import VoxelManager from "../../voxel/voxelManager";
+import ClientObjectManager from "../../object/clientObjectManager";
+import ClientVoxelManager from "../../voxel/clientVoxelManager";
 
 let socket: Socket;
 
@@ -31,23 +31,23 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
     "roomChangedSignal": (data: EncodableData) =>
         App.onRoomChangedSignalReceived(data as RoomChangedSignal),
     "setObjectTransformSignal": (data: EncodableData) =>
-        ObjectManager.onSetObjectTransformSignalReceived(data as SetObjectTransformSignal),
+        ClientObjectManager.onSetObjectTransformSignalReceived(data as SetObjectTransformSignal),
     "resolveObjectTransformDesyncSignal": (data: EncodableData) =>
-        ObjectManager.onResolveObjectTransformDesyncSignalReceived(data as ResolveObjectTransformDesyncSignal),
+        ClientObjectManager.onResolveObjectTransformDesyncSignalReceived(data as ResolveObjectTransformDesyncSignal),
     "addObjectSignal": (data: EncodableData) =>
-        ObjectManager.onAddObjectSignalReceived(data as AddObjectSignal),
+        ClientObjectManager.onAddObjectSignalReceived(data as AddObjectSignal),
     "removeObjectSignal": (data: EncodableData) =>
-        ObjectManager.onRemoveObjectSignalReceived(data as RemoveObjectSignal),
+        ClientObjectManager.onRemoveObjectSignalReceived(data as RemoveObjectSignal),
     "addVoxelBlockSignal": (data: EncodableData) =>
-        VoxelManager.onAddVoxelBlockSignalReceived(data as AddVoxelBlockSignal),
+        ClientVoxelManager.onAddVoxelBlockSignalReceived(data as AddVoxelBlockSignal),
     "moveVoxelBlockSignal": (data: EncodableData) =>
-        VoxelManager.onMoveVoxelBlockSignalReceived(data as MoveVoxelBlockSignal),
+        ClientVoxelManager.onMoveVoxelBlockSignalReceived(data as MoveVoxelBlockSignal),
     "removeVoxelBlockSignal": (data: EncodableData) =>
-        VoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
+        ClientVoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
     "setVoxelQuadTextureSignal": (data: EncodableData) =>
-        VoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
+        ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
     "setObjectMetadataSignal": (data: EncodableData) =>
-        ObjectManager.onSetObjectMetadataSignalReceived(data as SetObjectMetadataSignal),
+        ClientObjectManager.onSetObjectMetadataSignalReceived(data as SetObjectMetadataSignal),
     "setUserRoleSignal": (data: EncodableData) =>
         App.onSetUserRoleSignalReceived(data as SetUserRoleSignal),
 }

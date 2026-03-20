@@ -89,7 +89,7 @@ function broadcast(socketUserContext: SocketUserContext, room: Room,
 
 const ServerVoxelManager =
 {
-    moveVoxelBlock: (socketUserContext: SocketUserContext, params: MoveVoxelBlockSignal) =>
+    onMoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, params: MoveVoxelBlockSignal) =>
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {
@@ -116,7 +116,7 @@ const ServerVoxelManager =
         }
         broadcast(socketUserContext, room, "moveVoxelBlockSignal", params);
     },
-    addVoxelBlock: (socketUserContext: SocketUserContext, params: AddVoxelBlockSignal) =>
+    onAddVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, params: AddVoxelBlockSignal) =>
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {
@@ -138,7 +138,7 @@ const ServerVoxelManager =
         }
         broadcast(socketUserContext, room, "addVoxelBlockSignal", params);
     },
-    removeVoxelBlock: (socketUserContext: SocketUserContext, params: RemoveVoxelBlockSignal) =>
+    onRemoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, params: RemoveVoxelBlockSignal) =>
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {
@@ -166,7 +166,7 @@ const ServerVoxelManager =
         }
         broadcast(socketUserContext, room, "removeVoxelBlockSignal", params);
     },
-    setVoxelQuadTexture: (socketUserContext: SocketUserContext, params: SetVoxelQuadTextureSignal) =>
+    onSetVoxelQuadTextureSignalReceived: (socketUserContext: SocketUserContext, params: SetVoxelQuadTextureSignal) =>
     {
         if (!canUserModifyVoxel(socketUserContext.user.id))
         {

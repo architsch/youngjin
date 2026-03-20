@@ -10,7 +10,7 @@ import CanvasGameObject from "../../../object/types/canvasGameObject";
 import { MAX_CANVASES_PER_ROOM, MID_ROOM_Y } from "../../../../shared/system/sharedConstants";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import ObjectFactory from "../../../object/factories/objectFactory";
-import ObjectManager from "../../../object/objectManager";
+import ClientObjectManager from "../../../object/clientObjectManager";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
@@ -89,13 +89,13 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
         return;
 
     // Track as speculative spawn so we can roll back the counter if the server rejects
-    ObjectManager.speculativeSpawnObjectIds.add(objectId);
+    ClientObjectManager.speculativeSpawnObjectIds.add(objectId);
 
     // Send to server
     SocketsClient.emitAddObjectSignal(objectSpawnParams);
 
     // Spawn the game object locally
     const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
-    await ObjectManager.spawnObject(gameObject);
+    await ClientObjectManager.spawnObject(gameObject);
     PersistentObjectSelection.trySelect(gameObject);
 }

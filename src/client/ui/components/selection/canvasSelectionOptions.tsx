@@ -4,7 +4,7 @@ import Button from "../basic/button";
 import TextInput from "../basic/textInput";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
-import ObjectManager from "../../../object/objectManager";
+import ClientObjectManager from "../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
@@ -57,7 +57,7 @@ function tryRemoveCanvas(selection: PersistentObjectSelection)
         return;
 
     PersistentObjectSelection.unselect();
-    ObjectManager.despawnObject(objectId);
+    ClientObjectManager.despawnObject(objectId);
     SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
 }
 

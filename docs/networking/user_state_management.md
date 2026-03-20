@@ -1,10 +1,10 @@
 # User State Management Flows
 
-Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/roomRuntimeMemory.ts , @src/shared/room/types/roomChangedSignal.ts , @src/server/sockets/sockets.ts , @src/client/networking/client/socketsClient.ts
+Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/roomRuntimeMemory.ts , @src/shared/room/types/roomChangedSignal.ts , @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts
 
 ## When the user moves from one room to another without loading a new "/mypage"
 1. The client sends a `RequestRoomChangeSignal` (with the target room's ID) to the server via `SocketsClient.tryEmitRequestRoomChangeSignal`. This also starts a client-side `roomChange` process that blocks further room change requests until the current one completes.
-2. The server receives the `RequestRoomChangeSignal` and calls `ServerRoomManager.changeUserRoom` with the target room ID.
+2. The server receives the `RequestRoomChangeSignal` and calls `ServerRoomManager.onRequestRoomChangeSignalReceived`, which in turn calls `ServerRoomManager.changeUserRoom` with the target room ID.
 3. `ServerRoomManager.changeUserRoom` removes the user from the previous room (despawning the user's player object and cleaning up the room's runtime memory), without saving gameplay state to the DB (since the user is staying connected and state is still in runtime memory).
 4. `ServerRoomManager.changeUserRoom` loads the target room (from in-memory cache if available, otherwise from Firestore), restores the user's position/direction/metadata (from DB lookup, or defaults if none exists), and adds the user to the new room.
 5. The server unicasts a `RoomChangedSignal` (which bundles the room's `RoomRuntimeMemory` and the user's current role) to the client.
@@ -72,7 +72,7 @@ Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/
 1. The server receives a `SIGTERM` or `SIGINT` signal (e.g. from PM2 during deployment).
 2. The server's `gracefulShutdown` handler runs:
     1. It saves all dirty rooms to Firestore via `ServerRoomManager.saveRooms(true)`.
-    2. It calls `Sockets.saveAndDisconnectAllUsers()`, which:
+    2. It calls `SocketsServer.saveAndDisconnectAllUsers()`, which:
         1. Saves all connected users' gameplay states to Firestore in a batch via `ServerRoomManager.saveAllUserGameplayStates`.
         2. Removes each user from their room and force-disconnects their socket.
 3. The server closes the HTTP server (with a 10-second hard timeout to prevent hanging).

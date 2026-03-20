@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import App from "../../../app";
-import ObjectManager from "../../../object/objectManager";
+import ClientObjectManager from "../../../object/clientObjectManager";
 import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import { colliderDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -21,7 +21,7 @@ export default function DebugStats({env}: Props)
         const interval = setInterval(() => { // start the clock
             const fpsDesc = App.getFPS().toString();
 
-            const myPlayer = ObjectManager.getMyPlayer();
+            const myPlayer = ClientObjectManager.getMyPlayer();
             let x = "?", y = "?", z = "?";
             if (myPlayer)
             {

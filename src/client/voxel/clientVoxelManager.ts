@@ -1,7 +1,7 @@
 import { voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import Room from "../../shared/room/types/room";
-import ObjectManager from "../object/objectManager";
+import ClientObjectManager from "../object/clientObjectManager";
 import App from "../app";
 import VoxelBlockUpdateUtil from "../../shared/voxel/util/voxelBlockUpdateUtil";
 import VoxelQuadUpdateUtil from "../../shared/voxel/util/voxelQuadUpdateUtil";
@@ -17,7 +17,7 @@ import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMa
 import VoxelGameObject from "../object/types/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
-const VoxelManager =
+const ClientVoxelManager =
 {
     onAddVoxelBlockSignalReceived: async (params: AddVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("addVoxelBlockSignal",
@@ -103,7 +103,7 @@ function refreshSelection()
     }
 }
 
-voxelQuadChangeObservable.addListener("voxelManager", async (change: VoxelQuadChange) => {
+voxelQuadChangeObservable.addListener("clientVoxelManager", async (change: VoxelQuadChange) => {
     const room = App.getCurrentRoom();
     if (!room)
     {
@@ -130,7 +130,7 @@ function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObje
         return null;
     }
 
-    const obj = ObjectManager.getObjectById(voxel.gameObjectId);
+    const obj = ClientObjectManager.getObjectById(voxel.gameObjectId);
     if (!obj)
     {
         console.error(`Voxel gameObject not found (row: ${row}, col: ${col})`);
@@ -149,4 +149,4 @@ function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObje
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
 
-export default VoxelManager;
+export default ClientVoxelManager;

@@ -5,7 +5,7 @@ import DBUserUtil from "../../db/util/dbUserUtil";
 
 const UserCommandUtil =
 {
-    handleCommand: async (user: User, params: UserCommandSignal): Promise<void> =>
+    onUserCommandSignalReceived: async (user: User, params: UserCommandSignal): Promise<void> =>
     {
         const words = params.message.split(" ");
         if (words.length == 0)

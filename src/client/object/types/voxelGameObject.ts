@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import GameObject from "./gameObject";
-import ObjectManager from "../objectManager";
+import ClientObjectManager from "../clientObjectManager";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import Voxel from "../../../shared/voxel/types/voxel";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
@@ -79,7 +79,7 @@ export default class VoxelGameObject extends GameObject
     // hit by the user's pointer input.
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        const player = ObjectManager.getMyPlayer();
+        const player = ClientObjectManager.getMyPlayer();
         if (player == undefined)
         {
             console.error("My player not found in VoxelGameObject's onClick.");

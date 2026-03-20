@@ -12,6 +12,7 @@ import DBUserRoomStateUtil from "../db/util/dbUserRoomStateUtil";
 import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import UserGameplayState from "../user/types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
+import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -215,6 +216,10 @@ const ServerRoomManager =
         else // Send the room data to the user who is added to the room.
             socketRoomContext.unicastSignal("roomChangedSignal", roomChangedSignal, user.id);
         return true;
+    },
+    onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>
+    {
+        await ServerRoomManager.changeUserRoom(socketUserContext, params.roomID, true, false);
     },
 }
 
