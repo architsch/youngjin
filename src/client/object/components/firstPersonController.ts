@@ -6,6 +6,8 @@ import FirstPersonCamera from "./helpers/firstPerson/firstPersonCamera";
 import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProximityDetection";
 import FirstPersonPointerInput from "./helpers/firstPerson/firstPersonPointerInput";
 import FirstPersonKeyInput from "./helpers/firstPerson/firstPersonKeyInput";
+import PhysicsUpdater from "./physicsUpdater";
+import GameObject from "../types/gameObject";
 
 const objTemp: THREE.Object3D = new THREE.Object3D();
 const yAxis = new THREE.Vector3(0, 1, 0);
@@ -19,6 +21,17 @@ export default class FirstPersonController extends GameObjectComponent
     private firstPersonProximityDetection: FirstPersonProximityDetection = new FirstPersonProximityDetection();
     private firstPersonPointerInput: FirstPersonPointerInput = new FirstPersonPointerInput();
     private firstPersonKeyInput: FirstPersonKeyInput = new FirstPersonKeyInput();
+
+    private physicsUpdater: PhysicsUpdater;
+
+    constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
+    {
+        super(gameObject, componentConfig);
+
+        this.physicsUpdater = this.gameObject.components.physicsUpdater as PhysicsUpdater;
+        if (!this.physicsUpdater)
+            throw new Error("FirstPersonController requires PhysicsUpdater component");
+    }
 
     async onSpawn(): Promise<void>
     {
@@ -57,7 +70,7 @@ export default class FirstPersonController extends GameObjectComponent
         {
             objTemp.copy(this.gameObject.obj, false);
             objTemp.translateZ(-9 * deltaTime * this.dy);
-            this.gameObject.trySetTransform(objTemp.position, this.gameObject.direction);
+            this.physicsUpdater.tryMove(objTemp.position, this.gameObject.direction);
         }
         this.dx = 0;
         this.dy = 0;

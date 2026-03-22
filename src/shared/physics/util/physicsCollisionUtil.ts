@@ -8,6 +8,7 @@ import { ColliderConfig } from "../types/colliderConfig";
 import PhysicsDebugUtil from "./physicsDebugUtil";
 
 const voxelBlockColliderConfig: ColliderConfig = {
+    colliderType: "standalone",
     hitboxSize: {sizeX: 1, sizeY: 0.5, sizeZ: 1},
 };
 
@@ -28,9 +29,7 @@ const PhysicsCollisionUtil =
     {
         const objectTypeConfig = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex);
         const components = objectTypeConfig.components;
-        let colliderConfig = components.spawnedByAny?.dynamicCollider;
-        if (!colliderConfig)
-            colliderConfig = components.spawnedByAny?.staticCollider;
+        let colliderConfig = components.spawnedByAny?.collider;
         if (!colliderConfig)
             return undefined;
         const hitboxSize = colliderConfig.hitboxSize;
@@ -39,7 +38,7 @@ const PhysicsCollisionUtil =
         const reorientedSizeZ = moreAlignedWithXAxis ? hitboxSize.sizeX : hitboxSize.sizeZ;
         const hitbox: AABB3 = {
             x: position.x,
-            y: position.y + hitboxSize.sizeY * 0.5,
+            y: position.y,
             z: position.z,
             halfSizeX: 0.5 * reorientedSizeX,
             halfSizeY: 0.5 * hitboxSize.sizeY,

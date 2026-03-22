@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
-import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
@@ -13,7 +13,7 @@ const vec3Temp = new THREE.Vector3();
 const tempObj = new THREE.Object3D();
 tempObj.position.set(0, 0, 0);
 
-export default class ObjectTransformReceiver extends GameObjectComponent
+export default class PeriodicTransformReceiver extends GameObjectComponent
 {
     private lastSyncTime: number = 0;
     private positionInterpRange: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3()];
@@ -24,7 +24,7 @@ export default class ObjectTransformReceiver extends GameObjectComponent
         super(gameObject, componentConfig);
 
         if (this.gameObject.isMine())
-            throw new Error("User's own object is not allowed to have the ObjectTransformReceiver component.");
+            throw new Error("User's own object is not allowed to have the PeriodicTransformReceiver component.");
 
         this.lastSyncTime = performance.now();
 
@@ -50,42 +50,20 @@ export default class ObjectTransformReceiver extends GameObjectComponent
 
         vec3Temp.lerpVectors(
             this.positionInterpRange[0], this.positionInterpRange[1], interpProgressNormalized);
-        this.gameObject.forceSetTransform(vec3Temp, this.gameObject.direction);
 
+        this.gameObject.position.copy(vec3Temp);
         this.gameObject.quaternion.slerpQuaternions(
             this.quaternionInterpRange[0], this.quaternionInterpRange[1], interpProgressNormalized);
     }
 
-    onResolveObjectTransformDesyncSignalReceived(params: ResolveObjectTransformDesyncSignal): void
+    setObjectTransform(transform: ObjectTransform): void
     {
-        if (this.gameObject.params.objectId != params.objectId)
-        {
-            console.error(`Object ID mismatch (this.gameObject.objectId = ${this.gameObject.params.objectId}, params.objectId = ${params.objectId})`);
-            return;
-        }
-        const p = params.resolvedPos;
-        vec3Temp.set(p.x, p.y, p.z);
-        this.gameObject.forceSetTransform(vec3Temp, this.gameObject.direction);
-        
-        this.positionInterpRange[0].copy(vec3Temp);
-        this.positionInterpRange[1].copy(vec3Temp);
-
-        this.lastSyncTime = performance.now();
-    }
-
-    onSetObjectTransformSignalReceived(params: SetObjectTransformSignal): void
-    {
-        if (this.gameObject.params.objectId != params.objectId)
-        {
-            console.error(`Object ID mismatch (this.gameObject.objectId = ${this.gameObject.params.objectId}, params.objectId = ${params.objectId})`);
-            return;
-        }
         this.lastSyncTime = performance.now();
 
         this.positionInterpRange[0].copy(this.gameObject.position);
-        this.positionInterpRange[1].set(params.transform.pos.x, params.transform.pos.y, params.transform.pos.z);
+        this.positionInterpRange[1].set(transform.pos.x, transform.pos.y, transform.pos.z);
 
-        vec3Temp.set(params.transform.dir.x, params.transform.dir.y, params.transform.dir.z);
+        vec3Temp.set(transform.dir.x, transform.dir.y, transform.dir.z);
         tempObj.lookAt(vec3Temp);
 
         this.quaternionInterpRange[0].setFromEuler(this.gameObject.rotation);

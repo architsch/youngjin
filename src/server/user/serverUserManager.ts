@@ -11,27 +11,11 @@ import UserGameplayState from "./types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import SetUserRoleSignal from "../../shared/user/types/setUserRoleSignal";
 import DBUserUtil from "../db/util/dbUserUtil";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
 const userRoleByUserID: {[userID: string]: UserRole} = {};
-
-function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): string[]
-{
-    const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
-    if (roomRuntimeMemory == undefined)
-    {
-        console.error(`ServerUserManager.getIdsOfObjectsSpawnedByUser :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
-        return [];
-    }
-    const ids: string[] = [];
-    for (const [objectId, obj] of Object.entries(roomRuntimeMemory.room.objectById))
-    {
-        if (obj.sourceUserID == userID)
-            ids.push(objectId);
-    }
-    return ids;
-}
 
 const ServerUserManager =
 {
@@ -202,6 +186,39 @@ const ServerUserManager =
     {
         return userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
     },
+    canUserEditRoom: (userID: string): boolean =>
+    {
+        const role = ServerUserManager.getUserRole(userID);
+        // User has permission to edit the room
+        if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
+            return true;
+        const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
+        if (roomID)
+        {
+            const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+            // Room is a hub (i.e. free to be edited by anyone)
+            if (roomRuntimeMemory && roomRuntimeMemory.room.roomType === RoomTypeEnumMap.Hub)
+                return true;
+        }
+        return false;
+    },
+}
+
+function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): string[]
+{
+    const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+    if (roomRuntimeMemory == undefined)
+    {
+        console.error(`ServerUserManager.getIdsOfObjectsSpawnedByUser :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        return [];
+    }
+    const ids: string[] = [];
+    for (const [objectId, obj] of Object.entries(roomRuntimeMemory.room.objectById))
+    {
+        if (obj.sourceUserID == userID)
+            ids.push(objectId);
+    }
+    return ids;
 }
 
 export default ServerUserManager;

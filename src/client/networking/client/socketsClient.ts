@@ -2,7 +2,6 @@ import { io, Socket } from "socket.io-client";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
-import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import RoomChangedSignal from "../../../shared/room/types/roomChangedSignal";
 import ThingsPoolEnv from "../../system/types/thingsPoolEnv";
@@ -30,14 +29,14 @@ let socket: Socket;
 const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "roomChangedSignal": (data: EncodableData) =>
         App.onRoomChangedSignalReceived(data as RoomChangedSignal),
-    "setObjectTransformSignal": (data: EncodableData) =>
-        ClientObjectManager.onSetObjectTransformSignalReceived(data as SetObjectTransformSignal),
-    "resolveObjectTransformDesyncSignal": (data: EncodableData) =>
-        ClientObjectManager.onResolveObjectTransformDesyncSignalReceived(data as ResolveObjectTransformDesyncSignal),
     "addObjectSignal": (data: EncodableData) =>
         ClientObjectManager.onAddObjectSignalReceived(data as AddObjectSignal),
     "removeObjectSignal": (data: EncodableData) =>
         ClientObjectManager.onRemoveObjectSignalReceived(data as RemoveObjectSignal),
+    "setObjectTransformSignal": (data: EncodableData) =>
+        ClientObjectManager.onSetObjectTransformSignalReceived(data as SetObjectTransformSignal),
+    "setObjectMetadataSignal": (data: EncodableData) =>
+        ClientObjectManager.onSetObjectMetadataSignalReceived(data as SetObjectMetadataSignal),
     "addVoxelBlockSignal": (data: EncodableData) =>
         ClientVoxelManager.onAddVoxelBlockSignalReceived(data as AddVoxelBlockSignal),
     "moveVoxelBlockSignal": (data: EncodableData) =>
@@ -46,8 +45,6 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientVoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
     "setVoxelQuadTextureSignal": (data: EncodableData) =>
         ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
-    "setObjectMetadataSignal": (data: EncodableData) =>
-        ClientObjectManager.onSetObjectMetadataSignalReceived(data as SetObjectMetadataSignal),
     "setUserRoleSignal": (data: EncodableData) =>
         App.onSetUserRoleSignalReceived(data as SetUserRoleSignal),
 }

@@ -11,14 +11,15 @@ import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
-import ObjectTransformReceiver from "./components/objectTransformReceiver";
-import ResolveObjectTransformDesyncSignal from "../../shared/object/types/resolveObjectTransformDesyncSignal";
-import ObjectTransformEmitter from "./components/objectTransformEmitter";
+import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
+import PeriodicTransformEmitter from "./components/periodicTransformEmitter";
 import VoxelGameObject from "./types/voxelGameObject";
 import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
 import { setObjectMetadataObservable } from "../../shared/system/sharedObservables";
 import { persistentObjectSelectionObservable } from "../system/clientObservables";
 import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
+import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
+import Vec3 from "../../shared/math/types/vec3";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -27,11 +28,11 @@ const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
 // IDs of objects that were speculatively spawned by the client before server confirmation
-const speculativeSpawnObjectIds = new Set<string>();
+const speculativeAddObjectIds = new Set<string>();
 
 const ClientObjectManager =
 {
-    speculativeSpawnObjectIds,
+    speculativeAddObjectIds,
     getObjectById: (objectId: string): GameObject | undefined =>
     {
         return gameObjects[objectId];
@@ -71,7 +72,7 @@ const ClientObjectManager =
             );
             const voxelGameObject = gameObject as VoxelGameObject;
             voxelGameObject.setVoxel(voxel);
-            await ClientObjectManager.spawnObject(gameObject);
+            await ClientObjectManager.addObject(gameObject);
         };
 
         // Find the player's initial position for distance-based loading order
@@ -102,7 +103,7 @@ const ClientObjectManager =
             if (obj.objectTypeIndex == voxelTypeIndex)
                 throw new Error(`Voxel object is not allowed to spawn via objectById.`);
             const gameObject = ObjectFactory.createServerSideObject(obj);
-            await ClientObjectManager.spawnObject(gameObject);
+            await ClientObjectManager.addObject(gameObject);
         }
     },
     unload: async () =>
@@ -110,7 +111,7 @@ const ClientObjectManager =
         // Unload objects
         for (const key of Object.keys(gameObjects))
         {
-            await ClientObjectManager.despawnObject(key);
+            await ClientObjectManager.removeObject(key);
             delete gameObjects[key];
         }
         for (const key of Object.keys(updatableGameObjects))
@@ -118,8 +119,21 @@ const ClientObjectManager =
         for (const key of Object.keys(playerByUserID))
             delete playerByUserID[key];
     },
-    spawnObject: async (object: GameObject) =>
+    addObject: async (object: GameObject) =>
     {
+        if (ObjectUpdateUtil.canAddObject(
+            App.getCurrentRoom()!, object.params.objectTypeIndex,
+            object.params.transform.pos, object.params.transform.dir,
+            object.params.objectId))
+        {
+            ObjectUpdateUtil.addObject(
+                App.getCurrentRoom()!, object.params.objectId,
+                object.params.objectTypeIndex,
+                object.params.transform.pos, object.params.transform.dir,
+                object.params.metadata, object.params.sourceUserID,
+                object.params.sourceUserName);
+        }
+
         if (gameObjects[object.params.objectId] == undefined)
         {
             gameObjects[object.params.objectId] = object;
@@ -142,8 +156,13 @@ const ClientObjectManager =
             console.error(`Object (ID = ${object.params.objectId}) has already been spawned.`);
         }
     },
-    despawnObject: async (objectId: string) =>
+    removeObject: async (objectId: string) =>
     {
+        if (ObjectUpdateUtil.canRemoveObject(App.getCurrentRoom()!, objectId))
+        {
+            ObjectUpdateUtil.removeObject(App.getCurrentRoom()!, objectId);
+        }
+
         if (gameObjects[objectId] != undefined)
         {
             const object = gameObjects[objectId];
@@ -159,6 +178,22 @@ const ClientObjectManager =
             console.error(`Object (ID = ${objectId}) has already been despawned.`);
         }
     },
+    setObjectTransform: (objectId: string, pos: Vec3, dir: Vec3, ignorePhysics: boolean): ObjectTransform =>
+    {
+        const result = ObjectUpdateUtil.setObjectTransform(
+            App.getCurrentRoom()!, objectId, pos, dir, ignorePhysics);
+        const object = ClientObjectManager.getObjectById(objectId)!;
+        if (object)
+        {
+            if (object.components.periodicTransformReceiver)
+                (object.components.periodicTransformReceiver as PeriodicTransformReceiver).setObjectTransform(result.transform);
+            else
+                object.setObjectTransform(result.transform.pos, result.transform.dir);
+        }
+        else
+            console.error(`ClientObjectManager.setObjectTransform :: GameObject not found (objectId = ${objectId})`);
+        return result.transform;
+    },
     // When the client receives an AddObjectSignal from the server,
     // the given object will spawn as soon as the room to which it belongs is available.
     onAddObjectSignalReceived: async (params: AddObjectSignal) => {
@@ -171,7 +206,7 @@ const ClientObjectManager =
         room.objectById[params.objectId] = params;
 
         const gameObject = ObjectFactory.createServerSideObject(params);
-        await ClientObjectManager.spawnObject(gameObject);
+        await ClientObjectManager.addObject(gameObject);
     },
     // When the client receives a RemoveObjectSignal from the server,
     // the given object will despawn as soon as the room to which it belongs is available.
@@ -184,7 +219,7 @@ const ClientObjectManager =
         const room = App.getCurrentRoom()!;
 
         // If this is a rejection of our speculative spawn, roll back the counter
-        if (speculativeSpawnObjectIds.delete(params.objectId))
+        if (speculativeAddObjectIds.delete(params.objectId))
             room.lastObjectId--;
 
         delete room.objectById[params.objectId];
@@ -194,19 +229,11 @@ const ClientObjectManager =
         if (sel && sel.gameObject.params.objectId === params.objectId)
             PersistentObjectSelection.unselect();
 
-        await ClientObjectManager.despawnObject(params.objectId);
+        await ClientObjectManager.removeObject(params.objectId);
     },
     onSetObjectTransformSignalReceived: async (params: SetObjectTransformSignal) => {
-        const object = ClientObjectManager.getObjectById(params.objectId)!;
-        if (object.components.objectTransformReceiver)
-            (object.components.objectTransformReceiver as ObjectTransformReceiver).onSetObjectTransformSignalReceived(params);
-    },
-    onResolveObjectTransformDesyncSignalReceived: async (params: ResolveObjectTransformDesyncSignal) => {
-        const object = ClientObjectManager.getObjectById(params.objectId)!;
-        if (object.components.objectTransformReceiver)
-            (object.components.objectTransformReceiver as ObjectTransformReceiver).onResolveObjectTransformDesyncSignalReceived(params);
-        if (object.components.objectTransformEmitter)
-            (object.components.objectTransformEmitter as ObjectTransformEmitter).onResolveObjectTransformDesyncSignalReceived(params);
+        ClientObjectManager.setObjectTransform(params.objectId,
+            params.transform.pos, params.transform.dir, !params.ignorePhysics);
     },
     // When the client receives a SetObjectMetadataSignal from the server,
     // the metadata change will be applied to the corresponding game object.

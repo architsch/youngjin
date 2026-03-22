@@ -1,5 +1,4 @@
 import ObjectTypeConfig from "../types/objectTypeConfig";
-import { ObjectTagEnumMap } from "../types/objectTag";
 
 // This map specifies all types of GameObject and their global configs.
 // Each config specifies all types of GameObjectComponents which must be included in the
@@ -8,7 +7,6 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [0, { // This object represents each voxel in the room's voxelGrid. Each voxel consists of blocks, and each block consists of quads (aka "voxelQuads").
         objectType: "Voxel",
         persistent: false,
-        tags: [],
         components: {
             spawnedByAny: {
                 // Collider is not needed here because the physics system handles voxels under a separate logic.
@@ -21,10 +19,10 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [1, { // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
         objectType: "Player",
         persistent: false,
-        tags: [],
         components: {
             spawnedByAny: {
-                dynamicCollider: {
+                collider: {
+                    colliderType: "rigidbody",
                     hitboxSize: {sizeX: 0.6, sizeY: 2.5, sizeZ: 0.6},
                 },
                 speechBubble: {
@@ -33,14 +31,15 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                     showMessageIfSpawnedByMe: false,
                     showMessageIfSpawnedByOther: true,
                 },
-                playerProximityDetector: {
+                playerProximityDetector: { // This is to prevent the mesh of any nearby player from clipping through the camera's view.
                     maxDist: 0.45,
                     maxLookAngle: -1,
                 },
             },
             spawnedByMe: {
                 firstPersonController: {},
-                objectTransformEmitter: {},
+                periodicTransformEmitter: {},
+                physicsUpdater: {},
             },
             spawnedByOther: {
                 modelGraphics: {
@@ -48,17 +47,17 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                     localPosition: {x: 0, y: 1.22, z: 0},
                     scale: {x: 0.3, y: 0.3, z: 0.3},
                 },
-                objectTransformReceiver: {},
+                periodicTransformReceiver: {},
             },
         },
     }],
     [2, { // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
         objectType: "Canvas",
         persistent: true,
-        tags: [ObjectTagEnumMap.AttachedToWall],
         components: {
             spawnedByAny: {
-                staticCollider: {
+                collider: {
+                    colliderType: "wallAttachment",
                     hitboxSize: {sizeX: 0.99, sizeY: 0.99, sizeZ: 0.001},
                 },
                 instancedMeshGraphics: {

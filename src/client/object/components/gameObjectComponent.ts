@@ -25,7 +25,5 @@ export default abstract class GameObjectComponent
     async onSpawn?(): Promise<void>;
     async onDespawn?(): Promise<void>;
     update?(deltaTime: number): void;
-    trySetTransform?(position: THREE.Vector3, direction: THREE.Vector3): void;
-    forceSetTransform?(position: THREE.Vector3, direction: THREE.Vector3): void;
     onSetMetadata?(key: ObjectMetadataKey, value: string): void;
 }

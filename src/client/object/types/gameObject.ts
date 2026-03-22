@@ -7,6 +7,7 @@ import GameObjectComponent from "../components/gameObjectComponent";
 import ObjectComponentFactory from "../factories/objectComponentFactory";
 import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/objectTypeConfig";
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
+import Vec3 from "../../../shared/math/types/vec3";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -95,70 +96,21 @@ export default abstract class GameObject
         return this.params.sourceUserID == App.getUser().id;
     }
 
-    // Checks to see if the transform-updating process should be regulated by one of the components
-    // (e.g. collider updating the object's transform based on physics).
-    // If there is one, let that component intercept the transform-updating process.
-    // If not, just assign the given position/direction to the object's current transform.
-    trySetTransform(position: THREE.Vector3, direction: THREE.Vector3)
-    {
-        let overrideFound = false;
-        for (const component of Object.values(this.components))
-        {
-            if (component.trySetTransform)
-            {
-                if (overrideFound)
-                    throw new Error("Multiple components with the 'trySetTransform' method detected. This is not allowed.");
-                overrideFound = true;
-                component.trySetTransform(position, direction);
-            }
-        }
-        if (!overrideFound)
-        {
-            this.position.copy(position);
-            this.direction = direction;
-        }
-    }
-
-    // This method works like "trySetTransform", but is intended to be invoked
-    // only in cases where the object's position/direction must be set forcefully rather than
-    // based on real-time physical collision.
-    // (e.g. when the object's client-side position is out of sync with its server-side position,
-    //      or when an object with a static collider needs to be relocated).
-    forceSetTransform(position: THREE.Vector3, direction: THREE.Vector3)
-    {
-        let overrideFound = false;
-        for (const component of Object.values(this.components))
-        {
-            if (component.forceSetTransform)
-            {
-                if (overrideFound)
-                    throw new Error("Multiple components with the 'forceSetTransform' method detected. This is not allowed.");
-                overrideFound = true;
-                component.forceSetTransform(position, direction);
-            }
-        }
-        if (!overrideFound)
-        {
-            this.position = position;
-            this.direction = direction;
-        }
-    }
-
     // Aliases
     get position(): THREE.Vector3 { return this.obj.position; }
-    set position(p: THREE.Vector3) { this.obj.position.set(p.x, p.y, p.z); }
     get direction(): THREE.Vector3
     {
         const direction = new THREE.Vector3();
         this.obj.getWorldDirection(direction);
         return direction;
     }
-    set direction(d: THREE.Vector3)
+    setObjectTransform(pos: Vec3, dir: Vec3)
     {
+        this.obj.position.set(pos.x, pos.y, pos.z);
         const target = new THREE.Vector3(
-            this.position.x + d.x,
-            this.position.y + d.y,
-            this.position.z + d.z
+            this.position.x + dir.x,
+            this.position.y + dir.y,
+            this.position.z + dir.z
         );
         this.obj.lookAt(target);
     }

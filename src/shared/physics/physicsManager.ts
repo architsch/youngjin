@@ -3,7 +3,7 @@ import Vec3 from "../math/types/vec3";
 import Vector3DUtil from "../math/util/vector3DUtil";
 import Geometry3DUtil from "../math/util/geometry3DUtil";
 import PhysicsObject from "./types/physicsObject";
-import PhysicsColliderUpdateResult from "./types/physicsColliderUpdateResult";
+import ObjectTransformUpdateResult from "../object/types/objectTransformUpdateResult";
 import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
 import PhysicsRoom from "./types/physicsRoom";
 import PhysicsHitState from "./types/physicsHitState";
@@ -11,6 +11,8 @@ import PhysicsCollisionUtil from "./util/physicsCollisionUtil";
 import PhysicsVoxelUtil from "./util/physicsVoxelUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STEP_UP_HEIGHT } from "../system/sharedConstants";
 import { ColliderState } from "./types/colliderState";
+import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
+import ObjectTransform from "../object/types/objectTransform";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
 
@@ -89,8 +91,8 @@ const PhysicsManager =
      * targetPos.y and resolvedPos.y represent the object's base Y (foot position),
      * NOT the hitbox center. Internally, the engine converts to hitbox-center coordinates.
      */
-    trySetTransform: (roomID: string, objectId: string, objectTypeIndex: number,
-        targetPos: Vec3, targetDir: Vec3): PhysicsColliderUpdateResult =>
+    setObjectTransform: (roomID: string, objectId: string, objectTypeIndex: number,
+        targetPos: Vec3, targetDir: Vec3, ignorePhysics: boolean): ObjectTransformUpdateResult =>
     {
         const physicsRoom = physicsRooms[roomID];
         if (physicsRoom == undefined)
@@ -117,6 +119,15 @@ const PhysicsManager =
         const startCenter: Vec3 = { x: sourceHitbox.x, y: sourceHitbox.y, z: sourceHitbox.z };
         const startBaseY = sourceHitbox.y - halfSizeY;
 
+        if (ignorePhysics)
+        {
+            object.removeFromIntersectingVoxels();
+            object.colliderState = newColliderState;
+            object.addToIntersectingVoxels();
+            const transform = new ObjectTransform(targetPos, targetDir);
+            return { transform, desyncDetected: false };
+        }
+
         // Any attempt to move more than 3 units will force-sync the object back to its original location.
         const desyncDistSqr =
             (targetPos.x - startCenter.x) * (targetPos.x - startCenter.x) +
@@ -125,7 +136,8 @@ const PhysicsManager =
         if (desyncDistSqr >= 9)
         {
             console.warn(`Physics-position desync due to distance gap (dist = ${Math.sqrt(desyncDistSqr).toFixed(3)})`);
-            return { resolvedPos: { x: startCenter.x, y: startBaseY, z: startCenter.z }, desyncDetected: true };
+            const transform = new ObjectTransform({ x: startCenter.x, y: startBaseY, z: startCenter.z }, targetDir);
+            return { transform, desyncDetected: true };
         }
 
         // ----- Phase 1: XZ Movement Resolution -----
@@ -160,7 +172,8 @@ const PhysicsManager =
         if (minCol < 0 || minRow < 0 || maxCol >= NUM_VOXEL_COLS || maxRow >= NUM_VOXEL_ROWS)
         {
             console.warn(`Physics-position desync due to room boundary limit`);
-            return { resolvedPos: { x: startCenter.x, y: startBaseY, z: startCenter.z }, desyncDetected: true };
+            const transform = new ObjectTransform({ x: startCenter.x, y: startBaseY, z: startCenter.z }, targetDir);
+            return { transform, desyncDetected: true };
         }
 
         object.removeFromIntersectingVoxels();
@@ -406,26 +419,8 @@ const PhysicsManager =
 
         // Return base Y (foot position) to the caller
         const resolvedBaseY = resolvedCenterY - halfSizeY;
-        return { resolvedPos: { x: resolvedPos.x, y: resolvedBaseY, z: resolvedPos.z }, desyncDetected: false };
-    },
-    forceSetTransform: (roomID: string, objectId: string, objectTypeIndex: number,
-        position: Vec3, direction: Vec3) =>
-    {
-        const physicsRoom = physicsRooms[roomID];
-        if (physicsRooms[roomID] == undefined)
-            throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
-
-        const object = physicsRoom.objectById[objectId];
-        if (object == undefined)
-            throw new Error(`PhysicsObject is not registered (objectId = ${objectId})`);
-
-        const colliderState = PhysicsCollisionUtil.getObjectColliderState(objectTypeIndex, position, direction);
-        if (!colliderState)
-            throw new Error(`ColliderState couldn't be computed (objectId = ${objectId}, objectTypeIndex = ${objectTypeIndex})`);
-
-        object.removeFromIntersectingVoxels();
-        object.colliderState = colliderState;
-        object.addToIntersectingVoxels();
+        const transform = new ObjectTransform({ x: resolvedPos.x, y: resolvedBaseY, z: resolvedPos.z }, targetDir);
+        return { transform, desyncDetected: false };
     },
 }
 

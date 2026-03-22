@@ -57,7 +57,7 @@ function tryRemoveCanvas(selection: PersistentObjectSelection)
         return;
 
     PersistentObjectSelection.unselect();
-    ClientObjectManager.despawnObject(objectId);
+    ClientObjectManager.removeObject(objectId);
     SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
 }
 

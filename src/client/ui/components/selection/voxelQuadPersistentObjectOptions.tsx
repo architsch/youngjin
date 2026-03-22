@@ -83,19 +83,15 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
         new ObjectTransform({x, y, z}, {x: dirX, y: dirY, z: dirZ}),
         metadata
     );
-    const obj = ObjectUpdateUtil.addObject(room, objectId, objectTypeIndex,
-        {x, y, z}, {x: dirX, y: dirY, z: dirZ}, metadata);
-    if (!obj)
-        return;
 
     // Track as speculative spawn so we can roll back the counter if the server rejects
-    ClientObjectManager.speculativeSpawnObjectIds.add(objectId);
+    ClientObjectManager.speculativeAddObjectIds.add(objectId);
 
     // Send to server
     SocketsClient.emitAddObjectSignal(objectSpawnParams);
 
     // Spawn the game object locally
     const gameObject = ObjectFactory.createServerSideObject(objectSpawnParams);
-    await ClientObjectManager.spawnObject(gameObject);
+    await ClientObjectManager.addObject(gameObject);
     PersistentObjectSelection.trySelect(gameObject);
 }

@@ -1,11 +1,11 @@
 import * as THREE from "three";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
 import SocketsClient from "../../networking/client/socketsClient";
-import ResolveObjectTransformDesyncSignal from "../../../shared/object/types/resolveObjectTransformDesyncSignal";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
+import PhysicsCollisionUtil from "../../../shared/physics/util/physicsCollisionUtil";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
 
@@ -14,8 +14,9 @@ const minSyncAngle = 0.01;
 
 const vec3Temp = new THREE.Vector3();
 
-export default class ObjectTransformEmitter extends GameObjectComponent
+export default class PeriodicTransformEmitter extends GameObjectComponent
 {
+    private ignorePhysics: boolean;
     private lastSyncTime: number = 0;
     private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
     private lastSyncedRotation: THREE.Euler = new THREE.Euler();
@@ -26,6 +27,12 @@ export default class ObjectTransformEmitter extends GameObjectComponent
 
         if (!this.gameObject.isMine())
             throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
+
+        const colliderState = PhysicsCollisionUtil.getObjectColliderState(
+            this.gameObject.params.objectTypeIndex,
+            this.gameObject.params.transform.pos,
+            this.gameObject.params.transform.dir);
+        this.ignorePhysics = !colliderState || colliderState.colliderConfig.colliderType != "rigidbody";
 
         this.lastSyncTime = performance.now();
         this.lastSyncedPosition.copy(this.gameObject.position);
@@ -53,21 +60,11 @@ export default class ObjectTransformEmitter extends GameObjectComponent
                     new ObjectTransform(
                         {x: this.lastSyncedPosition.x, y: this.lastSyncedPosition.y, z: this.lastSyncedPosition.z},
                         {x: vec3Temp.x, y: vec3Temp.y, z: vec3Temp.z}
-                    )
+                    ),
+                    this.ignorePhysics
                 );
                 SocketsClient.emitSetObjectTransformSignal(params);
-                //console.log(`(ObjectTransformEmitter) emitSetObjectTransformSignal :: ${JSON.stringify(params)}`);
             }
         }
-    }
-
-    onResolveObjectTransformDesyncSignalReceived(params: ResolveObjectTransformDesyncSignal): void
-    {
-        const p = params.resolvedPos;
-        vec3Temp.set(p.x, p.y, p.z);
-        this.gameObject.forceSetTransform(vec3Temp, this.gameObject.direction);
-        
-        this.lastSyncedPosition.copy(vec3Temp);
-        this.lastSyncTime = performance.now();
     }
 }

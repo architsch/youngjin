@@ -19,20 +19,6 @@ const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
 const currentRoomIDByUserID: {[userID: string]: string} = {};
 const pendingLoads: {[roomID: string]: Promise<RoomRuntimeMemory | null>} = {};
 
-async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
-{
-    const room = await DBRoomUtil.getRoomContent(roomID);
-    if (!room)
-        return null;
-
-    const roomRuntimeMemory = new RoomRuntimeMemory(room, {});
-    ServerRoomManager.roomRuntimeMemories[roomID] = roomRuntimeMemory;
-    ServerRoomManager.socketRoomContexts[roomID] = new SocketRoomContext();
-
-    PhysicsManager.load(roomRuntimeMemory);
-    return roomRuntimeMemory;
-}
-
 const ServerRoomManager =
 {
     roomRuntimeMemories,
@@ -221,6 +207,20 @@ const ServerRoomManager =
     {
         await ServerRoomManager.changeUserRoom(socketUserContext, params.roomID, true, false);
     },
+}
+
+async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
+{
+    const room = await DBRoomUtil.getRoomContent(roomID);
+    if (!room)
+        return null;
+
+    const roomRuntimeMemory = new RoomRuntimeMemory(room, {});
+    ServerRoomManager.roomRuntimeMemories[roomID] = roomRuntimeMemory;
+    ServerRoomManager.socketRoomContexts[roomID] = new SocketRoomContext();
+
+    PhysicsManager.load(roomRuntimeMemory);
+    return roomRuntimeMemory;
 }
 
 // periodic room saving

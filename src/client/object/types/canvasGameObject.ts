@@ -7,6 +7,7 @@ import TexturePackMaterialParams from "../../graphics/types/material/texturePack
 import ClientObjectManager from "../clientObjectManager";
 import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import PersistentObjectSelection from "../../graphics/types/gizmo/persistentObjectSelection";
+import Vec3 from "../../../shared/math/types/vec3";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -51,16 +52,16 @@ export default class CanvasGameObject extends GameObject
         this.loadImage();
     }
 
-    forceSetTransform(position: THREE.Vector3, direction: THREE.Vector3)
+    setObjectTransform(pos: Vec3, dir: Vec3)
     {
-        super.forceSetTransform(position, direction);
+        super.setObjectTransform(pos, dir);
 
         if (this.instanceId === -1)
             return;
         this.instancedMeshGraphics.updateInstanceTransform(
             this.instanceId,
             0, 0, 0.001,
-            direction.x, direction.y, direction.z,
+            this.direction.x, this.direction.y, this.direction.z,
             1, 1, 1);
     }
 

@@ -5,48 +5,17 @@ import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import PhysicsManager from "../../shared/physics/physicsManager";
-import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import { MAX_CANVASES_PER_ROOM } from "../../shared/system/sharedConstants";
-import { UserRoleEnumMap } from "../../shared/user/types/userRole";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerUserManager from "../user/serverUserManager";
 import ObjectTransform from "../../shared/object/types/objectTransform";
-import ResolveObjectTransformDesyncSignal from "../../shared/object/types/resolveObjectTransformDesyncSignal";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
-import Vec3 from "../../shared/math/types/vec3";
+import PhysicsCollisionUtil from "../../shared/physics/util/physicsCollisionUtil";
 
 let serverObjectIdCounter = 0;
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-
-function canUserModifyObject(userID: string, obj: AddObjectSignal): boolean
-{
-    if (obj.sourceUserID === userID)
-        return true;
-    const role = ServerUserManager.getUserRole(userID);
-    if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
-        return true;
-    const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
-    if (roomID)
-    {
-        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
-        if (roomRuntimeMemory && roomRuntimeMemory.room.roomType === RoomTypeEnumMap.Hub)
-            return true;
-    }
-    return false;
-}
-
-function markDirtyIfPersistent(obj: AddObjectSignal, roomID: string): void
-{
-    const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-    if (config.persistent)
-    {
-        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
-        if (roomRuntimeMemory)
-            roomRuntimeMemory.room.dirty = true;
-    }
-}
 
 const ServerObjectManager =
 {
@@ -126,7 +95,7 @@ const ServerObjectManager =
             socketRoomContext.multicastSignal("removeObjectSignal", removeSignal, user.id);
     },
     // Handle client-sent addObjectSignal (e.g. adding a canvas)
-    onAddObjectSignalReceived: (socketUserContext: SocketUserContext, params: AddObjectSignal) =>
+    onAddObjectSignalReceived: (socketUserContext: SocketUserContext, obj: AddObjectSignal) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -142,15 +111,14 @@ const ServerObjectManager =
             return;
         }
         const room = roomRuntimeMemory.room;
-
-        if (!canUserModifyObject(user.id, params))
+        if (!ServerUserManager.canUserEditRoom(user.id))
         {
-            console.warn(`(ServerObjectManager) Rejected addObjectSignal from unauthorized user (userID = ${user.id})`);
+            console.warn(`ServerObjectManager.onAddObjectSignalReceived :: Rejected addObjectSignal from unauthorized user (userID = ${user.id})`);
             return;
         }
 
         // Validate canvas limit
-        if (params.objectTypeIndex === canvasTypeIndex)
+        if (obj.objectTypeIndex === canvasTypeIndex)
         {
             const canvasCount = Object.values(room.objectById)
                 .filter(obj => obj.objectTypeIndex === canvasTypeIndex).length;
@@ -158,46 +126,46 @@ const ServerObjectManager =
             {
                 console.error(`onAddObjectSignalReceived :: Canvas limit reached (${MAX_CANVASES_PER_ROOM}) in room ${room.id}`);
                 socketUserContext.addPendingSignalToUser("removeObjectSignal",
-                    new RemoveObjectSignal(room.id, params.objectId));
+                    new RemoveObjectSignal(room.id, obj.objectId));
                 return;
             }
         }
 
         // Verify client's objectId matches expected server-side objectId
         const expectedObjectId = `p${room.lastObjectId + 1}`;
-        if (params.objectId !== expectedObjectId)
+        if (obj.objectId !== expectedObjectId)
         {
-            console.error(`onAddObjectSignalReceived :: ObjectId mismatch (expected=${expectedObjectId}, received=${params.objectId})`);
+            console.error(`onAddObjectSignalReceived :: ObjectId mismatch (expected=${expectedObjectId}, received=${obj.objectId})`);
             socketUserContext.addPendingSignalToUser("removeObjectSignal",
-                new RemoveObjectSignal(room.id, params.objectId));
+                new RemoveObjectSignal(room.id, obj.objectId));
             return;
         }
 
         // Validate placement
-        const t = params.transform;
-        if (!ObjectUpdateUtil.canAddObject(room, params.objectTypeIndex, t.pos, t.dir))
+        const t = obj.transform;
+        if (!ObjectUpdateUtil.canAddObject(room, obj.objectTypeIndex, t.pos, t.dir))
         {
-            console.error(`onAddObjectSignalReceived :: Placement validation failed (objectId=${params.objectId})`);
+            console.error(`onAddObjectSignalReceived :: Placement validation failed (objectId=${obj.objectId})`);
             socketUserContext.addPendingSignalToUser("removeObjectSignal",
-                new RemoveObjectSignal(room.id, params.objectId));
+                new RemoveObjectSignal(room.id, obj.objectId));
             return;
         }
 
         // Add the object
-        room.objectById[params.objectId] = params;
+        room.objectById[obj.objectId] = obj;
         ++room.lastObjectId;
 
         // Register physics
-        const colliderState = params.getObjectColliderState();
+        const colliderState = obj.getObjectColliderState();
         if (colliderState)
-            PhysicsManager.addObject(room.id, params.objectId, params.objectTypeIndex, colliderState);
+            PhysicsManager.addObject(room.id, obj.objectId, obj.objectTypeIndex, colliderState);
 
-        markDirtyIfPersistent(params, roomID);
+        markRoomAsDirtyIfPersistent(obj, roomID);
 
         // Broadcast to other clients
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (socketRoomContext)
-            socketRoomContext.multicastSignal("addObjectSignal", params, user.id);
+            socketRoomContext.multicastSignal("addObjectSignal", obj, user.id);
     },
     // Handle client-sent removeObjectSignal (e.g. removing a canvas)
     onRemoveObjectSignalReceived: (socketUserContext: SocketUserContext, params: RemoveObjectSignal) =>
@@ -222,8 +190,7 @@ const ServerObjectManager =
             console.error(`ServerObjectManager.onRemoveObjectSignalReceived :: Object not found (objectId = ${params.objectId})`);
             return;
         }
-
-        if (!canUserModifyObject(user.id, existingObj))
+        if (!canUserEditObject(user.id, existingObj))
         {
             console.warn(`(ServerObjectManager) Rejected removeObjectSignal from unauthorized user (userID = ${user.id})`);
             return;
@@ -236,7 +203,7 @@ const ServerObjectManager =
         if (PhysicsManager.hasObject(room.id, params.objectId))
             PhysicsManager.removeObject(room.id, params.objectId);
 
-        markDirtyIfPersistent(existingObj, roomID);
+        markRoomAsDirtyIfPersistent(existingObj, roomID);
 
         // Broadcast to other clients
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
@@ -267,10 +234,9 @@ const ServerObjectManager =
             console.error(`ServerObjectManager.onSetObjectMetadataSignalReceived :: Object not found (objectId = ${params.objectId})`);
             return;
         }
-
-        if (!canUserModifyObject(user.id, existingObj))
+        if (!canUserEditObject(user.id, existingObj))
         {
-            console.warn(`(ServerObjectManager) Rejected setObjectMetadataSignal from unauthorized user (userID = ${user.id})`);
+            console.warn(`ServerObjectManager.onSetObjectMetadataSignalReceived :: Unauthorized user (userID = ${user.id})`);
             return;
         }
 
@@ -284,7 +250,7 @@ const ServerObjectManager =
             return;
         }
 
-        markDirtyIfPersistent(obj, roomID);
+        markRoomAsDirtyIfPersistent(obj, roomID);
 
         // Broadcast to other clients
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
@@ -313,61 +279,52 @@ const ServerObjectManager =
             console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: Object doesn't exist (roomID = ${roomID}, objectId = ${objectId})`);
             return;
         }
-        if (obj.sourceUserID != user.id)
+        if (!canUserEditObject(user.id, obj))
         {
-            console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: User has no authority to control this object (roomID = ${roomID}, objectId = ${objectId})`);
+            console.warn(`ServerObjectManager.onSetObjectTransformSignalReceived :: Unauthorized user (userID = ${user.id})`);
             return;
         }
 
-        const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        const hasDynamicCollider = config.components.spawnedByAny?.dynamicCollider != null;
+        const colliderState = PhysicsCollisionUtil.getObjectColliderState(
+            obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+        const ignorePhysics = colliderState?.colliderConfig.colliderType != "rigidbody";
 
-        const targetPos: Vec3 = { ...transform.pos };
-        const targetDir: Vec3 = { ...transform.dir };
+        const result = ObjectUpdateUtil.setObjectTransform(roomRuntimeMemory.room,
+            objectId, { ...transform.pos }, { ...transform.dir }, ignorePhysics);
 
-        if (hasDynamicCollider)
-        {
-            const result = PhysicsManager.trySetTransform(roomID, objectId, obj.objectTypeIndex, targetPos, targetDir);
-            transform.pos.x = result.resolvedPos.x;
-            transform.pos.y = result.resolvedPos.y;
-            transform.pos.z = result.resolvedPos.z;
-            Object.assign(obj.transform, transform);
+        markRoomAsDirtyIfPersistent(obj, roomID);
 
-            if (result.desyncDetected)
-            {
-                const desyncSignal = new ResolveObjectTransformDesyncSignal(objectId, result.resolvedPos);
-                const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-                if (!socketRoomContext)
-                    console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: SocketRoomContext not found (roomID = ${roomID})`);
-                else // Broadcast to everyone.
-                    socketRoomContext.multicastSignal("resolveObjectTransformDesyncSignal", desyncSignal);
-            }
-            else
-            {
-                const syncSignal = new SetObjectTransformSignal(objectId, transform);
-                const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-                if (!socketRoomContext)
-                    console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: SocketRoomContext not found (roomID = ${roomID})`);
-                else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
-                    socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
-            }
-        }
-        else
-        {
-            // No dynamic collider - force set the transform without physics validation.
-            PhysicsManager.forceSetTransform(roomID, objectId, obj.objectTypeIndex, targetPos, targetDir);
-            Object.assign(obj.transform, transform);
-
-            markDirtyIfPersistent(obj, roomID);
-
-            const syncSignal = new SetObjectTransformSignal(objectId, transform);
-            const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-            if (!socketRoomContext)
-                console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: SocketRoomContext not found (roomID = ${roomID})`);
-            else // Broadcast to everyone except the one who sent the setObjectTransformSignal.
-                socketRoomContext.multicastSignal("setObjectTransformSignal", syncSignal, user.id);
-        }
+        // If desync was detected,
+        //      Broadcast to everyone (including the sender).
+        // Otherwise,
+        //      Broadcast to everyone except the one who sent the signal. 
+        const signal = new SetObjectTransformSignal(objectId, transform, true);
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
+        if (!socketRoomContext)
+            console.error(`ServerObjectManager.onSetObjectTransformSignalReceived :: SocketRoomContext not found (roomID = ${roomID})`);
+        else 
+            socketRoomContext.multicastSignal("setObjectTransformSignal", signal, result.desyncDetected ? undefined : user.id);
     },
+}
+
+function canUserEditObject(userID: string, obj: AddObjectSignal): boolean
+{
+    // User can modify an existing object if either:
+    // (1) The object has no owner and the user is allowed to edit the room, or
+    // (2) The object is owned by the user.
+    return (obj.sourceUserID == "" && ServerUserManager.canUserEditRoom(userID)) ||
+        obj.sourceUserID == userID;
+}
+
+function markRoomAsDirtyIfPersistent(obj: AddObjectSignal, roomID: string): void
+{
+    const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
+    if (config.persistent)
+    {
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (roomRuntimeMemory)
+            roomRuntimeMemory.room.dirty = true;
+    }
 }
 
 export default ServerObjectManager;

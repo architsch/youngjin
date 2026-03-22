@@ -1,15 +1,12 @@
 import { ColliderConfig } from "../../physics/types/colliderConfig";
-import { ObjectTag } from "./objectTag";
 
 export default interface ObjectTypeConfig
 {
     objectType: string;
     persistent: boolean;
-    tags: ObjectTag[];
     components: {
         spawnedByAny?: {
-            dynamicCollider?: ColliderConfig,
-            staticCollider?: ColliderConfig,
+            collider?: ColliderConfig,
             instancedMeshGraphics?: {
                 createInstanceIdPool: boolean,
             },
@@ -25,14 +22,12 @@ export default interface ObjectTypeConfig
             },
         },
         spawnedByMe?: {
-            firstPersonController?: {
-            },
-            objectTransformEmitter?: {
-            },
+            firstPersonController?: {},
+            periodicTransformEmitter?: {},
+            physicsUpdater?: {},
         },
         spawnedByOther?: {
-            objectTransformReceiver?: {
-            },
+            periodicTransformReceiver?: {},
             modelGraphics?: {
                 path: string,
                 localPosition: {x: number, y: number, z: number},

@@ -7,9 +7,10 @@ import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import SetObjectTransformSignal from "../../../../shared/object/types/setObjectTransformSignal";
-import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
+import WallAttachedObjectUtil from "../../../../shared/object/util/wallAttachedObjectUtil";
+import ClientObjectManager from "../../../object/clientObjectManager";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -74,6 +75,7 @@ async function updateGizmos(selection: PersistentObjectSelection)
     }
 
     const objectId = go.params.objectId;
+    const obj = room.objectById[objectId];
     const pos = go.position;
 
     // Calculate the canvas's local right vector.
@@ -92,7 +94,10 @@ async function updateGizmos(selection: PersistentObjectSelection)
     {
         const def = arrowDefs[i];
         const arrow = arrows[i];
-        const canMove = ObjectUpdateUtil.canMoveObject(room, objectId, def.dx, def.dy, def.dz);
+
+        const result = WallAttachedObjectUtil.getMoveResult(room, obj, def.dx, def.dy, def.dz);
+        const canMove = result != undefined &&
+            ObjectUpdateUtil.canSetObjectTransform(room, objectId, result.newPos, result.newDir);
 
         arrow.setVisible(canMove);
 
@@ -126,35 +131,22 @@ function tryMoveCanvas(selection: PersistentObjectSelection,
     dx: number, dy: number, dz: number)
 {
     const room = App.getCurrentRoom();
-    if (!room) return;
-
-    const objectId = selection.gameObject.params.objectId;
-    if (!ObjectUpdateUtil.canMoveObject(room, objectId, dx, dy, dz))
+    if (!room)
         return;
 
-    const moved = ObjectUpdateUtil.moveObject(room, objectId, dx, dy, dz);
-    if (!moved) return;
+    const objectId = selection.gameObject.params.objectId;
+    const obj = room.objectById[objectId];
+    const result = WallAttachedObjectUtil.getMoveResult(room, obj, dx, dy, dz);
+    if (!result)
+        return;
 
-    // Update the game object's visual transform
-    const go = selection.gameObject;
-    const t = moved.transform;
-    go.forceSetTransform(
-        new THREE.Vector3(t.pos.x, t.pos.y, t.pos.z),
-        new THREE.Vector3(t.dir.x, t.dir.y, t.dir.z)
-    );
+    const tr = ClientObjectManager.setObjectTransform(objectId, result.newPos, result.newDir, true);
 
     // Notify the observable to update the selection outline and gizmo positions
     persistentObjectSelectionObservable.notify();
 
     // Emit to server
-    SocketsClient.emitSetObjectTransformSignal(
-        new SetObjectTransformSignal(objectId,
-            new ObjectTransform(
-                {x: t.pos.x, y: t.pos.y, z: t.pos.z},
-                {x: t.dir.x, y: t.dir.y, z: t.dir.z}
-            )
-        )
-    );
+    SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(objectId, tr, true));
 }
 
 // --- Observable listeners ---

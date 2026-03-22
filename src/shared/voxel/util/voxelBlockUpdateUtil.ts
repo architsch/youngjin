@@ -5,8 +5,6 @@ import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
 import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
-import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
-import { ObjectTagEnumMap } from "../../object/types/objectTag";
 
 const VoxelBlockUpdateUtil =
 {
@@ -114,8 +112,7 @@ const VoxelBlockUpdateUtil =
         const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
         for (const collidingObject of Object.values(collidingObjects))
         {
-            const config = ObjectTypeConfigMap.getConfigByIndex(collidingObject.objectTypeIndex);
-            if (config.tags.includes(ObjectTagEnumMap.AttachedToWall))
+            if (collidingObject.colliderState.colliderConfig.colliderType == "wallAttachment")
                 return false;
         }
         return true;
