@@ -3,7 +3,7 @@ import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Observable from "../../shared/system/types/observable";
 import ObservableMap from "../../shared/system/types/observableMap";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
-import PersistentObjectSelection from "../graphics/types/gizmo/persistentObjectSelection";
+import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ClientProcess from "./types/clientProcess";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 
@@ -35,8 +35,8 @@ export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
 // Each voxel consists of a stack of voxelBlocks.
 export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | null>(null);
 
-// This observable notifies its listeners whenever the user selects or unselects a persistent object.
-export const persistentObjectSelectionObservable = new Observable<PersistentObjectSelection | null>(null);
+// This observable notifies its listeners whenever the user selects or unselects an object.
+export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
 // This observable notifies its listeners whenever a text input element (UI) either gets
 // focused or unfocused.

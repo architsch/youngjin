@@ -5,7 +5,6 @@ import AddObjectSignal from "../../object/types/addObjectSignal";
 import EncodableByteString from "../../networking/types/encodableByteString";
 import { RoomType } from "./roomType";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
-import EncodableRaw4ByteNumber from "../../networking/types/encodableRaw4ByteNumber";
 import EncodableArray from "../../networking/types/encodableArray";
 import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
 
@@ -17,14 +16,12 @@ export default class Room extends EncodableData
     texturePackPath: string;
     voxelGrid: VoxelGrid;
     objectById: {[objectId: string]: AddObjectSignal};
-    lastObjectId: number;
     dirty: boolean;
 
     constructor(id: string | undefined, roomType: RoomType, ownerUserID: string,
         texturePackPath: string,
         voxelGrid: VoxelGrid,
-        objectById: {[objectId: string]: AddObjectSignal} = {},
-        lastObjectId: number = 0)
+        objectById: {[objectId: string]: AddObjectSignal} = {})
     {
         super();
         this.id = (id != undefined) ? id : "";
@@ -33,7 +30,6 @@ export default class Room extends EncodableData
         this.texturePackPath = texturePackPath;
         this.voxelGrid = voxelGrid;
         this.objectById = objectById;
-        this.lastObjectId = lastObjectId;
         this.dirty = false;
     }
 
@@ -52,7 +48,6 @@ export default class Room extends EncodableData
 
         // Encode all objects (DB persistence filters to persistent-only separately in saveRoomContent)
         const allObjects = Object.values(this.objectById);
-        new EncodableRaw4ByteNumber(this.lastObjectId).encode(bufferState);
         new EncodableArray(allObjects, 65535).encode(bufferState);
     }
 
@@ -66,7 +61,6 @@ export default class Room extends EncodableData
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
 
-        const lastObjectId = (EncodableRaw4ByteNumber.decode(bufferState) as EncodableRaw4ByteNumber).n;
         const objectArray = EncodableArray.decodeWithParams(bufferState, AddObjectSignal.decode, 65535) as EncodableArray;
         const objectById: {[objectId: string]: AddObjectSignal} = {};
         for (const element of objectArray.arr)
@@ -75,6 +69,6 @@ export default class Room extends EncodableData
             objectById[obj.objectId] = obj;
         }
 
-        return new Room(id, roomType, ownerUserID, texturePackPath, voxelGrid, objectById, lastObjectId);
+        return new Room(id, roomType, ownerUserID, texturePackPath, voxelGrid, objectById);
     }
 }

@@ -5,6 +5,7 @@ import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfi
 import EncodableArray from "../../../shared/networking/types/encodableArray";
 import EncodableRawByteNumber from "../../../shared/networking/types/encodableRawByteNumber";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
+import ErrorUtil from "../../../shared/system/util/errorUtil";
 
 export default class SocketUserContext
 {
@@ -36,7 +37,11 @@ export default class SocketUserContext
                     return;
                 this.throttleTimestamps[signalType] = now;
             }
-            handler(buffer);
+            try {
+                handler(buffer);
+            } catch (err) {
+                console.error(`Exception while handling '${signalType}' from user (ID: ${this.user.id}, Name: ${this.user.userName}) :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+            }
         });
     }
 

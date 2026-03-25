@@ -29,6 +29,7 @@ import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import UserCommandUtil from "../user/util/userCommandUtil";
 import UserGameplayState from "../user/types/userGameplayState";
 import LatencySimUtil from "../system/util/latencySimUtil";
+import ErrorUtil from "../../shared/system/util/errorUtil";
 
 let io: socketIO.Server;
 let signalProcessingInterval: NodeJS.Timeout;
@@ -82,172 +83,168 @@ const SocketsServer =
         }
 
         io.on("connection", async (socket: socketIO.Socket) => {
-            const socketUserContext = new SocketUserContext(socket);
-            const user = socketUserContext.user;
-            console.log(`(SocketsServer) Client connected :: ${JSON.stringify(user)}`);
+            try {
+                const socketUserContext = new SocketUserContext(socket);
+                const user = socketUserContext.user;
+                console.log(`(SocketsServer) Client connected :: ${JSON.stringify(user)}`);
 
-            // Cached gameplay state from a previous session (used for reconnection).
-            // This is passed to changeUserRoom so it can restore position without a DB lookup.
-            let cachedGameplayState: UserGameplayState | undefined;
+                // Cached gameplay state from a previous session (used for reconnection).
+                // This is passed to changeUserRoom so it can restore position without a DB lookup.
+                let cachedGameplayState: UserGameplayState | undefined;
 
-            if (ServerUserManager.hasUser(user.id))
-            {
-                // Case A: New socket connects BEFORE old disconnect fires (common on
-                // low-latency environments as well as cases in which another tab inside the same
-                // browser window connects to the server while the original tab is still connected).
-                // Capture the old session's gameplay state from runtime memory, clean it up,
-                // and pass it to changeUserRoom so the player spawns at the correct position.
-                console.warn(`(SocketsServer) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
-                const oldContext = ServerUserManager.getSocketUserContext(user.id)!;
-                const oldRoomID = ServerRoomManager.currentRoomIDByUserID[user.id];
-                const oldRoomMemory = oldRoomID ? ServerRoomManager.roomRuntimeMemories[oldRoomID] : undefined;
-                cachedGameplayState = oldRoomMemory ? ServerUserManager.getUserGameplayState(oldContext, oldRoomMemory) : undefined;
-
-                ServerUserManager.removeUser(user.id);
-                await ServerRoomManager.changeUserRoom(oldContext, undefined, false, true);
-                oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
-                oldContext.socket.disconnect(true);
-
-                if (cachedGameplayState)
-                    user.lastRoomID = cachedGameplayState.lastRoomID;
-            }
-            else
-            {
-                // Case B: Old disconnect already fired BEFORE this new socket
-                // connected (common on higher-latency environments).
-                // The disconnect handler cached the gameplay state in memory.
-                // Restore it here because the DB write from the disconnect handler
-                // may not have completed before the socket auth middleware queried
-                // the DB for this new connection.
-                const cached = recentDisconnectGameplayStates[user.id];
-                if (cached)
+                if (ServerUserManager.hasUser(user.id))
                 {
-                    console.log(`(SocketsServer) Restoring cached gameplay state for userID = ${user.id}`);
-                    cachedGameplayState = cached.state;
-                    user.lastRoomID = cached.state.lastRoomID;
+                    // Case A: New socket connects BEFORE old disconnect fires (common on
+                    // low-latency environments as well as cases in which another tab inside the same
+                    // browser window connects to the server while the original tab is still connected).
+                    // Capture the old session's gameplay state from runtime memory, clean it up,
+                    // and pass it to changeUserRoom so the player spawns at the correct position.
+                    console.warn(`(SocketsServer) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
+                    const oldContext = ServerUserManager.getSocketUserContext(user.id)!;
+                    const oldRoomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+                    const oldRoomMemory = oldRoomID ? ServerRoomManager.roomRuntimeMemories[oldRoomID] : undefined;
+                    cachedGameplayState = oldRoomMemory ? ServerUserManager.getUserGameplayState(oldContext, oldRoomMemory) : undefined;
+
+                    ServerUserManager.removeUser(user.id);
+                    await ServerRoomManager.changeUserRoom(oldContext, undefined, false, true);
+                    oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
+                    oldContext.socket.disconnect(true);
+
+                    if (cachedGameplayState)
+                        user.lastRoomID = cachedGameplayState.lastRoomID;
                 }
-            }
-            delete recentDisconnectGameplayStates[user.id];
-            delete staleSocketFirstDetectedAt[user.id];
-            ServerUserManager.addUser(socketUserContext);
-
-            socketUserContext.onReceivedSignalFromUser("setObjectTransformSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = SetObjectTransformSignal.decode(bufferState) as SetObjectTransformSignal;
-                ServerObjectManager.onSetObjectTransformSignalReceived(socketUserContext, params.objectId, params.transform);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("userCommandSignal", async (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = UserCommandSignal.decode(bufferState) as UserCommandSignal;
-                await UserCommandUtil.onUserCommandSignalReceived(user, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
-                ServerVoxelManager.onAddVoxelBlockSignalReceived(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("moveVoxelBlockSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
-                ServerVoxelManager.onMoveVoxelBlockSignalReceived(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("removeVoxelBlockSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
-                ServerVoxelManager.onRemoveVoxelBlockSignalReceived(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
-                ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = AddObjectSignal.decode(bufferState) as AddObjectSignal;
-                ServerObjectManager.onAddObjectSignalReceived(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("removeObjectSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
-                ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("setObjectMetadataSignal", (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
-                ServerObjectManager.onSetObjectMetadataSignalReceived(socketUserContext, params);
-            });
-
-            socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                const params = RequestRoomChangeSignal.decode(bufferState) as RequestRoomChangeSignal;
-                await ServerRoomManager.onRequestRoomChangeSignalReceived(socketUserContext, params);
-            });
-
-            socket.on("disconnect", async () => {
-                console.log(`(SocketsServer) Client disconnected :: ${JSON.stringify(user)}`);
-
-                if (ServerUserManager.getSocketUserContext(user.id) != socketUserContext)
+                else
                 {
-                    // This socket was already replaced by a newer connection (page
-                    // refresh), or was cleaned up earlier.  The replacement logic in
-                    // the connection handler already captured the gameplay state, so
-                    // there is nothing left to do.
-                    console.warn(`(SocketsServer) Skipping stale disconnect handler (userID = ${user.id})`);
-                    return;
-                }
-
-                // Cache the gameplay state in memory so that a new connection
-                // arriving shortly after this disconnect can restore it, even if the
-                // DB write below hasn't completed by the time the new socket's auth
-                // middleware queries the DB.
-                const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
-                const roomMem = roomID ? ServerRoomManager.roomRuntimeMemories[roomID] : undefined;
-                const gameplayState = roomMem ? ServerUserManager.getUserGameplayState(socketUserContext, roomMem) : undefined;
-                if (gameplayState)
-                    recentDisconnectGameplayStates[user.id] = {state: gameplayState, timestamp: Date.now()};
-
-                ServerUserManager.removeUser(user.id);
-                await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, true);
-            });
-
-            // Determine which room the user should join.
-            // Priority:
-            //   1. targetRoomID from socket handshake (URL-based room access: /mypage/:roomID)
-            //   2. user.lastRoomID (the room the user was last in)
-            //   3. Hub room (fallback)
-            const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
-            const preferredRoomID = (targetRoomID && targetRoomID.length > 0)
-                ? targetRoomID
-                : user.lastRoomID;
-
-            if (!(await ServerRoomManager.changeUserRoom(socketUserContext, preferredRoomID, false, false, cachedGameplayState)))
-            {
-                // Check in-memory rooms first to avoid a Firestore query
-                let hubRoomID: string | undefined;
-                for (const [roomID, mem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
-                {
-                    if (mem.room.roomType === RoomTypeEnumMap.Hub)
+                    // Case B: Old disconnect already fired BEFORE this new socket
+                    // connected (common on higher-latency environments).
+                    // The disconnect handler cached the gameplay state in memory.
+                    // Restore it here because the DB write from the disconnect handler
+                    // may not have completed before the socket auth middleware queried
+                    // the DB for this new connection.
+                    const cached = recentDisconnectGameplayStates[user.id];
+                    if (cached)
                     {
-                        hubRoomID = roomID;
-                        break;
+                        console.log(`(SocketsServer) Restoring cached gameplay state for userID = ${user.id}`);
+                        cachedGameplayState = cached.state;
+                        user.lastRoomID = cached.state.lastRoomID;
                     }
                 }
-                if (!hubRoomID)
+                delete recentDisconnectGameplayStates[user.id];
+                delete staleSocketFirstDetectedAt[user.id];
+                ServerUserManager.addUser(socketUserContext);
+
+                socketUserContext.onReceivedSignalFromUser("setObjectTransformSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = SetObjectTransformSignal.decode(bufferState) as SetObjectTransformSignal;
+                    ServerObjectManager.onSetObjectTransformSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("userCommandSignal", async (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = UserCommandSignal.decode(bufferState) as UserCommandSignal;
+                    await UserCommandUtil.onUserCommandSignalReceived(user, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
+                    ServerVoxelManager.onAddVoxelBlockSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("moveVoxelBlockSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
+                    ServerVoxelManager.onMoveVoxelBlockSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("removeVoxelBlockSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
+                    ServerVoxelManager.onRemoveVoxelBlockSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
+                    ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = AddObjectSignal.decode(bufferState) as AddObjectSignal;
+                    ServerObjectManager.onAddObjectSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("removeObjectSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
+                    ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("setObjectMetadataSignal", (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
+                    ServerObjectManager.onSetObjectMetadataSignalReceived(socketUserContext, signal);
+                });
+                socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
+                    const bufferState = new BufferState(new Uint8Array(buffer));
+                    const signal = RequestRoomChangeSignal.decode(bufferState) as RequestRoomChangeSignal;
+                    await ServerRoomManager.onRequestRoomChangeSignalReceived(socketUserContext, signal);
+                });
+
+                socket.on("disconnect", async () => {
+                    console.log(`(SocketsServer) Client disconnected :: ${JSON.stringify(user)}`);
+
+                    if (ServerUserManager.getSocketUserContext(user.id) != socketUserContext)
+                    {
+                        // This socket was already replaced by a newer connection (page
+                        // refresh), or was cleaned up earlier.  The replacement logic in
+                        // the connection handler already captured the gameplay state, so
+                        // there is nothing left to do.
+                        console.warn(`(SocketsServer) Skipping stale disconnect handler (userID = ${user.id})`);
+                        return;
+                    }
+
+                    // Cache the gameplay state in memory so that a new connection
+                    // arriving shortly after this disconnect can restore it, even if the
+                    // DB write below hasn't completed by the time the new socket's auth
+                    // middleware queries the DB.
+                    const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+                    const roomMem = roomID ? ServerRoomManager.roomRuntimeMemories[roomID] : undefined;
+                    const gameplayState = roomMem ? ServerUserManager.getUserGameplayState(socketUserContext, roomMem) : undefined;
+                    if (gameplayState)
+                        recentDisconnectGameplayStates[user.id] = {state: gameplayState, timestamp: Date.now()};
+
+                    ServerUserManager.removeUser(user.id);
+                    await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, true);
+                });
+
+                // Determine which room the user should join.
+                // Priority:
+                //   1. targetRoomID from socket handshake (URL-based room access: /mypage/:roomID)
+                //   2. user.lastRoomID (the room the user was last in)
+                //   3. Hub room (fallback)
+                const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
+                const preferredRoomID = (targetRoomID && targetRoomID.length > 0)
+                    ? targetRoomID
+                    : user.lastRoomID;
+
+                if (!(await ServerRoomManager.changeUserRoom(socketUserContext, preferredRoomID, false, false, cachedGameplayState)))
                 {
-                    const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
-                    if (roomSearchResult.success && roomSearchResult.data.length > 0)
-                        hubRoomID = roomSearchResult.data[0].id as string;
+                    // Check in-memory rooms first to avoid a Firestore query
+                    let hubRoomID: string | undefined;
+                    for (const [roomID, mem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+                    {
+                        if (mem.room.roomType === RoomTypeEnumMap.Hub)
+                        {
+                            hubRoomID = roomID;
+                            break;
+                        }
+                    }
+                    if (!hubRoomID)
+                    {
+                        const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
+                        if (roomSearchResult.success && roomSearchResult.data.length > 0)
+                            hubRoomID = roomSearchResult.data[0].id as string;
+                    }
+                    if (hubRoomID)
+                        await ServerRoomManager.changeUserRoom(socketUserContext, hubRoomID, false, false);
                 }
-                if (hubRoomID)
-                    await ServerRoomManager.changeUserRoom(socketUserContext, hubRoomID, false, false);
+            } catch (err) {
+                console.error(`Exception while establishing a socket connection with a client :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+                socket.disconnect(true);
             }
         });
 

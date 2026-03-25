@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import PersistentObjectSelection from "./persistentObjectSelection";
-import { persistentObjectSelectionObservable, roomChangedObservable } from "../../../system/clientObservables";
+import ObjectSelection from "./objectSelection";
+import { objectSelectionObservable, roomChangedObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
@@ -11,6 +11,8 @@ import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import WallAttachedObjectUtil from "../../../../shared/object/util/wallAttachedObjectUtil";
 import ClientObjectManager from "../../../object/clientObjectManager";
+import ErrorUtil from "../../../../shared/system/util/errorUtil";
+import ObjectTransform from "../../../../shared/object/types/objectTransform";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -56,7 +58,7 @@ function hideAll()
         arrow.setVisible(false);
 }
 
-async function updateGizmos(selection: PersistentObjectSelection)
+async function updateGizmos(selection: ObjectSelection)
 {
     const go = selection.gameObject;
     if (go.params.objectTypeIndex !== canvasTypeIndex)
@@ -73,6 +75,9 @@ async function updateGizmos(selection: PersistentObjectSelection)
         hideAll();
         return;
     }
+
+    const user = App.getUser();
+    const userRole = App.getCurrentUserRole();
 
     const objectId = go.params.objectId;
     const obj = room.objectById[objectId];
@@ -97,7 +102,9 @@ async function updateGizmos(selection: PersistentObjectSelection)
 
         const result = WallAttachedObjectUtil.getMoveResult(room, obj, def.dx, def.dy, def.dz);
         const canMove = result != undefined &&
-            ObjectUpdateUtil.canSetObjectTransform(room, objectId, result.newPos, result.newDir);
+            ObjectUpdateUtil.canSetObjectTransform(user, userRole, room,
+                new SetObjectTransformSignal(objectId,
+                    new ObjectTransform(result.newPos, result.newDir), true));
 
         arrow.setVisible(canMove);
 
@@ -127,31 +134,35 @@ async function updateGizmos(selection: PersistentObjectSelection)
     }
 }
 
-function tryMoveCanvas(selection: PersistentObjectSelection,
+function tryMoveCanvas(selection: ObjectSelection,
     dx: number, dy: number, dz: number)
 {
-    const room = App.getCurrentRoom();
-    if (!room)
-        return;
+    try {
+        const room = App.getCurrentRoom();
+        if (!room)
+            return;
 
-    const objectId = selection.gameObject.params.objectId;
-    const obj = room.objectById[objectId];
-    const result = WallAttachedObjectUtil.getMoveResult(room, obj, dx, dy, dz);
-    if (!result)
-        return;
+        const objectId = selection.gameObject.params.objectId;
+        const obj = room.objectById[objectId];
+        const result = WallAttachedObjectUtil.getMoveResult(room, obj, dx, dy, dz);
+        if (!result)
+            return;
 
-    const tr = ClientObjectManager.setObjectTransform(objectId, result.newPos, result.newDir, true);
+        const tr = ClientObjectManager.setObjectTransform(objectId, result.newPos, result.newDir, true);
 
-    // Notify the observable to update the selection outline and gizmo positions
-    persistentObjectSelectionObservable.notify();
+        // Notify the observable to update the selection outline and gizmo positions
+        objectSelectionObservable.notify();
 
-    // Emit to server
-    SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(objectId, tr, true));
+        // Emit to server
+        SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(objectId, tr, true));
+    } catch (err) {
+        console.error(`Exception while trying to move a canvas :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+    }
 }
 
 // --- Observable listeners ---
 
-persistentObjectSelectionObservable.addListener("canvasWorldSpaceGizmos", async (selection: PersistentObjectSelection | null) => {
+objectSelectionObservable.addListener("canvasWorldSpaceGizmos", async (selection: ObjectSelection | null) => {
     if (selection)
         await updateGizmos(selection);
     else

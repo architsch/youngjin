@@ -1,9 +1,19 @@
 import { ColliderConfig } from "../../physics/types/colliderConfig";
+import Room from "../../room/types/room";
+import User from "../../user/types/user";
+import { UserRole } from "../../user/types/userRole";
+import AddObjectSignal from "./addObjectSignal";
+import SetObjectMetadataSignal from "./setObjectMetadataSignal";
+import SetObjectTransformSignal from "./setObjectTransformSignal";
 
 export default interface ObjectTypeConfig
 {
     objectType: string;
     persistent: boolean;
+    canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => boolean,
+    canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => boolean,
+    canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,
+    canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => boolean,
     components: {
         spawnedByAny?: {
             collider?: ColliderConfig,
@@ -24,7 +34,7 @@ export default interface ObjectTypeConfig
         spawnedByMe?: {
             firstPersonController?: {},
             periodicTransformEmitter?: {},
-            physicsUpdater?: {},
+            rigidbody?: {},
         },
         spawnedByOther?: {
             periodicTransformReceiver?: {},

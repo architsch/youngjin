@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { persistentObjectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import MeshFactory from "../../factories/meshFactory";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
@@ -102,8 +102,8 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         // If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
         playerViewTargetPosObservable.set(new THREE.Vector3(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ));
 
-        // Also unselect any persistent object selection.
-        persistentObjectSelectionObservable.set(null);
+        // Also unselect any object selection.
+        objectSelectionObservable.set(null);
     }
     else
     {

@@ -12,6 +12,7 @@ import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import SetUserRoleSignal from "../../shared/user/types/setUserRoleSignal";
 import DBUserUtil from "../db/util/dbUserUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
@@ -66,12 +67,12 @@ const ServerUserManager =
             user.id,
             user.userName,
             ObjectTypeConfigMap.getIndexByType("Player"),
-            ServerObjectManager.generateObjectId(),
+            ServerObjectManager.generateNonPersistentObjectId(),
             playerObjectTransform,
             restoredMetadata
         );
-        ServerObjectManager.addObject(socketUserContext, playerAddObjectSignal);
-        playerObjectByUserID[userID] = playerAddObjectSignal;
+        if (ServerObjectManager.onAddObjectSignalReceived(socketUserContext, playerAddObjectSignal))
+            playerObjectByUserID[userID] = playerAddObjectSignal;
         userRoleByUserID[userID] = userRole;
     },
     removeUserFromRoom: async (socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
@@ -101,7 +102,7 @@ const ServerUserManager =
 
         const objectIds = getIdsOfObjectsSpawnedByUser(roomID, user.id);
         for (const objectId of objectIds)
-            ServerObjectManager.removeObject(socketUserContext, objectId);
+            ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, new RemoveObjectSignal(roomRuntimeMemory.room.id, objectId));
 
         if (roomRuntimeMemory.participantUserIDs[user.id] == undefined)
         {

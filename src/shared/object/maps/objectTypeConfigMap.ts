@@ -1,4 +1,13 @@
+import Room from "../../room/types/room";
+import { RoomTypeEnumMap } from "../../room/types/roomType";
+import { MAX_CANVASES_PER_ROOM, MAX_IMAGE_URL_LENGTH } from "../../system/sharedConstants";
+import User from "../../user/types/user";
+import { UserRole, UserRoleEnumMap } from "../../user/types/userRole";
+import AddObjectSignal from "../types/addObjectSignal";
+import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import ObjectTypeConfig from "../types/objectTypeConfig";
+import SetObjectMetadataSignal from "../types/setObjectMetadataSignal";
+import SetObjectTransformSignal from "../types/setObjectTransformSignal";
 
 // This map specifies all types of GameObject and their global configs.
 // Each config specifies all types of GameObjectComponents which must be included in the
@@ -7,6 +16,18 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [0, { // This object represents each voxel in the room's voxelGrid. Each voxel consists of blocks, and each block consists of quads (aka "voxelQuads").
         objectType: "Voxel",
         persistent: false,
+        canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+        },
+        canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+        },
+        canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
+            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+        },
+        canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
+            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+        },
         components: {
             spawnedByAny: {
                 // Collider is not needed here because the physics system handles voxels under a separate logic.
@@ -19,6 +40,34 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [1, { // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
         objectType: "Player",
         persistent: false,
+        canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+            return user == undefined; // Only the server can add a player character (corresponding to a connected user)
+        },
+        canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+            return user == undefined; // Only the server can remove a player character (corresponding to a disconnected user)
+        },
+        canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
+            // User can only move his/her own player character
+            if (obj.sourceUserID != user.id || obj.sourceUserName != user.userName)
+                return false;
+
+            // Player movement must obey the laws of physics
+            if (signal.ignorePhysics)
+                return false;
+
+            return true;
+        },
+        canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
+            // User can only set the metadata of his/her own player character
+            if (obj.sourceUserID != user.id || obj.sourceUserName != user.userName)
+                return false;
+
+            // User can only set the player's message nothing else
+            if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage)
+                return false;
+
+            return true;
+        },
         components: {
             spawnedByAny: {
                 collider: {
@@ -39,7 +88,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByMe: {
                 firstPersonController: {},
                 periodicTransformEmitter: {},
-                physicsUpdater: {},
+                rigidbody: {},
             },
             spawnedByOther: {
                 modelGraphics: {
@@ -54,6 +103,69 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [2, { // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
         objectType: "Canvas",
         persistent: true,
+        canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+            // Block users who have no editing privilege
+            const userCanEditRoom = room.roomType == RoomTypeEnumMap.Hub ||
+                userRole == UserRoleEnumMap.Owner ||
+                userRole == UserRoleEnumMap.Editor;
+            if (!userCanEditRoom)
+                return false;
+
+            // Block spoofing attempts
+            if (obj.sourceUserID != user.id || obj.sourceUserName != user.userName)
+                return false;
+
+            // Block users from adding too many canvases
+            const typeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+            const canvasCount = Object.values(room.objectById)
+                .filter(obj => obj.objectTypeIndex === typeIndex).length;
+            if (canvasCount >= MAX_CANVASES_PER_ROOM)
+                return false;
+
+            return true;
+        },
+        canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+            // Block users who have no editing privilege
+            const userCanEditRoom = room.roomType == RoomTypeEnumMap.Hub ||
+                userRole == UserRoleEnumMap.Owner ||
+                userRole == UserRoleEnumMap.Editor;
+            if (!userCanEditRoom)
+                return false;
+
+            return true;
+        },
+        canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
+            // Block users who have no editing privilege
+            const userCanEditRoom = room.roomType == RoomTypeEnumMap.Hub ||
+                userRole == UserRoleEnumMap.Owner ||
+                userRole == UserRoleEnumMap.Editor;
+            if (!userCanEditRoom)
+                return false;
+
+            // Canvas movement must ignore physics
+            if (!signal.ignorePhysics)
+                return false;
+
+            return true;
+        },
+        canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
+            // Block users who have no editing privilege
+            const userCanEditRoom = room.roomType == RoomTypeEnumMap.Hub ||
+                userRole == UserRoleEnumMap.Owner ||
+                userRole == UserRoleEnumMap.Editor;
+            if (!userCanEditRoom)
+                return false;
+
+            // User can only set the canvas's image URL and nothing else
+            if (signal.metadataKey != ObjectMetadataKeyEnumMap.ImageURL)
+                return false;
+
+            // Image URL must not exceed its maximum length
+            if (signal.metadataValue.length > MAX_IMAGE_URL_LENGTH)
+                return false;
+
+            return true;
+        },
         components: {
             spawnedByAny: {
                 collider: {

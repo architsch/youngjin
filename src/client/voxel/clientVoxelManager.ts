@@ -19,47 +19,47 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const ClientVoxelManager =
 {
-    onAddVoxelBlockSignalReceived: async (params: AddVoxelBlockSignal) => {
+    onAddVoxelBlockSignalReceived: async (signal: AddVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("addVoxelBlockSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
 
         const room = App.getCurrentRoom()!;
-        VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer);
+        VoxelBlockUpdateUtil.addVoxelBlock(room, signal.quadIndex, signal.quadTextureIndicesWithinLayer);
         refreshSelection();
     },
 
-    onMoveVoxelBlockSignalReceived: async (params: MoveVoxelBlockSignal) => {
+    onMoveVoxelBlockSignalReceived: async (signal: MoveVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("moveVoxelBlockSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
 
         const room = App.getCurrentRoom()!;
-        VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset);
+        VoxelBlockUpdateUtil.moveVoxelBlock(room, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset);
         refreshSelection();
     },
 
-    onRemoveVoxelBlockSignalReceived: async (params: RemoveVoxelBlockSignal) => {
+    onRemoveVoxelBlockSignalReceived: async (signal: RemoveVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("removeVoxelBlockSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
 
         const room = App.getCurrentRoom()!;
-        VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex);
+        VoxelBlockUpdateUtil.removeVoxelBlock(room, signal.quadIndex);
         refreshSelection();
     },
 
-    onSetVoxelQuadTextureSignalReceived: async (params: SetVoxelQuadTextureSignal) => {
+    onSetVoxelQuadTextureSignalReceived: async (signal: SetVoxelQuadTextureSignal) => {
         const success = await waitUntilSignalProcessingReady("setVoxelQuadTextureSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == params.roomID);
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
 
         const room = App.getCurrentRoom()!;
-        const quadIndex = params.quadIndex;
+        const quadIndex = signal.quadIndex;
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -67,11 +67,11 @@ const ClientVoxelManager =
         const voxel = VoxelQueryUtil.getVoxel(room, row, col);
         if (!voxel)
         {
-            console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - params: ${JSON.stringify(params)}`);
+            console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - signal: ${JSON.stringify(signal)}`);
             return;
         }
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-        VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex);
+        VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, signal.textureIndex);
         refreshSelection();
     },
 }

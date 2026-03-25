@@ -6,7 +6,7 @@ import FirstPersonCamera from "./helpers/firstPerson/firstPersonCamera";
 import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProximityDetection";
 import FirstPersonPointerInput from "./helpers/firstPerson/firstPersonPointerInput";
 import FirstPersonKeyInput from "./helpers/firstPerson/firstPersonKeyInput";
-import PhysicsUpdater from "./physicsUpdater";
+import Rigidbody from "./rigidbody";
 import GameObject from "../types/gameObject";
 
 const objTemp: THREE.Object3D = new THREE.Object3D();
@@ -22,15 +22,15 @@ export default class FirstPersonController extends GameObjectComponent
     private firstPersonPointerInput: FirstPersonPointerInput = new FirstPersonPointerInput();
     private firstPersonKeyInput: FirstPersonKeyInput = new FirstPersonKeyInput();
 
-    private physicsUpdater: PhysicsUpdater;
+    private rigidbody: Rigidbody;
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
         super(gameObject, componentConfig);
 
-        this.physicsUpdater = this.gameObject.components.physicsUpdater as PhysicsUpdater;
-        if (!this.physicsUpdater)
-            throw new Error("FirstPersonController requires PhysicsUpdater component");
+        this.rigidbody = this.gameObject.components.rigidbody as Rigidbody;
+        if (!this.rigidbody)
+            throw new Error("FirstPersonController requires Rigidbody component");
     }
 
     async onSpawn(): Promise<void>
@@ -70,7 +70,7 @@ export default class FirstPersonController extends GameObjectComponent
         {
             objTemp.copy(this.gameObject.obj, false);
             objTemp.translateZ(-9 * deltaTime * this.dy);
-            this.physicsUpdater.tryMove(objTemp.position, this.gameObject.direction);
+            this.rigidbody.tryMove(objTemp.position, this.gameObject.direction);
         }
         this.dx = 0;
         this.dy = 0;

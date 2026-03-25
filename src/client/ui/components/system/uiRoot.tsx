@@ -3,7 +3,7 @@ import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 import Chat from "../chat/chat";
 import DebugStats from "../debug/debugStats";
 import VoxelQuadSelectionMenu from "../selection/voxelQuadSelectionMenu";
-import PersistentObjectSelectionMenu from "../selection/persistentObjectSelectionMenu";
+import ObjectSelectionMenu from "../selection/objectSelectionMenu";
 import Tutorial from "../tutorial/tutorial";
 import UserRoomIdentity from "../user/userRoomIdentity";
 import Loading from "./loading";
@@ -66,7 +66,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         />
         <DebugStats env={env}/>
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
-            {canModifyRoom && <PersistentObjectSelectionMenu/>}
+            {canModifyRoom && <ObjectSelectionMenu/>}
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
             <Chat/>
         </div>

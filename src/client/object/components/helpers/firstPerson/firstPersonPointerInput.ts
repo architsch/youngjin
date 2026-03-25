@@ -133,7 +133,7 @@ export default class FirstPersonPointerInput
                     if (instancedMeshGraphics)
                         gameObject.onClick(instanceId, intersection.point);
                     else
-                        console.error(`InstancedMeshGraphics component not found (spawnParams = ${JSON.stringify(gameObject.params)}, instanceId = ${instanceId})`);
+                        console.error(`InstancedMeshGraphics component not found (params = ${JSON.stringify(gameObject.params)}, instanceId = ${instanceId})`);
                 }
                 else
                     console.error(`GameObject not found in InstancedMeshGraphics (instanceId = ${instanceId})`);

@@ -6,8 +6,9 @@ import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import ClientObjectManager from "../clientObjectManager";
+import ErrorUtil from "../../../shared/system/util/errorUtil";
 
-export default class PhysicsUpdater extends GameObjectComponent
+export default class Rigidbody extends GameObjectComponent
 {
     private collider: Collider;
     private nextPosition = new THREE.Vector3();
@@ -19,11 +20,11 @@ export default class PhysicsUpdater extends GameObjectComponent
 
         this.collider = this.gameObject.components.collider as Collider;
         if (!this.collider)
-            throw new Error("PhysicsUpdater requires Collider component");
+            throw new Error("Rigidbody requires Collider component");
 
         const colliderConfig = this.collider.componentConfig as ColliderConfig;
         if (colliderConfig.colliderType != "rigidbody")
-            throw new Error("PhysicsUpdater requires a Collider component whose type is 'rigidobdy'");
+            throw new Error("Rigidbody requires a Collider component whose type is 'rigidobdy'");
     }
 
     async onSpawn(): Promise<void>
@@ -48,13 +49,17 @@ export default class PhysicsUpdater extends GameObjectComponent
             z: this.nextDirection.z,
         };
 
-        // Physics simulation (3D collision handling, step-up, gravity)
-        const tr = ClientObjectManager.setObjectTransform(
-            this.gameObject.params.objectId,
-            targetPos, targetDir, false
-        );
-        this.nextPosition.set(tr.pos.x, tr.pos.y, tr.pos.z);
-        this.nextDirection.set(tr.dir.x, tr.dir.y, tr.dir.z);
+        try {
+            // Run physics simulation
+            const tr = ClientObjectManager.setObjectTransform(
+                this.gameObject.params.objectId,
+                targetPos, targetDir, false
+            );
+            this.nextPosition.set(tr.pos.x, tr.pos.y, tr.pos.z);
+            this.nextDirection.set(tr.dir.x, tr.dir.y, tr.dir.z);
+        } catch (err) {
+            console.error(`Exception while trying to update a rigidbody :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+        }
     }
 
     tryMove(pos: THREE.Vector3, dir: THREE.Vector3): void

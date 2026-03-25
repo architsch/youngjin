@@ -1,4 +1,4 @@
-import PhysicsUpdater from "../components/physicsUpdater";
+import Rigidbody from "../components/rigidbody";
 import FirstPersonController from "../components/firstPersonController";
 import GameObjectComponent from "../components/gameObjectComponent";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
@@ -13,8 +13,8 @@ import Collider from "../components/collider";
 export const ObjectComponentConstructorMap: {[componentType: string]:
     (parentObject: GameObject, componentConfig: {[key: string]: any}) => GameObjectComponent} =
 {
-    "physicsUpdater": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new PhysicsUpdater(parentObject, componentConfig),
+    "rigidbody": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new Rigidbody(parentObject, componentConfig),
     "collider": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new Collider(parentObject, componentConfig),
     "firstPersonController": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>

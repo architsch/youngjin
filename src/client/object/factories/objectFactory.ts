@@ -15,24 +15,24 @@ const ObjectFactory =
     createClientSideObject: (roomID: string, objectTypeIndex: number, transform: ObjectTransform, metadata: ObjectMetadata = {}): GameObject =>
     {
         const user = App.getUser();
-        const params = new AddObjectSignal(
+        const obj = new AddObjectSignal(
             roomID,
             user.id,
             user.userName,
             objectTypeIndex,
-            (++lastObjectIdNumber).toString(),
+            `#${++lastObjectIdNumber}`, // Client-only objects are prefixed by "#".
             transform,
             metadata,
         );
         const objectType = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).objectType;
-        return ObjectConstructorMap[objectType](params);
+        return ObjectConstructorMap[objectType](obj);
     },
     // This method is called when the client is instantiating an object
     // that belongs to the server.
-    createServerSideObject: (params: AddObjectSignal): GameObject =>
+    createServerSideObject: (obj: AddObjectSignal): GameObject =>
     {
-        const objectType = ObjectTypeConfigMap.getConfigByIndex(params.objectTypeIndex).objectType;
-        return ObjectConstructorMap[objectType](params);
+        const objectType = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).objectType;
+        return ObjectConstructorMap[objectType](obj);
     },
 }
 

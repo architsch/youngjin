@@ -23,6 +23,7 @@ import SetUserRoleSignal from "../../../shared/user/types/setUserRoleSignal";
 import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
+import ErrorUtil from "../../../shared/system/util/errorUtil";
 
 let socket: Socket;
 
@@ -119,26 +120,30 @@ const SocketsClient =
         });
 
         socket.on("signalBatch", (buffer: ArrayBuffer) => {
-            //console.log(`signalBatch received - length = ${buffer.byteLength}`);
-            const bufferState = new BufferState(new Uint8Array(buffer));
-            while (bufferState.byteIndex < bufferState.view.byteLength)
-            {
-                const signalTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-                const signalConfig = SignalTypeConfigMap.getConfigByIndex(signalTypeIndex);
-                if (!signalConfig)
+            try {
+                //console.log(`signalBatch received - length = ${buffer.byteLength}`);
+                const bufferState = new BufferState(new Uint8Array(buffer));
+                while (bufferState.byteIndex < bufferState.view.byteLength)
                 {
-                    console.error(`Unknown signal type index: ${signalTypeIndex}`);
-                    return;
+                    const signalTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+                    const signalConfig = SignalTypeConfigMap.getConfigByIndex(signalTypeIndex);
+                    if (!signalConfig)
+                    {
+                        console.error(`Unknown signal type index: ${signalTypeIndex}`);
+                        return;
+                    }
+                    const incomingSignalHandler = incomingSignalHandlers[signalConfig.signalType];
+                    if (!incomingSignalHandler)
+                    {
+                        console.error(`Incoming Signal handler not found (signal type = ${signalConfig.signalType})`);
+                        return;
+                    }
+                    const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
+                    for (const data of arr)
+                        incomingSignalHandler(data);
                 }
-                const incomingSignalHandler = incomingSignalHandlers[signalConfig.signalType];
-                if (!incomingSignalHandler)
-                {
-                    console.error(`Incoming Signal handler not found (signal type = ${signalConfig.signalType})`);
-                    return;
-                }
-                const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
-                for (const data of arr)
-                    incomingSignalHandler(data);
+            } catch (err) {
+                console.error(`Exception while receiving a signalBatch from the server :: Error: ${ErrorUtil.getErrorMessage(err)}`);
             }
         });
     },

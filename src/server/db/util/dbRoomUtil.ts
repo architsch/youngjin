@@ -8,7 +8,6 @@ import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import VoxelGrid from "../../../shared/voxel/types/voxelGrid";
 import BufferState from "../../../shared/networking/types/bufferState";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import EncodableRaw4ByteNumber from "../../../shared/networking/types/encodableRaw4ByteNumber";
 import EncodableArray from "../../../shared/networking/types/encodableArray";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
@@ -40,7 +39,6 @@ const DBRoomUtil =
         // Encode only persistent objects
         const persistentObjects = Object.values(room.objectById)
             .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
-        new EncodableRaw4ByteNumber(room.lastObjectId).encode(bufferState);
         new EncodableArray(persistentObjects, 65535).encode(bufferState);
 
         const buffer = Buffer.from(EncodingUtil.endEncoding(bufferState));
@@ -127,7 +125,6 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
 
-    const lastObjectId = (EncodableRaw4ByteNumber.decode(bufferState) as EncodableRaw4ByteNumber).n;
     const objectArray = EncodableArray.decodeWithParams(bufferState, AddObjectSignal.decode, 65535) as EncodableArray;
     const objectById: {[objectId: string]: AddObjectSignal} = {};
     for (const element of objectArray.arr)
@@ -142,8 +139,7 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
         dbRoom.ownerUserID,
         dbRoom.texturePackPath,
         voxelGrid,
-        objectById,
-        lastObjectId
+        objectById
     );
 }
 

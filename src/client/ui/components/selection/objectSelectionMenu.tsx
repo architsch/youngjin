@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
-import { persistentObjectSelectionObservable } from "../../../system/clientObservables";
-import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
+import { objectSelectionObservable } from "../../../system/clientObservables";
+import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import CanvasSelectionOptions from "./canvasSelectionOptions";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
-export default function PersistentObjectSelectionMenu()
+export default function ObjectSelectionMenu()
 {
-    const [state, setState] = useState<PersistentObjectSelectionState>({
+    const [state, setState] = useState<ObjectSelectionState>({
         selection: null,
     });
 
     useEffect(() => {
-        persistentObjectSelectionObservable.addListener("ui.persistentObjectSelection", selection => setState({selection}));
+        objectSelectionObservable.addListener("ui.objectSelection", selection => setState({selection}));
         return () => {
-            persistentObjectSelectionObservable.removeListener("ui.persistentObjectSelection");
+            objectSelectionObservable.removeListener("ui.objectSelection");
         };
     }, []);
 
@@ -33,7 +33,7 @@ export default function PersistentObjectSelectionMenu()
 
 const className = "flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden";
 
-interface PersistentObjectSelectionState
+interface ObjectSelectionState
 {
-    selection: PersistentObjectSelection | null;
+    selection: ObjectSelection | null;
 }

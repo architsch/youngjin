@@ -1,5 +1,5 @@
 import { useState } from "react";
-import PersistentObjectSelection from "../../../graphics/types/gizmo/persistentObjectSelection";
+import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import Button from "../basic/button";
 import TextInput from "../basic/textInput";
 import App from "../../../app";
@@ -8,11 +8,11 @@ import ClientObjectManager from "../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
-import { notificationMessageObservable, persistentObjectSelectionObservable } from "../../../system/clientObservables";
+import { notificationMessageObservable, objectSelectionObservable } from "../../../system/clientObservables";
 import { MAX_IMAGE_URL_LENGTH } from "../../../../shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 
-export default function CanvasSelectionOptions(props: {selection: PersistentObjectSelection})
+export default function CanvasSelectionOptions(props: {selection: ObjectSelection})
 {
     const go = props.selection.gameObject;
     const currentImageURL = go.params.hasMetadata(ObjectMetadataKeyEnumMap.ImageURL)
@@ -35,63 +35,66 @@ export default function CanvasSelectionOptions(props: {selection: PersistentObje
     </div>;
 }
 
-function canRemoveCanvas(selection: PersistentObjectSelection): boolean
+function canRemoveCanvas(selection: ObjectSelection): boolean
 {
     const room = App.getCurrentRoom();
     if (!room)
         return false;
+    const user = App.getUser();
+    const userRole = App.getCurrentUserRole();
 
     const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canRemoveObject(room, objectId);
+    return ObjectUpdateUtil.canRemoveObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
 }
 
-function tryRemoveCanvas(selection: PersistentObjectSelection)
+function tryRemoveCanvas(selection: ObjectSelection)
 {
     if (!canRemoveCanvas(selection))
         return;
 
+    const user = App.getUser();
+    const userRole = App.getCurrentUserRole();
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
-    const removed = ObjectUpdateUtil.removeObject(room, objectId);
+    const removed = ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
     if (!removed)
         return;
 
-    PersistentObjectSelection.unselect();
+    ObjectSelection.unselect();
     ClientObjectManager.removeObject(objectId);
     SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
 }
 
-function canSetCanvasImageURL(selection: PersistentObjectSelection): boolean
+function canSetCanvasImageURL(selection: ObjectSelection): boolean
 {
     const room = App.getCurrentRoom();
     if (!room)
         return false;
+    const user = App.getUser();
+    const userRole = App.getCurrentUserRole();
 
     const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canSetObjectMetadata(room, objectId);
+    const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, "");
+    return ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal);
 }
 
-function trySetCanvasImageURL(selection: PersistentObjectSelection, imageURL: string)
+function trySetCanvasImageURL(selection: ObjectSelection, imageURL: string)
 {
     if (!canSetCanvasImageURL(selection))
         return;
 
     const room = App.getCurrentRoom()!;
-
-    if (imageURL.length > MAX_IMAGE_URL_LENGTH)
-    {
-        notificationMessageObservable.set(`Image URL is too long (max ${MAX_IMAGE_URL_LENGTH} characters).`);
-        return;
-    }
+    const user = App.getUser();
+    const userRole = App.getCurrentUserRole();
 
     const objectId = selection.gameObject.params.objectId;
-    const obj = ObjectUpdateUtil.setObjectMetadata(room, objectId,
-        ObjectMetadataKeyEnumMap.ImageURL, imageURL);
-    if (!obj) return;
+    const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, "");
+    if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal))
+        return;
 
     selection.gameObject.params.setMetadata(ObjectMetadataKeyEnumMap.ImageURL, imageURL);
 
-    persistentObjectSelectionObservable.notify();
+    objectSelectionObservable.notify();
     SocketsClient.emitSetObjectMetadataSignal(
         new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL));
 }

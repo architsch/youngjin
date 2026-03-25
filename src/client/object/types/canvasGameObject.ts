@@ -6,7 +6,7 @@ import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import ClientObjectManager from "../clientObjectManager";
 import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
-import PersistentObjectSelection from "../../graphics/types/gizmo/persistentObjectSelection";
+import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../shared/math/types/vec3";
 
 export default class CanvasGameObject extends GameObject
@@ -96,7 +96,7 @@ export default class CanvasGameObject extends GameObject
         if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
             return;
 
-        PersistentObjectSelection.trySelect(this);
+        ObjectSelection.trySelect(this);
     }
 
     loadImage(): Promise<void>

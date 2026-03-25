@@ -1,5 +1,5 @@
-import { persistentObjectSelectionObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
-import PersistentObjectSelection from "../types/gizmo/persistentObjectSelection";
+import { objectSelectionObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import ObjectSelection from "../types/gizmo/objectSelection";
 import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
 
 export default class WorldSpaceSelectionUtil
@@ -8,13 +8,13 @@ export default class WorldSpaceSelectionUtil
 
     static isAnythingSelected(): boolean
     {
-        return VoxelQuadSelection.isSelected() || PersistentObjectSelection.isSelected();
+        return VoxelQuadSelection.isSelected() || ObjectSelection.isSelected();
     }
 
     static unselectAll()
     {
         VoxelQuadSelection.unselect();
-        PersistentObjectSelection.unselect();
+        ObjectSelection.unselect();
     }
 
     static unselectionPending(): boolean
@@ -46,7 +46,7 @@ voxelQuadSelectionObservable.addListener("worldSpaceSelectionUtil", (selection: 
         WorldSpaceSelectionUtil.cancelDelayedUnselectTimeout();
     }
 });
-persistentObjectSelectionObservable.addListener("worldSpaceSelectionUtil", (selection: PersistentObjectSelection | null) => {
+objectSelectionObservable.addListener("worldSpaceSelectionUtil", (selection: ObjectSelection | null) => {
     if (selection)
     {
         WorldSpaceSelectionUtil.cancelDelayedUnselectTimeout();

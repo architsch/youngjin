@@ -3,7 +3,7 @@ import { voxelQuadSelectionObservable } from "../../../system/clientObservables"
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import VoxelQuadTextureOptions from "./voxelQuadTextureOptions";
 import VoxelQuadTransformOptions from "./voxelQuadTransformOptions";
-import VoxelQuadPersistentObjectOptions from "./voxelQuadPersistentObjectOptions";
+import VoxelQuadObjectOptions from "./voxelQuadObjectOptions";
 
 export default function VoxelQuadSelectionMenu()
 {
@@ -22,7 +22,7 @@ export default function VoxelQuadSelectionMenu()
     {
         return <div className={className}>
             <VoxelQuadTransformOptions selection={state.selection}/>
-            <VoxelQuadPersistentObjectOptions selection={state.selection}/>
+            <VoxelQuadObjectOptions selection={state.selection}/>
             <VoxelQuadTextureOptions selection={state.selection}/>
         </div>;
     }
