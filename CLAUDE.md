@@ -12,28 +12,30 @@
 ## Project Structure
 ### `/src` - Main Source Code
 - **`/client`** - Client-side code (browser)
-  - `/graphics` - 3D graphics for game objects and voxels
-  - `/networking` - Client-side networking (Socket.IO, Axios)
-  - `/object` - Game object management
+  - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos
+  - `/networking` - Client-side networking (SocketsClient for Socket.IO, API clients for Axios)
+  - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, FirstPersonController, PeriodicTransformEmitter/Receiver)
   - `/system` - Client-side observables and state management
   - `/ui` - React UI components and styles
-  - `/voxel` - Voxel management
+  - `/voxel` - Voxel management (ClientVoxelManager)
   
 - **`/server`** - Server-side code (Node.js/Express)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
+  - `/object` - Server-side object management (ServerObjectManager)
   - `/room` - Game room management
   - `/sockets` - Socket.IO initializer and event handlers
   - `/ssg` - Static Site Generator (builds static pages)
   - `/system` - Server-side constants
   - `/user` - User authentication and state management
+  - `/voxel` - Server-side voxel management (ServerVoxelManager)
   
 - **`/shared`** - Code shared between client and server
   - `/localization` - Localization utilities
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
-  - `/object` - Game object types and configs
-  - `/physics` - Physics engine (collision, hitboxes)
+  - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil)
+  - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity)
   - `/room` - Room types and generators
   - `/system` - Shared observables, constants, logging, and error handling
   - `/user` - User types and validators

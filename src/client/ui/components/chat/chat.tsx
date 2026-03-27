@@ -23,14 +23,21 @@ export default function Chat()
                 () => ClientObjectManager.getMyPlayer() != undefined, 5000);
 
             const myPlayer = ClientObjectManager.getMyPlayer();
-            const playerObj = myPlayer ? roomRuntimeMemory.room.objectById[myPlayer.params.objectId] : undefined;
-            if (playerObj?.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage))
+            if (!myPlayer)
             {
-                const sentMessage = playerObj.getMetadata(ObjectMetadataKeyEnumMap.SentMessage);
-                setState(prev => ({...prev, sentMessage}));
+                console.error("Player GameObject not found.");
+                return;
             }
-            else
-                setState(prev => ({...prev, sentMessage: ""}));
+            const playerObj = myPlayer ? roomRuntimeMemory.room.objectById[myPlayer.params.objectId] : undefined;
+            if (!playerObj)
+            {
+                console.error("Player AddObjectSignal not found.");
+                return;
+            }
+            const metadata = playerObj.metadata[ObjectMetadataKeyEnumMap.SentMessage];
+            const metadataValue = metadata ? metadata.str : "";
+            setState(prev => ({...prev, sentMessage: metadataValue}));
+
         });
         return () => { roomChangedObservable.removeListener("ui_chat"); };
     }, []);

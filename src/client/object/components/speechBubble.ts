@@ -21,9 +21,8 @@ export default class SpeechBubble extends GameObjectComponent
         this.gameObject.obj.add(this.speechBubbleHotspot);
         this.speechBubbleHotspot.position.set(0, this.componentConfig.yOffset as number, 0);
 
-        let initialMessage = "";
-        if (this.gameObject.params.hasMetadata(ObjectMetadataKeyEnumMap.SentMessage)) // The object has a sent message.
-            initialMessage = this.gameObject.params.getMetadata(ObjectMetadataKeyEnumMap.SentMessage);
+        const metadata = this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.SentMessage];
+        const initialMessage = metadata ? metadata.str : "";
         this.displayMessage(initialMessage);
     }
 

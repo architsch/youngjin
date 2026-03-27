@@ -1,137 +1,112 @@
-import EncodableData from "../../shared/networking/types/encodableData";
 import Room from "../../shared/room/types/room";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import VoxelBlockUpdateUtil from "../../shared/voxel/util/voxelBlockUpdateUtil";
-import VoxelQuadUpdateUtil from "../../shared/voxel/util/voxelQuadUpdateUtil";
+import VoxelUpdateUtil from "../../shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../shared/system/sharedConstants";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerUserManager from "../user/serverUserManager";
 
 const ServerVoxelManager =
 {
-    onMoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, params: MoveVoxelBlockSignal) =>
+    onAddVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: AddVoxelBlockSignal) =>
     {
-        if (!ServerUserManager.canUserEditRoom(socketUserContext.user.id))
+        const user = socketUserContext.user;
+        const userRole = ServerUserManager.getUserRole(user.id);
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        const room = roomRuntimeMemory.room;
+
+        if (!VoxelUpdateUtil.addVoxelBlock(userRole, room, signal.quadIndex, signal.quadTextureIndicesWithinLayer))
         {
-            console.warn(`ServerVoxelManager.onMoveVoxelBlockSignalReceived :: Unauthorized user (userID = ${socketUserContext.user.id})`);
+            console.error(`ServerVoxelManager::onAddVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
+            socketUserContext.addPendingSignalToUser("removeVoxelBlockSignal",
+                new RemoveVoxelBlockSignal(room.id, signal.quadIndex));
             return;
         }
-        const room = ServerRoomManager.getRoom(socketUserContext);
-        if (!room)
+
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
+        socketRoomContext.multicastSignal("addVoxelBlockSignal", signal, user.id);
+    },
+    onRemoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: RemoveVoxelBlockSignal) =>
+    {
+        const user = socketUserContext.user;
+        const userRole = ServerUserManager.getUserRole(user.id);
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        const room = roomRuntimeMemory.room;
+
+        // Capture textures before any modification attempt, for potential recovery.
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(signal.quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(signal.quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex);
+        const textures = captureBlockTextures(room, row, col, collisionLayer);
+
+        if (!VoxelUpdateUtil.removeVoxelBlock(userRole, room, signal.quadIndex))
         {
-            console.error(`Voxel update failed (moveVoxelBlock) - room not found`);
+            console.error(`ServerVoxelManager::onRemoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
+            socketUserContext.addPendingSignalToUser("addVoxelBlockSignal",
+                new AddVoxelBlockSignal(room.id, signal.quadIndex, textures));
             return;
         }
-        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
-        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
+        socketRoomContext.multicastSignal("removeVoxelBlockSignal", signal, user.id);
+    },
+    onMoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: MoveVoxelBlockSignal) =>
+    {
+        const user = socketUserContext.user;
+        const userRole = ServerUserManager.getUserRole(user.id);
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        const room = roomRuntimeMemory.room;
+
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(signal.quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(signal.quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex);
 
         // Capture source block textures before any modification attempt, for potential recovery.
         const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
-        if (!VoxelBlockUpdateUtil.moveVoxelBlock(room, params.quadIndex, params.rowOffset, params.colOffset, params.collisionLayerOffset))
-        {
-            console.error(`Voxel update failed (moveVoxelBlock) - params: ${JSON.stringify(params)}`);
-            sendMoveReversal(socketUserContext, room, params, sourceTextures);
-            return;
-        }
-        broadcast(socketUserContext, room, "moveVoxelBlockSignal", params);
-    },
-    onAddVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, params: AddVoxelBlockSignal) =>
-    {
-        if (!ServerUserManager.canUserEditRoom(socketUserContext.user.id))
-        {
-            console.warn(`ServerVoxelManager.onAddVoxelBlockSignalReceived :: Unauthorized user (userID = ${socketUserContext.user.id})`);
-            return;
-        }
-        const room = ServerRoomManager.getRoom(socketUserContext);
-        if (!room)
-        {
-            console.error(`Voxel update failed (addVoxelBlock) - room not found`);
-            return;
-        }
-        if (!VoxelBlockUpdateUtil.addVoxelBlock(room, params.quadIndex, params.quadTextureIndicesWithinLayer))
-        {
-            console.error(`Voxel update failed (addVoxelBlock) - params: ${JSON.stringify(params)}`);
-            unicastToSender(socketUserContext, "removeVoxelBlockSignal",
-                new RemoveVoxelBlockSignal(room.id, params.quadIndex));
-            return;
-        }
-        broadcast(socketUserContext, room, "addVoxelBlockSignal", params);
-    },
-    onRemoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, params: RemoveVoxelBlockSignal) =>
-    {
-        if (!ServerUserManager.canUserEditRoom(socketUserContext.user.id))
-        {
-            console.warn(`ServerVoxelManager.onRemoveVoxelBlockSignalReceived :: Unauthorized user (userID = ${socketUserContext.user.id})`);
-            return;
-        }
-        const room = ServerRoomManager.getRoom(socketUserContext);
-        if (!room)
-        {
-            console.error(`Voxel update failed (removeVoxelBlock) - room not found`);
-            return;
-        }
-        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
-        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
 
-        // Capture textures before any modification attempt, for potential recovery.
-        const textures = captureBlockTextures(room, row, col, collisionLayer);
-        if (!VoxelBlockUpdateUtil.removeVoxelBlock(room, params.quadIndex))
+        if (!VoxelUpdateUtil.moveVoxelBlock(userRole, room, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset))
         {
-            console.error(`Voxel update failed (removeVoxelBlock) - params: ${JSON.stringify(params)}`);
-            unicastToSender(socketUserContext, "addVoxelBlockSignal",
-                new AddVoxelBlockSignal(room.id, params.quadIndex, textures));
+            console.error(`ServerVoxelManager::onMoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
+            sendMoveReversal(socketUserContext, room, signal, sourceTextures);
             return;
         }
-        broadcast(socketUserContext, room, "removeVoxelBlockSignal", params);
+
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
+        socketRoomContext.multicastSignal("moveVoxelBlockSignal", signal, user.id);
     },
-    onSetVoxelQuadTextureSignalReceived: (socketUserContext: SocketUserContext, params: SetVoxelQuadTextureSignal) =>
+    onSetVoxelQuadTextureSignalReceived: (socketUserContext: SocketUserContext, signal: SetVoxelQuadTextureSignal) =>
     {
-        if (!ServerUserManager.canUserEditRoom(socketUserContext.user.id))
-        {
-            console.warn(`ServerVoxelManager.onSetVoxelQuadTextureSignalReceived :: Unauthorized user (userID = ${socketUserContext.user.id})`);
-            return;
-        }
-        const room = ServerRoomManager.getRoom(socketUserContext);
-        if (!room)
-        {
-            console.error(`Voxel update failed (setVoxelQuadTexture) - room not found - params: ${JSON.stringify(params)}`);
-            return;
-        }
-        const quadIndex = params.quadIndex;
-        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-        const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-        if (!voxel)
-        {
-            console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - params: ${JSON.stringify(params)}`);
-            return;
-        }
-        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        const user = socketUserContext.user;
+        const userRole = ServerUserManager.getUserRole(user.id);
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        const room = roomRuntimeMemory.room;
 
         // Capture old texture for potential recovery.
-        const oldTextureIndex = voxel.quadsMem.quads[quadIndex] & 0b01111111;
+        const oldTextureIndex = room.voxelGrid.quadsMem.quads[signal.quadIndex] & 0b01111111;
 
-        if (!VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, params.textureIndex))
+        if (!VoxelUpdateUtil.setVoxelQuadTexture(userRole, room, signal.quadIndex, signal.textureIndex))
         {
-            console.error(`Voxel update failed (setVoxelQuadTexture) - params: ${JSON.stringify(params)}`);
-            unicastToSender(socketUserContext, "setVoxelQuadTextureSignal",
-                new SetVoxelQuadTextureSignal(room.id, quadIndex, oldTextureIndex));
+            console.error(`ServerVoxelManager::onSetVoxelQuadTextureSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
+            socketUserContext.addPendingSignalToUser("setVoxelQuadTextureSignal",
+                new SetVoxelQuadTextureSignal(room.id, signal.quadIndex, oldTextureIndex));
             return;
         }
-        broadcast(socketUserContext, room, "setVoxelQuadTextureSignal", params);
+
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
+        socketRoomContext.multicastSignal("setVoxelQuadTextureSignal", signal, user.id);
     },
 }
 
-function captureBlockTextures(room: Room, row: number, col: number, collisionLayer: number): number[]
+function captureBlockTextures(room: Room,
+    row: number, col: number, collisionLayer: number): number[]
 {
     const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
     const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
@@ -140,53 +115,27 @@ function captureBlockTextures(room: Room, row: number, col: number, collisionLay
     return textures;
 }
 
-function sendMoveReversal(socketUserContext: SocketUserContext, room: Room,
-    params: MoveVoxelBlockSignal, sourceTextures: number[])
+function sendMoveReversal(socketUserContext: SocketUserContext,
+    room: Room,
+    signal: MoveVoxelBlockSignal, sourceTextures: number[])
 {
     // The client applied the move optimistically: added block at target, removed block at source.
     // To reverse: remove the block at the target and re-add the block at the source.
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(params.quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(params.quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(params.quadIndex);
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(signal.quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(signal.quadIndex);
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex);
 
-    let newCollisionLayer = collisionLayer + params.collisionLayerOffset;
+    let newCollisionLayer = collisionLayer + signal.collisionLayerOffset;
     if (newCollisionLayer < COLLISION_LAYER_MIN || newCollisionLayer > COLLISION_LAYER_MAX)
         newCollisionLayer = COLLISION_LAYER_NULL;
 
-    const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row + params.rowOffset, col + params.colOffset,
+    const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row + signal.rowOffset, col + signal.colOffset,
         "y", "-", newCollisionLayer);
 
-    unicastToSender(socketUserContext, "removeVoxelBlockSignal",
+    socketUserContext.addPendingSignalToUser("removeVoxelBlockSignal",
         new RemoveVoxelBlockSignal(room.id, targetQuadIndex));
-    unicastToSender(socketUserContext, "addVoxelBlockSignal",
-        new AddVoxelBlockSignal(room.id, params.quadIndex, sourceTextures));
-}
-
-function unicastToSender(socketUserContext: SocketUserContext,
-    signalType: string, signal: EncodableData)
-{
-    socketUserContext.addPendingSignalToUser(signalType, signal);
-}
-
-function broadcast(socketUserContext: SocketUserContext, room: Room,
-    signalType: string, signal: EncodableData)
-{
-    room.dirty = true; // Mark the room as dirty since its voxel grid has been modified.
-
-    const user = socketUserContext.user;
-    const socketRoomContext = ServerRoomManager.socketRoomContexts[room.id];
-    if (!socketRoomContext)
-        console.error(`SocketRoomContext not found (roomID = ${room.id})`);
-    else
-    {
-        Object.entries(socketRoomContext.getUserContexts()).forEach((kvp: [string, SocketUserContext]) => {
-            if (user.id != kvp[0]) // Exclude the broadcast sender from the group of broadcast recipients (in order to prevent an infinite cycle).
-            {
-                const ctx = kvp[1];
-                ctx.addPendingSignalToUser(signalType, signal);
-            }
-        });
-    }
+    socketUserContext.addPendingSignalToUser("addVoxelBlockSignal",
+        new AddVoxelBlockSignal(room.id, signal.quadIndex, sourceTextures));
 }
 
 export default ServerVoxelManager;

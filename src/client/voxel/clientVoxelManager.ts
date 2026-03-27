@@ -3,8 +3,7 @@ import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlock
 import Room from "../../shared/room/types/room";
 import ClientObjectManager from "../object/clientObjectManager";
 import App from "../app";
-import VoxelBlockUpdateUtil from "../../shared/voxel/util/voxelBlockUpdateUtil";
-import VoxelQuadUpdateUtil from "../../shared/voxel/util/voxelQuadUpdateUtil";
+import VoxelUpdateUtil from "../../shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -19,59 +18,70 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const ClientVoxelManager =
 {
+    // --- Public methods for local (optimistic) operations ---
+
+    addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer: number[],
+        validate: boolean = true): boolean =>
+    {
+        const userRole = App.getCurrentUserRole();
+        return VoxelUpdateUtil.addVoxelBlock(userRole, room, quadIndex, quadTextureIndicesWithinLayer, validate);
+    },
+    removeVoxelBlock: (room: Room, quadIndex: number,
+        validate: boolean = true): boolean =>
+    {
+        const userRole = App.getCurrentUserRole();
+        return VoxelUpdateUtil.removeVoxelBlock(userRole, room, quadIndex, validate);
+    },
+    moveVoxelBlock: (room: Room, quadIndex: number,
+        rowOffset: number, colOffset: number, collisionLayerOffset: number,
+        validate: boolean = true): boolean =>
+    {
+        const userRole = App.getCurrentUserRole();
+        return VoxelUpdateUtil.moveVoxelBlock(userRole, room, quadIndex, rowOffset, colOffset, collisionLayerOffset, validate);
+    },
+    setVoxelQuadTexture: (room: Room, quadIndex: number, textureIndex: number,
+        validate: boolean = true): boolean =>
+    {
+        const userRole = App.getCurrentUserRole();
+        return VoxelUpdateUtil.setVoxelQuadTexture(userRole, room, quadIndex, textureIndex, validate);
+    },
+
+    // --- Signal reception handlers (for signals from other clients via server) ---
+
     onAddVoxelBlockSignalReceived: async (signal: AddVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("addVoxelBlockSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
-
-        const room = App.getCurrentRoom()!;
-        VoxelBlockUpdateUtil.addVoxelBlock(room, signal.quadIndex, signal.quadTextureIndicesWithinLayer);
+        ClientVoxelManager.addVoxelBlock(App.getCurrentRoom()!, signal.quadIndex,
+            signal.quadTextureIndicesWithinLayer, false);
         refreshSelection();
     },
-
     onMoveVoxelBlockSignalReceived: async (signal: MoveVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("moveVoxelBlockSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
-
-        const room = App.getCurrentRoom()!;
-        VoxelBlockUpdateUtil.moveVoxelBlock(room, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset);
+        ClientVoxelManager.moveVoxelBlock(App.getCurrentRoom()!, signal.quadIndex,
+            signal.rowOffset, signal.colOffset, signal.collisionLayerOffset, false);
         refreshSelection();
     },
-
     onRemoveVoxelBlockSignalReceived: async (signal: RemoveVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("removeVoxelBlockSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
-
-        const room = App.getCurrentRoom()!;
-        VoxelBlockUpdateUtil.removeVoxelBlock(room, signal.quadIndex);
+        ClientVoxelManager.removeVoxelBlock(App.getCurrentRoom()!,
+            signal.quadIndex, false);
         refreshSelection();
     },
-
     onSetVoxelQuadTextureSignalReceived: async (signal: SetVoxelQuadTextureSignal) => {
         const success = await waitUntilSignalProcessingReady("setVoxelQuadTextureSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
-
-        const room = App.getCurrentRoom()!;
-        const quadIndex = signal.quadIndex;
-        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-        const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-        if (!voxel)
-        {
-            console.error(`Voxel update failed (setVoxelQuadTexture) - voxel not found - signal: ${JSON.stringify(signal)}`);
-            return;
-        }
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-        VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, facingAxis, orientation, collisionLayer, signal.textureIndex);
+        ClientVoxelManager.setVoxelQuadTexture(App.getCurrentRoom()!,
+            signal.quadIndex, signal.textureIndex, false);
         refreshSelection();
     },
 }

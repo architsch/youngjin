@@ -1,3 +1,8 @@
+// Runtime Environment
+
+export let IS_SERVER = false;
+export function setIsServer() { IS_SERVER = true; }
+
 // Math
 
 export const NEAR_EPSILON = 0.000000001;

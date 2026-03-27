@@ -6,6 +6,7 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
 import PhysicsCollisionUtil from "../../../shared/physics/util/physicsCollisionUtil";
+import App from "../../app";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
 
@@ -20,6 +21,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
     private lastSyncTime: number = 0;
     private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
     private lastSyncedRotation: THREE.Euler = new THREE.Euler();
+    private roomID: string;
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
@@ -37,6 +39,8 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
         this.lastSyncTime = performance.now();
         this.lastSyncedPosition.copy(this.gameObject.position);
         this.lastSyncedRotation.copy(this.gameObject.rotation);
+
+        this.roomID = App.getCurrentRoom()!.id;
     }
 
     update(deltaTime: number)
@@ -56,6 +60,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
                 vec3Temp.setFromEuler(this.lastSyncedRotation).normalize();
                 this.gameObject.obj.getWorldDirection(vec3Temp);
                 const params = new SetObjectTransformSignal(
+                    this.roomID,
                     this.gameObject.params.objectId,
                     new ObjectTransform(
                         {x: this.lastSyncedPosition.x, y: this.lastSyncedPosition.y, z: this.lastSyncedPosition.z},

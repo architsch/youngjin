@@ -13,12 +13,11 @@ import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntry
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/voxelGameObject";
-import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
-import { setObjectMetadataObservable } from "../../shared/system/sharedObservables";
 import { objectSelectionObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
+import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -67,7 +66,6 @@ const ClientObjectManager =
             );
             const voxelGameObject = gameObject as VoxelGameObject;
             voxelGameObject.setVoxel(voxel);
-            await ClientObjectManager.addObject(gameObject);
         };
 
         // Find the player's initial position for distance-based loading order
@@ -104,23 +102,27 @@ const ClientObjectManager =
     unload: async () =>
     {
         // Unload objects
-        for (const key of Object.keys(gameObjects))
+        for (const objectId of Object.keys(gameObjects))
         {
-            await ClientObjectManager.removeObject(key);
-            delete gameObjects[key];
+            if (!objectId.startsWith("#"))
+                await ClientObjectManager.removeObject(objectId);
+            delete gameObjects[objectId];
         }
-        for (const key of Object.keys(updatableGameObjects))
-            delete updatableGameObjects[key];
-        for (const key of Object.keys(playerByUserID))
-            delete playerByUserID[key];
+        for (const objectId of Object.keys(updatableGameObjects))
+            delete updatableGameObjects[objectId];
+        for (const userID of Object.keys(playerByUserID))
+            delete playerByUserID[userID];
     },
-    addObject: async (object: GameObject): Promise<boolean> =>
+    addObject: async (object: GameObject, validate: boolean = true): Promise<boolean> =>
     {
+        if (object.params.objectId.startsWith("#"))
+            throw new Error("Client-side objects (those with IDs beginning with '#') are not allowed to be part of the room's object dictionary.");
+
         const user = App.getUser();
         const userRole = App.getCurrentUserRole();
         const room = App.getCurrentRoom()!;
 
-        if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params))
+        if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params, validate))
             return false;
 
         if (gameObjects[object.params.objectId] == undefined)
@@ -147,13 +149,16 @@ const ClientObjectManager =
             return false;
         }
     },
-    removeObject: async (objectId: string): Promise<boolean> =>
+    removeObject: async (objectId: string, validate: boolean = true): Promise<boolean> =>
     {
+        if (objectId.startsWith("#"))
+            throw new Error("Client-side objects (those with IDs beginning with '#') are not allowed to be part of the room's object dictionary.");
+
         const user = App.getUser();
         const userRole = App.getCurrentUserRole();
         const room = App.getCurrentRoom()!;
 
-        if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId)))
+        if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId), validate))
             return false;
 
         if (gameObjects[objectId] != undefined)
@@ -173,14 +178,15 @@ const ClientObjectManager =
             return false;
         }
     },
-    setObjectTransform: (objectId: string, pos: Vec3, dir: Vec3, ignorePhysics: boolean): ObjectTransform =>
+    setObjectTransform: (objectId: string, pos: Vec3, dir: Vec3, ignorePhysics: boolean,
+        validate: boolean = true): ObjectTransform =>
     {
         const user = App.getUser();
         const userRole = App.getCurrentUserRole();
         const room = App.getCurrentRoom()!;
 
-        const signal = new SetObjectTransformSignal(objectId, new ObjectTransform(pos, dir), ignorePhysics);
-        const result = ObjectUpdateUtil.setObjectTransform(user, userRole, room, signal);
+        const signal = new SetObjectTransformSignal(room.id, objectId, new ObjectTransform(pos, dir), ignorePhysics);
+        const result = ObjectUpdateUtil.setObjectTransform(user, userRole, room, signal, validate);
         const object = ClientObjectManager.getObjectById(objectId);
         if (object)
         {
@@ -193,6 +199,33 @@ const ClientObjectManager =
             console.error(`ClientObjectManager.setObjectTransform :: GameObject not found (objectId = ${objectId})`);
         return result.transform;
     },
+    setObjectMetadata: (objectId: string, key: ObjectMetadataKey, value: string,
+        validate: boolean = true): boolean =>
+    {
+        const user = App.getUser();
+        const userRole = App.getCurrentUserRole();
+        const room = App.getCurrentRoom()!;
+
+        const signal = new SetObjectMetadataSignal(room.id, objectId, key, value);
+        if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal, validate))
+            return false;
+
+        if (ObjectMetadataEntryMap.shouldUnselectObjectOnSet(key))
+        {
+            const sel = objectSelectionObservable.peek();
+            if (sel && sel.gameObject.params.objectId === objectId)
+                ObjectSelection.unselect();
+        }
+
+        const object = ClientObjectManager.getObjectById(objectId);
+        if (object)
+            object.onSetMetadata(key, value);
+        else
+            console.error(`ClientObjectManager.setObjectMetadata :: GameObject not found (objectId = ${objectId})`);
+
+        return true;
+    },
+
     // When the client receives an AddObjectSignal from the server,
     // the given object will spawn as soon as the room to which it belongs is available.
     onAddObjectSignalReceived: async (signal: AddObjectSignal) => {
@@ -205,7 +238,7 @@ const ClientObjectManager =
         room.objectById[signal.objectId] = signal;
 
         const gameObject = ObjectFactory.createServerSideObject(signal);
-        await ClientObjectManager.addObject(gameObject);
+        await ClientObjectManager.addObject(gameObject, false);
     },
     // When the client receives a RemoveObjectSignal from the server,
     // the given object will despawn as soon as the room to which it belongs is available.
@@ -223,11 +256,20 @@ const ClientObjectManager =
         if (sel && sel.gameObject.params.objectId === signal.objectId)
             ObjectSelection.unselect();
 
-        await ClientObjectManager.removeObject(signal.objectId);
+        await ClientObjectManager.removeObject(signal.objectId, false);
     },
     onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {
+        // Apply graceful (conditionally deferred) signal handling only if
+        // the signal is NOT a result of real-time physics calculation (for performance reasons).
+        if (signal.ignorePhysics)
+        {
+            const success = await waitUntilSignalProcessingReady("setObjectTransformSignal",
+                () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
+            if (!success)
+                return;
+        }
         ClientObjectManager.setObjectTransform(signal.objectId,
-            signal.transform.pos, signal.transform.dir, signal.ignorePhysics);
+            signal.transform.pos, signal.transform.dir, signal.ignorePhysics, false);
     },
     // When the client receives a SetObjectMetadataSignal from the server,
     // the metadata change will be applied to the corresponding game object.
@@ -236,34 +278,10 @@ const ClientObjectManager =
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
-
-        const room = App.getCurrentRoom()!;
-        const obj = room.objectById[signal.objectId];
-        if (obj)
-            obj.setMetadata(signal.metadataKey, signal.metadataValue);
-
-        const gameObject = ClientObjectManager.getObjectById(signal.objectId);
-        if (gameObject)
-            gameObject.params.setMetadata(signal.metadataKey, signal.metadataValue);
-
-        // If the modified object was selected by us, deactivate the selection
-        // since another user initiated the metadata change (only for metadata types that require it).
-        if (ObjectMetadataEntryMap.shouldUnselectObjectOnSet(signal.metadataKey))
-        {
-            const sel = objectSelectionObservable.peek();
-            if (sel && sel.gameObject.params.objectId === signal.objectId)
-                ObjectSelection.unselect();
-        }
+        ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
+            signal.metadataValue, false);
     },
 }
-
-setObjectMetadataObservable.addListener("clientObjectManager", async (change: {objectId: string, key: ObjectMetadataKey, value: string}) => {
-    const gameObject = ClientObjectManager.getObjectById(change.objectId);
-    if (gameObject)
-        gameObject.onSetMetadata(change.key, change.value);
-    else
-        console.error(`Object metadata is set, but the object is not found (objectId = ${change.objectId}, key = ${change.key}, value = ${change.value})`);
-});
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)

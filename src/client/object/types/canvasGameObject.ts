@@ -109,9 +109,10 @@ export default class CanvasGameObject extends GameObject
     {
         if (this.instanceId === -1) // Already despawned
             return;
-        if (!this.params.hasMetadata(ObjectMetadataKeyEnumMap.ImageURL))
+        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImageURL];
+        if (!metadata)
             return;
-        const imageURL = this.params.getMetadata(ObjectMetadataKeyEnumMap.ImageURL);
+        const imageURL = metadata.str;
         try
         {
             this.instancedMeshGraphics.updateInstanceTextureUV(this.instanceId, this.instanceId % 64);

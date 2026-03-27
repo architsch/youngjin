@@ -33,7 +33,8 @@ const PhysicsManager =
         const objects = Object.values(roomRuntimeMemory.room.objectById);
         for (const obj of objects)
         {
-            const colliderState = obj.getObjectColliderState();
+            const colliderState = PhysicsCollisionUtil.getObjectColliderState(
+                obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
             if (colliderState)
                 PhysicsManager.addObject(roomRuntimeMemory.room.id, obj.objectId, obj.objectTypeIndex, colliderState);
         }
@@ -88,8 +89,8 @@ const PhysicsManager =
      * updating its hitbox orientation based on `targetDir`.
      * Handles 3D collision resolution, step-up logic, and gravity (via the caller's targetPos.y).
      *
-     * targetPos.y and resolvedPos.y represent the object's base Y (foot position),
-     * NOT the hitbox center. Internally, the engine converts to hitbox-center coordinates.
+     * All position coordinates (targetPos and the returned transform.pos) represent the
+     * hitbox center, consistent with the AABB3 convention used throughout the physics system.
      */
     setObjectTransform: (roomID: string, objectId: string, objectTypeIndex: number,
         targetPos: Vec3, targetDir: Vec3, ignorePhysics: boolean): ObjectTransformUpdateResult =>
@@ -112,12 +113,8 @@ const PhysicsManager =
         const halfSizeY = newColliderState.hitbox.halfSizeY;
         const halfSizeZ = newColliderState.hitbox.halfSizeZ;
 
-        // Convert base Y to hitbox-center Y for internal processing
-        const targetCenterY = targetPos.y + halfSizeY;
-
         // Start position is always the current hitbox center
         const startCenter: Vec3 = { x: sourceHitbox.x, y: sourceHitbox.y, z: sourceHitbox.z };
-        const startBaseY = sourceHitbox.y - halfSizeY;
 
         if (ignorePhysics)
         {
@@ -132,11 +129,11 @@ const PhysicsManager =
         const desyncDistSqr =
             (targetPos.x - startCenter.x) * (targetPos.x - startCenter.x) +
             (targetPos.z - startCenter.z) * (targetPos.z - startCenter.z) +
-            (targetCenterY - startCenter.y) * (targetCenterY - startCenter.y);
+            (targetPos.y - startCenter.y) * (targetPos.y - startCenter.y);
         if (desyncDistSqr >= 9)
         {
             console.warn(`Physics-position desync due to distance gap (dist = ${Math.sqrt(desyncDistSqr).toFixed(3)})`);
-            const transform = new ObjectTransform({ x: startCenter.x, y: startBaseY, z: startCenter.z }, targetDir);
+            const transform = new ObjectTransform({ x: startCenter.x, y: startCenter.y, z: startCenter.z }, targetDir);
             return { transform, desyncDetected: true };
         }
 
@@ -172,7 +169,7 @@ const PhysicsManager =
         if (minCol < 0 || minRow < 0 || maxCol >= NUM_VOXEL_COLS || maxRow >= NUM_VOXEL_ROWS)
         {
             console.warn(`Physics-position desync due to room boundary limit`);
-            const transform = new ObjectTransform({ x: startCenter.x, y: startBaseY, z: startCenter.z }, targetDir);
+            const transform = new ObjectTransform({ x: startCenter.x, y: startCenter.y, z: startCenter.z }, targetDir);
             return { transform, desyncDetected: true };
         }
 
@@ -350,15 +347,15 @@ const PhysicsManager =
         }
 
         // ----- Phase 3: Gravity (vertical resolution) -----
-        // The caller has set targetPos.y (base Y) to include gravity.
+        // The caller has set targetPos.y to include gravity.
         // Cast downward from the step-up-resolved center to target center.
-        if (targetCenterY < resolvedCenterY)
+        if (targetPos.y < resolvedCenterY)
         {
             const gravitySource: AABB3 = {
                 x: resolvedPos.x, y: resolvedCenterY, z: resolvedPos.z,
                 halfSizeX, halfSizeY, halfSizeZ,
             };
-            const gravityTarget: Vec3 = { x: resolvedPos.x, y: targetCenterY, z: resolvedPos.z };
+            const gravityTarget: Vec3 = { x: resolvedPos.x, y: targetPos.y, z: resolvedPos.z };
 
             let gravityHitScale = 1;
 
@@ -369,8 +366,8 @@ const PhysicsManager =
 
             // Check voxel blocks beneath
             const gravityVoxels = PhysicsVoxelUtil.getVoxelsInBox(physicsRoom, {
-                x: resolvedPos.x, y: Math.min(resolvedCenterY, targetCenterY), z: resolvedPos.z,
-                halfSizeX, halfSizeY: Math.abs(resolvedCenterY - targetCenterY) * 0.5 + halfSizeY, halfSizeZ,
+                x: resolvedPos.x, y: Math.min(resolvedCenterY, targetPos.y), z: resolvedPos.z,
+                halfSizeX, halfSizeY: Math.abs(resolvedCenterY - targetPos.y) * 0.5 + halfSizeY, halfSizeZ,
             });
             for (const physicsVoxel of gravityVoxels)
             {
@@ -401,7 +398,7 @@ const PhysicsManager =
                     gravityHitScale = result.hitRayScale;
             }
 
-            const gravityDrop = (resolvedCenterY - targetCenterY) * gravityHitScale;
+            const gravityDrop = (resolvedCenterY - targetPos.y) * gravityHitScale;
             resolvedCenterY = resolvedCenterY - gravityDrop;
         }
 
@@ -417,9 +414,7 @@ const PhysicsManager =
 
         object.addToIntersectingVoxels();
 
-        // Return base Y (foot position) to the caller
-        const resolvedBaseY = resolvedCenterY - halfSizeY;
-        const transform = new ObjectTransform({ x: resolvedPos.x, y: resolvedBaseY, z: resolvedPos.z }, targetDir);
+        const transform = new ObjectTransform({ x: resolvedPos.x, y: resolvedCenterY, z: resolvedPos.z }, targetDir);
         return { transform, desyncDetected: false };
     },
 }

@@ -103,7 +103,7 @@ async function updateGizmos(selection: ObjectSelection)
         const result = WallAttachedObjectUtil.getMoveResult(room, obj, def.dx, def.dy, def.dz);
         const canMove = result != undefined &&
             ObjectUpdateUtil.canSetObjectTransform(user, userRole, room,
-                new SetObjectTransformSignal(objectId,
+                new SetObjectTransformSignal(room.id, objectId,
                     new ObjectTransform(result.newPos, result.newDir), true));
 
         arrow.setVisible(canMove);
@@ -154,7 +154,7 @@ function tryMoveCanvas(selection: ObjectSelection,
         objectSelectionObservable.notify();
 
         // Emit to server
-        SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(objectId, tr, true));
+        SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(room.id, objectId, tr, true));
     } catch (err) {
         console.error(`Exception while trying to move a canvas :: Error: ${ErrorUtil.getErrorMessage(err)}`);
     }

@@ -22,21 +22,16 @@ export default class FirstPersonController extends GameObjectComponent
     private firstPersonPointerInput: FirstPersonPointerInput = new FirstPersonPointerInput();
     private firstPersonKeyInput: FirstPersonKeyInput = new FirstPersonKeyInput();
 
-    private rigidbody: Rigidbody;
-
-    constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
-    {
-        super(gameObject, componentConfig);
-
-        this.rigidbody = this.gameObject.components.rigidbody as Rigidbody;
-        if (!this.rigidbody)
-            throw new Error("FirstPersonController requires Rigidbody component");
-    }
+    private rigidbody: Rigidbody | undefined;
 
     async onSpawn(): Promise<void>
     {
         if (!this.gameObject.isMine())
             throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
+
+        this.rigidbody = this.gameObject.components.rigidbody as Rigidbody;
+        if (!this.rigidbody)
+            throw new Error("FirstPersonController requires Rigidbody component");
 
         this.firstPersonCamera.onSpawn(this);
         this.firstPersonPointerInput.onSpawn(this);
@@ -70,7 +65,7 @@ export default class FirstPersonController extends GameObjectComponent
         {
             objTemp.copy(this.gameObject.obj, false);
             objTemp.translateZ(-9 * deltaTime * this.dy);
-            this.rigidbody.tryMove(objTemp.position, this.gameObject.direction);
+            this.rigidbody?.tryMove(objTemp.position, this.gameObject.direction);
         }
         this.dx = 0;
         this.dy = 0;

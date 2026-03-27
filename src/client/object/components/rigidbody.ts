@@ -3,20 +3,20 @@ import Vec3 from "../../../shared/math/types/vec3";
 import { GRAVITY_SPEED } from "../../../shared/system/sharedConstants";
 import Collider from "./collider";
 import GameObjectComponent from "./gameObjectComponent";
-import GameObject from "../types/gameObject";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import ClientObjectManager from "../clientObjectManager";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 
 export default class Rigidbody extends GameObjectComponent
 {
-    private collider: Collider;
+    private collider: Collider | undefined;
     private nextPosition = new THREE.Vector3();
     private nextDirection = new THREE.Vector3();
 
-    constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
+    async onSpawn(): Promise<void>
     {
-        super(gameObject, componentConfig);
+        this.nextPosition.copy(this.gameObject.position);
+        this.nextDirection.copy(this.gameObject.direction);
 
         this.collider = this.gameObject.components.collider as Collider;
         if (!this.collider)
@@ -27,20 +27,11 @@ export default class Rigidbody extends GameObjectComponent
             throw new Error("Rigidbody requires a Collider component whose type is 'rigidobdy'");
     }
 
-    async onSpawn(): Promise<void>
-    {
-        this.nextPosition.copy(this.gameObject.position);
-        this.nextDirection.copy(this.gameObject.direction);
-    }
-
     update(deltaTime: number): void
     {
-        const colliderConfig = this.collider.componentConfig as ColliderConfig;
-        const bottomY = this.gameObject.position.y - 0.5 * colliderConfig.hitboxSize.sizeY;
-
         const targetPos: Vec3 = {
             x: this.nextPosition.x,
-            y: bottomY - GRAVITY_SPEED * deltaTime,
+            y: this.nextPosition.y - GRAVITY_SPEED * deltaTime,
             z: this.nextPosition.z,
         };
         const targetDir: Vec3 = {

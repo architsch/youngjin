@@ -18,7 +18,10 @@ export default class PlayerProximityDetector extends GameObjectComponent
         this.maxDist = componentConfig.maxDist;
         this.maxLookAngle = componentConfig.maxLookAngle;
         this.proximityOn = false;
+    }
 
+    async onSpawn(): Promise<void>
+    {
         if (this.maxLookAngle > 0)
         {
             const instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;

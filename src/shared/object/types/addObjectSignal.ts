@@ -5,10 +5,6 @@ import EncodableByteString from "../../networking/types/encodableByteString";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import { ObjectMetadata } from "./objectMetadata";
 import EncodableMap from "../../networking/types/encodableMap";
-import { ObjectMetadataKey } from "./objectMetadataKey";
-import { setObjectMetadataObservable } from "../../system/sharedObservables";
-import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
-import { ColliderState } from "../../physics/types/colliderState";
 
 export default class AddObjectSignal extends EncodableData
 {
@@ -31,41 +27,6 @@ export default class AddObjectSignal extends EncodableData
         this.objectId = objectId;
         this.transform = transform;
         this.metadata = metadata;
-    }
-
-    getObjectColliderState(): ColliderState | undefined
-    {
-        return PhysicsCollisionUtil.getObjectColliderState(this.objectTypeIndex,
-            this.transform.pos, this.transform.dir);
-    }
-
-    getMetadata(key: ObjectMetadataKey): string
-    {
-        if (this.metadata[key] == undefined)
-        {
-            console.error(`Object metadata key '${key}' doesn't exist.`);
-            return "";
-        }
-        return this.metadata[key].str;
-    }
-
-    hasMetadata(key: ObjectMetadataKey): boolean
-    {
-        return this.metadata[key] != undefined;
-    }
-
-    setMetadata(key: ObjectMetadataKey, value: string)
-    {
-        this.metadata[key] = new EncodableByteString(value);
-        setObjectMetadataObservable.set({objectId: this.objectId, key, value});
-    }
-
-    deleteMetadata(key: ObjectMetadataKey)
-    {
-        if (this.metadata[key] == undefined)
-            console.warn(`Object metadata key '${key}' doesn't exist.`);
-        else
-            delete this.metadata[key];
     }
 
     encode(bufferState: BufferState)

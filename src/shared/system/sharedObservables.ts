@@ -1,4 +1,3 @@
-import { ObjectMetadataKey } from "../object/types/objectMetadataKey";
 import ColliderDebugBox from "../physics/types/colliderDebugBox";
 import VoxelQuadChange from "../voxel/types/voxelQuadChange";
 import LogEvent from "./types/logEvent";
@@ -18,9 +17,6 @@ export const logEventObservable = new Observable<LogEvent>();
 
 // This observable notifies its listeners whenever a room's voxelGrid needs to be modified.
 export const voxelQuadChangeObservable = new Observable<VoxelQuadChange>();
-
-// This observable notifies its listeners whenever an object's metadata entry is set.
-export const setObjectMetadataObservable = new Observable<{objectId: string, key: ObjectMetadataKey, value: string}>();
 
 //--------------------------------------------------------------------------------
 // Debug

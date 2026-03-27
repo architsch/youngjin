@@ -1,6 +1,6 @@
 import Room from "../../room/types/room";
 import { RoomTypeEnumMap } from "../../room/types/roomType";
-import { MAX_CANVASES_PER_ROOM, MAX_IMAGE_URL_LENGTH } from "../../system/sharedConstants";
+import { IS_SERVER, MAX_CANVASES_PER_ROOM, MAX_IMAGE_URL_LENGTH } from "../../system/sharedConstants";
 import User from "../../user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../user/types/userRole";
 import AddObjectSignal from "../types/addObjectSignal";
@@ -17,16 +17,16 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Voxel",
         persistent: false,
         canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+            return false;
         },
         canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+            return false;
         },
         canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+            return false;
         },
         canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-            return false; // A user with an appropriate permission can edit a voxel's block or quad, but not the voxel object itself.
+            return false;
         },
         components: {
             spawnedByAny: {
@@ -41,10 +41,10 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         objectType: "Player",
         persistent: false,
         canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-            return user == undefined; // Only the server can add a player character (corresponding to a connected user)
+            return IS_SERVER; // Only the server can add a player character.
         },
         canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-            return user == undefined; // Only the server can remove a player character (corresponding to a disconnected user)
+            return IS_SERVER; // Only the server can remove a player character.
         },
         canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
             // User can only move his/her own player character

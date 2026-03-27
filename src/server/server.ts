@@ -13,12 +13,13 @@ import DBSearchUtil from "./db/util/dbSearchUtil";
 import DBUserUtil from "./db/util/dbUserUtil";
 import AddressUtil from "./networking/util/addressUtil";
 import LogUtil from "../shared/system/util/logUtil";
-import { HOUR_IN_MS } from "../shared/system/sharedConstants";
+import { HOUR_IN_MS, setIsServer } from "../shared/system/sharedConstants";
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
 
 async function Server(): Promise<void>
 {
+    setIsServer();
     console.log(`========================================
 Env Variables in Server:
 ========================================

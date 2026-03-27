@@ -4,7 +4,7 @@ import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
 import WorldSpaceIconButton from "../../../ui/components/basic/worldspace/worldSpaceIconButton";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
-import VoxelBlockUpdateUtil from "../../../../shared/voxel/util/voxelBlockUpdateUtil";
+import VoxelUpdateUtil from "../../../../shared/voxel/util/voxelUpdateUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import MoveVoxelBlockSignal from "../../../../shared/voxel/types/update/moveVoxelBlockSignal";
@@ -12,6 +12,7 @@ import AddVoxelBlockSignal from "../../../../shared/voxel/types/update/addVoxelB
 import RemoveVoxelBlockSignal from "../../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
+import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 
 // Arrow offset distance from center of voxel block face
 const ARROW_OFFSET = 0.35;
@@ -95,8 +96,8 @@ async function updateGizmos(selection: VoxelQuadSelection)
         const def = arrowDefs[i];
         const arrow = arrows[i];
 
-        const canMove = VoxelBlockUpdateUtil.canMoveVoxelBlock(
-            room, quadIndex, def.rowOffset, def.colOffset, def.collisionLayerOffset);
+        const canMove = VoxelUpdateUtil.canMoveVoxelBlock(
+            App.getCurrentUserRole(), room, quadIndex, def.rowOffset, def.colOffset, def.collisionLayerOffset);
 
         arrow.setVisible(canMove);
         arrow.setPosition(
@@ -146,7 +147,7 @@ async function updateGizmos(selection: VoxelQuadSelection)
     );
     addButton!.setOnClick(canAdd ? () => tryAddVoxelBlock(selection) : null);
 
-    const canRemove = VoxelBlockUpdateUtil.canRemoveVoxelBlock(room, quadIndex);
+    const canRemove = VoxelUpdateUtil.canRemoveVoxelBlock(App.getCurrentUserRole(), room, quadIndex);
     removeButton!.setVisible(canRemove);
     removeButton!.setPosition(
         quadWorldX - tangentX,
@@ -156,18 +157,18 @@ async function updateGizmos(selection: VoxelQuadSelection)
     removeButton!.setOnClick(canRemove ? () => tryRemoveVoxelBlock(selection) : null);
 }
 
-// --- Action handlers (same logic as voxelQuadTransformOptions.tsx) ---
+// --- Action handlers ---
 
 function tryMoveVoxelBlock(selection: VoxelQuadSelection,
     rowOffset: number, colOffset: number, collisionLayerOffset: number)
 {
     const room = App.getCurrentRoom();
     if (!room) return;
-    if (!VoxelBlockUpdateUtil.canMoveVoxelBlock(room, selection.quadIndex, rowOffset, colOffset, collisionLayerOffset))
+    if (!VoxelUpdateUtil.canMoveVoxelBlock(App.getCurrentUserRole(), room, selection.quadIndex, rowOffset, colOffset, collisionLayerOffset))
         return;
 
     const quadIndex = selection.quadIndex;
-    if (VoxelBlockUpdateUtil.moveVoxelBlock(room, quadIndex, rowOffset, colOffset, collisionLayerOffset))
+    if (ClientVoxelManager.moveVoxelBlock(room, quadIndex, rowOffset, colOffset, collisionLayerOffset))
     {
         const v = selection.voxel;
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
@@ -219,7 +220,7 @@ function canAddVoxelBlock(selection: VoxelQuadSelection): boolean
     }
 
     const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    return VoxelBlockUpdateUtil.canAddVoxelBlock(room, targetQuadIndex);
+    return VoxelUpdateUtil.canAddVoxelBlock(App.getCurrentUserRole(), room, targetQuadIndex);
 }
 
 function tryAddVoxelBlock(selection: VoxelQuadSelection)
@@ -255,7 +256,7 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
         quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
 
     const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    if (VoxelBlockUpdateUtil.addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
+    if (ClientVoxelManager.addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
     {
         VoxelQuadSelection.trySelect(VoxelQueryUtil.getVoxel(room, newRow, newCol), targetQuadIndex);
         SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, targetQuadIndex, quadTextureIndicesWithinLayer));
@@ -266,10 +267,10 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
 {
     const room = App.getCurrentRoom();
     if (!room) return;
-    if (!VoxelBlockUpdateUtil.canRemoveVoxelBlock(room, selection.quadIndex)) return;
+    if (!VoxelUpdateUtil.canRemoveVoxelBlock(App.getCurrentUserRole(), room, selection.quadIndex)) return;
 
     const quadIndex = selection.quadIndex;
-    if (VoxelBlockUpdateUtil.removeVoxelBlock(room, quadIndex))
+    if (ClientVoxelManager.removeVoxelBlock(room, quadIndex))
     {
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);

@@ -6,8 +6,7 @@ import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import SocketsClient from "../../../networking/client/socketsClient";
 import SetVoxelQuadTextureSignal from "../../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import App from "../../../app";
-import VoxelQuadUpdateUtil from "../../../../shared/voxel/util/voxelQuadUpdateUtil";
-import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
+import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 import VoxelGameObject from "../../../object/types/voxelGameObject";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
@@ -44,12 +43,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     return;
                 }
 
-                const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-                const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-                const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-                if (VoxelQuadUpdateUtil.setVoxelQuadVisible(true, props.selection.voxel, facingAxis, orientation,
-                    collisionLayer, textureIndex))
+                if (ClientVoxelManager.setVoxelQuadTexture(room, quadIndex, textureIndex))
                 {
                     voxelQuadSelectionObservable.notify();
                     SocketsClient.emitSetVoxelQuadTextureSignal(new SetVoxelQuadTextureSignal(room.id, quadIndex, textureIndex));

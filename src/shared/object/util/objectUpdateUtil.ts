@@ -41,9 +41,10 @@ const ObjectUpdateUtil =
         else
             return true;
     },
-    addObject(user: User, userRole: UserRole, room: Room, obj: AddObjectSignal): boolean
+    addObject(user: User, userRole: UserRole, room: Room, obj: AddObjectSignal,
+        validate: boolean = true): boolean
     {
-        if (!ObjectUpdateUtil.canAddObject(user, userRole, room, obj))
+        if (validate && !ObjectUpdateUtil.canAddObject(user, userRole, room, obj))
         {
             console.error(`ObjectUpdateUtil::addObject :: Failed (x=${obj.transform.pos.x}, y=${obj.transform.pos.y}, z=${obj.transform.pos.z})`);
             return false;
@@ -78,9 +79,10 @@ const ObjectUpdateUtil =
 
         return true;
     },
-    removeObject(user: User, userRole: UserRole, room: Room, signal: RemoveObjectSignal): boolean
+    removeObject(user: User, userRole: UserRole, room: Room, signal: RemoveObjectSignal,
+        validate: boolean = true): boolean
     {
-        if (!ObjectUpdateUtil.canRemoveObject(user, userRole, room, signal))
+        if (validate && !ObjectUpdateUtil.canRemoveObject(user, userRole, room, signal))
         {
             console.error(`ObjectUpdateUtil::removeObject :: Failed (objectId=${signal.objectId})`);
             return false;
@@ -117,11 +119,11 @@ const ObjectUpdateUtil =
         else
             return true;
     },
-    setObjectTransform(user: User, userRole: UserRole, room: Room,
-        signal: SetObjectTransformSignal): ObjectTransformUpdateResult
+    setObjectTransform(user: User, userRole: UserRole, room: Room, signal: SetObjectTransformSignal,
+        validate: boolean = true): ObjectTransformUpdateResult
     {
         const obj = room.objectById[signal.objectId];
-        if (!ObjectUpdateUtil.canSetObjectTransform(user, userRole, room, signal))
+        if (validate && !ObjectUpdateUtil.canSetObjectTransform(user, userRole, room, signal))
         {
             console.error(`ObjectUpdateUtil::setObjectTransform :: Failed (x=${signal.transform.pos.x}, y=${signal.transform.pos.y}, z=${signal.transform.pos.z})`);
             return {transform: obj.transform, desyncDetected: true};
@@ -173,9 +175,9 @@ const ObjectUpdateUtil =
         return true;
     },
     setObjectMetadata(user: User, userRole: UserRole, room: Room,
-        signal: SetObjectMetadataSignal): boolean
+        signal: SetObjectMetadataSignal, validate: boolean = true): boolean
     {
-        if (!ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal))
+        if (validate && !ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal))
         {
             console.error(`ObjectUpdateUtil::setObjectMetadata :: Failed (objectId=${signal.objectId})`);
             return false;

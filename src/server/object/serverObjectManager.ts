@@ -81,9 +81,11 @@ const ServerObjectManager =
         if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal))
         {
             console.error(`onSetObjectMetadataSignalReceived :: Failed (objectId = ${signal.objectId})`);
+            const originalMetadata = obj.metadata[signal.metadataKey];
+            const originalMetadataValue = originalMetadata ? originalMetadata.str : "";
             socketUserContext.addPendingSignalToUser("setObjectMetadataSignal",
                 new SetObjectMetadataSignal(room.id, obj.objectId, signal.metadataKey,
-                    obj.getMetadata(signal.metadataKey)));
+                    originalMetadataValue));
             return;
         }
 

@@ -8,17 +8,16 @@ import ClientObjectManager from "../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
-import { notificationMessageObservable, objectSelectionObservable } from "../../../system/clientObservables";
-import { MAX_IMAGE_URL_LENGTH } from "../../../../shared/system/sharedConstants";
+import { objectSelectionObservable } from "../../../system/clientObservables";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 
 export default function CanvasSelectionOptions(props: {selection: ObjectSelection})
 {
     const go = props.selection.gameObject;
-    const currentImageURL = go.params.hasMetadata(ObjectMetadataKeyEnumMap.ImageURL)
-        ? go.params.getMetadata(ObjectMetadataKeyEnumMap.ImageURL)
-        : "";
-    const [imageURL, setImageURL] = useState(currentImageURL);
+    const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImageURL];
+    const metadataValue = metadata ? metadata.str : "";
+
+    const [imageURL, setImageURL] = useState(metadataValue);
 
     return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
         <div className="flex flex-row gap-2">
@@ -84,15 +83,9 @@ function trySetCanvasImageURL(selection: ObjectSelection, imageURL: string)
         return;
 
     const room = App.getCurrentRoom()!;
-    const user = App.getUser();
-    const userRole = App.getCurrentUserRole();
-
     const objectId = selection.gameObject.params.objectId;
-    const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, "");
-    if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal))
+    if (!ClientObjectManager.setObjectMetadata(objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL))
         return;
-
-    selection.gameObject.params.setMetadata(ObjectMetadataKeyEnumMap.ImageURL, imageURL);
 
     objectSelectionObservable.notify();
     SocketsClient.emitSetObjectMetadataSignal(
