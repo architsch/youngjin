@@ -66,7 +66,8 @@ const ClientObjectManager =
             );
             const voxelGameObject = gameObject as VoxelGameObject;
             voxelGameObject.setVoxel(voxel);
-        };
+            await ClientObjectManager.addObject(gameObject, false, false); // Don't try to add the object to the room data because voxels don't reside in its object dictionary.
+        }
 
         // Find the player's initial position for distance-based loading order
         let playerX = 0, playerY = 0, playerZ = 0;
@@ -96,34 +97,29 @@ const ClientObjectManager =
             if (obj.objectTypeIndex == voxelTypeIndex)
                 throw new Error(`Voxel object is not allowed to spawn via objectById.`);
             const gameObject = ObjectFactory.createServerSideObject(obj);
-            await ClientObjectManager.addObject(gameObject);
+            await ClientObjectManager.addObject(gameObject, false, false); // Don't try to add the object to the room data again because it is already part of it.
         }
     },
     unload: async () =>
     {
-        // Unload objects
         for (const objectId of Object.keys(gameObjects))
         {
-            if (!objectId.startsWith("#"))
-                await ClientObjectManager.removeObject(objectId);
-            delete gameObjects[objectId];
+            // Objects whose IDs start with "#" (i.e. client-only objects) are excluded from room data.
+            await ClientObjectManager.removeObject(objectId, false, !objectId.startsWith("#"));
         }
-        for (const objectId of Object.keys(updatableGameObjects))
-            delete updatableGameObjects[objectId];
-        for (const userID of Object.keys(playerByUserID))
-            delete playerByUserID[userID];
     },
-    addObject: async (object: GameObject, validate: boolean = true): Promise<boolean> =>
+    addObject: async (object: GameObject, validate: boolean = true,
+        addToRoomData: boolean = true): Promise<boolean> =>
     {
-        if (object.params.objectId.startsWith("#"))
-            throw new Error("Client-side objects (those with IDs beginning with '#') are not allowed to be part of the room's object dictionary.");
-
         const user = App.getUser();
         const userRole = App.getCurrentUserRole();
         const room = App.getCurrentRoom()!;
 
-        if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params, validate))
-            return false;
+        if (addToRoomData)
+        {
+            if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params, validate))
+                return false;
+        }
 
         if (gameObjects[object.params.objectId] == undefined)
         {
@@ -149,17 +145,18 @@ const ClientObjectManager =
             return false;
         }
     },
-    removeObject: async (objectId: string, validate: boolean = true): Promise<boolean> =>
+    removeObject: async (objectId: string, validate: boolean = true,
+        removeFromRoomData: boolean = true): Promise<boolean> =>
     {
-        if (objectId.startsWith("#"))
-            throw new Error("Client-side objects (those with IDs beginning with '#') are not allowed to be part of the room's object dictionary.");
-
         const user = App.getUser();
         const userRole = App.getCurrentUserRole();
         const room = App.getCurrentRoom()!;
 
-        if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId), validate))
-            return false;
+        if (removeFromRoomData)
+        {
+            if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId), validate))
+                return false;
+        }
 
         if (gameObjects[objectId] != undefined)
         {
@@ -233,10 +230,6 @@ const ClientObjectManager =
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
-
-        const room = App.getCurrentRoom()!;
-        room.objectById[signal.objectId] = signal;
-
         const gameObject = ObjectFactory.createServerSideObject(signal);
         await ClientObjectManager.addObject(gameObject, false);
     },
@@ -247,15 +240,10 @@ const ClientObjectManager =
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
             return;
-
-        const room = App.getCurrentRoom()!;
-        delete room.objectById[signal.objectId];
-
         // If the removed object was selected, unselect it.
         const sel = objectSelectionObservable.peek();
         if (sel && sel.gameObject.params.objectId === signal.objectId)
             ObjectSelection.unselect();
-
         await ClientObjectManager.removeObject(signal.objectId, false);
     },
     onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {

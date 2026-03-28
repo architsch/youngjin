@@ -92,10 +92,9 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
         const objectId = generateRandomObjectId();
         const signal = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, tr, metadata);
         
-        // Spawn the game object locally
+        // Add the game object locally, and report it to the server if successful.
         const gameObject = ObjectFactory.createServerSideObject(signal);
         const success = await ClientObjectManager.addObject(gameObject);
-
         if (success)
         {
             SocketsClient.emitAddObjectSignal(signal);

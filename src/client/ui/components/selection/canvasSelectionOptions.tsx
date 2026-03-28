@@ -46,22 +46,18 @@ function canRemoveCanvas(selection: ObjectSelection): boolean
     return ObjectUpdateUtil.canRemoveObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
 }
 
-function tryRemoveCanvas(selection: ObjectSelection)
+async function tryRemoveCanvas(selection: ObjectSelection)
 {
-    if (!canRemoveCanvas(selection))
-        return;
-
-    const user = App.getUser();
-    const userRole = App.getCurrentUserRole();
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
-    const removed = ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
-    if (!removed)
-        return;
 
+    // Remove the game object locally, and report it to the server if successful.
     ObjectSelection.unselect();
-    ClientObjectManager.removeObject(objectId);
-    SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
+    const success = await ClientObjectManager.removeObject(objectId);
+    if (success)
+    {
+        SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
+    }
 }
 
 function canSetCanvasImageURL(selection: ObjectSelection): boolean

@@ -44,8 +44,7 @@ export const COLLISION_LAYER_NULL = 8;
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
 
-export const MIN_OBJECT_LEVEL_CHANGE_TIME_INTERVAL = 0.2;
-export const STEP_UP_HEIGHT = 0.5; // Maximum height an object can step up onto when colliding with an obstacle.
+export const STEP_UP_HEIGHT = 0.6; // Maximum height an object can step up onto when colliding with an obstacle.
 export const GRAVITY_SPEED = 5; // Units per second for gravity-based falling.
 
 // Voxel Grid Dimensions
