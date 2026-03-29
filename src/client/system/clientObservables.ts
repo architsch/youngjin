@@ -11,6 +11,11 @@ import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 // Core Observables
 //--------------------------------------------------------------------------------
 
+// This observable notifies its listeners whenever the client app's update loop runs
+// (i.e. each tick inside the "update" function of "src/client/app.ts").
+// Each loop's deltaTime will be passed as the observable's "number" property.
+export const updateObservable = new Observable<number>();
+
 // This observable notifies its listeners whenever a new clientProcess begins
 // or an existing clientProcess ends.
 // A "clientProcess" is any asynchronous routine which is supposed to block the app's

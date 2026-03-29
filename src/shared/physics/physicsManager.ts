@@ -11,7 +11,6 @@ import PhysicsCollisionUtil from "./util/physicsCollisionUtil";
 import PhysicsVoxelUtil from "./util/physicsVoxelUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STEP_UP_HEIGHT } from "../system/sharedConstants";
 import { ColliderState } from "./types/colliderState";
-import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
 import ObjectTransform from "../object/types/objectTransform";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};

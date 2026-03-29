@@ -170,7 +170,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByAny: {
                 collider: {
                     colliderType: "wallAttachment",
-                    hitboxSize: {sizeX: 0.99, sizeY: 0.99, sizeZ: 0.001},
+                    hitboxSize: {sizeX: 0.98, sizeY: 0.98, sizeZ: 0.01},
                 },
                 instancedMeshGraphics: {
                     createInstanceIdPool: true,

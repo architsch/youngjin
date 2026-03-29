@@ -1,11 +1,13 @@
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
-import EncodableByteVec3 from "../../networking/types/encodableByteVec3";
 import Vec3 from "../../math/types/vec3";
+import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import Encodable2ByteVec3 from "../../networking/types/encodable2ByteVec3";
 
-const xzRange = [0, 32];
-const yRange = [-1, 4 + 0.0196058823529414]; // Note: The addition of this weird constant is to make sure that 0 will be quantized to a value which is as close to 0 as possible.
-const dirVecRange = [-1, 1 + 0.0157472440944882]; // Note: The addition of this weird constant is to make sure that 0 will be quantized to a value which is as close to 0 as possible.
+const xRange = [0, NUM_VOXEL_COLS]; // from start to end of the voxel grid
+const yRange = [0, MAX_ROOM_Y]; // from floor to ceiling
+const zRange = [0, NUM_VOXEL_ROWS]; // from start to end of the voxel grid
+const dirVecRange = [-1, 1]; // direction vector is a unit vector, so none of its components will ever exceed 1.
 
 export default class ObjectTransform extends EncodableData
 {
@@ -21,14 +23,29 @@ export default class ObjectTransform extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        new EncodableByteVec3(this.pos, xzRange[0], xzRange[1], yRange[0], yRange[1]).encode(bufferState);
-        new EncodableByteVec3(this.dir, dirVecRange[0], dirVecRange[1], dirVecRange[0], dirVecRange[1]).encode(bufferState);
+        new Encodable2ByteVec3(this.pos,
+            xRange[0], xRange[1],
+            yRange[0], yRange[1],
+            zRange[0], zRange[1],).encode(bufferState);
+
+        new Encodable2ByteVec3(this.dir,
+            dirVecRange[0], dirVecRange[1],
+            dirVecRange[0], dirVecRange[1],
+            dirVecRange[0], dirVecRange[1]).encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const posData = EncodableByteVec3.decodeWithParams(bufferState, xzRange[0], xzRange[1], yRange[0], yRange[1]) as EncodableByteVec3;
-        const dirData = EncodableByteVec3.decodeWithParams(bufferState, dirVecRange[0], dirVecRange[1], dirVecRange[0], dirVecRange[1]) as EncodableByteVec3;
+        const posData = Encodable2ByteVec3.decodeWithParams(bufferState,
+            xRange[0], xRange[1],
+            yRange[0], yRange[1],
+            zRange[0], zRange[1]) as Encodable2ByteVec3;
+
+        const dirData = Encodable2ByteVec3.decodeWithParams(bufferState,
+            dirVecRange[0], dirVecRange[1],
+            dirVecRange[0], dirVecRange[1],
+            dirVecRange[0], dirVecRange[1]) as Encodable2ByteVec3;
+
         return new ObjectTransform(posData.v, dirData.v);
     }
 }

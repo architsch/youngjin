@@ -1,18 +1,8 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import GeometryFactory from "../../../../graphics/factories/geometryFactory";
+import { DIRECTION_VECTORS } from "../../../../../client/system/clientConstants";
 
-// Direction vectors for each arrow direction label
-const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {
-    "+x": new THREE.Vector3(1, 0, 0),
-    "-x": new THREE.Vector3(-1, 0, 0),
-    "+y": new THREE.Vector3(0, 1, 0),
-    "-y": new THREE.Vector3(0, -1, 0),
-    "+z": new THREE.Vector3(0, 0, 1),
-    "-z": new THREE.Vector3(0, 0, -1),
-};
-
-const UP = new THREE.Vector3(0, 1, 0);
 const tempQuat = new THREE.Quaternion();
 
 // A world-space arrow rendered as a 3D mesh (cone head + cylinder shaft).
@@ -21,6 +11,7 @@ const tempQuat = new THREE.Quaternion();
 export default class WorldSpaceArrow
 {
     private group: THREE.Group = new THREE.Group();
+    private arrowAssembly: THREE.Group;
     private coneMesh: THREE.Mesh;
     private cylinderMesh: THREE.Mesh;
     private clickElement: HTMLElement;
@@ -32,6 +23,7 @@ export default class WorldSpaceArrow
         color: string,
         coneGeometry: THREE.BufferGeometry,
         cylinderGeometry: THREE.BufferGeometry,
+        scale: number = 1,
     )
     {
         const mat = new THREE.MeshBasicMaterial({
@@ -57,27 +49,32 @@ export default class WorldSpaceArrow
         const arrowAssembly = new THREE.Group();
         arrowAssembly.add(this.cylinderMesh);
         arrowAssembly.add(this.coneMesh);
+        
+        const up = DIRECTION_VECTORS["+y"];
 
         // Rotate arrowAssembly from default +Y to the desired direction
-        const dir = DIRECTION_VECTORS[arrowDirection] || UP;
+        const dir = DIRECTION_VECTORS[arrowDirection] || up;
         if (dir.y < -0.99)
         {
             // Special case: pointing straight down — rotate 180° around X
-            arrowAssembly.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+            arrowAssembly.quaternion.setFromAxisAngle(DIRECTION_VECTORS["+x"], Math.PI);
         }
         else if (dir.y < 0.99)
         {
-            tempQuat.setFromUnitVectors(UP, dir);
+            tempQuat.setFromUnitVectors(up, dir);
             arrowAssembly.quaternion.copy(tempQuat);
         }
         // If dir is +Y, no rotation needed.
 
+        arrowAssembly.scale.setScalar(scale);
+        this.arrowAssembly = arrowAssembly;
         this.group.add(arrowAssembly);
 
         // Invisible CSS2D click target (DOM element overlay for pointer events)
+        const clickSize = 2 * scale;
         this.clickElement = document.createElement("div");
         this.clickElement.style.cssText =
-            "cursor:pointer; pointer-events:auto; width:1.4rem; height:1.4rem;" +
+            "cursor:pointer; pointer-events:auto; width:" + clickSize + "rem; height:" + clickSize + "rem;" +
             "border-radius:50%; background:transparent;";
 
         this.clickElement.addEventListener("pointerenter", () => {
@@ -97,13 +94,13 @@ export default class WorldSpaceArrow
         this.group.add(this.css2dObject);
     }
 
-    static async create(arrowDirection: string, color: string = "#00ff00"): Promise<WorldSpaceArrow>
+    static async create(arrowDirection: string, color: string = "#00ff00", scale: number = 1): Promise<WorldSpaceArrow>
     {
         const [coneGeometry, cylinderGeometry] = await Promise.all([
             GeometryFactory.load("ArrowCone"),
             GeometryFactory.load("ArrowCylinder"),
         ]);
-        return new WorldSpaceArrow(arrowDirection, color, coneGeometry, cylinderGeometry);
+        return new WorldSpaceArrow(arrowDirection, color, coneGeometry, cylinderGeometry, scale);
     }
 
     addToParent(parent: THREE.Object3D): void
@@ -125,6 +122,24 @@ export default class WorldSpaceArrow
     {
         this.group.visible = visible;
         this.clickElement.style.display = visible ? "block" : "none";
+    }
+
+    setDirection(dir: THREE.Vector3): void
+    {
+        const up = DIRECTION_VECTORS["+y"];
+        if (dir.y < -0.99)
+        {
+            this.arrowAssembly.quaternion.setFromAxisAngle(DIRECTION_VECTORS["+x"], Math.PI);
+        }
+        else if (dir.y < 0.99)
+        {
+            tempQuat.setFromUnitVectors(up, dir);
+            this.arrowAssembly.quaternion.copy(tempQuat);
+        }
+        else
+        {
+            this.arrowAssembly.quaternion.identity();
+        }
     }
 
     setOnClick(callback: (() => void) | null): void

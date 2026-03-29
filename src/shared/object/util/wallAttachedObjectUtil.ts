@@ -1,6 +1,7 @@
 import Vec3 from "../../math/types/vec3";
 import DirUtil from "../../math/util/dirUtil";
 import Vector3DUtil from "../../math/util/vector3DUtil";
+import { ColliderState } from "../../physics/types/colliderState";
 import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
@@ -26,17 +27,27 @@ const WallAttachedObjectUtil =
             return false;
         }
 
+        // Object should not be able to penetrate halfway through the room's boundary wall.
+
+        if (((pos.x <= 1 || pos.x >= NUM_VOXEL_COLS-1) && dir.z != 0) ||
+            ((pos.z <= 1 || pos.z >= NUM_VOXEL_ROWS-1) && dir.x != 0))
+        {
+            return false;
+        }
+
         const newColliderState = PhysicsCollisionUtil.getObjectColliderState(objectTypeIndex, pos, dir);
         if (!newColliderState)
             throw new Error(`new ColliderState not found (objectTypeIndex = ${objectTypeIndex})`);
+
+        const halfHorizontal = getQuantizedColliderHorizontalHalfSize(newColliderState);
+        const halfVertical = getQuantizedColliderVerticalHalfSize(newColliderState);
 
         // (1) The object's back side must be fully covered (by voxel blocks).
         // (2) The object's front side must be at least partially exposed.
         // We check voxel occupancy using the object's Y range against collision layers.
 
-        const half = newColliderState.hitbox.halfSizeX;
-        const objBottomY = newColliderState.hitbox.y - newColliderState.hitbox.halfSizeY;
-        const objTopY = newColliderState.hitbox.y + newColliderState.hitbox.halfSizeY;
+        const objBottomY = newColliderState.hitbox.y - halfVertical;
+        const objTopY = newColliderState.hitbox.y + halfVertical;
         let frontExposureFound = false;
 
         // Determine which direction the object faces for back/front scanning
@@ -48,8 +59,8 @@ const WallAttachedObjectUtil =
         {
             const backRow = Math.floor(pos.z + 0.01 * (dir.z > 0 ? -1 : +1));
             const frontRow = Math.floor(pos.z + 0.01 * (dir.z > 0 ? +1 : -1));
-            const leftCol = Math.floor(pos.x - half);
-            const rightCol = Math.floor(pos.x + half);
+            const leftCol = Math.floor(pos.x - halfHorizontal);
+            const rightCol = Math.floor(pos.x + halfHorizontal - 0.01);
             for (let col = leftCol; col <= rightCol; ++col)
             {
                 const backVoxel = VoxelQueryUtil.getVoxel(room, backRow, col);
@@ -64,8 +75,8 @@ const WallAttachedObjectUtil =
         {
             const backCol = Math.floor(pos.x + 0.01 * (dir.x > 0 ? -1 : +1));
             const frontCol = Math.floor(pos.x + 0.01 * (dir.x > 0 ? +1 : -1));
-            const leftRow = Math.floor(pos.z - half);
-            const rightRow = Math.floor(pos.z + half);
+            const leftRow = Math.floor(pos.z - halfHorizontal);
+            const rightRow = Math.floor(pos.z + halfHorizontal - 0.01);
             for (let row = leftRow; row <= rightRow; ++row)
             {
                 const backVoxel = VoxelQueryUtil.getVoxel(room, row, backCol);
@@ -178,8 +189,9 @@ function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     if (!colliderState)
         throw new Error(`ColliderState not found (objectTypeIndex = ${obj.objectTypeIndex})`);
 
-    const offset1 = Vector3DUtil.scale(tr.dir, (tryConcaveWrap ? 1 : -1) * colliderState.hitbox.halfSizeX);
-    const offset2 = Vector3DUtil.scale(dirCCW, (moveRight ? 1 : -1) * colliderState.hitbox.halfSizeX);
+    const halfHorizontal = getQuantizedColliderHorizontalHalfSize(colliderState);
+    const offset1 = Vector3DUtil.scale(tr.dir, (tryConcaveWrap ? 1 : -1) * halfHorizontal);
+    const offset2 = Vector3DUtil.scale(dirCCW, (moveRight ? 1 : -1) * halfHorizontal);
 
     const newPos = Vector3DUtil.add(Vector3DUtil.add(tr.pos, offset1), offset2);
     const newDir = Vector3DUtil.scale(dirCCW, (tryConcaveWrap != moveRight) ? 1 : -1);
@@ -200,6 +212,22 @@ function voxelCoversYRange(collisionLayerMask: number, bottomY: number, topY: nu
             return false;
     }
     return true;
+}
+
+function getQuantizedColliderHorizontalHalfSize(colliderState: ColliderState): number
+{
+    // ColliderConfig's sizeX is not being affected by the collider's
+    // current orientation (i.e. whether is aligned with x-axis or z-axis),
+    // unlike ColliderState's halfSizeX which varies depending on the
+    // collider's orientation.
+    const hitboxSize = colliderState.colliderConfig.hitboxSize;
+    return 0.5*Math.round(hitboxSize.sizeX);
+}
+
+function getQuantizedColliderVerticalHalfSize(colliderState: ColliderState): number
+{
+    const hitboxSize = colliderState.colliderConfig.hitboxSize;
+    return 0.5*Math.round(hitboxSize.sizeY);
 }
 
 export default WallAttachedObjectUtil;

@@ -7,10 +7,9 @@ import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProx
 import FirstPersonPointerInput from "./helpers/firstPerson/firstPersonPointerInput";
 import FirstPersonKeyInput from "./helpers/firstPerson/firstPersonKeyInput";
 import Rigidbody from "./rigidbody";
-import GameObject from "../types/gameObject";
+import { DIRECTION_VECTORS } from "../../system/clientConstants";
 
 const objTemp: THREE.Object3D = new THREE.Object3D();
-const yAxis = new THREE.Vector3(0, 1, 0);
 
 export default class FirstPersonController extends GameObjectComponent
 {
@@ -59,7 +58,7 @@ export default class FirstPersonController extends GameObjectComponent
         this.dy = Math.max(-0.4, Math.min(0.4, this.dy));
         
         if (Math.abs(this.dx) > NEAR_EPSILON)
-            this.gameObject.obj.rotateOnWorldAxis(yAxis, -3 * deltaTime * this.dx);
+            this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"], -3 * deltaTime * this.dx);
 
         if (Math.abs(this.dy) > NEAR_EPSILON)
         {

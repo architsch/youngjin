@@ -14,7 +14,23 @@ const VoxelUpdateUtil =
     {
         if (!canUserEditVoxel(userRole, room))
             return false;
-        return canAddVoxelBlockInternal(room, quadIndex);
+
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
+        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+            return false;
+        if (row <= 0 || col <= 0 || row >= NUM_VOXEL_ROWS-1 || col >= NUM_VOXEL_COLS-1)
+            return false;
+
+        const voxel = VoxelQueryUtil.getVoxel(room, row, col);
+        if (!voxel)
+            return false;
+        if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+            return false;
+
+        return true;
     },
     addVoxelBlock(userRole: UserRole, room: Room, quadIndex: number,
         quadTextureIndicesWithinLayer: number[], validate: boolean = true): boolean
@@ -40,7 +56,31 @@ const VoxelUpdateUtil =
     {
         if (!canUserEditVoxel(userRole, room))
             return false;
-        return canRemoveVoxelBlockInternal(room, quadIndex);
+
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
+        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+            return false;
+        if (row <= 0 || col <= 0 || row >= NUM_VOXEL_ROWS-1 || col >= NUM_VOXEL_COLS-1)
+            return false;
+
+        const voxel = VoxelQueryUtil.getVoxel(room, row, col);
+        if (!voxel)
+            return false;
+        if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+            return false;
+
+        // Check if removing the voxel block will cause any wall-attached object to lose its wall support.
+        const voxelBlockColliderState = PhysicsCollisionUtil.getVoxelBlockColliderState(row, col, collisionLayer);
+        const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
+        for (const collidingObject of Object.values(collidingObjects))
+        {
+            if (collidingObject.colliderState.colliderConfig.colliderType == "wallAttachment")
+                return false;
+        }
+        return true;
     },
     removeVoxelBlock(userRole: UserRole, room: Room, quadIndex: number,
         validate: boolean = true): boolean
@@ -83,8 +123,8 @@ const VoxelUpdateUtil =
         const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
             row + rowOffset, col + colOffset, "y", "-", newCollisionLayer);
 
-        return canAddVoxelBlockInternal(room, targetQuadIndex)
-            && canRemoveVoxelBlockInternal(room, quadIndex);
+        return VoxelUpdateUtil.canAddVoxelBlock(userRole, room, targetQuadIndex)
+            && VoxelUpdateUtil.canRemoveVoxelBlock(userRole, room, quadIndex);
     },
     moveVoxelBlock(userRole: UserRole, room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number,
@@ -177,54 +217,6 @@ function canUserEditVoxel(userRole: UserRole, room: Room): boolean
     if (room.roomType === RoomTypeEnumMap.Hub)
         return true;
     return false;
-}
-
-function canAddVoxelBlockInternal(room: Room, quadIndex: number): boolean
-{
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-    if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-        return false;
-    if (row <= 0 || col <= 0 || row >= NUM_VOXEL_ROWS-1 || col >= NUM_VOXEL_COLS-1)
-        return false;
-
-    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-    if (!voxel)
-        return false;
-    if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
-        return false;
-
-    return true;
-}
-
-function canRemoveVoxelBlockInternal(room: Room, quadIndex: number): boolean
-{
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-    if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-        return false;
-    if (row <= 0 || col <= 0 || row >= NUM_VOXEL_ROWS-1 || col >= NUM_VOXEL_COLS-1)
-        return false;
-
-    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
-    if (!voxel)
-        return false;
-    if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
-        return false;
-
-    // Check if removing the voxel block will cause any wall-attached object to lose its wall support.
-    const voxelBlockColliderState = PhysicsCollisionUtil.getVoxelBlockColliderState(row, col, collisionLayer);
-    const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
-    for (const collidingObject of Object.values(collidingObjects))
-    {
-        if (collidingObject.colliderState.colliderConfig.colliderType == "wallAttachment")
-            return false;
-    }
-    return true;
 }
 
 function updateAllVoxelBlockSides(room: Room, voxel: Voxel, collisionLayer: number,

@@ -13,6 +13,7 @@ import WallAttachedObjectUtil from "../../../../shared/object/util/wallAttachedO
 import ClientObjectManager from "../../../object/clientObjectManager";
 import ErrorUtil from "../../../../shared/system/util/errorUtil";
 import ObjectTransform from "../../../../shared/object/types/objectTransform";
+import { DIRECTION_VECTORS } from "../../../system/clientConstants";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -34,7 +35,7 @@ let initialized = false;
 
 const vec3Dir = new THREE.Vector3();
 const vec3Right = new THREE.Vector3();
-const vec3Up = new THREE.Vector3(0, 1, 0);
+const vec3LocalDir = new THREE.Vector3();
 
 async function ensureInitialized()
 {
@@ -45,7 +46,7 @@ async function ensureInitialized()
 
     for (const def of arrowDefs)
     {
-        const arrow = await WorldSpaceArrow.create(def.dir, "#00ccff");
+        const arrow = await WorldSpaceArrow.create(def.dir, "#00ccff", 1.8);
         arrow.addToParent(scene);
         arrow.setVisible(false);
         arrows.push(arrow);
@@ -83,17 +84,8 @@ async function updateGizmos(selection: ObjectSelection)
     const obj = room.objectById[objectId];
     const pos = go.position;
 
-    // Calculate the canvas's local right vector.
-    // The canvas direction vector points forward (away from the wall).
-    // The local right vector is perpendicular to both direction and world up.
     vec3Dir.set(go.params.transform.dir.x, go.params.transform.dir.y, go.params.transform.dir.z);
-
-    // For wall-attached objects, direction is in the XZ plane.
-    // Local right = cross(direction, up), but since the canvas faces outward,
-    // we need cross(up, direction) for correct handedness matching the moveObject logic.
-    // Actually, the DirUtil CCW rotation gives us the perpendicular direction.
-    // Let's compute it directly: right = normalize(cross(up, dir))
-    vec3Right.crossVectors(vec3Up, vec3Dir).normalize();
+    vec3Right.crossVectors(DIRECTION_VECTORS["+y"], vec3Dir).normalize().negate();
 
     for (let i = 0; i < arrowDefs.length; ++i)
     {
@@ -113,18 +105,28 @@ async function updateGizmos(selection: ObjectSelection)
         let arrowY = pos.y;
         let arrowZ = pos.z;
 
-        if (def.dx !== 0) // horizontal movement (local x-axis)
+        if (def.dx !== 0 && def.dy === 0) // horizontal movement
         {
             // Place arrow along the local right direction at the edge
             const sign = def.dx > 0 ? 1 : -1;
             arrowX += vec3Right.x * EDGE_OFFSET * sign;
-            arrowY += vec3Right.y * EDGE_OFFSET * sign;
             arrowZ += vec3Right.z * EDGE_OFFSET * sign;
+
+            // Orient arrow along local right axis
+            vec3LocalDir.copy(vec3Right).multiplyScalar(sign);
+            arrow.setDirection(vec3LocalDir);
         }
-        else if (def.dy !== 0) // vertical movement
+        else if (def.dx === 0 && def.dy !== 0) // vertical movement
         {
             const sign = def.dy > 0 ? 1 : -1;
             arrowY += EDGE_OFFSET * sign;
+
+            // Orient arrow along global up/down
+            arrow.setDirection(sign > 0 ? DIRECTION_VECTORS["+y"] : DIRECTION_VECTORS["-y"]);
+        }
+        else
+        {
+            throw new Error(`Attempted a diagonal movement (dx = ${def.dx}, dy = ${def.dy})`);
         }
 
         arrow.setPosition(arrowX, arrowY, arrowZ);

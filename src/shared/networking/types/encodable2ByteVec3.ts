@@ -1,6 +1,6 @@
 import BufferState from "./bufferState";
 import EncodableData from "./encodableData";
-import EncodableByteNumber from "./encodableByteNumber";
+import Encodable2ByteNumber from "./encodable2ByteNumber";
 import Vec3 from "../../math/types/vec3";
 
 let temp_minX = 0;
@@ -10,7 +10,7 @@ let temp_maxY = 0;
 let temp_minZ = 0;
 let temp_maxZ = 0;
 
-export default class EncodableByteVec3 extends EncodableData
+export default class Encodable2ByteVec3 extends EncodableData
 {
     v: Vec3;
     minX: number;
@@ -34,9 +34,9 @@ export default class EncodableByteVec3 extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        new EncodableByteNumber(this.v.x, this.minX, this.maxX).encode(bufferState);
-        new EncodableByteNumber(this.v.y, this.minY, this.maxY).encode(bufferState);
-        new EncodableByteNumber(this.v.z, this.minZ, this.maxZ).encode(bufferState);
+        new Encodable2ByteNumber(this.v.x, this.minX, this.maxX).encode(bufferState);
+        new Encodable2ByteNumber(this.v.y, this.minY, this.maxY).encode(bufferState);
+        new Encodable2ByteNumber(this.v.z, this.minZ, this.maxZ).encode(bufferState);
     }
 
     static decodeWithParams(bufferState: BufferState,
@@ -48,15 +48,15 @@ export default class EncodableByteVec3 extends EncodableData
         temp_maxY = maxY;
         temp_minZ = minZ;
         temp_maxZ = maxZ;
-        return EncodableByteVec3.decode(bufferState);
+        return Encodable2ByteVec3.decode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const xData = EncodableByteNumber.decodeWithParams(bufferState, temp_minX, temp_maxX) as EncodableByteNumber;
-        const yData = EncodableByteNumber.decodeWithParams(bufferState, temp_minY, temp_maxY) as EncodableByteNumber;
-        const zData = EncodableByteNumber.decodeWithParams(bufferState, temp_minZ, temp_maxZ) as EncodableByteNumber;
-        return new EncodableByteVec3(
+        const xData = Encodable2ByteNumber.decodeWithParams(bufferState, temp_minX, temp_maxX) as Encodable2ByteNumber;
+        const yData = Encodable2ByteNumber.decodeWithParams(bufferState, temp_minY, temp_maxY) as Encodable2ByteNumber;
+        const zData = Encodable2ByteNumber.decodeWithParams(bufferState, temp_minZ, temp_maxZ) as Encodable2ByteNumber;
+        return new Encodable2ByteVec3(
             {x: xData.n, y: yData.n, z: zData.n},
             temp_minX, temp_maxX,
             temp_minY, temp_maxY,

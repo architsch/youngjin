@@ -5,6 +5,7 @@ import { playerViewTargetPosObservable } from "../../../../system/clientObservab
 import GameObject from "../../../types/gameObject";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
+import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 
 const frustum = new THREE.Frustum();
 const mat4Temp = new THREE.Matrix4();
@@ -14,8 +15,6 @@ const playerRightDir = new THREE.Vector3();
 const viewDir = new THREE.Vector3();
 const viewDirOnVerticalPlane = new THREE.Vector3();
 const playerForwardDir = new THREE.Vector3();
-const right = new THREE.Vector3(1, 0, 0);
-const up = new THREE.Vector3(0, 1, 0);
 
 export default class FirstPersonCamera
 {
@@ -73,7 +72,7 @@ export default class FirstPersonCamera
         else // Otherwise, always prefer looking up.
             desiredPitchAngle = Math.max(pitchAngleForViewTarget, pitchAngleForAltitude);
 
-        this.quaternionInterpTarget.setFromAxisAngle(right, desiredPitchAngle);
+        this.quaternionInterpTarget.setFromAxisAngle(DIRECTION_VECTORS["+x"], desiredPitchAngle);
     }
 
     // Updates the view-target's selection state and returns the desired camera pitch angle.
@@ -106,7 +105,7 @@ export default class FirstPersonCamera
         this.player!.obj.getWorldDirection(playerRightDir);
         playerRightDir.negate();
         playerForwardDir.copy(playerRightDir);
-        playerRightDir.applyAxisAngle(up, -Math.PI*0.5);
+        playerRightDir.applyAxisAngle(DIRECTION_VECTORS["+y"], -Math.PI*0.5);
 
         viewDir.subVectors(playerViewTargetPos, cameraPos);
         viewDirOnVerticalPlane.copy(viewDir);

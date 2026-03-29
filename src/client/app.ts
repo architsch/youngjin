@@ -8,7 +8,7 @@ import Room from "../shared/room/types/room";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
-import { roomChangedObservable, userRoleObservable } from "./system/clientObservables";
+import { roomChangedObservable, updateObservable, userRoleObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
@@ -128,6 +128,7 @@ function update()
 
         ClientObjectManager.update(deltaTime);
         GraphicsManager.update(App.getFPS());
+        updateObservable.set(deltaTime);
 
         tickTimeQueue.push(currTime);
         while (tickTimeQueue[0] < currTime - 1)

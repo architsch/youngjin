@@ -100,7 +100,7 @@ const ServerUserManager =
                 await DBUserUtil.saveUserGameplayState(gameplayState);
         }
 
-        const objectIds = getIdsOfObjectsSpawnedByUser(roomID, user.id);
+        const objectIds = getIdsOfNonPersistentObjectsSpawnedByUser(roomID, user.id);
         for (const objectId of objectIds)
             ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, new RemoveObjectSignal(roomRuntimeMemory.room.id, objectId));
 
@@ -187,37 +187,25 @@ const ServerUserManager =
     {
         return userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
     },
-    canUserEditRoom: (userID: string): boolean =>
-    {
-        const role = ServerUserManager.getUserRole(userID);
-        // User has permission to edit the room
-        if (role === UserRoleEnumMap.Owner || role === UserRoleEnumMap.Editor)
-            return true;
-        const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
-        if (roomID)
-        {
-            const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
-            // Room is a hub (i.e. free to be edited by anyone)
-            if (roomRuntimeMemory && roomRuntimeMemory.room.roomType === RoomTypeEnumMap.Hub)
-                return true;
-        }
-        return false;
-    },
 }
 
-function getIdsOfObjectsSpawnedByUser(roomID: string, userID: string): string[]
+function getIdsOfNonPersistentObjectsSpawnedByUser(roomID: string, userID: string): string[]
 {
     const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
     if (roomRuntimeMemory == undefined)
     {
-        console.error(`ServerUserManager.getIdsOfObjectsSpawnedByUser :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
+        console.error(`getIdsOfNonPersistentObjectsSpawnedByUser :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
         return [];
     }
     const ids: string[] = [];
     for (const [objectId, obj] of Object.entries(roomRuntimeMemory.room.objectById))
     {
         if (obj.sourceUserID == userID)
-            ids.push(objectId);
+        {
+            const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
+            if (!config.persistent)
+                ids.push(objectId);
+        }
     }
     return ids;
 }
