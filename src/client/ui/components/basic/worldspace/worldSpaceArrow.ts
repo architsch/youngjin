@@ -1,9 +1,12 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import GeometryFactory from "../../../../graphics/factories/geometryFactory";
+import GraphicsManager from "../../../../graphics/graphicsManager";
 import { DIRECTION_VECTORS } from "../../../../../client/system/clientConstants";
 
 const tempQuat = new THREE.Quaternion();
+const vecTemp1 = new THREE.Vector3();
+const vecTemp2 = new THREE.Vector3();
 
 // A world-space arrow rendered as a 3D mesh (cone head + cylinder shaft).
 // Uses depthTest:false to always render on top of scene geometry.
@@ -17,6 +20,7 @@ export default class WorldSpaceArrow
     private clickElement: HTMLElement;
     private css2dObject: CSS2DObject;
     private onClickCallback: (() => void) | null = null;
+    private baseClickSize: number;
 
     private constructor(
         arrowDirection: string,
@@ -71,10 +75,10 @@ export default class WorldSpaceArrow
         this.group.add(arrowAssembly);
 
         // Invisible CSS2D click target (DOM element overlay for pointer events)
-        const clickSize = 2 * scale;
+        this.baseClickSize = 2 * scale;
         this.clickElement = document.createElement("div");
         this.clickElement.style.cssText =
-            "cursor:pointer; pointer-events:auto; width:" + clickSize + "rem; height:" + clickSize + "rem;" +
+            "cursor:pointer; pointer-events:auto;" +
             "border-radius:50%; background:transparent;";
 
         this.clickElement.addEventListener("pointerenter", () => {
@@ -91,7 +95,10 @@ export default class WorldSpaceArrow
 
         this.css2dObject = new CSS2DObject(this.clickElement);
         this.css2dObject.center.set(0.5, 0.5);
-        this.group.add(this.css2dObject);
+        // Position at the midpoint of the full arrow (cylinder + cone combined)
+        // so the click area is centered on the whole arrow, not just the shaft.
+        this.css2dObject.position.set(0, 0.045, 0);
+        arrowAssembly.add(this.css2dObject);
     }
 
     static async create(arrowDirection: string, color: string = "#00ff00", scale: number = 1): Promise<WorldSpaceArrow>
@@ -140,6 +147,19 @@ export default class WorldSpaceArrow
         {
             this.arrowAssembly.quaternion.identity();
         }
+    }
+
+    update(): void
+    {
+        if (!this.group.visible) return;
+
+        // Distance-based scaling (same formula as WorldSpaceIconButton)
+        this.group.getWorldPosition(vecTemp1);
+        GraphicsManager.getCamera().getWorldPosition(vecTemp2);
+        const dist = vecTemp1.distanceTo(vecTemp2);
+        const clickSize = (Math.max(0.5, 2 - 0.2 * dist) * this.baseClickSize).toFixed(3) + "rem";
+        this.clickElement.style.width = clickSize;
+        this.clickElement.style.height = clickSize;
     }
 
     setOnClick(callback: (() => void) | null): void

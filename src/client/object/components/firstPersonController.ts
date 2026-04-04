@@ -9,7 +9,7 @@ import FirstPersonKeyInput from "./helpers/firstPerson/firstPersonKeyInput";
 import Rigidbody from "./rigidbody";
 import { DIRECTION_VECTORS } from "../../system/clientConstants";
 
-const objTemp: THREE.Object3D = new THREE.Object3D();
+const forwardTemp = new THREE.Vector3();
 
 export default class FirstPersonController extends GameObjectComponent
 {
@@ -60,12 +60,17 @@ export default class FirstPersonController extends GameObjectComponent
         if (Math.abs(this.dx) > NEAR_EPSILON)
             this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"], -3 * deltaTime * this.dx);
 
+        let vx = 0, vz = 0;
         if (Math.abs(this.dy) > NEAR_EPSILON)
         {
-            objTemp.copy(this.gameObject.obj, false);
-            objTemp.translateZ(-9 * deltaTime * this.dy);
-            this.rigidbody?.tryMove(objTemp.position, this.gameObject.direction);
+            this.gameObject.obj.getWorldDirection(forwardTemp);
+            forwardTemp.negate(); // Player-camera's "forward" direction is the opposite of the player-gameObject's forward direction.
+
+            const speed = 9 * this.dy;
+            vx = forwardTemp.x * speed;
+            vz = forwardTemp.z * speed;
         }
+        this.rigidbody?.tryMove(vx, vz);
         this.dx = 0;
         this.dy = 0;
     }

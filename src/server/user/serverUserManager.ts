@@ -123,7 +123,14 @@ const ServerUserManager =
         if (Object.keys(roomRuntimeMemory.participantUserIDs).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
-                ServerRoomManager.unloadRoom(roomID);
+            {
+                // Check once again to see if there is any user in the room,
+                // before proceeding to unload the room. The reason why this check is necessary
+                // is that a user might have joined the room WHILE we were saving the
+                // room's content to the DB (by the async "DBRoomUtil.saveRoomContent" call above).
+                if (Object.keys(roomRuntimeMemory.participantUserIDs).length == 0)
+                    ServerRoomManager.unloadRoom(roomID);
+            }
         }
     },
     getUserGameplayState: (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory)

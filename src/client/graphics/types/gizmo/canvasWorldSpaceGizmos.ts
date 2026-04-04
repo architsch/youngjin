@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
-import { objectSelectionObservable, roomChangedObservable } from "../../../system/clientObservables";
+import { objectSelectionObservable, roomChangedObservable, updateObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
@@ -46,7 +46,7 @@ async function ensureInitialized()
 
     for (const def of arrowDefs)
     {
-        const arrow = await WorldSpaceArrow.create(def.dir, "#00ccff", 1.8);
+        const arrow = await WorldSpaceArrow.create(def.dir, "#00ccff", 2);
         arrow.addToParent(scene);
         arrow.setVisible(false);
         arrows.push(arrow);
@@ -173,4 +173,9 @@ objectSelectionObservable.addListener("canvasWorldSpaceGizmos", async (selection
 
 roomChangedObservable.addListener("canvasWorldSpaceGizmos", (_roomRuntimeMemory: RoomRuntimeMemory) => {
     hideAll();
+});
+
+updateObservable.addListener("canvasWorldSpaceGizmos", () => {
+    for (const arrow of arrows)
+        arrow.update();
 });

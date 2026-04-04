@@ -7,6 +7,8 @@ import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
 import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
+import Vector3DUtil from "../../math/util/vector3DUtil";
+import Vec3 from "../../math/types/vec3";
 
 const VoxelUpdateUtil =
 {
@@ -72,13 +74,29 @@ const VoxelUpdateUtil =
         if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             return false;
 
+        const voxelPos: Vec3 = {x: col+0.5, y: 0.25 + collisionLayer*0.5, z: row+0.5};
+
         // Check if removing the voxel block will cause any wall-attached object to lose its wall support.
         const voxelBlockColliderState = PhysicsCollisionUtil.getVoxelBlockColliderState(row, col, collisionLayer);
         const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
         for (const collidingObject of Object.values(collidingObjects))
         {
             if (collidingObject.colliderState.colliderConfig.colliderType == "wallAttachment")
-                return false;
+            {
+                const object = room.objectById[collidingObject.objectId];
+                if (!object)
+                {
+                    console.error(`Colliding object not found (objectId = ${collidingObject.objectId})`);
+                    continue;
+                }
+                const objectDir = object.transform.dir;
+                const fromVoxelToObject = Vector3DUtil.subtract(object.transform.pos, voxelPos);
+                const objectIsFacingAwayFromVoxel =
+                    Vector3DUtil.dot(objectDir, fromVoxelToObject) > 0;
+
+                if (objectIsFacingAwayFromVoxel) // This means that the object's back side is attached to the voxel block (NOT its front side).
+                    return false;
+            }
         }
         return true;
     },

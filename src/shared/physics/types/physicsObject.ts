@@ -19,6 +19,8 @@ export default class PhysicsObject
         this.colliderState = colliderState;
         this.intersectingVoxels = new Array<PhysicsVoxel>(4);
         this.intersectingVoxels.length = 0;
+        
+        this.addToIntersectingVoxels();
     }
 
     onDestroy()

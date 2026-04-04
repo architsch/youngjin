@@ -41,3 +41,7 @@ ThingsPool is open source and built with a modern real-time web stack — Three.
     - ["My Room" Flows](docs/networking/my_room.md)
     - [Voxel Grid Update Flows](docs/networking/voxel_grid_update.md)
     - [Object Update Flows](docs/networking/object_update.md)
+
+- **Geometry**
+    - [Texture](docs/geometry/texture.md)
+    - [Wall-Attached Object](docs/geometry/wall_attached_object.md)

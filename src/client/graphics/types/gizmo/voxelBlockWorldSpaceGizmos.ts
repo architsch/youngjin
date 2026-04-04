@@ -46,18 +46,18 @@ async function ensureInitialized()
     // Create 6 arrows
     for (const def of arrowDefs)
     {
-        const arrow = await WorldSpaceArrow.create(def.dir, "#ffff00", 1.8);
+        const arrow = await WorldSpaceArrow.create(def.dir, "#ffff00", 2);
         arrow.addToParent(scene);
         arrow.setVisible(false);
         arrows.push(arrow);
     }
 
     // Create + and - icon-buttons
-    addButton = new WorldSpaceIconButton("+", "#227722", "#ffffff", 1.8);
+    addButton = new WorldSpaceIconButton("+", "#227722", "#ffffff", 2);
     addButton.addToParent(scene);
     addButton.setVisible(false);
 
-    removeButton = new WorldSpaceIconButton("\u2212", "#772222", "#ffffff", 1.8);
+    removeButton = new WorldSpaceIconButton("\u2212", "#772222", "#ffffff", 2);
     removeButton.addToParent(scene);
     removeButton.setVisible(false);
 }
@@ -126,13 +126,13 @@ async function updateGizmos(selection: VoxelQuadSelection)
     const canAdd = canAddVoxelBlock(selection);
     addButton!.setVisible(canAdd);
     addButton!.setPosition(quadWorldX, quadWorldY + buttonYOffset, quadWorldZ);
-    addButton!.setLocalOffset(0.2, 0, 0);
+    addButton!.setLocalOffset(0.3, 0, 0);
     addButton!.setOnClick(canAdd ? () => tryAddVoxelBlock(selection) : null);
 
     const canRemove = VoxelUpdateUtil.canRemoveVoxelBlock(App.getCurrentUserRole(), room, quadIndex);
     removeButton!.setVisible(canRemove);
     removeButton!.setPosition(quadWorldX, quadWorldY + buttonYOffset, quadWorldZ);
-    removeButton!.setLocalOffset(-0.2, 0, 0);
+    removeButton!.setLocalOffset(-0.3, 0, 0);
     removeButton!.setOnClick(canRemove ? () => tryRemoveVoxelBlock(selection) : null);
 }
 
@@ -317,6 +317,8 @@ roomChangedObservable.addListener("voxelBlockWorldSpaceGizmos", (_roomRuntimeMem
 });
 
 updateObservable.addListener("voxelBlockWorldSpaceGizmos", () => {
+    for (const arrow of arrows)
+        arrow.update();
     if (addButton) addButton.update();
     if (removeButton) removeButton.update();
 });

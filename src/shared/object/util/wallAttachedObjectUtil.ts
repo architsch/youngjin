@@ -55,11 +55,15 @@ const WallAttachedObjectUtil =
         const absZ = Math.abs(dir.z);
         const primaryAxis = absZ >= absX ? "z" : "x";
 
+        // NOTE:
+        // See the section called "Finding the Front/Back-Facing Voxels of a Wall-Attached Object"
+        // in @docs/geometry/wall_attached_object.md for technical details.
+
         if (primaryAxis == "z") // object is a horizontal line on the XZ plane (X = horizontal, Z = vertical)
         {
             const backRow = Math.floor(pos.z + 0.01 * (dir.z > 0 ? -1 : +1));
             const frontRow = Math.floor(pos.z + 0.01 * (dir.z > 0 ? +1 : -1));
-            const leftCol = Math.floor(pos.x - halfHorizontal);
+            const leftCol = Math.floor(pos.x - halfHorizontal + 0.01);
             const rightCol = Math.floor(pos.x + halfHorizontal - 0.01);
             for (let col = leftCol; col <= rightCol; ++col)
             {
@@ -75,7 +79,7 @@ const WallAttachedObjectUtil =
         {
             const backCol = Math.floor(pos.x + 0.01 * (dir.x > 0 ? -1 : +1));
             const frontCol = Math.floor(pos.x + 0.01 * (dir.x > 0 ? +1 : -1));
-            const leftRow = Math.floor(pos.z - halfHorizontal);
+            const leftRow = Math.floor(pos.z - halfHorizontal + 0.01);
             const rightRow = Math.floor(pos.z + halfHorizontal - 0.01);
             for (let row = leftRow; row <= rightRow; ++row)
             {
@@ -175,6 +179,10 @@ function getStraightHorizontalMoveResult(room: Room, obj: AddObjectSignal,
         return {newPos, newDir};
     return undefined;
 }
+
+// NOTE:
+// See the section called "Computing Corner-Wrapped Movement of a Wall-Attached Object"
+// in @docs/geometry/wall_attached_object.md for technical details.
 
 function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean, tryConcaveWrap: boolean): {newPos: Vec3, newDir: Vec3} | undefined

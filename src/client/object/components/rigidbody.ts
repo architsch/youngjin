@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import Vec3 from "../../../shared/math/types/vec3";
 import { GRAVITY_SPEED } from "../../../shared/system/sharedConstants";
 import Collider from "./collider";
@@ -10,14 +9,10 @@ import ErrorUtil from "../../../shared/system/util/errorUtil";
 export default class Rigidbody extends GameObjectComponent
 {
     private collider: Collider | undefined;
-    private nextPosition = new THREE.Vector3();
-    private nextDirection = new THREE.Vector3();
+    private velocity: Vec3 = { x: 0, y: 0, z: 0 };
 
     async onSpawn(): Promise<void>
     {
-        this.nextPosition.copy(this.gameObject.position);
-        this.nextDirection.copy(this.gameObject.direction);
-
         this.collider = this.gameObject.components.collider as Collider;
         if (!this.collider)
             throw new Error("Rigidbody requires Collider component");
@@ -29,15 +24,24 @@ export default class Rigidbody extends GameObjectComponent
 
     update(deltaTime: number): void
     {
+        // Apply gravity to velocity
+        this.velocity.y -= GRAVITY_SPEED * deltaTime;
+
+        // Compute target position from current position + velocity
+        const currentPos: Vec3 = {
+            x: this.gameObject.position.x,
+            y: this.gameObject.position.y,
+            z: this.gameObject.position.z,
+        };
         const targetPos: Vec3 = {
-            x: this.nextPosition.x,
-            y: this.nextPosition.y - GRAVITY_SPEED * deltaTime,
-            z: this.nextPosition.z,
+            x: currentPos.x + this.velocity.x * deltaTime,
+            y: currentPos.y + this.velocity.y * deltaTime,
+            z: currentPos.z + this.velocity.z * deltaTime,
         };
         const targetDir: Vec3 = {
-            x: this.nextDirection.x,
-            y: this.nextDirection.y,
-            z: this.nextDirection.z,
+            x: this.gameObject.direction.x,
+            y: this.gameObject.direction.y,
+            z: this.gameObject.direction.z,
         };
 
         try {
@@ -46,16 +50,22 @@ export default class Rigidbody extends GameObjectComponent
                 this.gameObject.params.objectId,
                 targetPos, targetDir, false
             );
-            this.nextPosition.set(tr.pos.x, tr.pos.y, tr.pos.z);
-            this.nextDirection.set(tr.dir.x, tr.dir.y, tr.dir.z);
+
+            // Derive effective velocity from physics resolution
+            if (deltaTime > 0)
+            {
+                this.velocity.x = (tr.pos.x - currentPos.x) / deltaTime;
+                this.velocity.y = (tr.pos.y - currentPos.y) / deltaTime;
+                this.velocity.z = (tr.pos.z - currentPos.z) / deltaTime;
+            }
         } catch (err) {
             console.error(`Exception while trying to update a rigidbody :: Error: ${ErrorUtil.getErrorMessage(err)}`);
         }
     }
 
-    tryMove(pos: THREE.Vector3, dir: THREE.Vector3): void
+    tryMove(velocityX: number, velocityZ: number): void
     {
-        this.nextPosition.copy(pos);
-        this.nextDirection.copy(dir);
+        this.velocity.x = velocityX;
+        this.velocity.z = velocityZ;
     }
 }
