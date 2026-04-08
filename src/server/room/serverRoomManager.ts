@@ -9,7 +9,7 @@ import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
 import DBUserRoomStateUtil from "../db/util/dbUserRoomStateUtil";
-import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import UserGameplayState from "../user/types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
@@ -152,7 +152,7 @@ const ServerRoomManager =
 
         // Determine the user's position/direction/metadata for this room.
         // Priority: cachedGameplayState (from reconnection) > DB lookup > defaults
-        let lastX = 16, lastY = 0, lastZ = 16;
+        let lastX = 16, lastY = 0.5 * PLAYER_HEIGHT, lastZ = 16;
         let lastDirX = 0, lastDirY = 0, lastDirZ = 1;
         let playerMetadata: {[key: string]: string} = {};
         let userRole: UserRole = UserRoleEnumMap.Visitor;

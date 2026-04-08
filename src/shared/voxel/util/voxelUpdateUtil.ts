@@ -5,7 +5,7 @@ import { UserRole, UserRoleEnumMap } from "../../user/types/userRole";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
-import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
+import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Vector3DUtil from "../../math/util/vector3DUtil";
 import Vec3 from "../../math/types/vec3";
@@ -77,7 +77,7 @@ const VoxelUpdateUtil =
         const voxelPos: Vec3 = {x: col+0.5, y: 0.25 + collisionLayer*0.5, z: row+0.5};
 
         // Check if removing the voxel block will cause any wall-attached object to lose its wall support.
-        const voxelBlockColliderState = PhysicsCollisionUtil.getVoxelBlockColliderState(row, col, collisionLayer);
+        const voxelBlockColliderState = PhysicsColliderStateUtil.getVoxelBlockColliderState(row, col, collisionLayer);
         const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
         for (const collidingObject of Object.values(collidingObjects))
         {

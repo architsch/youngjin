@@ -5,7 +5,7 @@ import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
-import PhysicsCollisionUtil from "../../../shared/physics/util/physicsCollisionUtil";
+import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import App from "../../app";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
@@ -30,7 +30,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
         if (!this.gameObject.isMine())
             throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
 
-        const colliderState = PhysicsCollisionUtil.getObjectColliderState(
+        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
             this.gameObject.params.objectTypeIndex,
             this.gameObject.params.transform.pos,
             this.gameObject.params.transform.dir);

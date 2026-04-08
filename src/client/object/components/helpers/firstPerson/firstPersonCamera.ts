@@ -6,6 +6,7 @@ import GameObject from "../../../types/gameObject";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
+import { PLAYER_HEIGHT } from "../../../../../shared/system/sharedConstants";
 
 const frustum = new THREE.Frustum();
 const mat4Temp = new THREE.Matrix4();
@@ -29,7 +30,7 @@ export default class FirstPersonCamera
 
         this.camera = GraphicsManager.getCamera();
         controller.gameObject.obj.add(this.camera);
-        this.camera.position.set(0, 2, 0);
+        this.camera.position.set(0, 0.3*PLAYER_HEIGHT, 0);
 
         this.defaultQuaternion.copy(this.camera.quaternion);
         this.quaternionInterpTarget.copy(this.defaultQuaternion);
@@ -55,10 +56,11 @@ export default class FirstPersonCamera
         // (2) Look up toward the view target if it is placed above your eye level.
         // (3) Neither try to look down nor up if the view target doesn't exist (i.e. angle == 0).
         const pitchAngleForViewTarget = this.processViewTarget(playerViewTarget);
+        const playerBottomY = Math.max(0, this.player!.position.y - 0.5*PLAYER_HEIGHT);
 
         // The higher you are, the more you should look down
         // (unless there is a view target that is placed higher).
-        const pitchAngleForAltitude = -0.4 * this.player!.position.y;
+        const pitchAngleForAltitude = -0.4 * playerBottomY;
 
         // (+1 = "look up"), (-1 = "look down"), (0 = "neither")
         const s1 = Math.sign(pitchAngleForViewTarget);

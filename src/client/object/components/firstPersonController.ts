@@ -70,7 +70,7 @@ export default class FirstPersonController extends GameObjectComponent
             vx = forwardTemp.x * speed;
             vz = forwardTemp.z * speed;
         }
-        this.rigidbody?.tryMove(vx, vz);
+        this.rigidbody?.setDesiredVelocity(vx, 0, vz);
         this.dx = 0;
         this.dy = 0;
     }

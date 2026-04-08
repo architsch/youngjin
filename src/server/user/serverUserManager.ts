@@ -11,7 +11,6 @@ import UserGameplayState from "./types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import SetUserRoleSignal from "../../shared/user/types/setUserRoleSignal";
 import DBUserUtil from "../db/util/dbUserUtil";
-import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};

@@ -37,12 +37,16 @@ const PhysicsObjectUtil =
             throw new Error(`Physics-room doesn't exist (roomID = ${roomID})`);
 
         const voxels = PhysicsVoxelUtil.getVoxelsInBox(physicsRoom, {
-            x: centerX,
-            y: 0,
-            z: centerZ,
-            halfSizeX: dist,
-            halfSizeY: 1000,
-            halfSizeZ: dist,
+            center: {
+                x: centerX,
+                y: 0,
+                z: centerZ
+            },
+            halfSize: {
+                x: dist,
+                y: 1000,
+                z: dist
+            },
         });
         const objs: {[objectId: string]: PhysicsObject} = {};
         for (const voxel of voxels)
@@ -51,8 +55,8 @@ const PhysicsObjectUtil =
             {
                 if (objs[obj.objectId] != undefined)
                     continue;
-                const offsetX = obj.colliderState.hitbox.x - centerX;
-                const offsetZ = obj.colliderState.hitbox.z - centerZ;
+                const offsetX = obj.colliderState.hitbox.center.x - centerX;
+                const offsetZ = obj.colliderState.hitbox.center.z - centerZ;
                 const distSqr = offsetX*offsetX + offsetZ*offsetZ;
                 if (distSqr <= dist * dist)
                     objs[obj.objectId] = obj;

@@ -1,5 +1,7 @@
 // Runtime Environment
 
+import Vec3 from "../math/types/vec3";
+
 export let IS_SERVER = false;
 export function setIsServer() { IS_SERVER = true; }
 
@@ -27,6 +29,9 @@ export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 
 // Physics
 
+export const GRAVITY_SPEED = 5;
+export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
+
 export const NUM_COLLISION_LAYERS = 8; // Total number of collision layers which span the room's Y-axis
 export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * 0.5; // 4
 export const MID_ROOM_Y = 0.5 * MAX_ROOM_Y; // 2
@@ -44,8 +49,14 @@ export const COLLISION_LAYER_NULL = 8;
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
 
-export const STEP_UP_HEIGHT = 0.6; // Maximum height an object can step up onto when colliding with an obstacle.
-export const GRAVITY_SPEED = 5; // Units per second for gravity-based falling.
+export const DIR_VEC: {[key: string]: Vec3} = {
+    "+x": {x: 1, y: 0, z: 0},
+    "-x": {x: -1, y: 0, z: 0},
+    "+y": {x: 0, y: 1, z: 0},
+    "-y": {x: 0, y: -1, z: 0},
+    "+z": {x: 0, y: 0, z: 1},
+    "-z": {x: 0, y: 0, z: -1},
+};
 
 // Voxel Grid Dimensions
 
@@ -58,6 +69,8 @@ export const NUM_VOXEL_QUADS_PER_VOXEL =
 
 export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 51200
 
+export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.25, z: 0.5};
+
 // Object Limits
 
 export const MAX_CANVASES_PER_ROOM = 64;
@@ -65,6 +78,7 @@ export const MAX_IMAGE_URL_LENGTH = 512;
 
 // Gameplay
 
+export const PLAYER_HEIGHT = 2.5;
 export const MAX_WORLDSPACE_SELECT_DIST_SQR = 256; // = 16*16
 
 // UI

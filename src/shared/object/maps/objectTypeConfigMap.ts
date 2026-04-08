@@ -1,6 +1,6 @@
 import Room from "../../room/types/room";
 import { RoomTypeEnumMap } from "../../room/types/roomType";
-import { IS_SERVER, MAX_CANVASES_PER_ROOM, MAX_IMAGE_URL_LENGTH } from "../../system/sharedConstants";
+import { IS_SERVER, MAX_CANVASES_PER_ROOM, MAX_IMAGE_URL_LENGTH, PLAYER_HEIGHT } from "../../system/sharedConstants";
 import User from "../../user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../user/types/userRole";
 import AddObjectSignal from "../types/addObjectSignal";
@@ -72,10 +72,14 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByAny: {
                 collider: {
                     colliderType: "rigidbody",
-                    hitboxSize: {sizeX: 0.6, sizeY: 2.5, sizeZ: 0.6},
+                    hitboxSize: {sizeX: 0.6, sizeY: PLAYER_HEIGHT, sizeZ: 0.6},
+                    applyHardCollisionToOthers: true,
+                    outgoingSoftCollisionForceMultiplier: 1,
+                    incomingSoftCollisionForceMultiplier: 1,
+                    maxClimbableHeight: 0.6, // a little bit more than the height of a voxel block
                 },
                 speechBubble: {
-                    yOffset: 2.4,
+                    yOffset: 0.5*PLAYER_HEIGHT,
                     prependUserNameToMessage: true,
                     showMessageIfSpawnedByMe: false,
                     showMessageIfSpawnedByOther: true,
@@ -93,7 +97,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByOther: {
                 modelGraphics: {
                     path: "lowpolyghost/lowpolyghost.glb",
-                    localPosition: {x: 0, y: 1.22, z: 0},
+                    localPosition: {x: 0, y: 0.5*PLAYER_HEIGHT, z: 0},
                     scale: {x: 0.3, y: 0.3, z: 0.3},
                 },
                 periodicTransformReceiver: {},
@@ -171,6 +175,10 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 collider: {
                     colliderType: "wallAttachment",
                     hitboxSize: {sizeX: 0.98, sizeY: 0.98, sizeZ: 0.01},
+                    applyHardCollisionToOthers: false,
+                    outgoingSoftCollisionForceMultiplier: 0,
+                    incomingSoftCollisionForceMultiplier: 0,
+                    maxClimbableHeight: 0,
                 },
                 instancedMeshGraphics: {
                     createInstanceIdPool: true,

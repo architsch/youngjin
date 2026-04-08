@@ -10,12 +10,12 @@ const PhysicsDebugUtil =
         {
             const hitbox = colliderState.hitbox;
             const box: ColliderDebugBox = {
-                x: hitbox.x,
-                y: hitbox.y,
-                z: hitbox.z,
-                halfSizeX: hitbox.halfSizeX,
-                halfSizeY: hitbox.halfSizeY,
-                halfSizeZ: hitbox.halfSizeZ,
+                x: hitbox.center.x,
+                y: hitbox.center.y,
+                z: hitbox.center.z,
+                halfSizeX: hitbox.halfSize.x,
+                halfSizeY: hitbox.halfSize.y,
+                halfSizeZ: hitbox.halfSize.z,
                 colorHex,
             };
             if (!colliderDebugBoxMap.tryUpdate(key, () => box))

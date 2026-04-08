@@ -2,7 +2,7 @@ import Vec3 from "../../math/types/vec3";
 import DirUtil from "../../math/util/dirUtil";
 import Vector3DUtil from "../../math/util/vector3DUtil";
 import { ColliderState } from "../../physics/types/colliderState";
-import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
+import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
@@ -35,7 +35,7 @@ const WallAttachedObjectUtil =
             return false;
         }
 
-        const newColliderState = PhysicsCollisionUtil.getObjectColliderState(objectTypeIndex, pos, dir);
+        const newColliderState = PhysicsColliderStateUtil.getObjectColliderState(objectTypeIndex, pos, dir);
         if (!newColliderState)
             throw new Error(`new ColliderState not found (objectTypeIndex = ${objectTypeIndex})`);
 
@@ -46,8 +46,8 @@ const WallAttachedObjectUtil =
         // (2) The object's front side must be at least partially exposed.
         // We check voxel occupancy using the object's Y range against collision layers.
 
-        const objBottomY = newColliderState.hitbox.y - halfVertical;
-        const objTopY = newColliderState.hitbox.y + halfVertical;
+        const objBottomY = newColliderState.hitbox.center.y - halfVertical;
+        const objTopY = newColliderState.hitbox.center.y + halfVertical;
         let frontExposureFound = false;
 
         // Determine which direction the object faces for back/front scanning
@@ -193,7 +193,7 @@ function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     const dir4CCW = DirUtil.rotateCCW(dir4);
     const dirCCW = DirUtil.dir4ToVec3(dir4CCW);
 
-    const colliderState = PhysicsCollisionUtil.getObjectColliderState(obj.objectTypeIndex, tr.pos, tr.dir);
+    const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, tr.pos, tr.dir);
     if (!colliderState)
         throw new Error(`ColliderState not found (objectTypeIndex = ${obj.objectTypeIndex})`);
 

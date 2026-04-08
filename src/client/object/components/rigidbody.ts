@@ -1,15 +1,18 @@
 import Vec3 from "../../../shared/math/types/vec3";
-import { GRAVITY_SPEED } from "../../../shared/system/sharedConstants";
 import Collider from "./collider";
 import GameObjectComponent from "./gameObjectComponent";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import ClientObjectManager from "../clientObjectManager";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
+import PhysicsManager from "../../../shared/physics/physicsManager";
+import App from "../../app";
+import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
+import { GRAVITY_SPEED } from "../../../shared/system/sharedConstants";
 
 export default class Rigidbody extends GameObjectComponent
 {
     private collider: Collider | undefined;
-    private velocity: Vec3 = { x: 0, y: 0, z: 0 };
+    private desiredVelocity: Vec3 = { x: 0, y: 0, z: 0 };
 
     async onSpawn(): Promise<void>
     {
@@ -24,48 +27,44 @@ export default class Rigidbody extends GameObjectComponent
 
     update(deltaTime: number): void
     {
-        // Apply gravity to velocity
-        this.velocity.y -= GRAVITY_SPEED * deltaTime;
-
-        // Compute target position from current position + velocity
-        const currentPos: Vec3 = {
-            x: this.gameObject.position.x,
-            y: this.gameObject.position.y,
-            z: this.gameObject.position.z,
-        };
-        const targetPos: Vec3 = {
-            x: currentPos.x + this.velocity.x * deltaTime,
-            y: currentPos.y + this.velocity.y * deltaTime,
-            z: currentPos.z + this.velocity.z * deltaTime,
-        };
-        const targetDir: Vec3 = {
-            x: this.gameObject.direction.x,
-            y: this.gameObject.direction.y,
-            z: this.gameObject.direction.z,
-        };
-
         try {
-            // Run physics simulation
-            const tr = ClientObjectManager.setObjectTransform(
-                this.gameObject.params.objectId,
-                targetPos, targetDir, false
-            );
+            // Apply gravity to velocity
+            this.desiredVelocity.y -= GRAVITY_SPEED;
 
-            // Derive effective velocity from physics resolution
-            if (deltaTime > 0)
-            {
-                this.velocity.x = (tr.pos.x - currentPos.x) / deltaTime;
-                this.velocity.y = (tr.pos.y - currentPos.y) / deltaTime;
-                this.velocity.z = (tr.pos.z - currentPos.z) / deltaTime;
-            }
+            // Apply soft collisions (and step-up logic) to the velocity
+            this.desiredVelocity = PhysicsManager.getAdjustedVelocity(App.getCurrentRoom()?.id!,
+                this.gameObject.params.objectId, this.desiredVelocity);
+
+            const currentPos: Vec3 = {
+                x: this.gameObject.position.x,
+                y: this.gameObject.position.y,
+                z: this.gameObject.position.z,
+            };
+            
+            const displacement = Vector3DUtil.scale(this.desiredVelocity, deltaTime);
+            const targetPos = Vector3DUtil.add(currentPos, displacement);
+            //console.log(currentPos.y.toFixed(5) + " ---> " + targetPos.y.toFixed(5));
+          
+            const targetDir: Vec3 = {
+                x: this.gameObject.direction.x,
+                y: this.gameObject.direction.y,
+                z: this.gameObject.direction.z,
+            };
+            ClientObjectManager.setObjectTransform(this.gameObject.params.objectId,
+                targetPos, targetDir, false);
+
+            this.desiredVelocity.x = 0;
+            this.desiredVelocity.y = 0;
+            this.desiredVelocity.z = 0;
         } catch (err) {
             console.error(`Exception while trying to update a rigidbody :: Error: ${ErrorUtil.getErrorMessage(err)}`);
         }
     }
 
-    tryMove(velocityX: number, velocityZ: number): void
+    setDesiredVelocity(x: number, y: number, z: number): void
     {
-        this.velocity.x = velocityX;
-        this.velocity.z = velocityZ;
+        this.desiredVelocity.x = x;
+        this.desiredVelocity.y = y;
+        this.desiredVelocity.z = z;
     }
 }

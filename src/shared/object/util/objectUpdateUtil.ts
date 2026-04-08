@@ -5,7 +5,7 @@ import AddObjectSignal from "../types/addObjectSignal";
 import WallAttachedObjectUtil from "./wallAttachedObjectUtil";
 import PhysicsManager from "../../physics/physicsManager";
 import ObjectTransformUpdateResult from "../types/objectTransformUpdateResult";
-import PhysicsCollisionUtil from "../../physics/util/physicsCollisionUtil";
+import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import RemoveObjectSignal from "../types/removeObjectSignal";
 import User from "../../user/types/user";
@@ -35,7 +35,7 @@ const ObjectUpdateUtil =
             return false;
 
         // Check if the object's collider is placeable.
-        const colliderState = PhysicsCollisionUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
         if (colliderState && colliderState.colliderConfig.colliderType == "wallAttachment")
             return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
         else
@@ -53,7 +53,7 @@ const ObjectUpdateUtil =
         room.objectById[obj.objectId] = obj;
 
         // Add the object's corresponding PhysicsObject.
-        const colliderState = PhysicsCollisionUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
         if (colliderState)
             PhysicsManager.addObject(room.id, obj.objectId, obj.objectTypeIndex, colliderState);
 
@@ -113,7 +113,7 @@ const ObjectUpdateUtil =
             return false;
 
         // Check if the object's collider is placeable.
-        const colliderState = PhysicsCollisionUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
         if (colliderState && colliderState.colliderConfig.colliderType == "wallAttachment")
             return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
         else
@@ -134,7 +134,7 @@ const ObjectUpdateUtil =
         if (PhysicsManager.hasObject(room.id, signal.objectId))
         {
             const result = PhysicsManager.setObjectTransform(room.id, signal.objectId,
-                obj.objectTypeIndex, signal.transform.pos, signal.transform.dir, signal.ignorePhysics);
+                signal.transform.pos, signal.transform.dir, signal.ignorePhysics);
             obj.transform.pos.x = result.transform.pos.x;
             obj.transform.pos.y = result.transform.pos.y;
             obj.transform.pos.z = result.transform.pos.z;

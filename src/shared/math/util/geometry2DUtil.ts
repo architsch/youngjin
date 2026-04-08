@@ -8,8 +8,8 @@ const Geometry2DUtil =
 {
     AABBsOverlap: (a: AABB2, b: AABB2): boolean =>
     {
-        return Math.abs(a.x - b.x) < (a.halfSizeX + b.halfSizeX) &&
-            Math.abs(a.y - b.y) < (a.halfSizeY + b.halfSizeY);
+        return Math.abs(a.center.x - b.center.x) < (a.halfSize.x + b.halfSize.x) &&
+            Math.abs(a.center.y - b.center.y) < (a.halfSize.y + b.halfSize.y);
     },
     // Returns the AABB-casting ray's scale factor which, when applied to the ray,
     // pushes the source AABB to end up at the point of collision
@@ -17,10 +17,10 @@ const Geometry2DUtil =
     // (Returns 1 when the source AABB doesn't hit the target AABB)
     castAABBAgainstAABB: (source: AABB2, destination: Vec2, target: AABB2): RaycastHitResult2 =>
     {
-        const x1 = target.x - target.halfSizeX - source.halfSizeX;
-        const y1 = target.y - target.halfSizeY - source.halfSizeY;
-        const x2 = target.x + target.halfSizeX + source.halfSizeX;
-        const y2 = target.y + target.halfSizeY + source.halfSizeY;
+        const x1 = target.center.x - target.halfSize.x - source.halfSize.x;
+        const y1 = target.center.y - target.halfSize.y - source.halfSize.y;
+        const x2 = target.center.x + target.halfSize.x + source.halfSize.x;
+        const y2 = target.center.y + target.halfSize.y + source.halfSize.y;
 
         const bottomLeftCorner: Vec2 = { x: x1, y: y1 };
         const bottomRightCorner: Vec2 = { x: x2, y: y1 };
@@ -32,7 +32,7 @@ const Geometry2DUtil =
         const top: LineSegment2 = {start: topRightCorner, end: topLeftCorner};
         const left: LineSegment2 = {start: topLeftCorner, end: bottomLeftCorner};
 
-        const circleStart: Vec2 = { x: source.x, y: source.y };
+        const circleStart: Vec2 = { x: source.center.x, y: source.center.y };
         const ray: LineSegment2 = { start: circleStart, end: destination };
         let minHitRayScale = 1;
         let hitRayScale: number;
