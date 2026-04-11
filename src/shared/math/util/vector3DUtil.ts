@@ -38,6 +38,10 @@ const Vector3DUtil =
     {
         return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
     },
+    lengthSqr: (v: Vec3): number =>
+    {
+        return v.x * v.x + v.y * v.y + v.z * v.z;
+    },
     distSqr: (v1: Vec3, v2: Vec3): number =>
     {
         const dx = v2.x - v1.x;
