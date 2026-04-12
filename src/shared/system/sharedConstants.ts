@@ -29,7 +29,7 @@ export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 
 // Physics
 
-export const GRAVITY_SPEED = 5;
+export const GRAVITY_SPEED = 3;
 export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
 
 export const NUM_COLLISION_LAYERS = 8; // Total number of collision layers which span the room's Y-axis

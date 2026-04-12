@@ -73,7 +73,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 collider: {
                     colliderType: "rigidbody",
                     hitboxSize: {sizeX: 0.6, sizeY: PLAYER_HEIGHT, sizeZ: 0.6},
-                    applyHardCollisionToOthers: true,
+                    applyHardCollisionToOthers: false,
                     outgoingSoftCollisionForceMultiplier: 1,
                     incomingSoftCollisionForceMultiplier: 1,
                     maxClimbableHeight: 0.6, // a little bit more than the height of a voxel block
@@ -97,7 +97,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             spawnedByOther: {
                 modelGraphics: {
                     path: "lowpolyghost/lowpolyghost.glb",
-                    localPosition: {x: 0, y: 0.5*PLAYER_HEIGHT, z: 0},
+                    localPosition: {x: 0, y: 0, z: 0},
                     scale: {x: 0.3, y: 0.3, z: 0.3},
                 },
                 periodicTransformReceiver: {},

@@ -8,7 +8,11 @@ import PhysicsDebugUtil from "./physicsDebugUtil";
 import PhysicsRoom from "../types/physicsRoom";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../system/sharedConstants";
 
-const colliderStatesTemp: Set<ColliderState> = new Set<ColliderState>();
+// Sequentially recycle each of the sets in the array (because there may be a function which uses multiple sets simultaneously).
+let colliderStatesTempNextIndex = 0;
+const colliderStatesTemp: Set<ColliderState>[] = [];
+for (let i = 0; i < 64; ++i)
+    colliderStatesTemp.push(new Set<ColliderState>());
 
 const voxelBlockColliderConfig: ColliderConfig = {
     colliderType: "standalone",
@@ -73,14 +77,17 @@ const PhysicsColliderStateUtil =
         const minRow = Math.floor(minZ);
         const maxRow = Math.floor(maxZ);
 
-        colliderStatesTemp.clear();
+        const set = colliderStatesTemp[colliderStatesTempNextIndex];
+        colliderStatesTempNextIndex = (colliderStatesTempNextIndex + 1) % colliderStatesTemp.length;
+
+        set.clear();
         if (Geometry3DUtil.AABBsOverlap(hitbox, physicsRoom.floor.hitbox))
-            colliderStatesTemp.add(physicsRoom.floor);
+            set.add(physicsRoom.floor);
         if (Geometry3DUtil.AABBsOverlap(hitbox, physicsRoom.ceiling.hitbox))
-            colliderStatesTemp.add(physicsRoom.ceiling);
+            set.add(physicsRoom.ceiling);
 
         if (minCol < 0 || minRow < 0 || maxCol >= NUM_VOXEL_COLS || maxRow >= NUM_VOXEL_ROWS)
-            return colliderStatesTemp;
+            return set;
 
         for (let row = minRow; row <= maxRow; ++row)
         {
@@ -99,7 +106,7 @@ const PhysicsColliderStateUtil =
                             halfSize: VOXEL_BLOCK_HITBOX_HALFSIZE
                         };
                         if (Geometry3DUtil.AABBsOverlap(hitbox, voxelBlockHitbox))
-                            colliderStatesTemp.add({hitbox: voxelBlockHitbox, colliderConfig: voxelBlockColliderConfig});
+                            set.add({hitbox: voxelBlockHitbox, colliderConfig: voxelBlockColliderConfig});
                     }
                 }
                 // Object hitboxes
@@ -107,15 +114,15 @@ const PhysicsColliderStateUtil =
                 {
                     const objectHitbox = object.colliderState.hitbox;
                     if (objectHitbox != hitbox &&
-                        !colliderStatesTemp.has(object.colliderState) &&
+                        !set.has(object.colliderState) &&
                         Geometry3DUtil.AABBsOverlap(hitbox, objectHitbox))
                     {
-                        colliderStatesTemp.add(object.colliderState);
+                        set.add(object.colliderState);
                     }
                 }
             }
         }
-        return colliderStatesTemp;
+        return set;
     }
 }
 

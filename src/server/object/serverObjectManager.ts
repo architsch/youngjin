@@ -67,7 +67,15 @@ const ServerObjectManager =
         // Otherwise,
         //      Broadcast to everyone except the one who sent the signal. 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("setObjectTransformSignal", signal, result.desyncDetected ? undefined : user.id);
+        if (result.desyncDetected)
+        {
+            const resyncSignal = new SetObjectTransformSignal(signal.roomID, signal.objectId, result.transform, signal.ignorePhysics);
+            socketRoomContext.multicastSignal("setObjectTransformSignal", resyncSignal);
+        }
+        else
+        {
+            socketRoomContext.multicastSignal("setObjectTransformSignal", signal, user.id);
+        }
     },
     onSetObjectMetadataSignalReceived: (socketUserContext: SocketUserContext, signal: SetObjectMetadataSignal) =>
     {

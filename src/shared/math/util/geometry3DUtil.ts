@@ -6,6 +6,12 @@ import { DIR_VEC } from "../../system/sharedConstants";
 
 const Geometry3DUtil =
 {
+    areAABBsEqual: (a: AABB3, b: AABB3): boolean =>
+    {
+        return a.center.x === b.center.x && a.halfSize.x === b.halfSize.x &&
+            a.center.y === b.center.y && a.halfSize.y === b.halfSize.y &&
+            a.center.z === b.center.z && a.halfSize.z === b.halfSize.z;
+    },
     pointOverlapsAABB: (point: Vec3, aabb: AABB3): boolean =>
     {
         return Math.abs(point.x - aabb.center.x) < aabb.halfSize.x &&

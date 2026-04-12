@@ -8,6 +8,7 @@ import PhysicsColliderStateUtil from "./physicsColliderStateUtil";
 import ObjectTransformUpdateResult from "../../object/types/objectTransformUpdateResult";
 import ObjectTransform from "../../object/types/objectTransform";
 import { GRAVITY_SPEED, SOFT_COLLISION_PUSH_SPEED_LIMIT } from "../../system/sharedConstants";
+import { ColliderState } from "../types/colliderState";
 
 const PhysicsCollisionUtil =
 {
@@ -18,27 +19,30 @@ const PhysicsCollisionUtil =
             throw new Error(`ColliderState couldn't be computed (objectId = ${object.objectId}, objectTypeIndex = ${object.objectTypeIndex})`);
 
         const halfSize = newColliderState.hitbox.halfSize;
+        const maxClimbableHeight = newColliderState.colliderConfig.maxClimbableHeight;
         let start = object.colliderState.hitbox.center;
 
-        // Any attempt to move more than 3 units will force-sync the object back to its original location.
+        // Any attempt to move more than 3 units from the server's last synced location
+        // will be subject to forced resync.
         if (Vector3DUtil.distSqr(target, start) >= 9)
         {
             console.warn(`Physics-position desync due to distance gap`);
             return {transform: new ObjectTransform(start, targetDir), desyncDetected: true};
         }
-        const result1 = applyHardCollisionToAABBMovement(physicsRoom, start, target, halfSize);
+        const result1 = applyHardCollisionToAABBMovement(physicsRoom, object,
+            start, target, halfSize, maxClimbableHeight);
         let resolvedTarget = result1.closestHitPos;
         if (result1.closestHitSlide != undefined) // Need to slide
         {
             const slideTarget = Vector3DUtil.add(result1.closestHitPos, result1.closestHitSlide);
-            const result2 = applyHardCollisionToAABBMovement(physicsRoom,
-                result1.closestHitPos, slideTarget, halfSize);
+            const result2 = applyHardCollisionToAABBMovement(physicsRoom, object,
+                result1.closestHitPos, slideTarget, halfSize, maxClimbableHeight);
             resolvedTarget = result2.closestHitPos;
             if (result2.closestHitSlide != undefined) // Need to slide again
             {
                 const slideTarget2 = Vector3DUtil.add(result2.closestHitPos, result2.closestHitSlide);
-                const result3 = applyHardCollisionToAABBMovement(physicsRoom,
-                    result2.closestHitPos, slideTarget2, halfSize);
+                const result3 = applyHardCollisionToAABBMovement(physicsRoom, object,
+                    result2.closestHitPos, slideTarget2, halfSize, maxClimbableHeight);
                 resolvedTarget = result3.closestHitPos;
             }
         }
@@ -55,40 +59,55 @@ const PhysicsCollisionUtil =
         const objectCenter = objectHitbox.center;
         const colliderConfig = object.colliderState.colliderConfig;
 
-        const overlappingColliderStates = PhysicsColliderStateUtil.findOverlappingColliderStates(
+        const overlaps = PhysicsColliderStateUtil.findOverlappingColliderStates(
             physicsRoom, objectHitbox);
 
-        overlappingColliderStates.forEach((overlappingColliderState) =>
+        let climbing = false;
+        overlaps.forEach((overlap) =>
         {
-            const outgoingMult = overlappingColliderState.colliderConfig.outgoingSoftCollisionForceMultiplier;
+            // Climb up the obstacle if it is climbable.
+            if (canClimbObstacle(physicsRoom, object, objectCenter,
+                colliderConfig.maxClimbableHeight, overlap))
+            {
+                climbing = true;
+                return;
+            }
+
+            const outgoingMult = overlap.colliderConfig.outgoingSoftCollisionForceMultiplier;
             if (outgoingMult <= 0)
                 return;
-            const overlap = Geometry3DUtil.getIntersectionAABB(objectHitbox, overlappingColliderState.hitbox);
-            const overlapVolume = 8 * overlap.halfSize.x * overlap.halfSize.y * overlap.halfSize.z; // 8 = 2*2*2
-            const overlapToObjectDir = Vector3DUtil.normalize(
-                Vector3DUtil.subtract(objectCenter, overlap.center));
+            const intersection = Geometry3DUtil.getIntersectionAABB(objectHitbox, overlap.hitbox);
+            const intersectionVolume = 8 * intersection.halfSize.x * intersection.halfSize.y * intersection.halfSize.z; // 8 = 2*2*2
+            const intersectionToObjectDir = Vector3DUtil.normalize(
+                Vector3DUtil.subtract(objectCenter, intersection.center));
             
-            const overlapProportion = overlapVolume / objectVolume;
+            const intersectionProportion = intersectionVolume / objectVolume;
             const incomingMult = colliderConfig.incomingSoftCollisionForceMultiplier;
-            const pushMagnitude = 100 * overlapProportion * outgoingMult * incomingMult;
+            const pushMagnitude = 10 * intersectionProportion * outgoingMult * incomingMult;
 
-            let push = Vector3DUtil.scale(overlapToObjectDir, pushMagnitude);
+            // Limit the push magnitude.
+            let push = Vector3DUtil.scale(intersectionToObjectDir, pushMagnitude);
             const pushLength = Vector3DUtil.length(push);
-            if (pushLength > SOFT_COLLISION_PUSH_SPEED_LIMIT) // Limit the push magnitude.
+            if (pushLength > SOFT_COLLISION_PUSH_SPEED_LIMIT)
                 push = Vector3DUtil.scale(push, SOFT_COLLISION_PUSH_SPEED_LIMIT / pushLength);
 
             velocity = Vector3DUtil.add(velocity, push);
 
+            // Limit the velocity magnitude.
             const velocityLength = Vector3DUtil.length(velocity);
-            if (velocityLength > GRAVITY_SPEED) // Limit the velocity magnitude.
+            if (velocityLength > GRAVITY_SPEED)
                 velocity = Vector3DUtil.scale(velocity, GRAVITY_SPEED / velocityLength);
         });
+
+        if (climbing)
+            velocity.y = Math.max(GRAVITY_SPEED, velocity.y);
         return velocity;
     },
 }
 
-function applyHardCollisionToAABBMovement(physicsRoom: PhysicsRoom,
-    start: Vec3, target: Vec3, halfSize: Vec3): {closestHitPos: Vec3, closestHitSlide: Vec3 | undefined}
+function applyHardCollisionToAABBMovement(physicsRoom: PhysicsRoom, object: PhysicsObject,
+    start: Vec3, target: Vec3, halfSize: Vec3, maxClimbableHeight: number)
+    : {closestHitPos: Vec3, closestHitSlide: Vec3 | undefined}
 {
     // Step back a bit to prevent raycasting from within obstacles.
     const startToTarget = Vector3DUtil.subtract(target, start);
@@ -121,6 +140,11 @@ function applyHardCollisionToAABBMovement(physicsRoom: PhysicsRoom,
         if (!overlap.colliderConfig.applyHardCollisionToOthers)
             return;
 
+        // Prevent climbable obstacles from exerting hard collision forces.
+        const hypotheticalTargetWhenClimbing: Vec3 = {x: target.x, y: start.y, z: target.z};
+        if (canClimbObstacle(physicsRoom, object, hypotheticalTargetWhenClimbing, maxClimbableHeight, overlap))
+            return;
+
         const result = Geometry3DUtil.castAABBAgainstAABB(rayStartAABB, target, overlap.hitbox);
         if (result.hitNormal != undefined) // Hit detected
         {
@@ -140,6 +164,36 @@ function applyHardCollisionToAABBMovement(physicsRoom: PhysicsRoom,
         }
     });
     return {closestHitPos, closestHitSlide};
+}
+
+function canClimbObstacle(physicsRoom: PhysicsRoom, object: PhysicsObject,
+    myPos: Vec3, maxClimbableHeight: number, obstacle: ColliderState): boolean
+{
+    const myHitbox = object.colliderState.hitbox;
+    const myBottom = myPos.y - myHitbox.halfSize.y;
+    const obstacleTop = obstacle.hitbox.center.y + obstacle.hitbox.halfSize.y;
+    const heightToClimb = obstacleTop - myBottom;
+    if (heightToClimb > maxClimbableHeight || heightToClimb <= 0) // height constraint not met
+        return false;
+    
+    // Is there room on top of the obstacle for me to stand?
+    const onTopCheckAABB: AABB3 = {
+        center: {x: myPos.x, y: obstacleTop + myHitbox.halfSize.y, z: myPos.z},
+        halfSize: {x: myHitbox.halfSize.x, y: myHitbox.halfSize.y, z: myHitbox.halfSize.z},
+    };
+    const onTopOverlaps = PhysicsColliderStateUtil.findOverlappingColliderStates(
+        physicsRoom, onTopCheckAABB);
+    let onTopBlocked = false;
+    onTopOverlaps.forEach((overlap) => {
+        if (overlap.colliderConfig.applyHardCollisionToOthers &&
+            !Geometry3DUtil.areAABBsEqual(overlap.hitbox, object.colliderState.hitbox))
+        {
+            onTopBlocked = true;
+        }
+    });
+    if (onTopBlocked)
+        return false;
+    return true;
 }
 
 export default PhysicsCollisionUtil;

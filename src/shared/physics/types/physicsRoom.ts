@@ -40,7 +40,7 @@ const defaultFloor: ColliderState = {
         colliderType: "standalone",
         hitboxSize: {sizeX: NUM_VOXEL_COLS, sizeY: 100, sizeZ: NUM_VOXEL_ROWS},
         applyHardCollisionToOthers: true,
-        outgoingSoftCollisionForceMultiplier: 100,
+        outgoingSoftCollisionForceMultiplier: 1,
         incomingSoftCollisionForceMultiplier: 0,
         maxClimbableHeight: 0,
     },
