@@ -1,38 +1,28 @@
 /**
- * Server harness: wires up the real server-side modules (RoomManager,
- * GameSockets, UserManager, PhysicsManager) with mocked DB layer so that
- * integration tests exercise real game logic without touching Firestore.
+ * Server harness: wires up the real server-side modules (ServerRoomManager,
+ * ServerUserManager, ServerObjectManager, PhysicsManager) with mocked DB layer
+ * so that integration tests exercise real game logic without touching Firestore.
  *
  * Usage:
  *   import { harness } from "./helpers/serverHarness";
  *
  *   beforeEach(() => harness.reset());
  *
- *   // Create a user + socket and "connect" them to the game server
  *   const ctx = harness.connectUser();          // auto-generated user
  *   const ctx = harness.connectUser(myUser);     // explicit user
- *
- *   // Put a user into a room
  *   await harness.joinRoom(ctx, "room-1");
- *
- *   // Disconnect a user
  *   await harness.disconnectUser(ctx);
  */
 
 import { vi } from "vitest";
 import { resetStores, seedRoom, roomStore, userRoomStateStore } from "./mockDB";
 
-// ─── Shared room store reference for the getRoomContent mock ─────────────────
-// We import roomStore above and reference it inside the factory closures.
-// Vitest hoists vi.mock calls but the factory functions run lazily, so by the
-// time getRoomContent is actually called, the roomStore import is resolved.
-
 import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 
-// ─── Apply mocks BEFORE importing real modules ──────────────────────────────
+// ─── Hoisted stores for vi.mock factories ──────────────────────────────────
 // vi.mock is hoisted by Vitest. Factory functions must not close over module-
-// scope variables (Vitest limitation), so we use vi.hoisted to share state.
+// scope variables, so we use vi.hoisted to share state.
 
 const _roomStore = vi.hoisted(() => {
     const store: { [roomID: string]: { room: any } } = {};
@@ -62,6 +52,8 @@ function _randomDelay(): Promise<void>
         Math.random() * (_latencyConfig.maxMs - _latencyConfig.minMs);
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// ─── Apply mocks BEFORE importing real modules ──────────────────────────────
 
 vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
     default: {
@@ -172,15 +164,19 @@ vi.mock("../../../src/server/user/util/userCommandUtil", () => ({
 
 // ─── Now import the real modules ─────────────────────────────────────────────
 
+import { setIsServer } from "../../../src/shared/system/sharedConstants";
+setIsServer(); // Must be called before any server module logic runs (e.g. Player canUserAddObject checks IS_SERVER)
+
 import User from "../../../src/shared/user/types/user";
-import RoomManager from "../../../src/server/room/roomManager";
-import UserManager from "../../../src/server/user/userManager";
+import ServerRoomManager from "../../../src/server/room/serverRoomManager";
+import ServerUserManager from "../../../src/server/user/serverUserManager";
+import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
-import { getUserGameplayState, getPlayerObject, clearPlayerObjects } from "../../../src/server/room/util/roomUserUtil";
 import UserGameplayState from "../../../src/server/user/types/userGameplayState";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import ObjectMessageParams from "../../../src/shared/object/types/objectMessageParams";
+import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
+import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
 import { MockSocket } from "./mockSocket";
 import { createMockUser, resetUserCounter, MockUserOverrides } from "./mockUser";
 
@@ -197,16 +193,12 @@ export interface ConnectedUser
 
 function syncRoomStore(): void
 {
-    // Clear _roomStore
     for (const k in _roomStore) delete _roomStore[k];
-    // Copy from mockDB's roomStore
     for (const [k, v] of Object.entries(roomStore))
         _roomStore[k] = v;
 }
 
 // ─── Internal: pending initial positions for users ───────────────────────────
-// When connectUser is called with position overrides, we store them here.
-// When joinRoom is called, we seed the userRoomStateStore for that user+room.
 
 const _pendingPositions: {[userID: string]: {
     lastX: number; lastY: number; lastZ: number;
@@ -223,35 +215,29 @@ export const harness = {
      */
     reset(): void
     {
-        // Clear UserManager
-        for (const uid in UserManager.socketUserContexts)
-            delete UserManager.socketUserContexts[uid];
+        for (const uid in ServerUserManager.socketUserContexts)
+            delete ServerUserManager.socketUserContexts[uid];
 
-        // Unload all rooms (physics + memory)
-        for (const roomID of Object.keys(RoomManager.roomRuntimeMemories))
+        for (const roomID of Object.keys(ServerRoomManager.roomRuntimeMemories))
         {
             if (PhysicsManager.hasRoom(roomID))
                 PhysicsManager.unload(roomID);
-            delete RoomManager.roomRuntimeMemories[roomID];
-            delete RoomManager.socketRoomContexts[roomID];
+            delete ServerRoomManager.roomRuntimeMemories[roomID];
+            delete ServerRoomManager.socketRoomContexts[roomID];
         }
-        for (const uid in RoomManager.currentRoomIDByUserID)
-            delete RoomManager.currentRoomIDByUserID[uid];
-        clearPlayerObjects();
+        for (const uid in ServerRoomManager.currentRoomIDByUserID)
+            delete ServerRoomManager.currentRoomIDByUserID[uid];
+        ServerUserManager.clearPlayerObjects();
 
-        // Reset in-memory DB stores
         resetStores();
         resetUserCounter();
 
-        // Clear hoisted stores and saved gameplay states
         for (const k in _roomStore) delete _roomStore[k];
         for (const k in _userRoomStateStore) delete _userRoomStateStore[k];
         _savedGameplayStates.length = 0;
 
-        // Clear pending positions
         for (const k in _pendingPositions) delete _pendingPositions[k];
 
-        // Disable latency by default (tests opt in explicitly)
         _latencyConfig.enabled = false;
         _latencyConfig.minMs = 0;
         _latencyConfig.maxMs = 0;
@@ -259,7 +245,7 @@ export const harness = {
 
     /**
      * Seeds a room into the mock DB so that it can be loaded via
-     * RoomManager.changeUserRoom.
+     * ServerRoomManager.changeUserRoom.
      */
     seedRoom(
         roomID: string,
@@ -267,7 +253,6 @@ export const harness = {
     ): Room
     {
         const room = seedRoom(roomID, roomType);
-        // Sync to the hoisted store so the vi.mock factory can find it
         syncRoomStore();
         return room;
     },
@@ -275,9 +260,6 @@ export const harness = {
     /**
      * Simulates a user connecting a socket. Returns the context needed to
      * interact with the server.
-     *
-     * Position overrides (lastX, lastY, lastZ, etc.) are stored as pending
-     * initial positions and applied when the user joins a room.
      */
     connectUser(userOrOverrides?: User | MockUserOverrides): ConnectedUser
     {
@@ -290,15 +272,13 @@ export const harness = {
         {
             const result = createMockUser(userOrOverrides);
             user = result.user;
-            // Store initial position for seeding when joining a room
             _pendingPositions[user.id] = result.initialPosition;
         }
 
         const socket = new MockSocket(user);
-        // SocketUserContext reads user from socket.handshake.auth.user
         const socketUserContext = new SocketUserContext(socket as any);
 
-        UserManager.addUser(socketUserContext);
+        ServerUserManager.addUser(socketUserContext);
 
         return { user, socket, socketUserContext };
     },
@@ -309,7 +289,6 @@ export const harness = {
      */
     async joinRoom(ctx: ConnectedUser, roomID: string): Promise<boolean>
     {
-        // Seed per-room state from pending initial position
         const pending = _pendingPositions[ctx.user.id];
         if (pending)
         {
@@ -321,26 +300,25 @@ export const harness = {
                 version: 0,
             };
         }
-        return RoomManager.changeUserRoom(ctx.socketUserContext, roomID, false, false);
+        return ServerRoomManager.changeUserRoom(ctx.socketUserContext, roomID, false, false);
     },
 
     /**
-     * Simulates user disconnection: removes from room + UserManager.
+     * Simulates user disconnection: removes from room + ServerUserManager.
      */
     async disconnectUser(ctx: ConnectedUser, saveState: boolean = true): Promise<void>
     {
-        UserManager.removeUser(ctx.user.id);
-        await RoomManager.changeUserRoom(ctx.socketUserContext, undefined, false, saveState);
+        ServerUserManager.removeUser(ctx.user.id);
+        await ServerRoomManager.changeUserRoom(ctx.socketUserContext, undefined, false, saveState);
         ctx.socket.connected = false;
     },
 
     /**
-     * Returns the number of participants in a room, or -1 if the room is not
-     * loaded.
+     * Returns the number of participants in a room, or -1 if the room is not loaded.
      */
     getRoomParticipantCount(roomID: string): number
     {
-        const mem = RoomManager.roomRuntimeMemories[roomID];
+        const mem = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!mem) return -1;
         return Object.keys(mem.participantUserIDs).length;
     },
@@ -350,36 +328,31 @@ export const harness = {
      */
     isRoomLoaded(roomID: string): boolean
     {
-        return RoomManager.roomRuntimeMemories[roomID] != undefined;
+        return ServerRoomManager.roomRuntimeMemories[roomID] != undefined;
     },
 
     /**
-     * Reads the current gameplay state for a connected user from the room's
-     * runtime memory (same extraction path as disconnect/save).
+     * Reads the current gameplay state for a connected user.
      */
     getGameplayState(ctx: ConnectedUser): UserGameplayState | undefined
     {
-        const roomID = RoomManager.currentRoomIDByUserID[ctx.user.id];
+        const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
         if (!roomID) return undefined;
-        const roomMem = RoomManager.roomRuntimeMemories[roomID];
+        const roomMem = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomMem) return undefined;
-        return getUserGameplayState(ctx.socketUserContext, roomMem);
+        return ServerUserManager.getUserGameplayState(ctx.socketUserContext, roomMem);
     },
 
     /**
-     * Returns the player object's spawn params as seen by other users in
-     * the room. This is the data broadcast via `objectSpawnParams` multicast.
+     * Returns the player object for a user.
      */
-    getPlayerObjectInRoom(ctx: ConnectedUser)
+    getPlayerObject(userID: string)
     {
-        const obj = getPlayerObject(ctx.user.id);
-        if (!obj) return undefined;
-        return obj;
+        return ServerUserManager.getPlayerObject(userID);
     },
 
     /**
-     * Returns all gameplay states that were passed to
-     * DBUserUtil.saveUserGameplayState (captured by the mock).
+     * Returns all gameplay states saved via the DB mock.
      */
     get savedGameplayStates(): UserGameplayState[]
     {
@@ -387,13 +360,7 @@ export const harness = {
     },
 
     /**
-     * Enables or disables random latency on mocked DB operations
-     * (getRoomContent, saveRoomContent, saveUserGameplayState, etc.).
-     * When enabled, each mocked async DB call sleeps for a random
-     * duration in [minMs, maxMs] before resolving. This creates
-     * non-deterministic interleavings that can expose race conditions.
-     *
-     * Disabled by default; reset() turns it off.
+     * Enables or disables random latency on mocked DB operations.
      */
     setLatency(enabled: boolean, minMs: number = 0, maxMs: number = 5): void
     {
@@ -403,32 +370,20 @@ export const harness = {
     },
 
     /**
-     * Simulates reconnection Case A: a new socket connects BEFORE the old
-     * disconnect fires (e.g. page refresh on low-latency).
-     *
-     * Mirrors the logic in sockets.ts:
-     *   1. Captures old session's gameplay state from runtime memory
-     *   2. Removes old user and cleans up old room membership
-     *   3. Passes cached state to changeUserRoom so the player spawns correctly
-     *   4. Registers the new user
-     *
-     * Returns a new ConnectedUser that has inherited the old session's state.
+     * Simulates reconnection Case A: new socket connects BEFORE old disconnect fires.
      */
     async reconnectCaseA(oldCtx: ConnectedUser): Promise<ConnectedUser>
     {
-        // Step 1: Capture old state from runtime memory (same as sockets.ts)
-        const oldRoomID = RoomManager.currentRoomIDByUserID[oldCtx.user.id];
-        const oldRoomMem = oldRoomID ? RoomManager.roomRuntimeMemories[oldRoomID] : undefined;
+        const oldRoomID = ServerRoomManager.currentRoomIDByUserID[oldCtx.user.id];
+        const oldRoomMem = oldRoomID ? ServerRoomManager.roomRuntimeMemories[oldRoomID] : undefined;
         const oldGameplayState = oldRoomMem
-            ? getUserGameplayState(oldCtx.socketUserContext, oldRoomMem)
+            ? ServerUserManager.getUserGameplayState(oldCtx.socketUserContext, oldRoomMem)
             : undefined;
 
-        // Step 2: Remove old user and clean up
-        UserManager.removeUser(oldCtx.user.id);
-        await RoomManager.changeUserRoom(oldCtx.socketUserContext, undefined, false, true);
+        ServerUserManager.removeUser(oldCtx.user.id);
+        await ServerRoomManager.changeUserRoom(oldCtx.socketUserContext, undefined, false, true);
         oldCtx.socket.connected = false;
 
-        // Step 3: Create new user (no position fields on User anymore)
         const { user: newUser } = createMockUser({
             id: oldCtx.user.id,
             userName: oldCtx.user.userName,
@@ -438,7 +393,6 @@ export const harness = {
         if (oldGameplayState)
             newUser.lastRoomID = oldGameplayState.lastRoomID;
 
-        // Store cached gameplay state as pending position for rejoining
         if (oldGameplayState)
         {
             _pendingPositions[newUser.id] = {
@@ -452,34 +406,22 @@ export const harness = {
             };
         }
 
-        // Step 4: Register new connection
         const socket = new MockSocket(newUser);
         const socketUserContext = new SocketUserContext(socket as any);
-        UserManager.addUser(socketUserContext);
+        ServerUserManager.addUser(socketUserContext);
 
         return { user: newUser, socket, socketUserContext };
     },
 
     /**
-     * Simulates reconnection Case B: old disconnect fires BEFORE the new
-     * socket connects (e.g. high-latency environment).
-     *
-     * Mirrors the logic in sockets.ts:
-     *   1. Old user disconnects (state saved and cached in memory)
-     *   2. New socket connects and finds cached state
-     *   3. Passes cached state to changeUserRoom for restoration
-     *
-     * Returns a new ConnectedUser that has inherited the disconnected state.
+     * Simulates reconnection Case B: old disconnect fires BEFORE new socket connects.
      */
     async reconnectCaseB(oldCtx: ConnectedUser): Promise<ConnectedUser>
     {
-        // Step 1: Capture state before disconnect
         const cachedState = harness.getGameplayState(oldCtx);
 
-        // Step 2: Old user fully disconnects (state saved to DB mock)
         await harness.disconnectUser(oldCtx, true);
 
-        // Step 3: New socket connects
         const { user: newUser } = createMockUser({
             id: oldCtx.user.id,
             userName: oldCtx.user.userName,
@@ -489,7 +431,6 @@ export const harness = {
         if (cachedState)
             newUser.lastRoomID = cachedState.lastRoomID;
 
-        // Store cached gameplay state as pending position for rejoining
         if (cachedState)
         {
             _pendingPositions[newUser.id] = {
@@ -503,61 +444,61 @@ export const harness = {
             };
         }
 
-        // Step 4: Register new connection
         const socket = new MockSocket(newUser);
         const socketUserContext = new SocketUserContext(socket as any);
-        UserManager.addUser(socketUserContext);
+        ServerUserManager.addUser(socketUserContext);
 
         return { user: newUser, socket, socketUserContext };
     },
 
     /**
-     * Simulates a graceful server shutdown: saves all rooms (forced), saves
-     * all user gameplay states, then disconnects all users.
-     *
-     * Mirrors the logic in server.ts gracefulShutdown (lines 133-158).
+     * Simulates a graceful server shutdown.
      */
     async gracefulShutdown(): Promise<void>
     {
-        await RoomManager.saveRooms(true);
-        await RoomManager.saveAllUserGameplayStates(UserManager.socketUserContexts);
+        await ServerRoomManager.saveRooms(true);
+        await ServerRoomManager.saveAllUserGameplayStates(ServerUserManager.socketUserContexts);
 
-        for (const [userID, ctx] of Object.entries(UserManager.socketUserContexts))
+        for (const [userID, ctx] of Object.entries(ServerUserManager.socketUserContexts))
         {
-            await RoomManager.changeUserRoom(ctx, undefined, false, false);
+            await ServerRoomManager.changeUserRoom(ctx, undefined, false, false);
             ctx.socket.disconnect(true);
         }
 
-        for (const uid in UserManager.socketUserContexts)
-            delete UserManager.socketUserContexts[uid];
+        for (const uid in ServerUserManager.socketUserContexts)
+            delete ServerUserManager.socketUserContexts[uid];
     },
 
     /**
-     * Convenience wrapper: update a connected user's object transform.
+     * Convenience: update a connected user's player object transform via
+     * the real ServerObjectManager signal handler.
      */
     updateObjectTransform(ctx: ConnectedUser, newTransform: ObjectTransform): void
     {
-        const playerObjectId = this.getPlayerObjectId(ctx);
-        if (!playerObjectId) return;
-        RoomManager.updateObjectTransform(ctx.socketUserContext, playerObjectId, newTransform);
+        const playerObj = ServerUserManager.getPlayerObject(ctx.user.id);
+        if (!playerObj) return;
+        const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
+        if (!roomID) return;
+        const signal = new SetObjectTransformSignal(roomID, playerObj.objectId, newTransform, false);
+        ServerObjectManager.onSetObjectTransformSignalReceived(ctx.socketUserContext, signal);
     },
 
     /**
-     * Convenience wrapper: send an object message (sets SentMessage metadata).
+     * Convenience: send an object message (sets SentMessage metadata key=0).
      */
     sendObjectMessage(ctx: ConnectedUser, message: string): void
     {
-        const playerObjectId = this.getPlayerObjectId(ctx);
-        if (!playerObjectId) return;
-        RoomManager.sendObjectMessage(
-            ctx.socketUserContext,
-            new ObjectMessageParams(playerObjectId, message)
-        );
+        const playerObj = ServerUserManager.getPlayerObject(ctx.user.id);
+        if (!playerObj) return;
+        const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
+        if (!roomID) return;
+        const signal = new SetObjectMetadataSignal(roomID, playerObj.objectId, 0, message);
+        ServerObjectManager.onSetObjectMetadataSignalReceived(ctx.socketUserContext, signal);
     },
 
     getPlayerObjectId(ctx: ConnectedUser): string | undefined
     {
-        const playerObj = getPlayerObject(ctx.user.id);
+        const playerObj = ServerUserManager.getPlayerObject(ctx.user.id);
         if (!playerObj) return undefined;
         return playerObj.objectId;
     },
@@ -565,8 +506,8 @@ export const harness = {
     /**
      * Direct access to the underlying modules for advanced assertions.
      */
-    getPlayerObject,
-    RoomManager,
-    UserManager,
+    ServerRoomManager,
+    ServerUserManager,
+    ServerObjectManager,
     PhysicsManager,
 };

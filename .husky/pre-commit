@@ -1,2 +1,2 @@
 node dev/scripts/checkBeforeCommit.js
-npx vitest run
+npm run test:integration

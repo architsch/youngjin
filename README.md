@@ -28,7 +28,6 @@ ThingsPool is open source and built with a modern real-time web stack — Three.
 
 - **DevOps**
     - [Local Development Guide](docs/devOps/local_dev.md)
-    - [Testing Guide](docs/devOps/tests.md)
     - VPS Hosting Guide
         - [Basic Setup](docs/devOps/vps/basic-setup.md)
         - [Networking & Security](docs/devOps/vps/networking-and-security.md)
@@ -45,3 +44,11 @@ ThingsPool is open source and built with a modern real-time web stack — Three.
 - **Geometry**
     - [Texture](docs/geometry/texture.md)
     - [Wall-Attached Object](docs/geometry/wall_attached_object.md)
+
+- **Testing**
+    - E2E Tests
+        - [Workflow](docs/testing/e2e/workflow.md)
+    - Integration Tests
+        - [Workflow](docs/testing/integration/workflow.md)
+        - [Framework](docs/testing/integration/framework.md)
+        - [Scenarios](docs/testing/integration/scenarios.md)
