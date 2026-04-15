@@ -60,6 +60,16 @@ const PROFILES: TestProfile[] = [
         weights: { connect: 2, disconnect: 1, joinRoom: 3, moveObject: 2, reconnectA: 2, reconnectB: 2 },
         maxUsers: 8, maxActions: 30, numRuns: 15,
     },
+    {
+        name: "voxel-mixed",
+        weights: { connect: 2, disconnect: 1, joinRoom: 2, moveObject: 1, addVoxel: 3, removeVoxel: 2, moveVoxel: 2, setVoxelTexture: 2 },
+        maxUsers: 6, maxActions: 40, numRuns: 20,
+    },
+    {
+        name: "permission-mixed",
+        weights: { connect: 2, disconnect: 1, joinRoom: 3, moveObject: 1, addVoxel: 2, setUserRole: 3 },
+        maxUsers: 8, maxActions: 40, numRuns: 20,
+    },
 ];
 
 const ROOM_IDS = ["room-A", "room-B", "room-C"];
@@ -87,12 +97,16 @@ describe("property-based: structural invariants (no latency)", () => {
                             harness.seedRoom(roomID, RoomTypeEnumMap.Hub);
 
                         const connectedUsers: ConnectedUser[] = [];
+                        const errors: Error[] = [];
 
                         for (const action of actions)
                         {
                             try { await executeAction(action, connectedUsers); }
-                            catch { /* some actions may throw under edge conditions */ }
+                            catch (e) { errors.push(e instanceof Error ? e : new Error(String(e))); }
                         }
+
+                        // Actions should not throw — exceptions indicate real bugs
+                        expect(errors, `Unexpected errors during actions: ${errors.map(e => e.message).join("; ")}`).toHaveLength(0);
 
                         checkStructuralInvariants(connectedUsers);
 
@@ -120,18 +134,21 @@ describe("property-based: structural invariants (no latency)", () => {
                         harness.seedRoom(roomID, RoomTypeEnumMap.Hub);
 
                     const connectedUsers: ConnectedUser[] = [];
+                    const errors: Error[] = [];
 
                     for (const action of actions)
                     {
                         try { await executeAction(action, connectedUsers); }
-                        catch {}
+                        catch (e) { errors.push(e instanceof Error ? e : new Error(String(e))); }
                     }
+
+                    expect(errors, `Unexpected errors during actions: ${errors.map(e => e.message).join("; ")}`).toHaveLength(0);
 
                     while (connectedUsers.length > 0)
                     {
                         const ctx = connectedUsers.pop()!;
                         try { await harness.disconnectUser(ctx, false); }
-                        catch {}
+                        catch { /* cleanup */ }
                     }
 
                     checkCleanState();
@@ -175,12 +192,18 @@ describe("property-based: structural invariants (with latency)", () => {
                             harness.seedRoom(roomID, RoomTypeEnumMap.Hub);
 
                         const connectedUsers: ConnectedUser[] = [];
+                        const errors: Error[] = [];
 
                         for (const action of actions)
                         {
                             try { await executeAction(action, connectedUsers); }
-                            catch { /* latency-induced edge conditions */ }
+                            catch (e) { errors.push(e instanceof Error ? e : new Error(String(e))); }
                         }
+
+                        // Under latency, some race-condition-induced errors may occur,
+                        // but they should not be frequent
+                        if (errors.length > actions.length * 0.1)
+                            expect.fail(`Too many errors (${errors.length}/${actions.length}): ${errors.slice(0, 3).map(e => e.message).join("; ")}`);
 
                         // Structural invariants (relaxed: skip count check since latency may cause
                         // race conditions in disconnect tracking)
@@ -242,12 +265,15 @@ describe("property-based: gameplay state persistence", () => {
                         harness.seedRoom(roomID, RoomTypeEnumMap.Regular);
 
                     const users: ConnectedUser[] = [];
+                    const errors: Error[] = [];
 
                     for (const action of actions)
                     {
                         try { await executeAction(action, users); }
-                        catch {}
+                        catch (e) { errors.push(e instanceof Error ? e : new Error(String(e))); }
                     }
+
+                    expect(errors, `Unexpected errors during actions: ${errors.map(e => e.message).join("; ")}`).toHaveLength(0);
 
                     // In-room transforms should match getUserGameplayState
                     checkObjectTransformConsistency(users);
@@ -265,7 +291,7 @@ describe("property-based: gameplay state persistence", () => {
                     for (const ctx of users)
                     {
                         try { await harness.disconnectUser(ctx, false); }
-                        catch {}
+                        catch { /* cleanup */ }
                     }
                 }
             ),

@@ -2,6 +2,15 @@
 
 A wall-attached object is a game object that is mounted on the surface of a voxel wall (e.g. a painting, shelf, or wall lamp). Its position snaps to a 0.5-unit grid, and its direction vector is always axis-aligned (one of `+x`, `-x`, `+z`, `-z`), pointing outward from the wall it is attached to.
 
+## Position & Direction Quantization
+All wall-attached object positions are quantized to the 0.5-unit grid: `0.5 × round(2 × pos_component)`. Direction components are rounded to integers (−1, 0, or 1). The quantized collider dimensions are: horizontal half-size = `0.5 × round(colliderConfig.hitboxSize.sizeX)`, vertical half-size = `0.5 × round(colliderConfig.hitboxSize.sizeY)`.
+
+## Movement Types
+Wall-attached objects support three movement types:
+1. **Vertical movement**: Simple ±0.5 unit translation along the Y axis. Direction unchanged.
+2. **Horizontal movement (same wall)**: Uses the perpendicular CCW rotation of the facing direction to compute the movement vector along the wall surface.
+3. **Horizontal movement (corner wrap)**: When reaching a wall corner, the object wraps around it (see "Computing Corner-Wrapped Movement" below). The algorithm tries concave wrapping first and falls back to convex.
+
 ## Computing Corner-Wrapped Movement of a Wall-Attached Object
 
 ![Corner Wrapped Move](figures/corner_wrapped_move.jpg)

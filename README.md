@@ -44,6 +44,8 @@ ThingsPool is open source and built with a modern real-time web stack — Three.
 - **Geometry**
     - [Texture](docs/geometry/texture.md)
     - [Wall-Attached Object](docs/geometry/wall_attached_object.md)
+    - [Voxel Grid Structure](docs/geometry/voxel_grid.md)
+    - [Physics System](docs/geometry/physics.md)
 
 - **Testing**
     - E2E Tests

@@ -215,6 +215,50 @@ export function checkUnicastSignalReach(
     }
 }
 
+// ─── Voxel & Physics Invariants ──────────────────────────────────────────
+
+/** Invariant 9: Every room with participants has a loaded physics room. */
+export function checkPhysicsRoomConsistency(): void
+{
+    for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+    {
+        const participantCount = Object.keys(roomMem.participantUserIDs).length;
+        if (participantCount > 0)
+            expect(PhysicsManager.hasRoom(roomID), `Physics room missing for occupied room ${roomID}`).toBe(true);
+    }
+}
+
+/** Invariant 10: Every participant's player object exists in the physics system. */
+export function checkPhysicsObjectConsistency(): void
+{
+    for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+    {
+        for (const uid of Object.keys(roomMem.participantUserIDs))
+        {
+            const playerObj = ServerUserManager.getPlayerObject(uid);
+            if (playerObj)
+            {
+                const hasPhysObj = PhysicsManager.hasObject(roomID, playerObj.objectId);
+                expect(hasPhysObj, `Physics object missing for player ${uid} in room ${roomID}`).toBe(true);
+            }
+        }
+    }
+}
+
+/** Invariant 11: User roles are consistent (owner of room has Owner role). */
+export function checkUserRoleConsistency(): void
+{
+    for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+    {
+        const ownerID = roomMem.room.ownerUserID;
+        if (ownerID && roomMem.participantUserIDs[ownerID])
+        {
+            const role = ServerUserManager.getUserRole(ownerID);
+            expect(role, `Owner ${ownerID} of room ${roomID} should have Owner role`).toBe(0); // UserRoleEnumMap.Owner
+        }
+    }
+}
+
 // ─── Clean State Invariants ────────────────────────────────────────────────
 
 /**
@@ -229,10 +273,14 @@ export function checkCleanState(): void
 
 // ─── Composite Invariant Sets ──────────────────────────────────────────────
 
-export type InvariantSet = "structural" | "full";
+export type InvariantSet = "structural" | "full" | "extended";
 
 /**
  * Runs the specified invariant set.
+ *
+ * - "structural": Core data-structure invariants (1–7).
+ * - "full": Structural + object transform consistency (8).
+ * - "extended": Full + physics & role consistency (9–11).
  */
 export function checkInvariants(
     connectedUsers: ConnectedUser[],
@@ -240,8 +288,14 @@ export function checkInvariants(
 ): void
 {
     checkStructuralInvariants(connectedUsers);
-    if (level === "full")
+    if (level === "full" || level === "extended")
     {
         checkObjectTransformConsistency(connectedUsers);
+    }
+    if (level === "extended")
+    {
+        checkPhysicsRoomConsistency();
+        checkPhysicsObjectConsistency();
+        checkUserRoleConsistency();
     }
 }

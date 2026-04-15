@@ -173,6 +173,10 @@ objectSelectionObservable.addListener("canvasWorldSpaceGizmos", async (selection
 
 roomChangedObservable.addListener("canvasWorldSpaceGizmos", (_roomRuntimeMemory: RoomRuntimeMemory) => {
     hideAll();
+    for (const arrow of arrows)
+        arrow.dispose();
+    arrows = [];
+    initialized = false;
 });
 
 updateObservable.addListener("canvasWorldSpaceGizmos", () => {

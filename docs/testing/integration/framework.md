@@ -74,6 +74,7 @@ Every atomic operation is an `Action` type:
 | `reconnectCaseA` | New socket before old disconnect |
 | `reconnectCaseB` | Old disconnect before new socket |
 | `joinRoom` | Move user into a room |
+| `requestRoomChange` | Room change via `onRequestRoomChangeSignalReceived` (saves previous room state) |
 | `seedRoom` | Seed a room into mock DB |
 | `moveObject` | Update player transform |
 | `sendMessage` | Send chat message (object metadata) |
@@ -81,6 +82,8 @@ Every atomic operation is an `Action` type:
 | `removeVoxel` | Remove a voxel block |
 | `moveVoxel` | Move a voxel block |
 | `setVoxelTexture` | Set voxel quad texture |
+| `setUserRole` | Change a user's role (Owner/Editor/Visitor) |
+| `setRoomOwner` | Set a user as the owner of a room |
 | `parallel` | Execute action groups concurrently |
 | `gracefulShutdown` | Simulate server shutdown |
 | `setLatency` | Toggle DB latency simulation |
@@ -99,6 +102,11 @@ Structural invariants that must hold after any valid action sequence:
 6. **No multi-room users** - No user appears in multiple rooms simultaneously
 7. **Player objects exist** - Every room participant has exactly one player object
 8. **Transform consistency** - In-room object transforms match `getUserGameplayState` output
+9. **Physics room consistency** - Every occupied room has a loaded physics room
+10. **Physics object consistency** - Every participant's player object exists in the physics system
+11. **User role consistency** - Room owners in the room have the Owner role
+
+Invariant sets: `"structural"` (checks 1–7), `"full"` (adds 8), `"extended"` (adds 9–11).
 
 Signal utilities:
 - `getPendingSignals(ctx, signalType)` - Read buffered signals from a user's `SocketUserContext`
@@ -108,16 +116,18 @@ Signal utilities:
 ### Scenario Presets (`helpers/scenarioPresets.ts`)
 
 Reusable building blocks:
-- **Room presets**: `EMPTY_HUB`, `EMPTY_REGULAR`, `regularRoom(id)`, `hubRoom(id)`, `roomWithWall(id,row,col)`
-- **User presets**: `userAtCenter(roomID)`, `userAt(x,z,roomID)`, `usersInRoom(count,roomID)`
-- **Action presets**: `walkAcross()`, `buildColumn()`, `removeColumn()`, `parallel()`, `enableLatency()`, `disableLatency()`
+- **Room presets**: `EMPTY_HUB`, `EMPTY_REGULAR`, `regularRoom(id)`, `hubRoom(id)`, `roomWithWall(id,row,col)`, `multipleRooms(count)`
+- **User presets**: `userAtCenter(roomID)`, `userAt(x,z,roomID)`, `namedUser(id,roomID)`, `usersInRoom(count,roomID)`
+- **Action presets**: `walkAcross()`, `buildColumn()`, `removeColumn()`, `reconnectUser()`, `disconnectWithSave()`, `disconnectWithoutSave()`, `parallel()`, `enableLatency()`, `disableLatency()`
+- **Permission presets**: `setOwner(userIndex,roomID)`, `promoteToEditor(userIndex)`, `demoteToVisitor(userIndex)`
+- **Composite presets**: `addAndTextureVoxel()`, `buildAndMoveBlock()`
 
 ## Property-Based Testing
 
 Uses [fast-check](https://github.com/dubzzz/fast-check) to generate random action sequences and verify invariants hold.
 
 Parameterized over:
-- **Weight profiles** - Control the distribution of action types (balanced, connect-heavy, disconnect-heavy, room-switch-heavy, voxel-heavy, reconnect-heavy)
+- **Weight profiles** - Control the distribution of action types (balanced, connect-heavy, disconnect-heavy, room-switch-heavy, voxel-heavy, reconnect-heavy, voxel-mixed, permission-mixed)
 - **Latency** - Tests run both with and without simulated DB latency
 - **Room types** - Regular rooms (permission-gated) and Hub rooms (open editing)
 
@@ -156,13 +166,4 @@ it("my new test", async () => {
 
 ## Running Tests
 
-```bash
-# All integration tests
-npx vitest run tests/integration/
-
-# Specific scenario file
-npx vitest run tests/integration/scenarios/connection.test.ts
-
-# Watch mode
-npx vitest tests/integration/scenarios/
-```
+See [workflow.md](workflow.md) for commands to run integration tests.

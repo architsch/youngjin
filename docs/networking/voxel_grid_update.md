@@ -29,3 +29,8 @@ Reference: @src/shared/voxel/util/voxelUpdateUtil.ts , @src/server/voxel/serverV
 2. The server captures the old texture index and calls `VoxelUpdateUtil.setVoxelQuadTexture`.
     - If it succeeds: the server multicasts the signal to everyone except the sender.
     - If it fails: the server unicasts a `SetVoxelQuadTextureSignal` (with the old texture index) back to the sender to revert the optimistic change.
+
+## Permission Enforcement
+All voxel operations pass the user's role to `VoxelUpdateUtil` for permission checking:
+- **Hub rooms**: All users can edit voxels regardless of role.
+- **Regular rooms**: Only the room Owner and users with the Editor role can edit voxels. Visitors receive rollback signals for any attempted edits.

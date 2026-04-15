@@ -39,3 +39,6 @@ Reference: @src/shared/object/util/objectUpdateUtil.ts , @src/server/object/serv
 2. The server calls `ObjectUpdateUtil.setObjectMetadata` to validate and apply.
     - If the update succeeds: the server multicasts the signal to everyone except the sender. Other clients apply the metadata change.
     - If the update fails: the server unicasts a `SetObjectMetadataSignal` back to the sender with the current server-side value, reverting the optimistic change.
+
+## Signal Optimization for Continuous Updates
+For signals that update frequently (e.g. object transforms), the server uses `tryUpdateLatestPendingSignalToUser()` to replace the most recently pending signal of the same type rather than appending a new one. This prevents building up a backlog of stale signals during high-frequency updates.

@@ -69,7 +69,7 @@ const ServerObjectManager =
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (result.desyncDetected)
         {
-            const resyncSignal = new SetObjectTransformSignal(signal.roomID, signal.objectId, result.transform, signal.ignorePhysics);
+            const resyncSignal = new SetObjectTransformSignal(signal.roomID, signal.objectId, result.transform, true);
             socketRoomContext.multicastSignal("setObjectTransformSignal", resyncSignal);
         }
         else

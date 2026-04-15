@@ -13,27 +13,27 @@ const UserIdentificationUtil =
 {
     identifyAdmin: async (req: Request, res: Response, next: () => void): Promise<void> =>
     {
-        await identifyUserFromReq(req, res, user => user.userType == UserTypeEnumMap.Admin, next);
+        await identifyUserFromReq(req, res, user => user.userType == UserTypeEnumMap.Admin, next, false);
     },
     identifyRegisteredUser: async (req: Request, res: Response, next: () => void): Promise<void> =>
     {
         await identifyUserFromReq(req, res,
             user => user.userType == UserTypeEnumMap.Admin ||
                 user.userType == UserTypeEnumMap.Member,
-            next);
+            next, false);
     },
     identifyAnyUser: async (req: Request, res: Response, next: () => void): Promise<void> =>
     {
-        await identifyUserFromReq(req, res, _ => true, next);
+        await identifyUserFromReq(req, res, _ => true, next, true);
     },
 }
 
 async function identifyUserFromReq(req: Request, res: Response,
-    passCondition: (user: User) => Boolean, next: () => void): Promise<boolean>
+    passCondition: (user: User) => Boolean, next: () => void, updateLoginStats: boolean): Promise<boolean>
 {
     try
     {
-        const user = await getUserFromReq(req, res);
+        const user = await getUserFromReq(req, res, updateLoginStats);
         if (!user)
         {
             LogUtil.logRaw("Failed to identify the user", "high", "error");
@@ -61,7 +61,7 @@ async function identifyUserFromReq(req: Request, res: Response,
     }
 }
 
-async function getUserFromReq(req: Request, res: Response): Promise<User | undefined>
+async function getUserFromReq(req: Request, res: Response, updateLoginStats: boolean): Promise<User | undefined>
 {
     const token = req.cookies[CookieUtil.getAuthTokenName()];
 
@@ -73,7 +73,8 @@ async function getUserFromReq(req: Request, res: Response): Promise<User | undef
             const dbUser = await DBUserUtil.findUserById(userId);
             if (dbUser)
             {
-                DBUserUtil.updateLastLogin(userId);
+                if (updateLoginStats)
+                    DBUserUtil.updateLastLogin(userId);
                 return DBUserUtil.fromDBType(dbUser);
             }
         }

@@ -77,15 +77,20 @@ describe("permission scenarios", () => {
             name: "owner can edit",
             rooms: [regularRoom("owner-room")],
             users: [userAt(16, 16, "owner-room", { id: "the-owner" })],
-            // Pre-configure the room's owner
-            assertions: ({ users, harness }) => {
-                // Manually set room owner and user role for this test
+            actions: [
+                // Set user as room owner, then attempt voxel add
+                { type: "setRoomOwner", userIndex: 0, roomID: "owner-room" },
+                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+            ],
+            assertions: ({ users }) => {
+                expect(ServerUserManager.getUserRole("the-owner")).toBe(UserRoleEnumMap.Owner);
+                // Owner's voxel add should have succeeded (no rollback)
+                const rollback = getPendingSignals(users[0], "removeVoxelBlockSignal");
+                expect(rollback.length).toBe(0);
+                // Block should be present
                 const roomMem = ServerRoomManager.roomRuntimeMemories["owner-room"];
-                roomMem.room.ownerUserID = "the-owner";
-                ServerUserManager.syncUserRoleInMemory("the-owner", "owner-room", UserRoleEnumMap.Owner);
-
-                const role = ServerUserManager.getUserRole("the-owner");
-                expect(role).toBe(UserRoleEnumMap.Owner);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },
         });
     });
@@ -95,11 +100,20 @@ describe("permission scenarios", () => {
             name: "editor can edit",
             rooms: [regularRoom("editor-room")],
             users: [userAt(16, 16, "editor-room", { id: "the-editor" })],
-            assertions: ({ users, harness }) => {
-                // Promote to editor
-                ServerUserManager.syncUserRoleInMemory("the-editor", "editor-room", UserRoleEnumMap.Editor);
-                const role = ServerUserManager.getUserRole("the-editor");
-                expect(role).toBe(UserRoleEnumMap.Editor);
+            actions: [
+                // Promote to editor, then attempt voxel add
+                { type: "setUserRole", userIndex: 0, role: UserRoleEnumMap.Editor },
+                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+            ],
+            assertions: ({ users }) => {
+                expect(ServerUserManager.getUserRole("the-editor")).toBe(UserRoleEnumMap.Editor);
+                // Editor's voxel add should have succeeded (no rollback)
+                const rollback = getPendingSignals(users[0], "removeVoxelBlockSignal");
+                expect(rollback.length).toBe(0);
+                // Block should be present
+                const roomMem = ServerRoomManager.roomRuntimeMemories["editor-room"];
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },
         });
     });

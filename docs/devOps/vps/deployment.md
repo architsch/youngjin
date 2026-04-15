@@ -40,12 +40,7 @@ Accept the defaults when prompted (or customize the runner name/labels as needed
 ```
 You should also see the runner listed as "Idle" in the repository's `Settings -> Actions -> Runners` page.
 
-7. Make sure Node.js and PM2 are installed on the VPS, since the workflows depend on them:
-```
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt-get install -y nodejs
-npm install -g pm2
-```
+7. Make sure Node.js and PM2 are installed on the VPS (see [Basic Setup](basic-setup.md) steps 7–8).
 
 8. The workflows (defined in `.github/workflows/`) use `runs-on: self-hosted` to target this runner. Once the runner is active, any push to `main` will trigger the staging deployment workflow, and the promote/rollback workflows can be triggered manually via GitHub's UI.
 

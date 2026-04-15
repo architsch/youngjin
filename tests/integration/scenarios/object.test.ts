@@ -58,9 +58,10 @@ describe("object scenarios", () => {
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id);
                 expect(obj).toBeDefined();
-                // Physics may adjust the exact position, but it should be close
-                expect(obj!.transform.pos.x).toBeDefined();
-                expect(obj!.transform.pos.z).toBeDefined();
+                // Movement of 2 units is within desync threshold (3),
+                // so the server should accept a position close to the target
+                expect(obj!.transform.pos.x).toBeCloseTo(12, 0);
+                expect(obj!.transform.pos.z).toBeCloseTo(12, 0);
             },
         });
     });
@@ -119,12 +120,14 @@ describe("object scenarios", () => {
                 { type: "moveObject", userIndex: 0, x: 25, y: 0, z: 25 },
             ],
             assertions: ({ users, harness }) => {
-                // After desync, server should have corrected position
-                // (either at original or somewhere close, not at 25,25)
                 const obj = harness.getPlayerObject(users[0].user.id)!;
-                // The desync mechanism resets to the start position
-                // when the distance is >= 3 units
-                expect(obj.transform.pos.x).toBeDefined();
+                // Desync resets to the last known server position (5, 5)
+                // when the distance is >= 3 units (distSqr >= 9)
+                expect(obj.transform.pos.x).toBeCloseTo(5, 0);
+                expect(obj.transform.pos.z).toBeCloseTo(5, 0);
+                // The requested position (25, 25) should NOT be applied
+                expect(obj.transform.pos.x).not.toBeCloseTo(25, 0);
+                expect(obj.transform.pos.z).not.toBeCloseTo(25, 0);
             },
         });
     });

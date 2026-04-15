@@ -10,12 +10,15 @@ import fc from "fast-check";
 import { harness, ConnectedUser } from "./serverHarness";
 import { MockUserOverrides } from "./mockUser";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import { UserRole, UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
+import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomChangeSignal";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
+import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
@@ -33,6 +36,7 @@ export type Action =
     | { type: "reconnectCaseB"; userIndex: number }
     // Room
     | { type: "joinRoom"; userIndex: number; roomID: string }
+    | { type: "requestRoomChange"; userIndex: number; roomID: string }
     | { type: "seedRoom"; roomID: string; roomType?: RoomType }
     // Object — player movement
     | { type: "moveObject"; userIndex: number; x: number; y: number; z: number;
@@ -47,6 +51,9 @@ export type Action =
         dRow: number; dCol: number; dLayer: number }
     | { type: "setVoxelTexture"; userIndex: number; row: number; col: number;
         layer: number; quadOffset: number; textureIndex: number }
+    // Permissions
+    | { type: "setUserRole"; userIndex: number; role: UserRole }
+    | { type: "setRoomOwner"; userIndex: number; roomID: string }
     // Concurrency (for race condition testing)
     | { type: "parallel"; groups: Action[][] }
     // Server lifecycle
@@ -114,6 +121,15 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             const idx = action.userIndex % connectedUsers.length;
             const ctx = connectedUsers[idx];
             await harness.joinRoom(ctx, action.roomID);
+            break;
+        }
+        case "requestRoomChange":
+        {
+            if (connectedUsers.length === 0) return;
+            const idx = action.userIndex % connectedUsers.length;
+            const ctx = connectedUsers[idx];
+            const signal = new RequestRoomChangeSignal(action.roomID);
+            await ServerRoomManager.onRequestRoomChangeSignalReceived(ctx.socketUserContext, signal);
             break;
         }
         case "seedRoom":
@@ -201,6 +217,27 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(ctx.socketUserContext, signal);
             break;
         }
+        case "setUserRole":
+        {
+            if (connectedUsers.length === 0) return;
+            const idx = action.userIndex % connectedUsers.length;
+            const ctx = connectedUsers[idx];
+            const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
+            if (!roomID) return;
+            ServerUserManager.syncUserRoleInMemory(ctx.user.id, roomID, action.role);
+            break;
+        }
+        case "setRoomOwner":
+        {
+            if (connectedUsers.length === 0) return;
+            const idx = action.userIndex % connectedUsers.length;
+            const ctx = connectedUsers[idx];
+            const roomMem = ServerRoomManager.roomRuntimeMemories[action.roomID];
+            if (!roomMem) return;
+            roomMem.room.ownerUserID = ctx.user.id;
+            ServerUserManager.syncUserRoleInMemory(ctx.user.id, action.roomID, UserRoleEnumMap.Owner);
+            break;
+        }
         case "parallel":
         {
             await Promise.allSettled(
@@ -237,8 +274,11 @@ export interface ActionWeights
     sendMessage?: number;
     addVoxel?: number;
     removeVoxel?: number;
+    moveVoxel?: number;
+    setVoxelTexture?: number;
     reconnectA?: number;
     reconnectB?: number;
+    setUserRole?: number;
 }
 
 export const DEFAULT_MAX_USERS = 10;
@@ -258,8 +298,11 @@ export function buildActionArbitrary(
         sendMessage: weights.sendMessage ?? 1,
         addVoxel: weights.addVoxel ?? 1,
         removeVoxel: weights.removeVoxel ?? 0,
+        moveVoxel: weights.moveVoxel ?? 0,
+        setVoxelTexture: weights.setVoxelTexture ?? 0,
         reconnectA: weights.reconnectA ?? 0,
         reconnectB: weights.reconnectB ?? 0,
+        setUserRole: weights.setUserRole ?? 0,
     };
 
     const arbs: {weight: number; arbitrary: fc.Arbitrary<Action>}[] = [];
@@ -324,10 +367,49 @@ export function buildActionArbitrary(
             type: "reconnectCaseA", userIndex: i,
         }))});
 
+    if (w.moveVoxel > 0)
+        arbs.push({weight: w.moveVoxel, arbitrary: fc.record({
+            type: fc.constant("moveVoxel" as const),
+            userIndex: fc.nat({max: maxUsers - 1}),
+            row: fc.nat({min: 2, max: 28}),
+            col: fc.nat({min: 2, max: 28}),
+            layer: fc.nat({min: 0, max: 6}),
+            dRow: fc.constantFrom(-1, 0, 1),
+            dCol: fc.constantFrom(-1, 0, 1),
+            dLayer: fc.constantFrom(-1, 0, 1),
+        })});
+
+    if (w.setVoxelTexture > 0)
+        arbs.push({weight: w.setVoxelTexture, arbitrary: fc.record({
+            type: fc.constant("setVoxelTexture" as const),
+            userIndex: fc.nat({max: maxUsers - 1}),
+            row: fc.nat({min: 2, max: 29}),
+            col: fc.nat({min: 2, max: 29}),
+            layer: fc.nat({min: 0, max: 7}),
+            quadOffset: fc.nat({min: 0, max: 5}),
+            textureIndex: fc.nat({min: 0, max: 127}),
+        })});
+
+    if (w.reconnectA > 0)
+        arbs.push({weight: w.reconnectA, arbitrary: fc.nat({max: maxUsers - 1}).map<Action>(i => ({
+            type: "reconnectCaseA", userIndex: i,
+        }))});
+
     if (w.reconnectB > 0)
         arbs.push({weight: w.reconnectB, arbitrary: fc.nat({max: maxUsers - 1}).map<Action>(i => ({
             type: "reconnectCaseB", userIndex: i,
         }))});
+
+    if (w.setUserRole > 0)
+        arbs.push({weight: w.setUserRole, arbitrary: fc.record({
+            type: fc.constant("setUserRole" as const),
+            userIndex: fc.nat({max: maxUsers - 1}),
+            role: fc.constantFrom(
+                UserRoleEnumMap.Owner,
+                UserRoleEnumMap.Editor,
+                UserRoleEnumMap.Visitor,
+            ),
+        })});
 
     return fc.oneof(...arbs);
 }

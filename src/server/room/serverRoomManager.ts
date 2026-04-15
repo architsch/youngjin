@@ -205,7 +205,7 @@ const ServerRoomManager =
     },
     onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>
     {
-        await ServerRoomManager.changeUserRoom(socketUserContext, params.roomID, true, false);
+        await ServerRoomManager.changeUserRoom(socketUserContext, params.roomID, true, true);
     },
 }
 

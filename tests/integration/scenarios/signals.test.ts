@@ -141,13 +141,12 @@ describe("signal emission scenarios", () => {
                 { type: "moveObject", userIndex: 0, x: 25, y: 0, z: 25 },
             ],
             assertions: ({ users }) => {
-                // Both users (including sender) should have transform signals
-                // The sender gets the corrected position, observers get it too
+                // Both users (including sender) should independently have transform signals.
+                // Desync broadcasts to ALL with no exclude — so each must receive at least one.
                 const u0Signals = getPendingSignals(users[0], "setObjectTransformSignal");
                 const u1Signals = getPendingSignals(users[1], "setObjectTransformSignal");
-                // Both should have at least one (from desync broadcast)
-                // Note: u0 gets desync signal because desync broadcasts to ALL (no exclude)
-                expect(u0Signals.length + u1Signals.length).toBeGreaterThanOrEqual(1);
+                expect(u0Signals.length, "sender should receive desync correction").toBeGreaterThanOrEqual(1);
+                expect(u1Signals.length, "observer should receive desync correction").toBeGreaterThanOrEqual(1);
             },
         });
     });

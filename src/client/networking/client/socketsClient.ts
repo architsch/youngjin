@@ -156,6 +156,9 @@ const SocketsClient =
         else
             console.warn("Cannot change room because 'roomChange' process is ongoing.");
     },
+    emitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
+        emitWhenReady("requestRoomChangeSignal", params);
+    },
     emitMoveVoxelBlockSignal: (params: MoveVoxelBlockSignal) =>
     {
         emitWhenReady("moveVoxelBlockSignal", params);

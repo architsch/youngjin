@@ -314,6 +314,12 @@ voxelQuadSelectionObservable.addListener("voxelBlockWorldSpaceGizmos", async (se
 
 roomChangedObservable.addListener("voxelBlockWorldSpaceGizmos", (_roomRuntimeMemory: RoomRuntimeMemory) => {
     hideAll();
+    for (const arrow of arrows)
+        arrow.dispose();
+    arrows = [];
+    if (addButton) { addButton.dispose(); addButton = null; }
+    if (removeButton) { removeButton.dispose(); removeButton = null; }
+    initialized = false;
 });
 
 updateObservable.addListener("voxelBlockWorldSpaceGizmos", () => {

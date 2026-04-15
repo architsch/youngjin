@@ -85,6 +85,11 @@ const App =
         await loadRoom(roomChangedSignal.roomRuntimeMemory, roomChangedSignal.currentUserRole);
 
         endClientProcess("roomChange");
+
+        // Update the browser URL to reflect the loaded room's ID.
+        const roomID = roomChangedSignal.roomRuntimeMemory.room.id;
+        window.history.replaceState(null, "", `/mypage/${roomID}`);
+
         roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
     },
 }

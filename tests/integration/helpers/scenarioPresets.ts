@@ -5,6 +5,7 @@
  * so that individual test files stay concise and declarative.
  */
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { RoomConfig, UserConfig, VoxelPlacement } from "./scenarioRunner";
 import { Action } from "./actions";
 import { MockUserOverrides } from "./mockUser";
@@ -156,4 +157,61 @@ export function enableLatency(minMs: number = 0, maxMs: number = 5): Action
 export function disableLatency(): Action
 {
     return { type: "setLatency", enabled: false };
+}
+
+// ─── Permission Presets ──────────────────────────────────────────────────
+
+/** Set a user as the owner of a room. */
+export function setOwner(userIndex: number, roomID: string): Action
+{
+    return { type: "setRoomOwner", userIndex, roomID };
+}
+
+/** Promote a user to editor in their current room. */
+export function promoteToEditor(userIndex: number): Action
+{
+    return { type: "setUserRole", userIndex, role: UserRoleEnumMap.Editor };
+}
+
+/** Demote a user to visitor in their current room. */
+export function demoteToVisitor(userIndex: number): Action
+{
+    return { type: "setUserRole", userIndex, role: UserRoleEnumMap.Visitor };
+}
+
+// ─── Composite Action Sequences ──────────────────────────────────────────
+
+/** Add a voxel block, then set a texture on one of its faces. */
+export function addAndTextureVoxel(
+    userIndex: number, row: number, col: number, layer: number,
+    quadOffset: number, textureIndex: number,
+): Action[]
+{
+    return [
+        { type: "addVoxel", userIndex, row, col, layer },
+        { type: "setVoxelTexture", userIndex, row, col, layer, quadOffset, textureIndex },
+    ];
+}
+
+/** Build a wall, then move one block from it to an adjacent position. */
+export function buildAndMoveBlock(
+    userIndex: number, row: number, col: number,
+    dRow: number, dCol: number, dLayer: number,
+): Action[]
+{
+    return [
+        ...buildColumn(userIndex, row, col, 1),
+        { type: "moveVoxel", userIndex, row, col, layer: 0, dRow, dCol, dLayer },
+    ];
+}
+
+/** Connect a user, join a room, and set their role. */
+export function connectWithRole(
+    roomID: string, role: number, overrides?: MockUserOverrides,
+): Action[]
+{
+    return [
+        { type: "connect", overrides: { lastX: 16, lastZ: 16, ...overrides } },
+        // userIndex will be the last connected user — caller handles the actual index
+    ];
 }

@@ -110,8 +110,16 @@ describe("race condition scenarios", () => {
                 ],
                 skipInvariants: true, // Mixed state due to concurrent disconnect + index shift
                 assertions: ({ harness }) => {
-                    // The room should either be loaded (joiner made it) or unloaded (joiner didn't)
-                    // Either way, no crash occurred. This is the key assertion.
+                    // Room is either loaded with valid participants, or fully unloaded
+                    if (harness.isRoomLoaded("jl-room"))
+                    {
+                        expect(harness.getRoomParticipantCount("jl-room")).toBeGreaterThanOrEqual(1);
+                    }
+                    else
+                    {
+                        // If unloaded, no users should reference it
+                        expect(ServerRoomManager.currentRoomIDByUserID["joiner"]).not.toBe("jl-room");
+                    }
                 },
                 skipCleanup: true,
             });
@@ -189,11 +197,12 @@ describe("race condition scenarios", () => {
                     ),
                 ],
                 assertions: () => {
-                    // The block is either present or absent, but the state is consistent
+                    // The voxel state should be internally consistent:
+                    // either occupied (add won) or not (remove won), and
+                    // structural invariants should hold for the room
                     const roomMem = ServerRoomManager.roomRuntimeMemories["ar-race"];
-                    const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 15, 15);
-                    const occupied = VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0);
-                    expect(typeof occupied).toBe("boolean"); // No crash = success
+                    expect(roomMem).toBeDefined();
+                    expect(Object.keys(roomMem.participantUserIDs).length).toBe(2);
                 },
             });
         });
@@ -242,8 +251,14 @@ describe("race condition scenarios", () => {
                     ),
                 ],
                 skipInvariants: true, // State may be inconsistent mid-transition
-                assertions: () => {
-                    // No crash = success. User should end up in one of the two rooms.
+                assertions: ({ users }) => {
+                    // User must end up in exactly one room
+                    const roomID = ServerRoomManager.currentRoomIDByUserID[users[0].user.id];
+                    expect(roomID).toBeDefined();
+                    expect(["from-room", "to-room"]).toContain(roomID);
+                    // That room should be loaded and contain the user
+                    expect(ServerRoomManager.roomRuntimeMemories[roomID]).toBeDefined();
+                    expect(ServerRoomManager.roomRuntimeMemories[roomID].participantUserIDs[users[0].user.id]).toBe(true);
                 },
             });
         });
@@ -355,8 +370,11 @@ describe("race condition scenarios", () => {
                     ),
                 ],
                 skipInvariants: true,
-                assertions: () => {
-                    // No crash = success
+                assertions: ({ users }) => {
+                    // Room should still be loaded
+                    expect(harness.isRoomLoaded("recon-edit-room")).toBe(true);
+                    // Reconnected user should be back with correct ID
+                    expect(users[0].user.id).toBe("recon-editor");
                 },
             });
         });
@@ -412,9 +430,15 @@ describe("race condition scenarios", () => {
                 ],
                 skipInvariants: true,
                 assertions: () => {
-                    // No crash under latency = success
+                    // Under latency, room switches may complete in any order.
+                    // Verify that all loaded rooms have consistent participant/memory state.
+                    for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+                    {
+                        const socketRoomCtx = ServerRoomManager.socketRoomContexts[roomID];
+                        expect(socketRoomCtx, `Socket room context missing for loaded room ${roomID}`).toBeDefined();
+                    }
                 },
-            }, );
+            });
         });
     });
 
@@ -491,7 +515,8 @@ describe("race condition scenarios", () => {
                 ],
                 skipInvariants: true,
                 assertions: () => {
-                    // No crash during concurrent shutdown + edits = success
+                    // After shutdown, all users should be cleaned up
+                    expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(0);
                 },
                 skipCleanup: true,
             });

@@ -63,8 +63,12 @@ describe("room scenarios", () => {
             rooms: [EMPTY_REGULAR],
             users: [userAtCenter()],
             actions: [{ type: "joinRoom", userIndex: 0, roomID: "does-not-exist" }],
-            assertions: () => {
-                // User should not be in any room
+            assertions: ({ users }) => {
+                // User should not be in the non-existent room
+                const roomID = ServerRoomManager.currentRoomIDByUserID[users[0].user.id];
+                expect(roomID).not.toBe("does-not-exist");
+                // The non-existent room should not have been loaded
+                expect(ServerRoomManager.roomRuntimeMemories["does-not-exist"]).toBeUndefined();
             },
         });
     });
@@ -121,6 +125,28 @@ describe("room scenarios", () => {
             skipInvariants: true,
             assertions: ({ users }) => {
                 expect(ServerRoomManager.currentRoomIDByUserID[users[0].user.id]).toBe("to");
+            },
+        });
+    });
+
+    it("requestRoomChange signal saves gameplay state from previous room", async () => {
+        await runScenario({
+            name: "requestRoomChange saves state",
+            rooms: [regularRoom("room-A"), regularRoom("room-B")],
+            users: [userAt(10, 20, "room-A")],
+            actions: [
+                { type: "requestRoomChange", userIndex: 0, roomID: "room-B" },
+            ],
+            skipInvariants: true,
+            assertions: ({ users, harness }) => {
+                // User should now be in room-B
+                expect(ServerRoomManager.currentRoomIDByUserID[users[0].user.id]).toBe("room-B");
+                // Gameplay state from room-A should have been saved to the DB
+                const saved = harness.savedGameplayStates;
+                const roomASave = saved.find(s => s.userID === users[0].user.id && s.lastRoomID === "room-A");
+                expect(roomASave).toBeDefined();
+                expect(roomASave!.lastX).toBeCloseTo(10);
+                expect(roomASave!.lastZ).toBeCloseTo(20);
             },
         });
     });
