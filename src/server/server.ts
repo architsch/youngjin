@@ -16,6 +16,7 @@ import LogUtil from "../shared/system/util/logUtil";
 import { HOUR_IN_MS, setIsServer } from "../shared/system/sharedConstants";
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
+import DevUserSeedUtil from "./user/util/devUserSeedUtil";
 
 async function Server(): Promise<void>
 {
@@ -80,6 +81,10 @@ ${LatencySimUtil.getConfigSummary()}
             return;
         }
     }
+
+    // Seed dev user accounts (dev mode only)
+    if (dev)
+        await DevUserSeedUtil.seed();
 
     // express app
     const app = express();

@@ -25,7 +25,7 @@ async function send(method: "get" | "post" | "put" | "delete",
     url: string, requestConfig?: AxiosRequestConfig): Promise<RestAPIResponse>
 {
     try {
-        const axiosResponse = await axios[method](url, requestConfig);
+        const axiosResponse = await axios.request({ method, url, ...requestConfig });
         return { status: axiosResponse.status, data: axiosResponse.data };
     } catch (err) {
         if (axios.isAxiosError(err))

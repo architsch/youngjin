@@ -6,6 +6,7 @@ import CookieUtil from "../../networking/util/cookieUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import GuestCreationLimitUtil from "./guestCreationLimitUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
+import DevUserSeedUtil from "./devUserSeedUtil";
 
 let cyclicCounter = 0;
 
@@ -63,6 +64,25 @@ async function identifyUserFromReq(req: Request, res: Response,
 
 async function getUserFromReq(req: Request, res: Response, updateLoginStats: boolean): Promise<User | undefined>
 {
+    // Dev mode: allow switching to a seeded dev user via ?devuser=N query param
+    if (process.env.MODE == "dev" && req.query.devuser)
+    {
+        const index = parseInt(req.query.devuser as string);
+        if (!isNaN(index))
+        {
+            const devUserId = DevUserSeedUtil.getUserIdByIndex(index);
+            if (devUserId)
+            {
+                const dbUser = await DBUserUtil.findUserById(devUserId);
+                if (dbUser)
+                {
+                    UserTokenUtil.addTokenForUserId(devUserId, req, res);
+                    return DBUserUtil.fromDBType(dbUser);
+                }
+            }
+        }
+    }
+
     const token = req.cookies[CookieUtil.getAuthTokenName()];
 
     if (token)

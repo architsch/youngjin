@@ -13,6 +13,7 @@ import { PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/shar
 import UserGameplayState from "../user/types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
+import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -206,6 +207,25 @@ const ServerRoomManager =
     onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>
     {
         await ServerRoomManager.changeUserRoom(socketUserContext, params.roomID, true, true);
+    },
+    changeRoomTexturePack: async (room: Room, newTexturePackPath: string): Promise<boolean> =>
+    {
+        const success = await DBRoomUtil.changeRoomTexturePackPath(room, newTexturePackPath);
+        if (!success)
+            return false;
+
+        const roomRuntimeMemory = roomRuntimeMemories[room.id];
+        if (roomRuntimeMemory)
+            roomRuntimeMemory.room.texturePackPath = newTexturePackPath;
+
+        const socketRoomContext = socketRoomContexts[room.id];
+        if (socketRoomContext)
+        {
+            const signal = new RoomTexturePackChangedSignal(room.id, newTexturePackPath);
+            socketRoomContext.multicastSignal("roomTexturePackChangedSignal", signal);
+        }
+
+        return true;
     },
 }
 

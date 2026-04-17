@@ -3,6 +3,7 @@ import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import ObjectFactory from "./factories/objectFactory";
 import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
+import Room from "../../shared/room/types/room";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
@@ -13,11 +14,15 @@ import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntry
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/voxelGameObject";
-import { objectSelectionObservable } from "../system/clientObservables";
+import { objectSelectionObservable, texturePackPathObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
 import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
+import MeshFactory from "../graphics/factories/meshFactory";
+import MaterialFactory from "../graphics/factories/materialFactory";
+import TextureFactory from "../graphics/factories/textureFactory";
+import TexturePackMaterialParams from "../graphics/types/material/texturePackMaterialParams";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -53,21 +58,7 @@ const ClientObjectManager =
     },
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
-        // Load voxels from the decoded voxelGrid
-        for (const voxel of roomRuntimeMemory.room.voxelGrid.voxels)
-        {
-            const gameObject = ObjectFactory.createClientSideObject(
-                roomRuntimeMemory.room.id,
-                voxelTypeIndex,
-                new ObjectTransform(
-                    {x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5},
-                    {x: 0, y: 0, z: 1}
-                )
-            );
-            const voxelGameObject = gameObject as VoxelGameObject;
-            voxelGameObject.setVoxel(voxel);
-            await ClientObjectManager.addObject(gameObject, false, false); // Don't try to add the object to the room data because voxels don't reside in its object dictionary.
-        }
+        await spawnVoxelsFromGrid(roomRuntimeMemory.room);
 
         // Find the player's initial position for distance-based loading order
         let playerX = 0, playerY = 0, playerZ = 0;
@@ -223,6 +214,52 @@ const ClientObjectManager =
         return true;
     },
 
+    updateVoxelTexturePack: async (newTexturePackPath: string): Promise<void> =>
+    {
+        const room = App.getCurrentRoom();
+        if (!room)
+            return;
+
+        // Collect all existing voxel objects along with the mesh/material/texture
+        // IDs that belong to the old texture pack (captured before despawn).
+        const voxelObjects: VoxelGameObject[] = [];
+        let oldMeshId: string | undefined;
+        let oldMaterialId: string | undefined;
+        let oldTexturePath: string | undefined;
+        for (const obj of Object.values(gameObjects))
+        {
+            if (obj.params.objectTypeIndex === voxelTypeIndex)
+            {
+                const voxelObj = obj as VoxelGameObject;
+                if (oldMeshId === undefined)
+                {
+                    oldMeshId = voxelObj.instancedMeshGraphics.getMeshId();
+                    const oldParams = voxelObj.instancedMeshGraphics.materialParams as TexturePackMaterialParams;
+                    oldMaterialId = oldParams.getMaterialId();
+                    oldTexturePath = oldParams.texturePath;
+                }
+                voxelObjects.push(voxelObj);
+            }
+        }
+
+        // Despawn all existing voxel objects (client-only — no server sync needed).
+        for (const voxelObj of voxelObjects)
+            await ClientObjectManager.removeObject(voxelObj.params.objectId, false, false);
+
+        // Now that nothing references the old texture pack's GPU resources,
+        // dispose of them via the factories.
+        if (oldMeshId !== undefined)
+        {
+            MeshFactory.unload(oldMeshId);
+            MaterialFactory.unload(oldMaterialId!);
+            TextureFactory.unload(oldTexturePath!);
+        }
+
+        // Update the observable so newly spawned voxels pick up the new texture pack.
+        texturePackPathObservable.set(newTexturePackPath);
+
+        await spawnVoxelsFromGrid(room);
+    },
     // When the client receives an AddObjectSignal from the server,
     // the given object will spawn as soon as the room to which it belongs is available.
     onAddObjectSignalReceived: async (signal: AddObjectSignal) => {
@@ -273,5 +310,24 @@ const ClientObjectManager =
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
+
+// Spawns voxel GameObjects for every voxel in the given room's voxelGrid.
+// Voxel objects don't reside in Room.objectById, so addToRoomData is skipped.
+async function spawnVoxelsFromGrid(room: Room): Promise<void>
+{
+    for (const voxel of room.voxelGrid.voxels)
+    {
+        const gameObject = ObjectFactory.createClientSideObject(
+            room.id,
+            voxelTypeIndex,
+            new ObjectTransform(
+                {x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5},
+                {x: 0, y: 0, z: 1}
+            )
+        );
+        (gameObject as VoxelGameObject).setVoxel(voxel);
+        await ClientObjectManager.addObject(gameObject, false, false);
+    }
+}
 
 export default ClientObjectManager;

@@ -81,6 +81,10 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         {
             const lineSegments = await MeshFactory.loadLineSegments("Square", "#00ff00");
             selectionLineSegmentsClone = lineSegments.clone();
+            // Force the selection outline to draw after voxel meshes, so it stays
+            // visible even when the voxel InstancedMesh is later added to the scene
+            // (e.g. after a texture pack swap rebuilds the mesh).
+            selectionLineSegmentsClone.renderOrder = 9999;
             GraphicsManager.getScene().add(selectionLineSegmentsClone);
         }
 

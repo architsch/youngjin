@@ -1,6 +1,7 @@
 import RemoveObjectSignal from "../../object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../object/types/setObjectMetadataSignal";
 import SetUserRoleSignal from "../../user/types/setUserRoleSignal";
+import RoomTexturePackChangedSignal from "../../room/types/roomTexturePackChangedSignal";
 import AddObjectSignal from "../../object/types/addObjectSignal";
 import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
 import UserCommandSignal from "../../user/types/userCommandSignal";
@@ -151,6 +152,15 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 2000, // this handles the case in which the role update arrives while the room is still loading on the client side, etc.
         decode: (bufferState: BufferState) => SetUserRoleSignal.decode(bufferState),
+    }],
+    [12, { // Unidirectional (client <- server)
+        // (Overall Flow):
+        // The server updates the room's texture pack path (via the REST API) and broadcasts the change to all clients in the room.
+        // Each client receives the update and swaps the voxel mesh texture (by respawning the voxel objects) without a full room reload.
+        signalType: "roomTexturePackChangedSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => RoomTexturePackChangedSignal.decode(bufferState),
     }],
 ];
 

@@ -11,6 +11,7 @@ import DBUserRoomStateUtil from "../../../db/util/dbUserRoomStateUtil";
 import DBSearchUtil from "../../../db/util/dbSearchUtil";
 import AddressUtil from "../../util/addressUtil";
 import ServerUserManager from "../../../user/serverUserManager";
+import ServerRoomManager from "../../../room/serverRoomManager";
 
 const RoomRouter = express.Router();
 
@@ -81,7 +82,7 @@ RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegistere
         return;
     }
 
-    const success = await DBRoomUtil.changeRoomTexturePackPath(room, texturePackPath);
+    const success = await ServerRoomManager.changeRoomTexturePack(room, texturePackPath);
     if (!success)
     {
         res.status(500).send("Failed to change room texture.");

@@ -66,3 +66,7 @@ export const notificationMessageObservable = new Observable<string | null>(null)
 // This observable notifies its listeners whenever the current user's role
 // in the current room changes (e.g. from Visitor to Editor, or vice versa).
 export const userRoleObservable = new Observable<UserRole>(UserRoleEnumMap.Visitor);
+
+// This observable tracks the current room's latest texture pack path.
+// It is updated whenever a room loads or the current room's texture pack changes.
+export const texturePackPathObservable = new Observable<string>();

@@ -20,6 +20,7 @@ import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBloc
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import SetUserRoleSignal from "../../../shared/user/types/setUserRoleSignal";
+import RoomTexturePackChangedSignal from "../../../shared/room/types/roomTexturePackChangedSignal";
 import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
@@ -48,6 +49,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
     "setUserRoleSignal": (data: EncodableData) =>
         App.onSetUserRoleSignalReceived(data as SetUserRoleSignal),
+    "roomTexturePackChangedSignal": (data: EncodableData) =>
+        App.onRoomTexturePackChangedSignalReceived(data as RoomTexturePackChangedSignal),
 }
 
 const lastSignalSentTimes: {[signalType: string]: number} = {};

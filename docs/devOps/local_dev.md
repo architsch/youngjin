@@ -22,6 +22,30 @@ gcloud auth application-default login
 
 4. If you want to terminate the local instance, press `Ctrl+C` to exit the inner console and then run `npm stop` to terminate the PM2 process.
 
+## Dev User Accounts
+
+When `npm run dev` starts, the server automatically seeds 3 **Member** user accounts in the local Firestore emulator. These accounts bypass Google OAuth and let you quickly test member-only features (creating rooms, changing texture packs, registering editors, etc.).
+
+### Seeded Accounts
+
+| Index | Username    | Email                 |
+|-------|-------------|-----------------------|
+| 1     | DevMember1  | devmember1@test.com   |
+| 2     | DevMember2  | devmember2@test.com   |
+| 3     | DevMember3  | devmember3@test.com   |
+
+### How to Use
+
+Append `?devuser=N` to the `/mypage` URL to log in as a specific dev user:
+
+- `http://127.0.0.1:3000/mypage?devuser=1` — logs in as DevMember1
+- `http://127.0.0.1:3000/mypage?devuser=2` — logs in as DevMember2
+- `http://127.0.0.1:3000/mypage?devuser=3` — logs in as DevMember3
+
+This sets a JWT cookie, so subsequent visits to `http://127.0.0.1:3000/mypage` (without the query param) will remain logged in as that user. To switch to a different dev user, simply visit with a different `?devuser=N` value.
+
+**Note:** The `?devuser` parameter is only available in `dev` mode and has no effect in staging or production.
+
 ## How to Push to GitHub
 
 1. Stage the changes you want to commit.
