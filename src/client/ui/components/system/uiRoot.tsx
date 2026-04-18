@@ -15,7 +15,7 @@ import User from "../../../../shared/user/types/user";
 import AuthPromptForm from "../form/authPromptForm";
 import UserAPIClient from "../../../networking/client/userAPIClient";
 import SignOutForm from "../form/signOutForm";
-import VisitMyRoomForm from "../form/visitMyRoomForm";
+import RoomListForm from "../form/roomListForm";
 import ConfigureMyRoomForm from "../form/configureMyRoomForm";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
@@ -43,7 +43,7 @@ export default function UIRoot({ env, user }: UIRootProps)
 
     const openAuthPromptFormPopup = useCallback(() => setPopupType("authPrompt"), []);
     const openSignOutFormPopup = useCallback(() => setPopupType("signOut"), []);
-    const openVisitMyRoomPopup = useCallback(() => setPopupType("visitMyRoom"), []);
+    const openRoomsPopup = useCallback(() => setPopupType("rooms"), []);
     const openConfigureMyRoomPopup = useCallback(() => setPopupType("configureMyRoom"), []);
     const closePopup = useCallback(() => setPopupType("none"), []);
 
@@ -61,7 +61,7 @@ export default function UIRoot({ env, user }: UIRootProps)
             currentRoomID={roomID ?? ""}
             onAuthPromptButtonClick={openAuthPromptFormPopup}
             onSignOutButtonClick={openSignOutFormPopup}
-            onVisitMyRoomButtonClick={openVisitMyRoomPopup}
+            onOpenRoomsButtonClick={openRoomsPopup}
             onConfigureButtonClick={openConfigureMyRoomPopup}
         />
         <DebugStats env={env}/>
@@ -80,8 +80,8 @@ export default function UIRoot({ env, user }: UIRootProps)
         {popupType == "signOut" && <Popup>
             <SignOutForm onCancel={closePopup}/>
         </Popup>}
-        {popupType == "visitMyRoom" && <Popup>
-            <VisitMyRoomForm user={user} onCancel={closePopup}/>
+        {popupType == "rooms" && <Popup>
+            <RoomListForm user={user} currentRoomID={roomID ?? ""} onClose={closePopup}/>
         </Popup>}
         {popupType == "configureMyRoom" && <Popup>
             <ConfigureMyRoomForm onClose={closePopup}/>

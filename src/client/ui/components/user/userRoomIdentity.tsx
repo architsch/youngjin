@@ -9,13 +9,12 @@ export default function UserRoomIdentity({
     currentRoomID,
     onAuthPromptButtonClick,
     onSignOutButtonClick,
-    onVisitMyRoomButtonClick,
+    onOpenRoomsButtonClick,
     onConfigureButtonClick,
 }: Props)
 {
     const isGuest = user.userType === UserTypeEnumMap.Guest;
     const isInOwnRoom = user.ownedRoomID.length > 0 && user.ownedRoomID === currentRoomID;
-    const showMyRoomButton = !isGuest && !isInOwnRoom;
     const showConfigureButton = !isGuest && isInOwnRoom;
 
     const roleName = userRole === UserRoleEnumMap.Owner ? "Owner"
@@ -39,7 +38,7 @@ export default function UserRoomIdentity({
                 <div className="yj-text-sm text-amber-300">{roleName}</div>
                 <div className="yj-text-sm text-gray-400">)</div>
             </div>
-            {showMyRoomButton && <Button name="My Room" size="sm" onClick={onVisitMyRoomButtonClick}/>}
+            <Button name="Rooms" size="sm" onClick={onOpenRoomsButtonClick}/>
             {showConfigureButton && <Button name="Configure" size="sm" onClick={onConfigureButtonClick}/>}
         </div>
     </div>;
@@ -54,6 +53,6 @@ interface Props
     currentRoomID: string;
     onAuthPromptButtonClick: () => void;
     onSignOutButtonClick: () => void;
-    onVisitMyRoomButtonClick: () => void;
+    onOpenRoomsButtonClick: () => void;
     onConfigureButtonClick: () => void;
 }

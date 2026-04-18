@@ -1,12 +1,13 @@
 # "My Room" Flows
 
-Reference: @src/client/ui/components/form/visitMyRoomForm.tsx , @src/client/ui/components/form/configureMyRoomForm.tsx , @src/server/networking/router/api/roomRouter.ts , @src/server/user/serverUserManager.ts
+Reference: @src/client/ui/components/form/roomListForm.tsx , @src/client/ui/components/form/configureMyRoomForm.tsx , @src/server/networking/router/api/roomRouter.ts , @src/server/user/serverUserManager.ts
 
 ## Create/Visit My Room
-1. The client checks whether the user already owns a room:
+1. The user opens the Rooms popup and clicks Visit on the "My Room" pinned entry.
+2. The client checks whether the user already owns a room:
     - If not: the client calls `RoomAPIClient.createRoom()`, the server creates the room and associates it with the user, and the client receives the new room ID.
     - If yes: the client uses the existing room ID directly.
-2. The client emits a `RequestRoomChangeSignal` to move the user into their room.
+3. The client emits a `RequestRoomChangeSignal` to move the user into their room.
 
 ## Copy Room URL
 1. The client computes the room URL locally and copies it to the clipboard. No server request is made.

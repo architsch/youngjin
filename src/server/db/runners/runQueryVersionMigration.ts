@@ -7,10 +7,10 @@ import DBQuery from "../types/dbQuery";
 import { DBRow } from "../types/row/dbRow";
 import { COLLECTION_ROOMS, COLLECTION_USERS, COLLECTION_USER_ROOM_STATES } from "../../system/serverConstants";
 
-export default function runQueryVersionMigration<T extends DBRow>(
+export default async function runQueryVersionMigration<T extends DBRow>(
     dbQuery: DBQuery<T>,
     docData: admin.firestore.DocumentData
-): admin.firestore.DocumentData
+): Promise<admin.firestore.DocumentData>
 {
     let versionMigration: DBVersionMigration;
     switch (dbQuery.tableId)
@@ -39,7 +39,7 @@ export default function runQueryVersionMigration<T extends DBRow>(
         let docDataAfterMigration = docData;
         while (versionNumber < latestVersion)
         {
-            docDataAfterMigration = versionMigration[versionNumber](docDataAfterMigration);
+            docDataAfterMigration = await versionMigration[versionNumber](docDataAfterMigration);
             docDataAfterMigration.version = ++versionNumber;
         }
         docDataAfterMigration.version = versionNumber;

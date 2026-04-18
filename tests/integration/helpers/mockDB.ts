@@ -75,7 +75,7 @@ export function seedRoom(
 ): Room
 {
     const { voxelGrid } = RoomGenerator.generateEmptyRoom(0, 1, 2);
-    const room = new Room(roomID, roomType, "", "", voxelGrid);
+    const room = new Room(roomID, roomType, "", "", "", voxelGrid);
     roomStore[roomID] = {
         id: roomID,
         roomType,

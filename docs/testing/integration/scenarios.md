@@ -25,7 +25,7 @@ This document catalogs all integration test scenarios organized by category.
 | Cross-user visibility | Users in same room see each other's player objects |
 | Multi-room independence | Users in different rooms don't see each other |
 | Room switch saves state | Previous room state saved on room change |
-| requestRoomChange saves state | `onRequestRoomChangeSignalReceived` (the signal handler used by `visitMyRoomForm`) persists gameplay state from the previous room to the DB |
+| requestRoomChange saves state | `onRequestRoomChangeSignalReceived` (the signal handler used by `roomListForm`) persists gameplay state from the previous room to the DB |
 | Room unloads when empty | Room removed from memory after last user leaves |
 | Graceful shutdown | All rooms saved and unloaded, all users disconnected |
 

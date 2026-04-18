@@ -30,6 +30,21 @@ const DBRoomUtil =
             return null;
         return await getRoomFromDBRoom(result.data[0]);
     },
+    // Returns the room's DB row only (no voxel/object content). Use this when you need
+    // metadata fields like roomType / ownerUserName but don't want the cost of
+    // deserializing the binary content blob from cloud storage.
+    getRoomMetadata: async (roomID: string): Promise<DBRoom | null> =>
+    {
+        LogUtil.log("DBRoomUtil.getRoomMetadata", {roomID}, "low", "info");
+        const result = await new DBQuery<DBRoom>()
+            .select()
+            .from(COLLECTION_ROOMS)
+            .where("id", "==", roomID)
+            .run();
+        if (!result.success || result.data.length == 0)
+            return null;
+        return result.data[0];
+    },
     saveRoomContent: async (room: Room): Promise<boolean> =>
     {
         LogUtil.log("DBRoomUtil.saveRoomContent", {roomID: room.id}, "low", "info");
@@ -49,16 +64,16 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.deleteRoomContent", {roomID: room.id}, "low", "info");
         return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(room.id));
     },
-    createRoom: async (roomType: RoomType, ownerUserID: string,
+    createRoom: async (roomType: RoomType, ownerUserID: string, ownerUserName: string,
         floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number,
         texturePackPath: string): Promise<DBQueryResponse<{id: string}>> =>
     {
-        LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, floorTextureIndex, wallTextureIndex,
+        LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName, floorTextureIndex, wallTextureIndex,
             ceilingTextureIndex, texturePackPath}, "low", "info");
         const {voxelGrid} =
             RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
-        const room = new Room(undefined, roomType, ownerUserID, texturePackPath,
+        const room = new Room(undefined, roomType, ownerUserID, ownerUserName, texturePackPath,
             voxelGrid);
         const dbRoom = getDBRoomFromRoom(room);
 
@@ -111,6 +126,7 @@ function getDBRoomFromRoom(room: Room): DBRoom
         version: DBRoomVersionMigration.length,
         roomType: room.roomType,
         ownerUserID: room.ownerUserID,
+        ownerUserName: room.ownerUserName,
         texturePackPath: room.texturePackPath,
     };
     return dbRoom;
@@ -137,6 +153,7 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
         dbRoom.id,
         dbRoom.roomType,
         dbRoom.ownerUserID,
+        dbRoom.ownerUserName,
         dbRoom.texturePackPath,
         voxelGrid,
         objectById

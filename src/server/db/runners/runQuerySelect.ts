@@ -36,7 +36,7 @@ export default async function runQuerySelect<T extends DBRow>(
             docData.id = doc.id;
 
             const originalVersion = docData.version;
-            const newDocData = runQueryVersionMigration(dbQuery, docData);
+            const newDocData = await runQueryVersionMigration(dbQuery, docData);
             if (newDocData.version !== originalVersion)
             {
                 // Write back the updated data to the DB (Note: This is a fire-and-forget operation. Don't await, don't block the read)
@@ -56,23 +56,28 @@ export default async function runQuerySelect<T extends DBRow>(
         const docs = querySnapshot.docs;
         const versionMigratedDocEntries: { ref: admin.firestore.DocumentReference, originalVersion: number, newDocData: admin.firestore.DocumentData }[] = [];
 
-        docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
-            if (doc.exists)
+        const migrated = await Promise.all(docs.map(async (doc: admin.firestore.QueryDocumentSnapshot) => {
+            if (!doc.exists)
+                return null;
+            let docData = doc.data();
+            if (!docData)
             {
-                let docData = doc.data();
-                if (!docData)
-                {
-                    LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
-                    return;
-                }
-                docData.id = doc.id;
-                const originalVersion = docData.version;
-                const newDocData = runQueryVersionMigration(dbQuery, docData);
-                if (newDocData.version !== originalVersion)
-                    versionMigratedDocEntries.push({ ref: doc.ref, originalVersion, newDocData });
-                data.push(newDocData as T);
+                LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
+                return null;
             }
-        });
+            docData.id = doc.id;
+            const originalVersion = docData.version;
+            const newDocData = await runQueryVersionMigration(dbQuery, docData);
+            return { ref: doc.ref, originalVersion, newDocData };
+        }));
+
+        for (const entry of migrated)
+        {
+            if (!entry) continue;
+            if (entry.newDocData.version !== entry.originalVersion)
+                versionMigratedDocEntries.push(entry);
+            data.push(entry.newDocData as T);
+        }
 
         if (versionMigratedDocEntries.length > 0)
         {

@@ -13,12 +13,14 @@ export default class Room extends EncodableData
     id: string;
     roomType: RoomType;
     ownerUserID: string;
+    ownerUserName: string;
     texturePackPath: string;
     voxelGrid: VoxelGrid;
     objectById: {[objectId: string]: AddObjectSignal};
     dirty: boolean;
 
     constructor(id: string | undefined, roomType: RoomType, ownerUserID: string,
+        ownerUserName: string,
         texturePackPath: string,
         voxelGrid: VoxelGrid,
         objectById: {[objectId: string]: AddObjectSignal} = {})
@@ -27,6 +29,7 @@ export default class Room extends EncodableData
         this.id = (id != undefined) ? id : "";
         this.roomType = roomType;
         this.ownerUserID = ownerUserID;
+        this.ownerUserName = ownerUserName;
         this.texturePackPath = texturePackPath;
         this.voxelGrid = voxelGrid;
         this.objectById = objectById;
@@ -43,6 +46,7 @@ export default class Room extends EncodableData
         new EncodableByteString(this.id.length > 0 ? this.id : UNDEFINED_DOCUMENT_ID_CHAR).encode(bufferState);
         new EncodableRawByteNumber(this.roomType).encode(bufferState);
         new EncodableByteString(this.ownerUserID).encode(bufferState);
+        new EncodableByteString(this.ownerUserName).encode(bufferState);
         new EncodableByteString(this.texturePackPath).encode(bufferState);
         this.voxelGrid.encode(bufferState);
 
@@ -58,6 +62,7 @@ export default class Room extends EncodableData
             id = undefined;
         const roomType = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const ownerUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        const ownerUserName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
 
@@ -69,6 +74,6 @@ export default class Room extends EncodableData
             objectById[obj.objectId] = obj;
         }
 
-        return new Room(id, roomType, ownerUserID, texturePackPath, voxelGrid, objectById);
+        return new Room(id, roomType, ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectById);
     }
 }

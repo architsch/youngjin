@@ -12,10 +12,10 @@ export default function Tutorial({user}: Props)
     const [state, setState] = useState<TutorialState>({loading: true, step: user.tutorialStep});
 
     useEffect(() => {
-        ongoingClientProcessesObservable.addListener("ui.tutorial", _ => setState({
-            ...state,
+        ongoingClientProcessesObservable.addListener("ui.tutorial", _ => setState(prev => ({
+            ...prev,
             loading: ongoingClientProcessExists()
-        }));
+        })));
         return () => {
             ongoingClientProcessesObservable.removeListener("ui.tutorial");
         };

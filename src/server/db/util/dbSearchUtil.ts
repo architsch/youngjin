@@ -11,13 +11,15 @@ import { COLLECTION_ROOMS, COLLECTION_USERS, COLLECTION_USER_ROOM_STATES } from 
 const DBSearchUtil =
 {
     rooms: {
-        all: async (page: number): Promise<DBQueryResponse<DBRoom>> => {
-            LogUtil.log("DBSearchUtil.rooms.all", {page}, "low", "info");
+        // Single page (offset-based) used by the room-list endpoint. Caller chooses pageSize
+        // so the same helper can serve both the default list (10/page) and the search scan.
+        page: async (offset: number, limit: number): Promise<DBQueryResponse<DBRoom>> => {
+            LogUtil.log("DBSearchUtil.rooms.page", {offset, limit}, "low", "info");
             return await new DBQuery<DBRoom>()
                 .select()
                 .from(COLLECTION_ROOMS)
-                .limit(10)
-                .offset(page * 10)
+                .limit(limit)
+                .offset(offset)
                 .run();
         },
         withRoomType: async (roomType: RoomType): Promise<DBQueryResponse<DBRoom>> => {
@@ -30,16 +32,6 @@ const DBSearchUtil =
         },
     },
     users: {
-        all: async (page: number): Promise<DBQueryResponse<DBUser>> => {
-            LogUtil.log("DBSearchUtil.users.all", {page}, "low", "info");
-            return await new DBQuery<DBUser>()
-                .select()
-                .from(COLLECTION_USERS)
-                .orderBy("userName")
-                .limit(10)
-                .offset(page * 10)
-                .run();
-        },
         withUserName: async (userName: string): Promise<DBQueryResponse<DBUser>> => {
             LogUtil.log("DBSearchUtil.users.withUserName", {userName}, "low", "info");
             return await new DBQuery<DBUser>()

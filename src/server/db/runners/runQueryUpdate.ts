@@ -29,7 +29,7 @@ export default async function runQueryUpdate<T extends DBRow>(
                 return { success: false, data: [] };
             }
             const originalVersion = docData.version;
-            const newDocData = runQueryVersionMigration(dbQuery, docData);
+            const newDocData = await runQueryVersionMigration(dbQuery, docData);
             if (newDocData.version != originalVersion)
             {
                 Object.assign(newDocData, dbQuery.columnValues);
@@ -62,20 +62,24 @@ export default async function runQueryUpdate<T extends DBRow>(
         {
             const db = await FirebaseUtil.getDB();
             const batch = db.batch();
-            querySnapshot.docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
+            const migrated = await Promise.all(querySnapshot.docs.map(async (doc: admin.firestore.QueryDocumentSnapshot) => {
                 const docData = doc.data();
                 const originalVersion = docData.version;
-                const newDocData = runQueryVersionMigration(dbQuery, docData);
+                const newDocData = await runQueryVersionMigration(dbQuery, docData);
+                return { ref: doc.ref, originalVersion, newDocData };
+            }));
+            for (const { ref, originalVersion, newDocData } of migrated)
+            {
                 if (newDocData.version != originalVersion)
                 {
                     Object.assign(newDocData, dbQuery.columnValues);
-                    batch.set(doc.ref, newDocData, {merge: false});
+                    batch.set(ref, newDocData, {merge: false});
                 }
                 else
                 {
-                    batch.update(doc.ref, dbQuery.columnValues);
+                    batch.update(ref, dbQuery.columnValues);
                 }
-            });
+            }
             await batch.commit();
         }
         else if (querySnapshot.docs.length == 1)
@@ -83,7 +87,7 @@ export default async function runQueryUpdate<T extends DBRow>(
             const doc = querySnapshot.docs[0];
             const docData = doc.data();
             const originalVersion = docData.version;
-            const newDocData = runQueryVersionMigration(dbQuery, docData);
+            const newDocData = await runQueryVersionMigration(dbQuery, docData);
             if (newDocData.version != originalVersion)
             {
                 Object.assign(newDocData, dbQuery.columnValues);
