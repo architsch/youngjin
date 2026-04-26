@@ -2,14 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import Text from "../basic/text";
 import Button from "../basic/button";
 import TextInput from "../basic/textInput";
-import Image from "../basic/image";
+import Image from "../image/image";
 import CloseButton from "../basic/closeButton";
 import Spacer from "../basic/spacer";
+import ImageChooser from "../image/imageChooser";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import App from "../../../app";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 import { UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import RoomEditor from "../../../../shared/user/types/roomEditor";
+import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
 
 export default function ConfigureMyRoomForm({ onClose }: Props)
 {
@@ -34,13 +36,16 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
         notificationMessageObservable.set("Copied the URL!");
     }, [roomURL]);
 
-    const setTexture = useCallback(async () => {
-        const response = await RoomAPIClient.changeRoomTexture(texturePackPath);
+    const setTexture = useCallback(async (path: string) => {
+        const response = await RoomAPIClient.changeRoomTexture(path);
         if (response.status >= 200 && response.status < 300)
+        {
+            setTexturePackPath(path);
             notificationMessageObservable.set("Texture pack updated!");
+        }
         else
             notificationMessageObservable.set("Failed to update texture pack.");
-    }, [texturePackPath]);
+    }, []);
 
     const addEditor = useCallback(async () => {
         if (!editorUserName.trim()) return;
@@ -82,11 +87,15 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
 
         {/* Section 2: Texture Pack */}
         <Text content="Texture Pack:" size="sm"/>
-        <div className="flex flex-row items-center gap-1">
-            <TextInput size="xs" placeholder="URL" textInput={texturePackPath} setTextInput={setTexturePackPath}/>
-            <Button name="Set" size="xs" onClick={setTexture}/>
-        </div>
-        {texturePackPath.length > 0 && <Image src={texturePackPath} size="md" alt="Texture preview"/>}
+        <ImageChooser
+            title="Choose Texture Pack"
+            mapName="TexturePackImageMap"
+            initialChoicePath={texturePackPath}
+            onChoose={(path) => setTexture(path)}
+        />
+        {texturePackPath.length > 0 && <Image
+            src={ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, texturePackPath)}
+            size="md" alt="Texture preview"/>}
 
         <Spacer size="sm"/>
 

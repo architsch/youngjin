@@ -169,7 +169,7 @@ export default function RoomListForm({ user, currentRoomID, onClose }: Props)
 
 function RoomEntryRow({ entry, user, currentRoomID, onVisit }: RowProps)
 {
-    const isMyRoom = entry.ownerUserID === user.id ||
+    const isMyRoom = entry.ownerUserID === user.id || entry.id === MY_ROOM_PLACEHOLDER_ID ||
         (user.ownedRoomID.length > 0 && user.ownedRoomID === entry.id);
     const ownerLabel = formatOwnerLabel(entry, isMyRoom);
     const idLabel = entry.id === MY_ROOM_PLACEHOLDER_ID ? "ID: ?" : `ID: ${entry.id}`;

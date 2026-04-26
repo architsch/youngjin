@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
-import AtlasCellSprite from "../basic/atlasCellSprite";
+import AtlasCellSprite from "../image/atlasCellSprite";
 import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import SocketsClient from "../../../networking/client/socketsClient";
 import SetVoxelQuadTextureSignal from "../../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
@@ -52,7 +52,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                 }
             };
             return <AtlasCellSprite
-                key={`texture.select.${textureIndex}`}
+                key={`voxelQuadTexture.select.${textureIndex}`}
                 atlasImageURL={materialParams.texturePath}
                 atlasWidth={materialParams.textureWidth}
                 atlasHeight={materialParams.textureHeight}

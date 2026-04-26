@@ -8,7 +8,7 @@ import Room from "../shared/room/types/room";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
-import { roomChangedObservable, texturePackPathObservable, updateObservable, userRoleObservable } from "./system/clientObservables";
+import { roomChangedObservable, texturePackURLObservable, updateObservable, userRoleObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
@@ -16,6 +16,7 @@ import SetUserRoleSignal from "../shared/user/types/setUserRoleSignal";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
+import ImageMapUtil from "../shared/image/util/imageMapUtil";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -109,7 +110,11 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
 
     // Read the current user's role from the RoomChangedSignal
     userRoleObservable.set(currentUserRole);
-    texturePackPathObservable.set(currentRoom.texturePackPath);
+
+    const texturePackURL = currentRoom.texturePackPath.startsWith("http")
+        ? currentRoom.texturePackPath
+        : ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, currentRoom.texturePackPath);
+    texturePackURLObservable.set(texturePackURL);
 
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);

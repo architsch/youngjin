@@ -1,0 +1,10 @@
+{
+    "images": [
+        {"path": "default", "author": "", "title": "default"},
+        {"path": "country", "author": "", "title": "country"},
+        {"path": "garden", "author": "", "title": "garden"},
+        {"path": "aqua", "author": "", "title": "aqua"},
+        {"path": "inferno", "author": "", "title": "inferno"},
+        {"path": "prison", "author": "", "title": "prison"}
+    ]
+}

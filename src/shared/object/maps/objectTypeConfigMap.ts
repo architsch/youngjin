@@ -1,6 +1,6 @@
 import Room from "../../room/types/room";
 import { RoomTypeEnumMap } from "../../room/types/roomType";
-import { IS_SERVER, MAX_CANVASES_PER_ROOM, MAX_IMAGE_URL_LENGTH, PLAYER_HEIGHT } from "../../system/sharedConstants";
+import { IS_SERVER, MAX_CANVASES_PER_ROOM, PLAYER_HEIGHT } from "../../system/sharedConstants";
 import User from "../../user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../user/types/userRole";
 import AddObjectSignal from "../types/addObjectSignal";
@@ -8,6 +8,7 @@ import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import ObjectTypeConfig from "../types/objectTypeConfig";
 import SetObjectMetadataSignal from "../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../types/setObjectTransformSignal";
+import ImageMapUtil from "../../image/util/imageMapUtil";
 
 // This map specifies all types of GameObject and their global configs.
 // Each config specifies all types of GameObjectComponents which must be included in the
@@ -160,12 +161,10 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
             if (!userCanEditRoom)
                 return false;
 
-            // User can only set the canvas's image URL and nothing else
-            if (signal.metadataKey != ObjectMetadataKeyEnumMap.ImageURL)
+            // User can only set the canvas's image path and nothing else
+            if (signal.metadataKey != ObjectMetadataKeyEnumMap.ImagePath)
                 return false;
-
-            // Image URL must not exceed its maximum length
-            if (signal.metadataValue.length > MAX_IMAGE_URL_LENGTH)
+            if (!ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(signal.metadataValue))
                 return false;
 
             return true;

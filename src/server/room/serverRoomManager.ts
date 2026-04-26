@@ -14,6 +14,7 @@ import UserGameplayState from "../user/types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
+import ImageMapUtil from "../../shared/image/util/imageMapUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -210,6 +211,9 @@ const ServerRoomManager =
     },
     changeRoomTexturePack: async (room: Room, newTexturePackPath: string): Promise<boolean> =>
     {
+        if (!ImageMapUtil.getImageMap("TexturePackImageMap").hasImagePath(newTexturePackPath))
+            return false;
+
         const success = await DBRoomUtil.changeRoomTexturePackPath(room, newTexturePackPath);
         if (!success)
             return false;

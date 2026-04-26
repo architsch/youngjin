@@ -1,7 +1,6 @@
-import { useState } from "react";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import Button from "../basic/button";
-import TextInput from "../basic/textInput";
+import ImageChooser from "../image/imageChooser";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ClientObjectManager from "../../../object/clientObjectManager";
@@ -14,10 +13,8 @@ import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/object
 export default function CanvasSelectionOptions(props: {selection: ObjectSelection})
 {
     const go = props.selection.gameObject;
-    const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImageURL];
-    const metadataValue = metadata ? metadata.str : "";
-
-    const [imageURL, setImageURL] = useState(metadataValue);
+    const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
+    const initialChoicePath = metadata ? metadata.str : "";
 
     return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
         <div className="flex flex-row gap-2">
@@ -25,12 +22,12 @@ export default function CanvasSelectionOptions(props: {selection: ObjectSelectio
                 disabled={!canRemoveCanvas(props.selection)}
                 onClick={() => tryRemoveCanvas(props.selection)}/>
         </div>
-        <div className="flex flex-row gap-2 items-center">
-            <TextInput size="sm" placeholder="Image URL" textInput={imageURL} setTextInput={setImageURL}/>
-            <Button name="Set URL" size="sm" color="green"
-                disabled={!canSetCanvasImageURL(props.selection)}
-                onClick={() => trySetCanvasImageURL(props.selection, imageURL)}/>
-        </div>
+        <ImageChooser
+            title="Choose Image"
+            mapName="CanvasImageMap"
+            initialChoicePath={initialChoicePath}
+            onChoose={path => trySetCanvasImageMetadata(props.selection, path)}
+        />
     </div>;
 }
 
@@ -60,7 +57,7 @@ async function tryRemoveCanvas(selection: ObjectSelection)
     }
 }
 
-function canSetCanvasImageURL(selection: ObjectSelection): boolean
+function canSetCanvasImageMetadata(selection: ObjectSelection, metadataValue: string): boolean
 {
     const room = App.getCurrentRoom();
     if (!room)
@@ -69,21 +66,21 @@ function canSetCanvasImageURL(selection: ObjectSelection): boolean
     const userRole = App.getCurrentUserRole();
 
     const objectId = selection.gameObject.params.objectId;
-    const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, "");
+    const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue);
     return ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal);
 }
 
-function trySetCanvasImageURL(selection: ObjectSelection, imageURL: string)
+function trySetCanvasImageMetadata(selection: ObjectSelection, metadataValue: string)
 {
-    if (!canSetCanvasImageURL(selection))
+    if (!canSetCanvasImageMetadata(selection, metadataValue))
         return;
 
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
-    if (!ClientObjectManager.setObjectMetadata(objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL))
+    if (!ClientObjectManager.setObjectMetadata(objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue))
         return;
 
     objectSelectionObservable.notify();
     SocketsClient.emitSetObjectMetadataSignal(
-        new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImageURL, imageURL));
+        new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue));
 }

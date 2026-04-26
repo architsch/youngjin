@@ -375,7 +375,8 @@ describe("room API: change room texture pack (Scenario 9)", () => {
         });
         mockChangeRoomTexturePackPath.mockResolvedValue(true);
 
-        const newTexturePath = "http://localhost:3000/app/assets/texture_packs/forest.jpg";
+        // Must be one of the URLs baked into RoomTextureChoiceMap.
+        const newTexturePath = "https://thingspool.net/app/assets/texture_packs/default.jpg";
         const res = await callRoute("post", "/change_room_texture", owner, {
             texturePackPath: newTexturePath,
         });

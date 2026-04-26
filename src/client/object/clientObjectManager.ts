@@ -14,7 +14,7 @@ import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntry
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/voxelGameObject";
-import { objectSelectionObservable, texturePackPathObservable } from "../system/clientObservables";
+import { objectSelectionObservable, texturePackURLObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
@@ -23,6 +23,7 @@ import MeshFactory from "../graphics/factories/meshFactory";
 import MaterialFactory from "../graphics/factories/materialFactory";
 import TextureFactory from "../graphics/factories/textureFactory";
 import TexturePackMaterialParams from "../graphics/types/material/texturePackMaterialParams";
+import ImageMapUtil from "../../shared/image/util/imageMapUtil";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -256,7 +257,10 @@ const ClientObjectManager =
         }
 
         // Update the observable so newly spawned voxels pick up the new texture pack.
-        texturePackPathObservable.set(newTexturePackPath);
+        const texturePackURL = newTexturePackPath.startsWith("http")
+            ? newTexturePackPath
+            : ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, newTexturePackPath);
+        texturePackURLObservable.set(texturePackURL);
 
         await spawnVoxelsFromGrid(room);
     },

@@ -10,7 +10,7 @@ import TexturePackMaterialParams from "../../graphics/types/material/texturePack
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import { texturePackPathObservable } from "../../system/clientObservables";
+import { texturePackURLObservable } from "../../system/clientObservables";
 
 let isDevMode: boolean | undefined;
 
@@ -32,9 +32,9 @@ export default class VoxelGameObject extends GameObject
         if (isDevMode === undefined)
             isDevMode = App.getEnv().mode == "dev";
 
-        const currentTexturePackPath = texturePackPathObservable.peek();
-        if (VoxelGameObject.latestMaterialParams?.texturePath !== currentTexturePackPath)
-            VoxelGameObject.latestMaterialParams = new TexturePackMaterialParams(currentTexturePackPath, 1024, 1024, 128, 128, "staticImageFromPath");
+        const currentTexturePackURL = texturePackURLObservable.peek();
+        if (VoxelGameObject.latestMaterialParams?.texturePath !== currentTexturePackURL)
+            VoxelGameObject.latestMaterialParams = new TexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
 
         this.instancedMeshGraphics.setInstancingProperties(VoxelGameObject.latestMaterialParams,
             "Square", NUM_VOXEL_QUADS_PER_ROOM);

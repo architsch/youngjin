@@ -15,6 +15,8 @@ type AuthFixtures = {
  * before the server detects the TCP drop, leaving stale players in the room.
  */
 async function disconnectSocket(page: Page): Promise<void> {
+    if (page.isClosed())
+        return;
     await page.evaluate(() => {
         return new Promise<void>((resolve) => {
             const io = (window as any).__socket_io_instance;
@@ -33,10 +35,19 @@ async function disconnectSocket(page: Page): Promise<void> {
 }
 
 export const test = base.extend<AuthFixtures>({
+    // Override the base `page` fixture so every test that imports `test` from
+    // this file gets socket cleanup on teardown — regardless of whether the
+    // test uses `page` directly or via `authenticatedPage`. Without this, a
+    // test that closes without an explicit disconnect leaves a player ghost
+    // in the room until the server's stale-socket sweep catches it (~15–20s
+    // after pingTimeout), which is visible on staging between test runs.
+    page: async ({ page }, use) => {
+        await use(page);
+        await disconnectSocket(page);
+    },
     authenticatedPage: async ({ page }, use) => {
         await page.goto("/mypage", { waitUntil: "networkidle" });
         await use(page);
-        await disconnectSocket(page);
     },
 });
 

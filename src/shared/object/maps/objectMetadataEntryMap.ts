@@ -1,4 +1,4 @@
-import { OBJECT_MESSAGE_MAX_LENGTH, MAX_IMAGE_URL_LENGTH } from "../../system/sharedConstants";
+import { OBJECT_MESSAGE_MAX_LENGTH } from "../../system/sharedConstants";
 import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 
@@ -7,8 +7,8 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
         preprocessingMethod: (rawValue: string) => rawValue.trim().substring(0, OBJECT_MESSAGE_MAX_LENGTH),
         unselectObjectOnSet: false,
     },
-    [ObjectMetadataKeyEnumMap.ImageURL]: {
-        preprocessingMethod: (rawValue: string) => rawValue.substring(0, MAX_IMAGE_URL_LENGTH),
+    [ObjectMetadataKeyEnumMap.ImagePath]: {
+        preprocessingMethod: (rawValue: string) => rawValue,
         unselectObjectOnSet: true,
     },
 };

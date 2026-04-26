@@ -27,7 +27,7 @@ export default function VoxelQuadObjectOptions(props: {selection: VoxelQuadSelec
                 disabled={getPlaceableWallAttachedObjectTransform(props.selection, canvasTypeIndex) == null}
                 onClick={() => {
                     tryAddObjectFromQuad(props.selection, canvasTypeIndex,
-                        {[ObjectMetadataKeyEnumMap.ImageURL]: new EncodableByteString("")});
+                        {[ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString("")});
                 }}/>
         </div>
     </div>;

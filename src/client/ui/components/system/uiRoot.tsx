@@ -10,7 +10,7 @@ import Loading from "./loading";
 import Notification from "./notification";
 import Reconnecting from "./reconnecting";
 import Popup from "../basic/popup";
-import { PopupType } from "../../types/PopupType";
+import { PopupType } from "../../types/popupType";
 import User from "../../../../shared/user/types/user";
 import AuthPromptForm from "../form/authPromptForm";
 import UserAPIClient from "../../../networking/client/userAPIClient";

@@ -7,6 +7,7 @@ import LibraryPageBuilder from "./builder/page/libraryPageBuilder";
 import TextFileBuilder from "./builder/textFileBuilder";
 import styleDictionary from "./style/styleDictionary";
 import ErrorPageBuilder from "./builder/page/errorPageBuilder";
+import ImageMapBuilder from "./builder/imageMapBuilder";
 
 export default async function SSG(): Promise<void>
 {
@@ -45,7 +46,19 @@ export default async function SSG(): Promise<void>
     await atomFeedB.build();
 
     // Generate CSS
+
     await FileUtil.write("style.css", styleDictionary);
+
+    // Generate Image Maps
+
+    await new ImageMapBuilder({
+        rootDirName: "texture_packs", mapName: "TexturePackImageMap",
+        gridCellSize: 256, maxCols: 2,
+    }).build();
+    await new ImageMapBuilder({
+        rootDirName: "canvas_images", mapName: "CanvasImageMap",
+        gridCellSize: 128, maxCols: 4,
+    }).build();
 
     console.log("SSG END");
 }

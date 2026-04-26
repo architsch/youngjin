@@ -18,6 +18,8 @@ import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
 import DevUserSeedUtil from "./user/util/devUserSeedUtil";
 
+require("../shared/image/imageMapDependencies.ts");
+
 async function Server(): Promise<void>
 {
     setIsServer();

@@ -9,6 +9,8 @@ import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
+import App from "../../app";
+import ImageMapUtil from "../../../shared/image/util/imageMapUtil";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -96,10 +98,15 @@ export default class CanvasGameObject extends GameObject
     {
         if (this.instanceId === -1) // Already despawned
             return;
-        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImageURL];
+        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
         if (!metadata)
             return;
-        const imageURL = metadata.str;
+        const metadataValue = metadata.str;
+
+        const imageURL = metadataValue.startsWith("http")
+            ? metadataValue
+            : ImageMapUtil.getImageMap("CanvasImageMap").getImageURLByPath(App.getEnv().assets_url, metadataValue);
+
         try
         {
             this.instancedMeshGraphics.updateInstanceTextureUV(this.instanceId, this.instanceId % 64);
@@ -107,7 +114,7 @@ export default class CanvasGameObject extends GameObject
         }
         catch (error)
         {
-            console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, url=${imageURL}):`, error);
+            console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadataValue}):`, error);
             // Paint a placeholder color so the canvas isn't stuck showing the old image
             await this.instancedMeshGraphics.drawImageAtIndex(this.instanceId % 64, "");
         }

@@ -1,0 +1,1 @@
+export type ScrollType = "none" | "horizontal" | "vertical" | "allDirections";
