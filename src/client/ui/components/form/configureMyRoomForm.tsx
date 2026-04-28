@@ -12,6 +12,7 @@ import { notificationMessageObservable } from "../../../system/clientObservables
 import { UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import RoomEditor from "../../../../shared/user/types/roomEditor";
 import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
+import Form from "../basic/form";
 
 export default function ConfigureMyRoomForm({ onClose }: Props)
 {
@@ -73,7 +74,7 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
             notificationMessageObservable.set("Failed to remove editor.");
     }, [loadEditors]);
 
-    return <div className="flex flex-col gap-3 max-w-80 max-h-96 overflow-y-auto p-1">
+    return <Form>
         <CloseButton onClose={onClose}/>
 
         {/* Section 1: Room URL */}
@@ -88,7 +89,7 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
         {/* Section 2: Texture Pack */}
         <Text content="Texture Pack:" size="sm"/>
         <ImageChooser
-            title="Choose Texture Pack"
+            title="Change Texture Pack"
             mapName="TexturePackImageMap"
             initialChoicePath={texturePackPath}
             onChoose={(path) => setTexture(path)}
@@ -113,7 +114,7 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
                 </div>
             ))}
         </div>}
-    </div>;
+    </Form>;
 }
 
 interface Props

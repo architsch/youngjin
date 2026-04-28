@@ -19,7 +19,7 @@ export default function ImageGrid({
         }
     }
 
-    const gridStyle = `grid grid-cols-${numCols} grid-rows-${numRows} gap-2 p-2 w-full max-h-64 overflow-y-auto pointer-events-auto bg-black`;
+    const gridStyle = `grid grid-cols-${numCols} grid-rows-${numRows} gap-2 m-2 w-full max-h-64 overflow-y-auto pointer-events-auto bg-black`;
 
     return <div ref={onRefChange} className={gridStyle}>
         {gridCoordsList.map((gridCoords) => {

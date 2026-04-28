@@ -111,9 +111,7 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
     // Read the current user's role from the RoomChangedSignal
     userRoleObservable.set(currentUserRole);
 
-    const texturePackURL = currentRoom.texturePackPath.startsWith("http")
-        ? currentRoom.texturePackPath
-        : ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, currentRoom.texturePackPath);
+    const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, currentRoom.texturePackPath);
     texturePackURLObservable.set(texturePackURL);
 
     await GraphicsManager.load(update);

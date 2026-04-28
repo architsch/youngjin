@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 import Chat from "../chat/chat";
 import DebugStats from "../debug/debugStats";
@@ -10,7 +10,7 @@ import Loading from "./loading";
 import Notification from "./notification";
 import Reconnecting from "./reconnecting";
 import Popup from "../basic/popup";
-import { PopupType } from "../../types/popupType";
+import PopupState from "../../types/popupState";
 import User from "../../../../shared/user/types/user";
 import AuthPromptForm from "../form/authPromptForm";
 import UserAPIClient from "../../../networking/client/userAPIClient";
@@ -21,10 +21,12 @@ import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRol
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import { roomChangedObservable, userRoleObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
+import ImageChooserForm from "../form/imageChooserForm";
+import { PopupContext } from "../../contexts/popupContext";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
-    const [popupType, setPopupType] = useState<PopupType>("none");
+    const [popupStack, setPopupStack] = useState<PopupState[]>([]);
     const [roomRuntimeMemory, setRoomRuntimeMemory] = useState<RoomRuntimeMemory>();
     const [userRole, setUserRole] = useState<UserRole>(UserRoleEnumMap.Visitor);
 
@@ -41,11 +43,14 @@ export default function UIRoot({ env, user }: UIRootProps)
         };
     }, []);
 
-    const openAuthPromptFormPopup = useCallback(() => setPopupType("authPrompt"), []);
-    const openSignOutFormPopup = useCallback(() => setPopupType("signOut"), []);
-    const openRoomsPopup = useCallback(() => setPopupType("rooms"), []);
-    const openConfigureMyRoomPopup = useCallback(() => setPopupType("configureMyRoom"), []);
-    const closePopup = useCallback(() => setPopupType("none"), []);
+    const openPopup = useCallback((state: PopupState) => setPopupStack(prev => [...prev, state]), []);
+    const closePopup = useCallback(() => setPopupStack(prev => prev.slice(0, -1)), []);
+    const popupContextValue = useMemo(() => ({open: openPopup, close: closePopup}), [openPopup, closePopup]);
+
+    const openAuthPromptFormPopup = useCallback(() => openPopup({popupType: "authPrompt"}), [openPopup]);
+    const openSignOutFormPopup = useCallback(() => openPopup({popupType: "signOut"}), [openPopup]);
+    const openRoomsPopup = useCallback(() => openPopup({popupType: "rooms"}), [openPopup]);
+    const openConfigureMyRoomPopup = useCallback(() => openPopup({popupType: "configureMyRoom"}), [openPopup]);
 
     const roomID = roomRuntimeMemory?.room.id;
     const roomType = roomRuntimeMemory?.room.roomType;
@@ -54,7 +59,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         userRole === UserRoleEnumMap.Editor ||
         roomType === RoomTypeEnumMap.Hub;
 
-    return <>
+    return <PopupContext.Provider value={popupContextValue}>
         <UserRoomIdentity
             user={user}
             userRole={userRole}
@@ -71,25 +76,38 @@ export default function UIRoot({ env, user }: UIRootProps)
             <Chat/>
         </div>
         <Tutorial user={user}/>
-        {popupType == "authPrompt" && <Popup>
-            <AuthPromptForm
-                onPlayAsGuestButtonClick={closePopup}
-                onLoginWithGoogleButtonClick={() => UserAPIClient.loginWithGoogle()}
-            />
-        </Popup>}
-        {popupType == "signOut" && <Popup>
-            <SignOutForm onCancel={closePopup}/>
-        </Popup>}
-        {popupType == "rooms" && <Popup>
-            <RoomListForm user={user} currentRoomID={roomID ?? ""} onClose={closePopup}/>
-        </Popup>}
-        {popupType == "configureMyRoom" && <Popup>
-            <ConfigureMyRoomForm onClose={closePopup}/>
-        </Popup>}
+        {popupStack.map((state, i) => {
+            switch (state.popupType)
+            {
+                case "authPrompt": return <Popup key={i}>
+                    <AuthPromptForm
+                        onPlayAsGuestButtonClick={closePopup}
+                        onLoginWithGoogleButtonClick={() => UserAPIClient.loginWithGoogle()}
+                    />
+                </Popup>;
+                case "signOut": return <Popup key={i}>
+                    <SignOutForm onCancel={closePopup}/>
+                </Popup>;
+                case "rooms": return <Popup key={i}>
+                    <RoomListForm user={user} currentRoomID={roomID ?? ""} onClose={closePopup}/>
+                </Popup>;
+                case "configureMyRoom": return <Popup key={i}>
+                    <ConfigureMyRoomForm onClose={closePopup}/>
+                </Popup>;
+                case "imageChooser": return <Popup key={i}>
+                    <ImageChooserForm
+                        mapName={state.params.mapName}
+                        initialChoicePath={state.params.initialChoicePath}
+                        onChoose={(path) => { state.params.onChoose(path); closePopup(); }}
+                        onClose={closePopup}
+                    />
+                </Popup>;
+            }
+        })}
         <Notification/>
         <Loading/>
         <Reconnecting/>
-    </>
+    </PopupContext.Provider>
 }
 
 interface UIRootProps

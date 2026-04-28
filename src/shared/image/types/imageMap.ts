@@ -59,7 +59,12 @@ export default class ImageMap
     }
     getFirstImagePath(): string
     {
-        return Object.keys(this.pathByCoords)[0];
+        return Object.keys(this.coordsByPath)[0];
+    }
+    getRandomImagePath(): string
+    {
+        const paths = Object.keys(this.coordsByPath);
+        return paths[Math.floor(Math.random() * paths.length)];
     }
 
     // path = (relative path under the root directory, but excluding the file extension)
@@ -67,6 +72,8 @@ export default class ImageMap
     // and the root directory is located right under the app's assets_url (see ThingsPoolEnv).
     getImageURLByPath(assetsURL: string, path: string): string
     {
+        if (path.length <= 0)
+            return "";
         return `${assetsURL}/${this.rootDirName}/${path}.jpg`;
     }
     // coords = {subfolderName},{col},{row}

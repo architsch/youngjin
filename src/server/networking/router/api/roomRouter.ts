@@ -46,7 +46,7 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
         return;
     }
 
-    const defaultTexturePackPath = `${AddressUtil.getEnvStaticURL()}/app/assets/texture_packs/default.jpg`;
+    const defaultTexturePackPath = "default";
     const createResult = await DBRoomUtil.createRoom(
         RoomTypeEnumMap.Regular, user.id, dbUser.userName, 0, 1, 2, defaultTexturePackPath
     );

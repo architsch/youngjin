@@ -1,37 +1,18 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import Button from "../basic/button";
-import ImageChooserPopup from "./imageChooserPopup";
+import ImageChooserProps from "../../types/imageChooserProps";
+import { usePopup } from "../../contexts/popupContext";
 
-export default function ImageChooser({title, mapName, initialChoicePath, onChoose}: Props)
+export default function ImageChooser({title, mapName, initialChoicePath, onChoose}: ImageChooserProps)
 {
-    const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
+    const popup = usePopup();
 
-    const openPopup = useCallback(() => setIsPopupOpen(true), []);
-    const closePopup = useCallback(() => setIsPopupOpen(false), []);
+    const openPopup = useCallback(() => {
+        popup.open({
+            popupType: "imageChooser",
+            params: {title, mapName, initialChoicePath, onChoose},
+        });
+    }, [popup, title, mapName, initialChoicePath, onChoose]);
 
-    const handleChoose = useCallback((path: string) => {
-        onChoose(path);
-        setIsPopupOpen(false);
-    }, [onChoose]);
-
-    return <>
-        <div className="flex flex-row items-center gap-2">
-            <Button name={title} size="xs" onClick={openPopup}/>
-        </div>
-        {isPopupOpen && <ImageChooserPopup
-            title={title}
-            mapName={mapName}
-            initialChoicePath={initialChoicePath}
-            onChoose={handleChoose}
-            onCancel={closePopup}
-        />}
-    </>;
-}
-
-interface Props
-{
-    title: string;
-    mapName: string;
-    initialChoicePath: string; // "" if no initial choice
-    onChoose: (path: string) => void;
+    return <Button name={title} size="sm" onClick={openPopup}/>;
 }

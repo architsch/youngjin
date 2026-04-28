@@ -11,7 +11,6 @@ import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBSearchUtil from "./db/util/dbSearchUtil";
 import DBUserUtil from "./db/util/dbUserUtil";
-import AddressUtil from "./networking/util/addressUtil";
 import LogUtil from "../shared/system/util/logUtil";
 import { HOUR_IN_MS, setIsServer } from "../shared/system/sharedConstants";
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
@@ -76,7 +75,7 @@ ${LatencySimUtil.getConfigSummary()}
 
     if (roomSearchResult.data.length == 0)
     {
-        let result = await DBRoomUtil.createRoom(RoomTypeEnumMap.Hub, "", "", 0, 1, 2, `${AddressUtil.getEnvStaticURL()}/app/assets/texture_packs/default.jpg`);
+        let result = await DBRoomUtil.createRoom(RoomTypeEnumMap.Hub, "", "", 0, 1, 2, "default");
         if (!result.success)
         {
             console.error("[Premature Server Termination] :: Failed to create a hub room.");

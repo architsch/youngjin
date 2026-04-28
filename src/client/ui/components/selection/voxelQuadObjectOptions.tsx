@@ -16,6 +16,7 @@ import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../../shared/math/types/vec3";
 import ErrorUtil from "../../../../shared/system/util/errorUtil";
+import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -26,8 +27,9 @@ export default function VoxelQuadObjectOptions(props: {selection: VoxelQuadSelec
             <Button name="Add Canvas" size="sm"
                 disabled={getPlaceableWallAttachedObjectTransform(props.selection, canvasTypeIndex) == null}
                 onClick={() => {
+                    const randomImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();
                     tryAddObjectFromQuad(props.selection, canvasTypeIndex,
-                        {[ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString("")});
+                        {[ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath)});
                 }}/>
         </div>
     </div>;
@@ -41,10 +43,6 @@ function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
         return null;
     const user = App.getUser();
     const userRole = App.getCurrentUserRole();
-
-    if (objectTypeIndex === canvasTypeIndex
-        && CanvasGameObject.spawnedCanvasGameObjects.size >= MAX_CANVASES_PER_ROOM)
-        return null;
 
     const voxel = selection.voxel;
     const quadIndex = selection.quadIndex;

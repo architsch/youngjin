@@ -102,11 +102,9 @@ export default class CanvasGameObject extends GameObject
         if (!metadata)
             return;
         const metadataValue = metadata.str;
-
-        const imageURL = metadataValue.startsWith("http")
-            ? metadataValue
-            : ImageMapUtil.getImageMap("CanvasImageMap").getImageURLByPath(App.getEnv().assets_url, metadataValue);
-
+        const imageURL = ImageMapUtil.getImageMap("CanvasImageMap").getImageURLByPath(App.getEnv().assets_url, metadataValue);
+        if (imageURL.length <= 0)
+            return;
         try
         {
             this.instancedMeshGraphics.updateInstanceTextureUV(this.instanceId, this.instanceId % 64);

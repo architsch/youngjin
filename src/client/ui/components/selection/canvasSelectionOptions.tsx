@@ -23,7 +23,7 @@ export default function CanvasSelectionOptions(props: {selection: ObjectSelectio
                 onClick={() => tryRemoveCanvas(props.selection)}/>
         </div>
         <ImageChooser
-            title="Choose Image"
+            title="Change Image"
             mapName="CanvasImageMap"
             initialChoicePath={initialChoicePath}
             onChoose={path => trySetCanvasImageMetadata(props.selection, path)}

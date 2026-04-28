@@ -257,9 +257,7 @@ const ClientObjectManager =
         }
 
         // Update the observable so newly spawned voxels pick up the new texture pack.
-        const texturePackURL = newTexturePackPath.startsWith("http")
-            ? newTexturePackPath
-            : ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, newTexturePackPath);
+        const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, newTexturePackPath);
         texturePackURLObservable.set(texturePackURL);
 
         await spawnVoxelsFromGrid(room);
