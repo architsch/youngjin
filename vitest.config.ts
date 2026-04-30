@@ -4,6 +4,7 @@ export default defineConfig({
     test: {
         root: ".",
         include: ["tests/**/*.test.ts"],
+        setupFiles: ["tests/integration/setup.ts"],
         testTimeout: 30_000,
         hookTimeout: 15_000,
         sequence: {

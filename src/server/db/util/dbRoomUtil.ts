@@ -7,7 +7,6 @@ import { DBRow } from "../types/row/dbRow";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import VoxelGrid from "../../../shared/voxel/types/voxelGrid";
 import BufferState from "../../../shared/networking/types/bufferState";
-import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import EncodableArray from "../../../shared/networking/types/encodableArray";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
@@ -15,6 +14,7 @@ import DBFileStorageUtil from "./dbFileStorageUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { COLLECTION_ROOMS } from "../../system/serverConstants";
+import ObjectGroup from "../../../shared/object/types/objectGroup";
 
 const DBRoomUtil =
 {
@@ -51,10 +51,10 @@ const DBRoomUtil =
         const bufferState = EncodingUtil.startEncoding();
         room.voxelGrid.encode(bufferState);
 
-        // Encode only persistent objects
+        // Encode only persistent objects when saving the room's data to file storage
         const persistentObjects = Object.values(room.objectById)
             .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
-        new EncodableArray(persistentObjects, 65535).encode(bufferState);
+        new ObjectGroup(persistentObjects).encode(bufferState);
 
         const buffer = Buffer.from(EncodingUtil.endEncoding(bufferState));
         return await DBFileStorageUtil.saveBinaryFile(getRoomContentFilePath(room.id), buffer);
@@ -70,11 +70,11 @@ const DBRoomUtil =
     {
         LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName, floorTextureIndex, wallTextureIndex,
             ceilingTextureIndex, texturePackPath}, "low", "info");
-        const {voxelGrid} =
+        const {voxelGrid, objectGroup} =
             RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
         const room = new Room(undefined, roomType, ownerUserID, ownerUserName, texturePackPath,
-            voxelGrid);
+            voxelGrid, objectGroup);
         const dbRoom = getDBRoomFromRoom(room);
 
         const roomInsertResult = await new DBQuery<{id: string}>()
@@ -140,24 +140,8 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
 
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-
-    const objectArray = EncodableArray.decodeWithParams(bufferState, AddObjectSignal.decode, 65535) as EncodableArray;
-    const objectById: {[objectId: string]: AddObjectSignal} = {};
-    for (const element of objectArray.arr)
-    {
-        const obj = element as AddObjectSignal;
-        objectById[obj.objectId] = obj;
-    }
-
-    return new Room(
-        dbRoom.id,
-        dbRoom.roomType,
-        dbRoom.ownerUserID,
-        dbRoom.ownerUserName,
-        dbRoom.texturePackPath,
-        voxelGrid,
-        objectById
-    );
+    const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "") as ObjectGroup;
+    return new Room(dbRoom.id, dbRoom.roomType, dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, voxelGrid, objectGroup);
 }
 
 function getRoomContentFilePath(roomID?: string): string

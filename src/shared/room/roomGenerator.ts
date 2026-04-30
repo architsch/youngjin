@@ -1,3 +1,4 @@
+import ObjectGroup from "../object/types/objectGroup";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL } from "../system/sharedConstants";
 import Voxel from "../voxel/types/voxel";
 import VoxelGrid from "../voxel/types/voxelGrid";
@@ -9,7 +10,7 @@ const RoomGenerator =
 {
     generateEmptyRoom: (
         floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number
-    ): {voxelGrid: VoxelGrid} =>
+    ): {voxelGrid: VoxelGrid, objectGroup: ObjectGroup} =>
     {
         const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
         const quadsMem = new VoxelQuadsRuntimeMemory();
@@ -76,6 +77,7 @@ const RoomGenerator =
 
         return {
             voxelGrid: new VoxelGrid(voxels, quadsMem),
+            objectGroup: new ObjectGroup([]),
         };
     },
 }

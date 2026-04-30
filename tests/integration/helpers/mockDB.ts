@@ -74,8 +74,8 @@ export function seedRoom(
     roomType: RoomType = RoomTypeEnumMap.Hub,
 ): Room
 {
-    const { voxelGrid } = RoomGenerator.generateEmptyRoom(0, 1, 2);
-    const room = new Room(roomID, roomType, "", "", "", voxelGrid);
+    const { voxelGrid, objectGroup } = RoomGenerator.generateEmptyRoom(0, 1, 2);
+    const room = new Room(roomID, roomType, "", "", "", voxelGrid, objectGroup);
     roomStore[roomID] = {
         id: roomID,
         roomType,

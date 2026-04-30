@@ -5,8 +5,8 @@ import AddObjectSignal from "../../object/types/addObjectSignal";
 import EncodableByteString from "../../networking/types/encodableByteString";
 import { RoomType } from "./roomType";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
-import EncodableArray from "../../networking/types/encodableArray";
 import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
+import ObjectGroup from "../../object/types/objectGroup";
 
 export default class Room extends EncodableData
 {
@@ -16,14 +16,14 @@ export default class Room extends EncodableData
     ownerUserName: string;
     texturePackPath: string;
     voxelGrid: VoxelGrid;
-    objectById: {[objectId: string]: AddObjectSignal};
+    objectGroup: ObjectGroup;
     dirty: boolean;
 
     constructor(id: string | undefined, roomType: RoomType, ownerUserID: string,
         ownerUserName: string,
         texturePackPath: string,
         voxelGrid: VoxelGrid,
-        objectById: {[objectId: string]: AddObjectSignal} = {})
+        objectGroup: ObjectGroup)
     {
         super();
         this.id = (id != undefined) ? id : "";
@@ -32,8 +32,13 @@ export default class Room extends EncodableData
         this.ownerUserName = ownerUserName;
         this.texturePackPath = texturePackPath;
         this.voxelGrid = voxelGrid;
-        this.objectById = objectById;
+        this.objectGroup = objectGroup;
         this.dirty = false;
+    }
+
+    get objectById(): {[objectId: string]: AddObjectSignal}
+    {
+        return this.objectGroup.objectById;
     }
 
     get voxelQuads(): Uint8Array
@@ -49,31 +54,21 @@ export default class Room extends EncodableData
         new EncodableByteString(this.ownerUserName).encode(bufferState);
         new EncodableByteString(this.texturePackPath).encode(bufferState);
         this.voxelGrid.encode(bufferState);
-
-        // Encode all objects (DB persistence filters to persistent-only separately in saveRoomContent)
-        const allObjects = Object.values(this.objectById);
-        new EncodableArray(allObjects, 65535).encode(bufferState);
+        this.objectGroup.encode(bufferState);
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        let id: string | undefined = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        let id: string = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         if (id == UNDEFINED_DOCUMENT_ID_CHAR)
-            id = undefined;
+            throw new Error("ID of the room being decoded is undefined.");
         const roomType = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const ownerUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const ownerUserName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
+        const objectGroup = ObjectGroup.decodeWithParams(bufferState, id) as ObjectGroup;
 
-        const objectArray = EncodableArray.decodeWithParams(bufferState, AddObjectSignal.decode, 65535) as EncodableArray;
-        const objectById: {[objectId: string]: AddObjectSignal} = {};
-        for (const element of objectArray.arr)
-        {
-            const obj = element as AddObjectSignal;
-            objectById[obj.objectId] = obj;
-        }
-
-        return new Room(id, roomType, ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectById);
+        return new Room(id, roomType, ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectGroup);
     }
 }

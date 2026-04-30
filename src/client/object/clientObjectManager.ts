@@ -297,6 +297,16 @@ const ClientObjectManager =
         }
         ClientObjectManager.setObjectTransform(signal.objectId,
             signal.transform.pos, signal.transform.dir, signal.ignorePhysics, false);
+
+        // If the moved object was selected by this client, unselect it so the selection
+        // outline doesn't linger at the obsolete location. Gated on ignorePhysics to
+        // avoid clearing selections from continuous real-time physics updates.
+        if (signal.ignorePhysics)
+        {
+            const sel = objectSelectionObservable.peek();
+            if (sel && sel.gameObject.params.objectId === signal.objectId)
+                ObjectSelection.unselect();
+        }
     },
     // When the client receives a SetObjectMetadataSignal from the server,
     // the metadata change will be applied to the corresponding game object.
