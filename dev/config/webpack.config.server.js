@@ -43,7 +43,11 @@ module.exports = {
     output: {
         filename: `bundle.js`,
         path: path.resolve(__dirname, '../../dist/server'),
-        clean: true, // wipe dist/server before each build
+        // Wipe dist/server before each build to avoid stale async chunks accumulating,
+        // but preserve bundle.live.js / bundle.backup.js — those belong to the live
+        // server's promote/rollback flow ([promote-live.yml] and [rollback-live.yml])
+        // and are independent of the staging build cycle.
+        clean: { keep: /\.(live|backup)\./ },
     },
     externals: [nodeExternals()],
 };
