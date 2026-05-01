@@ -7,11 +7,16 @@ import LibraryPageBuilder from "./builder/page/libraryPageBuilder";
 import TextFileBuilder from "./builder/textFileBuilder";
 import styleDictionary from "./style/styleDictionary";
 import ErrorPageBuilder from "./builder/page/errorPageBuilder";
-import ImageMapBuilder from "./builder/imageMapBuilder";
 
 export default async function SSG(): Promise<void>
 {
     console.log("SSG START");
+
+    // ImageMapBuilder pulls in `sharp`, a native module that requires an x86-64-v2 CPU
+    // baseline our prod VPS does not meet. Dynamic-importing it here keeps `sharp` out
+    // of the static module graph reachable from server.ts, so the prod server (which
+    // never calls SSG) never loads `sharp`.
+    const { default: ImageMapBuilder } = await import("./builder/imageMapBuilder");
 
     // Generate pages
 

@@ -46,7 +46,17 @@ jobs:
       run: npm ci
 
     - name: Build
+      env:
+        EXCLUDE_SHARP: "true"
       run: npm run build
+
+    - name: Strip optional deps before runtime
+      # `sharp` is an optional dep used only by the local SSG image-map step, which
+      # never runs on the VPS (SKIP_SSG=true in prod). Its prebuilt linux-x64 binary
+      # also requires an x86-64-v2 CPU the VPS does not have, so leaving it on disk
+      # is a loaded gun if anything ever require()s it. Strip it after the build,
+      # which needs sharp's TypeScript types to compile.
+      run: npm prune --omit=optional
 
     - name: Restart staging server
       run: pm2 startOrRestart ecosystem.config.js --only staging

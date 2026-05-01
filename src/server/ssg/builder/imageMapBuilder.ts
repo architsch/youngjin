@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import FileUtil from "../util/fileUtil";
+import ImageFileUtil from "../util/imageFileUtil";
 import { STATIC_PAGE_ROOT_DIR, SRC_ROOT_DIR } from "../../system/serverConstants";
 import ImageMapSeed from "../../../shared/image/types/imageMapSeed";
 import ImageMapSubfolderInfo from "../../../shared/image/types/imageMapSubfolderInfo";
@@ -61,7 +62,7 @@ export default class ImageMapBuilder
 
         for (const {path, author, title} of subfolderInfo.images)
         {
-            const image = FileUtil.readImage(`${path}.jpg`, this.imageRootPath);
+            const image = ImageFileUtil.readImage(`${path}.jpg`, this.imageRootPath);
             if (!image)
                 throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${path}.jpg)`);
             const imageBuffer = await (image
@@ -87,7 +88,7 @@ export default class ImageMapBuilder
         const gridImage = sharp({create: {width: gridWidth, height: gridHeight, channels: 3, background: {r: 0, g: 0, b: 0}}})
             .composite(composites)
             .jpeg({ quality: JPEG_QUALITY });
-        await FileUtil.writeImage(`${subfolderInfo.name.length == 0 ? "" : `${subfolderInfo.name}/`}grid.jpg`, gridImage, this.imageRootPath);
+        await ImageFileUtil.writeImage(`${subfolderInfo.name.length == 0 ? "" : `${subfolderInfo.name}/`}grid.jpg`, gridImage, this.imageRootPath);
     }
 
     private async writeMapFile(subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo}): Promise<void>

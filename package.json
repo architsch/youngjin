@@ -45,11 +45,13 @@
 		"jsonwebtoken": "^9.0.2",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",
-		"sharp": "^0.34.5",
 		"socket.io": "^4.8.1",
 		"socket.io-client": "^4.8.1",
 		"tailwindcss": "^4.1.17",
 		"three": "^0.180.0"
+	},
+	"optionalDependencies": {
+		"sharp": "^0.34.5"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.58.2",
