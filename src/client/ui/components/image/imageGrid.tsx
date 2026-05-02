@@ -19,9 +19,20 @@ export default function ImageGrid({
         }
     }
 
-    const gridStyle = `grid grid-cols-${numCols} grid-rows-${numRows} gap-2 m-2 w-full max-h-64 overflow-y-auto pointer-events-auto bg-black`;
+    const cellGap = 8; // gap-2 = 0.5rem
+    const containerPadding = 8; // p-2 = 0.5rem
+    const naturalWidth = numCols * cellSize + (numCols - 1) * cellGap + containerPadding * 2;
 
-    return <div ref={onRefChange} className={gridStyle}>
+    const gridClassNames = "grid gap-2 m-2 p-2 min-h-0 overflow-y-auto pointer-events-auto bg-black";
+    // Tailwind's JIT compiler cannot resolve dynamically-built class names like `grid-cols-${numCols}`,
+    // so the column template is set inline. Height is bounded by the parent flex container; min-h-0 lets
+    // this grid shrink so it scrolls internally instead of pushing siblings out of view.
+    const gridStyle = {
+        gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
+        width: `min(${naturalWidth}px, 90vw)`,
+    };
+
+    return <div ref={onRefChange} className={gridClassNames} style={gridStyle}>
         {gridCoordsList.map((gridCoords) => {
             return <AtlasCellSprite
                 key={`imageGrid.select.${gridCoords.col}.${gridCoords.row}`}
@@ -32,6 +43,7 @@ export default function ImageGrid({
                 atlasCellHeight={cellSize}
                 atlasCellCol={gridCoords.col}
                 atlasCellRow={gridCoords.row}
+                flipRow={false}
                 highlight={gridCoords.col == selectedCol && gridCoords.row == selectedRow}
                 autoScrollToHighlight={true}
                 additionalClassNames={""}

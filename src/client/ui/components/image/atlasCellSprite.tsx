@@ -5,6 +5,7 @@ export default function AtlasCellSprite(props: {
         atlasWidth: number, atlasHeight: number,
         atlasCellWidth: number, atlasCellHeight: number,
         atlasCellRow: number, atlasCellCol: number,
+        flipRow: boolean,
         highlight: boolean, autoScrollToHighlight: boolean,
         additionalClassNames: string,
         onClick?: () => void | Promise<void>,
@@ -27,12 +28,14 @@ export default function AtlasCellSprite(props: {
         }
     }, []);
 
+    const displayRow = props.flipRow ? (numRows - props.atlasCellRow - 1) : props.atlasCellRow;
+
     // I am hard-coding CSS styles here instead of using Tailwind's utility classes,
     // since the parameters must be dynamically determined (and thus cannot be preloaded during Tailwind's CSS build process)
     return <div ref={myRef} onClick={props.onClick} style={{
         aspectRatio: props.atlasCellWidth / props.atlasCellHeight,
         backgroundImage: `url(${props.atlasImageURL})`,
         backgroundSize: `${100 * numCols}% ${100 * numRows}%`,
-        backgroundPosition: `-${100 * props.atlasCellCol}% -${100 * (numRows - props.atlasCellRow - 1)}%`,
+        backgroundPosition: `-${100 * props.atlasCellCol}% -${100 * displayRow}%`,
     }} className={`${props.additionalClassNames} ${highlightClasses}`}></div>;
 }

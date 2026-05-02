@@ -226,6 +226,9 @@
   .static {
     position: static;
   }
+  .inset-0 {
+    inset: calc(var(--spacing) * 0);
+  }
   .inset-x-0 {
     inset-inline: calc(var(--spacing) * 0);
   }
@@ -258,6 +261,9 @@
   }
   .left-3 {
     left: calc(var(--spacing) * 3);
+  }
+  .z-40 {
+    z-index: 40;
   }
   .z-50 {
     z-index: 50;
@@ -341,6 +347,12 @@
   .max-h-64 {
     max-height: calc(var(--spacing) * 64);
   }
+  .max-h-\[75vh\] {
+    max-height: 75vh;
+  }
+  .min-h-0 {
+    min-height: calc(var(--spacing) * 0);
+  }
   .min-h-14 {
     min-height: calc(var(--spacing) * 14);
   }
@@ -380,8 +392,8 @@
   .max-w-9\/12 {
     max-width: calc(9/12 * 100%);
   }
-  .max-w-10\/12 {
-    max-width: calc(10/12 * 100%);
+  .max-w-\[80vw\] {
+    max-width: 80vw;
   }
   .max-w-full {
     max-width: 100%;
@@ -394,6 +406,9 @@
   }
   .flex-4 {
     flex: 4;
+  }
+  .shrink {
+    flex-shrink: 1;
   }
   .border-collapse {
     border-collapse: collapse;

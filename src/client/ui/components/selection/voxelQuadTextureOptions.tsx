@@ -60,6 +60,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                 atlasCellHeight={materialParams.textureGridCellHeight}
                 atlasCellCol={col}
                 atlasCellRow={row}
+                flipRow={true}
                 highlight={col == selectedTextureCol && row == selectedTextureRow}
                 autoScrollToHighlight={true}
                 additionalClassNames={additionalClassNames}

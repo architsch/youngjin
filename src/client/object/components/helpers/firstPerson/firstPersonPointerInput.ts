@@ -71,6 +71,11 @@ export default class FirstPersonPointerInput
         //console.log("onPointerPress");
         this.pointerIsDown = true;
 
+        // Capture the pointer so drag continues even when the cursor passes
+        // over CSS2D overlays (e.g. WorldSpaceArrow click targets).
+        const canvas = GraphicsManager.getGameCanvas();
+        canvas.setPointerCapture(ev.pointerId);
+
         getNDC(ev, this.pointerDownPos);
         getNDC(ev, this.pointerDragPos);
     }

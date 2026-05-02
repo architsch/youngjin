@@ -13,6 +13,7 @@ import { UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import RoomEditor from "../../../../shared/user/types/roomEditor";
 import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
 import Form from "../basic/form";
+import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 
 export default function ConfigureMyRoomForm({ onClose }: Props)
 {
@@ -28,6 +29,10 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
         const response = await RoomAPIClient.getRoomEditors();
         if (response.status >= 200 && response.status < 300 && response.data.editors)
             setEditors(response.data.editors);
+        /*const dummyEditors: RoomEditor[] = [];
+        for (let i = 0; i < 16; ++i)
+            dummyEditors.push({userName: `dummy_user_${i}`, email: `dummy_email_${i}@dummycompany.com`});
+        setEditors(dummyEditors);*/
     }, []);
 
     useEffect(() => { loadEditors(); }, []);
@@ -38,14 +43,23 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
     }, [roomURL]);
 
     const setTexture = useCallback(async (path: string) => {
-        const response = await RoomAPIClient.changeRoomTexture(path);
-        if (response.status >= 200 && response.status < 300)
+        if (!tryStartClientProcess("texturePackChange", 1, 0))
+            return;
+        try
         {
-            setTexturePackPath(path);
-            notificationMessageObservable.set("Texture pack updated!");
+            const response = await RoomAPIClient.changeRoomTexture(path);
+            if (response.status >= 200 && response.status < 300)
+            {
+                setTexturePackPath(path);
+                notificationMessageObservable.set("Texture pack updated!");
+            }
+            else
+                notificationMessageObservable.set("Failed to update texture pack.");
         }
-        else
-            notificationMessageObservable.set("Failed to update texture pack.");
+        finally
+        {
+            endClientProcess("texturePackChange");
+        }
     }, []);
 
     const addEditor = useCallback(async () => {

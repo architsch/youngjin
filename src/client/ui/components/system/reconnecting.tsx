@@ -22,4 +22,4 @@ export default function Reconnecting()
     </>;
 }
 
-const className = "w-full h-full bg-black/50";
+const className = "absolute inset-0 z-50 pointer-events-auto bg-black/50";
