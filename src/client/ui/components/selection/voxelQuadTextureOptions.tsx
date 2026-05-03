@@ -1,20 +1,16 @@
-import { useCallback } from "react";
 import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import AtlasCellSprite from "../image/atlasCellSprite";
-import { enableHorizontalDragScroll } from "../../util/mouseScroll";
 import SocketsClient from "../../../networking/client/socketsClient";
 import SetVoxelQuadTextureSignal from "../../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import App from "../../../app";
 import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 import VoxelGameObject from "../../../object/types/voxelGameObject";
+import useMouseDragScroll from "../../util/mouseDragScroll";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
-    const onRefChange = useCallback((node: any) => {
-        if (node)
-            enableHorizontalDragScroll(node as HTMLElement);
-    }, []);
+    const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
 
     const quadIndex = props.selection.quadIndex;
     const selectedTextureIndex = App.getVoxelQuads()[quadIndex] & 0b01111111;

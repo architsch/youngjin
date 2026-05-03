@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import App from "../../../app";
 import ClientObjectManager from "../../../object/clientObjectManager";
-import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
-import { colliderDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
+import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { colliderDebugEnabledObservable, editorListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../basic/button";
-import Checkbox from "../basic/checkbox";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
+import TextInput from "../basic/textInput";
 
 export default function DebugStats({env}: Props)
 {
     const [state, setState] = useState<DebugStatsState>({
-        display: false, fpsDesc: "?", playerPosDesc: "?", voxelDesc: "", voxelQuadSelectionDesc: "",
-        colliderDebug: false,
+        display: false, fpsDesc: "?", playerPosDesc: "?", voxelDesc: "",
+        voxelQuadSelectionDesc: "", debugCommand: "",
     });
 
     useEffect(() => {
@@ -76,15 +76,24 @@ export default function DebugStats({env}: Props)
             {voxelDescLine}
             {voxelQuadSelectionDescLine}
             <br/>
-            <Checkbox
-                label="Collider Debug"
-                size="xs"
-                checked={state.colliderDebug}
-                onChange={(checked) => {
-                    colliderDebugEnabledObservable.set(checked);
-                    setState({...state, colliderDebug: checked});
-                }}
-            />
+            <div className="flex flex-row items-center gap-1">
+                <TextInput size="xs" placeholder="Debug Command"
+                    textInput={state.debugCommand}
+                    setTextInput={(input: string) => setState({...state, debugCommand: input})}
+                />
+                <Button name="Run" size="xs" onClick={() => {
+                    const command = state.debugCommand.toLowerCase().trim();
+                    switch (command)
+                    {
+                        case "show collider": colliderDebugEnabledObservable.set(true); break;
+                        case "hide collider": colliderDebugEnabledObservable.set(false); break;
+                        case "show dummy-editors": editorListDebugEnabledObservable.set(true); break;
+                        case "hide dummy-editors": editorListDebugEnabledObservable.set(false); break;
+                        default: notificationMessageObservable.set("Unknown debug command."); break;
+                    }
+                    setState({...state, debugCommand: ""});
+                }}/>
+            </div>
         </div>}
     </div>;
 }
@@ -98,7 +107,7 @@ interface DebugStatsState
     playerPosDesc: string;
     voxelDesc: string;
     voxelQuadSelectionDesc: string;
-    colliderDebug: boolean;
+    debugCommand: string;
 }
 
 interface Props

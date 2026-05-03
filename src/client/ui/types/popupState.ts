@@ -3,7 +3,7 @@ import ImageChooserProps from "./imageChooserProps";
 type PopupState =
     | { popupType: "authPrompt" }
     | { popupType: "signOut" }
-    | { popupType: "rooms" }
+    | { popupType: "roomList" }
     | { popupType: "configureMyRoom" }
     | { popupType: "imageChooser"; params: ImageChooserProps };
 

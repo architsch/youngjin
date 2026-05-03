@@ -19,16 +19,20 @@ import RoomListForm from "../form/roomListForm";
 import ConfigureMyRoomForm from "../form/configureMyRoomForm";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
-import { roomChangedObservable, userRoleObservable } from "../../../system/clientObservables";
+import { objectSelectionObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ImageChooserForm from "../form/imageChooserForm";
 import { PopupContext } from "../../contexts/popupContext";
+import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
+import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
     const [popupStack, setPopupStack] = useState<PopupState[]>([]);
     const [roomRuntimeMemory, setRoomRuntimeMemory] = useState<RoomRuntimeMemory>();
     const [userRole, setUserRole] = useState<UserRole>(UserRoleEnumMap.Visitor);
+    const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
+    const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
 
     useEffect(() => {
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
@@ -37,20 +41,23 @@ export default function UIRoot({ env, user }: UIRootProps)
         userRoleObservable.addListener("ui_root", (role: UserRole) => {
             setUserRole(role);
         });
+        objectSelectionObservable.addListener("ui_root", (selection: ObjectSelection | null) => {
+            setObjectSelection(selection);
+        });
+        voxelQuadSelectionObservable.addListener("ui_root", (selection: VoxelQuadSelection | null) => {
+            setVoxelQuadSelection(selection);
+        });
         return () => {
             roomChangedObservable.removeListener("ui_root");
             userRoleObservable.removeListener("ui_root");
+            objectSelectionObservable.removeListener("ui_root");
+            voxelQuadSelectionObservable.removeListener("ui_root");
         };
     }, []);
 
     const openPopup = useCallback((state: PopupState) => setPopupStack(prev => [...prev, state]), []);
     const closePopup = useCallback(() => setPopupStack(prev => prev.slice(0, -1)), []);
     const popupContextValue = useMemo(() => ({open: openPopup, close: closePopup}), [openPopup, closePopup]);
-
-    const openAuthPromptFormPopup = useCallback(() => openPopup({popupType: "authPrompt"}), [openPopup]);
-    const openSignOutFormPopup = useCallback(() => openPopup({popupType: "signOut"}), [openPopup]);
-    const openRoomsPopup = useCallback(() => openPopup({popupType: "rooms"}), [openPopup]);
-    const openConfigureMyRoomPopup = useCallback(() => openPopup({popupType: "configureMyRoom"}), [openPopup]);
 
     const roomID = roomRuntimeMemory?.room.id;
     const roomType = roomRuntimeMemory?.room.roomType;
@@ -64,37 +71,37 @@ export default function UIRoot({ env, user }: UIRootProps)
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
-            onAuthPromptButtonClick={openAuthPromptFormPopup}
-            onSignOutButtonClick={openSignOutFormPopup}
-            onOpenRoomsButtonClick={openRoomsPopup}
-            onConfigureButtonClick={openConfigureMyRoomPopup}
+            onAuthPromptButtonClick={() => openPopup({popupType: "authPrompt"})}
+            onSignOutButtonClick={() => openPopup({popupType: "signOut"})}
+            onOpenRoomsButtonClick={() => openPopup({popupType: "roomList"})}
+            onConfigureButtonClick={() => openPopup({popupType: "configureMyRoom"})}
         />
         <DebugStats env={env}/>
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             {canModifyRoom && <ObjectSelectionMenu/>}
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
-            <Chat/>
+            {<Chat selectionIsActive={!objectSelection && !voxelQuadSelection}/>}
         </div>
         <Tutorial user={user}/>
         {popupStack.map((state, i) => {
             switch (state.popupType)
             {
-                case "authPrompt": return <Popup key={i}>
+                case "authPrompt": return <Popup key={i} onClose={closePopup}>
                     <AuthPromptForm
                         onPlayAsGuestButtonClick={closePopup}
                         onLoginWithGoogleButtonClick={() => UserAPIClient.loginWithGoogle()}
                     />
                 </Popup>;
-                case "signOut": return <Popup key={i}>
+                case "signOut": return <Popup key={i} onClose={closePopup}>
                     <SignOutForm onCancel={closePopup}/>
                 </Popup>;
-                case "rooms": return <Popup key={i}>
+                case "roomList": return <Popup key={i} onClose={closePopup} title="Rooms" showCloseButton={true}>
                     <RoomListForm user={user} currentRoomID={roomID ?? ""} onClose={closePopup}/>
                 </Popup>;
-                case "configureMyRoom": return <Popup key={i}>
+                case "configureMyRoom": return <Popup key={i} onClose={closePopup} showCloseButton={true}>
                     <ConfigureMyRoomForm onClose={closePopup}/>
                 </Popup>;
-                case "imageChooser": return <Popup key={i}>
+                case "imageChooser": return <Popup key={i} onClose={closePopup} showCloseButton={true}>
                     <ImageChooserForm
                         mapName={state.params.mapName}
                         initialChoicePath={state.params.initialChoicePath}

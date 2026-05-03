@@ -1,15 +1,10 @@
-import { useCallback } from "react";
-import { enableVerticalDragScroll } from "../../util/mouseScroll";
+import useMouseDragScroll from "../../util/mouseDragScroll";
 import AtlasCellSprite from "./atlasCellSprite";
 
 export default function ImageGrid({
     imageURL, selectedCol, selectedRow, numCols, numRows, cellSize, onSelect}: Props)
 {
-    const onRefChange = useCallback((node: any) => {
-        if (node)
-            enableVerticalDragScroll(node as HTMLElement);
-    }, []);
-
+    const onRefChange = useMouseDragScroll("vertical", "grabWhileDragging");
     const gridCoordsList: {col: number, row: number}[] = []
     for (let row = 0; row < numRows; ++row)
     {
@@ -23,13 +18,17 @@ export default function ImageGrid({
     const containerPadding = 8; // p-2 = 0.5rem
     const naturalWidth = numCols * cellSize + (numCols - 1) * cellGap + containerPadding * 2;
 
-    const gridClassNames = "grid gap-2 m-2 p-2 min-h-0 overflow-y-auto pointer-events-auto bg-black";
+    const gridClassNames = "grid gap-2 m-2 p-2 max-h-[60vh] overflow-y-auto pointer-events-auto bg-black";
     // Tailwind's JIT compiler cannot resolve dynamically-built class names like `grid-cols-${numCols}`,
-    // so the column template is set inline. Height is bounded by the parent flex container; min-h-0 lets
-    // this grid shrink so it scrolls internally instead of pushing siblings out of view.
+    // so the column template is set inline. `width` declares the natural size so ancestors with `w-fit`
+    // (the popup) can size themselves to it; `maxWidth: 100%` then shrinks the grid horizontally when
+    // the parent Form's `max-w-[80vw]` cap is hit. The viewport-based `max-h-[60vh]` paired with
+    // `overflow-y-auto` gives the grid its OWN vertical scrollbar (independent of flex distribution),
+    // so the panel keeps its natural height when content fits and scrolls internally when it doesn't.
     const gridStyle = {
         gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
-        width: `min(${naturalWidth}px, 90vw)`,
+        width: `${naturalWidth}px`,
+        maxWidth: "100%",
     };
 
     return <div ref={onRefChange} className={gridClassNames} style={gridStyle}>

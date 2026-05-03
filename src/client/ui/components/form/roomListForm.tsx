@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Text from "../basic/text";
 import Button from "../basic/button";
 import TextInput from "../basic/textInput";
-import CloseButton from "../basic/closeButton";
 import List from "../basic/list";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import SocketsClient from "../../../networking/client/socketsClient";
@@ -12,6 +10,7 @@ import { RoomTypeEnumMap, RoomType } from "../../../../shared/room/types/roomTyp
 import User from "../../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
+import Form from "../basic/form";
 
 // Sentinel ID used by the "My Room" placeholder entry when the user has no room yet.
 // The Visit handler detects this and creates a room before joining.
@@ -140,12 +139,7 @@ export default function RoomListForm({ user, currentRoomID, onClose }: Props)
     // Filter out pinned entries from the paginated list so they don't appear twice.
     const visibleOtherRooms = otherRooms.filter(r => !pinnedIDs.has(r.id));
 
-    return <div className="flex flex-col gap-2 w-80 p-1">
-        <div className="flex flex-row items-center justify-between">
-            <Text content="Rooms" size="lg"/>
-            <CloseButton onClose={onClose}/>
-        </div>
-
+    return <Form>
         <List<RoomListEntry>
             items={visibleOtherRooms}
             getItemKey={(entry) => entry.id}
@@ -164,7 +158,7 @@ export default function RoomListForm({ user, currentRoomID, onClose }: Props)
                 textInput={searchInput} setTextInput={setSearchInput}/>
             <Button name="Search" size="xs" onClick={submitSearch}/>
         </div>
-    </div>;
+    </Form>;
 }
 
 function RoomEntryRow({ entry, user, currentRoomID, onVisit }: RowProps)

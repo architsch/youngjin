@@ -10,7 +10,7 @@ import App from "../../../app";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import AsyncUtil from "../../../../shared/system/util/asyncUtil";
 
-export default function Chat()
+export default function Chat({selectionIsActive}: Props)
 {
     const [state, setState] = useState<ChatState>({textInput: "", sentMessage: ""});
 
@@ -81,16 +81,23 @@ export default function Chat()
         setState({textInput: state.textInput, sentMessage: ""});
     };
 
-    return <>
-        <div className={className}>
-            <ChatTextInput textInput={state.textInput} setTextInput={setTextInput}/>
-            <ChatSendButton textInput={state.textInput} sendMessage={sendMessage}/>
-        </div>
-        {state.sentMessage.length > 0 && <ChatSentMessage
-            sentMessage={state.sentMessage}
-            clearSentMessage={clearSentMessage}
-        />}
-    </>;
+    if (selectionIsActive)
+    {
+        return <>
+            <div className={className}>
+                <ChatTextInput textInput={state.textInput} setTextInput={setTextInput}/>
+                <ChatSendButton textInput={state.textInput} sendMessage={sendMessage}/>
+            </div>
+            {state.sentMessage.length > 0 && <ChatSentMessage
+                sentMessage={state.sentMessage}
+                clearSentMessage={clearSentMessage}
+            />}
+        </>;
+    }
+    else
+    {
+        return null;
+    }
 }
 
 const className = "flex flex-row flex-wrap gap-x-1 gap-y-0 p-2 w-full";
@@ -99,4 +106,9 @@ interface ChatState
 {
     textInput: string;
     sentMessage: string;
+}
+
+interface Props
+{
+    selectionIsActive: boolean;
 }

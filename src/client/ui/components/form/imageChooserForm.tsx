@@ -56,7 +56,7 @@ export default function ImageChooserForm({mapName, initialChoicePath, onChoose, 
             cellSize={imageMap.getGridCellSize()}
             onSelect={(col, row) => { setSelectedCol(col); setSelectedRow(row); }}/>
 
-        <div className="flex flex-row items-center justify-center gap-2">
+        <div className="sticky bottom-0 -mx-5 -mb-5 px-5 py-3 bg-gray-600 flex flex-row items-center justify-center gap-2">
             <Button name="Choose" size="sm" color="green"
                 onClick={() => onChoose(imageMap.getImagePathByRawCoords(selectedSubfolderName, selectedCol, selectedRow))}/>
             <Button name="Cancel" size="sm" color="gray" onClick={onClose}/>

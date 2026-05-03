@@ -3,7 +3,6 @@ import Text from "../basic/text";
 import Button from "../basic/button";
 import TextInput from "../basic/textInput";
 import Image from "../image/image";
-import CloseButton from "../basic/closeButton";
 import Spacer from "../basic/spacer";
 import ImageChooser from "../image/imageChooser";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
@@ -14,6 +13,7 @@ import RoomEditor from "../../../../shared/user/types/roomEditor";
 import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
 import Form from "../basic/form";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
+import { editorListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 
 export default function ConfigureMyRoomForm({ onClose }: Props)
 {
@@ -26,13 +26,19 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
     const [editors, setEditors] = useState<RoomEditor[]>([]);
 
     const loadEditors = useCallback(async () => {
-        const response = await RoomAPIClient.getRoomEditors();
-        if (response.status >= 200 && response.status < 300 && response.data.editors)
-            setEditors(response.data.editors);
-        /*const dummyEditors: RoomEditor[] = [];
-        for (let i = 0; i < 16; ++i)
-            dummyEditors.push({userName: `dummy_user_${i}`, email: `dummy_email_${i}@dummycompany.com`});
-        setEditors(dummyEditors);*/
+        if (editorListDebugEnabledObservable.peek())
+        {
+            const dummyEditors: RoomEditor[] = [];
+            for (let i = 0; i < 16; ++i)
+                dummyEditors.push({userName: `dummy_user_${i}`, email: `dummy_email_${i}@dummycompany.com`});
+            setEditors(dummyEditors);
+        }
+        else
+        {
+            const response = await RoomAPIClient.getRoomEditors();
+            if (response.status >= 200 && response.status < 300 && response.data.editors)
+                setEditors(response.data.editors);
+        }
     }, []);
 
     useEffect(() => { loadEditors(); }, []);
@@ -89,8 +95,6 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
     }, [loadEditors]);
 
     return <Form>
-        <CloseButton onClose={onClose}/>
-
         {/* Section 1: Room URL */}
         <Text content="My Room's URL:" size="sm"/>
         <div className="flex flex-row items-center gap-1">
