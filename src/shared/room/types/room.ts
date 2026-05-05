@@ -8,6 +8,8 @@ import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumbe
 import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
 import ObjectGroup from "../../object/types/objectGroup";
 
+let temp_participantUserNameByID: { [userID: string]: string } = {};
+
 export default class Room extends EncodableData
 {
     id: string;
@@ -46,6 +48,12 @@ export default class Room extends EncodableData
         return this.voxelGrid.quadsMem.quads;
     }
 
+    encodeWithParams(bufferState: BufferState, participantUserNameByID: { [userID: string]: string })
+    {
+        temp_participantUserNameByID = participantUserNameByID;
+        this.encode(bufferState);
+    }
+
     encode(bufferState: BufferState)
     {
         new EncodableByteString(this.id.length > 0 ? this.id : UNDEFINED_DOCUMENT_ID_CHAR).encode(bufferState);
@@ -54,7 +62,7 @@ export default class Room extends EncodableData
         new EncodableByteString(this.ownerUserName).encode(bufferState);
         new EncodableByteString(this.texturePackPath).encode(bufferState);
         this.voxelGrid.encode(bufferState);
-        this.objectGroup.encode(bufferState);
+        this.objectGroup.encodeWithParams(bufferState, temp_participantUserNameByID);
     }
 
     static decode(bufferState: BufferState): EncodableData

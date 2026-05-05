@@ -43,13 +43,13 @@ const ServerUserManager =
         const user = socketUserContext.user;
 
         console.log(`ServerUserManager.addUserToRoom :: roomID = ${roomRuntimeMemory.room.id}, userID = ${userID}`);
-        if (roomRuntimeMemory.participantUserIDs[userID] != undefined)
+        if (roomRuntimeMemory.participantUserNameByID[userID] != undefined)
         {
             console.error(`ServerUserManager.addUserToRoom :: User is already registered (roomID = ${roomRuntimeMemory.room.id}, userID = ${userID})`);
             return;
         }
         ServerRoomManager.currentRoomIDByUserID[userID] = roomRuntimeMemory.room.id;
-        roomRuntimeMemory.participantUserIDs[userID] = true;
+        roomRuntimeMemory.participantUserNameByID[userID] = user.userName;
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomRuntimeMemory.room.id];
         if (!socketRoomContext)
@@ -103,13 +103,13 @@ const ServerUserManager =
         for (const objectId of objectIds)
             ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, new RemoveObjectSignal(roomRuntimeMemory.room.id, objectId));
 
-        if (roomRuntimeMemory.participantUserIDs[user.id] == undefined)
+        if (roomRuntimeMemory.participantUserNameByID[user.id] == undefined)
         {
             console.error(`ServerUserManager.removeUserFromRoom :: User is not registered as the room's participant (userID = ${user.id}, roomID = ${roomID})`);
             return;
         }
         delete ServerRoomManager.currentRoomIDByUserID[user.id];
-        delete roomRuntimeMemory.participantUserIDs[user.id];
+        delete roomRuntimeMemory.participantUserNameByID[user.id];
         delete playerObjectByUserID[user.id];
         delete userRoleByUserID[user.id];
 
@@ -119,7 +119,7 @@ const ServerUserManager =
         else
             socketRoomContext.removeSocketUserContext(user.id);
 
-        if (Object.keys(roomRuntimeMemory.participantUserIDs).length == 0)
+        if (Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
             {
@@ -127,7 +127,7 @@ const ServerUserManager =
                 // before proceeding to unload the room. The reason why this check is necessary
                 // is that a user might have joined the room WHILE we were saving the
                 // room's content to the DB (by the async "DBRoomUtil.saveRoomContent" call above).
-                if (Object.keys(roomRuntimeMemory.participantUserIDs).length == 0)
+                if (Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
                     ServerRoomManager.unloadRoom(roomID);
             }
         }

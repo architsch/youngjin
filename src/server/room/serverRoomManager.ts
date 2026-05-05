@@ -51,8 +51,8 @@ const ServerRoomManager =
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (ServerRoomManager.roomRuntimeMemories[roomID] == undefined)
             throw new Error(`ServerRoomManager.unloadRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
-        if (Object.keys(roomRuntimeMemory.participantUserIDs).length > 0)
-            throw new Error(`ServerRoomManager.unloadRoom :: There are still participants in the room (participants = [${JSON.stringify(roomRuntimeMemory.participantUserIDs)}])`);
+        if (Object.keys(roomRuntimeMemory.participantUserNameByID).length > 0)
+            throw new Error(`ServerRoomManager.unloadRoom :: There are still participants in the room (participantUserNameByID = [${JSON.stringify(roomRuntimeMemory.participantUserNameByID)}])`);
         delete ServerRoomManager.roomRuntimeMemories[roomID];
         delete ServerRoomManager.socketRoomContexts[roomID];
 

@@ -202,7 +202,7 @@ describe("race condition scenarios", () => {
                     // structural invariants should hold for the room
                     const roomMem = ServerRoomManager.roomRuntimeMemories["ar-race"];
                     expect(roomMem).toBeDefined();
-                    expect(Object.keys(roomMem.participantUserIDs).length).toBe(2);
+                    expect(Object.keys(roomMem.participantUserNameByID).length).toBe(2);
                 },
             });
         });
@@ -258,7 +258,7 @@ describe("race condition scenarios", () => {
                     expect(["from-room", "to-room"]).toContain(roomID);
                     // That room should be loaded and contain the user
                     expect(ServerRoomManager.roomRuntimeMemories[roomID]).toBeDefined();
-                    expect(ServerRoomManager.roomRuntimeMemories[roomID].participantUserIDs[users[0].user.id]).toBe(true);
+                    expect(ServerRoomManager.roomRuntimeMemories[roomID].participantUserNameByID[users[0].user.id]).toBeDefined();
                 },
             });
         });

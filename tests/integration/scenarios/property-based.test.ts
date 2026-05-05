@@ -223,7 +223,7 @@ describe("property-based: structural invariants (with latency)", () => {
                         for (const [userID, roomID] of Object.entries(ServerRoomManager.currentRoomIDByUserID))
                         {
                             expect(ServerRoomManager.roomRuntimeMemories[roomID]).toBeDefined();
-                            expect(ServerRoomManager.roomRuntimeMemories[roomID].participantUserIDs[userID]).toBe(true);
+                            expect(ServerRoomManager.roomRuntimeMemories[roomID].participantUserNameByID[userID]).toBeDefined();
                         }
 
                         checkObjectTransformConsistency(connectedUsers);
@@ -281,7 +281,7 @@ describe("property-based: gameplay state persistence", () => {
                     // Each participant should have a player object
                     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
                     {
-                        for (const uid of Object.keys(roomMem.participantUserIDs))
+                        for (const uid of Object.keys(roomMem.participantUserNameByID))
                         {
                             const obj = ServerUserManager.getPlayerObject(uid);
                             expect(obj).toBeDefined();

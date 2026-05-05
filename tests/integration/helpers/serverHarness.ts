@@ -320,7 +320,7 @@ export const harness = {
     {
         const mem = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!mem) return -1;
-        return Object.keys(mem.participantUserIDs).length;
+        return Object.keys(mem.participantUserNameByID).length;
     },
 
     /**

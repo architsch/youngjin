@@ -49,7 +49,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         },
         canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
             // User can only move his/her own player character
-            if (obj.sourceUserID != user.id || obj.sourceUserName != user.userName)
+            if (obj.sourceUserID != user.id)
                 return false;
 
             // Player movement must obey the laws of physics
@@ -60,7 +60,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
         },
         canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
             // User can only set the metadata of his/her own player character
-            if (obj.sourceUserID != user.id || obj.sourceUserName != user.userName)
+            if (obj.sourceUserID != user.id)
                 return false;
 
             // User can only set the player's message nothing else
@@ -117,7 +117,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                 return false;
 
             // Block spoofing attempts
-            if (obj.sourceUserID != user.id || obj.sourceUserName != user.userName)
+            if (obj.sourceUserID != user.id)
                 return false;
 
             // Block users from adding too many canvases

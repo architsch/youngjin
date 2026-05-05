@@ -9,6 +9,7 @@ import { ObjectMetadata } from "./objectMetadata";
 import ObjectTransform from "./objectTransform";
 
 let temp_roomID = "";
+let temp_participantUserNameByID: { [userID: string]: string } = {};
 
 const latestVersion = 0;
 
@@ -22,6 +23,12 @@ export default class ObjectGroup extends EncodableData
         this.objectById = {};
         for (const object of objects)
             this.objectById[object.objectId] = object;
+    }
+
+    encodeWithParams(bufferState: BufferState, participantUserNameByID: { [userID: string]: string })
+    {
+        temp_participantUserNameByID = participantUserNameByID;
+        this.encode(bufferState);
     }
 
     encode(bufferState: BufferState)
@@ -41,7 +48,10 @@ export default class ObjectGroup extends EncodableData
             if (userIndex < 0)
             {
                 sourceUserIDs.push(object.sourceUserID);
-                sourceUserNames.push(object.sourceUserName);
+                let mostRecentSourceUserName = temp_participantUserNameByID[object.sourceUserID];
+                if (mostRecentSourceUserName == undefined)
+                    mostRecentSourceUserName = object.sourceUserName; // Fallback to the object's own sourceUserName if the userName is not found among the room's current participants.
+                sourceUserNames.push(mostRecentSourceUserName);
                 userIndex = sourceUserIDs.length - 1;
             }
             objectSourceUserIndices[i] = userIndex;

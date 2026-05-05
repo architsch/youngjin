@@ -56,7 +56,7 @@ export function checkRoomParticipantCounts(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
-        const participantCount = Object.keys(roomMem.participantUserIDs).length;
+        const participantCount = Object.keys(roomMem.participantUserNameByID).length;
         const socketRoomCtx = ServerRoomManager.socketRoomContexts[roomID];
         expect(socketRoomCtx).toBeDefined();
 
@@ -71,7 +71,7 @@ export function checkRoomIDReferences(): void
     for (const [userID, roomID] of Object.entries(ServerRoomManager.currentRoomIDByUserID))
     {
         expect(ServerRoomManager.roomRuntimeMemories[roomID]).toBeDefined();
-        expect(ServerRoomManager.roomRuntimeMemories[roomID].participantUserIDs[userID]).toBe(true);
+        expect(ServerRoomManager.roomRuntimeMemories[roomID].participantUserNameByID[userID]).toBeDefined();
     }
 }
 
@@ -83,7 +83,7 @@ export function checkObjectOwnership(): void
         for (const [objId, obj] of Object.entries(roomMem.room.objectById))
         {
             const sourceUser = obj.sourceUserID;
-            expect(roomMem.participantUserIDs[sourceUser]).toBe(true);
+            expect(roomMem.participantUserNameByID[sourceUser]).toBeDefined();
         }
     }
 }
@@ -94,7 +94,7 @@ export function checkNoUserInMultipleRooms(): void
     const seenUsers = new Set<string>();
     for (const roomMem of Object.values(ServerRoomManager.roomRuntimeMemories))
     {
-        for (const uid of Object.keys(roomMem.participantUserIDs))
+        for (const uid of Object.keys(roomMem.participantUserNameByID))
         {
             expect(seenUsers.has(uid)).toBe(false);
             seenUsers.add(uid);
@@ -107,7 +107,7 @@ export function checkPlayerObjectsExist(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
-        for (const uid of Object.keys(roomMem.participantUserIDs))
+        for (const uid of Object.keys(roomMem.participantUserNameByID))
         {
             const obj = ServerUserManager.getPlayerObject(uid);
             expect(obj, `Player object missing for user ${uid} in room ${roomID}`).toBeDefined();
@@ -178,7 +178,7 @@ export function checkMulticastSignalReach(
     for (const ctx of connectedUsers)
     {
         const pending = getPendingSignals(ctx, signalType);
-        const isInRoom = roomMem.participantUserIDs[ctx.user.id] === true;
+        const isInRoom = roomMem.participantUserNameByID[ctx.user.id] != undefined;
         const isExcluded = ctx.user.id === excludedUserID;
 
         if (isInRoom && !isExcluded)
@@ -222,7 +222,7 @@ export function checkPhysicsRoomConsistency(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
-        const participantCount = Object.keys(roomMem.participantUserIDs).length;
+        const participantCount = Object.keys(roomMem.participantUserNameByID).length;
         if (participantCount > 0)
             expect(PhysicsManager.hasRoom(roomID), `Physics room missing for occupied room ${roomID}`).toBe(true);
     }
@@ -233,7 +233,7 @@ export function checkPhysicsObjectConsistency(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
-        for (const uid of Object.keys(roomMem.participantUserIDs))
+        for (const uid of Object.keys(roomMem.participantUserNameByID))
         {
             const playerObj = ServerUserManager.getPlayerObject(uid);
             if (playerObj)
@@ -251,7 +251,7 @@ export function checkUserRoleConsistency(): void
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
         const ownerID = roomMem.room.ownerUserID;
-        if (ownerID && roomMem.participantUserIDs[ownerID])
+        if (ownerID && roomMem.participantUserNameByID[ownerID])
         {
             const role = ServerUserManager.getUserRole(ownerID);
             expect(role, `Owner ${ownerID} of room ${roomID} should have Owner role`).toBe(0); // UserRoleEnumMap.Owner

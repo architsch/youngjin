@@ -7,22 +7,27 @@ import EncodableByteString from "../../networking/types/encodableByteString";
 export default class RoomRuntimeMemory extends EncodableData
 {
     room: Room;
-    participantUserIDs: { [userID: string]: boolean };
+    participantUserNameByID: { [userID: string]: string };
     lastSavedTimeInMillis: number;
 
-    constructor(room: Room, participantUserIDs: { [userID: string]: boolean })
+    constructor(room: Room, participantUserNameByID: { [userID: string]: string })
     {
         super();
         this.room = room;
-        this.participantUserIDs = participantUserIDs;
+        this.participantUserNameByID = participantUserNameByID;
         this.lastSavedTimeInMillis = Date.now();
     }
 
     encode(bufferState: BufferState)
     {
-        this.room.encode(bufferState);
-        new EncodableArray(
-            Object.keys(this.participantUserIDs).map(x => new EncodableByteString(x)),
+        this.room.encodeWithParams(bufferState, this.participantUserNameByID);
+
+        new EncodableArray( // Encode participantUserIDs
+            Object.keys(this.participantUserNameByID).map(x => new EncodableByteString(x)),
+            65535
+        ).encode(bufferState);
+        new EncodableArray( // Encode participantUserNames
+            Object.values(this.participantUserNameByID).map(x => new EncodableByteString(x)),
             65535
         ).encode(bufferState);
     }
@@ -31,13 +36,15 @@ export default class RoomRuntimeMemory extends EncodableData
     {
         const room = Room.decode(bufferState) as Room;
 
-        const a1 = EncodableArray.decodeWithParams(bufferState, EncodableByteString.decode, 65535) as EncodableArray;
-        const participantUserIDs: { [userID: string]: boolean } = {};
-        for (const element of a1.arr)
-        {
-            participantUserIDs[(element as EncodableByteString).str] = true;
-        }
+        const participantUserIDs = (EncodableArray.decodeWithParams(bufferState, EncodableByteString.decode, 65535) as EncodableArray)
+            .arr.map(x => (x as EncodableByteString).str);
+        const participantUserNames = (EncodableArray.decodeWithParams(bufferState, EncodableByteString.decode, 65535) as EncodableArray)
+            .arr.map(x => (x as EncodableByteString).str);
+        
+        const participantUserNameByID: { [userID: string]: string } = {};
+        for (let i = 0; i < participantUserIDs.length; ++i)
+            participantUserNameByID[participantUserIDs[i]] = participantUserNames[i];
 
-        return new RoomRuntimeMemory(room, participantUserIDs);
+        return new RoomRuntimeMemory(room, participantUserNameByID);
     }
 }
