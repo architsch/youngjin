@@ -80,7 +80,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             {canModifyRoom && <ObjectSelectionMenu/>}
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
-            {<Chat selectionIsActive={!objectSelection && !voxelQuadSelection}/>}
+            {<Chat hide={canModifyRoom && (objectSelection != null || voxelQuadSelection != null)}/>}
         </div>
         <Tutorial user={user}/>
         {popupStack.map((state, i) => {

@@ -1,68 +1,116 @@
-import MoveVoxelBlockSignal from "../../../../shared/voxel/types/update/moveVoxelBlockSignal";
-import AddVoxelBlockSignal from "../../../../shared/voxel/types/update/addVoxelBlockSignal";
-import RemoveVoxelBlockSignal from "../../../../shared/voxel/types/update/removeVoxelBlockSignal";
-import App from "../../../app";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
-import SocketsClient from "../../../networking/client/socketsClient";
 import Button from "../basic/button";
+import App from "../../../app";
+import SocketsClient from "../../../networking/client/socketsClient";
+import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
-import Room from "../../../../shared/room/types/room";
-import VoxelUpdateUtil from "../../../../shared/voxel/util/voxelUpdateUtil";
+import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
+import EncodableByteString from "../../../../shared/networking/types/encodableByteString";
+import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
+import ObjectFactory from "../../../object/factories/objectFactory";
+import ClientObjectManager from "../../../object/clientObjectManager";
+import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
+import ObjectTransform from "../../../../shared/object/types/objectTransform";
+import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
+import Vec3 from "../../../../shared/math/types/vec3";
+import ErrorUtil from "../../../../shared/system/util/errorUtil";
+import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
 import ClientVoxelManager from "../../../voxel/clientVoxelManager";
+import VoxelUpdateUtil from "../../../../shared/voxel/util/voxelUpdateUtil";
+import RemoveVoxelBlockSignal from "../../../../shared/voxel/types/update/removeVoxelBlockSignal";
+import Room from "../../../../shared/room/types/room";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
+import AddVoxelBlockSignal from "../../../../shared/voxel/types/update/addVoxelBlockSignal";
+import ObjectIdUtil from "../../../../shared/object/util/objectIdUtil";
 
-export default function VoxelQuadTransformOptions(props: {selection: VoxelQuadSelection})
+const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+
+export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection})
 {
-    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
-        <Button name="Add Block" size="sm"
-            disabled={!canAddVoxelBlock(props.selection)}
-            onClick={() => tryAddVoxelBlock(props.selection)}/>
-        <Button name="Remove Block" size="sm"
-            disabled={!canRemoveVoxelBlock(props.selection)}
-            onClick={() => tryRemoveVoxelBlock(props.selection)}/>
-        <Button name="Move Up" size="sm"
-            disabled={!canMoveVoxelBlock(props.selection, 0, 0, 1)}
-            onClick={() => tryMoveVoxelBlock(props.selection, 0, 0, 1)}/>
-        <Button name="Move Down" size="sm"
-            disabled={!canMoveVoxelBlock(props.selection, 0, 0, -1)}
-            onClick={() => tryMoveVoxelBlock(props.selection, 0, 0, -1)}/>
+    return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
+        <div className="flex flex-row gap-2">
+            <Button name="Remove Block" size="sm"
+                disabled={!canRemoveVoxelBlock(props.selection)}
+                onClick={() => tryRemoveVoxelBlock(props.selection)}/>
+            <Button name="Add Block" size="sm"
+                disabled={!canAddVoxelBlock(props.selection)}
+                onClick={() => tryAddVoxelBlock(props.selection)}/>
+            <Button name="Add Canvas" size="sm"
+                disabled={getPlaceableWallAttachedObjectTransform(props.selection, canvasTypeIndex) == null}
+                onClick={() => {
+                    const randomImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();
+                    tryAddObjectFromQuad(props.selection, canvasTypeIndex,
+                        {[ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath)});
+                }}/>
+        </div>
     </div>;
 }
 
-function canMoveVoxelBlock(selection: VoxelQuadSelection,
-    rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
+function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
+    objectTypeIndex: number): ObjectTransform | null
 {
     const room = App.getCurrentRoom();
     if (!room)
-        return false;
-    return VoxelUpdateUtil.canMoveVoxelBlock(App.getCurrentUserRole(), room, selection.quadIndex, rowOffset, colOffset, collisionLayerOffset);
+        return null;
+    const user = App.getUser();
+    const userRole = App.getCurrentUserRole();
+
+    const voxel = selection.voxel;
+    const quadIndex = selection.quadIndex;
+    const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
+        VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex);
+
+    if (dirY != 0)
+        return null;
+
+    const x = voxel.col + 0.5 + offsetX;
+    const yUpper = 0.5 * Math.ceil(2 * offsetY);
+    const yLower = 0.5 * Math.floor(2 * offsetY);
+    const z = voxel.row + 0.5 + offsetZ;
+
+    const upperPos: Vec3 = {x, y: yUpper, z};
+    const lowerPos: Vec3 = {x, y: yLower, z};
+    const dir: Vec3 = {x: dirX, y: dirY, z: dirZ};
+
+    const upperTr = new ObjectTransform(upperPos, dir);
+    const lowerTr = new ObjectTransform(lowerPos, dir);
+    const upperObj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
+        ObjectIdUtil.generateRandomObjectId(), upperTr);
+    const lowerObj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
+        ObjectIdUtil.generateRandomObjectId(), lowerTr);
+
+    if (ObjectUpdateUtil.canAddObject(user, userRole, room, upperObj))
+        return upperTr;
+    if (ObjectUpdateUtil.canAddObject(user, userRole, room, lowerObj))
+        return lowerTr;
+    return null;
 }
 
-function tryMoveVoxelBlock(selection: VoxelQuadSelection, rowOffset: number, colOffset: number, collisionLayerOffset: number)
+async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
+    objectTypeIndex: number, metadata: {[key: number]: EncodableByteString})
 {
-    if (!canMoveVoxelBlock(selection, rowOffset, colOffset, collisionLayerOffset))
-        return;
+    try {
+        const tr = getPlaceableWallAttachedObjectTransform(selection, objectTypeIndex);
+        if (tr == null)
+            return;
 
-    const room = App.getCurrentRoom()!;
-    const quadIndex = selection.quadIndex;
+        VoxelQuadSelection.unselect();
 
-    if (ClientVoxelManager.moveVoxelBlock(room, quadIndex, rowOffset, colOffset, collisionLayerOffset))
-    {
-        const v = selection.voxel;
-        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-        const newRow = v.row + rowOffset;
-        const newCol = v.col + colOffset;
-        const newCollisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerAfterOffset(quadIndex, collisionLayerOffset);
-
-        if (!VoxelQuadSelection.trySelect(selection.voxel,
-            VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer)))
+        const room = App.getCurrentRoom()!;
+        const user = App.getUser();
+        const objectId = ObjectIdUtil.generateRandomObjectId();
+        const signal = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, tr, metadata);
+        
+        // Add the game object locally, and report it to the server if successful.
+        const gameObject = ObjectFactory.createServerSideObject(signal);
+        const success = await ClientObjectManager.addObject(gameObject);
+        if (success)
         {
-            // If selection failed, try selecting the opposite side of the moved block.
-            VoxelQuadSelection.trySelect(selection.voxel,
-                VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, (orientation == "-") ? "+" : "-", newCollisionLayer));
+            SocketsClient.emitAddObjectSignal(signal);
+            ObjectSelection.trySelect(gameObject);
         }
-        SocketsClient.emitMoveVoxelBlockSignal(new MoveVoxelBlockSignal(room.id, quadIndex, rowOffset, colOffset, collisionLayerOffset));
+    } catch (err) {
+        console.error(`Exception while trying to add an object from a voxelQuad :: Error: ${ErrorUtil.getErrorMessage(err)}`);
     }
 }
 

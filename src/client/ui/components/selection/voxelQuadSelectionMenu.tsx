@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import VoxelQuadTextureOptions from "./voxelQuadTextureOptions";
-import VoxelQuadTransformOptions from "./voxelQuadTransformOptions";
-import VoxelQuadObjectOptions from "./voxelQuadObjectOptions";
+import VoxelQuadPlacementOptions from "./voxelQuadPlacementOptions";
 
 export default function VoxelQuadSelectionMenu()
 {
@@ -20,17 +19,14 @@ export default function VoxelQuadSelectionMenu()
 
     if (state.selection)
     {
-        return <div className={className}>
-            <VoxelQuadTransformOptions selection={state.selection}/>
-            <VoxelQuadObjectOptions selection={state.selection}/>
+        return <div className="flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden">
+            <VoxelQuadPlacementOptions selection={state.selection}/>
             <VoxelQuadTextureOptions selection={state.selection}/>
         </div>;
     }
     else
         return null;
 }
-
-const className = "flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden";
 
 interface VoxelQuadSelectionState
 {

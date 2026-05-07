@@ -66,8 +66,9 @@ export default function DebugStats({env}: Props)
     
     return <div className={className}>
         <Button
-            name={state.display ? "Hide" : "Stats"}
+            name={state.display ? "Close Debugger" : "🔍"}
             size="xs"
+            color={state.display ? "red" : "transparent"}
             onClick={() => setState({...state, display: !state.display})}
         />
         {state.display && <div className="m-0 p-1 text-xs text-gray-400 text-nowrap bg-black overflow-auto pointer-events-auto">

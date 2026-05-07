@@ -9,6 +9,7 @@ import ObjectTransformUpdateResult from "../../object/types/objectTransformUpdat
 import ObjectTransform from "../../object/types/objectTransform";
 import { GRAVITY_SPEED, SOFT_COLLISION_PUSH_SPEED_LIMIT } from "../../system/sharedConstants";
 import { ColliderState } from "../types/colliderState";
+import NumUtil from "../../math/util/numUtil";
 
 const PhysicsCollisionUtil =
 {
@@ -87,6 +88,13 @@ const PhysicsCollisionUtil =
 
             // Limit the push magnitude.
             let push = Vector3DUtil.scale(intersectionToObjectDir, pushMagnitude);
+            const limit = overlap.colliderConfig.outgoingSoftCollisionForceLimit;
+            if (limit)
+            {
+                push.x = NumUtil.clampInRange(push.x, -limit.x, limit.x);
+                push.y = NumUtil.clampInRange(push.y, -limit.y, limit.y);
+                push.z = NumUtil.clampInRange(push.z, -limit.z, limit.z);
+            }
             const pushLength = Vector3DUtil.length(push);
             if (pushLength > SOFT_COLLISION_PUSH_SPEED_LIMIT)
                 push = Vector3DUtil.scale(push, SOFT_COLLISION_PUSH_SPEED_LIMIT / pushLength);

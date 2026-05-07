@@ -12,7 +12,7 @@ import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfi
 import EncodableData from "../../../shared/networking/types/encodableData";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import { connectionStateObservable } from "../../system/clientObservables";
-import { tryStartClientProcess } from "../../system/types/clientProcess";
+import { tryStartClientProcess, endClientProcess, ongoingClientProcessExists } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -81,6 +81,8 @@ const SocketsClient =
         socket.on("connect", () => {
             console.log(`Successfully connected to socket server (transport: ${socket.io.engine.transport.name})`);
             connectionStateObservable.set("connected");
+            if (ongoingClientProcessExists("reconnect"))
+                endClientProcess("reconnect");
             if (hasConnectedBefore)
             {
                 // Reconnection: start a new roomChange process so the server's
@@ -97,6 +99,7 @@ const SocketsClient =
         socket.on("disconnect", (reason) => {
             console.warn(`Socket disconnected (reason: ${reason})`);
             connectionStateObservable.set("reconnecting");
+            tryStartClientProcess("reconnect", 1, 0);
 
             if (reason === "io server disconnect")
             {
@@ -111,6 +114,8 @@ const SocketsClient =
             // All automatic reconnection attempts exhausted (network disconnect).
             console.warn("All reconnection attempts exhausted. Reloading page...");
             connectionStateObservable.set("disconnected");
+            if (ongoingClientProcessExists("reconnect"))
+                endClientProcess("reconnect");
             window.location.reload();
         });
 

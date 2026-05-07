@@ -46,7 +46,7 @@ async function ensureInitialized()
 
     for (const def of arrowDefs)
     {
-        const arrow = await WorldSpaceArrow.create(def.dir, "#00ccff", 2);
+        const arrow = await WorldSpaceArrow.create(def.dir, "#ffff00", 2);
         arrow.addToParent(scene);
         arrow.setVisible(false);
         arrows.push(arrow);

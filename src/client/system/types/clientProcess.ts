@@ -1,7 +1,7 @@
 import { ongoingClientProcessesObservable } from "../clientObservables";
 
 // While there is at least 1 ongoing ClientProcess,
-// the UI should be showing the "Loading" screen as well as blocking
+// the system should be showing a full-screen loading indicator UI as well as blocking
 // any other major (i.e. network or system-related) actions.
 export default interface ClientProcess
 {
@@ -45,9 +45,14 @@ export function endClientProcess(name: string): void
         throw new Error(`Failed to end client process "${name}" because there was no ongoing process registered.`);
 }
 
-export function ongoingClientProcessExists(): boolean
+export function ongoingClientProcessExists(name?: string): boolean
 {
     const processMap = ongoingClientProcessesObservable.peek();
+    if (name !== undefined)
+    {
+        const clientProcess = processMap[name];
+        return clientProcess !== undefined && clientProcess.numOngoingProcesses > 0;
+    }
     for (const clientProcess of Object.values(processMap))
     {
         if (clientProcess.numOngoingProcesses > 0)

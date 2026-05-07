@@ -1,7 +1,7 @@
 export default function Button({name, size = "md", color = "gray", disabled = false, onClick, additionalClassNames = "" }: Props)
 {
     return <div
-        className={`text-center ${disabled? "" : "cursor-pointer"} ${textClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]} ${additionalClassNames}`}
+        className={`text-center ${disabled ? "" : "cursor-pointer"} ${textClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]} ${additionalClassNames}`}
         onClick={disabled ? undefined : onClick}
     >
         {name}
@@ -20,13 +20,14 @@ const panelClassNames = {
     green: "yj-panel-green",
     red: "yj-panel-red",
     disabled: "yj-panel-gray opacity-50 cursor-not-allowed",
+    transparent: "pointer-events-auto",
 };
 
 interface Props
 {
     name: string;
     size?: "xs" | "sm" | "md" | "lg";
-    color?: "gray" | "green" | "red";
+    color?: "gray" | "green" | "red" | "transparent";
     disabled?: boolean;
     onClick: () => void;
     additionalClassNames?: string;

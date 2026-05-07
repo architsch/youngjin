@@ -5,7 +5,7 @@ import ScreenCenterText from "../basic/screenCenterText";
 
 export default function Loading()
 {
-    const [state, setState] = useState<LoadingState>({loading: true});
+    const [state, setState] = useState<LoadingState>({loading: ongoingClientProcessExists()});
 
     useEffect(() => {
         ongoingClientProcessesObservable.addListener("ui.loading", _ => setState({

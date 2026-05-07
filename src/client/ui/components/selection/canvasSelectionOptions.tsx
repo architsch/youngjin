@@ -16,12 +16,11 @@ export default function CanvasSelectionOptions(props: {selection: ObjectSelectio
     const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
     const initialChoicePath = metadata ? metadata.str : "";
 
-    return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
-        <div className="flex flex-row gap-2">
-            <Button name="Remove" size="sm" color="red"
-                disabled={!canRemoveCanvas(props.selection)}
-                onClick={() => tryRemoveCanvas(props.selection)}/>
-        </div>
+    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
+        <Button name="Remove" size="sm" color="red"
+            disabled={!canRemoveCanvas(props.selection)}
+            onClick={() => tryRemoveCanvas(props.selection)}
+        />
         <ImageChooser
             title="Change Image"
             mapName="CanvasImageMap"

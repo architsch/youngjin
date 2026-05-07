@@ -76,6 +76,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
                     hitboxSize: {sizeX: 0.6, sizeY: PLAYER_HEIGHT, sizeZ: 0.6},
                     applyHardCollisionToOthers: false,
                     outgoingSoftCollisionForceMultiplier: 1,
+                    outgoingSoftCollisionForceLimit: {x: 1, y: 0, z: 1},
                     incomingSoftCollisionForceMultiplier: 1,
                     maxClimbableHeight: 0.6, // a little bit more than the height of a voxel block
                 },
