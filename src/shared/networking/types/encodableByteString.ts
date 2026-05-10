@@ -1,6 +1,12 @@
 import BufferState from "./bufferState";
 import EncodableData from "./encodableData";
 
+// UTF-8 is used so multi-byte characters (e.g. Korean, emojis) survive the wire round-trip.
+// The 0x00 terminator stays valid because UTF-8 never emits 0x00 except for U+0000,
+// which we reject explicitly in encode().
+const encoder = new TextEncoder();
+const decoder = new TextDecoder("utf-8");
+
 export default class EncodableByteString extends EncodableData
 {
     str: string;
@@ -13,28 +19,30 @@ export default class EncodableByteString extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        for (let i = 0; i < this.str.length; ++i)
+        const utf8Bytes = encoder.encode(this.str);
+        for (let i = 0; i < utf8Bytes.length; ++i)
         {
-            let code = this.str.charCodeAt(i);
-            if (code < 0 || code > 255)
+            const byte = utf8Bytes[i];
+            if (byte === 0)
             {
-                console.error(`Char code is out of the 8-bit range (code = ${code}, string = ${this.str}, index = ${i})`);
-                code = "?".charCodeAt(0);
+                console.error(`Null character (U+0000) is not allowed in EncodableByteString (string = ${this.str})`);
+                continue;
             }
-            bufferState.view[bufferState.byteIndex++] = code;
+            bufferState.view[bufferState.byteIndex++] = byte;
         }
-        bufferState.view[bufferState.byteIndex++] = 0; // null character (to mark the end of the string)
+        bufferState.view[bufferState.byteIndex++] = 0; // null terminator
     }
 
     static decode(bufferState: BufferState): EncodableData
     {
-        const decodedChars: string[] = [];
-        let code: number;
+        const startIndex = bufferState.byteIndex;
         while (bufferState.byteIndex < bufferState.view.length &&
-            (code = bufferState.view[bufferState.byteIndex++]) != 0) // scan until you hit the null character (which marks the end of the string)
+            bufferState.view[bufferState.byteIndex] !== 0)
         {
-            decodedChars.push(String.fromCharCode(code));
+            bufferState.byteIndex++;
         }
-        return new EncodableByteString(decodedChars.join(""));
+        const str = decoder.decode(bufferState.view.subarray(startIndex, bufferState.byteIndex));
+        bufferState.byteIndex++; // skip null terminator
+        return new EncodableByteString(str);
     }
 }

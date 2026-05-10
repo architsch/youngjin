@@ -1,5 +1,8 @@
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
-import Button from "../basic/button";
+import IconButton from "../basic/iconButton";
+import TrashIcon from "../basic/icons/trashIcon";
+import AddBlockIcon from "../basic/icons/addBlockIcon";
+import AddCanvasIcon from "../basic/icons/addCanvasIcon";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
@@ -27,15 +30,15 @@ const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
 export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection})
 {
-    return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
+    return <div className="flex flex-col gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
         <div className="flex flex-row gap-2">
-            <Button name="Remove Block" size="sm"
+            <IconButton icon={<TrashIcon/>} size="md" color="red"
                 disabled={!canRemoveVoxelBlock(props.selection)}
                 onClick={() => tryRemoveVoxelBlock(props.selection)}/>
-            <Button name="Add Block" size="sm"
+            <IconButton icon={<AddBlockIcon/>} size="md"
                 disabled={!canAddVoxelBlock(props.selection)}
                 onClick={() => tryAddVoxelBlock(props.selection)}/>
-            <Button name="Add Canvas" size="sm"
+            <IconButton icon={<AddCanvasIcon/>} size="md"
                 disabled={getPlaceableWallAttachedObjectTransform(props.selection, canvasTypeIndex) == null}
                 onClick={() => {
                     const randomImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();

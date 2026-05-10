@@ -1,17 +1,35 @@
-import { ReactNode } from "react";
+import { ReactNode, useRef } from "react";
 import Text from "./text";
-import Button from "./button";
+import IconButton from "./iconButton";
+import CloseIcon from "./icons/closeIcon";
+import { DRAG_THRESHOLD_PX } from "../../../system/clientConstants";
 
 export default function Popup({ children, onClose, showCloseButton = false, title = "" }: Props)
 {
     const hasTopBar = showCloseButton || title.length > 0;
+    const downOnBackdropRef = useRef(false);
+    const downPosRef = useRef({ x: 0, y: 0 });
 
-    return <div className={className} onClick={onClose}>
-        <div onClick={(e) => e.stopPropagation()} className="relative w-fit h-fit text-lg text-gray-200 bg-gray-600 border-gray-400 border-2">
+    return <div
+        className={className}
+        onPointerDown={(e) => {
+            downOnBackdropRef.current = e.target === e.currentTarget;
+            downPosRef.current = { x: e.clientX, y: e.clientY };
+        }}
+        onPointerUp={(e) => {
+            const dx = e.clientX - downPosRef.current.x;
+            const dy = e.clientY - downPosRef.current.y;
+            const movedTooFar = dx * dx + dy * dy > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX;
+            const shouldClose = downOnBackdropRef.current && e.target === e.currentTarget && !movedTooFar;
+            downOnBackdropRef.current = false;
+            if (shouldClose) onClose();
+        }}
+    >
+        <div className="relative w-fit h-fit text-lg text-gray-200 bg-gray-600 border-gray-400 border-2 rounded-lg">
             {hasTopBar && <div className="flex flex-col">
                 <div className="flex flex-row">
                     {title.length > 0 && <Text size="sm" content={title}/>}
-                    {showCloseButton && <Button name="X" size="sm" onClick={onClose} additionalClassNames="ml-auto"/>}
+                    {showCloseButton && <IconButton icon={<CloseIcon/>} size="sm" onClick={onClose} additionalClassNames="ml-auto"/>}
                 </div>
                 {children}
             </div>}

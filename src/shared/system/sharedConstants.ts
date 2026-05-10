@@ -78,7 +78,7 @@ export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, u
 // Gameplay
 
 export const PLAYER_HEIGHT = 2.5;
-export const MAX_WORLDSPACE_SELECT_DIST_SQR = 256; // = 16*16
+export const MAX_WORLDSPACE_SELECT_DIST_SQR = 100; // = 10*10
 
 // UI
 

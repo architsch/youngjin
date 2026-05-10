@@ -18,7 +18,7 @@ export default function ImageGrid({
     const containerPadding = 8; // p-2 = 0.5rem
     const naturalWidth = numCols * cellSize + (numCols - 1) * cellGap + containerPadding * 2;
 
-    const gridClassNames = "grid gap-2 m-2 p-2 max-h-[60vh] overflow-y-auto pointer-events-auto bg-black";
+    const gridClassNames = "grid gap-2 m-2 p-2 max-h-[60vh] overflow-y-auto pointer-events-auto rounded-md";
     // Tailwind's JIT compiler cannot resolve dynamically-built class names like `grid-cols-${numCols}`,
     // so the column template is set inline. `width` declares the natural size so ancestors with `w-fit`
     // (the popup) can size themselves to it; `maxWidth: 100%` then shrinks the grid horizontally when

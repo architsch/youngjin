@@ -1,10 +1,11 @@
 import { OBJECT_MESSAGE_MAX_LENGTH } from "../../system/sharedConstants";
+import StringUtil from "../../system/util/stringUtil";
 import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 
 const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.SentMessage]: {
-        preprocessingMethod: (rawValue: string) => rawValue.trim().substring(0, OBJECT_MESSAGE_MAX_LENGTH),
+        preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), OBJECT_MESSAGE_MAX_LENGTH),
         unselectObjectOnSet: false,
     },
     [ObjectMetadataKeyEnumMap.ImagePath]: {

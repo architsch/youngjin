@@ -1,5 +1,6 @@
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
-import Button from "../basic/button";
+import IconButton from "../basic/iconButton";
+import TrashIcon from "../basic/icons/trashIcon";
 import ImageChooser from "../image/imageChooser";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
@@ -16,8 +17,8 @@ export default function CanvasSelectionOptions(props: {selection: ObjectSelectio
     const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
     const initialChoicePath = metadata ? metadata.str : "";
 
-    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-black">
-        <Button name="Remove" size="sm" color="red"
+    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
+        <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
             onClick={() => tryRemoveCanvas(props.selection)}
         />

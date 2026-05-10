@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import Button from "../basic/button";
+import IconButton from "../basic/iconButton";
+import EditIcon from "../basic/icons/editIcon";
 import ImageChooserProps from "../../types/imageChooserProps";
 import { usePopup } from "../../contexts/popupContext";
 
@@ -14,5 +15,5 @@ export default function ImageChooser({title, mapName, initialChoicePath, onChoos
         });
     }, [popup, title, mapName, initialChoicePath, onChoose]);
 
-    return <Button name={title} size="sm" onClick={openPopup}/>;
+    return <IconButton icon={<EditIcon/>} size="md" onClick={openPopup}/>;
 }

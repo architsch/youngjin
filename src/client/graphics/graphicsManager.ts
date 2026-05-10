@@ -83,7 +83,7 @@ const GraphicsManager =
         ambLight = new THREE.AmbientLight(0xffffff, 0.15);
         scene.add(ambLight);
 
-        camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        camera = new THREE.PerspectiveCamera(60, 1, 0.1, 45); // 45 = roughly the maximum diagonal distance from one corner of the room to the other (Room comprises a 32x32 voxel grid)
 
         if (!gameRenderer)
         {

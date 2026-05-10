@@ -14,6 +14,9 @@ import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
 import Form from "../basic/form";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 import { editorListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
+import IconButton from "../basic/iconButton";
+import CloseIcon from "../basic/icons/closeIcon";
+import CopyIcon from "../basic/icons/copyIcon";
 
 export default function ConfigureMyRoomForm({ onClose }: Props)
 {
@@ -98,37 +101,39 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
         {/* Section 1: Room URL */}
         <Text content="My Room's URL:" size="sm"/>
         <div className="flex flex-row items-center gap-1">
-            <div className="yj-text-xs text-gray-300 bg-gray-800 px-2 py-1 break-all select-all">{roomURL}</div>
-            <Button name="Copy" size="xs" onClick={copyURL}/>
+            <div className="yj-text-xs text-gray-300 bg-gray-800 px-2 py-1 rounded-md break-all select-all">{roomURL}</div>
+            <IconButton icon={<CopyIcon/>} size="sm" onClick={copyURL}/>
         </div>
 
         <Spacer size="sm"/>
 
         {/* Section 2: Texture Pack */}
         <Text content="Texture Pack:" size="sm"/>
-        <ImageChooser
-            title="Change Texture Pack"
-            mapName="TexturePackImageMap"
-            initialChoicePath={texturePackPath}
-            onChoose={(path) => setTexture(path)}
-        />
-        {texturePackPath.length > 0 && <Image
-            src={ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, texturePackPath)}
-            size="md" alt="Texture preview"/>}
+        <div className="flex flex-row items-center gap-1">
+            {texturePackPath.length > 0 && <Image
+                src={ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, texturePackPath)}
+                size="md" alt="Texture preview"/>}
+            <ImageChooser
+                title="Change Texture Pack"
+                mapName="TexturePackImageMap"
+                initialChoicePath={texturePackPath}
+                onChoose={(path) => setTexture(path)}
+            />
+        </div>
 
         <Spacer size="sm"/>
 
         {/* Section 3: Editors */}
         <Text content="Editors:" size="sm"/>
         <div className="flex flex-row items-center gap-1">
-            <TextInput size="xs" placeholder="userName" textInput={editorUserName} setTextInput={setEditorUserName}/>
-            <Button name="Add" size="xs" onClick={addEditor}/>
+            <TextInput size="sm" placeholder="userName" textInput={editorUserName} setTextInput={setEditorUserName}/>
+            <Button name="Add" size="sm" onClick={addEditor}/>
         </div>
         {editors.length > 0 && <div className="flex flex-col gap-1">
             {editors.map(editor => (
                 <div key={editor.userName} className="flex flex-row items-center gap-1">
-                    <div className="yj-text-xs text-gray-300">{editor.userName} ({editor.email})</div>
-                    <Button name="X" size="xs" color="red" onClick={() => removeEditor(editor.userName)}/>
+                    <Text size="sm" content={`${editor.userName} (${editor.email})`}/>
+                    <IconButton icon={<CloseIcon/>} size="sm" color="red" onClick={() => removeEditor(editor.userName)}/>
                 </div>
             ))}
         </div>}

@@ -1,4 +1,7 @@
 import Button from "../basic/button";
+import IconButton from "../basic/iconButton";
+import DoorIcon from "../basic/icons/doorIcon";
+import GearIcon from "../basic/icons/gearIcon";
 import User from "../../../../shared/user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
@@ -21,7 +24,7 @@ export default function UserRoomIdentity({
         : userRole === UserRoleEnumMap.Editor ? "Editor"
         : "Visitor";
 
-    return <div className="flex flex-col justify-end gap-1 absolute right-0 top-0 py-1 px-2 text-right bg-black">
+    return <div className="flex flex-col justify-end gap-1 absolute right-0 top-0 py-1 px-2 text-right bg-gray-800/50 rounded-bl-lg">
         <div className="flex flex-row items-end justify-end gap-2">
             <div className="flex flex-row">
                 <div className="yj-text-sm text-amber-300">{user.userName}</div>
@@ -31,8 +34,8 @@ export default function UserRoomIdentity({
             {!isGuest && <Button name="Sign Out" size="sm" onClick={onSignOutButtonClick}/>}
         </div>
         <div className="flex flex-row items-end justify-end gap-2">
-            <Button name="Browse Rooms" size="sm" onClick={onOpenRoomsButtonClick}/>
-            {showConfigureButton && <Button name="Manage My Room" size="sm" onClick={onConfigureButtonClick}/>}
+            <IconButton icon={<DoorIcon/>} size="md" onClick={onOpenRoomsButtonClick}/>
+            {showConfigureButton && <IconButton icon={<GearIcon/>} size="md" onClick={onConfigureButtonClick}/>}
         </div>
     </div>;
 }

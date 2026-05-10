@@ -32,7 +32,7 @@ export default function Notification()
     if (!message) return null;
 
     return <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-        <div className="px-4 py-2 text-sm text-gray-200 bg-gray-800 border border-gray-600">
+        <div className="px-4 py-2 text-sm text-gray-200 bg-gray-800 border border-gray-600 rounded-md">
             {message}
         </div>
     </div>;

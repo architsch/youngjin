@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import GeometryFactory from "../../../../graphics/factories/geometryFactory";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { DIRECTION_VECTORS } from "../../../../../client/system/clientConstants";
+import { DIRECTION_VECTORS, DRAG_THRESHOLD_PX } from "../../../../../client/system/clientConstants";
 
 const tempQuat = new THREE.Quaternion();
 const vecTemp1 = new THREE.Vector3();
@@ -81,6 +81,52 @@ export default class WorldSpaceArrow
             "cursor:pointer; pointer-events:auto;" +
             "border-radius:50%; background:transparent;";
 
+        // Drag-vs-click handoff: when a press starts on the click target,
+        // wait to see if the pointer moves past a small threshold. If it does,
+        // hand off to the game canvas so first-person drag-to-rotate runs.
+        // If it doesn't, the press stays on this element and the "click"
+        // listener below fires normally so the arrow's onClick callback runs.
+        let pressArmed = false;
+        let pressStartX = 0;
+        let pressStartY = 0;
+        let pressPointerId: number | null = null;
+
+        function cleanupPress(): void {
+            pressArmed = false;
+            pressPointerId = null;
+            document.removeEventListener("pointermove", onPressMove);
+            document.removeEventListener("pointerup", cleanupPress);
+            document.removeEventListener("pointercancel", cleanupPress);
+        }
+
+        function onPressMove(ev: PointerEvent): void {
+            if (!pressArmed || ev.pointerId !== pressPointerId) return;
+            const dx = ev.clientX - pressStartX;
+            const dy = ev.clientY - pressStartY;
+            if (dx * dx + dy * dy < DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) return;
+
+            cleanupPress();
+
+            const canvas = GraphicsManager.getGameCanvas();
+            canvas.dispatchEvent(new PointerEvent("pointerdown", {
+                pointerId: ev.pointerId,
+                pointerType: ev.pointerType,
+                clientX: pressStartX,
+                clientY: pressStartY,
+                bubbles: false,
+            }));
+            canvas.dispatchEvent(new PointerEvent("pointermove", ev));
+        }
+
+        this.clickElement.addEventListener("pointerdown", (ev) => {
+            pressArmed = true;
+            pressStartX = ev.clientX;
+            pressStartY = ev.clientY;
+            pressPointerId = ev.pointerId;
+            document.addEventListener("pointermove", onPressMove);
+            document.addEventListener("pointerup", cleanupPress);
+            document.addEventListener("pointercancel", cleanupPress);
+        });
         this.clickElement.addEventListener("pointerenter", () => {
             mat.opacity = 1.0;
         });

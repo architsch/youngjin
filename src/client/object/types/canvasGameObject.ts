@@ -30,7 +30,7 @@ export default class CanvasGameObject extends GameObject
             throw new Error("CanvasGameObject requires InstancedMeshGraphics component");
 
         const materialParams = new TexturePackMaterialParams("canvas_texture_pack",
-            2048, 2048, 256, 256, "dynamicEmpty");
+            2048, 2048, 256, 256, "dynamicEmpty", -1, -1); // polygon-offset values are -1 because canvases must not z-fight with the wall behind them.
         this.instancedMeshGraphics.setInstancingProperties(materialParams,
             "Square", MAX_CANVASES_PER_ROOM);
     }

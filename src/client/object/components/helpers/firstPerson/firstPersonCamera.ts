@@ -62,18 +62,7 @@ export default class FirstPersonCamera
         // (unless there is a view target that is placed higher).
         const pitchAngleForAltitude = -0.4 * playerBottomY;
 
-        // (+1 = "look up"), (-1 = "look down"), (0 = "neither")
-        const s1 = Math.sign(pitchAngleForViewTarget);
-        const s2 = Math.sign(pitchAngleForAltitude);
-
-        let desiredPitchAngle = 0;
-        if (s2 == 0) // If there is no "look down" due to the player's altitude, only take the view-target into account.
-            desiredPitchAngle = pitchAngleForViewTarget;
-        else if (s1 == 0) // If there is neither "look up" nor "look down" that is due to the view-target, only take the player's altitude into account.
-            desiredPitchAngle = pitchAngleForAltitude;
-        else // Otherwise, always prefer looking up.
-            desiredPitchAngle = Math.max(pitchAngleForViewTarget, pitchAngleForAltitude);
-
+        const desiredPitchAngle = (pitchAngleForViewTarget == 0) ? pitchAngleForAltitude : pitchAngleForViewTarget;
         this.quaternionInterpTarget.setFromAxisAngle(DIRECTION_VECTORS["+x"], desiredPitchAngle);
     }
 

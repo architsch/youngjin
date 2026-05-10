@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../basic/button";
+import IconButton from "../basic/iconButton";
+import SearchIcon from "../basic/icons/searchIcon";
 import TextInput from "../basic/textInput";
 import List from "../basic/list";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
@@ -154,9 +156,9 @@ export default function RoomListForm({ user, currentRoomID, onClose }: Props)
         />
 
         <div className="flex flex-row items-center gap-1">
-            <TextInput size="xs" placeholder="Search by user name"
+            <TextInput size="sm" placeholder="Search by user name"
                 textInput={searchInput} setTextInput={setSearchInput}/>
-            <Button name="Search" size="xs" onClick={submitSearch}/>
+            <IconButton icon={<SearchIcon/>} size="sm" onClick={submitSearch}/>
         </div>
     </Form>;
 }

@@ -8,10 +8,13 @@ export default class TexturePackMaterialParams extends MaterialParams
     textureGridCellWidth: number;
     textureGridCellHeight: number;
     textureLoadType: TextureLoadType;
+    polygonOffsetFactor?: number;
+    polygonOffsetUnits?: number;
 
     constructor(texturePath: string, textureWidth: number, textureHeight: number,
         textureGridCellWidth: number, textureGridCellHeight: number,
-        textureLoadType: TextureLoadType)
+        textureLoadType: TextureLoadType,
+        polygonOffsetFactor?: number, polygonOffsetUnits?: number)
     {
         super("TexturePack");
 
@@ -21,6 +24,8 @@ export default class TexturePackMaterialParams extends MaterialParams
         this.textureGridCellWidth = textureGridCellWidth;
         this.textureGridCellHeight = textureGridCellHeight;
         this.textureLoadType = textureLoadType;
+        this.polygonOffsetFactor = polygonOffsetFactor;
+        this.polygonOffsetUnits = polygonOffsetUnits;
     }
 
     getMaterialId(): string

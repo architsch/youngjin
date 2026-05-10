@@ -18,27 +18,27 @@
 
 @layer components {
   .yj-text-xs {
-    @apply m-[0.25] px-1 py-[0.25] text-xs
+    @apply px-1.5 py-0.5 text-xs
   }
   .yj-text-sm {
-    @apply m-[0.5] px-2 py-[0.5] text-sm
+    @apply px-3 py-1 text-sm
   }
   .yj-text-md {
-    @apply m-1 px-4 py-1 text-base font-semibold
+    @apply px-4.5 py-1.5 text-base font-semibold
   }
   .yj-text-lg {
-    @apply m-2 px-8 py-2 text-lg font-semibold
+    @apply px-6 py-2 text-lg font-semibold
   }
   .yj-panel-white {
-    @apply text-gray-800 bg-gray-100 border border-gray-400 pointer-events-auto
+    @apply text-gray-800 bg-gray-100 border border-gray-400 rounded-md pointer-events-auto
   }
   .yj-panel-gray {
-    @apply text-gray-200 bg-gray-700 border border-gray-500 pointer-events-auto
+    @apply text-gray-200 bg-gray-700 border border-gray-500 rounded-md pointer-events-auto
   }
   .yj-panel-green {
-    @apply text-green-200 bg-green-700 border border-green-500 pointer-events-auto
+    @apply text-green-200 bg-green-700 border border-green-500 rounded-md pointer-events-auto
   }
   .yj-panel-red {
-    @apply text-pink-200 bg-pink-700 border border-pink-500 pointer-events-auto
+    @apply text-pink-200 bg-pink-700 border border-pink-500 rounded-md pointer-events-auto
   }
 }

@@ -78,21 +78,31 @@ export default class SpeechBubble extends GameObjectComponent
         if (!this.shouldShowMessage())
             return;
 
-        if (this.componentConfig.prependUserNameToMessage)
+        const prepend = this.componentConfig.prependUserNameToMessage;
+
+        if (!prepend && message.length === 0)
+        {
+            this.hideSpeechBubble();
+            return;
+        }
+
+        this.showSpeechBubble();
+        this.textElement!.replaceChildren();
+
+        if (prepend)
         {
             const userName = this.gameObject.params.sourceUserName;
-            message = `<span style="color:#707070;">${userName + (message.length > 0 ? ":<br/>" : "")}</span>${message}`;
+            const userNameSpan = document.createElement("span");
+            userNameSpan.style.color = "oklch(87.9% 0.169 91.605)";
+            userNameSpan.textContent = userName + (message.length > 0 ? ":" : "");
+            this.textElement!.appendChild(userNameSpan);
+
+            if (message.length > 0)
+                this.textElement!.appendChild(document.createElement("br"));
         }
 
         if (message.length > 0)
-        {
-            this.showSpeechBubble();
-            this.textElement!.innerHTML = message;
-        }
-        else // Message is empty
-        {
-            this.hideSpeechBubble();
-        }
+            this.textElement!.appendChild(document.createTextNode(message));
     }
 
     private showSpeechBubble(): void
@@ -100,7 +110,7 @@ export default class SpeechBubble extends GameObjectComponent
         if (!this.textElement)
         {
             this.textElement = document.createElement("div");
-            this.textElement.style = "position:absolute; max-width:18ch; margin:auto auto; padding:0.2rem 0.2rem; color:white; background-color:rgba(0, 0, 0, 0.5); font-size:0.75rem; text-align:center; white-space:normal;";
+            this.textElement.style = "position:absolute; max-width:18ch; margin:auto auto; padding:0.2rem 0.4rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; font-size:0.75rem; text-align:center; white-space:normal; pointer-events:none;";
             this.textCSS2DObject = new CSS2DObject(this.textElement);
             this.speechBubbleHotspot.add(this.textCSS2DObject);
             this.textCSS2DObject.center.set(0.5, 1);

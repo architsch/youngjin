@@ -10,22 +10,7 @@ export const MaterialConstructorMap: { [materialType: string]:
 {
     "TexturePack": async (params: MaterialParams) =>
     {
-        const p = params as TexturePackMaterialParams;
-        switch (p.textureLoadType)
-        {
-            case "staticImageFromPath":
-                return createTexturePackMaterial(
-                    await TextureFactory.loadStaticImageTexture(p.texturePath),
-                    p.textureWidth, p.textureHeight, p.textureGridCellWidth, p.textureGridCellHeight
-                );
-            case "dynamicEmpty":
-                return createTexturePackMaterial(
-                    TextureFactory.loadDynamicEmptyTexture(p.texturePath, p.textureWidth, p.textureHeight),
-                    p.textureWidth, p.textureHeight, p.textureGridCellWidth, p.textureGridCellHeight
-                );
-            default:
-                throw new Error(`Unknown texture load type :: "${p.textureLoadType}"`);
-        }
+        return await createTexturePackMaterial(params as TexturePackMaterialParams);
     },
     "Wireframe": async (params: MaterialParams) =>
     {
@@ -41,21 +26,38 @@ export const MaterialConstructorMap: { [materialType: string]:
     },
 }
 
-function createTexturePackMaterial(texture: THREE.Texture,
-    textureWidth: number, textureHeight: number,
-    textureGridCellWidth: number, textureGridCellHeight: number): THREE.Material
+async function createTexturePackMaterial(p: TexturePackMaterialParams): Promise<THREE.Material>
 {
+    let texture: THREE.Texture;
+    switch (p.textureLoadType)
+    {
+        case "staticImageFromPath":
+            texture = await TextureFactory.loadStaticImageTexture(p.texturePath);
+            break;
+        case "dynamicEmpty":
+            texture = TextureFactory.loadDynamicEmptyTexture(p.texturePath, p.textureWidth, p.textureHeight);
+            break;
+        default:
+            throw new Error(`Unknown texture load type :: "${p.textureLoadType}"`);
+    }
+
     const newMaterial = new THREE.MeshPhongMaterial();
     newMaterial.map = texture;
     newMaterial.transparent = false;
+    if (p.polygonOffsetFactor && p.polygonOffsetUnits)
+    {
+        newMaterial.polygonOffset = true;
+        newMaterial.polygonOffsetFactor = p.polygonOffsetFactor;
+        newMaterial.polygonOffsetUnits = p.polygonOffsetUnits;
+    }
 
     const pixelBleedingPreventionScales = [
-        (textureGridCellWidth - 1) / textureGridCellWidth,
-        (textureGridCellHeight - 1) / textureGridCellHeight,
+        (p.textureGridCellWidth - 1) / p.textureGridCellWidth,
+        (p.textureGridCellHeight - 1) / p.textureGridCellHeight,
     ];
     const textureGridCellScales = [
-        textureGridCellWidth / textureWidth,
-        textureGridCellHeight / textureHeight,
+        p.textureGridCellWidth / p.textureWidth,
+        p.textureGridCellHeight / p.textureHeight,
     ];
     const uvScales = [
         textureGridCellScales[0] * pixelBleedingPreventionScales[0],
