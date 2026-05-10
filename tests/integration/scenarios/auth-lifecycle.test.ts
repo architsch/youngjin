@@ -67,7 +67,6 @@ vi.mock("../../../src/client/networking/api/restAPI", () => ({
 vi.mock("../../../src/server/networking/util/addressUtil", () => ({
     default: {
         getErrorPageURL: (name: string) => `/error/${name}`,
-        getMyPageURL: () => "/mypage",
         getEnvStaticURL: () => "http://localhost:3000",
         getEnvDynamicURL: () => "http://localhost:3000",
     },
@@ -161,8 +160,8 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockDBUserUtil.upgradeGuestToMember).toHaveBeenCalledWith(
             "guest-1", "newuser", "newuser@gmail.com",
         );
-        // Should redirect to mypage
-        expect(res.redirectUrl).toBe("/mypage");
+        // Should redirect to the game page (root)
+        expect(res.redirectUrl).toBe("/");
     });
 
     it("new user via Google OAuth: creates member when no guest exists", async () => {
@@ -187,7 +186,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockDBUserUtil.createUser).toHaveBeenCalledWith(
             "brandnew", UserTypeEnumMap.Member, "brandnew@gmail.com",
         );
-        expect(res.redirectUrl).toBe("/mypage");
+        expect(res.redirectUrl).toBe("/");
     });
 
     it("existing user via Google OAuth: signs in and cleans up orphaned guest", async () => {
@@ -217,7 +216,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockUserTokenUtil.addTokenForUserId).toHaveBeenCalledWith(
             "existing-member", req, res,
         );
-        expect(res.redirectUrl).toBe("/mypage");
+        expect(res.redirectUrl).toBe("/");
     });
 
     it("Google OAuth fails gracefully when no auth code provided", async () => {

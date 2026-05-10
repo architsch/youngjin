@@ -8,9 +8,6 @@ const AddressUtil =
     getErrorPageURL: (errorPageName: string) => {
         return `${AddressUtil.getEnvStaticURL()}/error/${errorPageName}.html`;
     },
-    getMyPageURL: () => {
-        return `${AddressUtil.getEnvDynamicURL()}/mypage`;
-    },
     getEnvStaticURL: () => {
         return dev ? getLocalURL() : URL_STATIC;
     },

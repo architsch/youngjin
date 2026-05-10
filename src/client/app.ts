@@ -96,9 +96,8 @@ const App =
 
         endClientProcess("roomChange");
 
-        // Update the browser URL to reflect the loaded room's ID.
-        const roomID = roomChangedSignal.roomRuntimeMemory.room.id;
-        window.history.replaceState(null, "", `/mypage/${roomID}`);
+        // Remove superfluous trailing parts of the URL
+        window.history.replaceState(null, "", "/");
 
         roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
     },

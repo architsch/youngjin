@@ -2,7 +2,7 @@ import { test as base, Page } from "@playwright/test";
 
 // The "setup" project in playwright.config.ts creates a guest session and saves
 // cookies to tests/e2e/.auth/guest.json. All tests in the "chromium" project inherit
-// that storageState automatically. This fixture navigates to /mypage using those
+// that storageState automatically. This fixture navigates to / using those
 // saved cookies, so no new guest user is created.
 
 type AuthFixtures = {
@@ -46,7 +46,7 @@ export const test = base.extend<AuthFixtures>({
         await disconnectSocket(page);
     },
     authenticatedPage: async ({ page }, use) => {
-        await page.goto("/mypage", { waitUntil: "networkidle" });
+        await page.goto("/", { waitUntil: "networkidle" });
         await use(page);
     },
 });

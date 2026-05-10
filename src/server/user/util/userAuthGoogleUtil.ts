@@ -119,7 +119,7 @@ const UserAuthGoogleUtil =
                 UserTokenUtil.addTokenForUserId(dbUser.id!, req, res);
             }
 
-            res.redirect("/mypage");
+            res.redirect("/");
         }
         catch (err)
         {

@@ -3,7 +3,7 @@
 Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/user/util/userIdentificationUtil.ts , @src/server/user/util/userTokenUtil.ts , @src/server/user/util/userAuthGoogleUtil.ts , @src/server/networking/util/cookieUtil.ts , @src/server/user/util/guestCreationLimitUtil.ts , @src/server/networking/util/rateLimitUtil.ts , @views/page/dynamic/mypage.ejs , @src/server/networking/router/api/userRouter.ts , @src/client/networking/client/userAPIClient.ts
 
 ## Client-Server Connection
-1. The user sends a `/mypage` (or `/mypage/:roomID`) HTTP request to the server. HTTP rate limiting applies (20 requests per minute per IP for both page and API routes).
+1. The user sends a `/` (or `/:roomID`) HTTP request to the server. HTTP rate limiting applies (20 requests per minute per IP for both page and API routes).
 2. The server's `UserIdentificationUtil.identifyAnyUser` middleware identifies the user:
     - **If a valid auth token cookie exists**: The JWT is verified, and the existing user is loaded from Firestore.
     - **If no valid auth token exists**: A new guest account is created (subject to rate limits) and a JWT is issued as an HTTP-only cookie.
@@ -21,7 +21,7 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
     - **New user, existing guest session**: The guest account is upgraded to a Member in-place (preserving the document ID, JWT, and all gameplay state).
     - **New user, no guest session**: A new Member account is created with a new JWT.
     - **Returning user**: A JWT is issued for the existing account. Any orphaned guest account is deleted.
-5. The server redirects the browser to `/mypage`, where the standard connection flow re-authenticates the user as a Member.
+5. The server redirects the browser to `/`, where the standard connection flow re-authenticates the user as a Member.
 
 ## Client Logout
 1. The client sends a POST request to the server's logout endpoint.
@@ -36,7 +36,7 @@ Guest account creation is rate-limited along two independent dimensions:
 Both limits use a sliding window with periodic cleanup every 10 minutes. Both limits must be satisfied for account creation to proceed. If either limit is exceeded, the request is rejected.
 
 ## HTTP API Rate Limiting
-All page routes (`/mypage`, `/mypage/:roomID`) and API routes (`/api/user/*`, `/api/room/*`) are rate-limited to 20 requests per minute per IP via Express rate limiting middleware. Violations are logged with the offending IP and path.
+All page routes (`/`, `/:roomID`) and API routes (`/api/user/*`, `/api/room/*`) are rate-limited to 20 requests per minute per IP via Express rate limiting middleware. Violations are logged with the offending IP and path.
 
 ## Authentication Error Handling
 Socket authentication failures redirect the client to one of three error pages:

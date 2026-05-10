@@ -20,13 +20,15 @@ test.describe("Error Handling", () => {
         expect([401, 403]).toContain(response.status());
     });
 
-    test("unknown page routes return 404", async ({ request }) => {
-        const response = await request.get("/this-page-does-not-exist");
+    test("unknown multi-segment routes return 404", async ({ request }) => {
+        // Single-segment paths (e.g. /foo) are now valid game URLs (treated as room IDs),
+        // so we use a multi-segment path to trigger the default 404.
+        const response = await request.get("/this/page/does/not/exist");
         expect(response.status()).toBe(404);
     });
 
-    test("rate limit headers are present on API responses", async ({ request }) => {
-        const response = await request.get("/mypage");
+    test("rate limit headers are present on page responses", async ({ request }) => {
+        const response = await request.get("/");
         expect(response.status()).toBe(200);
         const headers = response.headers();
         // Check for standard rate limit headers (express-rate-limit sets these)

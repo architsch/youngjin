@@ -10,13 +10,10 @@ import RateLimitUtil from "../util/rateLimitUtil";
 export default function Router(app: Express): void
 {
     // If you are in dev mode, also emulate the behavior of the static web server.
+    // Note: "/" is intentionally NOT registered here — PageRouter handles it as the
+    // game page. Static "index.html" remains reachable via "/index.html".
     if (process.env.MODE == "dev")
     {
-        app.get("/", async (req: Request, res: Response): Promise<void> => {
-            const staticContent = await FileUtil.read(req.url + "index.html");
-            res.status(200).setHeader("content-type", "text/html")
-                .send(EJSUtil.postProcessHTML(staticContent));
-        });
         app.get(/.*\.html$/, async (req: Request, res: Response): Promise<void> => {
             const staticContent = await FileUtil.read(req.url);
             res.status(200).setHeader("content-type", "text/html")
@@ -38,14 +35,12 @@ export default function Router(app: Express): void
             res.sendFile(FileUtil.getAbsoluteFilePath(req.url));
         });
     }
-    else
-    {
-        // Health check endpoint
-        app.get("/", (req: Request, res: Response) => {
-            res.status(200).send("Server is running");
-        });
-    }
-    
+
+    // Health check endpoint
+    app.get("/health", (req: Request, res: Response) => {
+        res.status(200).send("Server is running");
+    });
+
     app.get("/robots.txt", (req: Request, res: Response) => {
         res.type("text/plain");
         res.send("User-agent: *\nDisallow: /socket.io/");

@@ -16,7 +16,7 @@ test.describe("Socket.IO Connection", () => {
         const consoleLogs: string[] = [];
         page.on("console", (msg) => consoleLogs.push(msg.text()));
 
-        await page.goto("/mypage", { waitUntil: "networkidle" });
+        await page.goto("/", { waitUntil: "networkidle" });
 
         // Check if the connection log appeared during page load
         const connectionLog = consoleLogs.find((log) =>
@@ -41,7 +41,7 @@ test.describe("Socket.IO Connection", () => {
         const consoleLogs: string[] = [];
         page.on("console", (msg) => consoleLogs.push(msg.text()));
 
-        await page.goto("/mypage", { waitUntil: "networkidle" });
+        await page.goto("/", { waitUntil: "networkidle" });
 
         const connectionLog = consoleLogs.find((log) =>
             log.includes("Successfully connected to socket server")

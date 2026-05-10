@@ -252,7 +252,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 
 | Test | What it verifies |
 |------|-----------------|
-| identifyAnyUser calls updateLastLogin | Page-level identification (`/mypage`) increments `loginCount` |
+| identifyAnyUser calls updateLastLogin | Page-level identification (`/`) increments `loginCount` |
 | identifyRegisteredUser skips updateLastLogin | API-level identification (e.g. `/create_room`) does not increment `loginCount` |
 | identifyAdmin skips updateLastLogin | Admin-level identification (e.g. `/console`) does not increment `loginCount` |
 | Multiple API calls don't inflate loginCount | 5 sequential `identifyRegisteredUser` calls result in zero `updateLastLogin` invocations |

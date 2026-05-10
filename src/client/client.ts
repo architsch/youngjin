@@ -4,7 +4,7 @@ import UIManager from "./ui/uiManager";
 
 import "../shared/image/imageMapDependencies.ts";
 
-// Store the client-side env variables that were injected by the server via "/mypage".
+// Store the client-side env variables that were injected by the server via the game page route.
 const env = (window as any).thingspool_env;
 App.setEnv(env);
 

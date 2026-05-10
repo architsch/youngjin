@@ -1,9 +1,9 @@
 import { test, expect } from "../fixtures/auth.fixture";
 import { SELECTORS, TIMEOUTS } from "../helpers/constants";
 
-test.describe("Main Page (/mypage)", () => {
+test.describe("Main Page (/)", () => {
     test("page loads and returns 200", async ({ page }) => {
-        const response = await page.goto("/mypage", { waitUntil: "domcontentloaded" });
+        const response = await page.goto("/", { waitUntil: "domcontentloaded" });
         expect(response?.status()).toBe(200);
     });
 

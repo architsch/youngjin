@@ -213,7 +213,7 @@ const SocketsServer =
 
                 // Determine which room the user should join.
                 // Priority:
-                //   1. targetRoomID from socket handshake (URL-based room access: /mypage/:roomID)
+                //   1. targetRoomID from socket handshake (URL-based room access: /:roomID)
                 //   2. user.lastRoomID (the room the user was last in)
                 //   3. Hub room (fallback)
                 const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;

@@ -2,7 +2,7 @@
 
 A web-based 3D sandbox multiplayer game powered by Node.js. No downloads, no installs — just open your browser and jump in.
 
-**[Play Now](https://app.thingspool.net/mypage)**
+**[Play Now](https://app.thingspool.net)**
 
 ## What is ThingsPool?
 

@@ -63,7 +63,7 @@ test.describe("Socket Disconnection Handling", () => {
             const consoleLogs: string[] = [];
             page.on("console", (msg) => consoleLogs.push(msg.text()));
 
-            await page.goto("/mypage", { waitUntil: "networkidle" });
+            await page.goto("/", { waitUntil: "networkidle" });
             await waitForSocketConnection(page, consoleLogs);
 
             // 1. Intercept the polling HEAD requests at the Playwright network
@@ -155,7 +155,7 @@ test.describe("Socket Disconnection Handling", () => {
             const consoleLogs: string[] = [];
             page.on("console", (msg) => consoleLogs.push(msg.text()));
 
-            await page.goto("/mypage", { waitUntil: "networkidle" });
+            await page.goto("/", { waitUntil: "networkidle" });
             await waitForSocketConnection(
                 page,
                 consoleLogs,
@@ -238,7 +238,7 @@ test.describe("Socket Disconnection Handling", () => {
             const consoleLogs: string[] = [];
             page.on("console", (msg) => consoleLogs.push(msg.text()));
 
-            await page.goto("/mypage", { waitUntil: "networkidle" });
+            await page.goto("/", { waitUntil: "networkidle" });
             await waitForSocketConnection(
                 page,
                 consoleLogs,

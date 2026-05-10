@@ -2,17 +2,17 @@
 
 Reference: @src/server/user/types/userGameplayState.ts , @src/shared/room/types/roomRuntimeMemory.ts , @src/shared/room/types/roomChangedSignal.ts , @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/room/serverRoomManager.ts , @src/server/user/serverUserManager.ts , @src/server/user/util/userCommandUtil.ts , @src/server/sockets/types/socketUserContext.ts
 
-## When the user moves from one room to another without loading a new "/mypage"
+## When the user moves from one room to another without reloading the game page
 1. The client sends a `RequestRoomChangeSignal` to the server and blocks further room change requests until the current one completes.
 2. The server removes the user from the previous room (despawning player objects and cleaning up runtime memory), loads the target room (from cache or Firestore), restores the user's position/direction/metadata, and adds the user to the new room.
 3. The server unicasts a `RoomChangedSignal` to the client, which unloads the previous room and loads the new one.
 
-## When the user opens "/mypage" without a room ID in the URL
+## When the user opens "/" without a room ID in the URL
 1. The standard authentication and socket connection flow runs (see `authentication.md`).
 2. Since no `targetRoomID` is specified, the server falls back to `user.lastRoomID`. If that room doesn't exist, it falls back to a Hub room.
 3. The server unicasts a `RoomChangedSignal` to the client, which initializes the game.
 
-## When the user opens "/mypage" with a room ID in the URL
+## When the user opens "/:roomID" with a room ID in the URL
 1. The standard authentication and socket connection flow runs with the URL-specified room ID.
 2. The server attempts to join the user to the specified room. If that room doesn't exist, it falls back to a Hub room.
 3. The server unicasts a `RoomChangedSignal` to the client, which initializes the game.

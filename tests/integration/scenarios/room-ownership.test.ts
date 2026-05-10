@@ -170,7 +170,7 @@ describe("room ownership scenarios", () => {
             rooms: [hubRoom("hub"), regularRoom("target-room")],
             users: [userAt(16, 16, "hub", { id: "navigator" })],
             actions: [
-                // Simulates entering /mypage/:roomID — the server resolves this to a joinRoom call
+                // Simulates entering /:roomID — the server resolves this to a joinRoom call
                 { type: "joinRoom", userIndex: 0, roomID: "target-room" },
             ],
             skipInvariants: true,

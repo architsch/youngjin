@@ -22,7 +22,7 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
 {
     const room = App.getCurrentRoom();
     const roomID = room?.id ?? "";
-    const roomURL = `${window.location.origin}/mypage/${roomID}`;
+    const roomURL = `${window.location.origin}/${roomID}`;
 
     const [texturePackPath, setTexturePackPath] = useState(room?.texturePackPath ?? "");
     const [editorUserName, setEditorUserName] = useState("");

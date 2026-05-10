@@ -92,7 +92,6 @@ vi.mock("../../../src/server/user/serverUserManager", () => ({
 vi.mock("../../../src/server/networking/util/addressUtil", () => ({
     default: {
         getErrorPageURL: (name: string) => `/error/${name}`,
-        getMyPageURL: () => "/mypage",
         getEnvStaticURL: () => "http://localhost:3000",
         getEnvDynamicURL: () => "http://localhost:3000",
     },
