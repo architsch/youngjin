@@ -80,6 +80,8 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
             setEditorUserName("");
             loadEditors();
         }
+        else if (response.status === 409)
+            notificationMessageObservable.set("This room has reached the maximum number of editors.");
         else
             notificationMessageObservable.set("Failed to add editor.");
     }, [editorUserName, loadEditors]);

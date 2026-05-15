@@ -43,7 +43,7 @@ describe("race condition scenarios", () => {
                 name: "concurrent join - no latency",
                 rooms: [regularRoom("concurrent-room")],
                 users: Array.from({length: 6}, (_, i) => ({
-                    overrides: { lastX: 8 + i * 3, lastZ: 8 + i * 3, playerMetadata: { "0": `u${i}` } },
+                    overrides: { playerMetadata: { "0": `u${i}` } },
                 })),
                 actions: [
                     // All 6 users join concurrently
@@ -72,7 +72,7 @@ describe("race condition scenarios", () => {
                 rooms: [regularRoom("lat-concurrent")],
                 latency: { enabled: true, minMs: 0, maxMs: 3 },
                 users: Array.from({length: 6}, (_, i) => ({
-                    overrides: { lastX: 8 + i * 3, lastZ: 8 + i * 3, playerMetadata: { "0": `lat-${i}` } },
+                    overrides: { playerMetadata: { "0": `lat-${i}` } },
                 })),
                 actions: [
                     parallel(
@@ -285,7 +285,7 @@ describe("race condition scenarios", () => {
                 skipInvariants: true,
                 assertions: ({ harness }) => {
                     // At least some states should have been saved
-                    expect(harness.savedGameplayStates.length).toBeGreaterThanOrEqual(1);
+                    expect(harness.savedPlayerMetadataRecords.length).toBeGreaterThanOrEqual(1);
                 },
                 skipCleanup: true,
             }, );
@@ -334,7 +334,7 @@ describe("race condition scenarios", () => {
                 name: "reconnect A during movement",
                 rooms: [regularRoom("recon-room")],
                 users: [
-                    namedUser("reconnector", "recon-room", { lastX: 10, lastZ: 10 }),
+                    namedUser("reconnector", "recon-room"),
                     userAt(20, 20, "recon-room"),
                 ],
                 actions: [
@@ -356,7 +356,7 @@ describe("race condition scenarios", () => {
                 name: "reconnect B during voxel edit",
                 rooms: [hubRoom("recon-edit-room")],
                 users: [
-                    namedUser("recon-editor", "recon-edit-room", { lastX: 10, lastZ: 10 }),
+                    namedUser("recon-editor", "recon-edit-room"),
                     userAt(20, 20, "recon-edit-room"),
                 ],
                 actions: [
@@ -496,7 +496,7 @@ describe("race condition scenarios", () => {
                 skipInvariants: true,
                 assertions: ({ harness }) => {
                     // Shutdown should have saved states
-                    expect(harness.savedGameplayStates.length).toBeGreaterThanOrEqual(1);
+                    expect(harness.savedPlayerMetadataRecords.length).toBeGreaterThanOrEqual(1);
                 },
                 skipCleanup: true,
             });
@@ -533,7 +533,7 @@ describe("race condition scenarios", () => {
                 latency: { enabled: true, minMs: 0, maxMs: 3 },
                 users: [
                     namedUser("observer", "lat-recon"),
-                    namedUser("lat-reconnector", "lat-recon", { lastX: 16, lastZ: 16 }),
+                    namedUser("lat-reconnector", "lat-recon"),
                 ],
                 actions: [
                     { type: "moveObject", userIndex: 1, x: 17, y: 0, z: 17 },
@@ -571,6 +571,156 @@ describe("race condition scenarios", () => {
                 },
                 skipCleanup: true,
             }, );
+        });
+    });
+
+    // ─── RC12: Disconnect/reconnect metadata-cache race ──────────────────────
+    //
+    // These tests pin down the disconnect → reconnect contract:
+    //   - Case A (new connection BEFORE old disconnect): the still-live player
+    //     object's metadata must be captured and applied to the new player.
+    //   - Case B (old disconnect BEFORE new connection): the disconnect handler
+    //     snapshots metadata into ServerUserManager.recentDisconnectMetadata
+    //     synchronously (before the DBUser write begins), so the new connection
+    //     can consume the snapshot regardless of how slow the DB write is.
+    //   - When nothing is cached, the DBUser fallback supplies the metadata.
+
+    describe("RC12: metadata-cache race", () => {
+        it("Case B: brand-new chat message at disconnect lands on next session", async () => {
+            await runScenario({
+                name: "case B preserves latest chat",
+                rooms: [regularRoom("rc12-b")],
+                users: [namedUser("rc12-b-user", "rc12-b")],
+                actions: [
+                    { type: "sendMessage", userIndex: 0, message: "right-before-disconnect" },
+                    { type: "reconnectCaseB", userIndex: 0 },
+                ],
+                assertions: ({ harness }) => {
+                    const metadata = harness.getPlayerMetadata("rc12-b-user");
+                    expect(metadata).toBeDefined();
+                    expect(metadata!["0"]).toBe("right-before-disconnect");
+                    // The cache should be empty post-consumption.
+                    expect(harness.hasRecentDisconnectMetadata("rc12-b-user")).toBe(false);
+                },
+            });
+        });
+
+        it("Case A under latency: live metadata is captured even if DB has not yet caught up", async () => {
+            await runScenario({
+                name: "case A preserves live metadata under latency",
+                rooms: [regularRoom("rc12-a-lat")],
+                latency: { enabled: true, minMs: 1, maxMs: 4 },
+                users: [namedUser("rc12-a-user", "rc12-a-lat")],
+                actions: [
+                    { type: "sendMessage", userIndex: 0, message: "live-pre-reconnect" },
+                    { type: "reconnectCaseA", userIndex: 0 },
+                ],
+                skipInvariants: true,
+                assertions: ({ harness }) => {
+                    const metadata = harness.getPlayerMetadata("rc12-a-user");
+                    expect(metadata).toBeDefined();
+                    expect(metadata!["0"]).toBe("live-pre-reconnect");
+                },
+            });
+        });
+
+        it("fallback to DBUser when nothing is cached", async () => {
+            await runScenario({
+                name: "DBUser fallback",
+                rooms: [regularRoom("rc12-db")],
+                users: [namedUser("rc12-db-user", "rc12-db", {
+                    playerMetadata: { "0": "from-DBUser" },
+                })],
+                assertions: ({ harness }) => {
+                    // No reconnect happened — the join read the metadata from the
+                    // mocked DBUser store and applied it to the player object.
+                    const metadata = harness.getPlayerMetadata("rc12-db-user");
+                    expect(metadata!["0"]).toBe("from-DBUser");
+                    expect(harness.hasRecentDisconnectMetadata("rc12-db-user")).toBe(false);
+                },
+            });
+        });
+
+        it("disconnect → reconnect across rooms: metadata follows the user", async () => {
+            await runScenario({
+                name: "cross-room metadata follow",
+                rooms: [regularRoom("rc12-from"), regularRoom("rc12-to")],
+                users: [namedUser("rc12-cross", "rc12-from")],
+                actions: [
+                    { type: "sendMessage", userIndex: 0, message: "follow-me" },
+                    { type: "disconnect", userIndex: 0, saveState: true },
+                    { type: "connect", overrides: { id: "rc12-cross" } },
+                    // User reconnects but joins a DIFFERENT room.
+                    { type: "joinRoom", userIndex: 0, roomID: "rc12-to" },
+                ],
+                skipInvariants: true,
+                assertions: ({ harness }) => {
+                    // playerMetadata is per-user, so it follows the user across rooms.
+                    const metadata = harness.getPlayerMetadata("rc12-cross");
+                    expect(metadata).toBeDefined();
+                    expect(metadata!["0"]).toBe("follow-me");
+                    expect(harness.getStoredLastRoomID("rc12-cross")).toBe("rc12-to");
+                },
+                skipCleanup: true,
+            });
+        });
+
+        it("two rapid reconnects: only the latest chat is kept", async () => {
+            await runScenario({
+                name: "rapid reconnect coalesces metadata",
+                rooms: [regularRoom("rc12-rapid")],
+                users: [namedUser("rc12-rapid-user", "rc12-rapid")],
+                actions: [
+                    { type: "sendMessage", userIndex: 0, message: "first" },
+                    { type: "reconnectCaseB", userIndex: 0 },
+                    { type: "sendMessage", userIndex: 0, message: "second" },
+                    { type: "reconnectCaseB", userIndex: 0 },
+                ],
+                skipInvariants: true,
+                assertions: ({ harness }) => {
+                    const metadata = harness.getPlayerMetadata("rc12-rapid-user");
+                    expect(metadata!["0"]).toBe("second");
+                },
+            });
+        });
+
+        it("evictExpiredDisconnectMetadata clears stale entries past TTL", async () => {
+            await runScenario({
+                name: "TTL eviction",
+                rooms: [regularRoom("rc12-ttl")],
+                users: [namedUser("rc12-ttl-user", "rc12-ttl")],
+                actions: [
+                    { type: "sendMessage", userIndex: 0, message: "stale" },
+                    { type: "disconnect", userIndex: 0, saveState: true },
+                ],
+                skipInvariants: true,
+                assertions: ({ harness }) => {
+                    expect(harness.hasRecentDisconnectMetadata("rc12-ttl-user")).toBe(true);
+                    // Sweeping with TTL = 0 should evict everything.
+                    harness.ServerUserManager.evictExpiredDisconnectMetadata(0);
+                    expect(harness.hasRecentDisconnectMetadata("rc12-ttl-user")).toBe(false);
+                },
+                skipCleanup: true,
+            });
+        });
+
+        it("Case A: room owner reconnect re-establishes the Owner role", async () => {
+            // Editor/role membership must survive a reconnect, since role is
+            // determined per-room from DBRoom.ownerUserID (and DBRoom.editors).
+            await runScenario({
+                name: "case A preserves Owner role",
+                rooms: [regularRoom("rc12-owner")],
+                users: [namedUser("rc12-owner-user", "rc12-owner")],
+                actions: [
+                    { type: "setRoomOwner", userIndex: 0, roomID: "rc12-owner" },
+                    { type: "reconnectCaseA", userIndex: 0 },
+                ],
+                skipInvariants: true,
+                assertions: ({ harness }) => {
+                    expect(harness.ServerUserManager.getUserRole("rc12-owner-user"))
+                        .toBe(0); // UserRoleEnumMap.Owner
+                },
+            });
         });
     });
 });

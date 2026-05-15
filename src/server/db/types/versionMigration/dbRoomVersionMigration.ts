@@ -13,6 +13,14 @@ const DBRoomVersionMigration: DBVersionMigration = [
         }
         return { ...row, ownerUserName };
     },
+    // v1 -> v2: introduce editors[]. Per-(user, room) editor roles were previously
+    // stored in the userRoomStates collection, which has been retired; the editor
+    // list now lives directly on the room as a denormalized {userID, userName, email}
+    // snapshot for cheap rendering in the room-configuration UI.
+    async (row: any) => {
+        row.editors = [];
+        return row;
+    },
 ];
 
 export default DBRoomVersionMigration;

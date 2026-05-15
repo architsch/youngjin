@@ -1,5 +1,6 @@
 import { DBRow } from "./dbRow";
 import { RoomType } from "../../../../shared/room/types/roomType";
+import DBRoomEditor from "./dbRoomEditor";
 
 export default interface DBRoom extends DBRow
 {
@@ -9,4 +10,5 @@ export default interface DBRoom extends DBRow
     ownerUserID: string;
     ownerUserName: string;
     texturePackPath: string;
+    editors: DBRoomEditor[];
 }

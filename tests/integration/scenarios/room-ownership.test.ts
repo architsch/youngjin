@@ -56,11 +56,10 @@ describe("room ownership scenarios", () => {
             assertions: ({ harness }) => {
                 // Room should be unloaded after owner leaves
                 expect(harness.isRoomLoaded("my-room")).toBe(false);
-                // Gameplay state should have been saved
-                expect(harness.savedGameplayStates.length).toBeGreaterThanOrEqual(1);
-                const savedState = harness.savedGameplayStates.find(s => s.userID === "owner-1");
-                expect(savedState).toBeDefined();
-                expect(savedState!.lastRoomID).toBe("my-room");
+                // Owner's lastRoomID should have been written when they joined.
+                expect(harness.getStoredLastRoomID("owner-1")).toBe("my-room");
+                // Disconnect-with-save should have flushed playerMetadata to DBUser.
+                expect(harness.savedPlayerMetadataRecords.some(s => s.userID === "owner-1")).toBe(true);
             },
             skipCleanup: true,
         });
@@ -109,9 +108,8 @@ describe("room ownership scenarios", () => {
                 expect(harness.getRoomParticipantCount("other-room")).toBe(1);
                 // Owner should still have Owner role
                 expect(ServerUserManager.getUserRole("room-owner")).toBe(UserRoleEnumMap.Owner);
-                // Visitor's state should have been saved
-                const savedState = harness.savedGameplayStates.find(s => s.userID === "visitor-1");
-                expect(savedState).toBeDefined();
+                // Visitor's metadata should have been flushed via savePlayerMetadata.
+                expect(harness.savedPlayerMetadataRecords.some(s => s.userID === "visitor-1")).toBe(true);
             },
         });
     });

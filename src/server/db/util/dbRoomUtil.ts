@@ -1,13 +1,13 @@
 import Room from "../../../shared/room/types/room";
 import RoomGenerator from "../../../shared/room/roomGenerator";
 import DBRoom from "../types/row/dbRoom";
+import DBRoomEditor from "../types/row/dbRoomEditor";
 import { RoomType } from "../../../shared/room/types/roomType";
 import DBQuery from "../types/dbQuery";
 import { DBRow } from "../types/row/dbRow";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import VoxelGrid from "../../../shared/voxel/types/voxelGrid";
 import BufferState from "../../../shared/networking/types/bufferState";
-import EncodableArray from "../../../shared/networking/types/encodableArray";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import DBRoomVersionMigration from "../types/versionMigration/dbRoomVersionMigration";
 import DBFileStorageUtil from "./dbFileStorageUtil";
@@ -31,11 +31,11 @@ const DBRoomUtil =
         return await getRoomFromDBRoom(result.data[0]);
     },
     // Returns the room's DB row only (no voxel/object content). Use this when you need
-    // metadata fields like roomType / ownerUserName but don't want the cost of
+    // fields like roomType / ownerUserName / editors but don't want the cost of
     // deserializing the binary content blob from cloud storage.
-    getRoomMetadata: async (roomID: string): Promise<DBRoom | null> =>
+    getDBRoom: async (roomID: string): Promise<DBRoom | null> =>
     {
-        LogUtil.log("DBRoomUtil.getRoomMetadata", {roomID}, "low", "info");
+        LogUtil.log("DBRoomUtil.getDBRoom", {roomID}, "low", "info");
         const result = await new DBQuery<DBRoom>()
             .select()
             .from(COLLECTION_ROOMS)
@@ -75,7 +75,15 @@ const DBRoomUtil =
 
         const room = new Room(undefined, roomType, ownerUserID, ownerUserName, texturePackPath,
             voxelGrid, objectGroup);
-        const dbRoom = getDBRoomFromRoom(room);
+        const dbRoom: DBRoom = {
+            id: room.id,
+            version: DBRoomVersionMigration.length,
+            roomType: room.roomType,
+            ownerUserID: room.ownerUserID,
+            ownerUserName: room.ownerUserName,
+            texturePackPath: room.texturePackPath,
+            editors: [],
+        };
 
         const roomInsertResult = await new DBQuery<{id: string}>()
             .insertInto(COLLECTION_ROOMS)
@@ -117,19 +125,16 @@ const DBRoomUtil =
             .run();
         return result.success;
     },
-}
-
-function getDBRoomFromRoom(room: Room): DBRoom
-{
-    const dbRoom: DBRoom = {
-        id: room.id,
-        version: DBRoomVersionMigration.length,
-        roomType: room.roomType,
-        ownerUserID: room.ownerUserID,
-        ownerUserName: room.ownerUserName,
-        texturePackPath: room.texturePackPath,
-    };
-    return dbRoom;
+    setEditors: async (roomID: string, editors: DBRoomEditor[]): Promise<boolean> =>
+    {
+        LogUtil.log("DBRoomUtil.setEditors", {roomID, count: editors.length}, "low", "info");
+        const result = await new DBQuery<DBRow>()
+            .update(COLLECTION_ROOMS)
+            .set({ editors })
+            .where("id", "==", roomID)
+            .run();
+        return result.success;
+    },
 }
 
 async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>

@@ -94,7 +94,7 @@ describe("room scenarios", () => {
         });
     });
 
-    it("users in different rooms have independent gameplay states", async () => {
+    it("users in different rooms have independent room IDs persisted to DBUser", async () => {
         await runScenario({
             name: "multi-room independence",
             rooms: [regularRoom("room-X"), regularRoom("room-Y")],
@@ -103,12 +103,10 @@ describe("room scenarios", () => {
                 userAt(25, 25, "room-Y"),
             ],
             assertions: ({ users, harness }) => {
-                const stateX = harness.getGameplayState(users[0]);
-                const stateY = harness.getGameplayState(users[1]);
-                expect(stateX!.lastRoomID).toBe("room-X");
-                expect(stateY!.lastRoomID).toBe("room-Y");
-                expect(stateX!.lastX).toBeCloseTo(5);
-                expect(stateY!.lastX).toBeCloseTo(25);
+                expect(harness.getStoredLastRoomID(users[0].user.id)).toBe("room-X");
+                expect(harness.getStoredLastRoomID(users[1].user.id)).toBe("room-Y");
+                expect(ServerRoomManager.currentRoomIDByUserID[users[0].user.id]).toBe("room-X");
+                expect(ServerRoomManager.currentRoomIDByUserID[users[1].user.id]).toBe("room-Y");
             },
         });
     });
@@ -129,24 +127,25 @@ describe("room scenarios", () => {
         });
     });
 
-    it("requestRoomChange signal saves gameplay state from previous room", async () => {
+    it("requestRoomChange persists the new lastRoomID + flushes prev room's metadata", async () => {
         await runScenario({
             name: "requestRoomChange saves state",
             rooms: [regularRoom("room-A"), regularRoom("room-B")],
             users: [userAt(10, 20, "room-A")],
             actions: [
+                { type: "sendMessage", userIndex: 0, message: "from-A" },
                 { type: "requestRoomChange", userIndex: 0, roomID: "room-B" },
             ],
             skipInvariants: true,
             assertions: ({ users, harness }) => {
-                // User should now be in room-B
                 expect(ServerRoomManager.currentRoomIDByUserID[users[0].user.id]).toBe("room-B");
-                // Gameplay state from room-A should have been saved to the DB
-                const saved = harness.savedGameplayStates;
-                const roomASave = saved.find(s => s.userID === users[0].user.id && s.lastRoomID === "room-A");
-                expect(roomASave).toBeDefined();
-                expect(roomASave!.lastX).toBeCloseTo(10);
-                expect(roomASave!.lastZ).toBeCloseTo(20);
+                // lastRoomID is overwritten by the join into room-B.
+                expect(harness.getStoredLastRoomID(users[0].user.id)).toBe("room-B");
+                // The message sent while in room-A should have been flushed via savePlayerMetadata
+                // because room-change runs with savePlayerMetadata=true.
+                const flushed = harness.savedPlayerMetadataRecords.find(s => s.userID === users[0].user.id);
+                expect(flushed).toBeDefined();
+                expect(flushed!.playerMetadata["0"]).toBe("from-A");
             },
         });
     });
@@ -165,7 +164,7 @@ describe("room scenarios", () => {
         });
     });
 
-    it("graceful shutdown saves all rooms and user states", async () => {
+    it("graceful shutdown saves all rooms and user metadata", async () => {
         await runScenario({
             name: "graceful shutdown",
             rooms: [regularRoom("shut-A"), regularRoom("shut-B")],
@@ -177,7 +176,9 @@ describe("room scenarios", () => {
             skipInvariants: true,
             assertions: ({ harness }) => {
                 expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(0);
-                expect(harness.savedGameplayStates.length).toBeGreaterThanOrEqual(2);
+                const userIDs = harness.savedPlayerMetadataRecords.map(r => r.userID);
+                expect(userIDs).toContain("user-a");
+                expect(userIDs).toContain("user-b");
             },
             skipCleanup: true,
         });

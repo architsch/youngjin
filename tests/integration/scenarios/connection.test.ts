@@ -35,24 +35,30 @@ describe("connection scenarios", () => {
         });
     });
 
-    it("disconnect with saveState=true saves gameplay state", async () => {
+    it("disconnect with saveState=true persists player metadata + lastRoomID", async () => {
         await runScenario({
-            name: "disconnect saves state",
+            name: "disconnect saves metadata",
             rooms: [EMPTY_REGULAR],
-            users: [userAt(5, 25, "regular")],
-            actions: [disconnectWithSave(0)],
+            users: [namedUser("save-user", "regular")],
+            actions: [
+                { type: "sendMessage", userIndex: 0, message: "goodbye" },
+                disconnectWithSave(0),
+            ],
             skipInvariants: true,
             assertions: ({ harness }) => {
-                expect(harness.savedGameplayStates).toHaveLength(1);
-                const saved = harness.savedGameplayStates[0];
-                expect(saved.lastX).toBeCloseTo(5);
-                expect(saved.lastZ).toBeCloseTo(25);
+                // lastRoomID was written by changeUserRoom at join time and lives on DBUser.
+                expect(harness.getStoredLastRoomID("save-user")).toBe("regular");
+                // Player metadata is flushed on disconnect via savePlayerMetadata.
+                expect(harness.savedPlayerMetadataRecords).toHaveLength(1);
+                const saved = harness.savedPlayerMetadataRecords[0];
+                expect(saved.userID).toBe("save-user");
+                expect(saved.playerMetadata["0"]).toBe("goodbye");
             },
             skipCleanup: true,
         });
     });
 
-    it("disconnect with saveState=false does NOT save gameplay state", async () => {
+    it("disconnect with saveState=false does NOT call savePlayerMetadata", async () => {
         await runScenario({
             name: "disconnect without save",
             rooms: [EMPTY_REGULAR],
@@ -60,45 +66,60 @@ describe("connection scenarios", () => {
             actions: [{ type: "disconnect", userIndex: 0, saveState: false }],
             skipInvariants: true,
             assertions: ({ harness }) => {
-                expect(harness.savedGameplayStates).toHaveLength(0);
+                expect(harness.savedPlayerMetadataRecords).toHaveLength(0);
             },
             skipCleanup: true,
         });
     });
 
-    it("Case A: new socket before old disconnect preserves state", async () => {
+    it("lastRoomID is persisted on room join even without disconnect", async () => {
+        await runScenario({
+            name: "join writes lastRoomID",
+            rooms: [EMPTY_REGULAR],
+            users: [namedUser("eager-user", "regular")],
+            assertions: ({ harness }) => {
+                // changeUserRoom kicks off DBUserUtil.setLastRoomID synchronously
+                // from the join path — no disconnect required.
+                expect(harness.getStoredLastRoomID("eager-user")).toBe("regular");
+            },
+        });
+    });
+
+    it("Case A: new socket before old disconnect preserves metadata", async () => {
         await runScenario({
             name: "reconnect case A",
             rooms: [EMPTY_REGULAR],
-            users: [namedUser("case-a-user", "regular", { lastX: 10, lastZ: 20 })],
+            users: [namedUser("case-a-user", "regular", { playerMetadata: { "0": "case-a-hello" } })],
             actions: [
-                { type: "moveObject", userIndex: 0, x: 15, y: 0, z: 25 },
                 { type: "reconnectCaseA", userIndex: 0 },
             ],
             assertions: ({ users, harness }) => {
                 expect(users[0].user.id).toBe("case-a-user");
                 expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(1);
-                // User should be back in the room with position preserved
-                const state = harness.getGameplayState(users[0]);
-                expect(state).toBeDefined();
+                // Metadata captured from the still-live player object should land on the new player.
+                const metadata = harness.getPlayerMetadata("case-a-user");
+                expect(metadata).toBeDefined();
+                expect(metadata!["0"]).toBe("case-a-hello");
             },
         });
     });
 
-    it("Case B: old disconnect before new socket preserves state", async () => {
+    it("Case B: old disconnect before new socket preserves metadata", async () => {
         await runScenario({
             name: "reconnect case B",
             rooms: [EMPTY_REGULAR],
-            users: [namedUser("case-b-user", "regular", { lastX: 8, lastZ: 22 })],
+            users: [namedUser("case-b-user", "regular", { playerMetadata: { "0": "case-b-hello" } })],
             actions: [
-                { type: "moveObject", userIndex: 0, x: 14, y: 0, z: 26 },
                 { type: "reconnectCaseB", userIndex: 0 },
             ],
             assertions: ({ users, harness }) => {
                 expect(users[0].user.id).toBe("case-b-user");
                 expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(1);
-                const state = harness.getGameplayState(users[0]);
-                expect(state).toBeDefined();
+                // Even though the disconnect fired first, the snapshot in
+                // recentDisconnectMetadata is consumed by the reconnect path.
+                const metadata = harness.getPlayerMetadata("case-b-user");
+                expect(metadata).toBeDefined();
+                expect(metadata!["0"]).toBe("case-b-hello");
             },
         });
     });
@@ -134,46 +155,41 @@ describe("connection scenarios", () => {
         });
     });
 
-    it("gameplay state contains correct position, direction, and metadata", async () => {
+    it("player object's metadata reflects what the user joined the room with", async () => {
         await runScenario({
-            name: "gameplay state extraction",
+            name: "metadata seeded on join",
             rooms: [EMPTY_REGULAR],
             users: [{
                 overrides: {
-                    lastX: 10, lastY: 0.5, lastZ: 20,
-                    lastDirX: 0.7, lastDirY: 0, lastDirZ: 0.7,
                     playerMetadata: { "0": "hello" },
                 },
                 joinRoom: "regular",
             }],
             assertions: ({ users, harness }) => {
-                const state = harness.getGameplayState(users[0]);
-                expect(state).toBeDefined();
-                expect(state!.lastX).toBeCloseTo(10);
-                expect(state!.lastY).toBeCloseTo(0.5);
-                expect(state!.lastZ).toBeCloseTo(20);
-                expect(state!.lastDirX).toBeCloseTo(0.7, 1);
-                expect(state!.lastDirZ).toBeCloseTo(0.7, 1);
-                expect(state!.playerMetadata).toEqual({ "0": "hello" });
+                const metadata = harness.getPlayerMetadata(users[0].user.id);
+                expect(metadata).toBeDefined();
+                expect(metadata!["0"]).toBe("hello");
             },
         });
     });
 
-    it("position is preserved across disconnect and reconnect", async () => {
+    it("player metadata is updated by chat and flushed on disconnect", async () => {
         await runScenario({
-            name: "position persistence",
+            name: "metadata flushed on disconnect",
             rooms: [EMPTY_REGULAR],
-            users: [namedUser("persist-user", "regular", { lastX: 8, lastZ: 22 })],
+            users: [namedUser("persist-user", "regular", { playerMetadata: { "0": "before" } })],
             actions: [
-                { type: "moveObject", userIndex: 0, x: 12, y: 0, z: 18 },
+                { type: "sendMessage", userIndex: 0, message: "after" },
                 disconnectWithSave(0),
             ],
             skipInvariants: true,
             assertions: ({ harness }) => {
-                const saved = harness.savedGameplayStates[0];
+                const saved = harness.savedPlayerMetadataRecords[0];
                 expect(saved).toBeDefined();
                 expect(saved.userID).toBe("persist-user");
-                expect(saved.lastRoomID).toBe("regular");
+                expect(saved.playerMetadata["0"]).toBe("after");
+                // lastRoomID lives on DBUser and was written at join time.
+                expect(harness.getStoredLastRoomID("persist-user")).toBe("regular");
             },
             skipCleanup: true,
         });

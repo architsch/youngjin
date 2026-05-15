@@ -18,8 +18,9 @@ const _mockDBUserUtil = vi.hoisted(() => ({
     updateLastLogin: vi.fn(),
     setOwnedRoomID: vi.fn(),
     fromDBType: vi.fn((u: any) => u),
-    saveUserGameplayState: vi.fn(),
-    saveMultipleUsersGameplayState: vi.fn(),
+    setLastRoomID: vi.fn(),
+    savePlayerMetadata: vi.fn(),
+    saveMultipleUsersPlayerMetadata: vi.fn(),
     setUserTutorialStep: vi.fn(),
     deleteStaleGuestsByTier: vi.fn(),
 }));
@@ -32,7 +33,6 @@ const _mockDBSearchUtil = vi.hoisted(() => ({
         withEmail: vi.fn(),
         withUserNameOrEmail: vi.fn(),
     },
-    userRoomStates: { withUserRoleInRoom: vi.fn() },
 }));
 
 const _mockRestAPI = vi.hoisted(() => ({
@@ -252,13 +252,13 @@ import {
     GUEST_TIER_NAME_BY_TIER_PHASE,
     GUEST_MAX_AGE_BY_TIER_PHASE,
 } from "../../../src/server/system/serverConstants";
-import { MINUTE_IN_MS, HOUR_IN_MS, DAY_IN_MS } from "../../../src/shared/system/sharedConstants";
+import { DAY_IN_MS } from "../../../src/shared/system/sharedConstants";
 
 /** Replicates the tier classification logic from dbUserUtil.deleteStaleGuestsByTier. */
-function classifyGuestTier(loginCount: number, totalPlaytimeMs: number): number
+function classifyGuestTier(loginCount: number): number
 {
-    if (loginCount > 3 && totalPlaytimeMs >= HOUR_IN_MS) return 2;
-    if (loginCount > 1 && totalPlaytimeMs >= 10 * MINUTE_IN_MS) return 1;
+    if (loginCount > 3) return 2;
+    if (loginCount > 1) return 1;
     return 0;
 }
 
@@ -273,37 +273,29 @@ describe("stale guest tier classification (Scenario 11)", () => {
         expect(GUEST_MAX_AGE_BY_TIER_PHASE[2]).toBe(30 * DAY_IN_MS);
     });
 
-    it("single-login guest with no playtime is classified as disposable (tier 0)", () => {
-        expect(classifyGuestTier(1, 0)).toBe(0);
-        expect(classifyGuestTier(0, 0)).toBe(0);
-        expect(classifyGuestTier(1, 5 * MINUTE_IN_MS)).toBe(0);
+    it("single-login guest is classified as disposable (tier 0)", () => {
+        expect(classifyGuestTier(0)).toBe(0);
+        expect(classifyGuestTier(1)).toBe(0);
     });
 
-    it("multi-login guest with moderate playtime is classified as casual (tier 1)", () => {
-        expect(classifyGuestTier(2, 10 * MINUTE_IN_MS)).toBe(1);
-        expect(classifyGuestTier(3, 30 * MINUTE_IN_MS)).toBe(1);
-        // Just under tier 2 threshold
-        expect(classifyGuestTier(3, HOUR_IN_MS)).toBe(1);
+    it("multi-login guest (2-3 logins) is classified as casual (tier 1)", () => {
+        expect(classifyGuestTier(2)).toBe(1);
+        expect(classifyGuestTier(3)).toBe(1);
     });
 
-    it("frequent guest with high playtime is classified as dedicated (tier 2)", () => {
-        expect(classifyGuestTier(4, HOUR_IN_MS)).toBe(2);
-        expect(classifyGuestTier(10, 5 * HOUR_IN_MS)).toBe(2);
+    it("frequent guest (4+ logins) is classified as dedicated (tier 2)", () => {
+        expect(classifyGuestTier(4)).toBe(2);
+        expect(classifyGuestTier(10)).toBe(2);
     });
 
-    it("tier boundary: loginCount=1 with 10min playtime stays disposable", () => {
+    it("tier boundary: loginCount=1 stays disposable", () => {
         // loginCount must be > 1 for casual, not >= 1
-        expect(classifyGuestTier(1, 10 * MINUTE_IN_MS)).toBe(0);
+        expect(classifyGuestTier(1)).toBe(0);
     });
 
-    it("tier boundary: loginCount=3 with 1hr playtime stays casual", () => {
+    it("tier boundary: loginCount=3 stays casual", () => {
         // loginCount must be > 3 for dedicated, not >= 3
-        expect(classifyGuestTier(3, HOUR_IN_MS)).toBe(1);
-    });
-
-    it("tier boundary: loginCount=2 with 9min playtime stays disposable", () => {
-        // totalPlaytimeMs must be >= 10min for casual
-        expect(classifyGuestTier(2, 9 * MINUTE_IN_MS)).toBe(0);
+        expect(classifyGuestTier(3)).toBe(1);
     });
 });
 

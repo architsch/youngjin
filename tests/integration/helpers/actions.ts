@@ -310,10 +310,7 @@ export function buildActionArbitrary(
     if (w.connect > 0)
         arbs.push({weight: w.connect, arbitrary: fc.record({
             type: fc.constant("connect" as const),
-            overrides: fc.record({
-                lastX: fc.double({min: 2, max: 30, noNaN: true}),
-                lastZ: fc.double({min: 2, max: 30, noNaN: true}),
-            }),
+            overrides: fc.record({}),
         })});
 
     if (w.disconnect > 0)

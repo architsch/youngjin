@@ -275,7 +275,7 @@ describe("property-based: gameplay state persistence", () => {
 
                     expect(errors, `Unexpected errors during actions: ${errors.map(e => e.message).join("; ")}`).toHaveLength(0);
 
-                    // In-room transforms should match getUserGameplayState
+                    // In-room player objects should exist and have a readable metadata snapshot
                     checkObjectTransformConsistency(users);
 
                     // Each participant should have a player object

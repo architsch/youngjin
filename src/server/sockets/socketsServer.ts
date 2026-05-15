@@ -27,14 +27,13 @@ import DBSearchUtil from "../db/util/dbSearchUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import UserCommandUtil from "../user/util/userCommandUtil";
-import UserGameplayState from "../user/types/userGameplayState";
 import LatencySimUtil from "../system/util/latencySimUtil";
 import ErrorUtil from "../../shared/system/util/errorUtil";
 
 let io: socketIO.Server;
 let signalProcessingInterval: NodeJS.Timeout;
-const recentDisconnectGameplayStates: {[userID: string]: {state: UserGameplayState, timestamp: number}} = {};
 const staleSocketFirstDetectedAt: {[userID: string]: number} = {};
+const RECENT_DISCONNECT_METADATA_TTL_MS = 30000;
 
 const SocketsServer =
 {
@@ -88,48 +87,26 @@ const SocketsServer =
                 const user = socketUserContext.user;
                 console.log(`(SocketsServer) Client connected :: ${JSON.stringify(user)}`);
 
-                // Cached gameplay state from a previous session (used for reconnection).
-                // This is passed to changeUserRoom so it can restore position without a DB lookup.
-                let cachedGameplayState: UserGameplayState | undefined;
-
+                // Player metadata from the previous session is bridged across a reconnect
+                // by ServerUserManager.recentDisconnectMetadata: the previous session's
+                // removeUserFromRoom snapshots it synchronously before the DBUser write,
+                // and changeUserRoom (below) consumes that snapshot, falling back to
+                // DBUser. This holds whether the old socket's disconnect fired before
+                // (Case B) or after (Case A) this new socket connected — the only thing
+                // Case A must do here is proactively evict the still-registered old socket.
                 if (ServerUserManager.hasUser(user.id))
                 {
                     // Case A: New socket connects BEFORE old disconnect fires (common on
                     // low-latency environments as well as cases in which another tab inside the same
                     // browser window connects to the server while the original tab is still connected).
-                    // Capture the old session's gameplay state from runtime memory, clean it up,
-                    // and pass it to changeUserRoom so the player spawns at the correct position.
                     console.warn(`(SocketsServer) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
                     const oldContext = ServerUserManager.getSocketUserContext(user.id)!;
-                    const oldRoomID = ServerRoomManager.currentRoomIDByUserID[user.id];
-                    const oldRoomMemory = oldRoomID ? ServerRoomManager.roomRuntimeMemories[oldRoomID] : undefined;
-                    cachedGameplayState = oldRoomMemory ? ServerUserManager.getUserGameplayState(oldContext, oldRoomMemory) : undefined;
 
                     ServerUserManager.removeUser(user.id);
                     await ServerRoomManager.changeUserRoom(oldContext, undefined, false, true);
                     oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
                     oldContext.socket.disconnect(true);
-
-                    if (cachedGameplayState)
-                        user.lastRoomID = cachedGameplayState.lastRoomID;
                 }
-                else
-                {
-                    // Case B: Old disconnect already fired BEFORE this new socket
-                    // connected (common on higher-latency environments).
-                    // The disconnect handler cached the gameplay state in memory.
-                    // Restore it here because the DB write from the disconnect handler
-                    // may not have completed before the socket auth middleware queried
-                    // the DB for this new connection.
-                    const cached = recentDisconnectGameplayStates[user.id];
-                    if (cached)
-                    {
-                        console.log(`(SocketsServer) Restoring cached gameplay state for userID = ${user.id}`);
-                        cachedGameplayState = cached.state;
-                        user.lastRoomID = cached.state.lastRoomID;
-                    }
-                }
-                delete recentDisconnectGameplayStates[user.id];
                 delete staleSocketFirstDetectedAt[user.id];
                 ServerUserManager.addUser(socketUserContext);
 
@@ -190,23 +167,17 @@ const SocketsServer =
                     if (ServerUserManager.getSocketUserContext(user.id) != socketUserContext)
                     {
                         // This socket was already replaced by a newer connection (page
-                        // refresh), or was cleaned up earlier.  The replacement logic in
-                        // the connection handler already captured the gameplay state, so
+                        // refresh), or was cleaned up earlier. The replacement logic in
+                        // the connection handler already captured the player metadata, so
                         // there is nothing left to do.
                         console.warn(`(SocketsServer) Skipping stale disconnect handler (userID = ${user.id})`);
                         return;
                     }
 
-                    // Cache the gameplay state in memory so that a new connection
-                    // arriving shortly after this disconnect can restore it, even if the
-                    // DB write below hasn't completed by the time the new socket's auth
-                    // middleware queries the DB.
-                    const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
-                    const roomMem = roomID ? ServerRoomManager.roomRuntimeMemories[roomID] : undefined;
-                    const gameplayState = roomMem ? ServerUserManager.getUserGameplayState(socketUserContext, roomMem) : undefined;
-                    if (gameplayState)
-                        recentDisconnectGameplayStates[user.id] = {state: gameplayState, timestamp: Date.now()};
-
+                    // ServerUserManager.removeUserFromRoom (invoked via changeUserRoom)
+                    // snapshots playerMetadata synchronously into recentDisconnectMetadata
+                    // before kicking off the DBUser write, so a near-instant reconnect can
+                    // still read the latest chat message etc.
                     ServerUserManager.removeUser(user.id);
                     await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, true);
                 });
@@ -221,7 +192,7 @@ const SocketsServer =
                     ? targetRoomID
                     : user.lastRoomID;
 
-                if (!(await ServerRoomManager.changeUserRoom(socketUserContext, preferredRoomID, false, false, cachedGameplayState)))
+                if (!(await ServerRoomManager.changeUserRoom(socketUserContext, preferredRoomID, false, false)))
                 {
                     // Check in-memory rooms first to avoid a Firestore query
                     let hubRoomID: string | undefined;
@@ -286,18 +257,13 @@ const SocketsServer =
                 }
             }
 
-            // Periodically evict expired gameplay state cache entries.
-            const now = Date.now();
-            for (const [userID, cached] of Object.entries(recentDisconnectGameplayStates))
-            {
-                if (now - cached.timestamp > 30000)
-                    delete recentDisconnectGameplayStates[userID];
-            }
+            // Evict expired entries from the disconnect-metadata buffer.
+            ServerUserManager.evictExpiredDisconnectMetadata(RECENT_DISCONNECT_METADATA_TTL_MS);
         }, 5000);
     },
     saveAndDisconnectAllUsers: async (): Promise<void> =>
     {
-        await ServerRoomManager.saveAllUserGameplayStates(ServerUserManager.socketUserContexts);
+        await ServerRoomManager.saveAllUsersPlayerMetadata(ServerUserManager.socketUserContexts);
 
         for (const [userID, socketUserContext] of Object.entries(ServerUserManager.socketUserContexts))
         {

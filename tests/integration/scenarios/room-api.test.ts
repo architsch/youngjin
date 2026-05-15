@@ -20,12 +20,13 @@ const mockFindUserById = vi.fn();
 const mockCreateRoom = vi.fn();
 const mockSetOwnedRoomID = vi.fn();
 const mockGetRoomContent = vi.fn();
+const mockGetDBRoom = vi.fn();
 const mockChangeRoomTexturePackPath = vi.fn();
-const mockSaveUserRoomState = vi.fn();
-const mockSetUserRole = vi.fn();
-const mockFindByUserAndRoom = vi.fn();
+const mockSetEditors = vi.fn();
 const mockSearchUsersWithUserName = vi.fn();
-const mockSearchUserRoomStatesWithUserRoleInRoom = vi.fn();
+const mockSetRoomEditor = vi.fn();
+const mockRemoveRoomEditor = vi.fn();
+const mockGetRoomEditors = vi.fn();
 const mockSyncUserRoleInMemory = vi.fn();
 
 vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
@@ -33,8 +34,9 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
         findUserById: (...args: any[]) => mockFindUserById(...args),
         createUser: vi.fn(async () => ({ success: true, data: [{ id: "new-user" }] })),
         setOwnedRoomID: (...args: any[]) => mockSetOwnedRoomID(...args),
-        saveUserGameplayState: vi.fn(async () => ({ success: true, data: [] })),
-        saveMultipleUsersGameplayState: vi.fn(async () => {}),
+        setLastRoomID: vi.fn(async () => {}),
+        savePlayerMetadata: vi.fn(async () => {}),
+        saveMultipleUsersPlayerMetadata: vi.fn(async () => {}),
         setUserTutorialStep: vi.fn(async () => ({ success: true, data: [] })),
         deleteStaleGuestsByTier: vi.fn(async () => 0),
         deleteUser: vi.fn(async () => ({ success: true, data: [] })),
@@ -47,11 +49,13 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
 vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
     default: {
         getRoomContent: (...args: any[]) => mockGetRoomContent(...args),
+        getDBRoom: (...args: any[]) => mockGetDBRoom(...args),
         saveRoomContent: vi.fn(async () => true),
         deleteRoomContent: vi.fn(async () => true),
         createRoom: (...args: any[]) => mockCreateRoom(...args),
         deleteRoom: vi.fn(async () => true),
         changeRoomTexturePackPath: (...args: any[]) => mockChangeRoomTexturePackPath(...args),
+        setEditors: (...args: any[]) => mockSetEditors(...args),
     },
 }));
 
@@ -67,18 +71,18 @@ vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
             withEmail: vi.fn(async () => ({ success: true, data: [] })),
             withUserNameOrEmail: vi.fn(async () => ({ success: true, data: [] })),
         },
-        userRoomStates: {
-            withUserRoleInRoom: (...args: any[]) => mockSearchUserRoomStatesWithUserRoleInRoom(...args),
-        },
     },
 }));
 
-vi.mock("../../../src/server/db/util/dbUserRoomStateUtil", () => ({
+vi.mock("../../../src/server/room/serverRoomManager", () => ({
     default: {
-        findByUserAndRoom: (...args: any[]) => mockFindByUserAndRoom(...args),
-        saveUserRoomState: (...args: any[]) => mockSaveUserRoomState(...args),
-        setUserRole: (...args: any[]) => mockSetUserRole(...args),
-        makeCompositeId: (userID: string, roomID: string) => `${userID}_${roomID}`,
+        setRoomEditor: (...args: any[]) => mockSetRoomEditor(...args),
+        removeRoomEditor: (...args: any[]) => mockRemoveRoomEditor(...args),
+        getRoomEditors: (...args: any[]) => mockGetRoomEditors(...args),
+        changeRoomTexturePack: vi.fn(async (_room: any, _path: string) => {
+            mockChangeRoomTexturePackPath(_room, _path);
+            return true;
+        }),
     },
 }));
 
@@ -274,7 +278,7 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
             success: true,
             data: [{ id: "target-1", userName: "TargetUser", email: "target@test.com" }],
         });
-        mockSetUserRole.mockResolvedValue(undefined);
+        mockSetRoomEditor.mockResolvedValue("success");
 
         const res = await callRoute("post", "/set_room_user_role", owner, {
             targetUserName: "TargetUser",
@@ -282,12 +286,40 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
         });
 
         expect(res.statusCode).toBe(200);
-        expect(mockSetUserRole).toHaveBeenCalledWith(
-            "target-1", "TargetUser", "target@test.com", "my-room", UserRoleEnumMap.Editor,
-        );
+        // The route must denormalize userName/email into the editor record so that
+        // /get_room_editors can return them without an extra DBUser lookup.
+        expect(mockSetRoomEditor).toHaveBeenCalledWith("my-room", {
+            userID: "target-1",
+            userName: "TargetUser",
+            email: "target@test.com",
+        });
+        expect(mockRemoveRoomEditor).not.toHaveBeenCalled();
         expect(mockSyncUserRoleInMemory).toHaveBeenCalledWith(
             "target-1", "my-room", UserRoleEnumMap.Editor,
         );
+    });
+
+    it("appointing an editor past the limit is rejected with 409", async () => {
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+
+        mockFindUserById.mockResolvedValue({
+            id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
+            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+        });
+        mockSearchUsersWithUserName.mockResolvedValue({
+            success: true,
+            data: [{ id: "target-1", userName: "TargetUser", email: "target@test.com" }],
+        });
+        mockSetRoomEditor.mockResolvedValue("limit-reached");
+
+        const res = await callRoute("post", "/set_room_user_role", owner, {
+            targetUserName: "TargetUser",
+            userRole: UserRoleEnumMap.Editor,
+        });
+
+        expect(res.statusCode).toBe(409);
+        // The role multicast must NOT fire when the editor was never actually added.
+        expect(mockSyncUserRoleInMemory).not.toHaveBeenCalled();
     });
 
     it("owner cannot change their own role", async () => {
@@ -309,7 +341,8 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
 
         expect(res.statusCode).toBe(400);
         expect(res.body).toContain("own role");
-        expect(mockSetUserRole).not.toHaveBeenCalled();
+        expect(mockSetRoomEditor).not.toHaveBeenCalled();
+        expect(mockRemoveRoomEditor).not.toHaveBeenCalled();
     });
 
     it("user without a room cannot appoint editors", async () => {
@@ -326,7 +359,8 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
         });
 
         expect(res.statusCode).toBe(403);
-        expect(mockSetUserRole).not.toHaveBeenCalled();
+        expect(mockSetRoomEditor).not.toHaveBeenCalled();
+        expect(mockRemoveRoomEditor).not.toHaveBeenCalled();
     });
 
     it("owner can demote an editor back to visitor", async () => {
@@ -340,7 +374,7 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
             success: true,
             data: [{ id: "editor-1", userName: "EditorUser", email: "editor@test.com" }],
         });
-        mockSetUserRole.mockResolvedValue(undefined);
+        mockRemoveRoomEditor.mockResolvedValue(true);
 
         const res = await callRoute("post", "/set_room_user_role", owner, {
             targetUserName: "EditorUser",
@@ -348,9 +382,36 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
         });
 
         expect(res.statusCode).toBe(200);
-        expect(mockSetUserRole).toHaveBeenCalledWith(
-            "editor-1", "EditorUser", "editor@test.com", "my-room", UserRoleEnumMap.Visitor,
+        expect(mockRemoveRoomEditor).toHaveBeenCalledWith("my-room", "editor-1");
+        expect(mockSetRoomEditor).not.toHaveBeenCalled();
+        expect(mockSyncUserRoleInMemory).toHaveBeenCalledWith(
+            "editor-1", "my-room", UserRoleEnumMap.Visitor,
         );
+    });
+
+    it("/get_room_editors returns denormalized {userName, email} from the room", async () => {
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+
+        mockFindUserById.mockResolvedValue({
+            id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
+            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+        });
+        mockGetRoomEditors.mockResolvedValue([
+            { userID: "e-1", userName: "Alice", email: "alice@test.com" },
+            { userID: "e-2", userName: "Bob",   email: "bob@test.com" },
+        ]);
+
+        const res = await callRoute("post", "/get_room_editors", owner, {});
+
+        expect(res.statusCode).toBe(200);
+        expect(mockGetRoomEditors).toHaveBeenCalledWith("my-room");
+        // The route strips userID from the response — the client only renders name/email.
+        expect(res.jsonBody).toEqual({
+            editors: [
+                { userName: "Alice", email: "alice@test.com" },
+                { userName: "Bob",   email: "bob@test.com" },
+            ],
+        });
     });
 });
 
@@ -372,7 +433,7 @@ describe("room API: change room texture pack (Scenario 9)", () => {
         mockGetRoomContent.mockResolvedValue({
             id: "my-room", texturePackPath: "old-texture.jpg",
         });
-        mockChangeRoomTexturePackPath.mockResolvedValue(true);
+        mockChangeRoomTexturePackPath.mockReturnValue(undefined);
 
         // Must be one of the URLs baked into RoomTextureChoiceMap.
         const newTexturePath = "default";

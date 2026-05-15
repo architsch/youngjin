@@ -54,16 +54,16 @@ Guest accounts that have not been used recently are automatically deleted by a p
 
 ### Engagement Tiers
 
-Each guest account is classified into a tier based on its `loginCount` and `totalPlaytimeMs`:
+Each guest account is classified into a tier based on its `loginCount`:
 
 | Tier | Name | Criteria | Max Age |
 |------|------|----------|---------|
-| 0 | Disposable | loginCount ≤ 1 or totalPlaytime < 10 min | 3 days |
-| 1 | Casual | loginCount > 1 and totalPlaytime ≥ 10 min (but not Dedicated) | 7 days |
-| 2 | Dedicated | loginCount > 3 and totalPlaytime ≥ 1 hour | 30 days |
+| 0 | Disposable | loginCount ≤ 1 | 3 days |
+| 1 | Casual | loginCount 2–3 | 7 days |
+| 2 | Dedicated | loginCount > 3 | 30 days |
 
 ### Algorithm
 1. Query Firestore for all Guest-type users whose `lastLoginAt` is older than the tier's max age cutoff.
-2. Filter the results in-memory by the tier's engagement criteria (loginCount and totalPlaytimeMs thresholds).
+2. Filter the results in-memory by the tier's loginCount threshold.
 3. Delete all matching accounts from Firestore.
 4. Return the number of deleted accounts.

@@ -20,6 +20,7 @@ import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
+import { ENTRANCE_POSITION } from "../../../src/shared/system/sharedConstants";
 
 describe("object scenarios", () => {
     beforeEach(() => {
@@ -28,7 +29,7 @@ describe("object scenarios", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("two players spawn at correct positions", async () => {
+    it("two players both spawn at the room entrance", async () => {
         await runScenario({
             name: "spawn positions",
             rooms: [EMPTY_REGULAR],
@@ -41,10 +42,10 @@ describe("object scenarios", () => {
                 const obj2 = harness.getPlayerObject(users[1].user.id);
                 expect(obj1).toBeDefined();
                 expect(obj2).toBeDefined();
-                expect(obj1!.transform.pos.x).toBeCloseTo(10);
-                expect(obj1!.transform.pos.z).toBeCloseTo(10);
-                expect(obj2!.transform.pos.x).toBeCloseTo(20);
-                expect(obj2!.transform.pos.z).toBeCloseTo(20);
+                expect(obj1!.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x);
+                expect(obj1!.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z);
+                expect(obj2!.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x);
+                expect(obj2!.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z);
             },
         });
     });
@@ -54,14 +55,14 @@ describe("object scenarios", () => {
             name: "update own transform",
             rooms: [EMPTY_REGULAR],
             users: [userAt(10, 10, "regular")],
-            actions: [{ type: "moveObject", userIndex: 0, x: 12, y: 0, z: 12 }],
+            actions: [{ type: "moveObject", userIndex: 0, x: ENTRANCE_POSITION.x + 1, y: ENTRANCE_POSITION.y, z: ENTRANCE_POSITION.z + 1 }],
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id);
                 expect(obj).toBeDefined();
-                // Movement of 2 units is within desync threshold (3),
+                // Small movement is within desync threshold,
                 // so the server should accept a position close to the target
-                expect(obj!.transform.pos.x).toBeCloseTo(12, 0);
-                expect(obj!.transform.pos.z).toBeCloseTo(12, 0);
+                expect(obj!.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x + 1, 0);
+                expect(obj!.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z + 1, 0);
             },
         });
     });
@@ -87,10 +88,10 @@ describe("object scenarios", () => {
                 );
                 ServerObjectManager.onSetObjectTransformSignalReceived(users[0].socketUserContext, signal);
 
-                // user2's position should be unchanged
+                // user2's position should be unchanged (still at the entrance)
                 const obj2 = harness.getPlayerObject(users[1].user.id)!;
-                expect(obj2.transform.pos.x).toBeCloseTo(20);
-                expect(obj2.transform.pos.z).toBeCloseTo(20);
+                expect(obj2.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x);
+                expect(obj2.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z);
             },
         });
     });
@@ -117,51 +118,52 @@ describe("object scenarios", () => {
             users: [userAt(5, 5, "regular")],
             actions: [
                 // Try to teleport far away (>3 units should trigger desync)
-                { type: "moveObject", userIndex: 0, x: 25, y: 0, z: 25 },
+                { type: "moveObject", userIndex: 0, x: ENTRANCE_POSITION.x + 20, y: 0, z: ENTRANCE_POSITION.z + 20 },
             ],
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id)!;
-                // Desync resets to the last known server position (5, 5)
+                // Desync resets to the last known server position (the entrance)
                 // when the distance is >= 3 units (distSqr >= 9)
-                expect(obj.transform.pos.x).toBeCloseTo(5, 0);
-                expect(obj.transform.pos.z).toBeCloseTo(5, 0);
-                // The requested position (25, 25) should NOT be applied
-                expect(obj.transform.pos.x).not.toBeCloseTo(25, 0);
-                expect(obj.transform.pos.z).not.toBeCloseTo(25, 0);
+                expect(obj.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x, 0);
+                expect(obj.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z, 0);
             },
         });
     });
 
-    it("getUserGameplayState matches in-room object transform", async () => {
+    it("ServerUserManager.getPlayerMetadata mirrors live player-object metadata", async () => {
         await runScenario({
-            name: "state matches transform",
+            name: "metadata snapshot mirrors player object",
             rooms: [EMPTY_REGULAR],
             users: [userAt(11, 22, "regular")],
-            actions: walkAcross(0, 2),
+            actions: [
+                ...walkAcross(0, 2),
+                { type: "sendMessage", userIndex: 0, message: "snapshot" },
+            ],
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id)!;
-                const state = harness.getGameplayState(users[0])!;
-                expect(state.lastX).toBe(obj.transform.pos.x);
-                expect(state.lastY).toBe(obj.transform.pos.y);
-                expect(state.lastZ).toBe(obj.transform.pos.z);
+                const metadata = harness.getPlayerMetadata(users[0].user.id)!;
+                expect(metadata["0"]).toBe(obj.metadata[0]?.str);
+                expect(metadata["0"]).toBe("snapshot");
             },
         });
     });
 
-    it("position updates are reflected in saved state", async () => {
+    it("disconnect-with-save persists lastRoomID and flushes the latest metadata", async () => {
         await runScenario({
-            name: "saved state reflects movement",
+            name: "disconnect persists lastRoomID",
             rooms: [EMPTY_REGULAR],
-            users: [userAt(16, 16, "regular")],
+            users: [userAt(16, 16, "regular", { id: "post-walk-user" })],
             actions: [
                 ...walkAcross(0, 3),
+                { type: "sendMessage", userIndex: 0, message: "post-walk" },
                 disconnectWithSave(0),
             ],
             skipInvariants: true,
             assertions: ({ harness }) => {
-                const saved = harness.savedGameplayStates[0];
+                expect(harness.getStoredLastRoomID("post-walk-user")).toBe("regular");
+                const saved = harness.savedPlayerMetadataRecords[0];
                 expect(saved).toBeDefined();
-                expect(saved.lastRoomID).toBe("regular");
+                expect(saved.playerMetadata["0"]).toBe("post-walk");
             },
             skipCleanup: true,
         });

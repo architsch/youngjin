@@ -6,15 +6,15 @@
  *
  * Usage:
  *   runScenario({
- *     name: "player spawn at correct position",
+ *     name: "player can send a chat message",
  *     rooms: [{ id: "room-1", type: RoomTypeEnumMap.Regular }],
- *     users: [{ overrides: { lastX: 10, lastZ: 20 }, joinRoom: "room-1" }],
+ *     users: [{ overrides: { playerMetadata: { "0": "hi" } }, joinRoom: "room-1" }],
  *     actions: [
  *       { type: "moveObject", userIndex: 0, x: 15, y: 0, z: 25 },
  *     ],
  *     assertions: ({ users }) => {
- *       const state = harness.getGameplayState(users[0]);
- *       expect(state!.lastX).toBeCloseTo(15, 0);
+ *       const metadata = harness.getPlayerMetadata(users[0].user.id);
+ *       expect(metadata!["0"]).toBe("hi");
  *     },
  *   });
  */

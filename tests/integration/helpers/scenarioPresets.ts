@@ -42,20 +42,21 @@ export function multipleRooms(count: number, prefix: string = "room"): RoomConfi
 
 // ─── User Presets ──────────────────────────────────────────────────────────
 
-/** A user at the center of the room (16, 16). */
+/** A user joining a room. Position is fixed at the room entrance, not configurable. */
 export function userAtCenter(joinRoom?: string, overrides?: MockUserOverrides): UserConfig
 {
     return {
-        overrides: { lastX: 16, lastZ: 16, ...overrides },
+        overrides: { ...overrides },
         joinRoom,
     };
 }
 
-/** A user at a specific position. */
-export function userAt(x: number, z: number, joinRoom?: string, overrides?: MockUserOverrides): UserConfig
+/** Kept for source-compat with older tests; position args are ignored — players always
+ * spawn at the room's entrance. */
+export function userAt(_x: number, _z: number, joinRoom?: string, overrides?: MockUserOverrides): UserConfig
 {
     return {
-        overrides: { lastX: x, lastZ: z, ...overrides },
+        overrides: { ...overrides },
         joinRoom,
     };
 }
@@ -69,13 +70,11 @@ export function namedUser(id: string, joinRoom?: string, overrides?: MockUserOve
     };
 }
 
-/** N users all joining the same room at spread-out positions. */
-export function usersInRoom(count: number, roomID: string, startX: number = 5, spacing: number = 3): UserConfig[]
+/** N users all joining the same room (all spawn at the room's entrance). */
+export function usersInRoom(count: number, roomID: string, _startX: number = 5, _spacing: number = 3): UserConfig[]
 {
     return Array.from({ length: count }, (_, i) => ({
         overrides: {
-            lastX: startX + i * spacing,
-            lastZ: startX + i * spacing,
             playerMetadata: { "0": `user-${i}` },
         },
         joinRoom: roomID,
@@ -211,7 +210,7 @@ export function connectWithRole(
 ): Action[]
 {
     return [
-        { type: "connect", overrides: { lastX: 16, lastZ: 16, ...overrides } },
+        { type: "connect", overrides: { ...overrides } },
         // userIndex will be the last connected user — caller handles the actual index
     ];
 }

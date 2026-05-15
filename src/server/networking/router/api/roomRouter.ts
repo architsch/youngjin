@@ -7,13 +7,12 @@ import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
 import DBUserUtil from "../../../db/util/dbUserUtil";
 import DBRoomUtil from "../../../db/util/dbRoomUtil";
-import DBUserRoomStateUtil from "../../../db/util/dbUserRoomStateUtil";
 import DBSearchUtil from "../../../db/util/dbSearchUtil";
-import AddressUtil from "../../util/addressUtil";
 import ServerUserManager from "../../../user/serverUserManager";
 import ServerRoomManager from "../../../room/serverRoomManager";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import DBRoom from "../../../db/types/row/dbRoom";
+import { MAX_ROOM_EDITORS } from "../../../system/serverConstants";
 
 const RoomRouter = express.Router();
 
@@ -141,7 +140,33 @@ RoomRouter.post("/set_room_user_role", UserIdentificationUtil.identifyRegistered
         return;
     }
 
-    await DBUserRoomStateUtil.setUserRole(targetUser.id as string, targetUser.userName, targetUser.email, dbUser.ownedRoomID, userRole);
+    if (userRole === UserRoleEnumMap.Editor)
+    {
+        const result = await ServerRoomManager.setRoomEditor(dbUser.ownedRoomID, {
+            userID: targetUser.id as string,
+            userName: targetUser.userName,
+            email: targetUser.email,
+        });
+        if (result === "limit-reached")
+        {
+            res.status(409).send(`This room already has the maximum of ${MAX_ROOM_EDITORS} editors.`);
+            return;
+        }
+        if (result === "error")
+        {
+            res.status(500).send("Failed to set editor.");
+            return;
+        }
+    }
+    else // Visitor — revoke editor access.
+    {
+        const success = await ServerRoomManager.removeRoomEditor(dbUser.ownedRoomID, targetUser.id as string);
+        if (!success)
+        {
+            res.status(500).send("Failed to remove editor.");
+            return;
+        }
+    }
 
     // Sync the role change in the server's in-memory state and broadcast to clients.
     ServerUserManager.syncUserRoleInMemory(targetUser.id as string, dbUser.ownedRoomID, userRole);
@@ -164,17 +189,10 @@ RoomRouter.post("/get_room_editors", UserIdentificationUtil.identifyRegisteredUs
         return;
     }
 
-    const statesResult = await DBSearchUtil.userRoomStates.withUserRoleInRoom(dbUser.ownedRoomID, UserRoleEnumMap.Editor);
-    if (!statesResult.success)
-    {
-        res.status(500).send("Failed to query editors.");
-        return;
-    }
-
-    const editors = statesResult.data.map(state => ({
-        userName: state.userName,
-        email: state.email,
-    }));
+    // Editors are stored as denormalized {userID, userName, email} entries on DBRoom,
+    // so listing them is a single fetch — no per-user join required.
+    const roomEditors = await ServerRoomManager.getRoomEditors(dbUser.ownedRoomID);
+    const editors = roomEditors.map(e => ({ userName: e.userName, email: e.email }));
 
     res.status(200).json({ editors });
 });
@@ -271,7 +289,7 @@ RoomRouter.post("/get_hub_room", UserIdentificationUtil.identifyAnyUser, async (
     res.status(200).json({ room: toRoomListEntry(result.data[0]) });
 });
 
-// Returns the current user's owned-room metadata (or null if they don't own one yet).
+// Returns the current user's owned-room DB data (or null if they don't own one yet).
 // Used by the client to populate the "My Room" special entry.
 RoomRouter.post("/get_my_room", UserIdentificationUtil.identifyAnyUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
@@ -283,7 +301,7 @@ RoomRouter.post("/get_my_room", UserIdentificationUtil.identifyAnyUser, async (r
         return;
     }
 
-    const dbRoom = await DBRoomUtil.getRoomMetadata(dbUser.ownedRoomID);
+    const dbRoom = await DBRoomUtil.getDBRoom(dbUser.ownedRoomID);
     if (!dbRoom)
     {
         res.status(200).json({ room: null });

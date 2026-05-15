@@ -7,7 +7,6 @@ import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerObjectManager from "../object/serverObjectManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
-import UserGameplayState from "./types/userGameplayState";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import SetUserRoleSignal from "../../shared/user/types/setUserRoleSignal";
 import DBUserUtil from "../db/util/dbUserUtil";
@@ -17,9 +16,19 @@ const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
 const userRoleByUserID: {[userID: string]: UserRole} = {};
 
+// Short-lived per-user buffer of the last known player metadata at disconnect time.
+// When a user reconnects before the disconnect's DBUser write has landed (the race
+// window for case 1 of the user-state-management flow), this buffer is consulted
+// before falling back to DBUser so the rebuilt player object still carries the
+// user's latest chat message etc.
+// Entries are evicted on the next successful reconnect, or via TTL (handled by
+// SocketsServer's periodic stale-socket sweep).
+const recentDisconnectMetadata: {[userID: string]: {metadata: {[key: string]: string}; timestamp: number}} = {};
+
 const ServerUserManager =
 {
     socketUserContexts,
+    recentDisconnectMetadata,
     addUser: (socketUserContext: SocketUserContext) =>
     {
         socketUserContexts[socketUserContext.user.id] = socketUserContext;
@@ -75,7 +84,7 @@ const ServerUserManager =
         userRoleByUserID[userID] = userRole;
     },
     removeUserFromRoom: async (socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
-        saveGameplayState: boolean) =>
+        savePlayerMetadata: boolean) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -92,12 +101,14 @@ const ServerUserManager =
             console.error(`ServerUserManager.removeUserFromRoom :: RoomRuntimeMemory doesn't exist (roomID = ${roomID})`);
             return;
         }
-        if (saveGameplayState)
-        {
-            const gameplayState = ServerUserManager.getUserGameplayState(socketUserContext, roomRuntimeMemory);
-            if (gameplayState)
-                await DBUserUtil.saveUserGameplayState(gameplayState);
-        }
+
+        // Snapshot the player metadata BEFORE removing the player object, so that a
+        // reconnect arriving in the gap between this point and the DB write below
+        // can still read the user's latest chat message etc. from the in-memory
+        // buffer rather than seeing a stale DBUser document.
+        const metadataSnapshot = savePlayerMetadata ? extractPlayerMetadata(user.id) : undefined;
+        if (savePlayerMetadata && metadataSnapshot)
+            recentDisconnectMetadata[user.id] = {metadata: metadataSnapshot, timestamp: Date.now()};
 
         const objectIds = getIdsOfNonPersistentObjectsSpawnedByUser(roomID, user.id);
         for (const objectId of objectIds)
@@ -119,6 +130,13 @@ const ServerUserManager =
         else
             socketRoomContext.removeSocketUserContext(user.id);
 
+        // Persist the metadata snapshot AFTER releasing in-memory state, so the
+        // reconnect path (which checks recentDisconnectMetadata first) always sees
+        // a consistent view. If the DB write completes before the reconnect,
+        // DBUser is the source of truth; otherwise, the buffer covers the gap.
+        if (savePlayerMetadata && metadataSnapshot)
+            await DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot);
+
         if (Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
@@ -132,37 +150,30 @@ const ServerUserManager =
             }
         }
     },
-    getUserGameplayState: (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory)
-        : UserGameplayState | undefined =>
+    // Returns a snapshot of the user's current player metadata (read from the live
+    // player object). Used by graceful-shutdown to flush all connected users in one
+    // batch query.
+    getPlayerMetadata: (userID: string): {[key: string]: string} | undefined =>
     {
-        const user = socketUserContext.user;
-        const playerObject = playerObjectByUserID[user.id];
-        if (!playerObject)
+        return extractPlayerMetadata(userID);
+    },
+    consumeRecentDisconnectMetadata: (userID: string): {[key: string]: string} | undefined =>
+    {
+        const cached = recentDisconnectMetadata[userID];
+        if (!cached) return undefined;
+        delete recentDisconnectMetadata[userID];
+        return cached.metadata;
+    },
+    evictExpiredDisconnectMetadata: (maxAgeMs: number): void =>
+    {
+        const now = Date.now();
+        for (const [userID, cached] of Object.entries(recentDisconnectMetadata))
         {
-            console.error(`getUserGameplayState :: Player's AddObjectSignal not found (userID = ${user.id})`);
-            return undefined;
+            // `>=` (not `>`) so a maxAgeMs of 0 evicts everything synchronously,
+            // which makes test setup straightforward.
+            if (now - cached.timestamp >= maxAgeMs)
+                delete recentDisconnectMetadata[userID];
         }
-        const tr = playerObject.transform;
-        const rawMetadata = playerObject.metadata;
-        const playerMetadata: {[key: string]: string} = {};
-        for (const key of Object.keys(rawMetadata))
-            playerMetadata[key] = rawMetadata[key as any].str;
-
-        return {
-            userID: user.id,
-            userName: user.userName,
-            email: user.email,
-            lastRoomID: roomRuntimeMemory.room.id,
-            userRole: userRoleByUserID[user.id] ?? UserRoleEnumMap.Visitor,
-            lastX: tr.pos.x,
-            lastY: tr.pos.y,
-            lastZ: tr.pos.z,
-            lastDirX: tr.dir.x,
-            lastDirY: tr.dir.y,
-            lastDirZ: tr.dir.z,
-            playerMetadata,
-            sessionDurationMs: Date.now() - socketUserContext.connectTime,
-        };
     },
     getPlayerObject: (userID: string): AddObjectSignal | undefined =>
     {
@@ -175,6 +186,8 @@ const ServerUserManager =
             delete playerObjectByUserID[key];
         for (const key in userRoleByUserID)
             delete userRoleByUserID[key];
+        for (const key in recentDisconnectMetadata)
+            delete recentDisconnectMetadata[key];
     },
     syncUserRoleInMemory: (userID: string, roomID: string, userRole: UserRole): void =>
     {
@@ -193,6 +206,18 @@ const ServerUserManager =
     {
         return userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
     },
+}
+
+function extractPlayerMetadata(userID: string): {[key: string]: string} | undefined
+{
+    const playerObject = playerObjectByUserID[userID];
+    if (!playerObject)
+        return undefined;
+    const raw = playerObject.metadata;
+    const out: {[key: string]: string} = {};
+    for (const key of Object.keys(raw))
+        out[key] = raw[key as any].str;
+    return out;
 }
 
 function getIdsOfNonPersistentObjectsSpawnedByUser(roomID: string, userID: string): string[]

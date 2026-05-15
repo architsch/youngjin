@@ -11,7 +11,6 @@ export default class SocketUserContext
 {
     socket: socketIO.Socket;
     user: User;
-    connectTime: number;
 
     private pendingSignalsToUserByTypeIndex: Array<EncodableData[]>;
     private throttleTimestamps: {[signalType: string]: number} = {};
@@ -20,7 +19,6 @@ export default class SocketUserContext
     {
         this.socket = socket;
         this.user = socket.handshake.auth.user as User;
-        this.connectTime = Date.now();
         this.pendingSignalsToUserByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
     }
 

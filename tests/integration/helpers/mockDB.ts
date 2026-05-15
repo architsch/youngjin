@@ -7,7 +7,7 @@ import { vi } from "vitest";
 import Room from "../../../src/shared/room/types/room";
 import RoomGenerator from "../../../src/shared/room/roomGenerator";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import UserGameplayState from "../../../src/server/user/types/userGameplayState";
+import DBRoomEditor from "../../../src/server/db/types/row/dbRoomEditor";
 
 // ─── In-memory stores ────────────────────────────────────────────────────────
 
@@ -16,7 +16,9 @@ interface StoredRoom
     id: string;
     roomType: RoomType;
     ownerUserID: string;
+    ownerUserName: string;
     texturePackPath: string;
+    editors: DBRoomEditor[];
     room: Room; // Full Room object with voxelGrid
 }
 
@@ -28,31 +30,25 @@ interface StoredUser
     email: string;
     tutorialStep: number;
     lastRoomID: string;
+    ownedRoomID: string;
     lastLoginAt: number;
     createdAt: number;
     loginCount: number;
-    totalPlaytimeMs: number;
-    version: number;
-}
-
-interface StoredUserRoomState
-{
-    userID: string;
-    roomID: string;
-    lastX: number;
-    lastY: number;
-    lastZ: number;
-    lastDirX: number;
-    lastDirY: number;
-    lastDirZ: number;
     playerMetadata: {[key: string]: string};
     version: number;
 }
 
+interface SavedMetadataRecord
+{
+    userID: string;
+    playerMetadata: {[key: string]: string};
+}
+
 export const roomStore: {[roomID: string]: StoredRoom} = {};
 export const userStore: {[userID: string]: StoredUser} = {};
-export const userRoomStateStore: {[compositeId: string]: StoredUserRoomState} = {};
-export const savedGameplayStates: UserGameplayState[] = [];
+// Record of all writes performed via savePlayerMetadata / saveMultipleUsersPlayerMetadata.
+// Tests assert against this to verify the disconnect / graceful-shutdown flush.
+export const savedPlayerMetadataRecords: SavedMetadataRecord[] = [];
 
 let roomCounter = 0;
 let userCounter = 0;
@@ -61,46 +57,36 @@ export function resetStores(): void
 {
     for (const k in roomStore) delete roomStore[k];
     for (const k in userStore) delete userStore[k];
-    for (const k in userRoomStateStore) delete userRoomStateStore[k];
-    savedGameplayStates.length = 0;
+    savedPlayerMetadataRecords.length = 0;
     roomCounter = 0;
     userCounter = 0;
 }
 
 // ─── Helper: create a test room in the store ─────────────────────────────────
 
+// Idempotent: if a room with the same ID already exists in the store, return it
+// rather than wiping prior mutations (e.g. ownerUserID set via the setRoomOwner
+// action). Callers that need a fresh room must call resetStores() first.
 export function seedRoom(
     roomID: string,
     roomType: RoomType = RoomTypeEnumMap.Hub,
 ): Room
 {
+    const existing = roomStore[roomID];
+    if (existing) return existing.room;
+
     const { voxelGrid, objectGroup } = RoomGenerator.generateEmptyRoom(0, 1, 2);
     const room = new Room(roomID, roomType, "", "", "", voxelGrid, objectGroup);
     roomStore[roomID] = {
         id: roomID,
         roomType,
         ownerUserID: "",
+        ownerUserName: "",
         texturePackPath: "",
+        editors: [],
         room,
     };
     return room;
-}
-
-export function seedUserRoomState(
-    userID: string, roomID: string,
-    lastX: number, lastY: number, lastZ: number,
-    lastDirX: number, lastDirY: number, lastDirZ: number,
-    playerMetadata: {[key: string]: string},
-): void
-{
-    const compositeId = `${userID}_${roomID}`;
-    userRoomStateStore[compositeId] = {
-        userID, roomID,
-        lastX, lastY, lastZ,
-        lastDirX, lastDirY, lastDirZ,
-        playerMetadata,
-        version: 0,
-    };
 }
 
 // ─── Mock: DBRoomUtil ────────────────────────────────────────────────────────
@@ -110,6 +96,20 @@ export const mockDBRoomUtil = {
     {
         const stored = roomStore[roomID];
         return stored ? stored.room : null;
+    }),
+    getDBRoom: vi.fn(async (roomID: string) =>
+    {
+        const stored = roomStore[roomID];
+        if (!stored) return null;
+        return {
+            id: stored.id,
+            version: 2,
+            roomType: stored.roomType,
+            ownerUserID: stored.ownerUserID,
+            ownerUserName: stored.ownerUserName,
+            texturePackPath: stored.texturePackPath,
+            editors: stored.editors,
+        };
     }),
     saveRoomContent: vi.fn(async (_room: Room): Promise<boolean> =>
     {
@@ -134,6 +134,13 @@ export const mockDBRoomUtil = {
     }),
     changeRoomTexturePackPath: vi.fn(async (_room: Room, _newTexturePackPath: string): Promise<boolean> =>
     {
+        return true;
+    }),
+    setEditors: vi.fn(async (roomID: string, editors: DBRoomEditor[]): Promise<boolean> =>
+    {
+        const stored = roomStore[roomID];
+        if (!stored) return false;
+        stored.editors = editors;
         return true;
     }),
 };
@@ -166,23 +173,38 @@ export const mockDBUserUtil = {
     {
         return userStore[userID] ?? null;
     }),
-    saveUserGameplayState: vi.fn(async (state: UserGameplayState) =>
+    setLastRoomID: vi.fn(async (userID: string, roomID: string) =>
     {
-        savedGameplayStates.push(state);
-        return { success: true, data: [] };
+        const u = userStore[userID];
+        if (u) u.lastRoomID = roomID;
     }),
-    saveMultipleUsersGameplayState: vi.fn(async (states: UserGameplayState[]) =>
+    savePlayerMetadata: vi.fn(async (userID: string, playerMetadata: {[key: string]: string}) =>
     {
-        savedGameplayStates.push(...states);
+        savedPlayerMetadataRecords.push({ userID, playerMetadata });
+        const u = userStore[userID];
+        if (u)
+            u.playerMetadata = playerMetadata;
+    }),
+    saveMultipleUsersPlayerMetadata: vi.fn(async (updates: SavedMetadataRecord[]) =>
+    {
+        savedPlayerMetadataRecords.push(...updates);
+        for (const update of updates)
+        {
+            const u = userStore[update.userID];
+            if (u)
+                u.playerMetadata = update.playerMetadata;
+        }
     }),
     createUser: vi.fn(async (userName: string, userType: number, email: string) =>
     {
         const id = `user-${++userCounter}`;
         userStore[id] = {
             id, userName, userType, email,
-            tutorialStep: 0, lastRoomID: "",
+            tutorialStep: 0, lastRoomID: "", ownedRoomID: "",
             lastLoginAt: Date.now(), createdAt: Date.now(),
-            loginCount: 1, totalPlaytimeMs: 0, version: 1,
+            loginCount: 1,
+            playerMetadata: {},
+            version: 1,
         };
         return { success: true, data: [{ id }] };
     }),
@@ -192,31 +214,10 @@ export const mockDBUserUtil = {
     fromDBType: vi.fn((dbUser: any) => dbUser),
     updateLastLogin: vi.fn(async () => {}),
     upgradeGuestToMember: vi.fn(async () => ({ success: true, data: [] })),
-};
-
-// ─── Mock: DBUserRoomStateUtil ──────────────────────────────────────────────
-
-export const mockDBUserRoomStateUtil = {
-    findByUserAndRoom: vi.fn(async (userID: string, roomID: string) =>
+    setOwnedRoomID: vi.fn(async (userID: string, roomID: string) =>
     {
-        const compositeId = `${userID}_${roomID}`;
-        return userRoomStateStore[compositeId] ?? null;
+        const u = userStore[userID];
+        if (u) u.ownedRoomID = roomID;
+        return { success: true, data: [] };
     }),
-    saveUserRoomState: vi.fn(async (
-        userID: string, roomID: string,
-        lastX: number, lastY: number, lastZ: number,
-        lastDirX: number, lastDirY: number, lastDirZ: number,
-        playerMetadata: {[key: string]: string},
-    ) =>
-    {
-        const compositeId = `${userID}_${roomID}`;
-        userRoomStateStore[compositeId] = {
-            userID, roomID,
-            lastX, lastY, lastZ,
-            lastDirX, lastDirY, lastDirZ,
-            playerMetadata,
-            version: 0,
-        };
-    }),
-    makeCompositeId: (userID: string, roomID: string) => `${userID}_${roomID}`,
 };

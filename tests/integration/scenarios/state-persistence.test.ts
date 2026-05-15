@@ -35,7 +35,6 @@ describe("state persistence scenarios", () => {
             name: "metadata persists across reconnect A",
             rooms: [regularRoom("meta-room")],
             users: [namedUser("meta-user", "meta-room", {
-                lastX: 16, lastZ: 16,
                 playerMetadata: { "0": "my-display-name" },
             })],
             actions: [
@@ -54,7 +53,6 @@ describe("state persistence scenarios", () => {
             name: "metadata persists across reconnect B",
             rooms: [regularRoom("meta-room-b")],
             users: [namedUser("meta-user-b", "meta-room-b", {
-                lastX: 16, lastZ: 16,
                 playerMetadata: { "0": "user-b-name" },
             })],
             actions: [
@@ -92,7 +90,7 @@ describe("state persistence scenarios", () => {
         await runScenario({
             name: "5 reconnection cycles",
             rooms: [regularRoom("multi-recon")],
-            users: [namedUser("cycle-user", "multi-recon", { lastX: 10, lastZ: 10 })],
+            users: [namedUser("cycle-user", "multi-recon")],
             actions: [
                 reconnectUser(0, "A"),
                 { type: "moveObject", userIndex: 0, x: 12, y: 0, z: 12 },
@@ -116,7 +114,7 @@ describe("state persistence scenarios", () => {
             name: "alternating reconnect with observers",
             rooms: [regularRoom("alt-recon")],
             users: [
-                namedUser("reconnector", "alt-recon", { lastX: 10, lastZ: 10 }),
+                namedUser("reconnector", "alt-recon"),
                 userAt(20, 20, "alt-recon"),
             ],
             actions: [
@@ -140,7 +138,7 @@ describe("state persistence scenarios", () => {
         await runScenario({
             name: "voxels persist across empty room",
             rooms: [hubRoom("voxel-persist")],
-            users: [namedUser("builder", "voxel-persist", { lastX: 16, lastZ: 16 })],
+            users: [namedUser("builder", "voxel-persist")],
             actions: [
                 ...buildColumn(0, 10, 10, 3),
                 disconnectWithSave(0),
@@ -211,12 +209,15 @@ describe("state persistence scenarios", () => {
             ],
             skipInvariants: true,
             assertions: ({ harness }) => {
-                // All 3 users should have saved states
-                expect(harness.savedGameplayStates.length).toBeGreaterThanOrEqual(3);
-                const ids = harness.savedGameplayStates.map(s => s.userID);
+                // All 3 users should have flushed playerMetadata
+                const ids = harness.savedPlayerMetadataRecords.map(s => s.userID);
                 expect(ids).toContain("u-A");
                 expect(ids).toContain("u-B");
                 expect(ids).toContain("u-C");
+                // lastRoomID was persisted at join-time for each user
+                expect(harness.getStoredLastRoomID("u-A")).toBe("gs-A");
+                expect(harness.getStoredLastRoomID("u-B")).toBe("gs-B");
+                expect(harness.getStoredLastRoomID("u-C")).toBe("gs-C");
             },
             skipCleanup: true,
         });

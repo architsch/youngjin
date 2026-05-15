@@ -4,9 +4,7 @@ import DBUser from "../../../server/db/types/row/dbUser";
 import DBQuery from "../types/dbQuery";
 import DBRoom from "../../../server/db/types/row/dbRoom";
 import LogUtil from "../../../shared/system/util/logUtil";
-import DBUserRoomState from "../../../server/db/types/row/dbUserRoomState";
-import { UserRole } from "../../../shared/user/types/userRole";
-import { COLLECTION_ROOMS, COLLECTION_USERS, COLLECTION_USER_ROOM_STATES } from "../../system/serverConstants";
+import { COLLECTION_ROOMS, COLLECTION_USERS } from "../../system/serverConstants";
 
 const DBSearchUtil =
 {
@@ -56,17 +54,6 @@ const DBSearchUtil =
                 .where("userName", "==", userName)
                 .or()
                 .where("email", "==", email)
-                .run();
-        },
-    },
-    userRoomStates: {
-        withUserRoleInRoom: async (roomID: string, userRole: UserRole): Promise<DBQueryResponse<DBUserRoomState>> => {
-            LogUtil.log("DBSearchUtil.userRoomStates.withUserRoleInRoom", {roomID, userRole}, "low", "info");
-            return await new DBQuery<DBUserRoomState>()
-                .select()
-                .from(COLLECTION_USER_ROOM_STATES)
-                .where("roomID", "==", roomID)
-                .where("userRole", "==", userRole)
                 .run();
         },
     },

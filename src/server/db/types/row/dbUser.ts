@@ -13,6 +13,6 @@ export default interface DBUser extends DBRow
     lastLoginAt: number;
     createdAt: number;
     loginCount: number;
-    totalPlaytimeMs: number;
     ownedRoomID: string;
+    playerMetadata: {[key: string]: string};
 }

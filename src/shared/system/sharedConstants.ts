@@ -80,6 +80,11 @@ export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, u
 export const PLAYER_HEIGHT = 2.5;
 export const MAX_WORLDSPACE_SELECT_DIST_SQR = 100; // = 10*10
 
+// Fixed spawn point used whenever a player enters a room. Players always enter through this
+// designated spot (an "entrance door"), regardless of where they were when they last left.
+export const ENTRANCE_POSITION: Vec3 = {x: 16, y: 0.5 * PLAYER_HEIGHT, z: 16};
+export const ENTRANCE_DIRECTION: Vec3 = {x: 0, y: 0, z: 1};
+
 // UI
 
 export const PAGE_NAME_MAP = {

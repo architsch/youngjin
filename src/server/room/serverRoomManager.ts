@@ -8,24 +8,29 @@ import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import DBUserRoomStateUtil from "../db/util/dbUserRoomStateUtil";
-import { PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
-import UserGameplayState from "../user/types/userGameplayState";
+import { ENTRANCE_DIRECTION, ENTRANCE_POSITION, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
 import ImageMapUtil from "../../shared/image/util/imageMapUtil";
+import DBRoomEditor from "../db/types/row/dbRoomEditor";
+import { MAX_ROOM_EDITORS } from "../system/serverConstants";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
 const currentRoomIDByUserID: {[userID: string]: string} = {};
 const pendingLoads: {[roomID: string]: Promise<RoomRuntimeMemory | null>} = {};
+// Per-room editor table (denormalized {userID, userName, email} entries).
+// Loaded from DBRoom.editors when the room is loaded; mutated in lockstep with
+// DBRoom.editors via setRoomEditor/removeRoomEditor below.
+const editorsByRoomID: {[roomID: string]: DBRoomEditor[]} = {};
 
 const ServerRoomManager =
 {
     roomRuntimeMemories,
     socketRoomContexts,
     currentRoomIDByUserID,
+    editorsByRoomID,
     loadRoom: async (roomID: string): Promise<RoomRuntimeMemory | null> =>
     {
         console.log(`ServerRoomManager.loadRoom :: roomID = ${roomID}`);
@@ -55,6 +60,7 @@ const ServerRoomManager =
             throw new Error(`ServerRoomManager.unloadRoom :: There are still participants in the room (participantUserNameByID = [${JSON.stringify(roomRuntimeMemory.participantUserNameByID)}])`);
         delete ServerRoomManager.roomRuntimeMemories[roomID];
         delete ServerRoomManager.socketRoomContexts[roomID];
+        delete editorsByRoomID[roomID];
 
         PhysicsManager.unload(roomID);
     },
@@ -105,37 +111,26 @@ const ServerRoomManager =
             }));
         }
     },
-    saveAllUserGameplayStates: async (socketUserContextsByUserID: {[userID: string]: SocketUserContext}) =>
+    // Flushes every connected user's latest player metadata to DBUser in one batched query.
+    // Called by graceful shutdown so that the next-session data is preserved.
+    saveAllUsersPlayerMetadata: async (socketUserContextsByUserID: {[userID: string]: SocketUserContext}) =>
     {
-        const gameplayStates: UserGameplayState[] = [];
+        const updates: Array<{userID: string; playerMetadata: {[key: string]: string}}> = [];
 
-        for (const [userID, roomID] of Object.entries(currentRoomIDByUserID))
+        for (const userID of Object.keys(socketUserContextsByUserID))
         {
-            const roomRuntimeMemory = roomRuntimeMemories[roomID];
-            if (!roomRuntimeMemory)
-            {
-                console.error(`ServerRoomManager.saveAllUserGameplayStates :: RoomRuntimeMemory not found (roomID = ${roomID})`);
-                continue;
-            }
-            const socketUserContext = socketUserContextsByUserID[userID];
-            if (!socketUserContext)
-            {
-                console.error(`ServerRoomManager.saveAllUserGameplayStates :: SocketUserContext not found (userID = ${userID})`);
-                continue;
-            }
-            const gameplayState = ServerUserManager.getUserGameplayState(socketUserContext, roomRuntimeMemory);
-            if (gameplayState)
-                gameplayStates.push(gameplayState);
+            const metadata = ServerUserManager.getPlayerMetadata(userID);
+            if (!metadata) continue;
+            updates.push({ userID, playerMetadata: metadata });
         }
-
-        await DBUserUtil.saveMultipleUsersGameplayState(gameplayStates);
+        await DBUserUtil.saveMultipleUsersPlayerMetadata(updates);
     },
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
-        saveGameplayState: boolean, cachedGameplayState?: UserGameplayState): Promise<boolean> =>
+        savePlayerMetadata: boolean): Promise<boolean> =>
     {
         const user = socketUserContext.user;
         console.log(`ServerRoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
-        await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, saveGameplayState);
+        await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
         if (!roomID)
             return false;
 
@@ -152,48 +147,44 @@ const ServerRoomManager =
             return false;
         }
 
-        // Determine the user's position/direction/metadata for this room.
-        // Priority: cachedGameplayState (from reconnection) > DB lookup > defaults
-        let lastX = 16, lastY = 0.5 * PLAYER_HEIGHT, lastZ = 16;
-        let lastDirX = 0, lastDirY = 0, lastDirZ = 1;
+        // Player metadata is per-user (stored on DBUser), so it follows the user
+        // across rooms. Resolution order:
+        //   1. The recentDisconnectMetadata buffer on ServerUserManager — populated
+        //      synchronously by the previous session's removeUserFromRoom, so it
+        //      bridges the gap where the disconnect's DBUser write has not yet landed.
+        //   2. DBUser.playerMetadata — the persistent fallback (the buffer was either
+        //      never populated, or already evicted by TTL).
+        //   3. Empty object — brand-new user with no chat history.
         let playerMetadata: {[key: string]: string} = {};
-        let userRole: UserRole = UserRoleEnumMap.Visitor;
-
-        if (cachedGameplayState && cachedGameplayState.lastRoomID === roomID)
-        {
-            lastX = cachedGameplayState.lastX;
-            lastY = cachedGameplayState.lastY;
-            lastZ = cachedGameplayState.lastZ;
-            lastDirX = cachedGameplayState.lastDirX;
-            lastDirY = cachedGameplayState.lastDirY;
-            lastDirZ = cachedGameplayState.lastDirZ;
-            playerMetadata = cachedGameplayState.playerMetadata;
-            userRole = cachedGameplayState.userRole;
-        }
+        const consumed = ServerUserManager.consumeRecentDisconnectMetadata(user.id);
+        if (consumed)
+            playerMetadata = consumed;
         else
         {
-            const roomState = await DBUserRoomStateUtil.findByUserAndRoom(user.id, roomID);
-            if (roomState)
-            {
-                lastX = roomState.lastX;
-                lastY = roomState.lastY;
-                lastZ = roomState.lastZ;
-                lastDirX = roomState.lastDirX;
-                lastDirY = roomState.lastDirY;
-                lastDirZ = roomState.lastDirZ;
-                playerMetadata = (roomState.playerMetadata as {[key: string]: string}) ?? {};
-                if (roomState.userRole != null)
-                    userRole = roomState.userRole;
-            }
+            const dbUser = await DBUserUtil.findUserById(user.id);
+            if (dbUser && dbUser.playerMetadata)
+                playerMetadata = dbUser.playerMetadata;
         }
 
-        // Owner takes priority regardless of what the DB/cache says.
+        // userRole is derived from the room's editor list (loaded with the room)
+        // plus the room's ownerUserID. Owner takes precedence.
+        let userRole: UserRole = UserRoleEnumMap.Visitor;
+        const editors = editorsByRoomID[roomID];
+        if (editors && editors.some(e => e.userID === user.id))
+            userRole = UserRoleEnumMap.Editor;
         if (roomRuntimeMemory.room.ownerUserID === user.id)
             userRole = UserRoleEnumMap.Owner;
 
         ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
-            new ObjectTransform({x: lastX, y: lastY, z: lastZ}, {x: lastDirX, y: lastDirY, z: lastDirZ}),
+            new ObjectTransform({...ENTRANCE_POSITION}, {...ENTRANCE_DIRECTION}),
             playerMetadata, userRole
+        );
+
+        // Persist the user's current room to DBUser. This is the only durable signal
+        // we need for "where should this user land on next login" — there is no
+        // longer a separate gameplay-state save path.
+        DBUserUtil.setLastRoomID(user.id, roomID).catch(err =>
+            console.error(`ServerRoomManager.changeUserRoom :: setLastRoomID failed for userID = ${user.id}: ${err}`)
         );
 
         // Wrap the room memory and user role in a RoomChangedSignal and unicast to the joining user.
@@ -231,17 +222,74 @@ const ServerRoomManager =
 
         return true;
     },
+    // Adds or refreshes an editor entry on the room. Works whether or not the
+    // room is currently loaded: the DB is the source of truth, and the in-memory
+    // editor list is updated when the room is loaded.
+    // Refreshing an existing editor is always allowed; adding a NEW editor is
+    // rejected with "limit-reached" once the room is at MAX_ROOM_EDITORS.
+    setRoomEditor: async (roomID: string, editor: DBRoomEditor): Promise<"success" | "limit-reached" | "error"> =>
+    {
+        const current = await loadCurrentEditors(roomID);
+        if (!current) return "error";
+        const idx = current.findIndex(e => e.userID === editor.userID);
+        if (idx >= 0)
+            current[idx] = editor;
+        else
+        {
+            if (current.length >= MAX_ROOM_EDITORS)
+                return "limit-reached";
+            current.push(editor);
+        }
+        const success = await DBRoomUtil.setEditors(roomID, current);
+        if (success && editorsByRoomID[roomID])
+            editorsByRoomID[roomID] = current;
+        return success ? "success" : "error";
+    },
+    removeRoomEditor: async (roomID: string, userID: string): Promise<boolean> =>
+    {
+        const current = await loadCurrentEditors(roomID);
+        if (!current) return false;
+        const filtered = current.filter(e => e.userID !== userID);
+        if (filtered.length === current.length)
+            return true; // no-op
+        const success = await DBRoomUtil.setEditors(roomID, filtered);
+        if (success && editorsByRoomID[roomID])
+            editorsByRoomID[roomID] = filtered;
+        return success;
+    },
+    getRoomEditors: async (roomID: string): Promise<DBRoomEditor[]> =>
+    {
+        return (await loadCurrentEditors(roomID)) ?? [];
+    },
+}
+
+// Returns the room's current editor list, preferring the in-memory copy (loaded
+// rooms) and falling back to a DB read (unloaded rooms). Returns null only when
+// the room doesn't exist in either place.
+async function loadCurrentEditors(roomID: string): Promise<DBRoomEditor[] | null>
+{
+    const cached = editorsByRoomID[roomID];
+    if (cached) return [...cached];
+    const dbRoom = await DBRoomUtil.getDBRoom(roomID);
+    if (!dbRoom) return null;
+    return dbRoom.editors ?? [];
 }
 
 async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
 {
-    const room = await DBRoomUtil.getRoomContent(roomID);
+    // Load room content + DB metadata in parallel — they're independent.
+    // Editors live on DBRoom (NOT in the binary content blob), so we need both.
+    const [room, dbRoom] = await Promise.all([
+        DBRoomUtil.getRoomContent(roomID),
+        DBRoomUtil.getDBRoom(roomID),
+    ]);
     if (!room)
         return null;
 
     const roomRuntimeMemory = new RoomRuntimeMemory(room, {});
     ServerRoomManager.roomRuntimeMemories[roomID] = roomRuntimeMemory;
     ServerRoomManager.socketRoomContexts[roomID] = new SocketRoomContext();
+    editorsByRoomID[roomID] = dbRoom?.editors ?? [];
 
     PhysicsManager.load(roomRuntimeMemory);
     return roomRuntimeMemory;
