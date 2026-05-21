@@ -62,7 +62,7 @@ export default class FirstPersonProximityDetection
             const intersection = intersections[0];
             const instanceId = intersection.instanceId;
 
-            if (instanceId != undefined)
+            if (instanceId != undefined) // Raycast target is an instanced mesh.
             {
                 const gameObject = InstancedMeshGraphics.findGameObject(intersection.object, instanceId);
                 if (gameObject != undefined)
@@ -70,8 +70,15 @@ export default class FirstPersonProximityDetection
                 else
                     console.error(`GameObject not found in InstancedMeshGraphics (instanceId = ${instanceId})`);
             }
-            else
-                console.error(`InstanceId not found (object name = ${intersection.object.name})`);
+            else // Raycast target is a regular mesh.
+            {
+                const objectId = intersection.object.name; // For regular (non-instanced) meshes, (intersection.object.name == meshId == objectId).
+                const gameObject = ClientObjectManager.getObjectById(objectId);
+                if (gameObject != undefined)
+                    return gameObject == lookTargetObject;
+                else
+                    console.error(`GameObject not found from mesh (objectId = ${objectId})`);
+            }
         }
         return false;
     }

@@ -2,11 +2,11 @@ import Room from "../../../room/types/room";
 import { IS_SERVER, PLAYER_HEIGHT } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import { UserRole } from "../../../user/types/userRole";
-import AddObjectSignal from "../../types/addObjectSignal";
-import { ObjectMetadataKeyEnumMap } from "../../types/objectMetadataKey";
-import ObjectTypeConfig from "../../types/objectTypeConfig";
-import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
-import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
+import AddObjectSignal from "../addObjectSignal";
+import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
+import ObjectTypeConfig from "./objectTypeConfig";
+import SetObjectMetadataSignal from "../setObjectMetadataSignal";
+import SetObjectTransformSignal from "../setObjectTransformSignal";
 
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig: ObjectTypeConfig =

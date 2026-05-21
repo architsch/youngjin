@@ -4,6 +4,7 @@ import MaterialParams from "../types/material/materialParams";
 import WireframeMaterialParams from "../types/material/wireframeMaterialParams";
 import TexturePackMaterialParams from "../types/material/texturePackMaterialParams";
 import LineBasicMaterialParams from "../types/material/lineBasicMaterialParams";
+import TextureMaterialParams from "../types/material/textureMaterialParams";
 
 export const MaterialConstructorMap: { [materialType: string]:
     (params: MaterialParams) => Promise<THREE.Material> } =
@@ -11,6 +12,10 @@ export const MaterialConstructorMap: { [materialType: string]:
     "TexturePack": async (params: MaterialParams) =>
     {
         return await createTexturePackMaterial(params as TexturePackMaterialParams);
+    },
+    "Texture": async (params: MaterialParams) =>
+    {
+        return await createTextureMaterial(params as TextureMaterialParams);
     },
     "Wireframe": async (params: MaterialParams) =>
     {
@@ -81,5 +86,22 @@ async function createTexturePackMaterial(p: TexturePackMaterialParams): Promise<
             `
         );
     };
+    return newMaterial;
+}
+
+async function createTextureMaterial(p: TextureMaterialParams): Promise<THREE.Material>
+{
+    const texture: THREE.Texture = await TextureFactory.loadStaticImageTexture(p.texturePath);
+
+    const newMaterial = new THREE.MeshPhongMaterial();
+    newMaterial.map = texture;
+    newMaterial.transparent = true;
+    newMaterial.alphaTest = 0.5;
+    if (p.polygonOffsetFactor && p.polygonOffsetUnits)
+    {
+        newMaterial.polygonOffset = true;
+        newMaterial.polygonOffsetFactor = p.polygonOffsetFactor;
+        newMaterial.polygonOffsetUnits = p.polygonOffsetUnits;
+    }
     return newMaterial;
 }

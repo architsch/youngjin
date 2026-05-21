@@ -1,6 +1,7 @@
 import Rigidbody from "../components/rigidbody";
 import FirstPersonController from "../components/firstPersonController";
 import GameObjectComponent from "../components/gameObjectComponent";
+import MeshGraphics from "../components/meshGraphics";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import ModelGraphics from "../components/modelGraphics";
 import PeriodicTransformEmitter from "../components/periodicTransformEmitter";
@@ -19,6 +20,8 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new Collider(parentObject, componentConfig),
     "firstPersonController": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new FirstPersonController(parentObject, componentConfig),
+    "meshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new MeshGraphics(parentObject, componentConfig),
     "instancedMeshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new InstancedMeshGraphics(parentObject, componentConfig),
     "modelGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>

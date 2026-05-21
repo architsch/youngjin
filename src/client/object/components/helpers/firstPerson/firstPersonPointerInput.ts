@@ -3,6 +3,7 @@ import FirstPersonController from "../../firstPersonController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
 import InstancedMeshGraphics from "../../instancedMeshGraphics";
+import ClientObjectManager from "../../../clientObjectManager";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 
@@ -129,7 +130,7 @@ export default class FirstPersonPointerInput
             const intersection = intersections[0];
             const instanceId = intersection.instanceId;
 
-            if (instanceId != undefined)
+            if (instanceId != undefined) // Raycast target is an instanced mesh.
             {
                 const gameObject = InstancedMeshGraphics.findGameObject(intersection.object, instanceId);
                 if (gameObject != undefined)
@@ -143,8 +144,21 @@ export default class FirstPersonPointerInput
                 else
                     console.error(`GameObject not found in InstancedMeshGraphics (instanceId = ${instanceId})`);
             }
-            else
-                console.error(`InstanceId not found (object name = ${intersection.object.name})`);
+            else // Raycast target is a regular mesh.
+            {
+                const objectId = intersection.object.name; // For regular (non-instanced) meshes, (intersection.object.name == meshId == objectId).
+                const gameObject = ClientObjectManager.getObjectById(objectId);
+                if (gameObject != undefined)
+                {
+                    const meshGraphics = gameObject.components.meshGraphics;
+                    if (meshGraphics)
+                        gameObject.onClick(-1, intersection.point);
+                    else
+                        console.error(`MeshGraphics component not found (${JSON.stringify(gameObject.params)})`);
+                }
+                else
+                    console.error(`GameObject not found from mesh (objectId = ${objectId})`);
+            }
         }
     }
 }

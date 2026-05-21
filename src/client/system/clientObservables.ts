@@ -6,6 +6,7 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ClientProcess from "./types/clientProcess";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
+import PopupState from "../ui/types/popupState";
 
 //--------------------------------------------------------------------------------
 // Core Observables
@@ -58,6 +59,9 @@ export const playerViewTargetPosObservable = new Observable<THREE.Vector3 | null
 // This observable notifies its listeners whenever a brief notification message
 // should be displayed to the user (e.g. error messages, status updates).
 export const notificationMessageObservable = new Observable<string | null>(null);
+
+// This observable notifies its listeners whenever a popup needs to be opened.
+export const openPopupObservable = new Observable<PopupState>({ popupType: "none" });
 
 //--------------------------------------------------------------------------------
 // User State Observables

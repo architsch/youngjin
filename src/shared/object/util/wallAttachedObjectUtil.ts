@@ -67,11 +67,11 @@ const WallAttachedObjectUtil =
             const rightCol = Math.floor(pos.x + halfHorizontal - 0.01);
             for (let col = leftCol; col <= rightCol; ++col)
             {
-                const backVoxel = VoxelQueryUtil.getVoxel(room, backRow, col);
-                const frontVoxel = VoxelQueryUtil.getVoxel(room, frontRow, col);
-                if (!voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
+                const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, backRow, col);
+                const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, frontRow, col);
+                if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
                     return false;
-                if (!voxelCoversYRange(frontVoxel.collisionLayerMask, objBottomY, objTopY))
+                if (!frontVoxel || !voxelCoversYRange(frontVoxel.collisionLayerMask, objBottomY, objTopY))
                     frontExposureFound = true;
             }
         }
@@ -83,11 +83,11 @@ const WallAttachedObjectUtil =
             const rightRow = Math.floor(pos.z + halfHorizontal - 0.01);
             for (let row = leftRow; row <= rightRow; ++row)
             {
-                const backVoxel = VoxelQueryUtil.getVoxel(room, row, backCol);
-                const frontVoxel = VoxelQueryUtil.getVoxel(room, row, frontCol);
-                if (!voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
+                const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, backCol);
+                const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, frontCol);
+                if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
                     return false;
-                if (!voxelCoversYRange(frontVoxel.collisionLayerMask, objBottomY, objTopY))
+                if (!frontVoxel || !voxelCoversYRange(frontVoxel.collisionLayerMask, objBottomY, objTopY))
                     frontExposureFound = true;
             }
         }

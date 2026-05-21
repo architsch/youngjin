@@ -20,7 +20,7 @@ const ServerVoxelManager =
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         const room = roomRuntimeMemory.room;
 
-        if (!VoxelUpdateUtil.addVoxelBlock(userRole, room, signal.quadIndex, signal.quadTextureIndicesWithinLayer))
+        if (!VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels, signal.quadIndex, signal.quadTextureIndicesWithinLayer, room))
         {
             console.error(`ServerVoxelManager::onAddVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             socketUserContext.addPendingSignalToUser("removeVoxelBlockSignal",
@@ -45,7 +45,7 @@ const ServerVoxelManager =
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex);
         const textures = captureBlockTextures(room, row, col, collisionLayer);
 
-        if (!VoxelUpdateUtil.removeVoxelBlock(userRole, room, signal.quadIndex))
+        if (!VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels, signal.quadIndex, room))
         {
             console.error(`ServerVoxelManager::onRemoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             socketUserContext.addPendingSignalToUser("addVoxelBlockSignal",
@@ -71,7 +71,7 @@ const ServerVoxelManager =
         // Capture source block textures before any modification attempt, for potential recovery.
         const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
 
-        if (!VoxelUpdateUtil.moveVoxelBlock(userRole, room, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset))
+        if (!VoxelUpdateUtil.moveVoxelBlock(userRole, room.voxelGrid.voxels, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset, room))
         {
             console.error(`ServerVoxelManager::onMoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             sendMoveReversal(socketUserContext, room, signal, sourceTextures);
@@ -92,7 +92,7 @@ const ServerVoxelManager =
         // Capture old texture for potential recovery.
         const oldTextureIndex = room.voxelGrid.quadsMem.quads[signal.quadIndex] & 0b01111111;
 
-        if (!VoxelUpdateUtil.setVoxelQuadTexture(userRole, room, signal.quadIndex, signal.textureIndex))
+        if (!VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels, signal.quadIndex, signal.textureIndex, room))
         {
             console.error(`ServerVoxelManager::onSetVoxelQuadTextureSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             socketUserContext.addPendingSignalToUser("setVoxelQuadTextureSignal",

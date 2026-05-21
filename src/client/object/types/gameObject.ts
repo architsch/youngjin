@@ -5,7 +5,7 @@ import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import GameObjectComponent from "../components/gameObjectComponent";
 import ObjectComponentFactory from "../factories/objectComponentFactory";
-import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/objectTypeConfig";
+import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/objectTypeConfig/objectTypeConfig";
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
 import Vec3 from "../../../shared/math/types/vec3";
 
@@ -58,7 +58,7 @@ export default abstract class GameObject
 
     // Callback functions which must be overriden by subclasses
     // if they are meant to be used:
-    onClick(instanceId: number, hitPoint: THREE.Vector3) {} // Invoked when the object is clicked by the user's pointer input (mouse or touch). "instanceId" is the ID of the mesh instance that was hit by the user's pointer input.
+    onClick(instanceId: number, hitPoint: THREE.Vector3) {} // Invoked when the object is clicked by the user's pointer input (mouse or touch). "instanceId" is the ID of the mesh instance that was hit by the user's pointer input (-1 if the mesh is not instanced).
     onPlayerProximityStart() {} // Invoked when the object gets close to the player.
     onPlayerProximityEnd() {} // Invoked when the object moves away from the player.
     onSetMetadata(key: ObjectMetadataKey, value: string) // Invoked when the object's metadata is set (e.g. one of the entries in object's "metadata" field).

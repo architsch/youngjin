@@ -1,10 +1,10 @@
-import { ColliderConfig } from "../../physics/types/colliderConfig";
-import Room from "../../room/types/room";
-import User from "../../user/types/user";
-import { UserRole } from "../../user/types/userRole";
-import AddObjectSignal from "./addObjectSignal";
-import SetObjectMetadataSignal from "./setObjectMetadataSignal";
-import SetObjectTransformSignal from "./setObjectTransformSignal";
+import { ColliderConfig } from "../../../physics/types/colliderConfig";
+import Room from "../../../room/types/room";
+import User from "../../../user/types/user";
+import { UserRole } from "../../../user/types/userRole";
+import AddObjectSignal from "../addObjectSignal";
+import SetObjectMetadataSignal from "../setObjectMetadataSignal";
+import SetObjectTransformSignal from "../setObjectTransformSignal";
 
 export default interface ObjectTypeConfig
 {
@@ -19,6 +19,12 @@ export default interface ObjectTypeConfig
             collider?: ColliderConfig,
             instancedMeshGraphics?: {
                 createInstanceIdPool: boolean,
+            },
+            meshGraphics?: {
+                path: string,
+                geometryId: string,
+                localPosition: {x: number, y: number, z: number},
+                scale: {x: number, y: number, z: number},
             },
             speechBubble?: {
                 yOffset: number,

@@ -1,5 +1,4 @@
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
-import Room from "../../room/types/room";
 import Voxel from "../types/voxel";
 
 const VoxelQueryUtil =
@@ -8,11 +7,11 @@ const VoxelQueryUtil =
     // Basic
     //-------------------------------------------------------------------------------------
 
-    getVoxel(room: Room, row: number, col: number): Voxel
+    getVoxel(voxels: Voxel[], row: number, col: number): Voxel | undefined
     {
         if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
-            throw new Error(`Voxel coordinates are out of range (row: ${row}, col: ${col})`);
-        return room.voxelGrid.voxels[row * NUM_VOXEL_COLS + col];
+            return undefined;
+        return voxels[row * NUM_VOXEL_COLS + col];
     },
 
     //-------------------------------------------------------------------------------------
@@ -68,6 +67,7 @@ const VoxelQueryUtil =
         return NUM_VOXEL_QUADS_PER_VOXEL * voxelIndex;
     },
 
+    // [-y, +y, -x, +x, -z, +z]
     getVoxelQuadIndexOffsetInsideLayer(facingAxis: "x" | "y" | "z", orientation: "-" | "+"): number
     {
         return 2 * (facingAxis == "y" ? 0 : (facingAxis == "x" ? 1 : 2)) +

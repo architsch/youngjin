@@ -3,6 +3,7 @@ import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProximityDetection";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
+import MeshGraphics from "./meshGraphics";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -24,9 +25,10 @@ export default class PlayerProximityDetector extends GameObjectComponent
     {
         if (this.maxLookAngle > 0)
         {
+            const meshGraphics = this.gameObject.components.meshGraphics as MeshGraphics;
             const instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;
-            if (!instancedMeshGraphics)
-                throw new Error("PlayerProximityDetector with positive 'maxLookAngle' requires InstancedMeshGraphics component");
+            if (!meshGraphics && !instancedMeshGraphics)
+                throw new Error("PlayerProximityDetector with positive 'maxLookAngle' requires either MeshGraphics or InstancedMeshGraphics component");
         }
     }
 

@@ -15,9 +15,8 @@ const MeshFactory =
     {
         return Object.values(loadedMeshes);
     },
-    loadMesh: async (geometryId: string, materialParams: MaterialParams): Promise<THREE.Mesh> =>
+    loadMesh: async (meshId: string, geometryId: string, materialParams: MaterialParams): Promise<THREE.Mesh> =>
     {
-        const meshId = `${geometryId}-${materialParams.getMaterialId()}`;
         const loadedMesh = loadedMeshes[meshId];
         if (loadedMesh != undefined)
             return loadedMesh;
@@ -26,6 +25,7 @@ const MeshFactory =
         const material = await MaterialFactory.load(materialParams);
 
         const newMesh = new THREE.Mesh(geometry, material);
+        newMesh.name = meshId;
         loadedMeshes[meshId] = newMesh;
         return newMesh;
     },
@@ -42,10 +42,9 @@ const MeshFactory =
         loadedLineSegments[id] = lineSegments;
         return lineSegments;
     },
-    loadInstancedMesh: async (geometryId: string, materialParams: MaterialParams,
+    loadInstancedMesh: async (meshId: string, geometryId: string, materialParams: MaterialParams,
         maxNumInstances: number, createInstanceIdPool: boolean): Promise<THREE.InstancedMesh> =>
     {
-        const meshId = `${geometryId}-${materialParams.getMaterialId()}`;
         const loadedMesh = loadedMeshes[meshId];
         if (loadedMesh != undefined)
         {
@@ -63,6 +62,7 @@ const MeshFactory =
         geometryClone.setAttribute("uvSampleSize", uvSampleSizeBufferAttrib);
 
         const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
+        newMesh.name = meshId;
         newMesh.frustumCulled = false;
         GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
         loadedMeshes[meshId] = newMesh;

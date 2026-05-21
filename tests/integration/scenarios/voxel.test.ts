@@ -14,6 +14,7 @@ import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_REGULAR, EMPTY_HUB, userAtCenter, buildColumn, removeColumn } from "../helpers/scenarioPresets";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
+import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW } from "../../../src/shared/system/sharedConstants";
 
 describe("voxel scenarios", () => {
     beforeEach(() => {
@@ -30,7 +31,7 @@ describe("voxel scenarios", () => {
             actions: [{ type: "addVoxel", userIndex: 0, row: 5, col: 5, layer: 0 }],
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 5, 5);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 5, 5)!;
                 expect(voxel).toBeDefined();
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },
@@ -48,7 +49,7 @@ describe("voxel scenarios", () => {
             ],
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 8, 8);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 8, 8)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(false);
             },
         });
@@ -65,7 +66,7 @@ describe("voxel scenarios", () => {
             ],
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 for (let layer = 0; layer < 4; layer++)
                     expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer)).toBe(false);
             },
@@ -91,14 +92,14 @@ describe("voxel scenarios", () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub"];
                 // Removed blocks
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(
-                    VoxelQueryUtil.getVoxel(roomMem.room, 4, 4), 0)).toBe(false);
+                    VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 4, 4)!, 0)).toBe(false);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(
-                    VoxelQueryUtil.getVoxel(roomMem.room, 5, 5), 0)).toBe(false);
+                    VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 5, 5)!, 0)).toBe(false);
                 // Remaining blocks
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(
-                    VoxelQueryUtil.getVoxel(roomMem.room, 4, 5), 0)).toBe(true);
+                    VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 4, 5)!, 0)).toBe(true);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(
-                    VoxelQueryUtil.getVoxel(roomMem.room, 5, 4), 0)).toBe(true);
+                    VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 5, 4)!, 0)).toBe(true);
             },
         });
     });
@@ -115,7 +116,7 @@ describe("voxel scenarios", () => {
             ],
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 15, 15);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 15, 15)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 1)).toBe(true);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 2)).toBe(false);
@@ -148,9 +149,51 @@ describe("voxel scenarios", () => {
             ],
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 12, 12);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 12, 12)!;
                 // Block should still be there (first add succeeded, second was rejected)
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
+            },
+        });
+    });
+
+    it("cannot add a block inside the entrance's no-build zone", async () => {
+        await runScenario({
+            name: "entrance no-add zone",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            actions: [
+                // One cell in front of the entrance → inside the 3x3 no-add zone (rejected)
+                { type: "addVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW - 1, col: ENTRANCE_VOXEL_COL, layer: 0 },
+                // Two cells in front → outside the zone (allowed), as a control
+                { type: "addVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW - 2, col: ENTRANCE_VOXEL_COL, layer: 0 },
+            ],
+            assertions: () => {
+                const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
+                const blocked = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW - 1, ENTRANCE_VOXEL_COL)!;
+                const allowed = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW - 2, ENTRANCE_VOXEL_COL)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(blocked, 0)).toBe(false);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(allowed, 0)).toBe(true);
+            },
+        });
+    });
+
+    it("cannot remove the wall blocks framing the entrance", async () => {
+        await runScenario({
+            name: "entrance no-remove row",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            actions: [
+                // A jamb directly beside the doorway → protected (rejected)
+                { type: "removeVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW, col: ENTRANCE_VOXEL_COL - 1, layer: 0 },
+                // A boundary-wall block far from the entrance → editable now (allowed), as a control
+                { type: "removeVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW, col: 10, layer: 0 },
+            ],
+            assertions: () => {
+                const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
+                const jamb = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW, ENTRANCE_VOXEL_COL - 1)!;
+                const farWall = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW, 10)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(jamb, 0)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(farWall, 0)).toBe(false);
             },
         });
     });

@@ -117,9 +117,9 @@ function tryMoveVoxelBlock(selection: VoxelQuadSelection,
         // After a horizontal move (row/col change), the block is now in a different voxel.
         // We must get the voxel at the new position for selection to work correctly.
         const newVoxel = (rowOffset !== 0 || colOffset !== 0)
-            ? VoxelQueryUtil.getVoxel(room, newRow, newCol) : v;
+            ? VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol) : v;
 
-        if (!VoxelQuadSelection.trySelect(newVoxel,
+        if (newVoxel && !VoxelQuadSelection.trySelect(newVoxel,
             VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer)))
         {
             VoxelQuadSelection.trySelect(newVoxel,

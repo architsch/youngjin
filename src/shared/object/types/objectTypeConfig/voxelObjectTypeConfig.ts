@@ -2,7 +2,7 @@ import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
 import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../../types/addObjectSignal";
-import ObjectTypeConfig from "../../types/objectTypeConfig";
+import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 

@@ -166,7 +166,7 @@ describe("state persistence scenarios", () => {
             ],
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["voxel-vis"];
-                const v0 = VoxelQueryUtil.getVoxel(roomMem.room, 15, 15);
+                const v0 = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 15, 15)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v0, 0)).toBe(true);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v0, 1)).toBe(true);
             },

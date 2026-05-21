@@ -24,26 +24,30 @@ const ClientVoxelManager =
         validate: boolean = true): boolean =>
     {
         const userRole = App.getCurrentUserRole();
-        return VoxelUpdateUtil.addVoxelBlock(userRole, room, quadIndex, quadTextureIndicesWithinLayer, validate);
+        return VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
+            quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
     },
     removeVoxelBlock: (room: Room, quadIndex: number,
         validate: boolean = true): boolean =>
     {
         const userRole = App.getCurrentUserRole();
-        return VoxelUpdateUtil.removeVoxelBlock(userRole, room, quadIndex, validate);
+        return VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
+            quadIndex, validate ? room : undefined);
     },
     moveVoxelBlock: (room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number,
         validate: boolean = true): boolean =>
     {
         const userRole = App.getCurrentUserRole();
-        return VoxelUpdateUtil.moveVoxelBlock(userRole, room, quadIndex, rowOffset, colOffset, collisionLayerOffset, validate);
+        return VoxelUpdateUtil.moveVoxelBlock(userRole, room.voxelGrid.voxels,
+            quadIndex, rowOffset, colOffset, collisionLayerOffset, validate ? room : undefined);
     },
     setVoxelQuadTexture: (room: Room, quadIndex: number, textureIndex: number,
         validate: boolean = true): boolean =>
     {
         const userRole = App.getCurrentUserRole();
-        return VoxelUpdateUtil.setVoxelQuadTexture(userRole, room, quadIndex, textureIndex, validate);
+        return VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels,
+            quadIndex, textureIndex, validate ? room : undefined);
     },
 
     // --- Signal reception handlers (for signals from other clients via server) ---
@@ -133,7 +137,7 @@ voxelQuadChangeObservable.addListener("clientVoxelManager", async (change: Voxel
 
 function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObject | null
 {
-    const voxel = VoxelQueryUtil.getVoxel(room, row, col);
+    const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
     if (!voxel)
     {
         console.error(`Voxel not found (row: ${row}, col: ${col})`);

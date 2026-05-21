@@ -37,7 +37,7 @@ The integration test framework exercises real server-side game logic (room manag
 ### Server Harness (`helpers/serverHarness.ts`)
 
 The harness is the foundation. It:
-- Mocks all database utilities (`dbRoomUtil`, `dbUserUtil`, `dbSearchUtil`, `dbUserRoomStateUtil`) with in-memory stores
+- Mocks the database utilities (`dbRoomUtil`, `dbUserUtil`, `dbSearchUtil`) with in-memory stores
 - Calls `setIsServer()` so server-only validation gates (e.g. Player `canUserAddObject`) pass
 - Provides convenience methods: `connectUser()`, `joinRoom()`, `disconnectUser()`, `reconnectCaseA()`, `reconnectCaseB()`, `gracefulShutdown()`
 - Supports configurable latency simulation on DB operations
@@ -101,7 +101,7 @@ Structural invariants that must hold after any valid action sequence:
 5. **Object ownership** - Every object in a room belongs to a room participant
 6. **No multi-room users** - No user appears in multiple rooms simultaneously
 7. **Player objects exist** - Every room participant has exactly one player object
-8. **Transform consistency** - In-room object transforms match `getUserGameplayState` output
+8. **Player object & metadata presence** - Every in-room user has a player object and a readable `ServerUserManager.getPlayerMetadata` snapshot
 9. **Physics room consistency** - Every occupied room has a loaded physics room
 10. **Physics object consistency** - Every participant's player object exists in the physics system
 11. **User role consistency** - Room owners in the room have the Owner role

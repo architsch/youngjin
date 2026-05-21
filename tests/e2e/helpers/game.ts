@@ -98,10 +98,18 @@ export function captureConsole(page: Page)
         stop: () => page.off("console", handler),
         find: (sub: string) => logs.find(l => l.includes(sub)),
         findAll: (sub: string) => logs.filter(l => l.includes(sub)),
-        waitFor: (sub: string, timeout: number = TIMEOUTS.SOCKET_CONNECT) =>
-            page.waitForEvent("console", {
+        waitFor: async (sub: string, timeout: number = TIMEOUTS.SOCKET_CONNECT): Promise<void> => {
+            // The target message may already have been emitted before waitFor was
+            // called — e.g. during a page.goto({ waitUntil: "networkidle" }) that
+            // settles only after the socket connects. The handler above buffers every
+            // console message since capture start, so check that buffer first and fall
+            // back to waiting for a future event only if it hasn't appeared yet.
+            if (logs.some(l => l.includes(sub)) || errors.some(e => e.includes(sub)))
+                return;
+            await page.waitForEvent("console", {
                 predicate: (msg) => msg.text().includes(sub),
                 timeout,
-            }),
+            });
+        },
     };
 }

@@ -12,7 +12,6 @@ export default function UserRoomIdentity({
     currentRoomID,
     onAuthPromptButtonClick,
     onSignOutButtonClick,
-    onOpenRoomsButtonClick,
     onConfigureButtonClick,
 }: Props)
 {
@@ -34,7 +33,6 @@ export default function UserRoomIdentity({
             {!isGuest && <Button name="Sign Out" size="sm" onClick={onSignOutButtonClick}/>}
         </div>
         <div className="flex flex-row items-end justify-end gap-2">
-            <IconButton icon={<DoorIcon/>} size="md" onClick={onOpenRoomsButtonClick}/>
             {showConfigureButton && <IconButton icon={<GearIcon/>} size="md" onClick={onConfigureButtonClick}/>}
         </div>
     </div>;
@@ -47,6 +45,5 @@ interface Props
     currentRoomID: string;
     onAuthPromptButtonClick: () => void;
     onSignOutButtonClick: () => void;
-    onOpenRoomsButtonClick: () => void;
     onConfigureButtonClick: () => void;
 }

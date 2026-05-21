@@ -6,12 +6,12 @@ Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.
 
 - **DBUser** — per-user, persistent. Holds `lastRoomID`, `playerMetadata`, `tutorialStep`, account info (`userName`, `email`, `userType`), and bookkeeping (`loginCount`, `lastLoginAt`, etc.). `playerMetadata` follows the user across rooms; it is not per-room.
 - **DBRoom** — per-room, persistent. Holds `ownerUserID`, `ownerUserName`, `texturePackPath`, and `editors[]`, a denormalized list of `{userID, userName, email}` entries (so listing editors in the UI never needs an extra DBUser join). The product invariant is that `userName`/`email` never change after account creation, so the denormalized snapshot does not drift.
-- **No `UserGameplayState` aggregate.** Earlier versions of the server bundled position, direction, role, and metadata into a single "gameplay state" snapshot that was saved on disconnect and loaded on connect. That abstraction is gone — players always spawn at `ENTRANCE_POSITION`, user role is derived from `DBRoom`, and `lastRoomID` / `playerMetadata` are written to `DBUser` directly. See `ServerUserManager` and `ServerRoomManager`.
+- **No `UserGameplayState` aggregate.** Earlier versions of the server bundled position, direction, role, and metadata into a single "gameplay state" snapshot that was saved on disconnect and loaded on connect. That abstraction is gone — players always spawn at the designated entrance position, user role is derived from `DBRoom`, and `lastRoomID` / `playerMetadata` are written to `DBUser` directly. See `ServerUserManager` and `ServerRoomManager`.
 
 ## When the user moves from one room to another without reloading the game page
 1. The client sends a `RequestRoomChangeSignal` to the server and blocks further room change requests until the current one completes.
 2. The server removes the user from the previous room (despawning player objects, flushing playerMetadata to DBUser if `savePlayerMetadata` is requested) and loads the target room (from cache or Firestore).
-3. The server places the user at `ENTRANCE_POSITION` (fixed entrance) and restores `playerMetadata` from the in-memory disconnect buffer or `DBUser` (see "Player Metadata Restoration" below).
+3. The server places the user at the designated entrance position (the [fixed entrance](../geometry/room_entrance.md)) and restores `playerMetadata` from the in-memory disconnect buffer or `DBUser` (see "Player Metadata Restoration" below).
 4. The server writes the new `lastRoomID` to `DBUser` (fire-and-forget) and unicasts a `RoomChangedSignal` to the client.
 
 ## When the user opens "/" without a room ID in the URL

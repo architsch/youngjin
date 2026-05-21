@@ -185,7 +185,9 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
     const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
     if (ClientVoxelManager.addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
     {
-        VoxelQuadSelection.trySelect(VoxelQueryUtil.getVoxel(room, newRow, newCol), targetQuadIndex);
+        const voxelFound = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
+        if (voxelFound)
+            VoxelQuadSelection.trySelect(voxelFound, targetQuadIndex);
         SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, targetQuadIndex, quadTextureIndicesWithinLayer));
     }
 }
@@ -247,8 +249,14 @@ function trySelectNeighboringVoxelQuadInDirectionOfRemoval(room: Room, quadIndex
     const newCollisionLayer = (facingAxis == "y")
         ? VoxelQueryUtil.getVoxelQuadCollisionLayerAfterOffset(quadIndex, (orientation == "-") ? 1 : -1)
         : collisionLayer;
-    return (VoxelQuadSelection.trySelect(VoxelQueryUtil.getVoxel(room, newRow, newCol),
+    const voxelFound = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
+    if (voxelFound)
+    {
+        return (VoxelQuadSelection.trySelect(voxelFound,
             VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer)));
+    }
+    else
+        return false;
 }
 
 const quadDirections: { facingAxis: "x" | "y" | "z", orientation: "-" | "+" }[] = [

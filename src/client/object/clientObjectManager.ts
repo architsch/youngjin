@@ -24,12 +24,14 @@ import MaterialFactory from "../graphics/factories/materialFactory";
 import TextureFactory from "../graphics/factories/textureFactory";
 import TexturePackMaterialParams from "../graphics/types/material/texturePackMaterialParams";
 import ImageMapUtil from "../../shared/image/util/imageMapUtil";
+import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW } from "../../shared/system/sharedConstants";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
 const playerByUserID: {[userID: string]: GameObject} = {};
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
+const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 const ClientObjectManager =
 {
@@ -59,6 +61,7 @@ const ClientObjectManager =
     },
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
+        await spawnDoor(roomRuntimeMemory.room);
         await spawnVoxelsFromGrid(roomRuntimeMemory.room);
 
         // Find the player's initial position for distance-based loading order
@@ -107,11 +110,8 @@ const ClientObjectManager =
         const userRole = App.getCurrentUserRole();
         const room = App.getCurrentRoom()!;
 
-        if (addToRoomData)
-        {
-            if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params, validate))
-                return false;
-        }
+        if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params, validate, addToRoomData))
+            return false;
 
         if (gameObjects[object.params.objectId] == undefined)
         {
@@ -144,11 +144,8 @@ const ClientObjectManager =
         const userRole = App.getCurrentUserRole();
         const room = App.getCurrentRoom()!;
 
-        if (removeFromRoomData)
-        {
-            if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId), validate))
-                return false;
-        }
+        if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId), validate, removeFromRoomData))
+            return false;
 
         if (gameObjects[objectId] != undefined)
         {
@@ -340,6 +337,19 @@ async function spawnVoxelsFromGrid(room: Room): Promise<void>
         (gameObject as VoxelGameObject).setVoxel(voxel);
         await ClientObjectManager.addObject(gameObject, false, false);
     }
+}
+
+async function spawnDoor(room: Room): Promise<void>
+{
+    const gameObject = ObjectFactory.createClientSideObject(
+        room.id,
+        doorTypeIndex,
+        new ObjectTransform(
+            {x: ENTRANCE_VOXEL_COL + 0.5, y: 0, z: ENTRANCE_VOXEL_ROW},
+            {x: 0, y: 0, z: -1}
+        ),
+    );
+    await ClientObjectManager.addObject(gameObject, false, false);
 }
 
 export default ClientObjectManager;

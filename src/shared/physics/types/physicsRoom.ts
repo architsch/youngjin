@@ -1,69 +1,71 @@
 import Room from "../../room/types/room";
-import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW, MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import PhysicsObject from "./physicsObject";
 import PhysicsVoxel from "./physicsVoxel";
 import { ColliderState } from "./colliderState";
+import { ColliderConfig } from "./colliderConfig";
+import Vec3 from "../../math/types/vec3";
 
 export default class PhysicsRoom
 {
     room: Room;
     voxels: PhysicsVoxel[];
     objectById: { [objectId: string]: PhysicsObject };
-    floor: ColliderState; // Global floor collider
-    ceiling: ColliderState; // Global ceiling collider
+    globalColliders: ColliderState[];
 
     constructor(room: Room)
     {
         this.room = room;
         this.voxels = room.voxelGrid.voxels.map(voxel => new PhysicsVoxel(voxel));
         this.objectById = {};
-
-        this.floor = defaultFloor;
-        this.ceiling = defaultCeiling;
+        this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ, entrance];
     }
 }
 
-const defaultFloor: ColliderState = {
-    hitbox: {
-        center: {
-            x: NUM_VOXEL_COLS * 0.5,
-            y: -50,
-            z: NUM_VOXEL_ROWS * 0.5
-        },
-        halfSize: {
-            x: NUM_VOXEL_COLS * 0.5,
-            y: 50,
-            z: NUM_VOXEL_ROWS * 0.5
-        },
-    },
-    colliderConfig: {
-        colliderType: "standalone",
-        hitboxSize: {sizeX: NUM_VOXEL_COLS, sizeY: 100, sizeZ: NUM_VOXEL_ROWS},
-        applyHardCollisionToOthers: true,
-        outgoingSoftCollisionForceMultiplier: 1,
-        incomingSoftCollisionForceMultiplier: 0,
-        maxClimbableHeight: 0,
-    },
-};
+const cubeColliderSize = 100;
+const cubeColliderSizeHalf = cubeColliderSize*0.5;
 
-const defaultCeiling: ColliderState = {
+const cubeColliderConfig: ColliderConfig = {
+    colliderType: "standalone",
+    hitboxSize: {sizeX: cubeColliderSize, sizeY: cubeColliderSize, sizeZ: cubeColliderSize},
+    applyHardCollisionToOthers: true,
+    outgoingSoftCollisionForceMultiplier: 1,
+    incomingSoftCollisionForceMultiplier: 0,
+    maxClimbableHeight: 0,
+};
+const cubeColliderHalfSize: Vec3 = {x: cubeColliderSizeHalf, y: cubeColliderSizeHalf, z: cubeColliderSizeHalf};
+
+function makeCubeCollider(centerX: number, centerY: number, centerZ: number): ColliderState
+{
+    return {
+        hitbox: {center: {x: centerX, y: centerY, z: centerZ}, halfSize: cubeColliderHalfSize},
+        colliderConfig: cubeColliderConfig,
+    };
+}
+
+const floor = makeCubeCollider(
+    NUM_VOXEL_COLS*0.5, -cubeColliderSizeHalf, NUM_VOXEL_ROWS*0.5);
+const ceiling = makeCubeCollider(
+    NUM_VOXEL_COLS*0.5, MAX_ROOM_Y + cubeColliderSizeHalf, NUM_VOXEL_ROWS*0.5);
+const wall_lowerX = makeCubeCollider(
+    -cubeColliderSizeHalf, MID_ROOM_Y, NUM_VOXEL_ROWS*0.5);
+const wall_upperX = makeCubeCollider(
+    NUM_VOXEL_COLS + cubeColliderSizeHalf, MID_ROOM_Y, NUM_VOXEL_ROWS*0.5);
+const wall_lowerZ = makeCubeCollider(
+    NUM_VOXEL_COLS*0.5, MID_ROOM_Y, -cubeColliderSizeHalf);
+const wall_upperZ = makeCubeCollider(
+    NUM_VOXEL_COLS*0.5, MID_ROOM_Y, NUM_VOXEL_ROWS + cubeColliderSizeHalf);
+
+const entrance: ColliderState = {
     hitbox: {
-        center: {
-            x: NUM_VOXEL_COLS * 0.5,
-            y: MAX_ROOM_Y + 50,
-            z: NUM_VOXEL_ROWS * 0.5
-        },
-        halfSize: {
-            x: NUM_VOXEL_COLS * 0.5,
-            y: 50,
-            z: NUM_VOXEL_ROWS * 0.5
-        },
+        center: {x: ENTRANCE_VOXEL_COL + 0.5, y: MID_ROOM_Y, z: ENTRANCE_VOXEL_ROW},
+        halfSize: {x: 0.5, y: 0.5*MAX_ROOM_Y, z: 1},
     },
     colliderConfig: {
-        colliderType: "standalone",
-        hitboxSize: {sizeX: NUM_VOXEL_COLS, sizeY: 100, sizeZ: NUM_VOXEL_ROWS},
+            colliderType: "standalone",
+        hitboxSize: {sizeX: 1, sizeY: MAX_ROOM_Y, sizeZ: 2},
         applyHardCollisionToOthers: true,
-        outgoingSoftCollisionForceMultiplier: 1,
+        outgoingSoftCollisionForceMultiplier: 0,
         incomingSoftCollisionForceMultiplier: 0,
         maxClimbableHeight: 0,
     },

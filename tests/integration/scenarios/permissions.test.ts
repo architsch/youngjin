@@ -50,7 +50,7 @@ describe("permission scenarios", () => {
                 expect(rollback.length).toBeGreaterThanOrEqual(1);
                 // Block should NOT be present
                 const roomMem = ServerRoomManager.roomRuntimeMemories["vis-rollback"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(false);
             },
         });
@@ -66,7 +66,7 @@ describe("permission scenarios", () => {
             ],
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub-perm"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },
         });
@@ -89,7 +89,7 @@ describe("permission scenarios", () => {
                 expect(rollback.length).toBe(0);
                 // Block should be present
                 const roomMem = ServerRoomManager.roomRuntimeMemories["owner-room"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },
         });
@@ -112,7 +112,7 @@ describe("permission scenarios", () => {
                 expect(rollback.length).toBe(0);
                 // Block should be present
                 const roomMem = ServerRoomManager.roomRuntimeMemories["editor-room"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },
         });

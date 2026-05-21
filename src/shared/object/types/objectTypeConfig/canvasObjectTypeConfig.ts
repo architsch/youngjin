@@ -6,10 +6,10 @@ import User from "../../../user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../../user/types/userRole";
 import AddObjectSignal from "../../types/addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../../types/objectMetadataKey";
-import ObjectTypeConfig from "../../types/objectTypeConfig";
+import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
-import ObjectTypeConfigMap from "../objectTypeConfigMap";
+import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 
 // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
 const CanvasObjectTypeConfig: ObjectTypeConfig =

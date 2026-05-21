@@ -17,6 +17,15 @@ Reference: @src/shared/object/util/objectUpdateUtil.ts , @src/server/object/serv
     - If removal succeeds: the server multicasts the `RemoveObjectSignal` to everyone except the sender. Other clients remove the object and despawn its `GameObject`.
     - If removal fails: the server logs an error. No rollback signal is sent (the client-side removal was already applied optimistically).
 
+## Local-Only Objects (`addToRoomData` / `removeFromRoomData`)
+Some objects exist only on the client and must never enter the synced room state — for example the voxel render objects spawned from the voxel grid and the entrance [Door](../geometry/room_entrance.md#the-door-object). They are spawned during room load with `addToRoomData = false` (and `#`-prefixed, client-only object ids) and torn down with `removeFromRoomData = false`.
+
+`ObjectUpdateUtil.addObject` / `removeObject` take this flag as their final parameter:
+- When **true** (the default): the object is registered in / deleted from `room.objectById`, and the room is marked dirty if it is persistent.
+- When **false**: that bookkeeping is skipped, so the object never becomes part of room data and is never persisted.
+
+Either way the object's `PhysicsObject` is created/destroyed when its type defines a collider, so local-only objects can still participate in collision. These local spawn paths also emit no `AddObjectSignal` / `RemoveObjectSignal`, keeping the object purely client-side and deterministic across clients.
+
 ## Set Object Transform
 
 **Non-physical objects** (e.g. canvas objects dragged via world-space gizmos):

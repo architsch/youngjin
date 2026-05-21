@@ -7,20 +7,22 @@
  * - Authority checks (can't move another's object)
  * - Objects removed when user leaves
  * - Desync detection and recovery
- * - Gameplay state matches object transform
+ * - Player metadata snapshot mirrors the live player object
  * - Metadata (chat messages)
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_REGULAR, userAt, usersInRoom, walkAcross, disconnectWithSave } from "../helpers/scenarioPresets";
-import { harness } from "../helpers/serverHarness";
-import { getPendingSignals } from "../helpers/invariants";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
-import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import { ENTRANCE_POSITION } from "../../../src/shared/system/sharedConstants";
+import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
+
+// Players always spawn at the entrance cell center, regardless of where they were before
+// (see the spawn transform in ServerRoomManager.changeUserRoom).
+const SPAWN_X = ENTRANCE_VOXEL_COL + 0.5;
+const SPAWN_Z = ENTRANCE_VOXEL_ROW + 0.5;
 
 describe("object scenarios", () => {
     beforeEach(() => {
@@ -42,10 +44,10 @@ describe("object scenarios", () => {
                 const obj2 = harness.getPlayerObject(users[1].user.id);
                 expect(obj1).toBeDefined();
                 expect(obj2).toBeDefined();
-                expect(obj1!.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x);
-                expect(obj1!.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z);
-                expect(obj2!.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x);
-                expect(obj2!.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z);
+                expect(obj1!.transform.pos.x).toBeCloseTo(SPAWN_X);
+                expect(obj1!.transform.pos.z).toBeCloseTo(SPAWN_Z);
+                expect(obj2!.transform.pos.x).toBeCloseTo(SPAWN_X);
+                expect(obj2!.transform.pos.z).toBeCloseTo(SPAWN_Z);
             },
         });
     });
@@ -55,14 +57,14 @@ describe("object scenarios", () => {
             name: "update own transform",
             rooms: [EMPTY_REGULAR],
             users: [userAt(10, 10, "regular")],
-            actions: [{ type: "moveObject", userIndex: 0, x: ENTRANCE_POSITION.x + 1, y: ENTRANCE_POSITION.y, z: ENTRANCE_POSITION.z + 1 }],
+            actions: [{ type: "moveObject", userIndex: 0, x: SPAWN_X, y: 0.5 * PLAYER_HEIGHT, z: SPAWN_Z - 2 }],
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id);
                 expect(obj).toBeDefined();
-                // Small movement is within desync threshold,
+                // Small movement (2 units into the room) is within the desync threshold,
                 // so the server should accept a position close to the target
-                expect(obj!.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x + 1, 0);
-                expect(obj!.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z + 1, 0);
+                expect(obj!.transform.pos.x).toBeCloseTo(SPAWN_X, 0);
+                expect(obj!.transform.pos.z).toBeCloseTo(SPAWN_Z - 2, 0);
             },
         });
     });
@@ -90,8 +92,8 @@ describe("object scenarios", () => {
 
                 // user2's position should be unchanged (still at the entrance)
                 const obj2 = harness.getPlayerObject(users[1].user.id)!;
-                expect(obj2.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x);
-                expect(obj2.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z);
+                expect(obj2.transform.pos.x).toBeCloseTo(SPAWN_X);
+                expect(obj2.transform.pos.z).toBeCloseTo(SPAWN_Z);
             },
         });
     });
@@ -118,14 +120,14 @@ describe("object scenarios", () => {
             users: [userAt(5, 5, "regular")],
             actions: [
                 // Try to teleport far away (>3 units should trigger desync)
-                { type: "moveObject", userIndex: 0, x: ENTRANCE_POSITION.x + 20, y: 0, z: ENTRANCE_POSITION.z + 20 },
+                { type: "moveObject", userIndex: 0, x: SPAWN_X, y: 0, z: SPAWN_Z - 20 },
             ],
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id)!;
                 // Desync resets to the last known server position (the entrance)
                 // when the distance is >= 3 units (distSqr >= 9)
-                expect(obj.transform.pos.x).toBeCloseTo(ENTRANCE_POSITION.x, 0);
-                expect(obj.transform.pos.z).toBeCloseTo(ENTRANCE_POSITION.z, 0);
+                expect(obj.transform.pos.x).toBeCloseTo(SPAWN_X, 0);
+                expect(obj.transform.pos.z).toBeCloseTo(SPAWN_Z, 0);
             },
         });
     });

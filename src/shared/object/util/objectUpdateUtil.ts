@@ -42,7 +42,7 @@ const ObjectUpdateUtil =
             return true;
     },
     addObject(user: User, userRole: UserRole, room: Room, obj: AddObjectSignal,
-        validate: boolean = true): boolean
+        validate: boolean = true, addToRoomData: boolean = true): boolean
     {
         if (validate && !ObjectUpdateUtil.canAddObject(user, userRole, room, obj))
         {
@@ -50,14 +50,16 @@ const ObjectUpdateUtil =
             return false;
         }
         // Add the object.
-        room.objectById[obj.objectId] = obj;
+        if (addToRoomData)
+        {
+            room.objectById[obj.objectId] = obj;
+            markRoomAsDirtyIfPersistent(room, obj);
+        }
 
         // Add the object's corresponding PhysicsObject.
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
         if (colliderState)
             PhysicsManager.addObject(room.id, obj.objectId, obj.objectTypeIndex, colliderState);
-
-        markRoomAsDirtyIfPersistent(room, obj);
         return true;
     },
 
@@ -80,7 +82,7 @@ const ObjectUpdateUtil =
         return true;
     },
     removeObject(user: User, userRole: UserRole, room: Room, signal: RemoveObjectSignal,
-        validate: boolean = true): boolean
+        validate: boolean = true, removeFromRoomData: boolean = true): boolean
     {
         if (validate && !ObjectUpdateUtil.canRemoveObject(user, userRole, room, signal))
         {
@@ -88,14 +90,16 @@ const ObjectUpdateUtil =
             return false;
         }
         // Remove the object.
-        const obj = room.objectById[signal.objectId];
-        delete room.objectById[signal.objectId];
+        if (removeFromRoomData)
+        {
+            const obj = room.objectById[signal.objectId];
+            delete room.objectById[signal.objectId];
+            markRoomAsDirtyIfPersistent(room, obj);
+        }
 
         // Remove the object's corresponding PhysicsObject.
         if (PhysicsManager.hasObject(room.id, signal.objectId))
             PhysicsManager.removeObject(room.id, signal.objectId);
-
-        markRoomAsDirtyIfPersistent(room, obj);
         return true;
     },
 

@@ -42,3 +42,5 @@ Quad scaling:
 Voxel blocks can be manipulated via 6-directional arrows (world-space gizmos):
 - Arrow offset distance: 0.35 units from block center.
 - Each direction (+x, −x, +y, −y, +z, −z) maps to specific row, column, and collision layer offsets for adjacent block placement.
+
+Edits are bounded by the grid (`row`/`col` within `[0, NUM_VOXEL_ROWS/COLS)`), and additional constraints protect the cells around the room entrance from being added to or removed — see [room_entrance.md](room_entrance.md#voxel-edit-constraints-near-the-entrance).

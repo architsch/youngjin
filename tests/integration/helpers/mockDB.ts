@@ -5,7 +5,7 @@
  */
 import { vi } from "vitest";
 import Room from "../../../src/shared/room/types/room";
-import RoomGenerator from "../../../src/shared/room/roomGenerator";
+import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import DBRoomEditor from "../../../src/server/db/types/row/dbRoomEditor";
 
@@ -75,7 +75,7 @@ export function seedRoom(
     const existing = roomStore[roomID];
     if (existing) return existing.room;
 
-    const { voxelGrid, objectGroup } = RoomGenerator.generateEmptyRoom(0, 1, 2);
+    const { voxelGrid, objectGroup } = RoomGenerationUtil.generateEmptyRoom(0, 1, 2);
     const room = new Room(roomID, roomType, "", "", "", voxelGrid, objectGroup);
     roomStore[roomID] = {
         id: roomID,

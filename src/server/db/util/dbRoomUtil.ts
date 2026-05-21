@@ -1,5 +1,5 @@
 import Room from "../../../shared/room/types/room";
-import RoomGenerator from "../../../shared/room/roomGenerator";
+import RoomGenerationUtil from "../../../shared/room/util/roomGenerationUtil";
 import DBRoom from "../types/row/dbRoom";
 import DBRoomEditor from "../types/row/dbRoomEditor";
 import { RoomType } from "../../../shared/room/types/roomType";
@@ -71,7 +71,7 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName, floorTextureIndex, wallTextureIndex,
             ceilingTextureIndex, texturePackPath}, "low", "info");
         const {voxelGrid, objectGroup} =
-            RoomGenerator.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
+            RoomGenerationUtil.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
 
         const room = new Room(undefined, roomType, ownerUserID, ownerUserName, texturePackPath,
             voxelGrid, objectGroup);

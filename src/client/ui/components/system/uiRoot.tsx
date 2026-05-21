@@ -19,7 +19,7 @@ import RoomListForm from "../form/roomListForm";
 import ConfigureMyRoomForm from "../form/configureMyRoomForm";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
-import { objectSelectionObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { objectSelectionObservable, openPopupObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ImageChooserForm from "../form/imageChooserForm";
 import { PopupContext } from "../../contexts/popupContext";
@@ -34,6 +34,10 @@ export default function UIRoot({ env, user }: UIRootProps)
     const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
     const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
 
+    const openPopup = useCallback((state: PopupState) => setPopupStack(prev => [...prev, state]), []);
+    const closePopup = useCallback(() => setPopupStack(prev => prev.slice(0, -1)), []);
+    const popupContextValue = useMemo(() => ({open: openPopup, close: closePopup}), [openPopup, closePopup]);
+
     useEffect(() => {
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
             setRoomRuntimeMemory(roomRuntimeMemory);
@@ -47,17 +51,19 @@ export default function UIRoot({ env, user }: UIRootProps)
         voxelQuadSelectionObservable.addListener("ui_root", (selection: VoxelQuadSelection | null) => {
             setVoxelQuadSelection(selection);
         });
+        openPopupObservable.addListener("ui_root", (state: PopupState) => {
+            if (state.popupType == "none")
+                return;
+            openPopup(state);
+        })
         return () => {
             roomChangedObservable.removeListener("ui_root");
             userRoleObservable.removeListener("ui_root");
             objectSelectionObservable.removeListener("ui_root");
             voxelQuadSelectionObservable.removeListener("ui_root");
+            openPopupObservable.removeListener("ui_root");
         };
     }, []);
-
-    const openPopup = useCallback((state: PopupState) => setPopupStack(prev => [...prev, state]), []);
-    const closePopup = useCallback(() => setPopupStack(prev => prev.slice(0, -1)), []);
-    const popupContextValue = useMemo(() => ({open: openPopup, close: closePopup}), [openPopup, closePopup]);
 
     const roomID = roomRuntimeMemory?.room.id;
     const roomType = roomRuntimeMemory?.room.roomType;
@@ -73,7 +79,6 @@ export default function UIRoot({ env, user }: UIRootProps)
             currentRoomID={roomID ?? ""}
             onAuthPromptButtonClick={() => openPopup({popupType: "authPrompt"})}
             onSignOutButtonClick={() => openPopup({popupType: "signOut"})}
-            onOpenRoomsButtonClick={() => openPopup({popupType: "roomList"})}
             onConfigureButtonClick={() => openPopup({popupType: "configureMyRoom"})}
         />
         <DebugStats env={env}/>

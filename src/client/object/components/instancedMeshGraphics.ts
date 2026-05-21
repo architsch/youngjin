@@ -55,13 +55,12 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             throw new Error("MaterialParams hasn't been set yet.");
 
         const instancedMesh = await MeshFactory.loadInstancedMesh(
+            this.getMeshId(),
             this.geometryId,
             this.materialParams,
             this.maxNumInstances,
             this.componentConfig.createInstanceIdPool
         );
-        if (!instancedMesh.name)
-            instancedMesh.name = this.getMeshId();
         this.instancedMesh = instancedMesh;
 
         if (objMap[instancedMesh.name] == undefined)

@@ -8,7 +8,7 @@ import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import { ENTRANCE_DIRECTION, ENTRANCE_POSITION, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
@@ -176,7 +176,10 @@ const ServerRoomManager =
             userRole = UserRoleEnumMap.Owner;
 
         ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
-            new ObjectTransform({...ENTRANCE_POSITION}, {...ENTRANCE_DIRECTION}),
+            new ObjectTransform(
+                {x: ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: ENTRANCE_VOXEL_ROW + 0.5},
+                {x: 0, y: 0, z: 1}
+            ),
             playerMetadata, userRole
         );
 

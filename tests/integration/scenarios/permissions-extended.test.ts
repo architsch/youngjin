@@ -150,10 +150,10 @@ describe("extended permission scenarios", () => {
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["promote-room"];
                 // First add (at 10,10) should have been rejected
-                const v1 = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                const v1 = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v1, 0)).toBe(false);
                 // Second add (at 11,11) should have succeeded
-                const v2 = VoxelQueryUtil.getVoxel(roomMem.room, 11, 11);
+                const v2 = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 11, 11)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v2, 0)).toBe(true);
             },
         });
@@ -176,10 +176,10 @@ describe("extended permission scenarios", () => {
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["demote-room"];
                 // First add should have succeeded
-                const v1 = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                const v1 = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v1, 0)).toBe(true);
                 // Second add should have been rejected
-                const v2 = VoxelQueryUtil.getVoxel(roomMem.room, 11, 11);
+                const v2 = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 11, 11)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v2, 0)).toBe(false);
             },
         });

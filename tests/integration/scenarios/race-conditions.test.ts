@@ -172,7 +172,7 @@ describe("race condition scenarios", () => {
                 ],
                 assertions: () => {
                     const roomMem = ServerRoomManager.roomRuntimeMemories["voxel-race"];
-                    const voxel = VoxelQueryUtil.getVoxel(roomMem.room, 10, 10);
+                    const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                     // Exactly one block should be at this position
                     expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
                 },
@@ -225,7 +225,7 @@ describe("race condition scenarios", () => {
                     let count = 0;
                     for (const [r, c] of [[10,10],[10,11],[11,10],[11,11]])
                     {
-                        const voxel = VoxelQueryUtil.getVoxel(roomMem.room, r, c);
+                        const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, r, c)!;
                         if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0))
                             count++;
                     }

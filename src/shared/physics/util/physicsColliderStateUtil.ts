@@ -72,23 +72,24 @@ const PhysicsColliderStateUtil =
         const maxX = hitbox.center.x + hitbox.halfSize.x;
         const minZ = hitbox.center.z - hitbox.halfSize.z;
         const maxZ = hitbox.center.z + hitbox.halfSize.z;
-        const minCol = Math.floor(minX);
-        const maxCol = Math.floor(maxX);
-        const minRow = Math.floor(minZ);
-        const maxRow = Math.floor(maxZ);
+        const minCol = Math.max(0, Math.floor(minX));
+        const maxCol = Math.min(NUM_VOXEL_COLS-1, Math.floor(maxX));
+        const minRow = Math.max(0, Math.floor(minZ));
+        const maxRow = Math.min(NUM_VOXEL_ROWS-1, Math.floor(maxZ));
 
         const set = colliderStatesTemp[colliderStatesTempNextIndex];
         colliderStatesTempNextIndex = (colliderStatesTempNextIndex + 1) % colliderStatesTemp.length;
 
         set.clear();
-        if (Geometry3DUtil.AABBsOverlap(hitbox, physicsRoom.floor.hitbox))
-            set.add(physicsRoom.floor);
-        if (Geometry3DUtil.AABBsOverlap(hitbox, physicsRoom.ceiling.hitbox))
-            set.add(physicsRoom.ceiling);
 
-        if (minCol < 0 || minRow < 0 || maxCol >= NUM_VOXEL_COLS || maxRow >= NUM_VOXEL_ROWS)
-            return set;
+        // Global Colliders
+        for (const globalCollider of physicsRoom.globalColliders)
+        {
+            if (Geometry3DUtil.AABBsOverlap(hitbox, globalCollider.hitbox))
+                set.add(globalCollider);
+        }
 
+        // Voxel Colliders
         for (let row = minRow; row <= maxRow; ++row)
         {
             for (let col = minCol; col <= maxCol; ++col)

@@ -2,8 +2,14 @@ import { HOUR_IN_MS, MINUTE_IN_MS } from "../../../shared/system/sharedConstants
 import LogUtil from "../../../shared/system/util/logUtil";
 
 const WINDOW_MS = HOUR_IN_MS; // 1-hour window
-const MAX_GUESTS_PER_IP = 10; // Max guest accounts per IP per window
-const MAX_GUESTS_PER_UA = 3; // Max guest accounts per User-Agent per window
+// Abuse protection for production. In dev mode the entire dev/test workload originates
+// from a single IP + User-Agent and legitimately creates many guests — the E2E suite
+// spins up a fresh browser context (and thus a fresh guest) per test — so the production
+// caps would block it and surface as 401 "Failed to identify the user". Dev uses
+// effectively-unlimited caps.
+const isDev = process.env.MODE == "dev";
+const MAX_GUESTS_PER_IP = isDev ? 1_000_000 : 10; // Max guest accounts per IP per window
+const MAX_GUESTS_PER_UA = isDev ? 1_000_000 : 3;  // Max guest accounts per User-Agent per window
 const CLEANUP_INTERVAL_MS = 10 * MINUTE_IN_MS; // Clean up stale entries every 10 minutes
 
 type RateLimitRecord = {count: number, windowStart: number};
