@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 import Chat from "../chat/chat";
 import DebugStats from "../debug/debugStats";
@@ -13,18 +13,16 @@ import Popup from "../basic/popup";
 import PopupState from "../../types/popupState";
 import User from "../../../../shared/user/types/user";
 import AuthPromptForm from "../form/authPromptForm";
-import UserAPIClient from "../../../networking/client/userAPIClient";
-import SignOutForm from "../form/signOutForm";
 import RoomListForm from "../form/roomListForm";
 import ConfigureMyRoomForm from "../form/configureMyRoomForm";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
-import { objectSelectionObservable, openPopupObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { objectSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ImageChooserForm from "../form/imageChooserForm";
-import { PopupContext } from "../../contexts/popupContext";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
+import ConfirmForm from "../form/confirmForm";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -33,10 +31,6 @@ export default function UIRoot({ env, user }: UIRootProps)
     const [userRole, setUserRole] = useState<UserRole>(UserRoleEnumMap.Visitor);
     const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
     const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
-
-    const openPopup = useCallback((state: PopupState) => setPopupStack(prev => [...prev, state]), []);
-    const closePopup = useCallback(() => setPopupStack(prev => prev.slice(0, -1)), []);
-    const popupContextValue = useMemo(() => ({open: openPopup, close: closePopup}), [openPopup, closePopup]);
 
     useEffect(() => {
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
@@ -51,17 +45,18 @@ export default function UIRoot({ env, user }: UIRootProps)
         voxelQuadSelectionObservable.addListener("ui_root", (selection: VoxelQuadSelection | null) => {
             setVoxelQuadSelection(selection);
         });
-        openPopupObservable.addListener("ui_root", (state: PopupState) => {
-            if (state.popupType == "none")
-                return;
-            openPopup(state);
+        popupStateObservable.addListener("ui_root", (state: PopupState) => {
+            if (state.popupType != "none")
+                setPopupStack(prev => [...prev, state]); // Open up a new popup
+            else
+                setPopupStack(prev => prev.slice(0, -1)); // Close the topmost popup
         })
         return () => {
             roomChangedObservable.removeListener("ui_root");
             userRoleObservable.removeListener("ui_root");
             objectSelectionObservable.removeListener("ui_root");
             voxelQuadSelectionObservable.removeListener("ui_root");
-            openPopupObservable.removeListener("ui_root");
+            popupStateObservable.removeListener("ui_root");
         };
     }, []);
 
@@ -72,14 +67,11 @@ export default function UIRoot({ env, user }: UIRootProps)
         userRole === UserRoleEnumMap.Editor ||
         roomType === RoomTypeEnumMap.Hub;
 
-    return <PopupContext.Provider value={popupContextValue}>
+    return <>
         <UserRoomIdentity
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
-            onAuthPromptButtonClick={() => openPopup({popupType: "authPrompt"})}
-            onSignOutButtonClick={() => openPopup({popupType: "signOut"})}
-            onConfigureButtonClick={() => openPopup({popupType: "configureMyRoom"})}
         />
         <DebugStats env={env}/>
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
@@ -91,27 +83,27 @@ export default function UIRoot({ env, user }: UIRootProps)
         {popupStack.map((state, i) => {
             switch (state.popupType)
             {
-                case "authPrompt": return <Popup key={i} onClose={closePopup}>
-                    <AuthPromptForm
-                        onPlayAsGuestButtonClick={closePopup}
-                        onLoginWithGoogleButtonClick={() => UserAPIClient.loginWithGoogle()}
+                case "authPrompt": return <Popup key={i}>
+                    <AuthPromptForm/>
+                </Popup>;
+                case "confirm": return <Popup key={i}>
+                    <ConfirmForm
+                        message={state.params.message}
+                        onConfirm={state.params.onConfirm}
+                        onCancel={state.params.onCancel}
                     />
                 </Popup>;
-                case "signOut": return <Popup key={i} onClose={closePopup}>
-                    <SignOutForm onCancel={closePopup}/>
+                case "roomList": return <Popup key={i} title="Rooms" showCloseButton={true}>
+                    <RoomListForm user={user} currentRoomID={roomID ?? ""}/>
                 </Popup>;
-                case "roomList": return <Popup key={i} onClose={closePopup} title="Rooms" showCloseButton={true}>
-                    <RoomListForm user={user} currentRoomID={roomID ?? ""} onClose={closePopup}/>
+                case "configureMyRoom": return <Popup key={i} showCloseButton={true}>
+                    <ConfigureMyRoomForm/>
                 </Popup>;
-                case "configureMyRoom": return <Popup key={i} onClose={closePopup} showCloseButton={true}>
-                    <ConfigureMyRoomForm onClose={closePopup}/>
-                </Popup>;
-                case "imageChooser": return <Popup key={i} onClose={closePopup} showCloseButton={true}>
+                case "imageChooser": return <Popup key={i} showCloseButton={true}>
                     <ImageChooserForm
                         mapName={state.params.mapName}
                         initialChoicePath={state.params.initialChoicePath}
-                        onChoose={(path) => { state.params.onChoose(path); closePopup(); }}
-                        onClose={closePopup}
+                        onChoose={(path) => state.params.onChoose(path)}
                     />
                 </Popup>;
             }
@@ -119,7 +111,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         <Notification/>
         <Loading/>
         <Reconnecting/>
-    </PopupContext.Provider>
+    </>
 }
 
 interface UIRootProps

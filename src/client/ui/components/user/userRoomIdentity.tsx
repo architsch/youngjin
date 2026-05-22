@@ -1,18 +1,17 @@
 import Button from "../basic/button";
 import IconButton from "../basic/iconButton";
-import DoorIcon from "../basic/icons/doorIcon";
 import GearIcon from "../basic/icons/gearIcon";
 import User from "../../../../shared/user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
+import { popupStateObservable } from "../../../system/clientObservables";
+import UserAPIClient from "../../../networking/client/userAPIClient";
+import PopupUtil from "../../util/popupUtil";
 
 export default function UserRoomIdentity({
     user,
     userRole,
     currentRoomID,
-    onAuthPromptButtonClick,
-    onSignOutButtonClick,
-    onConfigureButtonClick,
 }: Props)
 {
     const isGuest = user.userType === UserTypeEnumMap.Guest;
@@ -29,13 +28,34 @@ export default function UserRoomIdentity({
                 <div className="yj-text-sm text-amber-300">{user.userName}</div>
                 <div className="yj-text-xs text-gray-400">({roleName})</div>
             </div>
-            {isGuest && <Button name="Sign In" size="sm" onClick={onAuthPromptButtonClick}/>}
-            {!isGuest && <Button name="Sign Out" size="sm" onClick={onSignOutButtonClick}/>}
+            {isGuest && <Button name="Sign In" size="sm" onClick={() => PopupUtil.openPopup({popupType: "authPrompt"})}/>}
+            {!isGuest && <Button name="Sign Out" size="sm" onClick={() => PopupUtil.openPopup({
+                    popupType: "confirm",
+                    params: {
+                        message: "Want to sign out?",
+                        onConfirm: logout,
+                        onCancel: PopupUtil.closePopup
+                    }
+            })}/>}
         </div>
         <div className="flex flex-row items-end justify-end gap-2">
-            {showConfigureButton && <IconButton icon={<GearIcon/>} size="md" onClick={onConfigureButtonClick}/>}
+            {showConfigureButton && <IconButton icon={<GearIcon/>} size="md" onClick={() => PopupUtil.openPopup({popupType: "configureMyRoom"})}/>}
         </div>
     </div>;
+}
+
+async function logout(): Promise<void>
+{
+    const response = await UserAPIClient.logout();
+    if (response.status >= 200 && response.status < 300)
+    {
+        window.location.reload();
+    }
+    else
+    {
+        PopupUtil.closePopup();
+        alert("Failed to sign out. Please try again.");
+    }
 }
 
 interface Props
@@ -43,7 +63,4 @@ interface Props
     user: User;
     userRole: UserRole;
     currentRoomID: string;
-    onAuthPromptButtonClick: () => void;
-    onSignOutButtonClick: () => void;
-    onConfigureButtonClick: () => void;
 }

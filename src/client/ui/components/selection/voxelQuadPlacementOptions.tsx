@@ -25,6 +25,7 @@ import Room from "../../../../shared/room/types/room";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../shared/object/util/objectIdUtil";
+import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -202,7 +203,7 @@ function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
 
 function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
 {
-    if (!canRemoveVoxelBlock(selection))
+    if (voxelQuadSelectionObservable.peek() != selection || !canRemoveVoxelBlock(selection))
         return;
 
     const room = App.getCurrentRoom()!;

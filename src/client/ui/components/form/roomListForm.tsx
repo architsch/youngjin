@@ -13,12 +13,14 @@ import User from "../../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 import Form from "../basic/form";
+import PopupUtil from "../../util/popupUtil";
+import { roomListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 
 // Sentinel ID used by the "My Room" placeholder entry when the user has no room yet.
 // The Visit handler detects this and creates a room before joining.
 const MY_ROOM_PLACEHOLDER_ID = "__my-room-placeholder__";
 
-export default function RoomListForm({ user, currentRoomID, onClose }: Props)
+export default function RoomListForm({ user, currentRoomID }: Props)
 {
     const [hubRoom, setHubRoom] = useState<RoomListEntry | null>(null);
     const [myRoom, setMyRoom] = useState<RoomListEntry | null>(null);
@@ -82,6 +84,20 @@ export default function RoomListForm({ user, currentRoomID, onClose }: Props)
         const generation = ++loadGenerationRef.current;
         loadingRef.current = true;
         setLoading(true);
+
+        // Debug mode: synthesize paginated dummy entries instead of hitting the API, so the
+        // list's pagination/scrolling can be exercised without a populated room database.
+        if (roomListDebugEnabledObservable.peek())
+        {
+            const { rooms, hasMore } = makeDummyRoomPage(page);
+            if (generation !== loadGenerationRef.current) return;
+            loadingRef.current = false;
+            setLoading(false);
+            setOtherRooms(prev => append ? [...prev, ...rooms] : rooms);
+            setHasMore(hasMore);
+            return;
+        }
+
         const response = query.length > 0
             ? await RoomAPIClient.searchRooms(query, page)
             : await RoomAPIClient.listRooms(page);
@@ -128,8 +144,8 @@ export default function RoomListForm({ user, currentRoomID, onClose }: Props)
     }, [onSearchKeyDown]);
 
     const handleVisit = useCallback((entry: RoomListEntry) => {
-        visitRoom(entry, user, onClose);
-    }, [user, onClose]);
+        visitRoom(entry, user);
+    }, [user]);
 
     // Pinned entries still honor the active search — a pinned room whose ownerUserName
     // doesn't match the query should disappear from search results the same way the
@@ -215,11 +231,33 @@ function makeMyRoomPlaceholder(): RoomListEntry
     };
 }
 
-async function visitRoom(entry: RoomListEntry, user: User, onClose: () => void): Promise<void>
+// Debug-only paginated dummy data. Page size mirrors the server's ROOM_LIST_PAGE_SIZE so the
+// infinite-scroll path behaves identically; hasMore stays true until the total is exhausted.
+const DEBUG_DUMMY_ROOM_PAGE_SIZE = 10;
+const DEBUG_DUMMY_ROOM_TOTAL = 200;
+
+function makeDummyRoomPage(page: number): { rooms: RoomListEntry[], hasMore: boolean }
+{
+    const start = page * DEBUG_DUMMY_ROOM_PAGE_SIZE;
+    const end = Math.min(start + DEBUG_DUMMY_ROOM_PAGE_SIZE, DEBUG_DUMMY_ROOM_TOTAL);
+    const rooms: RoomListEntry[] = [];
+    for (let i = start; i < end; ++i)
+    {
+        rooms.push({
+            id: `dummy-room-${i}`,
+            roomType: RoomTypeEnumMap.Regular,
+            ownerUserID: `dummy-owner-${i}`,
+            ownerUserName: `dummy_user_${i}`,
+        });
+    }
+    return { rooms, hasMore: end < DEBUG_DUMMY_ROOM_TOTAL };
+}
+
+async function visitRoom(entry: RoomListEntry, user: User): Promise<void>
 {
     // Close the popup and engage the full-screen loading indicator immediately so
     // the user can't fire more interactions during the room-change round-trip.
-    onClose();
+    PopupUtil.closePopup();
     if (!tryStartClientProcess("roomChange", 1, 1))
         return;
 
@@ -248,7 +286,6 @@ interface Props
 {
     user: User;
     currentRoomID: string;
-    onClose: () => void;
 }
 
 interface RowProps

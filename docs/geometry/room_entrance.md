@@ -48,7 +48,7 @@ The door is the `Door` GameObject type (`DoorObjectTypeConfig`, object type inde
 - **Collider.** A thin pass-through collider matching the mesh footprint (`applyHardCollisionToOthers: false`) — the wall and entrance collider behind it already block the player, so the door itself does not need to.
 - **Interaction.** A `playerProximityDetector` (`maxDist` 3.5, `maxLookAngle` 0.25π) drives a `speechBubble`:
   - On proximity start the door shows **"Click to Enter"**; on proximity end it clears the message.
-  - Clicking the door *while in proximity* opens the room-list popup (`openPopupObservable.set({popupType: "roomList"})`), from which the player picks another room to travel to. Clicking out of proximity does nothing.
+  - Clicking the door *while in proximity* opens the room-list popup (`PopupUtil.openPopup({popupType: "roomList"})`), from which the player picks another room to travel to. Clicking out of proximity does nothing.
 
 ## Voxel Edit Constraints Near the Entrance
 

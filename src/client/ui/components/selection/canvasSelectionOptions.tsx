@@ -10,6 +10,7 @@ import RemoveObjectSignal from "../../../../shared/object/types/removeObjectSign
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import { objectSelectionObservable } from "../../../system/clientObservables";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
+import PopupUtil from "../../util/popupUtil";
 
 export default function CanvasSelectionOptions(props: {selection: ObjectSelection})
 {
@@ -20,7 +21,7 @@ export default function CanvasSelectionOptions(props: {selection: ObjectSelectio
     return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
-            onClick={() => tryRemoveCanvas(props.selection)}
+            onClick={() => openRemoveConfirmPopup(props.selection)}
         />
         <ImageChooser
             title="Change Image"
@@ -43,8 +44,26 @@ function canRemoveCanvas(selection: ObjectSelection): boolean
     return ObjectUpdateUtil.canRemoveObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
 }
 
+function openRemoveConfirmPopup(selection: ObjectSelection)
+{
+    PopupUtil.openPopup({
+        popupType: "confirm",
+        params: {
+            message: "Want to remove this?",
+            onConfirm: () => {
+                tryRemoveCanvas(selection);
+                PopupUtil.closePopup();
+            },
+            onCancel: PopupUtil.closePopup
+        }
+    });
+}
+
 async function tryRemoveCanvas(selection: ObjectSelection)
 {
+    if (objectSelectionObservable.peek() != selection || !canRemoveCanvas(selection))
+        return;
+
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
 

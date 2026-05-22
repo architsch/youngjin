@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import GameObject from "./gameObject";
-import { openPopupObservable } from "../../system/clientObservables";
 import SpeechBubble from "../components/speechBubble";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import PlayerProximityDetector from "../components/playerProximityDetector";
+import PopupUtil from "../../ui/util/popupUtil";
 
 export default class DoorGameObject extends GameObject
 {
@@ -27,7 +27,7 @@ export default class DoorGameObject extends GameObject
     {
         if (!this.playerProximityDetector.isProximityOn())
             return;
-        openPopupObservable.set({popupType: "roomList"});
+        PopupUtil.openPopup({popupType: "roomList"});
     }
 
     onPlayerProximityStart(): void

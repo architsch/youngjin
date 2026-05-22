@@ -18,7 +18,7 @@ import IconButton from "../basic/iconButton";
 import CloseIcon from "../basic/icons/closeIcon";
 import CopyIcon from "../basic/icons/copyIcon";
 
-export default function ConfigureMyRoomForm({ onClose }: Props)
+export default function ConfigureMyRoomForm()
 {
     const room = App.getCurrentRoom();
     const roomID = room?.id ?? "";
@@ -140,9 +140,4 @@ export default function ConfigureMyRoomForm({ onClose }: Props)
             ))}
         </div>}
     </Form>;
-}
-
-interface Props
-{
-    onClose: () => void;
 }

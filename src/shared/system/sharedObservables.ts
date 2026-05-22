@@ -29,6 +29,10 @@ export const colliderDebugEnabledObservable = new Observable<boolean>(false);
 // a huge number of dummy editor entries (to let the user test the list's scrolling behavior.)
 export const editorListDebugEnabledObservable = new Observable<boolean>(false);
 
+// If this observable is enabled, RoomListForm will be filled with a huge number of paginated
+// dummy room entries (to let the user test the list's pagination and scrolling behavior.)
+export const roomListDebugEnabledObservable = new Observable<boolean>(false);
+
 // This observable map tracks collider debug boxes by unique ID.
 // Add a box with tryAdd(id, box), remove with tryRemove(id).
 export const colliderDebugBoxMap = new ObservableMap<ColliderDebugBox>();

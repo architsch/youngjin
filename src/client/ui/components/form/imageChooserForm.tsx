@@ -5,8 +5,9 @@ import TabBar from "../basic/tabBar";
 import ImageGrid from "../image/imageGrid";
 import App from "../../../app";
 import Form from "../basic/form";
+import PopupUtil from "../../util/popupUtil";
 
-export default function ImageChooserForm({mapName, initialChoicePath, onChoose, onClose}: Props)
+export default function ImageChooserForm({mapName, initialChoicePath, onChoose}: Props)
 {
     const imageMap = ImageMapUtil.getImageMap(mapName);
     
@@ -58,8 +59,11 @@ export default function ImageChooserForm({mapName, initialChoicePath, onChoose, 
 
         <div className="sticky bottom-0 -mx-5 -mb-5 px-5 py-3 bg-gray-600 rounded-b-lg flex flex-row items-center justify-center gap-2">
             <Button name="Choose" size="sm" color="green"
-                onClick={() => onChoose(imageMap.getImagePathByRawCoords(selectedSubfolderName, selectedCol, selectedRow))}/>
-            <Button name="Cancel" size="sm" color="gray" onClick={onClose}/>
+                onClick={() => {
+                    onChoose(imageMap.getImagePathByRawCoords(selectedSubfolderName, selectedCol, selectedRow));
+                    PopupUtil.closePopup();
+                }}/>
+            <Button name="Cancel" size="sm" color="gray" onClick={PopupUtil.closePopup}/>
         </div>
     </Form>;
 }
@@ -69,5 +73,4 @@ interface Props
     mapName: string;
     initialChoicePath: string; // "" if no initial choice
     onChoose: (path: string) => void;
-    onClose: () => void;
 }

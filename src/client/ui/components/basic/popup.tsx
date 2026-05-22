@@ -3,8 +3,9 @@ import Text from "./text";
 import IconButton from "./iconButton";
 import CloseIcon from "./icons/closeIcon";
 import { DRAG_THRESHOLD_PX } from "../../../system/clientConstants";
+import PopupUtil from "../../util/popupUtil";
 
-export default function Popup({ children, onClose, showCloseButton = false, title = "" }: Props)
+export default function Popup({ children, showCloseButton = false, title = "" }: Props)
 {
     const hasTopBar = showCloseButton || title.length > 0;
     const downOnBackdropRef = useRef(false);
@@ -26,14 +27,20 @@ export default function Popup({ children, onClose, showCloseButton = false, titl
             const movedTooFar = dx * dx + dy * dy > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX;
             const shouldClose = downOnBackdropRef.current && e.target === e.currentTarget && !movedTooFar;
             downOnBackdropRef.current = false;
-            if (shouldClose) onClose();
+            if (shouldClose)
+                PopupUtil.closePopup();
         }}
     >
         <div className="relative w-fit h-fit text-lg text-gray-200 bg-gray-600 border-gray-400 border-2 rounded-lg">
             {hasTopBar && <div className="flex flex-col">
                 <div className="flex flex-row">
                     {title.length > 0 && <Text size="sm" content={title}/>}
-                    {showCloseButton && <IconButton icon={<CloseIcon/>} size="sm" onClick={onClose} additionalClassNames="ml-auto"/>}
+                    {showCloseButton && <IconButton
+                        icon={<CloseIcon/>}
+                        size="sm"
+                        onClick={PopupUtil.closePopup}
+                        additionalClassNames="ml-auto"
+                    />}
                 </div>
                 {children}
             </div>}
@@ -47,7 +54,6 @@ const className = "absolute inset-0 z-40 pointer-events-auto flex justify-center
 interface Props
 {
     children: ReactNode;
-    onClose: () => void;
     showCloseButton?: boolean;
     title?: string;
 }
