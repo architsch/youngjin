@@ -40,6 +40,7 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
             },
             speechBubble: {
                 yOffset: 2,
+                checkLineOfSight: false,
                 prependUserNameToMessage: false,
                 showMessageIfSpawnedByMe: true,
                 showMessageIfSpawnedByOther: true,

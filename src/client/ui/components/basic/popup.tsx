@@ -16,7 +16,11 @@ export default function Popup({ children, onClose, showCloseButton = false, titl
             downOnBackdropRef.current = e.target === e.currentTarget;
             downPosRef.current = { x: e.clientX, y: e.clientY };
         }}
-        onPointerUp={(e) => {
+        onClick={(e) => {
+            // Close on click (not pointerup) so the backdrop is still mounted when the
+            // synthetic touch-click is dispatched on mobile, absorbing it. Closing during
+            // pointerup removes the backdrop before the synthetic click is hit-tested,
+            // which lets the click fall through to the game canvas and fire a raycast.
             const dx = e.clientX - downPosRef.current.x;
             const dy = e.clientY - downPosRef.current.y;
             const movedTooFar = dx * dx + dy * dy > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX;

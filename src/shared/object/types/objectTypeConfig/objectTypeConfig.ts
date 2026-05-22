@@ -28,6 +28,7 @@ export default interface ObjectTypeConfig
             },
             speechBubble?: {
                 yOffset: number,
+                checkLineOfSight: boolean,
                 prependUserNameToMessage: boolean,
                 showMessageIfSpawnedByMe: boolean,
                 showMessageIfSpawnedByOther: boolean,

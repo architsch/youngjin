@@ -6,6 +6,7 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/obj
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import SocketsClient from "../../networking/client/socketsClient";
 import App from "../../app";
+import CameraUtil from "../../graphics/util/cameraUtil";
 
 export default class SpeechBubble extends GameObjectComponent
 {
@@ -41,9 +42,19 @@ export default class SpeechBubble extends GameObjectComponent
             this.speechBubbleHotspot.getWorldPosition(this.vecTemp1);
             GraphicsManager.getCamera().getWorldPosition(this.vecTemp2);
             const dist = this.vecTemp1.distanceTo(this.vecTemp2);
-            const scaleFactor = Math.max(0.1, 1.4 - 0.15 * dist);
-            const scaleFactorStr = `${scaleFactor.toFixed(3)}rem`;
-            this.textElement.style.fontSize = scaleFactorStr;
+
+            if (dist < 12 && (!this.componentConfig.checkLineOfSight ||
+                CameraUtil.objectIsInLineOfSight(this.vecTemp1, this.gameObject)))
+            {
+                const scaleFactor = Math.max(0.1, 1.5 - 0.12 * dist);
+                const scaleFactorStr = `${scaleFactor.toFixed(3)}rem`;
+                this.textElement.style.fontSize = scaleFactorStr;
+                this.textElement.hidden = false;
+            }
+            else
+            {
+                this.textElement.hidden = true;
+            }
         }
     }
 

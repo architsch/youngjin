@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
-import FirstPersonProximityDetection from "./helpers/firstPerson/firstPersonProximityDetection";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MeshGraphics from "./meshGraphics";
+import CameraUtil from "../../graphics/util/cameraUtil";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -23,6 +23,9 @@ export default class PlayerProximityDetector extends GameObjectComponent
 
     async onSpawn(): Promise<void>
     {
+        if (!this.gameObject.components.collider)
+            throw new Error("PlayerProximityDetector requires Collider component.");
+
         if (this.maxLookAngle > 0)
         {
             const meshGraphics = this.gameObject.components.meshGraphics as MeshGraphics;
@@ -42,7 +45,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
         return this.proximityOn;
     }
 
-    updateProximity(player: GameObject, firstPersonProximityDetection: FirstPersonProximityDetection)
+    updateProximity(player: GameObject)
     { 
         let proximityShouldBeOn = false;
 
@@ -83,7 +86,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
 
                     if (lookAngle <= this.maxLookAngle)
                     {
-                        if (firstPersonProximityDetection.objectIsInLineOfSight(this.gameObject.position, this.gameObject))
+                        if (CameraUtil.objectIsInLineOfSight(this.gameObject.position, this.gameObject))
                             proximityShouldBeOn = true;
                     }
                 }

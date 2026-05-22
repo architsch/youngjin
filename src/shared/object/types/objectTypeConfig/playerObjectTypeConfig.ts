@@ -54,6 +54,7 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             },
             speechBubble: {
                 yOffset: 0.5*PLAYER_HEIGHT,
+                checkLineOfSight: true,
                 prependUserNameToMessage: true,
                 showMessageIfSpawnedByMe: false,
                 showMessageIfSpawnedByOther: true,
