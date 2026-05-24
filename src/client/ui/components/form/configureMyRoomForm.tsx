@@ -117,6 +117,7 @@ export default function ConfigureMyRoomForm()
                 size="md" alt="Texture preview"/>}
             <ImageChooser
                 title="Change Texture Pack"
+                viewType="grid"
                 mapName="TexturePackImageMap"
                 initialChoicePath={texturePackPath}
                 onChoose={(path) => setTexture(path)}

@@ -1,13 +1,22 @@
 import { ReactNode, UIEvent, useCallback, useEffect, useRef } from "react";
+import useMouseDragScroll from "../../util/mouseDragScroll";
 
-// Generic vertical list with optional infinite-scroll growth.
-// Pinned items render at the top and are excluded from the scrolled body region's keying;
-// the scrollable region uses item indices into `items` as keys.
-export default function List<T>({ items, renderItem, getItemKey, pinnedItems = [],
-    renderPinnedItem, onReachEnd, hasMore = false, loading = false,
-    emptyMessage, scrollThresholdPx = 32, maxHeightClassName = "max-h-64" }: Props<T>)
+// Generic vertical list with optional infinite-scroll growth and mouse-drag scrolling.
+// Consumers add layout styling (width, max-height, gap, padding) via `additionalClassNames`.
+export default function List<T>({ items, renderItem, getItemKey,
+    onReachEnd, hasMore = false, loading = false,
+    emptyMessage, scrollThresholdPx = 32, additionalClassNames = "" }: Props<T>)
 {
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const scrollElementRef = useRef<HTMLDivElement | null>(null);
+    const dragScrollRef = useMouseDragScroll("vertical", "grabWhileDragging");
+
+    // Merged ref: useMouseDragScroll wants a callback ref to attach its listeners;
+    // we also need a regular ref so the "container too short to scroll" effect can
+    // measure scrollHeight/clientHeight directly.
+    const refCallback = useCallback((node: HTMLDivElement | null) => {
+        scrollElementRef.current = node;
+        dragScrollRef(node);
+    }, [dragScrollRef]);
 
     const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
         if (!hasMore || loading || !onReachEnd) return;
@@ -16,34 +25,26 @@ export default function List<T>({ items, renderItem, getItemKey, pinnedItems = [
             onReachEnd();
     }, [hasMore, loading, onReachEnd, scrollThresholdPx]);
 
-    // Edge case: the initial page may not fill the scroll container, so the scroll handler
-    // never fires. Trigger another fetch as long as there's more and we're not already loading.
+    // Edge case: the initial page may not fill the scroll container, so the scroll
+    // handler never fires. Trigger another fetch as long as there's more and we're
+    // not already loading.
     useEffect(() => {
-        const el = scrollRef.current;
+        const el = scrollElementRef.current;
         if (!el || !hasMore || loading || !onReachEnd) return;
         if (el.scrollHeight <= el.clientHeight)
             onReachEnd();
     }, [items.length, hasMore, loading, onReachEnd]);
 
-    return <div className={`flex flex-col w-full ${maxHeightClassName} overflow-y-auto`}
-        ref={scrollRef} onScroll={handleScroll}>
-        {pinnedItems.length > 0 && renderPinnedItem && <div className="flex flex-col">
-            {pinnedItems.map((item, index) => (
-                <div key={`pinned-${getItemKey ? getItemKey(item, index) : index}`}>
-                    {renderPinnedItem(item, index)}
-                </div>
-            ))}
-        </div>}
-        <div className="flex flex-col">
-            {items.map((item, index) => (
-                <div key={getItemKey ? getItemKey(item, index) : index}>
-                    {renderItem(item, index)}
-                </div>
-            ))}
-        </div>
-        {items.length === 0 && pinnedItems.length === 0 && !loading && emptyMessage && (
+    return <div ref={refCallback} onScroll={handleScroll}
+        className={`flex flex-col overflow-y-auto ${additionalClassNames}`}>
+        {items.length === 0 && !loading && emptyMessage && (
             <div className="yj-text-xs text-gray-400 text-center py-2">{emptyMessage}</div>
         )}
+        {items.map((item, index) => (
+            <div key={getItemKey ? getItemKey(item, index) : index}>
+                {renderItem(item, index)}
+            </div>
+        ))}
         {loading && (
             <div className="yj-text-xs text-gray-400 text-center py-2">Loading...</div>
         )}
@@ -55,12 +56,10 @@ interface Props<T>
     items: T[];
     renderItem: (item: T, index: number) => ReactNode;
     getItemKey?: (item: T, index: number) => string | number;
-    pinnedItems?: T[];
-    renderPinnedItem?: (item: T, index: number) => ReactNode;
     onReachEnd?: () => void;
     hasMore?: boolean;
     loading?: boolean;
     emptyMessage?: string;
     scrollThresholdPx?: number;
-    maxHeightClassName?: string;
+    additionalClassNames?: string;
 }

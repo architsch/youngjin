@@ -1,7 +1,7 @@
-export default function Image({ src, size = "md", alt = "" }: Props)
+export default function Image({ src, size = "md", alt = "", additionalClassNames = "" }: Props)
 {
     return <img
-        className={`object-cover ${sizeClassNames[size]}`}
+        className={`object-cover ${sizeClassNames[size]} ${additionalClassNames}`}
         src={src}
         alt={alt}
     />
@@ -18,4 +18,5 @@ interface Props
     src: string;
     size?: "sm" | "md" | "lg";
     alt?: string;
+    additionalClassNames?: string;
 }

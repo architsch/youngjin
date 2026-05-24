@@ -1,3 +1,5 @@
+import ImageMetadata from "./imageMetadata";
+
 export default class ImageMap
 {
     private rootDirName: string;
@@ -5,26 +7,30 @@ export default class ImageMap
 
     // (subfolderName == "") if there is no subfolder.
     private subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}};
+    
+    private imageMetadataByCoords: {[coords: string]: ImageMetadata} = {};
+    private imageMetadataByPath: {[path: string]: ImageMetadata} = {};
+    private imageMetadataByAuthor: {[author: string]: ImageMetadata} = {};
+    private imageMetadataByTitle: {[title: string]: ImageMetadata} = {};
 
-    // coords = {subfolderName},{col},{row}
-    // (subfolderName == "") if there is no subfolder.
-    private pathByCoords: {[coords: string]: string};
-
-    // path = (relative path under the root directory, but excluding the file extension)
-    // The name of the root directory is given by rootDirName,
-    // and the root directory is located right under the app's assets_url (see ThingsPoolEnv).
-    private coordsByPath: {[path: string]: string};
+    private imageMetadataList: ImageMetadata[];
 
     constructor(rootDirName: string, gridCellSize: number,
         subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}},
-        pathByCoords: {[coords: string]: string},
-        coordsByPath: {[path: string]: string})
+        imageMetadataList: ImageMetadata[])
     {
         this.rootDirName = rootDirName;
         this.gridCellSize = gridCellSize;
         this.subfolderGridSizes = subfolderGridSizes;
-        this.pathByCoords = pathByCoords;
-        this.coordsByPath = coordsByPath;
+        this.imageMetadataList = imageMetadataList;
+
+        for (const imageMetadata of imageMetadataList)
+        {
+            this.imageMetadataByCoords[imageMetadata.coords] = imageMetadata;
+            this.imageMetadataByPath[imageMetadata.path] = imageMetadata;
+            this.imageMetadataByAuthor[imageMetadata.author] = imageMetadata;
+            this.imageMetadataByTitle[imageMetadata.title] = imageMetadata;
+        }
     }
 
     getGridCellSize(): number
@@ -42,29 +48,40 @@ export default class ImageMap
 
     hasImagePath(path: string): boolean
     {
-        return this.coordsByPath[path] != undefined;
+        return this.imageMetadataByPath[path] != undefined;
     }
 
-    getImageCoordsByPath(path: string): string
+    getImageMetadataByPath(path: string): ImageMetadata
     {
-        return this.coordsByPath[path];
+        return this.imageMetadataByPath[path];
     }
-    getImagePathByCoords(coords: string): string
+    getImageMetadataByCoords(coords: string): ImageMetadata
     {
-        return this.pathByCoords[coords];
+        return this.imageMetadataByCoords[coords];
+    }
+    getImageMetadataByAuthor(author: string): ImageMetadata
+    {
+        return this.imageMetadataByAuthor[author];
+    }
+    getImageMetadataByTitle(title: string): ImageMetadata
+    {
+        return this.imageMetadataByTitle[title];
     }
     getImagePathByRawCoords(subfolderName: string, col: number, row: number): string
     {
-        return this.getImagePathByCoords(`${subfolderName},${col},${row}`);
+        return this.getImageMetadataByCoords(`${subfolderName},${col},${row}`).path;
     }
     getFirstImagePath(): string
     {
-        return Object.keys(this.coordsByPath)[0];
+        return this.imageMetadataList[0].path;
     }
     getRandomImagePath(): string
     {
-        const paths = Object.keys(this.coordsByPath);
-        return paths[Math.floor(Math.random() * paths.length)];
+        return this.imageMetadataList[Math.floor(Math.random() * this.imageMetadataList.length)].path;
+    }
+    getImageMetadataList(): ImageMetadata[]
+    {
+        return this.imageMetadataList;
     }
 
     // path = (relative path under the root directory, but excluding the file extension)
@@ -80,7 +97,8 @@ export default class ImageMap
     // (subfolderName == "") if there is no subfolder.
     getImageURLByCoords(assetsURL: string, coords: string): string
     {
-        return this.getImageURLByPath(assetsURL, this.pathByCoords[coords]);
+        const imageMetadata = this.getImageMetadataByCoords(coords);
+        return this.getImageURLByPath(assetsURL, imageMetadata.path);
     }
     getImageURLByRawCoords(assetsURL: string, subfolderName: string, col: number, row: number): string
     {

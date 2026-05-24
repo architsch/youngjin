@@ -7,7 +7,7 @@ import App from "../../../app";
 import Form from "../basic/form";
 import PopupUtil from "../../util/popupUtil";
 
-export default function ImageChooserForm({mapName, initialChoicePath, onChoose}: Props)
+export default function ImageGridChooserForm({mapName, initialChoicePath, onChoose}: Props)
 {
     const imageMap = ImageMapUtil.getImageMap(mapName);
     
@@ -15,7 +15,7 @@ export default function ImageChooserForm({mapName, initialChoicePath, onChoose}:
         ? initialChoicePath
         : imageMap.getFirstImagePath();
 
-    const initialChoiceCoords = imageMap.getImageCoordsByPath(initialChoicePath);
+    const initialChoiceCoords = imageMap.getImageMetadataByPath(initialChoicePath).coords;
     const words = initialChoiceCoords.split(",");
 
     const initialSubfolderName = words[0];

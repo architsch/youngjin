@@ -12,19 +12,20 @@ import { objectSelectionObservable } from "../../../system/clientObservables";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import PopupUtil from "../../util/popupUtil";
 
-export default function CanvasSelectionOptions(props: {selection: ObjectSelection})
+export default function CanvasEditOptions(props: {selection: ObjectSelection})
 {
     const go = props.selection.gameObject;
     const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
     const initialChoicePath = metadata ? metadata.str : "";
 
-    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
+    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
             onClick={() => openRemoveConfirmPopup(props.selection)}
         />
         <ImageChooser
             title="Change Image"
+            viewType="list"
             mapName="CanvasImageMap"
             initialChoicePath={initialChoicePath}
             onChoose={path => trySetCanvasImageMetadata(props.selection, path)}

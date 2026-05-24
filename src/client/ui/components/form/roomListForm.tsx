@@ -159,16 +159,14 @@ export default function RoomListForm({ user, currentRoomID }: Props)
 
     return <Form>
         <List<RoomListEntry>
-            items={visibleOtherRooms}
+            items={[...pinned, ...visibleOtherRooms]}
             getItemKey={(entry) => entry.id}
             renderItem={(entry) => <RoomEntryRow entry={entry} user={user} currentRoomID={currentRoomID} onVisit={handleVisit}/>}
-            pinnedItems={pinned}
-            renderPinnedItem={(entry) => <RoomEntryRow entry={entry} user={user} currentRoomID={currentRoomID} onVisit={handleVisit}/>}
             onReachEnd={handleReachEnd}
             hasMore={hasMore}
             loading={loading}
             emptyMessage={activeQuery.length > 0 ? "No rooms match your search." : "No rooms found."}
-            maxHeightClassName="max-h-64"
+            additionalClassNames="max-h-64 w-full"
         />
 
         <div className="flex flex-row items-center gap-1">

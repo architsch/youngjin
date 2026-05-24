@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import App from "../../../app";
 import ClientObjectManager from "../../../object/clientObjectManager";
 import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
-import { colliderDebugEnabledObservable, editorListDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
+import { colliderDebugEnabledObservable, editorListDebugEnabledObservable, imageListChooserDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../basic/button";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
@@ -92,6 +92,8 @@ export default function DebugStats({env}: Props)
                         case "hide dummy-editors": editorListDebugEnabledObservable.set(false); break;
                         case "show dummy-rooms": roomListDebugEnabledObservable.set(true); break;
                         case "hide dummy-rooms": roomListDebugEnabledObservable.set(false); break;
+                        case "show dummy-images": imageListChooserDebugEnabledObservable.set(true); break;
+                        case "hide dummy-images": imageListChooserDebugEnabledObservable.set(false); break;
                         default: notificationMessageObservable.set("Unknown debug command."); break;
                     }
                     setState({...state, debugCommand: ""});

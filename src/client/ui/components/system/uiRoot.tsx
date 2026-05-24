@@ -19,7 +19,8 @@ import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRol
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import { objectSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
-import ImageChooserForm from "../form/imageChooserForm";
+import ImageGridChooserForm from "../form/imageGridChooserForm";
+import ImageListChooserForm from "../form/imageListChooserForm";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "../form/confirmForm";
@@ -75,7 +76,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         />
         <DebugStats env={env}/>
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
-            {canModifyRoom && <ObjectSelectionMenu/>}
+            <ObjectSelectionMenu canModifyRoom/>
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
             {<Chat hide={canModifyRoom && (objectSelection != null || voxelQuadSelection != null)}/>}
         </div>
@@ -100,11 +101,17 @@ export default function UIRoot({ env, user }: UIRootProps)
                     <ConfigureMyRoomForm/>
                 </Popup>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>
-                    <ImageChooserForm
-                        mapName={state.params.mapName}
-                        initialChoicePath={state.params.initialChoicePath}
-                        onChoose={(path) => state.params.onChoose(path)}
-                    />
+                    {state.params.viewType === "list"
+                        ? <ImageListChooserForm
+                            mapName={state.params.mapName}
+                            initialChoicePath={state.params.initialChoicePath}
+                            onChoose={(path) => state.params.onChoose(path)}
+                        />
+                        : <ImageGridChooserForm
+                            mapName={state.params.mapName}
+                            initialChoicePath={state.params.initialChoicePath}
+                            onChoose={(path) => state.params.onChoose(path)}
+                        />}
                 </Popup>;
             }
         })}

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { objectSelectionObservable } from "../../../system/clientObservables";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
-import CanvasSelectionOptions from "./canvasSelectionOptions";
+import CanvasEditOptions from "./canvasEditOptions";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
+import CanvasDesc from "./canvasDesc";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
-export default function ObjectSelectionMenu()
+export default function ObjectSelectionMenu({ canModifyRoom }: Props)
 {
     const [state, setState] = useState<ObjectSelectionState>({
         selection: null,
@@ -23,17 +24,23 @@ export default function ObjectSelectionMenu()
     {
         const typeIndex = state.selection.gameObject.params.objectTypeIndex;
         const objectId = state.selection.gameObject.params.objectId;
-        return <div className={className}>
-            {typeIndex === canvasTypeIndex && <CanvasSelectionOptions key={objectId} selection={state.selection}/>}
+        return <div className="flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden">
+            {typeIndex === canvasTypeIndex && canModifyRoom &&
+                <CanvasEditOptions key={`edit-${objectId}`} selection={state.selection}/>}
+            {typeIndex === canvasTypeIndex &&
+                <CanvasDesc key={`desc-${objectId}`} selection={state.selection}/>}
         </div>;
     }
     else
         return null;
 }
 
-const className = "flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden";
-
 interface ObjectSelectionState
 {
     selection: ObjectSelection | null;
+}
+
+interface Props
+{
+    canModifyRoom: boolean;
 }
