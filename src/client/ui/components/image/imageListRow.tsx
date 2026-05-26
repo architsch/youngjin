@@ -24,8 +24,8 @@ export default function ImageListRow({ imageURL, title, author, selected,
     >
         <Image src={imageURL} size="sm" alt={title} additionalClassNames="rounded-md shrink-0"/>
         <div className="flex flex-col min-w-0 flex-1 text-left">
-            <div className="yj-text-sm text-gray-200 truncate">{title}</div>
-            <div className="yj-text-xs text-gray-400 truncate">{author}</div>
+            <div className="yj-text-sm text-gray-200 wrap-break-word">{title}</div>
+            <div className="yj-text-xs text-gray-400 wrap-break-word">{author}</div>
         </div>
     </div>;
 }

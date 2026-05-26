@@ -15,7 +15,7 @@ export default function ImageGridChooserForm({mapName, initialChoicePath, onChoo
         ? initialChoicePath
         : imageMap.getFirstImagePath();
 
-    const initialChoiceCoords = imageMap.getImageMetadataByPath(initialChoicePath).coords;
+    const initialChoiceCoords = imageMap.getImageMetadataByPath(initialChoicePath).coords!;
     const words = initialChoiceCoords.split(",");
 
     const initialSubfolderName = words[0];

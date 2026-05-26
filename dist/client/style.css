@@ -748,6 +748,9 @@
   .text-nowrap {
     text-wrap: nowrap;
   }
+  .wrap-break-word {
+    overflow-wrap: break-word;
+  }
   .break-all {
     word-break: break-all;
   }

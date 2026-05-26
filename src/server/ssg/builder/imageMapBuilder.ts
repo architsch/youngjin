@@ -14,14 +14,16 @@ export default class ImageMapBuilder
     private readonly rootDirName: string;
     private readonly imageRootPath: string;
     private readonly mapName: string;
-    private readonly gridCellSize: number;
-    private readonly maxCols: number;
+    private readonly hasGrid: boolean;
+    private readonly gridCellSize?: number;
+    private readonly maxCols?: number;
 
     constructor(seed: ImageMapSeed)
     {
         this.rootDirName = seed.rootDirName;
         this.imageRootPath = `${ASSETS_ROOT_PATH}/${seed.rootDirName}`;
         this.mapName = seed.mapName;
+        this.hasGrid = seed.hasGrid;
         this.gridCellSize = seed.gridCellSize;
         this.maxCols = seed.maxCols;
     }
@@ -42,19 +44,23 @@ export default class ImageMapBuilder
             info.imageMetadataList.push({...image, coords: ""}); // 'coords' will be set inside the "buildGrid" method.
         }
         
-        // Build the grid
-        for (const info of Object.values(subfolderInfoByName))
-            await this.buildGrid(info);
+        if (this.hasGrid)
+        {
+            // Build the grid
+            for (const info of Object.values(subfolderInfoByName))
+                await this.buildGrid(info);
+        }
+
         await this.writeMapFile(subfolderInfoByName);
     }
 
     private async buildGrid(subfolderInfo: ImageMapSubfolderInfo): Promise<void>
     {
         const numImages = subfolderInfo.imageMetadataList.length;
-        const numCols = numImages === 0 ? 0 : Math.min(this.maxCols, numImages);
+        const numCols = numImages === 0 ? 0 : Math.min(this.maxCols!, numImages);
         const numRows = numImages === 0 ? 0 : Math.ceil(numImages / numCols);
-        const gridWidth = numCols === 0 ? 0 : numCols * this.gridCellSize;
-        const gridHeight = numRows === 0 ? 0 : numRows * this.gridCellSize;
+        const gridWidth = numCols === 0 ? 0 : numCols * this.gridCellSize!;
+        const gridHeight = numRows === 0 ? 0 : numRows * this.gridCellSize!;
 
         const composites: sharp.OverlayOptions[] = [];
         let col = 0, row = 0, maxCol = 0, maxRow = 0;
@@ -70,7 +76,7 @@ export default class ImageMapBuilder
                 .resize(this.gridCellSize, this.gridCellSize, { fit: "cover" })
                 .toBuffer());
             
-            composites.push({input: imageBuffer, left: col * this.gridCellSize, top: row * this.gridCellSize});
+            composites.push({input: imageBuffer, left: col * this.gridCellSize!, top: row * this.gridCellSize!});
             if (col > maxCol)
                 maxCol = col;
             if (row > maxRow)
@@ -96,7 +102,7 @@ export default class ImageMapBuilder
         const imageMetadataEntries =
             subfolderInfos.map(info =>
                 info.imageMetadataList.map(image =>
-                    `{path:"${image.path}",author:"${image.author}",title:"${image.title}",coords:"${image.coords}"}`)).flat().join(",");
+                    `{path:"${image.path}",author:"${image.author}",title:"${image.title}"${image.coords ? `,coords:"${image.coords}"` : ""}}`)).flat().join(",");
 
         const subfolderGridSizesEntries =
             subfolderInfos.map(info =>
@@ -110,7 +116,7 @@ import ImageMetadata from "../types/imageMetadata";
 const imageMetadataList: ImageMetadata[] = [${imageMetadataEntries}]
 const subfolderGridSizes: {[subfolder: string]: {numCols: number, numRows: number}} = {${subfolderGridSizesEntries}}
 
-ImageMapUtil.setImageMap("${this.mapName}", new ImageMap("${this.rootDirName}", ${this.gridCellSize}, subfolderGridSizes, imageMetadataList));
+ImageMapUtil.setImageMap("${this.mapName}", new ImageMap("${this.rootDirName}", ${this.gridCellSize ?? "0"}, subfolderGridSizes, imageMetadataList));
 `;
         const mapNameCamelCased = this.mapName[0].toLowerCase() + this.mapName.substring(1);
         await FileUtil.write(`${mapNameCamelCased}.ts`, text, MAPS_ROOT_PATH);

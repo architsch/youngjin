@@ -58,11 +58,11 @@ export default async function SSG(): Promise<void>
 
     await new ImageMapBuilder({
         rootDirName: "texture_packs", mapName: "TexturePackImageMap",
-        gridCellSize: 256, maxCols: 2,
+        hasGrid: true, gridCellSize: 256, maxCols: 2,
     }).build();
     await new ImageMapBuilder({
         rootDirName: "canvas_images", mapName: "CanvasImageMap",
-        gridCellSize: 128, maxCols: 4,
+        hasGrid: false,
     }).build();
 
     console.log("SSG END");

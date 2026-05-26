@@ -8,16 +8,7 @@ import ImageMetadata from "../../../../shared/image/types/imageMetadata";
 import App from "../../../app";
 import Form from "../basic/form";
 import PopupUtil from "../../util/popupUtil";
-import { imageListChooserDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
-
-// Page = number of rows mounted at a time. Even though the metadata is fully in-memory,
-// rendering every row up front (plus every thumbnail's network request) doesn't scale
-// when the ImageMap holds many thousands of images.
-const PAGE_SIZE = 30;
-
-// Debug-only total — exercised when imageListChooserDebugEnabledObservable is on,
-// to verify pagination/scroll on a list large enough to span many pages.
-const DEBUG_DUMMY_IMAGE_TOTAL = 200;
+import ImageListChooserUtil from "../../util/imageListChooserUtil";
 
 export default function ImageListChooserForm({mapName, initialChoicePath, onChoose}: Props)
 {
@@ -28,36 +19,34 @@ export default function ImageListChooserForm({mapName, initialChoicePath, onChoo
         ? initialChoicePath
         : imageMap.getFirstImagePath();
 
+    const allItems = ImageListChooserUtil.getShuffledAllItems(imageMap, resolvedInitialPath);
+
     const [selectedPath, setSelectedPath] = useState<string>(resolvedInitialPath);
     const [searchInput, setSearchInput] = useState<string>("");
     const [pageIndex, setPageIndex] = useState<number>(0);
 
-    // All filtering happens client-side because every image's metadata is already
-    // loaded into the ImageMap at startup. Debug mode swaps in a synthesized list so
-    // pagination/scroll behavior can be exercised without a populated ImageMap.
-    const filteredItems = useMemo(() => {
-        const allItems = imageListChooserDebugEnabledObservable.peek()
-            ? makeDummyImageList()
-            : imageMap.getImageMetadataList();
-        const query = searchInput.trim().toLowerCase();
-        if (query.length === 0)
-            return allItems;
-        return allItems.filter(metadata =>
-            metadata.title.toLowerCase().includes(query) ||
-            metadata.author.toLowerCase().includes(query));
-    }, [imageMap, searchInput]);
+    // Update 'filteredItems' whenever 'searchInput' changes.
+    const filteredItems = useMemo(() =>
+        ImageListChooserUtil.getFilteredItems(allItems, searchInput)
+    , [allItems, searchInput]);
 
-    // Reset pagination when the search query changes so the user doesn't see a
-    // partially-paged view of the new result set.
+    // Update 'pageIndex' whenever 'filteredItems' changes.
     useEffect(() => {
-        setPageIndex(0);
-    }, [searchInput]);
+        setPageIndex(0/*ImageListChooserUtil.getInitialPageIndex(
+            filteredItems, selectedPath, searchInput)*/);
+    }, [filteredItems]);
 
-    const visibleItems = useMemo(() =>
-        filteredItems.slice(0, (pageIndex + 1) * PAGE_SIZE),
-        [filteredItems, pageIndex]);
-    const hasMore = visibleItems.length < filteredItems.length;
+    // Update 'pageItems' whenever 'pageIndex' changes.
+    const pageItems = useMemo(() =>
+        ImageListChooserUtil.getPageItems(filteredItems, pageIndex)
+    , [filteredItems, pageIndex]);
+    
+    // Update 'hasMore' whenever 'pageIndex' changes.
+    const hasMore = useMemo(() =>
+        ImageListChooserUtil.hasMore(filteredItems, pageIndex)
+    , [filteredItems, pageIndex]);
 
+    // Update 'pageIndex' whenever the scroll reaches to bottom and there are more items to load.
     const handleReachEnd = useCallback(() => {
         setPageIndex(p => p + 1);
     }, []);
@@ -67,7 +56,7 @@ export default function ImageListChooserForm({mapName, initialChoicePath, onChoo
             textInput={searchInput} setTextInput={setSearchInput}/>
 
         <List<ImageMetadata>
-            items={visibleItems}
+            items={pageItems}
             getItemKey={(metadata) => metadata.path}
             renderItem={(metadata) => <ImageListRow
                 imageURL={imageMap.getImageURLByPath(assetsURL, metadata.path)}
@@ -92,21 +81,6 @@ export default function ImageListChooserForm({mapName, initialChoicePath, onChoo
             <Button name="Cancel" size="sm" color="gray" onClick={PopupUtil.closePopup}/>
         </div>
     </Form>;
-}
-
-function makeDummyImageList(): ImageMetadata[]
-{
-    const list: ImageMetadata[] = [];
-    for (let i = 0; i < DEBUG_DUMMY_IMAGE_TOTAL; ++i)
-    {
-        list.push({
-            path: `dummy-image-${i}`,
-            title: `dummy_title_${i}`,
-            author: `dummy_author_${i}`,
-            coords: "0,0,0",
-        });
-    }
-    return list;
 }
 
 interface Props

@@ -1,3 +1,4 @@
+import { imageListChooserDebugEnabledObservable } from "../../system/sharedObservables";
 import ImageMetadata from "./imageMetadata";
 
 export default class ImageMap
@@ -26,7 +27,8 @@ export default class ImageMap
 
         for (const imageMetadata of imageMetadataList)
         {
-            this.imageMetadataByCoords[imageMetadata.coords] = imageMetadata;
+            if (imageMetadata.coords)
+                this.imageMetadataByCoords[imageMetadata.coords] = imageMetadata;
             this.imageMetadataByPath[imageMetadata.path] = imageMetadata;
             this.imageMetadataByAuthor[imageMetadata.author] = imageMetadata;
             this.imageMetadataByTitle[imageMetadata.title] = imageMetadata;
@@ -89,6 +91,8 @@ export default class ImageMap
     // and the root directory is located right under the app's assets_url (see ThingsPoolEnv).
     getImageURLByPath(assetsURL: string, path: string): string
     {
+        if (imageListChooserDebugEnabledObservable.peek())
+            return `${assetsURL}/${this.rootDirName}/1/1.jpg`;
         if (path.length <= 0)
             return "";
         return `${assetsURL}/${this.rootDirName}/${path}.jpg`;

@@ -10,5 +10,5 @@ export default interface ImageMetadata
 
     // coords = {subfolderName},{col},{row}
     // (subfolderName == "") if there is no subfolder.
-    coords: string;
+    coords?: string;
 }
