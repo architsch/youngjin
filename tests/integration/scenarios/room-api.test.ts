@@ -37,7 +37,7 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
         setLastRoomID: vi.fn(async () => {}),
         savePlayerMetadata: vi.fn(async () => {}),
         saveMultipleUsersPlayerMetadata: vi.fn(async () => {}),
-        setUserTutorialStep: vi.fn(async () => ({ success: true, data: [] })),
+        setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
         deleteStaleGuestsByTier: vi.fn(async () => 0),
         deleteUser: vi.fn(async () => ({ success: true, data: [] })),
         fromDBType: vi.fn((u: any) => u),
@@ -216,11 +216,11 @@ describe("room API: create room (Scenario 1)", () => {
     });
 
     it("registered user can create a room", async () => {
-        const user = new User("user-1", "TestUser", UserTypeEnumMap.Member, "test@test.com", 0, "", "");
+        const user = new User("user-1", "TestUser", UserTypeEnumMap.Member, "test@test.com", "", "", "");
 
         mockFindUserById.mockResolvedValue({
             id: "user-1", userName: "TestUser", userType: UserTypeEnumMap.Member,
-            email: "test@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "",
+            email: "test@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "",
         });
         mockCreateRoom.mockResolvedValue({ success: true, data: [{ id: "new-room-1" }] });
         mockSetOwnedRoomID.mockResolvedValue({ success: true, data: [] });
@@ -234,7 +234,7 @@ describe("room API: create room (Scenario 1)", () => {
     });
 
     it("guest user cannot create a room", async () => {
-        const user = new User("guest-1", "Guest", UserTypeEnumMap.Guest, "", 0, "", "");
+        const user = new User("guest-1", "Guest", UserTypeEnumMap.Guest, "", "", "", "");
 
         const res = await callRoute("post", "/create_room", user);
 
@@ -244,11 +244,11 @@ describe("room API: create room (Scenario 1)", () => {
     });
 
     it("user who already owns a room cannot create another", async () => {
-        const user = new User("user-1", "TestUser", UserTypeEnumMap.Member, "test@test.com", 0, "", "existing-room");
+        const user = new User("user-1", "TestUser", UserTypeEnumMap.Member, "test@test.com", "", "", "existing-room");
 
         mockFindUserById.mockResolvedValue({
             id: "user-1", userName: "TestUser", userType: UserTypeEnumMap.Member,
-            email: "test@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "existing-room",
+            email: "test@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "existing-room",
         });
 
         const res = await callRoute("post", "/create_room", user);
@@ -268,11 +268,11 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
     });
 
     it("room owner can appoint another user as editor", async () => {
-        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
 
         mockFindUserById.mockResolvedValue({
             id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
-            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+            email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
         });
         mockSearchUsersWithUserName.mockResolvedValue({
             success: true,
@@ -300,11 +300,11 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
     });
 
     it("appointing an editor past the limit is rejected with 409", async () => {
-        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
 
         mockFindUserById.mockResolvedValue({
             id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
-            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+            email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
         });
         mockSearchUsersWithUserName.mockResolvedValue({
             success: true,
@@ -323,11 +323,11 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
     });
 
     it("owner cannot change their own role", async () => {
-        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
 
         mockFindUserById.mockResolvedValue({
             id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
-            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+            email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
         });
         mockSearchUsersWithUserName.mockResolvedValue({
             success: true,
@@ -346,11 +346,11 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
     });
 
     it("user without a room cannot appoint editors", async () => {
-        const user = new User("user-1", "NoRoom", UserTypeEnumMap.Member, "noroom@test.com", 0, "", "");
+        const user = new User("user-1", "NoRoom", UserTypeEnumMap.Member, "noroom@test.com", "", "", "");
 
         mockFindUserById.mockResolvedValue({
             id: "user-1", userName: "NoRoom", userType: UserTypeEnumMap.Member,
-            email: "noroom@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "",
+            email: "noroom@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "",
         });
 
         const res = await callRoute("post", "/set_room_user_role", user, {
@@ -364,11 +364,11 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
     });
 
     it("owner can demote an editor back to visitor", async () => {
-        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
 
         mockFindUserById.mockResolvedValue({
             id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
-            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+            email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
         });
         mockSearchUsersWithUserName.mockResolvedValue({
             success: true,
@@ -390,11 +390,11 @@ describe("room API: set room user role / appoint editor (Scenario 4)", () => {
     });
 
     it("/get_room_editors returns denormalized {userName, email} from the room", async () => {
-        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
 
         mockFindUserById.mockResolvedValue({
             id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
-            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+            email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
         });
         mockGetRoomEditors.mockResolvedValue([
             { userID: "e-1", userName: "Alice", email: "alice@test.com" },
@@ -424,11 +424,11 @@ describe("room API: change room texture pack (Scenario 9)", () => {
     });
 
     it("room owner can change the texture pack", async () => {
-        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
 
         mockFindUserById.mockResolvedValue({
             id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
-            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+            email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
         });
         mockGetRoomContent.mockResolvedValue({
             id: "my-room", texturePackPath: "old-texture.jpg",
@@ -449,11 +449,11 @@ describe("room API: change room texture pack (Scenario 9)", () => {
     });
 
     it("user without a room cannot change textures", async () => {
-        const user = new User("user-1", "NoRoom", UserTypeEnumMap.Member, "noroom@test.com", 0, "", "");
+        const user = new User("user-1", "NoRoom", UserTypeEnumMap.Member, "noroom@test.com", "", "", "");
 
         mockFindUserById.mockResolvedValue({
             id: "user-1", userName: "NoRoom", userType: UserTypeEnumMap.Member,
-            email: "noroom@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "",
+            email: "noroom@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "",
         });
 
         const res = await callRoute("post", "/change_room_texture", user, {
@@ -465,11 +465,11 @@ describe("room API: change room texture pack (Scenario 9)", () => {
     });
 
     it("request without texturePackPath is rejected", async () => {
-        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", 0, "", "my-room");
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
 
         mockFindUserById.mockResolvedValue({
             id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
-            email: "owner@test.com", tutorialStep: 0, lastRoomID: "", ownedRoomID: "my-room",
+            email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
         });
 
         const res = await callRoute("post", "/change_room_texture", owner, {});

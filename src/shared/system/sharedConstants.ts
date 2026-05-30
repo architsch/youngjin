@@ -15,9 +15,6 @@ export const DAY_IN_MS = 24 * HOUR_IN_MS;
 // Database
 
 export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
-export const FIRST_TUTORIAL_STEP = 0;
-export const LAST_TUTORIAL_STEP = 0;
-export const TUTORIAL_DONE_STEP = 10000;
 
 // Networking
 
@@ -80,10 +77,13 @@ export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, u
 export const PLAYER_HEIGHT = 2.5;
 export const MAX_WORLDSPACE_SELECT_DIST_SQR = 100; // = 10*10
 
-// Fixed spawn point used whenever a player enters a room. Players always enter through this
-// designated spot (an "entrance door").
-export const ENTRANCE_VOXEL_COL = 16;
-export const ENTRANCE_VOXEL_ROW = 31;
+// Fixed spawn point used whenever a player enters a multi-player room.
+export const MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
+export const MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
+
+// Fixed spawn point used whenever a player enters a single-player room.
+export const SINGLE_PLAYER_ENTRANCE_VOXEL_COL = 16;
+export const SINGLE_PLAYER_ENTRANCE_VOXEL_ROW = 30;
 
 // UI
 

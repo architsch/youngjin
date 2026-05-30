@@ -17,12 +17,12 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
 
 // Players always spawn at the entrance cell center, regardless of where they were before
 // (see the spawn transform in ServerRoomManager.changeUserRoom).
-const SPAWN_X = ENTRANCE_VOXEL_COL + 0.5;
-const SPAWN_Z = ENTRANCE_VOXEL_ROW + 0.5;
+const SPAWN_X = MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5;
+const SPAWN_Z = MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5;
 
 describe("object scenarios", () => {
     beforeEach(() => {

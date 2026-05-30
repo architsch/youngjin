@@ -1,7 +1,7 @@
 import Voxel from "./voxel";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import RoomGenerationHelperUtil from "../../room/util/roomGenerationHelperUtil";
@@ -60,7 +60,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
         RoomGenerationHelperUtil.addWall(voxels, NUM_VOXEL_ROWS-1, NUM_VOXEL_COLS-1, quadTextureIndicesWithinLayer);
 
         // Make the player's entrance point (i.e. behind the entrance door) hollow, so as to prevent the player from experiencing collision on entrance.
-        RoomGenerationHelperUtil.removeWall(voxels, ENTRANCE_VOXEL_ROW, ENTRANCE_VOXEL_COL, 0, 4);
+        RoomGenerationHelperUtil.removeWall(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL, 0, 4);
 
         return voxelGrid;
     },

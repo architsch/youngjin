@@ -14,7 +14,7 @@ import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_REGULAR, EMPTY_HUB, userAtCenter, buildColumn, removeColumn } from "../helpers/scenarioPresets";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW } from "../../../src/shared/system/sharedConstants";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../src/shared/system/sharedConstants";
 
 describe("voxel scenarios", () => {
     beforeEach(() => {
@@ -163,14 +163,14 @@ describe("voxel scenarios", () => {
             users: [userAtCenter("hub")],
             actions: [
                 // One cell in front of the entrance → inside the 3x3 no-add zone (rejected)
-                { type: "addVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW - 1, col: ENTRANCE_VOXEL_COL, layer: 0 },
+                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
                 // Two cells in front → outside the zone (allowed), as a control
-                { type: "addVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW - 2, col: ENTRANCE_VOXEL_COL, layer: 0 },
+                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
             ],
             assertions: () => {
                 const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
-                const blocked = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW - 1, ENTRANCE_VOXEL_COL)!;
-                const allowed = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW - 2, ENTRANCE_VOXEL_COL)!;
+                const blocked = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
+                const allowed = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(blocked, 0)).toBe(false);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(allowed, 0)).toBe(true);
             },
@@ -184,14 +184,14 @@ describe("voxel scenarios", () => {
             users: [userAtCenter("hub")],
             actions: [
                 // A jamb directly beside the doorway → protected (rejected)
-                { type: "removeVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW, col: ENTRANCE_VOXEL_COL - 1, layer: 0 },
+                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1, layer: 0 },
                 // A boundary-wall block far from the entrance → editable now (allowed), as a control
-                { type: "removeVoxel", userIndex: 0, row: ENTRANCE_VOXEL_ROW, col: 10, layer: 0 },
+                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: 10, layer: 0 },
             ],
             assertions: () => {
                 const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
-                const jamb = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW, ENTRANCE_VOXEL_COL - 1)!;
-                const farWall = VoxelQueryUtil.getVoxel(voxels, ENTRANCE_VOXEL_ROW, 10)!;
+                const jamb = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1)!;
+                const farWall = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(jamb, 0)).toBe(true);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(farWall, 0)).toBe(false);
             },

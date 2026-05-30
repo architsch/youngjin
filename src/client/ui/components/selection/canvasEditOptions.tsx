@@ -8,9 +8,11 @@ import ClientObjectManager from "../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
-import { objectSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, objectSelectionObservable, userRoleObservable } from "../../../system/clientObservables";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import PopupUtil from "../../util/popupUtil";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 export default function CanvasEditOptions(props: {selection: ObjectSelection})
 {
@@ -35,11 +37,14 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
 
 function canRemoveCanvas(selection: ObjectSelection): boolean
 {
+    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectRemoval))
+        return false;
+
     const room = App.getCurrentRoom();
     if (!room)
         return false;
     const user = App.getUser();
-    const userRole = App.getCurrentUserRole();
+    const userRole = userRoleObservable.peek();
 
     const objectId = selection.gameObject.params.objectId;
     return ObjectUpdateUtil.canRemoveObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
@@ -73,7 +78,8 @@ async function tryRemoveCanvas(selection: ObjectSelection)
     const success = await ClientObjectManager.removeObject(objectId);
     if (success)
     {
-        SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+            SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
     }
 }
 
@@ -83,7 +89,7 @@ function canSetCanvasImageMetadata(selection: ObjectSelection, metadataValue: st
     if (!room)
         return false;
     const user = App.getUser();
-    const userRole = App.getCurrentUserRole();
+    const userRole = userRoleObservable.peek();
 
     const objectId = selection.gameObject.params.objectId;
     const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue);
@@ -101,6 +107,7 @@ function trySetCanvasImageMetadata(selection: ObjectSelection, metadataValue: st
         return;
 
     objectSelectionObservable.notify();
-    SocketsClient.emitSetObjectMetadataSignal(
-        new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue));
+
+    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+        SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue));
 }

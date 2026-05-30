@@ -1,5 +1,5 @@
 import DBQueryResponse from "../types/dbQueryResponse";
-import { RoomType } from "../../../shared/room/types/roomType";
+import { RoomType, RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import DBUser from "../../../server/db/types/row/dbUser";
 import DBQuery from "../types/dbQuery";
 import DBRoom from "../../../server/db/types/row/dbRoom";
@@ -16,8 +16,18 @@ const DBSearchUtil =
             return await new DBQuery<DBRoom>()
                 .select()
                 .from(COLLECTION_ROOMS)
+                .where("roomType", "!=", RoomTypeEnumMap.SinglePlayer) // Don't include singleplayer rooms in the search result.
                 .limit(limit)
                 .offset(offset)
+                .run();
+        },
+        withRoomNameAndType: async (roomName: string, roomType: RoomType): Promise<DBQueryResponse<DBRoom>> => {
+            LogUtil.log("DBSearchUtil.rooms.withRoomNameAndType", {roomName, roomType}, "low", "info");
+            return await new DBQuery<DBRoom>()
+                .select()
+                .from(COLLECTION_ROOMS)
+                .where("roomName", "==", roomName)
+                .where("roomType", "==", roomType)
                 .run();
         },
         withRoomType: async (roomType: RoomType): Promise<DBQueryResponse<DBRoom>> => {

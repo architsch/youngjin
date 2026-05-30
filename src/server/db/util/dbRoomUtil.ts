@@ -64,20 +64,19 @@ const DBRoomUtil =
         LogUtil.log("DBRoomUtil.deleteRoomContent", {roomID: room.id}, "low", "info");
         return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(room.id));
     },
-    createRoom: async (roomType: RoomType, ownerUserID: string, ownerUserName: string,
-        floorTextureIndex: number, wallTextureIndex: number, ceilingTextureIndex: number,
+    createRoom: async (roomName: string, roomType: RoomType,
+        ownerUserID: string, ownerUserName: string,
         texturePackPath: string): Promise<DBQueryResponse<{id: string}>> =>
     {
-        LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName, floorTextureIndex, wallTextureIndex,
-            ceilingTextureIndex, texturePackPath}, "low", "info");
-        const {voxelGrid, objectGroup} =
-            RoomGenerationUtil.generateEmptyRoom(floorTextureIndex, wallTextureIndex, ceilingTextureIndex);
+        LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName, texturePackPath}, "low", "info");
+        const {voxelGrid, objectGroup} = RoomGenerationUtil.generateRoom(roomName, roomType);
 
-        const room = new Room(undefined, roomType, ownerUserID, ownerUserName, texturePackPath,
-            voxelGrid, objectGroup);
+        const room = new Room(undefined, roomName, roomType,
+            ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectGroup);
         const dbRoom: DBRoom = {
             id: room.id,
             version: DBRoomVersionMigration.length,
+            roomName: room.roomName,
             roomType: room.roomType,
             ownerUserID: room.ownerUserID,
             ownerUserName: room.ownerUserName,
@@ -146,7 +145,8 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
     const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "") as ObjectGroup;
-    return new Room(dbRoom.id, dbRoom.roomType, dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, voxelGrid, objectGroup);
+    return new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
+        dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, voxelGrid, objectGroup);
 }
 
 function getRoomContentFilePath(roomID?: string): string

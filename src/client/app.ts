@@ -8,7 +8,7 @@ import Room from "../shared/room/types/room";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
-import { roomChangedObservable, texturePackURLObservable, updateObservable, userRoleObservable } from "./system/clientObservables";
+import { roomChangedObservable, texturePackURLObservable, singlePlayerStepObservable, updateObservable, userRoleObservable, singlePlayerModeObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
@@ -17,6 +17,7 @@ import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackCh
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 import ImageMapUtil from "../shared/image/util/imageMapUtil";
+import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -38,6 +39,8 @@ const App =
     {
         env = newEnv;
         user = User.fromString(env.userString);
+        singlePlayerModeObservable.set(user.singlePlayerMode);
+        singlePlayerStepObservable.set(0);
     },
     getEnv: (): ThingsPoolEnv =>
     {
@@ -55,14 +58,6 @@ const App =
     {
         return currentRoom;
     },
-    getCurrentUserRole: (): UserRole =>
-    {
-        return userRoleObservable.peek();
-    },
-    setCurrentUserRole: (role: UserRole) =>
-    {
-        userRoleObservable.set(role);
-    },
     onSetUserRoleSignalReceived: async (params: SetUserRoleSignal) => {
         // If this is a UserRole update on the current user's player, update the app-level role.
         if (params.userID !== App.getUser()?.id)
@@ -71,7 +66,7 @@ const App =
             () => params.roomID === App.getCurrentRoom()?.id);
         if (!success)
             return;
-        App.setCurrentUserRole(params.userRole);
+        userRoleObservable.set(params.userRole);
     },
     onRoomTexturePackChangedSignalReceived: async (params: RoomTexturePackChangedSignal) => {
         const success = await waitUntilSignalProcessingReady("roomTexturePackChangedSignal",
@@ -107,7 +102,6 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
 {
     currentRoom = roomRuntimeMemory.room;
 
-    // Read the current user's role from the RoomChangedSignal
     userRoleObservable.set(currentUserRole);
 
     const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, currentRoom.texturePackPath);
@@ -145,6 +139,7 @@ function update()
 
         ClientObjectManager.update(deltaTime);
         GraphicsManager.update(App.getFPS());
+        SinglePlayerManager.update(deltaTime);
         updateObservable.set(deltaTime);
 
         tickTimeQueue.push(currTime);

@@ -21,7 +21,7 @@ const _mockDBUserUtil = vi.hoisted(() => ({
     setLastRoomID: vi.fn(),
     savePlayerMetadata: vi.fn(),
     saveMultipleUsersPlayerMetadata: vi.fn(),
-    setUserTutorialStep: vi.fn(),
+    setSinglePlayerMode: vi.fn(),
     deleteStaleGuestsByTier: vi.fn(),
 }));
 

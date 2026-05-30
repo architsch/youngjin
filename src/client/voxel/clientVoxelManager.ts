@@ -1,4 +1,4 @@
-import { voxelQuadSelectionObservable } from "../system/clientObservables";
+import { userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import Room from "../../shared/room/types/room";
 import ClientObjectManager from "../object/clientObjectManager";
@@ -23,14 +23,14 @@ const ClientVoxelManager =
     addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer: number[],
         validate: boolean = true): boolean =>
     {
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         return VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
     },
     removeVoxelBlock: (room: Room, quadIndex: number,
         validate: boolean = true): boolean =>
     {
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         return VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, validate ? room : undefined);
     },
@@ -38,14 +38,14 @@ const ClientVoxelManager =
         rowOffset: number, colOffset: number, collisionLayerOffset: number,
         validate: boolean = true): boolean =>
     {
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         return VoxelUpdateUtil.moveVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, rowOffset, colOffset, collisionLayerOffset, validate ? room : undefined);
     },
     setVoxelQuadTexture: (room: Room, quadIndex: number, textureIndex: number,
         validate: boolean = true): boolean =>
     {
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         return VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels,
             quadIndex, textureIndex, validate ? room : undefined);
     },

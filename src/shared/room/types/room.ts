@@ -13,6 +13,7 @@ let temp_participantUserNameByID: { [userID: string]: string } = {};
 export default class Room extends EncodableData
 {
     id: string;
+    roomName: string;
     roomType: RoomType;
     ownerUserID: string;
     ownerUserName: string;
@@ -21,7 +22,8 @@ export default class Room extends EncodableData
     objectGroup: ObjectGroup;
     dirty: boolean;
 
-    constructor(id: string | undefined, roomType: RoomType, ownerUserID: string,
+    constructor(id: string | undefined, roomName: string, roomType: RoomType,
+        ownerUserID: string,
         ownerUserName: string,
         texturePackPath: string,
         voxelGrid: VoxelGrid,
@@ -29,6 +31,7 @@ export default class Room extends EncodableData
     {
         super();
         this.id = (id != undefined) ? id : "";
+        this.roomName = roomName;
         this.roomType = roomType;
         this.ownerUserID = ownerUserID;
         this.ownerUserName = ownerUserName;
@@ -57,6 +60,7 @@ export default class Room extends EncodableData
     encode(bufferState: BufferState)
     {
         new EncodableByteString(this.id.length > 0 ? this.id : UNDEFINED_DOCUMENT_ID_CHAR).encode(bufferState);
+        new EncodableByteString(this.roomName).encode(bufferState);
         new EncodableRawByteNumber(this.roomType).encode(bufferState);
         new EncodableByteString(this.ownerUserID).encode(bufferState);
         new EncodableByteString(this.ownerUserName).encode(bufferState);
@@ -70,6 +74,7 @@ export default class Room extends EncodableData
         let id: string = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         if (id == UNDEFINED_DOCUMENT_ID_CHAR)
             throw new Error("ID of the room being decoded is undefined.");
+        const roomName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const roomType = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const ownerUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const ownerUserName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
@@ -77,6 +82,6 @@ export default class Room extends EncodableData
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
         const objectGroup = ObjectGroup.decodeWithParams(bufferState, id) as ObjectGroup;
 
-        return new Room(id, roomType, ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectGroup);
+        return new Room(id, roomName, roomType, ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectGroup);
     }
 }

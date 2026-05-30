@@ -17,8 +17,8 @@ const UserCommandUtil =
 
         switch (commandType)
         {
-            case "tutorialStep":
-                await handleTutorialStepCommand(user, words, params);
+            case "finishTutorial":
+                await handleFinishTutorialCommand(user, words, params);
                 break;
             default:
                 LogUtil.log("Unknown user command type", {commandType, params}, "high", "error");
@@ -27,26 +27,15 @@ const UserCommandUtil =
     },
 }
 
-async function handleTutorialStepCommand(user: User, words: string[], params: UserCommandSignal): Promise<void>
+async function handleFinishTutorialCommand(user: User, words: string[], params: UserCommandSignal): Promise<void>
 {
-    if (words.length < 2)
+    if (user.singlePlayerMode != "tutorial")
     {
-        LogUtil.log("No tutorial step specified", {params}, "high", "error");
+        LogUtil.log("Tutorial is already over", {params}, "high", "error");
         return;
     }
-    const step = parseInt(words[1]);
-    if (isNaN(step))
-    {
-        LogUtil.log("Invalid tutorial step specified", {params}, "high", "error");
-        return;
-    }
-    if (user.tutorialStep == step)
-    {
-        LogUtil.log("Tutorial step already set", {params}, "high", "error");
-        return;
-    }
-    user.tutorialStep = step;
-    await DBUserUtil.setUserTutorialStep(user.id, step);
+    user.singlePlayerMode = "";
+    await DBUserUtil.setSinglePlayerMode(user.id, "");
 }
 
 export default UserCommandUtil;

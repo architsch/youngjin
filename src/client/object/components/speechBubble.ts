@@ -7,6 +7,7 @@ import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetad
 import SocketsClient from "../../networking/client/socketsClient";
 import App from "../../app";
 import CameraUtil from "../../graphics/util/cameraUtil";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 
 export default class SpeechBubble extends GameObjectComponent
 {
@@ -70,10 +71,13 @@ export default class SpeechBubble extends GameObjectComponent
                 console.error("SpeechBubble.setMessage :: Current room not found");
                 return;
             }
-            const params = new SetObjectMetadataSignal(
-                room.id, this.gameObject.params.objectId,
-                ObjectMetadataKeyEnumMap.SentMessage, message);
-            SocketsClient.emitSetObjectMetadataSignal(params);
+            if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+            {
+                const params = new SetObjectMetadataSignal(
+                    room.id, this.gameObject.params.objectId,
+                    ObjectMetadataKeyEnumMap.SentMessage, message);
+                SocketsClient.emitSetObjectMetadataSignal(params);
+            }
         }
     }
 

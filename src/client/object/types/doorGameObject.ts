@@ -4,6 +4,11 @@ import SpeechBubble from "../components/speechBubble";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import PlayerProximityDetector from "../components/playerProximityDetector";
 import PopupUtil from "../../ui/util/popupUtil";
+import { clientFeatureFlagsObservable } from "../../system/clientObservables";
+import { FeatureFlag } from "../../../shared/system/types/featureFlag";
+import { tryStartClientProcess } from "../../system/types/clientProcess";
+import SocketsClient from "../../networking/client/socketsClient";
+import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 
 export default class DoorGameObject extends GameObject
 {
@@ -27,7 +32,18 @@ export default class DoorGameObject extends GameObject
     {
         if (!this.playerProximityDetector.isProximityOn())
             return;
-        PopupUtil.openPopup({popupType: "roomList"});
+
+        if (clientFeatureFlagsObservable.has(FeatureFlag.GoToHubImmediatelyOnDoorClick))
+        {
+            if (!tryStartClientProcess("roomChange", 1, 1))
+                return;
+            // "hub" is not an actual roomID. It is a special keyword which indicates that the user wants to join a Hub-type room.
+            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("hub"));
+        }
+        else
+        {
+            PopupUtil.openPopup({popupType: "roomList"});
+        }
     }
 
     onPlayerProximityStart(): void

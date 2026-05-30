@@ -2,11 +2,13 @@ import * as THREE from "three";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import Observable from "../../shared/system/types/observable";
 import ObservableMap from "../../shared/system/types/observableMap";
+import ObservableSet from "../../shared/system/types/observableSet";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ClientProcess from "./types/clientProcess";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import PopupState from "../ui/types/popupState";
+import { FeatureFlag } from "../../shared/system/types/featureFlag";
 
 //--------------------------------------------------------------------------------
 // Core Observables
@@ -22,6 +24,11 @@ export const updateObservable = new Observable<number>();
 // A "clientProcess" is any asynchronous routine which is supposed to block the app's
 // normal mode of operation by showing the "Loading..." indicator over the whole screen.
 export const ongoingClientProcessesObservable = new ObservableMap<ClientProcess>();
+
+// This observable notifies its listeners whenever a feature flag
+// either gets added to or removed from the client app.
+// Feature flags serve as global control parameters (i.e. switches).
+export const clientFeatureFlagsObservable = new ObservableSet<FeatureFlag>();
 
 // This observable notifies its listeners whenever the user's connectionState changes.
 // The user's "connectionState" tells us the state of the user's socket connection
@@ -69,8 +76,27 @@ export const popupStateObservable = new Observable<PopupState>({ popupType: "non
 
 // This observable notifies its listeners whenever the current user's role
 // in the current room changes (e.g. from Visitor to Editor, or vice versa).
+// This observable gets updated whenever:
+//      (1) Room gets loaded on the client side (i.e. "loadRoom" in app.ts), or
+//      (2) Server signals the client that the user's role in the current room has changed (i.e. "onSetUserRoleSignalReceived" in app.ts)
 export const userRoleObservable = new Observable<UserRole>(UserRoleEnumMap.Visitor);
 
 // This observable tracks the current room's latest texture pack URL.
 // It is updated whenever a room loads or the current room's texture pack changes.
 export const texturePackURLObservable = new Observable<string>();
+
+// This observable notifies its listeners whenever the current user's
+// singlePlayerMode changes on the client side (either when the user data gets fetched from the server,
+// or when the client either enters or exits a single-player mode game).
+// This observable gets updated whenever:
+//      (1) Client-side env variables get loaded (i.e. "setEnv" in app.ts), or
+//      (2) User's "singlePlayerMode" field value changes during runtime.
+export const singlePlayerModeObservable = new Observable<string>("");
+
+// This observable notifies its listeners whenever the current user's
+// singlePlayerStep changes on the client side (either when the user data gets fetched from the server,
+// or when the client's single-player system modifies the current client-side singlePlayerStep value).
+// This observable gets updated whenever:
+//      (1) Client-side env variables get loaded (i.e. "setEnv" in app.ts), or
+//      (2) Client's single-player gameplay logic (singlePlayerManager.ts) decides to change the current step.
+export const singlePlayerStepObservable = new Observable<number>(-1);

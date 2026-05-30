@@ -21,6 +21,13 @@ const DBRoomVersionMigration: DBVersionMigration = [
         row.editors = [];
         return row;
     },
+    // v2 -> v3: add a new field called "roomName".
+    // The purpose of this is to let us distinguish between different singleplayer rooms
+    // (based upon their names).
+    async (row: any) => {
+        row.roomName = "";
+        return row;
+    },
 ];
 
 export default DBRoomVersionMigration;

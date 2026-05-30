@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 import Chat from "../chat/chat";
 import DebugStats from "../debug/debugStats";
 import VoxelQuadSelectionMenu from "../selection/voxelQuadSelectionMenu";
 import ObjectSelectionMenu from "../selection/objectSelectionMenu";
-import Tutorial from "../tutorial/tutorial";
 import UserRoomIdentity from "../user/userRoomIdentity";
 import Loading from "./loading";
 import Notification from "./notification";
@@ -16,14 +15,15 @@ import AuthPromptForm from "../form/authPromptForm";
 import RoomListForm from "../form/roomListForm";
 import ConfigureMyRoomForm from "../form/configureMyRoomForm";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
-import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
-import { objectSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, objectSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "../form/imageGridChooserForm";
 import ImageListChooserForm from "../form/imageListChooserForm";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "../form/confirmForm";
+import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -32,8 +32,12 @@ export default function UIRoot({ env, user }: UIRootProps)
     const [userRole, setUserRole] = useState<UserRole>(UserRoleEnumMap.Visitor);
     const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
     const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
+    const [forceHideChat, setForceHideChat] = useState<boolean>(false);
 
     useEffect(() => {
+        clientFeatureFlagsObservable.addElementListener("ui_root", FeatureFlag.HideChatInput, (action: "add" | "remove") => {
+            setForceHideChat(action == "add");
+        });
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
             setRoomRuntimeMemory(roomRuntimeMemory);
         });
@@ -53,6 +57,7 @@ export default function UIRoot({ env, user }: UIRootProps)
                 setPopupStack(prev => prev.slice(0, -1)); // Close the topmost popup
         })
         return () => {
+            clientFeatureFlagsObservable.removeElementListener("ui_root", FeatureFlag.HideChatInput);
             roomChangedObservable.removeListener("ui_root");
             userRoleObservable.removeListener("ui_root");
             objectSelectionObservable.removeListener("ui_root");
@@ -61,12 +66,15 @@ export default function UIRoot({ env, user }: UIRootProps)
         };
     }, []);
 
-    const roomID = roomRuntimeMemory?.room.id;
-    const roomType = roomRuntimeMemory?.room.roomType;
-    const canModifyRoom =
-        userRole === UserRoleEnumMap.Owner ||
-        userRole === UserRoleEnumMap.Editor ||
-        roomType === RoomTypeEnumMap.Hub;
+    const roomID = useMemo(() =>
+        roomRuntimeMemory?.room.id
+        , [roomRuntimeMemory]);
+
+    const canModifyRoom = useMemo(() =>
+        roomRuntimeMemory
+            ? RoomValidationUtil.canUserEditRoom(userRole, roomRuntimeMemory?.room)
+            : false
+        , [userRole, roomRuntimeMemory]);
 
     return <>
         <UserRoomIdentity
@@ -78,9 +86,8 @@ export default function UIRoot({ env, user }: UIRootProps)
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             <ObjectSelectionMenu canModifyRoom/>
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
-            {<Chat hide={canModifyRoom && (objectSelection != null || voxelQuadSelection != null)}/>}
+            {<Chat hide={canModifyRoom && (objectSelection != null || voxelQuadSelection != null) && !forceHideChat}/>}
         </div>
-        <Tutorial user={user}/>
         {popupStack.map((state, i) => {
             switch (state.popupType)
             {

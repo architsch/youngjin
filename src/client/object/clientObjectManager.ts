@@ -3,7 +3,6 @@ import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import ObjectFactory from "./factories/objectFactory";
 import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import Room from "../../shared/room/types/room";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
@@ -14,7 +13,7 @@ import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntry
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/voxelGameObject";
-import { objectSelectionObservable, texturePackURLObservable } from "../system/clientObservables";
+import { objectSelectionObservable, texturePackURLObservable, userRoleObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
@@ -24,14 +23,14 @@ import MaterialFactory from "../graphics/factories/materialFactory";
 import TextureFactory from "../graphics/factories/textureFactory";
 import TexturePackMaterialParams from "../graphics/types/material/texturePackMaterialParams";
 import ImageMapUtil from "../../shared/image/util/imageMapUtil";
-import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW } from "../../shared/system/sharedConstants";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import ClientObjectUtil from "./util/clientObjectUtil";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
 const playerByUserID: {[userID: string]: GameObject} = {};
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
-const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 const ClientObjectManager =
 {
@@ -61,26 +60,41 @@ const ClientObjectManager =
     },
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
-        await spawnDoor(roomRuntimeMemory.room);
-        await spawnVoxelsFromGrid(roomRuntimeMemory.room);
-
-        // Find the player's initial position for distance-based loading order
+        const room = roomRuntimeMemory.room;
+        await ClientObjectUtil.spawnVoxelsFromGrid(room);
         let playerX = 0, playerY = 0, playerZ = 0;
-        for (const obj of Object.values(roomRuntimeMemory.room.objectById))
+
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer) // Spawn the entrance door only if it is a multiplayer room.
         {
-            if (obj.objectTypeIndex === playerTypeIndex)
+            await ClientObjectUtil.spawnEntranceDoor(room);
+
+            // Find the player's initial position for distance-based loading order
+            for (const obj of Object.values(room.objectById))
             {
-                const t = obj.transform;
-                playerX = t.pos.x;
-                playerY = t.pos.y;
-                playerZ = t.pos.z;
-                break;
+                if (obj.objectTypeIndex === playerTypeIndex)
+                {
+                    const t = obj.transform;
+                    playerX = t.pos.x;
+                    playerY = t.pos.y;
+                    playerZ = t.pos.z;
+                    break;
+                }
             }
+        }
+        else // If it is a singleplayer room, the client will be responsible for spawning its own player object (In multiplayer mode, the server would've included the player object as part of the room's data before sending it over to the client).
+        {
+            const player = await ClientObjectUtil.spawnSingleModePlayer(room);
+
+            // Find the player's initial position for distance-based loading order
+            const t = player.params.transform;
+            playerX = t.pos.x;
+            playerY = t.pos.y;
+            playerZ = t.pos.z;
         }
 
         // Load all objects from room.objectById, sorted by distance
         // from the player so that canvas images load nearest-first.
-        const objects = Object.values(roomRuntimeMemory.room.objectById);
+        const objects = Object.values(room.objectById);
         objects.sort((a, b) =>
         {
             const da = (a.transform.pos.x - playerX) ** 2 + (a.transform.pos.y - playerY) ** 2 + (a.transform.pos.z - playerZ) ** 2;
@@ -107,7 +121,7 @@ const ClientObjectManager =
         addToRoomData: boolean = true): Promise<boolean> =>
     {
         const user = App.getUser();
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
         if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params, validate, addToRoomData))
@@ -141,7 +155,7 @@ const ClientObjectManager =
         removeFromRoomData: boolean = true): Promise<boolean> =>
     {
         const user = App.getUser();
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
         if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId), validate, removeFromRoomData))
@@ -168,7 +182,7 @@ const ClientObjectManager =
         validate: boolean = true): ObjectTransform =>
     {
         const user = App.getUser();
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
         const signal = new SetObjectTransformSignal(room.id, objectId, new ObjectTransform(pos, dir), ignorePhysics);
@@ -189,7 +203,7 @@ const ClientObjectManager =
         validate: boolean = true): boolean =>
     {
         const user = App.getUser();
-        const userRole = App.getCurrentUserRole();
+        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
         const signal = new SetObjectMetadataSignal(room.id, objectId, key, value);
@@ -257,7 +271,7 @@ const ClientObjectManager =
         const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, newTexturePackPath);
         texturePackURLObservable.set(texturePackURL);
 
-        await spawnVoxelsFromGrid(room);
+        await ClientObjectUtil.spawnVoxelsFromGrid(room);
     },
     // When the client receives an AddObjectSignal from the server,
     // the given object will spawn as soon as the room to which it belongs is available.
@@ -319,37 +333,5 @@ const ClientObjectManager =
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
-
-// Spawns voxel GameObjects for every voxel in the given room's voxelGrid.
-// Voxel objects don't reside in Room.objectById, so addToRoomData is skipped.
-async function spawnVoxelsFromGrid(room: Room): Promise<void>
-{
-    for (const voxel of room.voxelGrid.voxels)
-    {
-        const gameObject = ObjectFactory.createClientSideObject(
-            room.id,
-            voxelTypeIndex,
-            new ObjectTransform(
-                {x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5},
-                {x: 0, y: 0, z: 1}
-            )
-        );
-        (gameObject as VoxelGameObject).setVoxel(voxel);
-        await ClientObjectManager.addObject(gameObject, false, false);
-    }
-}
-
-async function spawnDoor(room: Room): Promise<void>
-{
-    const gameObject = ObjectFactory.createClientSideObject(
-        room.id,
-        doorTypeIndex,
-        new ObjectTransform(
-            {x: ENTRANCE_VOXEL_COL + 0.5, y: 0, z: ENTRANCE_VOXEL_ROW},
-            {x: 0, y: 0, z: -1}
-        ),
-    );
-    await ClientObjectManager.addObject(gameObject, false, false);
-}
 
 export default ClientObjectManager;

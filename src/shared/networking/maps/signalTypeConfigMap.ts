@@ -137,7 +137,7 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
 
     [10, { // Unidirectional (client -> server)
         // (Overall Flow):
-        // The client sends a user-generated command (e.g. a command to increase the user's tutorialStep) to the server.
+        // The client sends a user-generated command (e.g. command to finish the tutorial) to the server.
         // The server processes the command.
         signalType: "userCommandSignal",
         minClientToServerSendInterval: 1000, // This is necessary because this signal may cost a DB query each time it gets sent.

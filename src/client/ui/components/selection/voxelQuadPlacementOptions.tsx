@@ -25,7 +25,9 @@ import Room from "../../../../shared/room/types/room";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../shared/object/util/objectIdUtil";
-import { voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -52,11 +54,14 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
 function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
     objectTypeIndex: number): ObjectTransform | null
 {
+    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectAddition))
+        return null;
+
     const room = App.getCurrentRoom();
     if (!room)
         return null;
     const user = App.getUser();
-    const userRole = App.getCurrentUserRole();
+    const userRole = userRoleObservable.peek();
 
     const voxel = selection.voxel;
     const quadIndex = selection.quadIndex;
@@ -109,7 +114,8 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
         const success = await ClientObjectManager.addObject(gameObject);
         if (success)
         {
-            SocketsClient.emitAddObjectSignal(signal);
+            if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+                SocketsClient.emitAddObjectSignal(signal);
             ObjectSelection.trySelect(gameObject);
         }
     } catch (err) {
@@ -119,6 +125,9 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
 
 function canAddVoxelBlock(selection: VoxelQuadSelection): boolean
 {
+    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelBlockAddition))
+        return false;
+
     const room = App.getCurrentRoom();
     if (!room)
         return false;
@@ -146,7 +155,7 @@ function canAddVoxelBlock(selection: VoxelQuadSelection): boolean
     }
 
     const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    return VoxelUpdateUtil.canAddVoxelBlock(App.getCurrentUserRole(), room, targetQuadIndex);
+    return VoxelUpdateUtil.canAddVoxelBlock(userRoleObservable.peek(), room, targetQuadIndex);
 }
 
 function tryAddVoxelBlock(selection: VoxelQuadSelection)
@@ -188,16 +197,20 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
         const voxelFound = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
         if (voxelFound)
             VoxelQuadSelection.trySelect(voxelFound, targetQuadIndex);
-        SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, targetQuadIndex, quadTextureIndicesWithinLayer));
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+            SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, targetQuadIndex, quadTextureIndicesWithinLayer));
     }
 }
 
 function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
 {
+    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelBlockRemoval))
+        return false;
+
     const room = App.getCurrentRoom();
     if (!room)
         return false;
-    return VoxelUpdateUtil.canRemoveVoxelBlock(App.getCurrentUserRole(), room, selection.quadIndex);
+    return VoxelUpdateUtil.canRemoveVoxelBlock(userRoleObservable.peek(), room, selection.quadIndex);
 }
 
 function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
@@ -234,7 +247,8 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
             dirIndex = (dirIndex + 1) % quadDirections.length;
         }
 
-        SocketsClient.emitRemoveVoxelBlockSignal(new RemoveVoxelBlockSignal(room.id, quadIndex));
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+            SocketsClient.emitRemoveVoxelBlockSignal(new RemoveVoxelBlockSignal(room.id, quadIndex));
     }
 }
 

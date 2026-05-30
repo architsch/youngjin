@@ -28,7 +28,7 @@ interface StoredUser
     userName: string;
     userType: number;
     email: string;
-    tutorialStep: number;
+    singlePlayerMode: string;
     lastRoomID: string;
     ownedRoomID: string;
     lastLoginAt: number;
@@ -75,8 +75,9 @@ export function seedRoom(
     const existing = roomStore[roomID];
     if (existing) return existing.room;
 
-    const { voxelGrid, objectGroup } = RoomGenerationUtil.generateEmptyRoom(0, 1, 2);
-    const room = new Room(roomID, roomType, "", "", "", voxelGrid, objectGroup);
+    const roomName = roomType === RoomTypeEnumMap.SinglePlayer ? "tutorial" : "";
+    const { voxelGrid, objectGroup } = RoomGenerationUtil.generateRoom(roomName, roomType);
+    const room = new Room(roomID, roomName, roomType, "", "", "", voxelGrid, objectGroup);
     roomStore[roomID] = {
         id: roomID,
         roomType,
@@ -103,7 +104,8 @@ export const mockDBRoomUtil = {
         if (!stored) return null;
         return {
             id: stored.id,
-            version: 2,
+            version: 3,
+            roomName: stored.room.roomName,
             roomType: stored.roomType,
             ownerUserID: stored.ownerUserID,
             ownerUserName: stored.ownerUserName,
@@ -120,12 +122,13 @@ export const mockDBRoomUtil = {
         return true;
     }),
     createRoom: vi.fn(async (
-        roomType: RoomType, _ownerUserID: string,
-        _floor: number, _wall: number, _ceil: number, _texPath: string
+        roomName: string, roomType: RoomType,
+        _ownerUserID: string, _ownerUserName: string, _texPath: string
     ) =>
     {
         const id = `room-${++roomCounter}`;
-        seedRoom(id, roomType);
+        const room = seedRoom(id, roomType);
+        room.roomName = roomName;
         return { success: true, data: [{ id }] };
     }),
     deleteRoom: vi.fn(async (_roomID: string): Promise<boolean> =>
@@ -153,6 +156,10 @@ export const mockDBSearchUtil = {
         withRoomType: vi.fn(async (type: RoomType) => ({
             success: true,
             data: Object.values(roomStore).filter(r => r.roomType === type),
+        })),
+        withRoomNameAndType: vi.fn(async (roomName: string, type: RoomType) => ({
+            success: true,
+            data: Object.values(roomStore).filter(r => r.room.roomName === roomName && r.roomType === type),
         })),
     },
     users: {
@@ -200,7 +207,7 @@ export const mockDBUserUtil = {
         const id = `user-${++userCounter}`;
         userStore[id] = {
             id, userName, userType, email,
-            tutorialStep: 0, lastRoomID: "", ownedRoomID: "",
+            singlePlayerMode: "tutorial", lastRoomID: "", ownedRoomID: "",
             lastLoginAt: Date.now(), createdAt: Date.now(),
             loginCount: 1,
             playerMetadata: {},
@@ -208,7 +215,7 @@ export const mockDBUserUtil = {
         };
         return { success: true, data: [{ id }] };
     }),
-    setUserTutorialStep: vi.fn(async () => ({ success: true, data: [] })),
+    setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
     deleteStaleGuestsByTier: vi.fn(async () => 0),
     deleteUser: vi.fn(async () => ({ success: true, data: [] })),
     fromDBType: vi.fn((dbUser: any) => dbUser),

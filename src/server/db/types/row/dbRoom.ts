@@ -6,6 +6,7 @@ export default interface DBRoom extends DBRow
 {
     id?: string;
     version: number;
+    roomName: string;
     roomType: RoomType;
     ownerUserID: string;
     ownerUserName: string;

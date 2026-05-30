@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
-import { objectSelectionObservable, roomChangedObservable, updateObservable } from "../../../system/clientObservables";
+import { objectSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
@@ -14,6 +14,7 @@ import ClientObjectManager from "../../../object/clientObjectManager";
 import ErrorUtil from "../../../../shared/system/util/errorUtil";
 import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import { DIRECTION_VECTORS } from "../../../system/clientConstants";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -78,7 +79,7 @@ async function updateGizmos(selection: ObjectSelection)
     }
 
     const user = App.getUser();
-    const userRole = App.getCurrentUserRole();
+    const userRole = userRoleObservable.peek();
 
     const objectId = go.params.objectId;
     const obj = room.objectById[objectId];
@@ -156,7 +157,8 @@ function tryMoveCanvas(selection: ObjectSelection,
         objectSelectionObservable.notify();
 
         // Emit to server
-        SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(room.id, objectId, tr, true));
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+            SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(room.id, objectId, tr, true));
     } catch (err) {
         console.error(`Exception while trying to move a canvas :: Error: ${ErrorUtil.getErrorMessage(err)}`);
     }

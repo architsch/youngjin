@@ -10,7 +10,8 @@ import TexturePackMaterialParams from "../../graphics/types/material/texturePack
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import { texturePackURLObservable } from "../../system/clientObservables";
+import { clientFeatureFlagsObservable, texturePackURLObservable } from "../../system/clientObservables";
+import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 
 let isDevMode: boolean | undefined;
 
@@ -73,6 +74,9 @@ export default class VoxelGameObject extends GameObject
     // hit by the user's pointer input.
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelQuadSelection))
+            return;
+
         const player = ClientObjectManager.getMyPlayer();
         if (player == undefined)
         {

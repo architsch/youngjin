@@ -215,8 +215,7 @@ function formatOwnerLabel(entry: RoomListEntry, isMyRoom: boolean): string
 
 function roomTypeName(roomType: RoomType): string
 {
-    if (roomType === RoomTypeEnumMap.Hub) return "Hub";
-    return "Room";
+    return (roomType === RoomTypeEnumMap.Hub) ? "Hub" : "Room";
 }
 
 function makeMyRoomPlaceholder(): RoomListEntry

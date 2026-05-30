@@ -7,15 +7,14 @@ import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
 import SocketsServer from "./sockets/socketsServer";
 import ServerRoomManager from "./room/serverRoomManager";
-import DBRoomUtil from "./db/util/dbRoomUtil";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
-import DBSearchUtil from "./db/util/dbSearchUtil";
 import DBUserUtil from "./db/util/dbUserUtil";
 import LogUtil from "../shared/system/util/logUtil";
 import { HOUR_IN_MS, setIsServer } from "../shared/system/sharedConstants";
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
 import DevUserSeedUtil from "./user/util/devUserSeedUtil";
+import OwnerlessRoomCreationRoutine from "./room/routines/ownerlessRoomCreationRoutine";
 
 require("../shared/image/imageMapDependencies.ts");
 
@@ -66,22 +65,8 @@ ${LatencySimUtil.getConfigSummary()}
         return;
     }
 
-    const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
-    if (!roomSearchResult.success)
-    {
-        console.error("[Premature Server Termination] :: Failed to search for hub rooms.");
-        return;
-    }
-
-    if (roomSearchResult.data.length == 0)
-    {
-        let result = await DBRoomUtil.createRoom(RoomTypeEnumMap.Hub, "", "", 0, 1, 2, "default");
-        if (!result.success)
-        {
-            console.error("[Premature Server Termination] :: Failed to create a hub room.");
-            return;
-        }
-    }
+    await OwnerlessRoomCreationRoutine.createIfMissing("", RoomTypeEnumMap.Hub);
+    await OwnerlessRoomCreationRoutine.createIfMissing("tutorial", RoomTypeEnumMap.SinglePlayer);
 
     // Seed dev user accounts (dev mode only)
     if (dev)

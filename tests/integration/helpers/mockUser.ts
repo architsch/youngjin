@@ -8,7 +8,7 @@ export interface MockUserOverrides {
     userName?: string;
     userType?: number;
     email?: string;
-    tutorialStep?: number;
+    singlePlayerMode?: string;
     lastRoomID?: string;
     playerMetadata?: {[key: string]: string};
 }
@@ -31,7 +31,7 @@ export function createMockUser(overrides: MockUserOverrides = {}): MockUserResul
         overrides.userName ?? `TestUser${i}`,
         overrides.userType ?? UserTypeEnumMap.Guest,
         overrides.email ?? `test${i}@test.com`,
-        overrides.tutorialStep ?? 0,
+        overrides.singlePlayerMode ?? "",
         overrides.lastRoomID ?? "",
     );
     return { user, playerMetadata: overrides.playerMetadata ?? {} };

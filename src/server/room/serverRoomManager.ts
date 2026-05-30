@@ -8,13 +8,15 @@ import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
 import ImageMapUtil from "../../shared/image/util/imageMapUtil";
 import DBRoomEditor from "../db/types/row/dbRoomEditor";
 import { MAX_ROOM_EDITORS } from "../system/serverConstants";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import DBSearchUtil from "../db/util/dbSearchUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -34,6 +36,28 @@ const ServerRoomManager =
     loadRoom: async (roomID: string): Promise<RoomRuntimeMemory | null> =>
     {
         console.log(`ServerRoomManager.loadRoom :: roomID = ${roomID}`);
+
+        // "hub" is a special keyword which means that the user wants to join whichever Hub-type room is available.
+        if (roomID == "hub")
+        {
+            // Search for a hub among the already loaded rooms.
+            for (const roomRuntimeMemory of Object.values(ServerRoomManager.roomRuntimeMemories))
+            {
+                if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Hub)
+                    return roomRuntimeMemory;
+            }
+            // If no hub is currently loaded, load one.
+            const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
+            if (roomSearchResult.success && roomSearchResult.data.length > 0)
+            {
+                // If there are multiple hub rooms, choose a random one of them
+                // (This will help distribute the user traffic evenly).
+                roomID = roomSearchResult.data[Math.floor(Math.random() * roomSearchResult.data.length)].id as string;
+            }
+            else
+                return null;
+        }
+
         if (ServerRoomManager.roomRuntimeMemories[roomID] != undefined)
             return ServerRoomManager.roomRuntimeMemories[roomID];
 
@@ -130,7 +154,13 @@ const ServerRoomManager =
     {
         const user = socketUserContext.user;
         console.log(`ServerRoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
-        await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
+        
+        // Remove the user from the previous room (if applicable).
+        // However, don't attempt to remove the user if the previous room was a single-player environment.
+        // A user never gets added to a single-player environment, so he/she is never meant to be removed from one either.
+        if (!socketUserContext.isInSinglePlayerRoom)
+            await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
+        
         if (!roomID)
             return false;
 
@@ -175,20 +205,30 @@ const ServerRoomManager =
         if (roomRuntimeMemory.room.ownerUserID === user.id)
             userRole = UserRoleEnumMap.Owner;
 
-        ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
-            new ObjectTransform(
-                {x: ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: ENTRANCE_VOXEL_ROW + 0.5},
-                {x: 0, y: 0, z: 1}
-            ),
-            playerMetadata, userRole
-        );
+        // Add the user to the room.
+        // (In case of a singleplayer room, the user's player object will be added/handled directly by the client.)
+        if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer)
+        {
+            socketUserContext.isInSinglePlayerRoom = false;
+            ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
+                new ObjectTransform(
+                    {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5},
+                    {x: 0, y: 0, z: 1}
+                ),
+                playerMetadata, userRole
+            );
+        }
+        else // If the user is joining a singleplayer room, mark him/her as so for future reference.
+            socketUserContext.isInSinglePlayerRoom = true;
 
-        // Persist the user's current room to DBUser. This is the only durable signal
-        // we need for "where should this user land on next login" — there is no
-        // longer a separate gameplay-state save path.
-        DBUserUtil.setLastRoomID(user.id, roomID).catch(err =>
-            console.error(`ServerRoomManager.changeUserRoom :: setLastRoomID failed for userID = ${user.id}: ${err}`)
-        );
+        // Persist the user's latest room to DBUser, so that the user will come back to the same room when reconnected.
+        // (A singleplayer room is not meant to be revisited based on the user's lastRoomID. It will be visited based on the user's singlePlayerMode.)
+        if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer)
+        {
+            DBUserUtil.setLastRoomID(user.id, roomID).catch(err =>
+                console.error(`ServerRoomManager.changeUserRoom :: setLastRoomID failed for userID = ${user.id}: ${err}`)
+            );
+        }
 
         // Wrap the room memory and user role in a RoomChangedSignal and unicast to the joining user.
         const roomChangedSignal = new RoomChangedSignal(roomRuntimeMemory, userRole);

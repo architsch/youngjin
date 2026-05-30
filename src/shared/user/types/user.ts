@@ -6,18 +6,18 @@ export default class User
     userName: string;
     userType: UserType;
     email: string;
-    tutorialStep: number;
+    singlePlayerMode: string;
     lastRoomID: string;
     ownedRoomID: string;
 
     constructor(id: string | undefined, userName: string, userType: UserType, email: string,
-        tutorialStep: number, lastRoomID: string = "", ownedRoomID: string = "")
+        singlePlayerMode: string, lastRoomID: string = "", ownedRoomID: string = "")
     {
         this.id = (id != undefined) ? id : "";
         this.userName = userName;
         this.userType = userType;
         this.email = email;
-        this.tutorialStep = tutorialStep;
+        this.singlePlayerMode = singlePlayerMode;
         this.lastRoomID = lastRoomID;
         this.ownedRoomID = ownedRoomID;
     }
@@ -29,19 +29,17 @@ export default class User
         const userName = fields.length > 1 ? fields[1] : "";
         const userType = fields.length > 2 ? parseInt(fields[2]) : UserTypeEnumMap.Guest;
         const email = fields.length > 3 ? fields[3] : "";
-        const tutorialStep = fields.length > 4 ? parseInt(fields[4]) : 0;
+        const singlePlayerMode = fields.length > 4 ? fields[4] : "";
         const ownedRoomID = fields.length > 5 ? fields[5] : "";
 
         if (isNaN(userType))
             throw new Error(`userType is NaN (userString = "${userString}")`);
-        if (isNaN(tutorialStep))
-            throw new Error(`tutorialStep is NaN (userString = "${userString}")`);
 
-        return new User(id, userName, userType, email, tutorialStep, "", ownedRoomID);
+        return new User(id, userName, userType, email, singlePlayerMode, "", ownedRoomID);
     }
 
     toString(): string
     {
-        return `${this.id} ${this.userName} ${this.userType} ${this.email} ${this.tutorialStep} ${this.ownedRoomID}`;
+        return `${this.id} ${this.userName} ${this.userType} ${this.email} ${this.singlePlayerMode} ${this.ownedRoomID}`;
     }
 }

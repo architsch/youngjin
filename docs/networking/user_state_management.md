@@ -2,9 +2,11 @@
 
 Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.ts , @src/shared/room/types/roomRuntimeMemory.ts , @src/shared/room/types/roomChangedSignal.ts , @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/room/serverRoomManager.ts , @src/server/user/serverUserManager.ts , @src/server/user/util/userCommandUtil.ts , @src/server/sockets/types/socketUserContext.ts
 
+> For how single-player rooms (e.g. the tutorial) differ from the multi-player flows described here — they are not removed/registered as participants and never write `lastRoomID` — see [single_player_mode.md](single_player_mode.md).
+
 ## Where user state lives
 
-- **DBUser** — per-user, persistent. Holds `lastRoomID`, `playerMetadata`, `tutorialStep`, account info (`userName`, `email`, `userType`), and bookkeeping (`loginCount`, `lastLoginAt`, etc.). `playerMetadata` follows the user across rooms; it is not per-room.
+- **DBUser** — per-user, persistent. Holds `lastRoomID`, `playerMetadata`, `singlePlayerMode` (`""` unless the user should be routed into a single-player room such as the tutorial — see [single_player_mode.md](single_player_mode.md)), account info (`userName`, `email`, `userType`), and bookkeeping (`loginCount`, `lastLoginAt`, etc.). `playerMetadata` follows the user across rooms; it is not per-room.
 - **DBRoom** — per-room, persistent. Holds `ownerUserID`, `ownerUserName`, `texturePackPath`, and `editors[]`, a denormalized list of `{userID, userName, email}` entries (so listing editors in the UI never needs an extra DBUser join). The product invariant is that `userName`/`email` never change after account creation, so the denormalized snapshot does not drift.
 - **No `UserGameplayState` aggregate.** Earlier versions of the server bundled position, direction, role, and metadata into a single "gameplay state" snapshot that was saved on disconnect and loaded on connect. That abstraction is gone — players always spawn at the designated entrance position, user role is derived from `DBRoom`, and `lastRoomID` / `playerMetadata` are written to `DBUser` directly. See `ServerUserManager` and `ServerRoomManager`.
 
@@ -16,7 +18,7 @@ Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.
 
 ## When the user opens "/" without a room ID in the URL
 1. The standard authentication and socket connection flow runs (see `authentication.md`).
-2. Since no `targetRoomID` is specified, the server falls back to `user.lastRoomID` (read from DBUser). If that room doesn't exist, it falls back to a Hub room.
+2. Since no `targetRoomID` is specified, the server picks the target room by priority: if `user.singlePlayerMode != ""` it routes the user into the matching single-player room (e.g. the tutorial); otherwise it falls back to `user.lastRoomID` (read from DBUser). If neither resolves, it falls back to a Hub room.
 3. The server unicasts a `RoomChangedSignal` to the client, which initializes the game.
 
 ## When the user opens "/:roomID" with a room ID in the URL
@@ -100,4 +102,4 @@ The server enforces rate limiting by rejecting signals that arrive sooner than t
 
 ## User Commands
 The server supports an extensible command system via `userCommandSignal`. The client sends a message in the format `"<commandType> <arg1> <arg2>..."`, which the server parses and dispatches to the appropriate handler. Current commands:
-- **`tutorialStep <step_number>`**: Updates the user's tutorial progress. Validates the step number and persists to Firestore. Rate-limited to 1000ms between signals.
+- **`finishTutorial`**: Marks the tutorial as complete. The server verifies the user is in `singlePlayerMode == "tutorial"`, then clears `singlePlayerMode` (`""`) and persists it to Firestore. Rate-limited to 1000ms between signals. See [single_player_mode.md](single_player_mode.md).

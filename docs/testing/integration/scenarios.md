@@ -34,7 +34,7 @@ This document catalogs all integration test scenarios organized by category.
 
 | Test | What it verifies |
 |------|-----------------|
-| two players both spawn at the room entrance | Both players spawn at the entrance cell (`ENTRANCE_VOXEL_COL + 0.5`, `ENTRANCE_VOXEL_ROW + 0.5`) |
+| two players both spawn at the room entrance | Both players spawn at the entrance cell (`MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5`, `MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5`) |
 | player can update own object transform | A small move (within the desync threshold) is accepted near the target |
 | player cannot move another player's object | Authority check: a user cannot move someone else's player |
 | objects are removed when user leaves room | A player object is cleaned up when its user leaves |
@@ -56,6 +56,14 @@ This document catalogs all integration test scenarios organized by category.
 | duplicate add to occupied layer is rejected | A second add to an occupied layer is rejected |
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
+
+## Single-Player Mode (`single-player.test.ts`) — 3 tests
+
+| Test | What it verifies |
+|------|-----------------|
+| joining a single-player room loads it without registering a participant | A `SinglePlayer` room loads, but the user is not a room participant (player is client-driven) and the socket context is flagged `isInSinglePlayerRoom` |
+| does not persist lastRoomID when joining a single-player room | `lastRoomID` stays empty — single-player rooms are re-entered via `user.singlePlayerMode` |
+| joining a multiplayer room still registers the user as a participant | A Hub join registers the user (participant count 1) and leaves `isInSinglePlayerRoom` false |
 
 ## Signal Emission (`signals.test.ts`) — 6 tests
 
@@ -281,6 +289,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room | 9 |
 | Object | 8 |
 | Voxel | 9 |
+| Single-Player | 3 |
 | Signals | 6 |
 | Permissions | 5 |
 | Extended Permissions | 16 |
@@ -290,4 +299,4 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 16 |
-| **Total** | **149** |
+| **Total** | **152** |

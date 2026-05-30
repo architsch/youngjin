@@ -185,33 +185,50 @@ const SocketsServer =
                 // Determine which room the user should join.
                 // Priority:
                 //   1. targetRoomID from socket handshake (URL-based room access: /:roomID)
-                //   2. user.lastRoomID (the room the user was last in)
-                //   3. Hub room (fallback)
+                //   2. Singleplayer room (if the user is in singleplayer mode)
+                //   3. user.lastRoomID (the room the user was last in)
+                //   4. Hub room (fallback)
                 const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
-                const preferredRoomID = (targetRoomID && targetRoomID.length > 0)
-                    ? targetRoomID
-                    : user.lastRoomID;
+                
+                let preferredRoomID: string;
+                let fallbackRoomType = RoomTypeEnumMap.Hub;
+
+                if (targetRoomID && targetRoomID.length > 0) // roomID was specified in the URL
+                {
+                    preferredRoomID = targetRoomID;
+                    fallbackRoomType = RoomTypeEnumMap.Hub;
+                }
+                else if (user.singlePlayerMode != "") // user is in singleplayer mode.
+                {
+                    preferredRoomID = "";
+                    fallbackRoomType = RoomTypeEnumMap.SinglePlayer;
+                }
+                else
+                {
+                    preferredRoomID = user.lastRoomID; // = "" if the user hasn't visited any multiplayer room yet.
+                    fallbackRoomType = RoomTypeEnumMap.Hub;
+                }
 
                 if (!(await ServerRoomManager.changeUserRoom(socketUserContext, preferredRoomID, false, false)))
                 {
                     // Check in-memory rooms first to avoid a Firestore query
-                    let hubRoomID: string | undefined;
+                    let fallbackRoomID: string | undefined;
                     for (const [roomID, mem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
                     {
-                        if (mem.room.roomType === RoomTypeEnumMap.Hub)
+                        if (mem.room.roomType === fallbackRoomType)
                         {
-                            hubRoomID = roomID;
+                            fallbackRoomID = roomID;
                             break;
                         }
                     }
-                    if (!hubRoomID)
+                    if (!fallbackRoomID)
                     {
-                        const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
+                        const roomSearchResult = await DBSearchUtil.rooms.withRoomType(fallbackRoomType);
                         if (roomSearchResult.success && roomSearchResult.data.length > 0)
-                            hubRoomID = roomSearchResult.data[0].id as string;
+                            fallbackRoomID = roomSearchResult.data[0].id as string;
                     }
-                    if (hubRoomID)
-                        await ServerRoomManager.changeUserRoom(socketUserContext, hubRoomID, false, false);
+                    if (fallbackRoomID)
+                        await ServerRoomManager.changeUserRoom(socketUserContext, fallbackRoomID, false, false);
                 }
             } catch (err) {
                 console.error(`Exception while establishing a socket connection with a client :: Error: ${ErrorUtil.getErrorMessage(err)}`);

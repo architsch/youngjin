@@ -1,7 +1,6 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
 import Room from "../../room/types/room";
-import { RoomTypeEnumMap } from "../../room/types/roomType";
-import { UserRole, UserRoleEnumMap } from "../../user/types/userRole";
+import { UserRole } from "../../user/types/userRole";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
@@ -9,12 +8,13 @@ import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUti
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Vector3DUtil from "../../math/util/vector3DUtil";
 import Vec3 from "../../math/types/vec3";
+import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
 const VoxelUpdateUtil =
 {
     canAddVoxelBlock(userRole: UserRole, room: Room, quadIndex: number): boolean
     {
-        if (!canUserEditVoxel(userRole, room))
+        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -25,7 +25,7 @@ const VoxelUpdateUtil =
             return false;
         if (row < 0 || col < 0 || row >= NUM_VOXEL_ROWS || col >= NUM_VOXEL_COLS)
             return false;
-        if (Math.abs(col - ENTRANCE_VOXEL_COL) <= 1 && Math.abs(row - ENTRANCE_VOXEL_ROW) <= 1)
+        if (Math.abs(col - MULTI_PLAYER_ENTRANCE_VOXEL_COL) <= 1 && Math.abs(row - MULTI_PLAYER_ENTRANCE_VOXEL_ROW) <= 1)
             return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
@@ -61,7 +61,7 @@ const VoxelUpdateUtil =
 
     canRemoveVoxelBlock(userRole: UserRole, room: Room, quadIndex: number): boolean
     {
-        if (!canUserEditVoxel(userRole, room))
+        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -72,7 +72,7 @@ const VoxelUpdateUtil =
             return false;
         if (row < 0 || col < 0 || row >= NUM_VOXEL_ROWS || col >= NUM_VOXEL_COLS)
             return false;
-        if (Math.abs(col - ENTRANCE_VOXEL_COL) <= 1 && row == ENTRANCE_VOXEL_ROW)
+        if (Math.abs(col - MULTI_PLAYER_ENTRANCE_VOXEL_COL) <= 1 && row == MULTI_PLAYER_ENTRANCE_VOXEL_ROW)
             return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
@@ -132,7 +132,7 @@ const VoxelUpdateUtil =
     canMoveVoxelBlock(userRole: UserRole, room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
     {
-        if (!canUserEditVoxel(userRole, room))
+        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -205,7 +205,7 @@ const VoxelUpdateUtil =
 
     canSetVoxelQuadTexture(userRole: UserRole, room: Room, quadIndex: number): boolean
     {
-        if (!canUserEditVoxel(userRole, room))
+        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -244,15 +244,6 @@ const VoxelUpdateUtil =
         return true;
     },
 };
-
-function canUserEditVoxel(userRole: UserRole, room: Room): boolean
-{
-    if (userRole === UserRoleEnumMap.Owner || userRole === UserRoleEnumMap.Editor)
-        return true;
-    if (room.roomType === RoomTypeEnumMap.Hub)
-        return true;
-    return false;
-}
 
 function updateAllVoxelBlockSides(voxels: Voxel[], voxel: Voxel, collisionLayer: number,
     quadTextureIndicesWithinLayer?: number[])

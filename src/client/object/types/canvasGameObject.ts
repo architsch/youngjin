@@ -11,6 +11,8 @@ import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/image/util/imageMapUtil";
+import { clientFeatureFlagsObservable } from "../../system/clientObservables";
+import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -75,6 +77,9 @@ export default class CanvasGameObject extends GameObject
 
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectSelection))
+            return;
+
         const player = ClientObjectManager.getMyPlayer();
         if (player == undefined)
         {

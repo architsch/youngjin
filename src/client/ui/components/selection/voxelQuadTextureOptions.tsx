@@ -7,6 +7,7 @@ import App from "../../../app";
 import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 import VoxelGameObject from "../../../object/types/voxelGameObject";
 import useMouseDragScroll from "../../util/mouseDragScroll";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
@@ -44,7 +45,9 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                 if (ClientVoxelManager.setVoxelQuadTexture(room, quadIndex, textureIndex))
                 {
                     voxelQuadSelectionObservable.notify();
-                    SocketsClient.emitSetVoxelQuadTextureSignal(new SetVoxelQuadTextureSignal(room.id, quadIndex, textureIndex));
+
+                    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+                        SocketsClient.emitSetVoxelQuadTextureSignal(new SetVoxelQuadTextureSignal(room.id, quadIndex, textureIndex));
                 }
             };
             return <AtlasCellSprite

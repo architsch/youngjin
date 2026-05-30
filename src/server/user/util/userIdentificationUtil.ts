@@ -123,7 +123,7 @@ async function getUserFromReq(req: Request, res: Response, updateLoginStats: boo
 
     UserTokenUtil.addTokenForUserId(guestId, req, res);
 
-    return new User(guestId, guestName, UserTypeEnumMap.Guest, "", 0);
+    return new User(guestId, guestName, UserTypeEnumMap.Guest, "", "tutorial");
 }
 
 export default UserIdentificationUtil;

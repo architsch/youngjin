@@ -47,8 +47,8 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
 
     const defaultTexturePackPath = "default";
     const createResult = await DBRoomUtil.createRoom(
-        RoomTypeEnumMap.Regular, user.id, dbUser.userName, 0, 1, 2, defaultTexturePackPath
-    );
+        "", RoomTypeEnumMap.Regular, user.id, dbUser.userName, defaultTexturePackPath);
+
     if (!createResult.success || createResult.data.length === 0)
     {
         res.status(500).send("Failed to create room.");

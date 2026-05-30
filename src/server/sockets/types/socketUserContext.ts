@@ -11,6 +11,7 @@ export default class SocketUserContext
 {
     socket: socketIO.Socket;
     user: User;
+    isInSinglePlayerRoom: boolean = false;
 
     private pendingSignalsToUserByTypeIndex: Array<EncodableData[]>;
     private throttleTimestamps: {[signalType: string]: number} = {};

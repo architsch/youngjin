@@ -7,6 +7,7 @@ import GameObject from "../types/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import App from "../../app";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 
 const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
 
@@ -22,6 +23,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
     private lastSyncedPosition: THREE.Vector3 = new THREE.Vector3();
     private lastSyncedRotation: THREE.Euler = new THREE.Euler();
     private roomID: string;
+    private updateEnabled: boolean = false;
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
@@ -43,8 +45,16 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
         this.roomID = App.getCurrentRoom()!.id;
     }
 
+    async onSpawn(): Promise<void>
+    {
+        this.updateEnabled = App.getCurrentRoom()!.roomType != RoomTypeEnumMap.SinglePlayer;
+    }
+
     update(deltaTime: number)
     {
+        if (!this.updateEnabled)
+            return;
+
         const currTime = performance.now();
         if (currTime - this.lastSyncTime > syncIntervalInMillis)
         {

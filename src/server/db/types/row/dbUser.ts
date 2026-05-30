@@ -8,7 +8,7 @@ export default interface DBUser extends DBRow
     userName: string;
     userType: UserType;
     email: string;
-    tutorialStep: number;
+    singlePlayerMode: string; // "" if not in singlePlayer mode.
     lastRoomID: string;
     lastLoginAt: number;
     createdAt: number;

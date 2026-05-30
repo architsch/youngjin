@@ -63,7 +63,8 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             if (!entry) return null;
             return {
                 id: roomID,
-                version: 2,
+                version: 3,
+                roomName: entry.room?.roomName ?? "",
                 roomType: entry.roomType,
                 ownerUserID: entry.ownerUserID,
                 ownerUserName: entry.ownerUserName,
@@ -93,7 +94,18 @@ vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
     default: {
         rooms: {
             all: vi.fn(async () => ({ success: true, data: [] })),
-            withRoomType: vi.fn(async () => ({ success: true, data: [] })),
+            withRoomType: vi.fn(async (roomType: number) => ({
+                success: true,
+                data: Object.entries(_roomStore)
+                    .filter(([, entry]) => entry.roomType === roomType)
+                    .map(([roomID, entry]) => ({ id: roomID, roomType: entry.roomType })),
+            })),
+            withRoomNameAndType: vi.fn(async (roomName: string, roomType: number) => ({
+                success: true,
+                data: Object.entries(_roomStore)
+                    .filter(([, entry]) => entry.room?.roomName === roomName && entry.roomType === roomType)
+                    .map(([roomID, entry]) => ({ id: roomID, roomType: entry.roomType })),
+            })),
         },
         users: {
             all: vi.fn(async () => ({ success: true, data: [] })),
@@ -138,7 +150,7 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
             }
         }),
         createUser: vi.fn(async () => ({ success: true, data: [{ id: "user-auto" }] })),
-        setUserTutorialStep: vi.fn(async () => ({ success: true, data: [] })),
+        setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
         deleteStaleGuestsByTier: vi.fn(async () => 0),
         deleteUser: vi.fn(async () => ({ success: true, data: [] })),
         fromDBType: vi.fn((u: any) => u),
@@ -336,7 +348,7 @@ export const harness = {
             userName: user.userName,
             userType: user.userType,
             email: user.email,
-            tutorialStep: user.tutorialStep,
+            singlePlayerMode: user.singlePlayerMode,
             lastRoomID: user.lastRoomID,
             ownedRoomID: user.ownedRoomID,
             playerMetadata,

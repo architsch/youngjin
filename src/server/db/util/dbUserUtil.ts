@@ -6,7 +6,6 @@ import DBUserVersionMigration from "../types/versionMigration/dbUserVersionMigra
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
-import { FIRST_TUTORIAL_STEP } from "../../../shared/system/sharedConstants";
 import { FieldValue } from "firebase-admin/firestore";
 import { COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE } from "../../system/serverConstants";
 
@@ -21,7 +20,7 @@ const DBUserUtil =
             userName,
             userType,
             email,
-            tutorialStep: FIRST_TUTORIAL_STEP,
+            singlePlayerMode: "tutorial",
             lastRoomID: "",
             lastLoginAt: Date.now(),
             createdAt: Date.now(),
@@ -47,12 +46,12 @@ const DBUserUtil =
             return null;
         return result.data[0];
     },
-    setUserTutorialStep: async (userID: string, tutorialStep: number): Promise<DBQueryResponse<DBRow>> =>
+    setSinglePlayerMode: async (userID: string, singlePlayerMode: string): Promise<DBQueryResponse<DBRow>> =>
     {
-        LogUtil.log("DBUserUtil.setUserTutorialStep", {userId: userID, tutorialStep}, "low", "info");
+        LogUtil.log("DBUserUtil.setSinglePlayerMode", {userId: userID, singlePlayerMode}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update(COLLECTION_USERS)
-            .set({"tutorialStep": tutorialStep})
+            .set({"singlePlayerMode": singlePlayerMode})
             .where("id", "==", userID)
             .run();
         return result;
@@ -182,7 +181,7 @@ const DBUserUtil =
             dbUser.userName,
             dbUser.userType,
             dbUser.email,
-            dbUser.tutorialStep,
+            dbUser.singlePlayerMode,
             dbUser.lastRoomID ?? "",
             dbUser.ownedRoomID ?? ""
         );

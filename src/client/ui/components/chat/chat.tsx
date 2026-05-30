@@ -37,7 +37,6 @@ export default function Chat({hide}: Props)
             const metadata = playerObj.metadata[ObjectMetadataKeyEnumMap.SentMessage];
             const metadataValue = metadata ? metadata.str : "";
             setState(prev => ({...prev, sentMessage: metadataValue}));
-
         });
         return () => { roomChangedObservable.removeListener("ui_chat"); };
     }, []);

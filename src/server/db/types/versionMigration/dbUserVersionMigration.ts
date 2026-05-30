@@ -8,6 +8,12 @@ const DBUserVersionMigration: DBVersionMigration = [
         delete row.totalPlaytimeMs;
         return row;
     },
+    // v1 -> v2: drop "tutorialStep" and add "singlePlayerMode".
+    async (row: any) => {
+        row.singlePlayerMode = (row.tutorialStep > 0) ? "" : "tutorial";
+        delete row.tutorialStep;
+        return row;
+    },
 ];
 
 export default DBUserVersionMigration;

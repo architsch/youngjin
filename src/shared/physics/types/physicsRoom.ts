@@ -1,10 +1,11 @@
 import Room from "../../room/types/room";
-import { ENTRANCE_VOXEL_COL, ENTRANCE_VOXEL_ROW, MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import PhysicsObject from "./physicsObject";
 import PhysicsVoxel from "./physicsVoxel";
 import { ColliderState } from "./colliderState";
 import { ColliderConfig } from "./colliderConfig";
 import Vec3 from "../../math/types/vec3";
+import { RoomTypeEnumMap } from "../../room/types/roomType";
 
 export default class PhysicsRoom
 {
@@ -18,7 +19,9 @@ export default class PhysicsRoom
         this.room = room;
         this.voxels = room.voxelGrid.voxels.map(voxel => new PhysicsVoxel(voxel));
         this.objectById = {};
-        this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ, entrance];
+        this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ];
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer) // Invisible entrance-clearance collider is only used in multiplayer rooms (to prevent other players from completely blocking the entrance door).
+            this.globalColliders.push(entrance);
     }
 }
 
@@ -58,7 +61,7 @@ const wall_upperZ = makeCubeCollider(
 
 const entrance: ColliderState = {
     hitbox: {
-        center: {x: ENTRANCE_VOXEL_COL + 0.5, y: MID_ROOM_Y, z: ENTRANCE_VOXEL_ROW},
+        center: {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: MID_ROOM_Y, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW},
         halfSize: {x: 0.5, y: 0.5*MAX_ROOM_Y, z: 1},
     },
     colliderConfig: {

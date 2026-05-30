@@ -6,6 +6,7 @@ import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerUserManager from "../user/serverUserManager";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 let nonPersistentObjectIdCounter = 0;
 
@@ -59,8 +60,9 @@ const ServerObjectManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        const room = roomRuntimeMemory.room;
 
-        const result = ObjectUpdateUtil.setObjectTransform(user, userRole, roomRuntimeMemory.room, signal);
+        const result = ObjectUpdateUtil.setObjectTransform(user, userRole, room, signal);
 
         // If desync was detected,
         //      Broadcast to everyone (including the sender).
@@ -84,7 +86,8 @@ const ServerObjectManager =
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         const room = roomRuntimeMemory.room;
-        const obj = room.objectById[signal.objectId];
+
+        const obj = room.objectById[signal.objectId];        
 
         if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal))
         {

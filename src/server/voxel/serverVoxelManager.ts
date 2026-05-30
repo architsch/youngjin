@@ -9,6 +9,7 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOX
 import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerUserManager from "../user/serverUserManager";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 const ServerVoxelManager =
 {
