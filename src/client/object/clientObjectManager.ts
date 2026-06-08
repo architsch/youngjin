@@ -66,7 +66,7 @@ const ClientObjectManager =
 
         if (room.roomType != RoomTypeEnumMap.SinglePlayer) // Spawn the entrance door only if it is a multiplayer room.
         {
-            await ClientObjectUtil.spawnEntranceDoor(room);
+            await ClientObjectUtil.spawnMultiplayerEntranceDoor(room);
 
             // Find the player's initial position for distance-based loading order
             for (const obj of Object.values(room.objectById))

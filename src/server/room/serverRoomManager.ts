@@ -111,7 +111,8 @@ const ServerRoomManager =
         const roomsToSave: RoomRuntimeMemory[] = [];
         for (const roomRuntimeMemory of Object.values(roomRuntimeMemories))
         {
-            if (roomRuntimeMemory.room.dirty &&
+            if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer &&
+                roomRuntimeMemory.room.dirty &&
                 (force || currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_AUTO_SAVE_INTERVAL))
             {
                 roomsToSave.push(roomRuntimeMemory);

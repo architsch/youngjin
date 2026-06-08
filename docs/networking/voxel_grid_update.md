@@ -2,35 +2,33 @@
 
 Reference: @src/shared/voxel/util/voxelUpdateUtil.ts , @src/server/voxel/serverVoxelManager.ts , @src/client/voxel/clientVoxelManager.ts
 
-## Add Voxel Block
+All voxel edits follow the same optimistic pattern: the client validates and applies the change locally through `VoxelUpdateUtil`, emits a signal, and the server re-validates through the same shared utility before relaying the change. On failure the server sends a compensating signal that reverts the client's optimistic change.
 
-1. The client calls `ClientVoxelManager.addVoxelBlock`, which delegates to `VoxelUpdateUtil.addVoxelBlock` to validate and optimistically apply the add. If successful, the client emits an `AddVoxelBlockSignal` to the server.
-2. The server receives the signal. `ServerVoxelManager` obtains the user role and delegates to `VoxelUpdateUtil.addVoxelBlock` for validation and state mutation.
-    - If it succeeds: the server multicasts the signal to everyone except the sender.
-    - If it fails: the server unicasts a `RemoveVoxelBlockSignal` back to the sender to revert the optimistic add.
+## Add Voxel Block
+1. The client validates, applies the add, and emits an `AddVoxelBlockSignal`.
+2. The server re-validates and applies it.
+    - **On success:** relays the signal to everyone else.
+    - **On failure:** sends a `RemoveVoxelBlockSignal` back to the sender to undo the add.
 
 ## Remove Voxel Block
-
-1. The client calls `ClientVoxelManager.removeVoxelBlock`, which delegates to `VoxelUpdateUtil.removeVoxelBlock` to validate and optimistically remove the block. If successful, the client emits a `RemoveVoxelBlockSignal` to the server.
-2. The server captures the block's texture state (for potential recovery) and calls `VoxelUpdateUtil.removeVoxelBlock`.
-    - If it succeeds: the server multicasts the signal to everyone except the sender.
-    - If it fails: the server unicasts an `AddVoxelBlockSignal` (with the captured texture state) back to the sender to revert the optimistic removal.
+1. The client validates, removes the block, and emits a `RemoveVoxelBlockSignal`.
+2. The server captures the block's texture state (for possible recovery) and re-validates.
+    - **On success:** relays the signal to everyone else.
+    - **On failure:** sends an `AddVoxelBlockSignal` (carrying the captured textures) back to the sender to restore the block.
 
 ## Move Voxel Block
-
-1. The client calls `ClientVoxelManager.moveVoxelBlock`, which delegates to `VoxelUpdateUtil.moveVoxelBlock` to validate and optimistically apply the move. If successful, the client emits a `MoveVoxelBlockSignal` to the server.
-2. The server captures the source block's texture state and calls `VoxelUpdateUtil.moveVoxelBlock`.
-    - If it succeeds: the server multicasts the signal to everyone except the sender.
-    - If it fails: the server unicasts a `RemoveVoxelBlockSignal` (for the target position) followed by an `AddVoxelBlockSignal` (for the source position with original textures) back to the sender to revert the optimistic move.
+1. The client validates, applies the move, and emits a `MoveVoxelBlockSignal`.
+2. The server captures the source block's texture state and re-validates.
+    - **On success:** relays the signal to everyone else.
+    - **On failure:** sends signals back to the sender that remove the block at the target and restore it (with its original textures) at the source.
 
 ## Set Voxel Quad Texture
-
-1. The client calls `ClientVoxelManager.setVoxelQuadTexture`, which delegates to `VoxelUpdateUtil.setVoxelQuadTexture` to validate and optimistically apply the texture change. If successful, the client emits a `SetVoxelQuadTextureSignal` to the server.
-2. The server captures the old texture index and calls `VoxelUpdateUtil.setVoxelQuadTexture`.
-    - If it succeeds: the server multicasts the signal to everyone except the sender.
-    - If it fails: the server unicasts a `SetVoxelQuadTextureSignal` (with the old texture index) back to the sender to revert the optimistic change.
+1. The client validates, applies the texture change, and emits a `SetVoxelQuadTextureSignal`.
+2. The server captures the old texture and re-validates.
+    - **On success:** relays the signal to everyone else.
+    - **On failure:** sends the signal back to the sender carrying the old texture, reverting the change.
 
 ## Permission Enforcement
-All voxel operations pass the user's role to `VoxelUpdateUtil` for permission checking:
-- **Hub rooms**: All users can edit voxels regardless of role.
-- **Regular rooms**: Only the room Owner and users with the Editor role can edit voxels. Visitors receive rollback signals for any attempted edits.
+Every voxel operation is checked against the user's role:
+- **Hub rooms:** any user may edit voxels.
+- **Regular rooms:** only the Owner and Editors may edit; a Visitor's attempts are rejected and rolled back.

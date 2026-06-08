@@ -2,7 +2,7 @@ import Room from "../../../shared/room/types/room";
 import RoomGenerationUtil from "../../../shared/room/util/roomGenerationUtil";
 import DBRoom from "../types/row/dbRoom";
 import DBRoomEditor from "../types/row/dbRoomEditor";
-import { RoomType } from "../../../shared/room/types/roomType";
+import { RoomType, RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import DBQuery from "../types/dbQuery";
 import { DBRow } from "../types/row/dbRow";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
@@ -45,15 +45,20 @@ const DBRoomUtil =
             return null;
         return result.data[0];
     },
-    saveRoomContent: async (room: Room): Promise<boolean> =>
+    saveRoomContent: async (room: Room, forceSaveNonPersistentObjects: boolean = false): Promise<boolean> =>
     {
         LogUtil.log("DBRoomUtil.saveRoomContent", {roomID: room.id}, "low", "info");
         const bufferState = EncodingUtil.startEncoding();
         room.voxelGrid.encode(bufferState);
 
         // Encode only persistent objects when saving the room's data to file storage
-        const persistentObjects = Object.values(room.objectById)
-            .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
+        // (except in case of first-time save (e.g. right after initial room generation),
+        // in which case the non-persistent objects should be taken as part of the
+        // room's intrinsic content and thus should not be discarded)
+        const persistentObjects = forceSaveNonPersistentObjects
+            ? Object.values(room.objectById)
+            : Object.values(room.objectById)
+                .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
         new ObjectGroup(persistentObjects).encode(bufferState);
 
         const buffer = Buffer.from(EncodingUtil.endEncoding(bufferState));
@@ -96,7 +101,7 @@ const DBRoomUtil =
         }
         room.id = roomInsertResult.data[0].id;
 
-        const contentSaved = await DBRoomUtil.saveRoomContent(room);
+        const contentSaved = await DBRoomUtil.saveRoomContent(room, true);
         if (!contentSaved)
             return {success: false, data: []};
 

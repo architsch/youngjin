@@ -11,6 +11,7 @@ import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import SetUserRoleSignal from "../../shared/user/types/setUserRoleSignal";
 import DBUserUtil from "../db/util/dbUserUtil";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
@@ -137,7 +138,8 @@ const ServerUserManager =
         if (savePlayerMetadata && metadataSnapshot)
             await DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot);
 
-        if (Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
+        if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer &&
+            Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
             {

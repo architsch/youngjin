@@ -5,10 +5,11 @@ import ChatSentMessage from "./chatSentMessage";
 import ClientObjectManager from "../../../object/clientObjectManager";
 import SpeechBubble from "../../../object/components/speechBubble";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import { roomChangedObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, roomChangedObservable } from "../../../system/clientObservables";
 import App from "../../../app";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import AsyncUtil from "../../../../shared/system/util/asyncUtil";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 export default function Chat({hide}: Props)
 {
@@ -46,6 +47,9 @@ export default function Chat({hide}: Props)
     };
 
     const sendMessage = (str: string) => {
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableChatSend))
+            return;
+
         const message = str.trim();
         if (message.length == 0)
             return;

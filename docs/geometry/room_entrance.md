@@ -1,71 +1,54 @@
 # Room Entrance Structure
 
-Reference: @src/shared/system/sharedConstants.ts , @src/shared/room/util/roomGenerationUtil.ts , @src/shared/room/util/roomGenerationHelperUtil.ts , @src/shared/voxel/util/voxelUpdateUtil.ts , @src/shared/voxel/types/voxelGrid.ts , @src/shared/physics/types/physicsRoom.ts , @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/client/object/types/doorGameObject.ts , @src/client/object/clientObjectManager.ts , @src/server/room/serverRoomManager.ts
+Reference: @src/shared/room/util/roomValidationUtil.ts , @src/shared/physics/types/physicsRoom.ts , @src/client/object/util/clientObjectUtil.ts
 
 ## Overview
 
-Every room has exactly one **entrance** — a fixed doorway in the room's boundary wall through which every player enters. It is the single gateway used to travel between rooms.
+Every room has exactly one **entrance** — a fixed doorway in one of the room's boundary walls, through which every player enters. It is the single gateway for traveling between rooms, and players always spawn here when they enter or switch rooms.
 
-The entrance is anchored to one voxel cell. For multi-player rooms (Hub/Regular) it is identified by the constants `MULTI_PLAYER_ENTRANCE_VOXEL_COL` (16) and `MULTI_PLAYER_ENTRANCE_VOXEL_ROW` (31); single-player rooms use `SINGLE_PLAYER_ENTRANCE_VOXEL_COL` (16) / `SINGLE_PLAYER_ENTRANCE_VOXEL_ROW` (30) instead (see [single_player_mode.md](../networking/single_player_mode.md)). The rest of this section describes the multi-player entrance. Because row 31 is the last row (`NUM_VOXEL_ROWS - 1`), the multi-player entrance sits in the middle of the room's upper-Z boundary wall.
+The entrance is anchored to one voxel cell, positioned along the middle of a boundary wall. Three things occupy that cell:
 
-Three things occupy this cell:
-1. A **doorway opening** carved into the boundary wall, so the wall reads as an open passage.
-2. An invisible **entrance collider** that plugs the opening, so players cannot physically walk out through it.
+1. A **doorway opening** carved into the boundary wall during room generation, so the wall reads as an open passage (see [room_generation.md](room_generation.md)).
+2. An invisible **entrance collider** that plugs the opening, so players cannot physically walk out of the room through it.
 3. A clickable **Door object** rendered on the inner wall face — the interactive gateway to other rooms.
 
-Players always spawn at this cell when they enter or switch rooms.
+Multi-player rooms (Hub/Regular) and single-player rooms each place the entrance at their own fixed cell; for a single-player room the location comes from that mode's configuration (see [single_player_mode.md](../networking/single_player_mode.md)).
 
-## Coordinates & Spawning
+## Player Spawning
 
-- Grid axes: column → +x, row → +z. Voxel `(row, col)` spans `x ∈ [col, col+1]`, `z ∈ [row, row+1]`.
-- Entrance cell center (XZ): `(MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5)` = `(16.5, 31.5)`.
-- **Player spawn** (`ServerRoomManager.changeUserRoom`): `{x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5 × PLAYER_HEIGHT, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5}`. There is no longer any per-user "last position"; every entry and room switch places the player here (see [user_state_management.md](../networking/user_state_management.md)).
-- **Door object** (`ClientObjectUtil.spawnEntranceDoor`): positioned at `{x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW}`, facing `-z` (into the room). `z = 31` is the inner face of the boundary wall.
+Players always spawn just inside the entrance cell. There is no per-user "last position" — every entry and every room switch places the player at the entrance (see [user_state_management.md](../networking/user_state_management.md)).
 
-## The Doorway Opening (carving the wall)
+## The Entrance Collider
 
-`RoomGenerationUtil.generateRoom` (via `generateMultiplayerRoom`) builds the room's perimeter walls, then hollows out the entrance so the player is not blocked the moment they spawn:
-
-- `RoomGenerationHelperUtil.removeWall(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL, 0, 4)` clears collision layers 0–4 of the entrance voxel, leaving layers 5–7 solid as a lintel above the opening.
-
-Rooms persisted before this feature are patched by the `VoxelGrid` encoder's **version 0 → 1 converter** (`voxelGrid.ts`): it fills the four corner cells and carves the same entrance opening, so existing rooms gain a valid entrance the next time they are loaded.
-
-## The Entrance Collider (plugging the opening)
-
-Carving the wall would otherwise let players walk straight out of the room into empty space. To prevent that, `PhysicsRoom` adds an invisible `entrance` collider over the opening:
-
-- Centered at `{x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: MID_ROOM_Y, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW}` with half-size `{0.5, 0.5 × MAX_ROOM_Y, 1}` — one voxel wide, full room height, two voxels deep (reaching one cell into the room).
-- It is a hard collider (`applyHardCollisionToOthers: true`) with zero soft-collision force, so it stops the player roughly one cell short of the doorway without pushing them around.
-
-The `entrance` collider is part of the room's `globalColliders` set, alongside the floor, ceiling, and four perimeter walls (see [physics.md](physics.md#global-colliders-room-boundaries)). The net effect: the entrance looks like an open doorway but is sealed against walk-through — the only way out is to interact with the Door.
+Because the doorway opening is a real gap in the boundary wall, a player could otherwise walk straight out of the room into empty space. To prevent that, `PhysicsRoom` seals the opening with an invisible collider. It blocks movement without applying any soft push, so it stops the player just short of the doorway rather than nudging them around. It belongs to the room's set of boundary colliders, alongside the floor, ceiling, and perimeter walls (see [physics.md](physics.md#global-colliders-room-boundaries)). The net effect: the entrance looks like an open doorway but is sealed against walk-through — the only way out is to interact with the Door.
 
 ## The Door Object
 
-The door is the `Door` GameObject type (`DoorObjectTypeConfig`, object type index 3):
+The door is its own GameObject type. It is **client-only and non-persistent**: each client spawns its own Door locally during room load, and it is never written to the database nor sent over the network (see [Local-Only Objects](../networking/object_update.md#local-only-objects)). Players cannot create, delete, move, or re-skin it.
 
-- **Non-persistent and client-only.** Each client spawns its own Door locally during room load (`ClientObjectManager.spawnDoor`), with `addToRoomData = false` and a `#`-prefixed client-only id. It is never written to the DB nor sent over the network (see [Local-Only Objects](../networking/object_update.md#local-only-objects-addtoroomdata--removefromroomdata)). All of `canUserAddObject` / `canUserRemoveObject` / `canUserSetObjectTransform` / `canUserSetObjectMetadata` return `false`, so players cannot create, delete, move, or re-skin it.
-- **Appearance.** A flat textured square (`meshGraphics`, `door.webp`) sized to the doorway and mounted on the inner wall face.
-- **Collider.** A thin pass-through collider matching the mesh footprint (`applyHardCollisionToOthers: false`) — the wall and entrance collider behind it already block the player, so the door itself does not need to.
-- **Interaction.** A `playerProximityDetector` (`maxDist` 3.5, `maxLookAngle` 0.25π) drives a `speechBubble`:
-  - On proximity start the door shows **"Click to Enter"**; on proximity end it clears the message.
-  - Clicking the door *while in proximity* opens the room-list popup (`PopupUtil.openPopup({popupType: "roomList"})`), from which the player picks another room to travel to. Clicking out of proximity does nothing.
+- **Appearance.** A flat textured panel sized to the doorway and mounted on the inner wall face.
+- **Collider.** A thin pass-through collider — the wall and entrance collider behind it already block the player, so the door itself does not need to.
+- **Interaction.** When the player is close enough and looking at it, the door prompts them to enter. Clicking it then opens the room-list popup, from which the player picks another room to travel to. (In single-player mode a feature flag can instead send the player straight to a hub — see [single_player_mode.md](../networking/single_player_mode.md#door-behavior).) Clicking out of proximity does nothing.
 
-## Constraints Near the Entrance
+## Editing Constraints Near the Entrance
+
+To keep the entrance functional, voxel editing is restricted in the cells around it (enforced by `RoomValidationUtil`). Two distinct zones apply:
+
+- A **no-addition zone**, where players cannot place new voxel blocks. This keeps the spawn area and the approach to the doorway from being walled in.
+- A **no-removal zone**, where players cannot remove voxel blocks. This keeps the wall structure framing the doorway intact.
 
 ### Regular Room (Multiplayer)
 
 ![Entrance Constraints of a Multiplayer Room (Regular)](figures/entrance_voxel_constraints_1.jpg)
 
-(TODO: Add Explanations)
+In a Regular room the protected zones are kept tight: the no-addition zone covers the entrance cell and its immediate neighbors, and the no-removal zone covers just the entrance's own row. Owners and editors are otherwise free to build right up to the edge of the entrance area.
 
 ### Hub Room (Multiplayer)
 
 ![Entrance Constraints of a Multiplayer Room (Hub)](figures/entrance_voxel_constraints_2.jpg)
 
-(TODO: Add Explanations)
+A Hub is a shared thoroughfare with heavy foot traffic, so its no-addition zone reaches further into the room than a Regular room's, reserving a larger clear area in front of the entrance so that arriving players are never boxed in. Its no-removal zone is the same as a Regular room's.
 
 ### Singleplayer Room
 
-![Entrance Constraints of a Singleplayer Room](figures/entrance_voxel_constraints_3.jpg)
-
-(TODO: Add Explanations)
+A single-player room has no entrance editing constraints. Editing there is purely local and never persisted, and the room is rebuilt from its template each session, so there is nothing to protect — the player may build freely anywhere. This lets a tutorial teach building without restriction.

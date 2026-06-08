@@ -74,9 +74,6 @@ export default class VoxelGameObject extends GameObject
     // hit by the user's pointer input.
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelQuadSelection))
-            return;
-
         const player = ClientObjectManager.getMyPlayer();
         if (player == undefined)
         {

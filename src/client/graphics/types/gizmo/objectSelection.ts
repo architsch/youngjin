@@ -1,11 +1,12 @@
 import * as THREE from "three";
 import GameObject from "../../../object/types/gameObject";
-import { objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable } from "../../../system/clientObservables";
 import VoxelQuadSelection from "./voxelQuadSelection";
 import MeshFactory from "../../factories/meshFactory";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 export default class ObjectSelection
 {
@@ -23,6 +24,8 @@ export default class ObjectSelection
 
     static trySelect(gameObject: GameObject): boolean
     {
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange))
+            return false;
         const existingSelection = objectSelectionObservable.peek();
 
         if (existingSelection == null) // There was no selection before.
@@ -47,6 +50,8 @@ export default class ObjectSelection
 
     static unselect()
     {
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange))
+            return;
         objectSelectionObservable.set(null);
     }
 }

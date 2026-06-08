@@ -77,9 +77,6 @@ export default class CanvasGameObject extends GameObject
 
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectSelection))
-            return;
-
         const player = ClientObjectManager.getMyPlayer();
         if (player == undefined)
         {

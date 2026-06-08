@@ -30,7 +30,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
 
     const additionalClassNames = "min-h-14 max-h-14 sm:min-h-13 sm:max-h-13 md:min-h-12 md:max-h-12 lg:min-h-11 lg:max-h-11";
 
-    return <div ref={onRefChange} className="flex flex-row gap-2 p-2 w-full overflow-x-auto no-scrollbar pointer-events-auto bg-gray-800/50 rounded-md">
+    return <div id="voxelQuadTextureOptions" ref={onRefChange} className="flex flex-row gap-2 p-2 w-full overflow-x-auto no-scrollbar pointer-events-auto bg-gray-800/50 rounded-md">
         {textureIndices.map((textureIndex) => {
             const col = textureIndex % numCols;
             const row = Math.floor(textureIndex / numCols);

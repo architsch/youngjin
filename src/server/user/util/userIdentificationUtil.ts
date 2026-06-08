@@ -7,6 +7,7 @@ import DBUserUtil from "../../db/util/dbUserUtil";
 import GuestCreationLimitUtil from "./guestCreationLimitUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DevUserSeedUtil from "./devUserSeedUtil";
+import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 
 let cyclicCounter = 0;
 
@@ -123,7 +124,7 @@ async function getUserFromReq(req: Request, res: Response, updateLoginStats: boo
 
     UserTokenUtil.addTokenForUserId(guestId, req, res);
 
-    return new User(guestId, guestName, UserTypeEnumMap.Guest, "", "tutorial");
+    return new User(guestId, guestName, UserTypeEnumMap.Guest, "", TUTORIAL_SINGLE_PLAYER_MODE);
 }
 
 export default UserIdentificationUtil;

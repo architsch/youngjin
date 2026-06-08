@@ -1,7 +1,8 @@
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import Room from "../../../shared/room/types/room";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, SINGLE_PLAYER_ENTRANCE_VOXEL_COL, SINGLE_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../shared/system/sharedConstants";
+import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
 import ObjectFactory from "../factories/objectFactory";
 import GameObject from "../types/gameObject";
@@ -13,6 +14,8 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 const ClientObjectUtil =
 {
+    // Spawn Actions
+
     spawnVoxelsFromGrid: async (room: Room): Promise<void> =>
     {
         for (const voxel of room.voxelGrid.voxels)
@@ -29,7 +32,7 @@ const ClientObjectUtil =
             await ClientObjectManager.addObject(gameObject, false, false);
         }
     },
-    spawnEntranceDoor: async (room: Room): Promise<GameObject> =>
+    spawnMultiplayerEntranceDoor: async (room: Room): Promise<GameObject> =>
     {
         const gameObject = ObjectFactory.createClientSideObject(
             room.id,
@@ -37,23 +40,39 @@ const ClientObjectUtil =
             new ObjectTransform(
                 {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW},
                 {x: 0, y: 0, z: -1}
-            ),
+            )
         );
         await ClientObjectManager.addObject(gameObject, false, false);
         return gameObject;
     },
     spawnSingleModePlayer: async (room: Room): Promise<GameObject> =>
     {
+        const config = SinglePlayerModeConfigMap[room.roomName];
+        const metadata = config.loadMetadata();
         const gameObject = ObjectFactory.createClientSideObject(
             room.id,
             playerTypeIndex,
             new ObjectTransform(
-                {x: SINGLE_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: SINGLE_PLAYER_ENTRANCE_VOXEL_ROW + 0.5},
+                {x: metadata.entranceVoxelCol + 0.5, y: 0.5 * PLAYER_HEIGHT, z: metadata.entranceVoxelRow + 0.5},
                 {x: 0, y: 0, z: 1}
             ),
+            {}, "my_player"
         );
         await ClientObjectManager.addObject(gameObject, false, false);
         return gameObject;
+    },
+
+    // Conditions
+
+    playerIsInCircle: (circleCenterX: number, circleCenterZ: number, circleRadius: number): boolean =>
+    {
+        const myPlayer = ClientObjectManager.getMyPlayer();
+        if (!myPlayer)
+            return false;
+        const dx = circleCenterX - myPlayer.position.x;
+        const dz = circleCenterZ - myPlayer.position.z;
+        const distSqr = dx*dx + dz*dz;
+        return distSqr <= circleRadius*circleRadius;
     },
 }
 

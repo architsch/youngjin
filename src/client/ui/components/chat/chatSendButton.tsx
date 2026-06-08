@@ -25,6 +25,7 @@ export default function ChatSendButton({textInput, sendMessage}
     }, []);
 
     return <button
+        id="chatSendButton"
         className="flex-1 m-1 px-2 py-1 justify-self-end text-center cursor-pointer align-middle border-2 border-green-900 rounded-md text-base text-gray-100 bg-green-700 pointer-events-auto"
         onClick={() => sendMessage(textInput)}>
             Send

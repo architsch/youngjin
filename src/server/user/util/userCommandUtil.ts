@@ -17,8 +17,8 @@ const UserCommandUtil =
 
         switch (commandType)
         {
-            case "finishTutorial":
-                await handleFinishTutorialCommand(user, words, params);
+            case "finishSinglePlayerMode":
+                await handleFinishSinglePlayerModeCommand(user, words, params);
                 break;
             default:
                 LogUtil.log("Unknown user command type", {commandType, params}, "high", "error");
@@ -27,11 +27,11 @@ const UserCommandUtil =
     },
 }
 
-async function handleFinishTutorialCommand(user: User, words: string[], params: UserCommandSignal): Promise<void>
+async function handleFinishSinglePlayerModeCommand(user: User, words: string[], params: UserCommandSignal): Promise<void>
 {
-    if (user.singlePlayerMode != "tutorial")
+    if (user.singlePlayerMode == "")
     {
-        LogUtil.log("Tutorial is already over", {params}, "high", "error");
+        LogUtil.log("SinglePlayerMode is already over", {params}, "high", "error");
         return;
     }
     user.singlePlayerMode = "";

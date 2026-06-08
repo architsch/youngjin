@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import MeshFactory from "../../factories/meshFactory";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -28,6 +29,9 @@ export default class VoxelQuadSelection
 
     static trySelect(voxel: Voxel, quadIndex: number): boolean
     {
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableVoxelQuadSelectionChange))
+            return false;
+
         // If the quadIndex doesn't even make sense, just unselect.
         if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
         {
@@ -65,8 +69,10 @@ export default class VoxelQuadSelection
         }
     }
 
-    static unselect()
+    static unselect(force: boolean = false)
     {
+        if (!force && clientFeatureFlagsObservable.has(FeatureFlag.DisableVoxelQuadSelectionChange))
+            return;
         voxelQuadSelectionObservable.set(null);
     }
 }

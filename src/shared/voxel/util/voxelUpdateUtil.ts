@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../system/sharedConstants";
 import Room from "../../room/types/room";
 import { UserRole } from "../../user/types/userRole";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
@@ -23,9 +23,7 @@ const VoxelUpdateUtil =
 
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
             return false;
-        if (row < 0 || col < 0 || row >= NUM_VOXEL_ROWS || col >= NUM_VOXEL_COLS)
-            return false;
-        if (Math.abs(col - MULTI_PLAYER_ENTRANCE_VOXEL_COL) <= 1 && Math.abs(row - MULTI_PLAYER_ENTRANCE_VOXEL_ROW) <= 1)
+        if (RoomValidationUtil.additionIsBlockedAtCoords(room, col, row))
             return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
@@ -37,7 +35,7 @@ const VoxelUpdateUtil =
         return true;
     },
     addVoxelBlock(userRole: UserRole, voxels: Voxel[], quadIndex: number,
-        quadTextureIndicesWithinLayer: number[],
+        quadTextureIndicesWithinLayer?: number[],
         room?: Room): boolean // Won't validate if the room is not defined (e.g. when generating a brand new room, or force-modifying a room's voxelGrid).
     {
         if (room && !VoxelUpdateUtil.canAddVoxelBlock(userRole, room, quadIndex))
@@ -70,9 +68,7 @@ const VoxelUpdateUtil =
 
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
             return false;
-        if (row < 0 || col < 0 || row >= NUM_VOXEL_ROWS || col >= NUM_VOXEL_COLS)
-            return false;
-        if (Math.abs(col - MULTI_PLAYER_ENTRANCE_VOXEL_COL) <= 1 && row == MULTI_PLAYER_ENTRANCE_VOXEL_ROW)
+        if (RoomValidationUtil.removalIsBlockedAtCoords(room, col, row))
             return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);

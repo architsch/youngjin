@@ -1,3 +1,4 @@
+import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../../shared/system/sharedConstants";
 import { DBVersionMigration } from "./dbVersionMigration";
 
 const DBUserVersionMigration: DBVersionMigration = [
@@ -10,7 +11,7 @@ const DBUserVersionMigration: DBVersionMigration = [
     },
     // v1 -> v2: drop "tutorialStep" and add "singlePlayerMode".
     async (row: any) => {
-        row.singlePlayerMode = (row.tutorialStep > 0) ? "" : "tutorial";
+        row.singlePlayerMode = (row.tutorialStep > 0) ? "" : TUTORIAL_SINGLE_PLAYER_MODE;
         delete row.tutorialStep;
         return row;
     },

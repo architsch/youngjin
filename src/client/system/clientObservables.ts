@@ -67,8 +67,30 @@ export const playerViewTargetPosObservable = new Observable<THREE.Vector3 | null
 // should be displayed to the user (e.g. error messages, status updates).
 export const notificationMessageObservable = new Observable<string | null>(null);
 
+// This observable notifies its listeners whenever the headline message
+// should be displayed to the user (e.g. tutorial instructions).
+export const headlineMessageObservable = new Observable<string | null>(null);
+
+// The DOM element id that the 2D on-screen arrow should point down at, or null to hide it.
+export const screenArrowTargetObservable = new Observable<string | null>(null);
+
+// The DOM element id that the 2D on-screen rectangular outline should surround, or null to hide it.
+export const screenOutlineRectTargetObservable = new Observable<string | null>(null);
+
+// The world-space XZ location the navigation arrow should guide the player toward, or null to hide it.
+export const navigationArrowTargetObservable = new Observable<{ x: number, z: number } | null>(null);
+
+// The world-space location the downward arrow should point at, or null to hide it.
+export const downwardArrowTargetObservable = new Observable<THREE.Vector3 | null>(null);
+
+// The voxel-quad whose boundary should be highlighted in world space, or null to hide it.
+export const voxelQuadHighlightObservable = new Observable<VoxelQuadSelection | null>(null);
+
 // This observable notifies its listeners whenever a popup needs to be opened/closed.
 export const popupStateObservable = new Observable<PopupState>({ popupType: "none" });
+
+// This observable notifies its listeners whenever ChatTextInput's input text changes.
+export const chatTextInputObservable = new Observable<string>("");
 
 //--------------------------------------------------------------------------------
 // User State Observables
@@ -86,17 +108,12 @@ export const userRoleObservable = new Observable<UserRole>(UserRoleEnumMap.Visit
 export const texturePackURLObservable = new Observable<string>();
 
 // This observable notifies its listeners whenever the current user's
-// singlePlayerMode changes on the client side (either when the user data gets fetched from the server,
-// or when the client either enters or exits a single-player mode game).
-// This observable gets updated whenever:
-//      (1) Client-side env variables get loaded (i.e. "setEnv" in app.ts), or
-//      (2) User's "singlePlayerMode" field value changes during runtime.
-export const singlePlayerModeObservable = new Observable<string>("");
-
-// This observable notifies its listeners whenever the current user's
-// singlePlayerStep changes on the client side (either when the user data gets fetched from the server,
+// singlePlayerMode or singlePlayerStep changes on the client side
+// (either when the user data gets fetched from the server,
+// or when the client either enters or exits a single-player mode game,
 // or when the client's single-player system modifies the current client-side singlePlayerStep value).
 // This observable gets updated whenever:
 //      (1) Client-side env variables get loaded (i.e. "setEnv" in app.ts), or
-//      (2) Client's single-player gameplay logic (singlePlayerManager.ts) decides to change the current step.
-export const singlePlayerStepObservable = new Observable<number>(-1);
+//      (2) User's "singlePlayerMode" field value changes during runtime, or
+//      (3) Client's single-player gameplay logic (singlePlayerManager.ts) decides to change the current step.
+export const singlePlayerObservable = new Observable<{mode: string, step: number}>({mode: "", step: -1});

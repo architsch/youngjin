@@ -1,0 +1,384 @@
+import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
+import AddObjectSignal from "../../object/types/addObjectSignal";
+import ObjectGroup from "../../object/types/objectGroup";
+import { ObjectMetadataKeyEnumMap } from "../../object/types/objectMetadataKey";
+import ObjectTransform from "../../object/types/objectTransform";
+import RoomGenerationVoxelGrid from "../../room/types/roomGeneration/roomGenerationVoxelGrid";
+import RoomGenerationHelperUtil from "../../room/util/roomGenerationHelperUtil";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, PLAYER_HEIGHT, TUTORIAL_SINGLE_PLAYER_MODE } from "../../system/sharedConstants";
+import { FeatureFlag } from "../../system/types/featureFlag";
+import VoxelGrid from "../../voxel/types/voxelGrid";
+import SinglePlayerModeConfig from "../types/singlePlayerModeConfig";
+import SinglePlayerModeConfigMetadata from "../types/singlePlayerModeConfigMetadata";
+import SinglePlayerStep from "../types/singlePlayerStep";
+
+const cachedMetadataByMode: {[singlePlayerMode: string]: SinglePlayerModeConfigMetadata} = {};
+const cachedStepsByMode: {[singlePlayerMode: string]: SinglePlayerStep[]} = {};
+
+const SinglePlayerModeConfigMap: {[singlePlayerMode: string]: SinglePlayerModeConfig} = {};
+
+SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
+    loadMetadata: () => {
+        const cachedMetadata = cachedMetadataByMode[TUTORIAL_SINGLE_PLAYER_MODE];
+        if (cachedMetadata)
+            return cachedMetadata;
+
+        // Manually set parameters:
+        const entranceVoxelCol = 5;
+        const entranceVoxelRow = 30;
+        const X1 = 5, X2 = 5, X3 = 5, X4 = 5, Z1 = 5, Z2 = 5, Z3 = 5;
+
+        if (X1 % 2 == 0 || X2 % 2 == 0 || X3 % 2 == 0 || X4 % 2 == 0 || Z1 % 2 == 0 || Z2 % 2 == 0 || Z3 % 2 == 0)
+            throw new Error("X1,X2,X3,X4,Z1,Z2,Z3 must all be positive odd integers.");
+
+        // Algebraically derived parameters:
+        const X = X1 + X2 + X3 + X4;
+        const Z = Z1 + Z2 + Z3;
+        const x0 = entranceVoxelCol - 0.5 * (X1 - 1);
+        const z0 = entranceVoxelRow - Z + 1;
+
+        const hotspots = {
+            table: {row: entranceVoxelRow - Z3 - Z2 + 1, col: entranceVoxelCol},
+            obstacle: {row: z0 + Z1 + 0.5*(Z2 - 1), col: x0 + X1 + X2 - 1},
+            npc: {row: z0, col: x0 + X1 + X2 + 0.5*(X3 - 1)},
+            door: {row: z0 + 0.5*(Z1 - 1), col: x0 + X - 1},
+        };
+        const rects = {
+            floor1: {rowStart: z0 + Z1, colStart: x0, numRows: Z2 + Z3, numCols: X1},
+            floor2: {rowStart: z0 + Z1, colStart: x0 + X1, numRows: Z2, numCols: X2 + X3},
+            floor3: {rowStart: z0, colStart: x0 + X1 + X2, numRows: Z1, numCols: X3 + X4},
+            wall1: {rowStart: z0 + Z1, colStart: x0 + X1, numRows: Z2, numCols: 1},
+            wall2: {rowStart: z0 + Z1, colStart: x0 + X1 + X2 - 1, numRows: Z2, numCols: 1},
+            wall3: {rowStart: z0, colStart: x0 + X1 + X2 + X3, numRows: Z1, numCols: 1},
+        };
+
+        const metadata: SinglePlayerModeConfigMetadata = {entranceVoxelCol, entranceVoxelRow, hotspots, rects};
+        cachedMetadataByMode[TUTORIAL_SINGLE_PLAYER_MODE] = metadata;
+        return metadata;
+    },
+    buildRoom: (voxelGrid: VoxelGrid, objectGroup: ObjectGroup) =>
+    {
+        // Note: See the "Tutorial Room" section of `docs/geometry/room_generation.md` for
+        // more details on what these variables mean geometrically.
+
+        const config = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
+        const c = config.loadMetadata();
+
+        // Add the floors and walls.
+        const grid = new RoomGenerationVoxelGrid();
+        grid.createRegion(c.rects.floor1.rowStart, c.rects.floor1.colStart, c.rects.floor1.numRows, c.rects.floor1.numCols, 0, 1, 2);
+        grid.createRegion(c.rects.floor2.rowStart, c.rects.floor2.colStart, c.rects.floor2.numRows, c.rects.floor2.numCols, 3, 4, 5);
+        grid.createRegion(c.rects.floor3.rowStart, c.rects.floor3.colStart, c.rects.floor3.numRows, c.rects.floor3.numCols, 6, 7, 8);
+        grid.createWalls(c.rects.wall1.rowStart, c.rects.wall1.colStart, c.rects.wall1.numRows, c.rects.wall1.numCols);
+        grid.createWalls(c.rects.wall2.rowStart, c.rects.wall2.colStart, c.rects.wall2.numRows, c.rects.wall2.numCols);
+        grid.createWalls(c.rects.wall3.rowStart, c.rects.wall3.colStart, c.rects.wall3.numRows, c.rects.wall3.numCols);
+        grid.generate(voxelGrid);
+
+        // Add the table.
+        RoomGenerationHelperUtil.addWall(voxelGrid.voxels, c.hotspots.table.row, c.hotspots.table.col,
+            undefined, 0, 1); // The table consists of layer-0 and layer-1 blocks. The player is meant to select the top (i.e. (+y)-facing) quad of the layer-1 block.
+
+        // Carve out part of the wall and add the obstacle.
+        RoomGenerationHelperUtil.removeWall(voxelGrid.voxels, c.hotspots.obstacle.row, c.hotspots.obstacle.col);
+        RoomGenerationHelperUtil.addWall(voxelGrid.voxels, c.hotspots.obstacle.row, c.hotspots.obstacle.col,
+            undefined, 2, 2); // The obstacle is a single voxel block which occupies layer-2 of the hotspot.
+        
+        // Add the NPC.
+        objectGroup.objectById["npc"] = new AddObjectSignal("", "@npc", "Receptionist",
+            ObjectTypeConfigMap.getIndexByType("Player"), "npc",
+            new ObjectTransform(
+                {x: c.hotspots.npc.col + 0.5, y: 0.5 * PLAYER_HEIGHT, z: c.hotspots.npc.row + 0.5},
+                {x: 0, y: 0, z: -1}));
+
+        // Add the door.
+        objectGroup.objectById["door"] = new AddObjectSignal("", "", "",
+            ObjectTypeConfigMap.getIndexByType("Door"), "door",
+            new ObjectTransform(
+                {x: c.hotspots.door.col + 0.5 + 0.499, y: 0, z: c.hotspots.door.row + 0.5},
+                {x: -1, y: 0, z: 0}));
+    },
+    loadSteps: () =>
+    {
+        const cachedSteps = cachedStepsByMode[TUTORIAL_SINGLE_PLAYER_MODE];
+        if (cachedSteps)
+            return cachedSteps;
+
+        const config = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
+        const m = config.loadMetadata();
+
+        const steps: SinglePlayerStep[] = [
+            { // (Step 0): Drag to move
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Drag the screen to move."},
+                    {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.GoToHubImmediatelyOnDoorClick, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "player_is_nearby", negate: true,
+                        targetX: m.entranceVoxelCol+0.5, targetZ: m.entranceVoxelRow+0.5,
+                        detectionDist: 0.75}],
+                    nextStep: 1,
+                    nextStepDelay: 500,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 1): Go to the table
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Follow the arrow."},
+                    {type: "gizmo_navigation_arrow",
+                        targetX: m.hotspots.table.col+0.5, targetZ: m.hotspots.table.row+0.5},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "player_is_nearby", negate: false,
+                        targetX: m.hotspots.table.col+0.5, targetZ: m.hotspots.table.row+0.5,
+                        detectionDist: 5}],
+                    nextStep: 2,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 2): Select the table
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Select the table."},
+                    {type: "gizmo_downward_arrow", targetX: m.hotspots.table.col+0.5,
+                        targetY: 1, targetZ: m.hotspots.table.row+0.5},
+                    {type: "gizmo_voxel_quad_outline_rect",
+                        row: m.hotspots.table.row, col: m.hotspots.table.col,
+                        collisionLayer: 1, facingAxis: "y", orientation: "+"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "voxel_quad_selected", negate: false,
+                        row: m.hotspots.table.row, col: m.hotspots.table.col,
+                        collisionLayer: 1, facingAxis: "y", orientation: "+"}],
+                    nextStep: 3,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
+                ],
+            },
+            { // (Step 3): Change the table's texture
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Change the table's texture."},
+                    {type: "ui_arrow", targetElementId: "voxelQuadTextureOptions"},
+                    {type: "ui_outline_rect", targetElementId: "voxelQuadTextureOptions"},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "voxel_quad_texture_equals", negate: true,
+                        row: m.hotspots.table.row, col: m.hotspots.table.col,
+                        collisionLayer: 1, facingAxis: "y", orientation: "+",
+                        textureIndex: 0}],
+                    nextStep: 4,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 4): Add a block to the table
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Add a block to the table."},
+                    {type: "ui_arrow", targetElementId: "addVoxelBlockButton"},
+                    {type: "ui_outline_rect", targetElementId: "addVoxelBlockButton"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: false},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "voxel_block_exists", negate: false,
+                        row: m.hotspots.table.row, col: m.hotspots.table.col,
+                        collisionLayer: 2}],
+                    nextStep: 5,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                    {type: "force_unselect_voxel"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
+                ],
+            },
+            { // (Step 5): Go to the obstacle
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Follow the arrow."},
+                    {type: "gizmo_navigation_arrow",
+                        targetX: m.hotspots.obstacle.col+0.5, targetZ: m.hotspots.obstacle.row+0.5},
+                    {type: "remove_voxel_blocks",
+                        rowStart: m.rects.wall1.rowStart,
+                        colStart: m.rects.wall1.colStart,
+                        numRows: m.rects.wall1.numRows,
+                        numCols: m.rects.wall1.numCols,
+                        collisionLayerMin: COLLISION_LAYER_MIN,
+                        collisionLayerMax: COLLISION_LAYER_MAX},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "player_is_nearby", negate: false,
+                        targetX: m.hotspots.obstacle.col+0.5, targetZ: m.hotspots.obstacle.row+0.5,
+                        detectionDist: 5}],
+                    nextStep: 6,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 6): Select the obstacle
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Select the obstacle."},
+                    {type: "gizmo_downward_arrow", targetX: m.hotspots.obstacle.col,
+                        targetY: 1.5, targetZ: m.hotspots.obstacle.row+0.5},
+                    {type: "gizmo_voxel_quad_outline_rect",
+                        row: m.hotspots.obstacle.row, col: m.hotspots.obstacle.col,
+                        collisionLayer: 2, facingAxis: "x", orientation: "-"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
+                ],
+                transitionRules: [{
+                        requirements: [{type: "voxel_quad_selected", negate: false,
+                            row: m.hotspots.obstacle.row, col: m.hotspots.obstacle.col,
+                            collisionLayer: 2, facingAxis: "y", orientation: "+"}],
+                        nextStep: 7,
+                        nextStepDelay: 0,
+                    },
+                    {
+                        requirements: [{type: "voxel_quad_selected", negate: false,
+                            row: m.hotspots.obstacle.row, col: m.hotspots.obstacle.col,
+                            collisionLayer: 2, facingAxis: "x", orientation: "-"}],
+                        nextStep: 7,
+                        nextStepDelay: 0,
+                    }
+                ],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
+                ],
+            },
+            { // (Step 7): Remove the obstacle
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Remove the obstacle."},
+                    {type: "ui_arrow", targetElementId: "removeVoxelBlockButton"},
+                    {type: "ui_outline_rect", targetElementId: "removeVoxelBlockButton"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: false},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "voxel_block_exists", negate: true,
+                        row: m.hotspots.obstacle.row, col: m.hotspots.obstacle.col,
+                        collisionLayer: 2}],
+                    nextStep: 8,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                    {type: "force_unselect_voxel"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
+                ],
+            },
+            { // (Step 8): Go to the NPC
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Follow the arrow."},
+                    {type: "gizmo_navigation_arrow",
+                        targetX: m.hotspots.npc.col+0.5, targetZ: m.hotspots.npc.row+0.5},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "player_is_nearby", negate: false,
+                        targetX: m.hotspots.npc.col+0.5, targetZ: m.hotspots.npc.row+0.5,
+                        detectionDist: 5}],
+                    nextStep: 9,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 9): Type inside the chat input
+                actionsOnStart: [
+                    {type: "ui_headline", text: "This is your receptionist.<br>Type your message to say \"Hello\"."},
+                    {type: "ui_arrow", targetElementId: "chatTextInput"},
+                    {type: "ui_outline_rect", targetElementId: "chatTextInput"},
+                    {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: false},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "chat_input_passes_condition",
+                        chatInputCondition: (str: string) => str.trim().length >= 2}],
+                    nextStep: 10,
+                    nextStepDelay: 500,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 10): Send a chat message
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Click 'Send' to send your message."},
+                    {type: "ui_arrow", targetElementId: "chatSendButton"},
+                    {type: "ui_outline_rect", targetElementId: "chatSendButton"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: false},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "object_metadata_passes_condition",
+                        objectId: "my_player",
+                        metadataKey: ObjectMetadataKeyEnumMap.SentMessage,
+                        metadataValueCondition: (str: string) => str.trim().length > 0}],
+                    nextStep: 11,
+                    nextStepDelay: 500,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 11): Watch the NPC's reply
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Look! The receptionist greeted you back."},
+                    {type: "set_object_metadata", objectId: "npc",
+                            metadataKey: ObjectMetadataKeyEnumMap.SentMessage, metadataValue: "Hello!"},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "always_true"}],
+                    nextStep: 12,
+                    nextStepDelay: 3500,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                ],
+            },
+            { // (Step 12): Exit through the door
+                actionsOnStart: [
+                    {type: "ui_headline", text: "Exit through the door."},
+                    {type: "gizmo_navigation_arrow",
+                        targetX: m.hotspots.door.col+0.5, targetZ: m.hotspots.door.row+0.5},
+                    {type: "remove_voxel_blocks",
+                        rowStart: m.rects.wall3.rowStart,
+                        colStart: m.rects.wall3.colStart,
+                        numRows: m.rects.wall3.numRows,
+                        numCols: m.rects.wall3.numCols,
+                        collisionLayerMin: COLLISION_LAYER_MIN,
+                        collisionLayerMax: COLLISION_LAYER_MAX},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "room_exited"}],
+                    nextStep: -1,
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                    {type: "feature_flag", flag: FeatureFlag.GoToHubImmediatelyOnDoorClick, enable: false},
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: false},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: false},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: false},
+                ],
+            },
+        ];
+        cachedStepsByMode[TUTORIAL_SINGLE_PLAYER_MODE] = steps;
+        return steps;
+    },
+};
+
+export default SinglePlayerModeConfigMap;

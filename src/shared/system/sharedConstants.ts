@@ -16,6 +16,11 @@ export const DAY_IN_MS = 24 * HOUR_IN_MS;
 
 export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
 
+// Note: Change this string value when the tutorial's content
+// (e.g. room, steps, etc) gets modified, so that the server will create a
+// brand new room for it and route new guest users to this newly made tutorial room.
+export const TUTORIAL_SINGLE_PLAYER_MODE = "tutorial";
+
 // Networking
 
 export const USER_API_ROUTE_PATH = "api/user";
@@ -77,13 +82,11 @@ export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, u
 export const PLAYER_HEIGHT = 2.5;
 export const MAX_WORLDSPACE_SELECT_DIST_SQR = 100; // = 10*10
 
-// Fixed spawn point used whenever a player enters a multi-player room.
+// Fixed spawn point used whenever a player enters a multiplayer room.
+// (For a singleplayer room, the player's spawn point will be determined by the corresponding
+// SinglePlayerModeConfig's entrance voxel coordinates.)
 export const MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
 export const MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
-
-// Fixed spawn point used whenever a player enters a single-player room.
-export const SINGLE_PLAYER_ENTRANCE_VOXEL_COL = 16;
-export const SINGLE_PLAYER_ENTRANCE_VOXEL_ROW = 30;
 
 // UI
 

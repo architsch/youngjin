@@ -12,7 +12,9 @@ const ObjectFactory =
 {
     // This method is called when the client is instantiating an object which only belongs to the client.
     // The server, therefore, is never informed of this object's existence.
-    createClientSideObject: (roomID: string, objectTypeIndex: number, transform: ObjectTransform, metadata: ObjectMetadata = {}): GameObject =>
+    createClientSideObject: (roomID: string, objectTypeIndex: number,
+        transform: ObjectTransform, metadata: ObjectMetadata = {},
+        objectId?: string): GameObject =>
     {
         const user = App.getUser();
         const obj = new AddObjectSignal(
@@ -20,7 +22,7 @@ const ObjectFactory =
             user.id,
             user.userName,
             objectTypeIndex,
-            `#${++lastObjectIdNumber}`, // Client-only objects are prefixed by "#".
+            objectId ? objectId : `#${++lastObjectIdNumber}`, // If not manually set, client-only objects' IDs will be integers prefixed by "#".
             transform,
             metadata,
         );

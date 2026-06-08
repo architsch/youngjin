@@ -34,10 +34,10 @@ const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection})
 {
     return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
-        <IconButton icon={<TrashIcon/>} size="md" color="red"
+        <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveVoxelBlock(props.selection)}
             onClick={() => tryRemoveVoxelBlock(props.selection)}/>
-        <IconButton icon={<AddBlockIcon/>} size="md"
+        <IconButton id="addVoxelBlockButton" icon={<AddBlockIcon/>} size="md"
             disabled={!canAddVoxelBlock(props.selection)}
             onClick={() => tryAddVoxelBlock(props.selection)}/>
         <IconButton icon={<AddCanvasIcon/>} size="md"

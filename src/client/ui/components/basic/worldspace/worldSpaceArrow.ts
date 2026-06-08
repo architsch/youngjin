@@ -10,15 +10,17 @@ const vecTemp2 = new THREE.Vector3();
 
 // A world-space arrow rendered as a 3D mesh (cone head + cylinder shaft).
 // Uses depthTest:false to always render on top of scene geometry.
-// A small invisible CSS2DObject is used as a click target overlay.
+// When interactive, a small invisible CSS2DObject is used as a click target overlay.
+// When non-interactive (e.g. a purely directional tutorial hint), the click target is
+// omitted so the arrow never intercepts pointer events or shows a hover cursor.
 export default class WorldSpaceArrow
 {
     private group: THREE.Group = new THREE.Group();
     private arrowAssembly: THREE.Group;
     private coneMesh: THREE.Mesh;
     private cylinderMesh: THREE.Mesh;
-    private clickElement: HTMLElement;
-    private css2dObject: CSS2DObject;
+    private clickElement?: HTMLElement;
+    private css2dObject?: CSS2DObject;
     private onClickCallback: (() => void) | null = null;
     private baseClickSize: number;
 
@@ -28,6 +30,7 @@ export default class WorldSpaceArrow
         coneGeometry: THREE.BufferGeometry,
         cylinderGeometry: THREE.BufferGeometry,
         scale: number = 1,
+        interactive: boolean = true,
     )
     {
         const mat = new THREE.MeshBasicMaterial({
@@ -74,8 +77,14 @@ export default class WorldSpaceArrow
         this.arrowAssembly = arrowAssembly;
         this.group.add(arrowAssembly);
 
-        // Invisible CSS2D click target (DOM element overlay for pointer events)
         this.baseClickSize = 2 * scale;
+
+        // A non-interactive arrow (e.g. a directional tutorial hint) has no click target,
+        // so it never intercepts pointer events nor shows a hover cursor.
+        if (!interactive)
+            return;
+
+        // Invisible CSS2D click target (DOM element overlay for pointer events)
         this.clickElement = document.createElement("div");
         this.clickElement.style.cssText =
             "cursor:pointer; pointer-events:auto;" +
@@ -147,13 +156,14 @@ export default class WorldSpaceArrow
         arrowAssembly.add(this.css2dObject);
     }
 
-    static async create(arrowDirection: string, color: string = "#00ff00", scale: number = 1): Promise<WorldSpaceArrow>
+    static async create(arrowDirection: string, color: string = "#00ff00", scale: number = 1,
+        interactive: boolean = true): Promise<WorldSpaceArrow>
     {
         const [coneGeometry, cylinderGeometry] = await Promise.all([
             GeometryFactory.load("ArrowCone"),
             GeometryFactory.load("ArrowCylinder"),
         ]);
-        return new WorldSpaceArrow(arrowDirection, color, coneGeometry, cylinderGeometry, scale);
+        return new WorldSpaceArrow(arrowDirection, color, coneGeometry, cylinderGeometry, scale, interactive);
     }
 
     addToParent(parent: THREE.Object3D): void
@@ -174,7 +184,8 @@ export default class WorldSpaceArrow
     setVisible(visible: boolean): void
     {
         this.group.visible = visible;
-        this.clickElement.style.display = visible ? "block" : "none";
+        if (this.clickElement)
+            this.clickElement.style.display = visible ? "block" : "none";
     }
 
     setDirection(dir: THREE.Vector3): void
@@ -197,7 +208,7 @@ export default class WorldSpaceArrow
 
     update(): void
     {
-        if (!this.group.visible) return;
+        if (!this.group.visible || !this.clickElement) return;
 
         // Distance-based scaling (same formula as WorldSpaceIconButton)
         this.group.getWorldPosition(vecTemp1);
@@ -215,8 +226,8 @@ export default class WorldSpaceArrow
 
     dispose(): void
     {
-        this.clickElement.remove();
-        this.css2dObject.removeFromParent();
+        this.clickElement?.remove();
+        this.css2dObject?.removeFromParent();
         (this.coneMesh.material as THREE.Material).dispose();
         this.group.removeFromParent();
     }

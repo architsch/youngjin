@@ -8,6 +8,9 @@ import UserRoomIdentity from "../user/userRoomIdentity";
 import Loading from "./loading";
 import Notification from "./notification";
 import Reconnecting from "./reconnecting";
+import Headline from "./headline";
+import ScreenArrow from "./screenArrow";
+import ScreenOutlineRect from "./screenOutlineRect";
 import Popup from "../basic/popup";
 import PopupState from "../../types/popupState";
 import User from "../../../../shared/user/types/user";
@@ -123,6 +126,9 @@ export default function UIRoot({ env, user }: UIRootProps)
             }
         })}
         <Notification/>
+        <Headline/>
+        <ScreenArrow/>
+        <ScreenOutlineRect/>
         <Loading/>
         <Reconnecting/>
     </>

@@ -1,5 +1,5 @@
 import { CompositionEvent, FormEvent, FormEventHandler, useEffect, useRef } from "react";
-import { numActiveTextInputsObservable } from "../../../system/clientObservables";
+import { chatTextInputObservable, numActiveTextInputsObservable } from "../../../system/clientObservables";
 import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../../shared/system/sharedConstants";
 import StringUtil from "../../../../shared/system/util/stringUtil";
 
@@ -22,6 +22,7 @@ export default function ChatTextInput({textInput, setTextInput}
         if (truncated !== rawValue && inputRef.current)
             inputRef.current.value = truncated;
         setTextInput(truncated);
+        chatTextInputObservable.set(truncated);
     };
 
     const onInput: FormEventHandler<HTMLInputElement> = (event: FormEvent<HTMLInputElement>) => {
@@ -46,6 +47,7 @@ export default function ChatTextInput({textInput, setTextInput}
     }, []);
 
     return <input
+        id="chatTextInput"
         type="text"
         ref={inputRef}
         className="flex-4 m-1 p-1 justify-self-start text-left align-middle border-2 border-gray-700 rounded-md text-base text-gray-900 bg-gray-200 pointer-events-auto"

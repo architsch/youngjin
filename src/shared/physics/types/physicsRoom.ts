@@ -21,7 +21,7 @@ export default class PhysicsRoom
         this.objectById = {};
         this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ];
         if (room.roomType != RoomTypeEnumMap.SinglePlayer) // Invisible entrance-clearance collider is only used in multiplayer rooms (to prevent other players from completely blocking the entrance door).
-            this.globalColliders.push(entrance);
+            this.globalColliders.push(multiplayerEntrance);
     }
 }
 
@@ -59,7 +59,7 @@ const wall_lowerZ = makeCubeCollider(
 const wall_upperZ = makeCubeCollider(
     NUM_VOXEL_COLS*0.5, MID_ROOM_Y, NUM_VOXEL_ROWS + cubeColliderSizeHalf);
 
-const entrance: ColliderState = {
+const multiplayerEntrance: ColliderState = {
     hitbox: {
         center: {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: MID_ROOM_Y, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW},
         halfSize: {x: 0.5, y: 0.5*MAX_ROOM_Y, z: 1},

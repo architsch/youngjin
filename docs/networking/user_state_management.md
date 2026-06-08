@@ -1,105 +1,83 @@
 # User State Management Flows
 
-Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.ts , @src/shared/room/types/roomRuntimeMemory.ts , @src/shared/room/types/roomChangedSignal.ts , @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/room/serverRoomManager.ts , @src/server/user/serverUserManager.ts , @src/server/user/util/userCommandUtil.ts , @src/server/sockets/types/socketUserContext.ts
+Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.ts , @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/room/serverRoomManager.ts , @src/server/user/serverUserManager.ts , @src/server/sockets/types/socketUserContext.ts
 
-> For how single-player rooms (e.g. the tutorial) differ from the multi-player flows described here — they are not removed/registered as participants and never write `lastRoomID` — see [single_player_mode.md](single_player_mode.md).
+> For how single-player rooms (e.g. the tutorial) differ from the multi-player flows described here — they are not registered as participants and never write a last-room — see [single_player_mode.md](single_player_mode.md).
 
 ## Where user state lives
 
-- **DBUser** — per-user, persistent. Holds `lastRoomID`, `playerMetadata`, `singlePlayerMode` (`""` unless the user should be routed into a single-player room such as the tutorial — see [single_player_mode.md](single_player_mode.md)), account info (`userName`, `email`, `userType`), and bookkeeping (`loginCount`, `lastLoginAt`, etc.). `playerMetadata` follows the user across rooms; it is not per-room.
-- **DBRoom** — per-room, persistent. Holds `ownerUserID`, `ownerUserName`, `texturePackPath`, and `editors[]`, a denormalized list of `{userID, userName, email}` entries (so listing editors in the UI never needs an extra DBUser join). The product invariant is that `userName`/`email` never change after account creation, so the denormalized snapshot does not drift.
-- **No `UserGameplayState` aggregate.** Earlier versions of the server bundled position, direction, role, and metadata into a single "gameplay state" snapshot that was saved on disconnect and loaded on connect. That abstraction is gone — players always spawn at the designated entrance position, user role is derived from `DBRoom`, and `lastRoomID` / `playerMetadata` are written to `DBUser` directly. See `ServerUserManager` and `ServerRoomManager`.
+- **`DBUser`** — per-user, persistent. Holds the user's last room, their player metadata, their single-player mode (see [single_player_mode.md](single_player_mode.md)), account info, and login bookkeeping. Player metadata follows the user across rooms; it is not per-room.
+- **`DBRoom`** — per-room, persistent. Holds the owner, the texture pack, and the editor list (a denormalized list of editor identities, so listing editors in the UI never needs an extra user lookup). The product invariant is that a user's name/email never change after account creation, so the denormalized snapshot does not drift.
+- **State is not bundled into a per-session snapshot.** Players always spawn at the designated entrance position, a user's role is derived from `DBRoom` at join time, and the last room and player metadata are written to `DBUser` directly.
 
 ## When the user moves from one room to another without reloading the game page
-1. The client sends a `RequestRoomChangeSignal` to the server and blocks further room change requests until the current one completes.
-2. The server removes the user from the previous room (despawning player objects, flushing playerMetadata to DBUser if `savePlayerMetadata` is requested) and loads the target room (from cache or Firestore).
-3. The server places the user at the designated entrance position (the [fixed entrance](../geometry/room_entrance.md)) and restores `playerMetadata` from the in-memory disconnect buffer or `DBUser` (see "Player Metadata Restoration" below).
-4. The server writes the new `lastRoomID` to `DBUser` (fire-and-forget) and unicasts a `RoomChangedSignal` to the client.
+1. The client sends a room-change request and blocks further requests until the current one completes.
+2. The server removes the user from the previous room (despawning their player object and, when requested, flushing player metadata to `DBUser`) and loads the target room (from cache or the database).
+3. The server places the user at the designated [entrance position](../geometry/room_entrance.md) and restores their player metadata (see "Player Metadata Restoration" below).
+4. The server writes the new last room to `DBUser` and notifies the client that the room has changed.
 
 ## When the user opens "/" without a room ID in the URL
-1. The standard authentication and socket connection flow runs (see `authentication.md`).
-2. Since no `targetRoomID` is specified, the server picks the target room by priority: if `user.singlePlayerMode != ""` it routes the user into the matching single-player room (e.g. the tutorial); otherwise it falls back to `user.lastRoomID` (read from DBUser). If neither resolves, it falls back to a Hub room.
-3. The server unicasts a `RoomChangedSignal` to the client, which initializes the game.
+1. The standard authentication and socket connection flow runs (see [authentication.md](authentication.md)).
+2. With no room specified, the server picks the target room by priority: the user's single-player room if their mode flag is set; otherwise their last room; otherwise a Hub room.
+3. The server tells the client which room it joined, and the client initializes the game.
 
 ## When the user opens "/:roomID" with a room ID in the URL
 1. The standard authentication and socket connection flow runs with the URL-specified room ID.
-2. The server attempts to join the user to the specified room. If that room doesn't exist, it falls back to a Hub room.
-3. The server unicasts a `RoomChangedSignal` to the client, which initializes the game.
+2. The server joins the user to that room, falling back to a Hub room if it doesn't exist.
+3. The server tells the client which room it joined, and the client initializes the game.
 
 ## When the user closes the page and reopens it
-1. On disconnect, `ServerUserManager.removeUserFromRoom` snapshots the latest `playerMetadata` synchronously into the in-memory `recentDisconnectMetadata` buffer, then kicks off the asynchronous `DBUserUtil.savePlayerMetadata` write.
-2. On reconnect, the new connection consults `recentDisconnectMetadata` first; if the buffer is empty, the server falls back to `DBUser.playerMetadata`. Either way, the new player object inherits the latest metadata.
+1. On disconnect, the server snapshots the user's latest player metadata synchronously into an in-memory buffer, then kicks off the asynchronous write to `DBUser`.
+2. On reconnect, the new connection consults the in-memory buffer first; if it is empty, the server falls back to `DBUser`. Either way, the new player object inherits the latest metadata.
 
 ## When the user refreshes the page
-1. Depending on timing, the new socket may connect before or after the old socket's disconnect fires. Either way, the metadata bridge is the same single mechanism — `ServerUserManager.recentDisconnectMetadata`, populated synchronously by the old session's `removeUserFromRoom` (before the `DBUser` write begins) and consumed by the new session's `changeUserRoom`.
-    - **Case A — New socket connects first**: the old socket is still registered, so `SocketsServer` proactively evicts it by calling `changeUserRoom(oldContext, undefined, …)`. That eviction's `removeUserFromRoom` populates `recentDisconnectMetadata`. The old socket's later disconnect handler is a no-op (it sees it has already been replaced).
-    - **Case B — Old socket disconnects first**: the disconnect handler already ran `removeUserFromRoom`, which populated `recentDisconnectMetadata`. The new connection needs no special handling.
-2. In both cases the new socket's `changeUserRoom` consumes the buffered snapshot (falling back to `DBUser.playerMetadata`). There is no separate `cachedPlayerMetadata` path — the two orderings converge on the one buffer.
-3. `lastRoomID` is already on `DBUser` (it was written when the user originally joined the room), so the new socket sees the same room without any extra cache.
+The new socket may connect before or after the old socket's disconnect fires. Either way, the same in-memory metadata buffer bridges the two sessions: it is populated synchronously when the old session is torn down and consumed when the new session joins.
+- **New socket connects first:** the server proactively evicts the still-registered old socket, and that eviction populates the buffer. The old socket's later disconnect is then a no-op.
+- **Old socket disconnects first:** its disconnect already populated the buffer, so the new connection needs no special handling.
+
+The last room is already on `DBUser` from when the user originally joined, so the refreshed session lands in the same room without any extra cache.
 
 ## When the user duplicates the current browser tab
-1. The server detects a duplicate user (same userID already in `socketUserContexts`), captures `playerMetadata` from the existing player object, disconnects the old socket (redirecting it to an error page), and proceeds with the new connection.
-2. The new tab joins the same room and rebuilds the player object with the captured metadata.
+The server detects that the same user is already connected, captures the player metadata from the existing player object, disconnects the old socket (redirecting it to an error page), and proceeds with the new connection. The new tab joins the same room and rebuilds the player object from the captured metadata.
 
 ## When the server crashes unexpectedly
-1. All in-memory state (including the `recentDisconnectMetadata` buffer) is lost. Clients attempt automatic reconnection.
-2. The last successful `DBUser.playerMetadata` and `DBUser.lastRoomID` writes are the recovery point. Anything in the in-memory buffer is gone.
+All in-memory state (including the metadata buffer) is lost, and clients attempt to reconnect automatically. The last successful writes of player metadata and last room to `DBUser` are the recovery point; anything still only in memory is gone.
 
 ## When the server undergoes a graceful shutdown
-1. `SocketsServer.saveAndDisconnectAllUsers` calls `ServerRoomManager.saveAllUsersPlayerMetadata`, which batches a `DBUserUtil.saveMultipleUsersPlayerMetadata` query for every connected user.
-2. Each user is then routed out of their room (no DB write — already flushed) and disconnected.
-3. Clients detect the server-initiated disconnect, poll `/` until the server responds, then reload and read state from DBUser.
+The server batches a save of every connected user's player metadata, then routes each user out of their room (no further DB write needed) and disconnects them. Clients detect the server-initiated disconnect, wait for the server to come back, then reload and read their state from `DBUser`.
 
 ## User role resolution
-A user's role within a room is derived (NOT stored separately) at room-join time inside `ServerRoomManager.changeUserRoom`:
-1. **Owner** — if `room.ownerUserID === user.id`.
-2. **Editor** — if the user's id appears in the room's `editors[]` list (loaded from DBRoom on room load, cached in-memory as `ServerRoomManager.editorsByRoomID`).
-3. **Visitor** — default.
+A user's role within a room is derived (not stored separately) at join time:
+1. **Owner** — if the user owns the room.
+2. **Editor** — if the user appears in the room's editor list (loaded from `DBRoom` and cached in memory while the room is loaded).
+3. **Visitor** — otherwise.
 
-When the room owner appoints or revokes an editor via `/api/room/set_room_user_role`, the server:
-1. Calls `ServerRoomManager.setRoomEditor` / `removeRoomEditor`, which updates `DBRoom.editors` (and the in-memory cache if the room is loaded).
-2. Calls `ServerUserManager.syncUserRoleInMemory`, which updates the per-user runtime role map and multicasts a `SetUserRoleSignal` to everyone in the room.
-
-If the target user is offline at the time, the multicast is a no-op for them; their role will take effect on their next room join (since `changeUserRoom` re-derives the role from DBRoom).
+When the owner appoints or revokes an editor, the server updates `DBRoom` (and the in-memory cache) and notifies everyone currently in the room of the role change. If the affected user is offline, the change simply takes effect on their next join, since the role is re-derived from `DBRoom` each time.
 
 ## Player Metadata Restoration
-When a user joins a room, `ServerRoomManager.changeUserRoom` resolves `playerMetadata` with the following priority:
-1. **`ServerUserManager.recentDisconnectMetadata` buffer** (synchronously populated by the previous session's `removeUserFromRoom`). Bridges the gap where the disconnect's `DBUser` write has not yet landed.
-2. **`DBUser.playerMetadata`** (the persistent fallback — the buffer was either never populated, or already evicted by TTL).
-3. **Empty object** (brand-new user with no chat history).
+When a user joins a room, the server resolves their player metadata by priority:
+1. **The in-memory disconnect buffer** — bridges the window where the previous session's `DBUser` write has not yet landed.
+2. **`DBUser`** — the persistent fallback.
+3. **Empty** — a brand-new user with no history.
 
 ## In-Memory Buffers (server-only)
-- **`ServerUserManager.recentDisconnectMetadata`**: `{[userID]: {metadata, timestamp}}`. Populated synchronously at disconnect, consumed on the matching reconnect. Periodically swept (TTL: 30 seconds) by the same loop that detects stale sockets. Required to close the race window where the disconnect's `DBUserUtil.savePlayerMetadata` write has not yet landed by the time the new socket reads `DBUser`.
-- **`ServerRoomManager.editorsByRoomID`**: `{[roomID]: RoomEditor[]}`. Populated when a room is loaded (from `DBRoom.editors`), refreshed whenever `setRoomEditor`/`removeRoomEditor` succeeds, dropped when the room is unloaded.
+- **Recent-disconnect metadata buffer** — keyed by user. Populated synchronously at disconnect and consumed on the matching reconnect, then swept after a short time-to-live. It closes the race window where the disconnect's `DBUser` write has not yet landed when the new socket reads `DBUser`.
+- **Editor cache** — keyed by room. Populated from `DBRoom` when a room loads, refreshed when editors change, and dropped when the room unloads.
 
 ## Stale Socket Detection & Cleanup
-A periodic check runs every 5 seconds to detect sockets where `socket.connected === false` but the disconnect handler may not have fired (e.g. due to abrupt browser crash or swallowed errors). Stale sockets are given a 5-second grace period before cleanup, which removes the user from their room and deletes their context. The same loop also evicts `recentDisconnectMetadata` entries past the TTL.
+A periodic check detects sockets that are no longer connected but whose disconnect handler never fired (e.g. an abrupt browser crash). Such sockets are cleaned up after a short grace period — removing the user from their room and discarding their context. The same loop evicts expired entries from the disconnect-metadata buffer.
 
-## Socket Heartbeat Configuration
-The server uses aggressive heartbeat timing:
-- **Ping interval**: 10 seconds (server sends ping).
-- **Ping timeout**: 5 seconds (wait for pong before disconnecting).
-
-If the client doesn't respond with a pong within 5 seconds, the socket auto-disconnects.
+## Socket Heartbeat
+The server uses aggressive heartbeat timing, pinging clients frequently and disconnecting any socket that fails to respond within a short timeout, so dead connections are detected quickly.
 
 ## Room Load Deduplication
-When multiple users request the same room concurrently, the server deduplicates the load by tracking in-flight room load promises via a `pendingLoads` map. All requests for the same room await the same promise, preventing duplicate Firestore queries.
+When multiple users request the same room concurrently, the server tracks the in-flight load and has all requests await the same result, so the room is loaded from the database only once.
 
 ## Periodic Room Auto-Saving
-The server runs a background save cycle every 3 seconds. A room is saved to Firestore only if:
-- It is marked as "dirty" (has unsaved changes), AND
-- The last save was more than 10 minutes ago (or a forced save is triggered).
-
-Rooms are saved in batches of 5 to avoid overwhelming the database. When the last user leaves a room, the server saves it immediately, then re-checks if the room is still empty (in case a user joined during the save) before unloading it.
+A background cycle saves rooms that are marked dirty, rate-limited so that a busy room is not written too often, and processed in batches to avoid overwhelming the database. When the last user leaves a room, the server saves it immediately and then unloads it (re-checking that it is still empty first, in case someone joined during the save).
 
 ## Signal Batching & Throttling
-Signals are not sent individually. Instead, they accumulate in pending arrays per signal type on each `SocketUserContext` and are batched together every 200ms via a `signalBatch` event. Each signal type has a `minClientToServerSendInterval` that throttles how frequently signals can be sent:
-- `requestRoomChangeSignal`: 2000ms (prevents frequent DB queries).
-- `userCommandSignal`: 1000ms (prevents frequent DB queries).
-- Most other signals: 0ms (no throttling).
-
-The server enforces rate limiting by rejecting signals that arrive sooner than their configured interval. The client retries up to 10 times with 200ms delays if the rate limit is not yet met.
+Signals are not sent one at a time. They accumulate per signal type on each connection and are flushed together on a fixed interval. Each signal type has a minimum send interval that throttles how often it may be sent; signals tied to expensive operations (such as room changes and user commands) are throttled more aggressively, while most are not throttled at all. The server rejects signals that arrive too soon, and the client retries a few times before giving up.
 
 ## User Commands
-The server supports an extensible command system via `userCommandSignal`. The client sends a message in the format `"<commandType> <arg1> <arg2>..."`, which the server parses and dispatches to the appropriate handler. Current commands:
-- **`finishTutorial`**: Marks the tutorial as complete. The server verifies the user is in `singlePlayerMode == "tutorial"`, then clears `singlePlayerMode` (`""`) and persists it to Firestore. Rate-limited to 1000ms between signals. See [single_player_mode.md](single_player_mode.md).
+The server supports an extensible command system: the client sends a command string, which the server parses and dispatches to the matching handler. For example, the **finish-tutorial** command verifies the user is in the tutorial, then clears their single-player mode and persists it (see [single_player_mode.md](single_player_mode.md)).

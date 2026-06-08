@@ -7,7 +7,7 @@ import VoxelUpdateUtil from "../../voxel/util/voxelUpdateUtil";
 const RoomGenerationHelperUtil =
 {
     addWall(voxels: Voxel[], row: number, col: number,
-        quadTextureIndicesWithinLayer: number[],
+        quadTextureIndicesWithinLayer?: number[],
         collisionLayerMin: number = COLLISION_LAYER_MIN,
         collisionLayerMax: number = COLLISION_LAYER_MAX)
     {
@@ -35,7 +35,7 @@ const RoomGenerationHelperUtil =
         quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL-2] = 0b10000000 | ceilingTextureIndex;
         quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL-1] = 0b10000000 | floorTextureIndex;
     },
-    /*paintFullWallTexture(quads: Uint8Array, row: number, col: number,
+    paintFullWallTexture(quads: Uint8Array, row: number, col: number,
         facingAxis: "x" | "z", orientation: "-" | "+", wallTextureIndex: number)
     {
         for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
@@ -44,7 +44,7 @@ const RoomGenerationHelperUtil =
             const offset = VoxelQueryUtil.getVoxelQuadIndexOffsetInsideLayer(facingAxis, orientation);
             quads[startIndex + offset] = 0b10000000 | wallTextureIndex;
         }
-    },*/
+    },
 }
 
 export default RoomGenerationHelperUtil;

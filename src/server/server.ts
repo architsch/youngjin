@@ -10,7 +10,7 @@ import ServerRoomManager from "./room/serverRoomManager";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBUserUtil from "./db/util/dbUserUtil";
 import LogUtil from "../shared/system/util/logUtil";
-import { HOUR_IN_MS, setIsServer } from "../shared/system/sharedConstants";
+import { HOUR_IN_MS, setIsServer, TUTORIAL_SINGLE_PLAYER_MODE } from "../shared/system/sharedConstants";
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
 import DevUserSeedUtil from "./user/util/devUserSeedUtil";
@@ -66,7 +66,7 @@ ${LatencySimUtil.getConfigSummary()}
     }
 
     await OwnerlessRoomCreationRoutine.createIfMissing("", RoomTypeEnumMap.Hub);
-    await OwnerlessRoomCreationRoutine.createIfMissing("tutorial", RoomTypeEnumMap.SinglePlayer);
+    await OwnerlessRoomCreationRoutine.createIfMissing(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
 
     // Seed dev user accounts (dev mode only)
     if (dev)

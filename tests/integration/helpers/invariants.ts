@@ -15,6 +15,7 @@ import ServerUserManager from "../../../src/server/user/serverUserManager";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeConfigMap";
+import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 
 // ─── Core Structural Invariants ────────────────────────────────────────────
 
@@ -75,11 +76,16 @@ export function checkRoomIDReferences(): void
     }
 }
 
-/** Invariant 5: Every object in a room belongs to a participant of that room. */
+/** Invariant 5: Every object in a room belongs to a participant of that room.
+ *  Single-player rooms are exempt: they have no participants and contain system-owned
+ *  objects (e.g. NPCs and doors spawned by room generation), so participant ownership
+ *  does not apply. */
 export function checkObjectOwnership(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
+        if (roomMem.room.roomType == RoomTypeEnumMap.SinglePlayer)
+            continue;
         for (const [objId, obj] of Object.entries(roomMem.room.objectById))
         {
             const sourceUser = obj.sourceUserID;

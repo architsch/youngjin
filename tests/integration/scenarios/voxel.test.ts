@@ -162,15 +162,16 @@ describe("voxel scenarios", () => {
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             actions: [
-                // One cell in front of the entrance → inside the 3x3 no-add zone (rejected)
+                // One cell in front of the entrance → inside the Hub no-add zone (rejected).
+                // A Hub's no-add zone reaches further into the room than a Regular room's.
                 { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
-                // Two cells in front → outside the zone (allowed), as a control
-                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
+                // Three cells in front → outside the Hub zone (allowed), as a control
+                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 3, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
             ],
             assertions: () => {
                 const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
                 const blocked = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
-                const allowed = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
+                const allowed = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 3, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(blocked, 0)).toBe(false);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(allowed, 0)).toBe(true);
             },

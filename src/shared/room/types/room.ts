@@ -13,7 +13,7 @@ let temp_participantUserNameByID: { [userID: string]: string } = {};
 export default class Room extends EncodableData
 {
     id: string;
-    roomName: string;
+    roomName: string; // (roomName == singlePlayerMode) if the room is a singleplayer room.
     roomType: RoomType;
     ownerUserID: string;
     ownerUserName: string;

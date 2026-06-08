@@ -1,8 +1,9 @@
 import { ReactNode } from "react";
 
-export default function IconButton({icon, size = "md", color = "gray", disabled = false, onClick, additionalClassNames = "" }: Props)
+export default function IconButton({icon, size = "md", color = "gray", disabled = false, onClick, additionalClassNames = "", id }: Props)
 {
     return <div
+        id={id}
         className={`flex items-center justify-center shrink-0 ${disabled ? "" : "cursor-pointer"} ${sizeClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]} ${additionalClassNames}`}
         onClick={disabled ? undefined : onClick}
     >
@@ -33,4 +34,5 @@ interface Props
     disabled?: boolean;
     onClick: () => void;
     additionalClassNames?: string;
+    id?: string;
 }

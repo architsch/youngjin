@@ -1,3 +1,4 @@
+import SinglePlayerModeConfigMap from "../../singlePlayer/maps/singlePlayerModeConfigMap";
 import ObjectGroup from "../../object/types/objectGroup";
 import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
 import Voxel from "../../voxel/types/voxel";
@@ -16,7 +17,7 @@ const RoomGenerationUtil =
             case RoomTypeEnumMap.Regular:
                 return generateMultiplayerRoom(0, 1, 2);
             case RoomTypeEnumMap.SinglePlayer:
-                return generateSingleplayerRoom(roomName, 0, 1, 2);
+                return generateSingleplayerRoom(roomName); // (roomName == singlePlayerMode) if the room is a singleplayer room.
             default: throw new Error(`Unknown room type :: ${roomType}`);
         }
     },
@@ -73,8 +74,7 @@ function generateMultiplayerRoom(floorTextureIndex: number, wallTextureIndex: nu
     };
 }
 
-function generateSingleplayerRoom(roomName: string, floorTextureIndex: number, wallTextureIndex: number,
-    ceilingTextureIndex: number): {voxelGrid: VoxelGrid, objectGroup: ObjectGroup}
+function generateSingleplayerRoom(singlePlayerMode: string): {voxelGrid: VoxelGrid, objectGroup: ObjectGroup}
 {
     const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
     const quadsMem = new VoxelQuadsRuntimeMemory();
@@ -85,29 +85,10 @@ function generateSingleplayerRoom(roomName: string, floorTextureIndex: number, w
             voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, 0b00000000);
         }
     }
-    const quadTextureIndicesWithinLayer = [
-        ceilingTextureIndex, // -y
-        floorTextureIndex, // +y
-        wallTextureIndex, // -x
-        wallTextureIndex, // +x
-        wallTextureIndex, // -z
-        wallTextureIndex, // +z
-    ];
-
-    if (roomName == "tutorial")
-    {
-        // TODO: Construct the tutorial level.
-        //...
-    }
-    else
-    {
-        throw new Error(`Unknown singleplayer roomName (${roomName})`);
-    }
-
-    return {
-        voxelGrid: new VoxelGrid(voxels, quadsMem),
-        objectGroup: new ObjectGroup([]),
-    };
+    const voxelGrid = new VoxelGrid(voxels, quadsMem);
+    const objectGroup = new ObjectGroup([]);
+    SinglePlayerModeConfigMap[singlePlayerMode].buildRoom(voxelGrid, objectGroup);
+    return {voxelGrid, objectGroup};
 }
 
 export default RoomGenerationUtil;

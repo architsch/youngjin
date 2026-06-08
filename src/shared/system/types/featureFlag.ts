@@ -1,11 +1,12 @@
 export enum FeatureFlag
 {
-    DisableManualVoxelQuadSelection,
-    DisableManualObjectSelection,
+    DisableVoxelQuadSelectionChange,
+    DisableObjectSelectionChange,
     DisableManualVoxelBlockAddition,
     DisableManualVoxelBlockRemoval,
     DisableManualObjectAddition,
     DisableManualObjectRemoval,
     GoToHubImmediatelyOnDoorClick,
     HideChatInput,
+    DisableChatSend,
 }

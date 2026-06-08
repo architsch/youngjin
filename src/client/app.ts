@@ -8,10 +8,11 @@ import Room from "../shared/room/types/room";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
-import { roomChangedObservable, texturePackURLObservable, singlePlayerStepObservable, updateObservable, userRoleObservable, singlePlayerModeObservable } from "./system/clientObservables";
+import { roomChangedObservable, texturePackURLObservable, updateObservable, userRoleObservable, singlePlayerObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
+import "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes
 import SetUserRoleSignal from "../shared/user/types/setUserRoleSignal";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import AsyncUtil from "../shared/system/util/asyncUtil";
@@ -39,8 +40,10 @@ const App =
     {
         env = newEnv;
         user = User.fromString(env.userString);
-        singlePlayerModeObservable.set(user.singlePlayerMode);
-        singlePlayerStepObservable.set(0);
+        singlePlayerObservable.set({
+            mode: user.singlePlayerMode,
+            step: user.singlePlayerMode != "" ? 0 : -1
+        });
     },
     getEnv: (): ThingsPoolEnv =>
     {

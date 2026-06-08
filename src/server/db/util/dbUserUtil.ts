@@ -8,6 +8,7 @@ import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import { FieldValue } from "firebase-admin/firestore";
 import { COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE } from "../../system/serverConstants";
+import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 
 const DBUserUtil =
 {
@@ -20,7 +21,7 @@ const DBUserUtil =
             userName,
             userType,
             email,
-            singlePlayerMode: "tutorial",
+            singlePlayerMode: TUTORIAL_SINGLE_PLAYER_MODE,
             lastRoomID: "",
             lastLoginAt: Date.now(),
             createdAt: Date.now(),

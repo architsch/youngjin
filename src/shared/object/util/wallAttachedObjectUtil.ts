@@ -5,6 +5,7 @@ import { ColliderState } from "../../physics/types/colliderState";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
+import RoomValidationUtil from "../../room/util/roomValidationUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import AddObjectSignal from "../types/addObjectSignal";
@@ -67,6 +68,8 @@ const WallAttachedObjectUtil =
             const rightCol = Math.floor(pos.x + halfHorizontal - 0.01);
             for (let col = leftCol; col <= rightCol; ++col)
             {
+                if (RoomValidationUtil.additionIsBlockedAtCoords(room, col, backRow))
+                    return false;
                 const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, backRow, col);
                 const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, frontRow, col);
                 if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
@@ -83,6 +86,8 @@ const WallAttachedObjectUtil =
             const rightRow = Math.floor(pos.z + halfHorizontal - 0.01);
             for (let row = leftRow; row <= rightRow; ++row)
             {
+                if (RoomValidationUtil.additionIsBlockedAtCoords(room, backCol, row))
+                    return false;
                 const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, backCol);
                 const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, frontCol);
                 if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))

@@ -20,12 +20,31 @@ const ClientVoxelManager =
 {
     // --- Public methods for local (optimistic) operations ---
 
-    addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer: number[],
+    addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer?: number[],
         validate: boolean = true): boolean =>
     {
         const userRole = userRoleObservable.peek();
         return VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
+    },
+    addVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
+        numRows: number, numCols: number, collisionLayerMin: number, collisionLayerMax: number,
+        quadTextureIndicesWithinLayer?: number[], validate: boolean = true): boolean =>
+    {
+        const userRole = userRoleObservable.peek();
+        for (let row = rowStart; row < rowStart + numRows; ++row)
+        {
+            for (let col = colStart; col < colStart + numCols; ++col)
+            {
+                for (let collisionLayer = collisionLayerMin; collisionLayer <= collisionLayerMax; ++collisionLayer)
+                {
+                    const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", collisionLayer);
+                    VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
+                        quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
+                }
+            }
+        }
+        return true;
     },
     removeVoxelBlock: (room: Room, quadIndex: number,
         validate: boolean = true): boolean =>
@@ -33,6 +52,25 @@ const ClientVoxelManager =
         const userRole = userRoleObservable.peek();
         return VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, validate ? room : undefined);
+    },
+    removeVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
+        numRows: number, numCols: number, collisionLayerMin: number, collisionLayerMax: number,
+        validate: boolean = true): boolean =>
+    {
+        const userRole = userRoleObservable.peek();
+        for (let row = rowStart; row < rowStart + numRows; ++row)
+        {
+            for (let col = colStart; col < colStart + numCols; ++col)
+            {
+                for (let collisionLayer = collisionLayerMin; collisionLayer <= collisionLayerMax; ++collisionLayer)
+                {
+                    const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", collisionLayer);
+                    VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
+                        quadIndex, validate ? room : undefined);
+                }
+            }
+        }
+        return true;
     },
     moveVoxelBlock: (room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number,
