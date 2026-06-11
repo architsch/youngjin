@@ -12,7 +12,7 @@ import { roomChangedObservable, texturePackURLObservable, updateObservable, user
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
-import "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes
+import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import SetUserRoleSignal from "../shared/user/types/setUserRoleSignal";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import AsyncUtil from "../shared/system/util/asyncUtil";
@@ -92,12 +92,29 @@ const App =
             await unloadCurrentRoom();
         await loadRoom(roomChangedSignal.roomRuntimeMemory, roomChangedSignal.currentUserRole);
 
+        // Notify listeners that the room has changed. This disposes the previous room's world-space
+        // gizmos and resets their lazy-init state, so the pre-load below re-creates them fresh in
+        // the new scene.
+        roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
+
+        // While the "Loading" indicator is still showing, eagerly create the world-space gizmos and
+        // pre-compile every material's shader program. This pays the one-time shader-compilation
+        // cost up front, instead of stalling the frame the first time a gizmo appears mid-gameplay.
+        // A failure here only forfeits the optimization, so don't let it strand the loading screen.
+        try
+        {
+            await preloadGenericWorldSpaceGizmos();
+            await GraphicsManager.precompileSceneShaders();
+        }
+        catch (err)
+        {
+            console.error("Failed to pre-load world-space gizmo shaders.", err);
+        }
+
         endClientProcess("roomChange");
 
         // Remove superfluous trailing parts of the URL
         window.history.replaceState(null, "", "/");
-
-        roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
     },
 }
 

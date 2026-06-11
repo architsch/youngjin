@@ -22,6 +22,11 @@ const ServerObjectManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerObjectManager::onAddObjectSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return false;
+        }
         const room = roomRuntimeMemory.room;
 
         if (!ObjectUpdateUtil.addObject(user, userRole, room, obj))
@@ -42,6 +47,11 @@ const ServerObjectManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerObjectManager::onRemoveObjectSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return false;
+        }
         const room = roomRuntimeMemory.room;
 
         if (!ObjectUpdateUtil.removeObject(user, userRole, room, signal))
@@ -60,6 +70,11 @@ const ServerObjectManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerObjectManager::onSetObjectTransformSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return;
+        }
         const room = roomRuntimeMemory.room;
 
         const result = ObjectUpdateUtil.setObjectTransform(user, userRole, room, signal);
@@ -85,6 +100,11 @@ const ServerObjectManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerObjectManager::onSetObjectMetadataSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return;
+        }
         const room = roomRuntimeMemory.room;
 
         const obj = room.objectById[signal.objectId];        

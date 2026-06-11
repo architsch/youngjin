@@ -231,13 +231,13 @@ const ServerRoomManager =
             );
         }
 
-        // Wrap the room memory and user role in a RoomChangedSignal and unicast to the joining user.
+        // Wrap the room memory and user role in a RoomChangedSignal and send it to the joining user.
+        // The signal goes straight to the user's own socket context rather than being routed through
+        // the room's SocketRoomContext: a single-player user is intentionally never registered in the
+        // room context (see above), so an indirect unicast would fail to find them. Since this is a
+        // pure unicast to the joining user, the direct path is equivalent for multiplayer rooms too.
         const roomChangedSignal = new RoomChangedSignal(roomRuntimeMemory, userRole);
-        const socketRoomContext = socketRoomContexts[roomID];
-        if (!socketRoomContext)
-            console.error(`ServerRoomManager.changeUserRoom :: SocketRoomContext not found (roomID = ${roomID})`);
-        else // Send the room data to the user who is added to the room.
-            socketRoomContext.unicastSignal("roomChangedSignal", roomChangedSignal, user.id);
+        socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
         return true;
     },
     onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>

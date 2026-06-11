@@ -19,6 +19,11 @@ const ServerVoxelManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerVoxelManager::onAddVoxelBlockSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return;
+        }
         const room = roomRuntimeMemory.room;
 
         if (!VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels, signal.quadIndex, signal.quadTextureIndicesWithinLayer, room))
@@ -38,6 +43,11 @@ const ServerVoxelManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerVoxelManager::onRemoveVoxelBlockSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return;
+        }
         const room = roomRuntimeMemory.room;
 
         // Capture textures before any modification attempt, for potential recovery.
@@ -63,6 +73,11 @@ const ServerVoxelManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerVoxelManager::onMoveVoxelBlockSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return;
+        }
         const room = roomRuntimeMemory.room;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(signal.quadIndex);
@@ -88,6 +103,11 @@ const ServerVoxelManager =
         const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerVoxelManager::onSetVoxelQuadTextureSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return;
+        }
         const room = roomRuntimeMemory.room;
 
         // Capture old texture for potential recovery.

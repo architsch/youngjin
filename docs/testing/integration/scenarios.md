@@ -57,7 +57,7 @@ This document catalogs all integration test scenarios organized by category.
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
 
-## Single-Player Mode (`single-player.test.ts`) — 4 tests
+## Single-Player Mode (`single-player.test.ts`) — 5 tests
 
 | Test | What it verifies |
 |------|-----------------|
@@ -65,6 +65,7 @@ This document catalogs all integration test scenarios organized by category.
 | does not persist lastRoomID when joining a single-player room | `lastRoomID` stays empty — single-player rooms are re-entered via `user.singlePlayerMode` |
 | joining a multiplayer room still registers the user as a participant | A Hub join registers the user (participant count 1) and leaves `isInSinglePlayerRoom` false |
 | builds the tutorial room with its hotspot blocks in place | The tutorial room generates on load via `SinglePlayerModeConfig.buildRoom`; the table (collision layer 1) and obstacle (collision layer 2) hotspot blocks exist at their metadata coordinates |
+| rejects a single-player user's edit signals without mutating the shared room | Defense-in-depth: firing all eight room-mutating signals (object add/remove/transform/metadata, voxel add/remove/move/setTexture) as a single-player user leaves the shared room untouched — the user stays unregistered and every handler bails at its no-room guard |
 
 ## Signal Emission (`signals.test.ts`) — 6 tests
 
@@ -290,7 +291,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room | 9 |
 | Object | 8 |
 | Voxel | 9 |
-| Single-Player | 4 |
+| Single-Player | 5 |
 | Signals | 6 |
 | Permissions | 5 |
 | Extended Permissions | 16 |
@@ -300,4 +301,4 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 16 |
-| **Total** | **153** |
+| **Total** | **154** |

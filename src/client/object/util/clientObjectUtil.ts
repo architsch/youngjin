@@ -1,3 +1,4 @@
+import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import Room from "../../../shared/room/types/room";
@@ -47,19 +48,27 @@ const ClientObjectUtil =
     },
     spawnSingleModePlayer: async (room: Room): Promise<GameObject> =>
     {
-        const config = SinglePlayerModeConfigMap[room.roomName];
-        const metadata = config.loadMetadata();
+        const pos = ClientObjectUtil.getSingleModePlayerPosition(room);
         const gameObject = ObjectFactory.createClientSideObject(
             room.id,
             playerTypeIndex,
-            new ObjectTransform(
-                {x: metadata.entranceVoxelCol + 0.5, y: 0.5 * PLAYER_HEIGHT, z: metadata.entranceVoxelRow + 0.5},
-                {x: 0, y: 0, z: 1}
-            ),
+            new ObjectTransform(pos, {x: 0, y: 0, z: 1}),
             {}, "my_player"
         );
-        await ClientObjectManager.addObject(gameObject, false, false);
+        // The player must be registered to the client-side room's objectById because
+        // ObjectUpdateUtil processes the player rigidbody's "setTransform" call
+        // through its corresponding entry in room.objectById.
+        await ClientObjectManager.addObject(gameObject, false, true);
         return gameObject;
+    },
+
+    // Parameters
+
+    getSingleModePlayerPosition: (room: Room): Vec3 =>
+    {
+        const config = SinglePlayerModeConfigMap[room.roomName];
+        const metadata = config.loadMetadata();
+        return {x: metadata.entranceVoxelCol + 0.5, y: 0.5 * PLAYER_HEIGHT, z: metadata.entranceVoxelRow + 0.5};
     },
 
     // Conditions

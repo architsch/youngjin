@@ -1,15 +1,17 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
 import { clientFeatureFlagsObservable, objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
-import MeshFactory from "../../factories/meshFactory";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import WorldSpaceOutlineRect from "../../../ui/components/basic/worldspace/worldSpaceOutlineRect";
 
-const vec3Temp = new THREE.Vector3();
+const tempPos = new THREE.Vector3();
+const tempDir = new THREE.Vector3();
+const tempScale = new THREE.Vector3();
 
 export default class VoxelQuadSelection
 {
@@ -77,37 +79,26 @@ export default class VoxelQuadSelection
     }
 }
 
-let selectionLineSegmentsClone: THREE.LineSegments | null = null;
+let selectionOutline: WorldSpaceOutlineRect | null = null;
 
 voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {
     if (selection)
     {
-        // Initialize the mesh if it hasn't been initialized yet.
-        if (selectionLineSegmentsClone == null)
+        // Initialize the outline if it hasn't been initialized yet.
+        if (selectionOutline == null)
         {
-            const lineSegments = await MeshFactory.loadLineSegments("Square", "#00ff00");
-            selectionLineSegmentsClone = lineSegments.clone();
-            // Force the selection outline to draw after voxel meshes, so it stays
-            // visible even when the voxel InstancedMesh is later added to the scene
-            // (e.g. after a texture pack swap rebuilds the mesh).
-            selectionLineSegmentsClone.renderOrder = 9999;
-            GraphicsManager.getScene().add(selectionLineSegmentsClone);
+            selectionOutline = await WorldSpaceOutlineRect.create("#00ff00");
+            selectionOutline.addToParent(GraphicsManager.getScene());
         }
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
             VoxelQueryUtil.getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
 
-        selectionLineSegmentsClone!.scale.set(scaleX, scaleY, scaleZ);
-        selectionLineSegmentsClone!.position.set(
-            selection.voxel.col + 0.5 + offsetX,
-            offsetY,
-            selection.voxel.row + 0.5 + offsetZ
-        );
-        const p = selectionLineSegmentsClone!.position;
-        vec3Temp.set(p.x + dirX, p.y + dirY, p.z + dirZ);
-        selectionLineSegmentsClone!.lookAt(vec3Temp);
-
-        selectionLineSegmentsClone.visible = true;
+        tempPos.set(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ);
+        tempDir.set(dirX, dirY, dirZ);
+        tempScale.set(scaleX, scaleY, scaleZ);
+        selectionOutline.setTransform(tempPos, tempDir, tempScale);
+        selectionOutline.setVisible(true);
 
         // If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
         playerViewTargetPosObservable.set(new THREE.Vector3(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ));
@@ -117,8 +108,7 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
     }
     else
     {
-        if (selectionLineSegmentsClone != null)
-            selectionLineSegmentsClone.visible = false;
+        selectionOutline?.setVisible(false);
     }
 
     // Is nothing selected at all? Then just set the viewTarget to NULL.
@@ -131,9 +121,9 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
 roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
     VoxelQuadSelection.unselect();
 
-    if (selectionLineSegmentsClone)
+    if (selectionOutline)
     {
-        selectionLineSegmentsClone.removeFromParent();
-        selectionLineSegmentsClone = null;
+        selectionOutline.dispose();
+        selectionOutline = null;
     }
 });

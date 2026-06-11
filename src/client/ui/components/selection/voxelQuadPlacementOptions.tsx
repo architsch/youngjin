@@ -1,3 +1,4 @@
+import { useEffect, useReducer } from "react";
 import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection";
 import IconButton from "../basic/iconButton";
 import TrashIcon from "../basic/icons/trashIcon";
@@ -31,8 +32,29 @@ import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
+// Feature flags whose toggling changes whether this menu's buttons are enabled.
+const placementFeatureFlags = [
+    FeatureFlag.DisableManualVoxelBlockAddition,
+    FeatureFlag.DisableManualVoxelBlockRemoval,
+    FeatureFlag.DisableManualObjectAddition,
+];
+
 export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection})
 {
+    const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
+
+    // The buttons' enabled state is derived from the feature flags above, which can be toggled
+    // at runtime (e.g. by the single-player tutorial). Re-render this menu — and only this menu,
+    // not the whole UI — whenever one of those flags is added or removed.
+    useEffect(() => {
+        for (const flag of placementFeatureFlags)
+            clientFeatureFlagsObservable.addElementListener("voxelQuadPlacementOptions", flag, forceRefresh);
+        return () => {
+            for (const flag of placementFeatureFlags)
+                clientFeatureFlagsObservable.removeElementListener("voxelQuadPlacementOptions", flag);
+        };
+    }, []);
+
     return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
         <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveVoxelBlock(props.selection)}

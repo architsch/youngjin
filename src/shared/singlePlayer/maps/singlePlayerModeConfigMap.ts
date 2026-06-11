@@ -26,13 +26,13 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
         // Manually set parameters:
         const entranceVoxelCol = 5;
         const entranceVoxelRow = 30;
-        const X1 = 5, X2 = 5, X3 = 5, X4 = 5, Z1 = 5, Z2 = 5, Z3 = 5;
+        const X1 = 5, X2 = 5, X3 = 5, Z1 = 5, Z2 = 5, Z3 = 5;
 
-        if (X1 % 2 == 0 || X2 % 2 == 0 || X3 % 2 == 0 || X4 % 2 == 0 || Z1 % 2 == 0 || Z2 % 2 == 0 || Z3 % 2 == 0)
-            throw new Error("X1,X2,X3,X4,Z1,Z2,Z3 must all be positive odd integers.");
+        if (X1 % 2 == 0 || X2 % 2 == 0 || X3 % 2 == 0 || Z1 % 2 == 0 || Z2 % 2 == 0 || Z3 % 2 == 0)
+            throw new Error("X1,X2,X3,Z1,Z2,Z3 must all be positive odd integers.");
 
         // Algebraically derived parameters:
-        const X = X1 + X2 + X3 + X4;
+        const X = X1 + X2 + X3;
         const Z = Z1 + Z2 + Z3;
         const x0 = entranceVoxelCol - 0.5 * (X1 - 1);
         const z0 = entranceVoxelRow - Z + 1;
@@ -40,16 +40,17 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
         const hotspots = {
             table: {row: entranceVoxelRow - Z3 - Z2 + 1, col: entranceVoxelCol},
             obstacle: {row: z0 + Z1 + 0.5*(Z2 - 1), col: x0 + X1 + X2 - 1},
-            npc: {row: z0, col: x0 + X1 + X2 + 0.5*(X3 - 1)},
-            door: {row: z0 + 0.5*(Z1 - 1), col: x0 + X - 1},
+            npc: {row: z0 + Z1 + 0.5*(Z2 - 1), col: x0 + X - 1},
+            door: {row: z0, col: x0 + X - 1 - 0.5*(X3 - 1)},
         };
         const rects = {
             floor1: {rowStart: z0 + Z1, colStart: x0, numRows: Z2 + Z3, numCols: X1},
-            floor2: {rowStart: z0 + Z1, colStart: x0 + X1, numRows: Z2, numCols: X2 + X3},
-            floor3: {rowStart: z0, colStart: x0 + X1 + X2, numRows: Z1, numCols: X3 + X4},
+            floor2: {rowStart: z0 + Z1, colStart: x0 + X1, numRows: Z2, numCols: X2},
+            floor3: {rowStart: z0, colStart: x0 + X1 + X2, numRows: Z1 + Z2, numCols: X3},
             wall1: {rowStart: z0 + Z1, colStart: x0 + X1, numRows: Z2, numCols: 1},
             wall2: {rowStart: z0 + Z1, colStart: x0 + X1 + X2 - 1, numRows: Z2, numCols: 1},
-            wall3: {rowStart: z0, colStart: x0 + X1 + X2 + X3, numRows: Z1, numCols: 1},
+            wall3: {rowStart: z0 + Z1, colStart: x0 + X - 2, numRows: Z2, numCols: 1},
+            wall4: {rowStart: z0 + Z1 - 1, colStart: x0 + X1 + X2, numRows: 1, numCols: X3},
         };
 
         const metadata: SinglePlayerModeConfigMetadata = {entranceVoxelCol, entranceVoxelRow, hotspots, rects};
@@ -72,6 +73,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
         grid.createWalls(c.rects.wall1.rowStart, c.rects.wall1.colStart, c.rects.wall1.numRows, c.rects.wall1.numCols);
         grid.createWalls(c.rects.wall2.rowStart, c.rects.wall2.colStart, c.rects.wall2.numRows, c.rects.wall2.numCols);
         grid.createWalls(c.rects.wall3.rowStart, c.rects.wall3.colStart, c.rects.wall3.numRows, c.rects.wall3.numCols);
+        grid.createWalls(c.rects.wall4.rowStart, c.rects.wall4.colStart, c.rects.wall4.numRows, c.rects.wall4.numCols);
         grid.generate(voxelGrid);
 
         // Add the table.
@@ -88,14 +90,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
             ObjectTypeConfigMap.getIndexByType("Player"), "npc",
             new ObjectTransform(
                 {x: c.hotspots.npc.col + 0.5, y: 0.5 * PLAYER_HEIGHT, z: c.hotspots.npc.row + 0.5},
-                {x: 0, y: 0, z: -1}));
+                {x: 1, y: 0, z: 0}));
 
         // Add the door.
         objectGroup.objectById["door"] = new AddObjectSignal("", "", "",
             ObjectTypeConfigMap.getIndexByType("Door"), "door",
             new ObjectTransform(
-                {x: c.hotspots.door.col + 0.5 + 0.499, y: 0, z: c.hotspots.door.row + 0.5},
-                {x: -1, y: 0, z: 0}));
+                {x: c.hotspots.door.col + 0.5, y: 0, z: c.hotspots.door.row + 0.001},
+                {x: 0, y: 0, z: 1}));
     },
     loadSteps: () =>
     {
@@ -110,12 +112,15 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
             { // (Step 0): Drag to move
                 actionsOnStart: [
                     {type: "ui_headline", text: "Drag the screen to move."},
+                    {type: "gizmo_navigation_arrow",
+                        targetX: m.hotspots.table.col+0.5, targetZ: m.hotspots.table.row+0.5},
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.GoToHubImmediatelyOnDoorClick, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockMovement, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
                 ],
                 transitionRules: [{
@@ -285,6 +290,13 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "ui_headline", text: "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
                         targetX: m.hotspots.npc.col+0.5, targetZ: m.hotspots.npc.row+0.5},
+                    {type: "remove_voxel_blocks",
+                        rowStart: m.rects.wall3.rowStart,
+                        colStart: m.rects.wall3.colStart,
+                        numRows: m.rects.wall3.numRows,
+                        numCols: m.rects.wall3.numCols,
+                        collisionLayerMin: COLLISION_LAYER_MIN,
+                        collisionLayerMax: COLLISION_LAYER_MAX},
                 ],
                 transitionRules: [{
                     requirements: [{type: "player_is_nearby", negate: false,
@@ -352,12 +364,12 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Exit through the door."},
                     {type: "gizmo_navigation_arrow",
-                        targetX: m.hotspots.door.col+0.5, targetZ: m.hotspots.door.row+0.5},
+                        targetX: m.hotspots.door.col+0.5, targetZ: m.hotspots.door.row-1},
                     {type: "remove_voxel_blocks",
-                        rowStart: m.rects.wall3.rowStart,
-                        colStart: m.rects.wall3.colStart,
-                        numRows: m.rects.wall3.numRows,
-                        numCols: m.rects.wall3.numCols,
+                        rowStart: m.rects.wall4.rowStart,
+                        colStart: m.rects.wall4.colStart,
+                        numRows: m.rects.wall4.numRows,
+                        numCols: m.rects.wall4.numCols,
                         collisionLayerMin: COLLISION_LAYER_MIN,
                         collisionLayerMax: COLLISION_LAYER_MAX},
                 ],
@@ -372,6 +384,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: false},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: false},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockMovement, enable: false},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: false},
                 ],
             },

@@ -18,6 +18,28 @@ const TextureFactory =
         loadedTextures[texturePath] = newTexture;
         return newTexture;
     },
+    // A texture whose image is drawn onto a 2D canvas at load time (e.g. a procedurally
+    // generated sprite). Cached by textureId, and disposed via unload/unloadAll like any other.
+    loadCanvasTexture: (textureId: string, width: number, height: number,
+        draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => void): THREE.Texture =>
+    {
+        const loadedTexture = loadedTextures[textureId];
+        if (loadedTexture != undefined)
+            return loadedTexture;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx == null)
+            throw new Error(`Failed to acquire a 2D canvas context (textureId = ${textureId})`);
+        draw(ctx, width, height);
+
+        const newTexture = new THREE.CanvasTexture(canvas);
+        newTexture.colorSpace = THREE.SRGBColorSpace;
+        loadedTextures[textureId] = newTexture;
+        return newTexture;
+    },
     // An empty texture upon which images can be freely rendered during runtime.
     loadDynamicEmptyTexture: (textureId: string, width: number, height: number): THREE.Texture =>
     {

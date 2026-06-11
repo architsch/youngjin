@@ -71,6 +71,14 @@ const GraphicsManager =
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);
     },
+    // Compiles the shader programs for every material currently in the scene (using the
+    // KHR_parallel_shader_compile extension when available). Called during the room-loading screen
+    // so the one-time shader-compilation cost is paid up front, rather than stalling the first
+    // frame a given material is drawn (e.g. the first time a world-space gizmo appears).
+    precompileSceneShaders: async () =>
+    {
+        await gameRenderer.compileAsync(scene, camera);
+    },
     load: async (updateCallback: XRFrameRequestCallback | null) =>
     {
         // Core elements

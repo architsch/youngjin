@@ -5,6 +5,7 @@ import WireframeMaterialParams from "../types/material/wireframeMaterialParams";
 import TexturePackMaterialParams from "../types/material/texturePackMaterialParams";
 import LineBasicMaterialParams from "../types/material/lineBasicMaterialParams";
 import TextureMaterialParams from "../types/material/textureMaterialParams";
+import SpriteMaterialParams from "../types/material/spriteMaterialParams";
 
 export const MaterialConstructorMap: { [materialType: string]:
     (params: MaterialParams) => Promise<THREE.Material> } =
@@ -16,6 +17,19 @@ export const MaterialConstructorMap: { [materialType: string]:
     "Texture": async (params: MaterialParams) =>
     {
         return await createTextureMaterial(params as TextureMaterialParams);
+    },
+    "Sprite": async (params: MaterialParams) =>
+    {
+        const p = params as SpriteMaterialParams;
+        const texture = TextureFactory.loadCanvasTexture(p.textureId, p.textureWidth, p.textureHeight, p.draw);
+        return new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            opacity: p.opacity,
+            depthTest: false,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+        });
     },
     "Wireframe": async (params: MaterialParams) =>
     {

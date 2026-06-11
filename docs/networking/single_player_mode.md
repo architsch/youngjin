@@ -36,11 +36,11 @@ The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to loa
 
 Because a single-player room is a shared template that each client drives locally, the server deliberately does **not** treat the joining user as a participant:
 
-- **No participant registration.** The user's player object is created and updated entirely client-side; the server only flags the connection as being in a single-player room.
+- **No participant registration.** The user's player object is created and updated entirely client-side; the server only flags the connection as being in a single-player room. Because the user is never added to the room's broadcast group, the server delivers the initial room snapshot straight to their own connection rather than through that group.
 - **No last-room write.** Single-player rooms are re-entered via the user's mode flag, not via the saved last room, so that write is skipped.
 - **No removal on exit.** Since the user was never registered as a participant, there is nothing to remove when they leave.
 
-As defense-in-depth, every server signal handler that would mutate room state (object add/remove/transform/metadata in `ServerObjectManager`, and voxel add/remove/move/texture in `ServerVoxelManager`) rejects single-player rooms outright. In practice the client never emits these while in a single-player room (see below).
+As defense-in-depth, every server signal handler that would mutate room state (object add/remove/transform/metadata in `ServerObjectManager`, and voxel add/remove/move/texture in `ServerVoxelManager`) rejects these edits outright: a single-player user is never bound to a server-side room, so each handler finds no room to act on and bails. In practice the client never emits these while in a single-player room (see below).
 
 ## Client-side architecture
 
@@ -70,7 +70,7 @@ A `SinglePlayerAction` is a small tagged command and a `SinglePlayerCondition` a
 Start and end actions drive a thin, purely local presentation layer, all of it observable-backed:
 
 - **On-screen UI** — a top-of-screen headline banner, a 2D arrow that points at a target UI element, and a 2D outline that frames one. The arrow and outline follow their target element live and never intercept pointer input, so the user can still operate the control being highlighted.
-- **World-space gizmos** — a navigation arrow that floats ahead of the player and points toward a destination, a downward arrow that hovers over a point of interest, and an outline that highlights a voxel-quad. These are drawn always-on-top so they stay visible through walls and objects.
+- **World-space gizmos** — a flat, ground-parallel navigation arrow that floats ahead of the player and points toward a destination, a downward arrow that hovers over a point of interest, and a softly glowing outline that highlights a voxel-quad. These are drawn always-on-top so they stay visible through walls and objects.
 
 A single "clear" action tears the whole layer down, which every step's end actions use.
 

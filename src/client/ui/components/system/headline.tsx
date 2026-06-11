@@ -11,6 +11,10 @@ export default function Headline()
 
     useEffect(() => {
         headlineMessageObservable.addListener("ui.headline", setMessage);
+        // The single-player tutorial's first step sets the headline during app bootstrap,
+        // before this component mounts (i.e. before the listener above is registered). Since
+        // addListener doesn't replay the current value, sync to it explicitly on mount.
+        setMessage(headlineMessageObservable.peek());
         return () => headlineMessageObservable.removeListener("ui.headline");
     }, []);
 

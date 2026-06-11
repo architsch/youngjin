@@ -62,43 +62,30 @@ const ClientObjectManager =
     {
         const room = roomRuntimeMemory.room;
         await ClientObjectUtil.spawnVoxelsFromGrid(room);
-        let playerX = 0, playerY = 0, playerZ = 0;
+        let playerPos: Vec3 = {x: 0, y: 0, z: 0};
 
-        if (room.roomType != RoomTypeEnumMap.SinglePlayer) // Spawn the entrance door only if it is a multiplayer room.
+        // Find the player's initial position for distance-based loading order
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
         {
-            await ClientObjectUtil.spawnMultiplayerEntranceDoor(room);
-
-            // Find the player's initial position for distance-based loading order
             for (const obj of Object.values(room.objectById))
             {
                 if (obj.objectTypeIndex === playerTypeIndex)
                 {
-                    const t = obj.transform;
-                    playerX = t.pos.x;
-                    playerY = t.pos.y;
-                    playerZ = t.pos.z;
+                    playerPos = obj.transform.pos;
                     break;
                 }
             }
         }
-        else // If it is a singleplayer room, the client will be responsible for spawning its own player object (In multiplayer mode, the server would've included the player object as part of the room's data before sending it over to the client).
-        {
-            const player = await ClientObjectUtil.spawnSingleModePlayer(room);
-
-            // Find the player's initial position for distance-based loading order
-            const t = player.params.transform;
-            playerX = t.pos.x;
-            playerY = t.pos.y;
-            playerZ = t.pos.z;
-        }
+        else
+            playerPos = ClientObjectUtil.getSingleModePlayerPosition(room);
 
         // Load all objects from room.objectById, sorted by distance
         // from the player so that canvas images load nearest-first.
         const objects = Object.values(room.objectById);
         objects.sort((a, b) =>
         {
-            const da = (a.transform.pos.x - playerX) ** 2 + (a.transform.pos.y - playerY) ** 2 + (a.transform.pos.z - playerZ) ** 2;
-            const db = (b.transform.pos.x - playerX) ** 2 + (b.transform.pos.y - playerY) ** 2 + (b.transform.pos.z - playerZ) ** 2;
+            const da = (a.transform.pos.x - playerPos.x) ** 2 + (a.transform.pos.y - playerPos.y) ** 2 + (a.transform.pos.z - playerPos.z) ** 2;
+            const db = (b.transform.pos.x - playerPos.x) ** 2 + (b.transform.pos.y - playerPos.y) ** 2 + (b.transform.pos.z - playerPos.z) ** 2;
             return da - db;
         });
         for (const obj of objects)
@@ -108,6 +95,12 @@ const ClientObjectManager =
             const gameObject = ObjectFactory.createServerSideObject(obj);
             await ClientObjectManager.addObject(gameObject, false, false); // Don't try to add the object to the room data again because it is already part of it.
         }
+
+        // Add special client-side singleton objects.
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+            await ClientObjectUtil.spawnMultiplayerEntranceDoor(room);
+        else // If it is a singleplayer room, the client will be responsible for spawning its own player object (In multiplayer mode, the server would've included the player object as part of the room's data before sending it over to the client).
+            await ClientObjectUtil.spawnSingleModePlayer(room);
     },
     unload: async () =>
     {

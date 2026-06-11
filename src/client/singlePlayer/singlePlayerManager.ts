@@ -54,7 +54,7 @@ const SinglePlayerManager =
     },
 }
 
-let pendingTimeout: number | undefined = undefined;
+let pendingTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 let prevStep: number = -1;
 let steps: SinglePlayerStep[];
 

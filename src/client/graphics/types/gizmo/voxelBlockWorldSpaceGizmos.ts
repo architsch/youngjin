@@ -1,5 +1,5 @@
 import VoxelQuadSelection from "./voxelQuadSelection";
-import { voxelQuadSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable } from "../../../system/clientObservables";
+import { voxelQuadSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable, clientFeatureFlagsObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -10,6 +10,7 @@ import MoveVoxelBlockSignal from "../../../../shared/voxel/types/update/moveVoxe
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 // Arrow offset distance from center of voxel block face
 const ARROW_OFFSET = 0.35;
@@ -134,6 +135,12 @@ function tryMoveVoxelBlock(selection: VoxelQuadSelection,
 // --- Observable listeners ---
 
 voxelQuadSelectionObservable.addListener("voxelBlockWorldSpaceGizmos", async (selection: VoxelQuadSelection | null) => {
+    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelBlockMovement))
+    {
+        hideAll();
+        return;
+    }
+
     if (selection)
         await updateGizmos(selection);
     else

@@ -19,9 +19,9 @@ export default function ScreenArrow()
     const rect = useTrackedElementRect(targetId);
     if (!rect) return null;
 
-    return <div className="absolute z-50 w-8 h-8 -translate-x-1/2 -translate-y-full animate-bounce pointer-events-none drop-shadow-lg"
+    return <div className="absolute z-50 w-14 h-14 -translate-x-1/2 -translate-y-full animate-bounce-strong pointer-events-none drop-shadow-lg"
         style={{ left: rect.left + rect.width / 2, top: rect.top - ARROW_GAP_PX }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full text-amber-400">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full text-amber-400">
             <line x1="12" y1="3" x2="12" y2="18"/>
             <path d="M6 12 L12 19 L18 12"/>
         </svg>

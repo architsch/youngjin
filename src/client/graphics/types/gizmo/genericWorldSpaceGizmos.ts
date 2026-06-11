@@ -1,36 +1,31 @@
 import * as THREE from "three";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
+import WorldSpaceSpriteArrow from "../../../ui/components/basic/worldspace/worldSpaceSpriteArrow";
 import WorldSpaceOutlineRect from "../../../ui/components/basic/worldspace/worldSpaceOutlineRect";
 import VoxelQuadSelection from "./voxelQuadSelection";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import { downwardArrowTargetObservable, navigationArrowTargetObservable, roomChangedObservable, updateObservable, voxelQuadHighlightObservable } from "../../../system/clientObservables";
 
-// Drives the world-space "attention" gizmos used by the single-player tutorial:
-//   - a navigation arrow that floats in front of the player and points toward a destination,
-//   - a downward arrow that hovers above a target and bobs to draw the eye,
-//   - a rectangular outline that highlights a voxel-quad with an oscillating brightness.
-// Each gizmo is shown/hidden by its observable; per-frame animation runs off updateObservable.
-
 const GIZMO_COLOR = "#ffe14d";
 
 // Navigation arrow: floats in front of where the player is looking and points at the target.
 const NAV_DISTANCE = 3; // distance in front of the player (in the XZ plane)
 const NAV_HEIGHT = 1;   // world-space y the arrow floats at
-const NAV_SCALE = 3;
+const NAV_SCALE = 1.4;
 
-// Downward arrow: hovers above the target, points straight down, and bobs up and down.
+// Downward arrow: hovers above the target, points straight down, and bobs up and down vigorously.
 const DOWN_SCALE = 3;
-const DOWN_BASE_OFFSET = 0.7; // base height above the target
-const DOWN_BOB_AMPLITUDE = 0.15;
-const DOWN_BOB_SPEED = 4; // radians per second
+const DOWN_BASE_OFFSET = 0.9; // base height above the target
+const DOWN_BOB_AMPLITUDE = 0.3;
+const DOWN_BOB_SPEED = 7.5; // radians per second
 
-// Voxel-quad outline: brightness oscillates to grab attention.
-const OUTLINE_MIN_BRIGHTNESS = 0.4;
-const OUTLINE_PULSE_SPEED = 4; // radians per second
+// Voxel-quad outline: brightness oscillates dramatically and rapidly to grab attention.
+const OUTLINE_MIN_BRIGHTNESS = 0.08;
+const OUTLINE_PULSE_SPEED = 8; // radians per second
 
-let navArrow: WorldSpaceArrow | null = null;
+let navArrow: WorldSpaceSpriteArrow | null = null;
 let downArrow: WorldSpaceArrow | null = null;
 let outlineRect: WorldSpaceOutlineRect | null = null;
 let initPromise: Promise<void> | null = null;
@@ -54,7 +49,7 @@ function ensureInitialized(): Promise<void>
         initPromise = (async () => {
             const scene = GraphicsManager.getScene();
 
-            navArrow = await WorldSpaceArrow.create("+z", GIZMO_COLOR, NAV_SCALE, false);
+            navArrow = await WorldSpaceSpriteArrow.create(GIZMO_COLOR, NAV_SCALE);
             navArrow.addToParent(scene);
             navArrow.setVisible(false);
 
@@ -67,6 +62,17 @@ function ensureInitialized(): Promise<void>
         })();
     }
     return initPromise;
+}
+
+// Eagerly creates the generic world-space gizmos (loading their geometry/materials) ahead of time,
+// so the room-loading screen can pre-warm them. This lets GraphicsManager.precompileSceneShaders
+// compile their shader programs up front, instead of the GPU stalling the first frame a gizmo
+// appears. Safe to call repeatedly — initialization is cached. Because Three.js shares compiled
+// programs by cache key, warming these gizmos also covers the selection outlines and block-move
+// arrows, which reuse the same materials.
+export async function preloadGenericWorldSpaceGizmos(): Promise<void>
+{
+    await ensureInitialized();
 }
 
 // --- Observable listeners ---

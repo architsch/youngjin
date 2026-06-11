@@ -10,6 +10,8 @@ import App from "../../../app";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import AsyncUtil from "../../../../shared/system/util/asyncUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
+import GameObject from "../../../object/types/gameObject";
 
 export default function Chat({hide}: Props)
 {
@@ -61,8 +63,7 @@ export default function Chat({hide}: Props)
             return;
         }
 
-        const speechBubble = player.components.speechBubble as SpeechBubble;
-        speechBubble.setMessage(message, true);
+        setMyPlayerSentMessage(player, message);
         setState({textInput: "", sentMessage: message});
     };
 
@@ -79,8 +80,7 @@ export default function Chat({hide}: Props)
             return;
         }
 
-        const speechBubble = player.components.speechBubble as SpeechBubble;
-        speechBubble.setMessage("", true);
+        setMyPlayerSentMessage(player, "");
         setState({textInput: state.textInput, sentMessage: ""});
     };
 
@@ -101,6 +101,21 @@ export default function Chat({hide}: Props)
             />}
         </>;
     }
+}
+
+// Applies the player's SentMessage (an empty string clears it).
+// In multiplayer the server is authoritative: the message is broadcast and echoed back, which
+// is what persists the SentMessage metadata on the player. Single-player has no such round-trip,
+// so persist the metadata locally instead — this both drives the speech bubble (via the object's
+// onSetMetadata hook) and makes the SentMessage readable by single-player step conditions.
+function setMyPlayerSentMessage(player: GameObject, message: string)
+{
+    const room = App.getCurrentRoom();
+    if (room && room.roomType == RoomTypeEnumMap.SinglePlayer)
+        ClientObjectManager.setObjectMetadata(player.params.objectId,
+            ObjectMetadataKeyEnumMap.SentMessage, message, false);
+    else
+        (player.components.speechBubble as SpeechBubble).setMessage(message, true);
 }
 
 interface ChatState

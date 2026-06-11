@@ -2,11 +2,11 @@ import * as THREE from "three";
 import GameObject from "../../../object/types/gameObject";
 import { clientFeatureFlagsObservable, objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable } from "../../../system/clientObservables";
 import VoxelQuadSelection from "./voxelQuadSelection";
-import MeshFactory from "../../factories/meshFactory";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import WorldSpaceOutlineRect from "../../../ui/components/basic/worldspace/worldSpaceOutlineRect";
 
 export default class ObjectSelection
 {
@@ -56,24 +56,21 @@ export default class ObjectSelection
     }
 }
 
-let selectionLineSegmentsClone: THREE.LineSegments | null = null;
+let selectionOutline: WorldSpaceOutlineRect | null = null;
 
 objectSelectionObservable.addListener("objectSelection", async (selection: ObjectSelection | null) => {
     if (selection)
     {
-        // Initialize the line segments if they haven't been initialized yet.
-        if (selectionLineSegmentsClone == null)
+        // Initialize the outline if it hasn't been initialized yet.
+        if (selectionOutline == null)
         {
-            const lineSegments = await MeshFactory.loadLineSegments("Square", "#00ff00");
-            selectionLineSegmentsClone = lineSegments.clone();
-            GraphicsManager.getScene().add(selectionLineSegmentsClone);
+            selectionOutline = await WorldSpaceOutlineRect.create("#00ff00");
+            selectionOutline.addToParent(GraphicsManager.getScene());
         }
 
         const go = selection.gameObject;
-        selectionLineSegmentsClone!.position.copy(go.position);
-        selectionLineSegmentsClone!.quaternion.copy(go.quaternion);
-        selectionLineSegmentsClone!.scale.copy(go.obj.scale);
-        selectionLineSegmentsClone!.visible = true;
+        selectionOutline.setTransformRaw(go.position, go.quaternion, go.obj.scale);
+        selectionOutline.setVisible(true);
 
         // If an object is selected, the player's viewTarget should be that object's position.
         playerViewTargetPosObservable.set(new THREE.Vector3(go.position.x, go.position.y, go.position.z));
@@ -84,8 +81,7 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
     }
     else
     {
-        if (selectionLineSegmentsClone != null)
-            selectionLineSegmentsClone.visible = false;
+        selectionOutline?.setVisible(false);
     }
 
     // Is nothing selected at all? Then just set the viewTarget to NULL.
@@ -98,9 +94,9 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
 roomChangedObservable.addListener("objectSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
     ObjectSelection.unselect();
 
-    if (selectionLineSegmentsClone)
+    if (selectionOutline)
     {
-        selectionLineSegmentsClone.removeFromParent();
-        selectionLineSegmentsClone = null;
+        selectionOutline.dispose();
+        selectionOutline = null;
     }
 });
