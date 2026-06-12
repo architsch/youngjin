@@ -10,6 +10,7 @@ import PlayerProximityDetector from "../components/playerProximityDetector";
 import SpeechBubble from "../components/speechBubble";
 import GameObject from "../types/gameObject";
 import Collider from "../components/collider";
+import EasingMotion from "../components/easingMotion";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
     (parentObject: GameObject, componentConfig: {[key: string]: any}) => GameObjectComponent} =
@@ -34,4 +35,6 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new SpeechBubble(parentObject, componentConfig),
     "playerProximityDetector": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new PlayerProximityDetector(parentObject, componentConfig),
+    "easingMotion": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new EasingMotion(parentObject, componentConfig),
 }

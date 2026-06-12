@@ -55,21 +55,21 @@ The transform emitter that normally streams player movement to the server disabl
 
 ### Scripted steps: actions, conditions, and transitions
 
-Each single-player experience is described declaratively by a `SinglePlayerModeConfig` (one per mode), which knows how to build its room, expose the room's layout metadata, and produce an ordered list of `SinglePlayerStep`s. A step has three parts:
+Each single-player experience is described declaratively by a `SinglePlayerModeConfig` (one per mode), which knows how to build its room, expose the room's layout metadata, and produce its `SinglePlayerStep`s as a set keyed by name. Steps are referenced by name rather than by position, so a step can name any other as its successor and the steps can be reordered or inserted without renumbering. A step has three parts:
 
 - **Start actions** — run once when the step begins (e.g. show a piece of tutorial UI or place a gizmo).
-- **Transition rules** — each rule pairs a set of requirements (all must hold) with the next step to advance to and a delay before doing so. The first rule whose requirements are all satisfied wins; a next-step of "none" ends the mode.
+- **Transition rules** — each rule pairs a set of requirements (all must hold) with the name of the step to advance to and a delay before doing so. The first rule whose requirements are all satisfied wins; a next-step of "none" ends the mode.
 - **End actions** — run once when the step is left (typically clearing the step's UI and gizmos).
 
 `SinglePlayerManager`, ticked from the main update loop, evaluates the current step's transition rules each frame and advances when one is met. A single observable holds the current mode-and-step pair; changing it automatically runs the previous step's end actions and the next step's start actions.
 
-A `SinglePlayerAction` is a small tagged command and a `SinglePlayerCondition` a small tagged predicate, each dispatched through a client-side map keyed by its tag. Actions cover showing or clearing tutorial UI, placing world-space gizmos, toggling feature flags, editing the local world, setting object metadata, and finishing the mode. Conditions observe local game state — player proximity, which voxel-quad is selected and what texture it carries, whether a block exists, whether the chat input or an object's metadata passes a test, or whether the room has been exited. Adding a new tutorial capability is therefore a matter of adding one action or condition variant plus its handler, with no per-step code.
+A `SinglePlayerAction` is a small tagged command and a `SinglePlayerCondition` a small tagged predicate, each dispatched through a client-side map keyed by its tag. Actions cover showing or clearing tutorial UI, placing world-space gizmos, toggling feature flags, editing the local world, setting object metadata, playing a brief cosmetic animation on a world object (e.g. nudging an NPC so it appears to nod when it replies), and finishing the mode. Conditions observe local game state — player proximity, which voxel-quad is selected and what texture it carries, whether a block exists, whether the chat input or an object's metadata passes a test, or whether the room has been exited. Adding a new tutorial capability is therefore a matter of adding one action or condition variant plus its handler, with no per-step code.
 
 ### Tutorial UI and gizmos
 
 Start and end actions drive a thin, purely local presentation layer, all of it observable-backed:
 
-- **On-screen UI** — a top-of-screen headline banner, a 2D arrow that points at a target UI element, and a 2D outline that frames one. The arrow and outline follow their target element live and never intercept pointer input, so the user can still operate the control being highlighted.
+- **On-screen UI** — a top-of-screen headline banner, a 2D arrow that points at a target UI element, a 2D outline that frames one, and a centered gesture diagram (an animated drawing with a short caption) that demonstrates an input such as how to move. The arrow and outline follow their target element live, and none of these intercept pointer input, so the user can still operate the control being highlighted or perform the demonstrated gesture "through" the diagram.
 - **World-space gizmos** — a flat, ground-parallel navigation arrow that floats ahead of the player and points toward a destination, a downward arrow that hovers over a point of interest, and a softly glowing outline that highlights a voxel-quad. These are drawn always-on-top so they stay visible through walls and objects.
 
 A single "clear" action tears the whole layer down, which every step's end actions use.

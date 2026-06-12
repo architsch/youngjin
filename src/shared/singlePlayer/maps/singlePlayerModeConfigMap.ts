@@ -13,7 +13,7 @@ import SinglePlayerModeConfigMetadata from "../types/singlePlayerModeConfigMetad
 import SinglePlayerStep from "../types/singlePlayerStep";
 
 const cachedMetadataByMode: {[singlePlayerMode: string]: SinglePlayerModeConfigMetadata} = {};
-const cachedStepsByMode: {[singlePlayerMode: string]: SinglePlayerStep[]} = {};
+const cachedStepsByMode: {[singlePlayerMode: string]: {[stepName: string]: SinglePlayerStep}} = {};
 
 const SinglePlayerModeConfigMap: {[singlePlayerMode: string]: SinglePlayerModeConfig} = {};
 
@@ -108,12 +108,10 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
         const config = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
         const m = config.loadMetadata();
 
-        const steps: SinglePlayerStep[] = [
-            { // (Step 0): Drag to move
+        const steps: {[stepName: string]: SinglePlayerStep} = {
+            "initial": { // Drag to move
                 actionsOnStart: [
-                    {type: "ui_headline", text: "Drag the screen to move."},
-                    {type: "gizmo_navigation_arrow",
-                        targetX: m.hotspots.table.col+0.5, targetZ: m.hotspots.table.row+0.5},
+                    {type: "ui_diagram", diagram: "drag_up", text: "Drag upward to move."},
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.GoToHubImmediatelyOnDoorClick, enable: true},
@@ -127,14 +125,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     requirements: [{type: "player_is_nearby", negate: true,
                         targetX: m.entranceVoxelCol+0.5, targetZ: m.entranceVoxelRow+0.5,
                         detectionDist: 0.75}],
-                    nextStep: 1,
+                    nextStep: "go_to_table",
                     nextStepDelay: 500,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 1): Go to the table
+            "go_to_table": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
@@ -144,14 +142,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     requirements: [{type: "player_is_nearby", negate: false,
                         targetX: m.hotspots.table.col+0.5, targetZ: m.hotspots.table.row+0.5,
                         detectionDist: 5}],
-                    nextStep: 2,
+                    nextStep: "select_table",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 2): Select the table
+            "select_table": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Select the table."},
                     {type: "gizmo_downward_arrow", targetX: m.hotspots.table.col+0.5,
@@ -165,7 +163,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     requirements: [{type: "voxel_quad_selected", negate: false,
                         row: m.hotspots.table.row, col: m.hotspots.table.col,
                         collisionLayer: 1, facingAxis: "y", orientation: "+"}],
-                    nextStep: 3,
+                    nextStep: "change_table_texture",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
@@ -173,7 +171,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                 ],
             },
-            { // (Step 3): Change the table's texture
+            "change_table_texture": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Change the table's texture."},
                     {type: "ui_arrow", targetElementId: "voxelQuadTextureOptions"},
@@ -184,14 +182,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                         row: m.hotspots.table.row, col: m.hotspots.table.col,
                         collisionLayer: 1, facingAxis: "y", orientation: "+",
                         textureIndex: 0}],
-                    nextStep: 4,
+                    nextStep: "add_block_to_table",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 4): Add a block to the table
+            "add_block_to_table": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Add a block to the table."},
                     {type: "ui_arrow", targetElementId: "addVoxelBlockButton"},
@@ -202,7 +200,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     requirements: [{type: "voxel_block_exists", negate: false,
                         row: m.hotspots.table.row, col: m.hotspots.table.col,
                         collisionLayer: 2}],
-                    nextStep: 5,
+                    nextStep: "go_to_obstacle",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
@@ -211,7 +209,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                 ],
             },
-            { // (Step 5): Go to the obstacle
+            "go_to_obstacle": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
@@ -228,14 +226,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     requirements: [{type: "player_is_nearby", negate: false,
                         targetX: m.hotspots.obstacle.col+0.5, targetZ: m.hotspots.obstacle.row+0.5,
                         detectionDist: 5}],
-                    nextStep: 6,
+                    nextStep: "select_obstacle",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 6): Select the obstacle
+            "select_obstacle": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Select the obstacle."},
                     {type: "gizmo_downward_arrow", targetX: m.hotspots.obstacle.col,
@@ -249,14 +247,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                         requirements: [{type: "voxel_quad_selected", negate: false,
                             row: m.hotspots.obstacle.row, col: m.hotspots.obstacle.col,
                             collisionLayer: 2, facingAxis: "y", orientation: "+"}],
-                        nextStep: 7,
+                        nextStep: "remove_obstacle",
                         nextStepDelay: 0,
                     },
                     {
                         requirements: [{type: "voxel_quad_selected", negate: false,
                             row: m.hotspots.obstacle.row, col: m.hotspots.obstacle.col,
                             collisionLayer: 2, facingAxis: "x", orientation: "-"}],
-                        nextStep: 7,
+                        nextStep: "remove_obstacle",
                         nextStepDelay: 0,
                     }
                 ],
@@ -265,7 +263,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                 ],
             },
-            { // (Step 7): Remove the obstacle
+            "remove_obstacle": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Remove the obstacle."},
                     {type: "ui_arrow", targetElementId: "removeVoxelBlockButton"},
@@ -276,7 +274,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     requirements: [{type: "voxel_block_exists", negate: true,
                         row: m.hotspots.obstacle.row, col: m.hotspots.obstacle.col,
                         collisionLayer: 2}],
-                    nextStep: 8,
+                    nextStep: "go_to_npc",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
@@ -285,7 +283,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
                 ],
             },
-            { // (Step 8): Go to the NPC
+            "go_to_npc": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
@@ -302,14 +300,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     requirements: [{type: "player_is_nearby", negate: false,
                         targetX: m.hotspots.npc.col+0.5, targetZ: m.hotspots.npc.row+0.5,
                         detectionDist: 5}],
-                    nextStep: 9,
+                    nextStep: "type_chat_message",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 9): Type inside the chat input
+            "type_chat_message": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "This is your receptionist.<br>Type your message to say \"Hello\"."},
                     {type: "ui_arrow", targetElementId: "chatTextInput"},
@@ -319,14 +317,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 transitionRules: [{
                     requirements: [{type: "chat_input_passes_condition",
                         chatInputCondition: (str: string) => str.trim().length >= 2}],
-                    nextStep: 10,
+                    nextStep: "send_chat_message",
                     nextStepDelay: 500,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 10): Send a chat message
+            "send_chat_message": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Click 'Send' to send your message."},
                     {type: "ui_arrow", targetElementId: "chatSendButton"},
@@ -338,33 +336,35 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                         objectId: "my_player",
                         metadataKey: ObjectMetadataKeyEnumMap.SentMessage,
                         metadataValueCondition: (str: string) => str.trim().length > 0}],
-                    nextStep: 11,
+                    nextStep: "watch_npc_reply",
                     nextStepDelay: 500,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 11): Watch the NPC's reply
+            "watch_npc_reply": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Look! The receptionist greeted you back."},
                     {type: "set_object_metadata", objectId: "npc",
                             metadataKey: ObjectMetadataKeyEnumMap.SentMessage, metadataValue: "Hello!"},
+                    {type: "object_bounce", objectId: "npc", durationSeconds: 0.6,
+                            positionOffset: {x: 0, y: 0.22, z: 0}, oscillations: 2}, // The NPC bobs up and down to "nod" as it greets back.
                 ],
                 transitionRules: [{
                     requirements: [{type: "always_true"}],
-                    nextStep: 12,
+                    nextStep: "exit_through_door",
                     nextStepDelay: 3500,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            { // (Step 12): Exit through the door
+            "exit_through_door": {
                 actionsOnStart: [
                     {type: "ui_headline", text: "Exit through the door."},
                     {type: "gizmo_navigation_arrow",
-                        targetX: m.hotspots.door.col+0.5, targetZ: m.hotspots.door.row-1},
+                        targetX: m.hotspots.door.col+0.5, targetZ: m.hotspots.door.row-5},
                     {type: "remove_voxel_blocks",
                         rowStart: m.rects.wall4.rowStart,
                         colStart: m.rects.wall4.colStart,
@@ -375,7 +375,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
                 transitionRules: [{
                     requirements: [{type: "room_exited"}],
-                    nextStep: -1,
+                    nextStep: "",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
@@ -388,7 +388,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: false},
                 ],
             },
-        ];
+        };
         cachedStepsByMode[TUTORIAL_SINGLE_PLAYER_MODE] = steps;
         return steps;
     },

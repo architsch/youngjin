@@ -11,6 +11,7 @@ import Reconnecting from "./reconnecting";
 import Headline from "./headline";
 import ScreenArrow from "./screenArrow";
 import ScreenOutlineRect from "./screenOutlineRect";
+import ScreenDiagram from "./screenDiagram";
 import Popup from "../basic/popup";
 import PopupState from "../../types/popupState";
 import User from "../../../../shared/user/types/user";
@@ -129,6 +130,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         <Headline/>
         <ScreenArrow/>
         <ScreenOutlineRect/>
+        <ScreenDiagram/>
         <Loading/>
         <Reconnecting/>
     </>

@@ -77,6 +77,10 @@ export const screenArrowTargetObservable = new Observable<string | null>(null);
 // The DOM element id that the 2D on-screen rectangular outline should surround, or null to hide it.
 export const screenOutlineRectTargetObservable = new Observable<string | null>(null);
 
+// The vector-graphics diagram (with its caption) to show centered on screen, or null to hide it.
+// "diagram" selects which built-in drawing the ScreenDiagram component renders.
+export const screenDiagramObservable = new Observable<{ diagram: "drag_up", text: string } | null>(null);
+
 // The world-space XZ location the navigation arrow should guide the player toward, or null to hide it.
 export const navigationArrowTargetObservable = new Observable<{ x: number, z: number } | null>(null);
 
@@ -116,4 +120,4 @@ export const texturePackURLObservable = new Observable<string>();
 //      (1) Client-side env variables get loaded (i.e. "setEnv" in app.ts), or
 //      (2) User's "singlePlayerMode" field value changes during runtime, or
 //      (3) Client's single-player gameplay logic (singlePlayerManager.ts) decides to change the current step.
-export const singlePlayerObservable = new Observable<{mode: string, step: number}>({mode: "", step: -1});
+export const singlePlayerObservable = new Observable<{mode: string, step: string}>({mode: "", step: ""});

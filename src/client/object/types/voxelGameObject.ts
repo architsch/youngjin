@@ -115,6 +115,18 @@ export default class VoxelGameObject extends GameObject
             console.log(String(voxelQuadChange));
     }
 
+    // Re-bakes this voxel's quad instances so they follow a cosmetic transform of "visualObj" (e.g.
+    // EasingMotion's bounce). Each quad is recomputed from the voxel data, which composes the moved
+    // visual node via InstancedMeshGraphics.
+    onVisualTransformChanged(): void
+    {
+        if (this.voxel == undefined)
+            return;
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
+        for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
+            this.updateVoxelQuadInstance(quadIndex);
+    }
+
     updateVoxelQuadInstance(quadIndex: number)
     {
         if (this.voxel == undefined)

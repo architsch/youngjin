@@ -11,10 +11,10 @@ const SinglePlayerManager =
     update: (deltaTime: number) =>
     {
         const {mode, step} = singlePlayerObservable.peek();
-        if (mode != "" && step >= 0)
+        if (mode != "" && step != "")
         {
             // Check transition rules
-            for (const rule of steps[step].transitionRules)
+            for (const rule of stepByName[step].transitionRules)
             {
                 let allRequirementsMet = true;
                 for (const requirement of rule.requirements)
@@ -55,31 +55,31 @@ const SinglePlayerManager =
 }
 
 let pendingTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
-let prevStep: number = -1;
-let steps: SinglePlayerStep[];
+let prevStep: string = "";
+let stepByName: {[stepName: string]: SinglePlayerStep};
 
-singlePlayerObservable.addListener("singlePlayer", (v: {mode: string, step: number}) => {
+singlePlayerObservable.addListener("singlePlayer", (v: {mode: string, step: string}) => {
     if (v.mode != "") // If the mode has started, ensure that its steps are loaded.
     {
         const config = SinglePlayerModeConfigMap[v.mode];
-        steps = config.loadSteps();
+        stepByName = config.loadSteps();
     }
     
     // If the previous step was the final step, finish the singleplayer mode.
-    const shouldFinishMode = prevStep >= 0 && v.step < 0;
+    const shouldFinishMode = prevStep != "" && v.step == "";
 
-    if (prevStep >= 0) // If the previous step exists, end it.
+    if (prevStep != "") // If the previous step exists, end it.
     {
         // End previous step
-        for (const action of steps[prevStep].actionsOnEnd)
+        for (const action of stepByName[prevStep].actionsOnEnd)
             SinglePlayerActionMap[action.type](action as any);
-        prevStep = -1;
+        prevStep = "";
     }
 
-    if (v.step >= 0) // If the new step exists, start it.
+    if (v.step != "") // If the new step exists, start it.
     {
         // Start new step
-        for (const action of steps[v.step].actionsOnStart)
+        for (const action of stepByName[v.step].actionsOnStart)
             SinglePlayerActionMap[action.type](action as any);
         prevStep = v.step;
     }
@@ -87,7 +87,7 @@ singlePlayerObservable.addListener("singlePlayer", (v: {mode: string, step: numb
     if (shouldFinishMode)
     {
         SocketsClient.emitUserCommandSignal(new UserCommandSignal("finishSinglePlayerMode"));
-        singlePlayerObservable.set({mode: "", step: -1});
+        singlePlayerObservable.set({mode: "", step: ""});
     }
 });
 

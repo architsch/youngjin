@@ -50,6 +50,7 @@ export default interface ObjectTypeConfig
                 localPosition: {x: number, y: number, z: number},
                 scale: {x: number, y: number, z: number},
             },
+            easingMotion?: {},
         },
     },
 }

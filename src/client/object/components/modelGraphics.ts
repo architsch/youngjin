@@ -11,7 +11,7 @@ export default class ModelGraphics extends GameObjectComponent
     {
         const model = await ModelFactory.load(`${App.getEnv().assets_url}/${this.componentConfig.path}`);
         this.model = model.clone();
-        this.gameObject.obj.add(this.model);
+        this.gameObject.visualObj.add(this.model);
 
         const p = this.componentConfig.localPosition;
         this.model.position.set(p.x, p.y, p.z);

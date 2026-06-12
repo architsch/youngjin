@@ -3,7 +3,8 @@ import SinglePlayerAction from "../../../shared/singlePlayer/types/singlePlayerA
 import App from "../../app";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import ClientObjectManager from "../../object/clientObjectManager";
-import { clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, screenArrowTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import EasingMotion from "../../object/components/easingMotion";
+import { clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 
@@ -16,6 +17,7 @@ const SinglePlayerActionMap: {
         headlineMessageObservable.set(null);
         screenArrowTargetObservable.set(null);
         screenOutlineRectTargetObservable.set(null);
+        screenDiagramObservable.set(null);
         navigationArrowTargetObservable.set(null);
         downwardArrowTargetObservable.set(null);
         voxelQuadHighlightObservable.set(null);
@@ -23,6 +25,10 @@ const SinglePlayerActionMap: {
     "ui_headline": (action) => // A React-based 2D box with text in it. It covers the topmost row of the screen, in order to avoid interfering with the camera view as well as the other UI elements.
     {
         headlineMessageObservable.set(action.text);
+    },
+    "ui_diagram": (action) => // A React-based diagram (drawn by vector-graphics) which is contained inside a partially transparent background. The background itself is a large rectangle (with rounded corners) which is centered on the screen, both horizontally and vertically. Right below the diagram, there may also be a short text describing what it means.
+    {
+        screenDiagramObservable.set({diagram: action.diagram, text: action.text});
     },
     "ui_arrow": (action) => // A React-based 2D downward arrow which points at the target, while pulsating up and down to grab the user's attention.
     {
@@ -91,6 +97,28 @@ const SinglePlayerActionMap: {
         }
         ClientObjectManager.setObjectMetadata(action.objectId, action.metadataKey,
             action.metadataValue, false);
+    },
+    "object_bounce": (action) => // Triggers a brief easing motion (offset/rotation/scale) on the target object, e.g. to make an NPC nod when it replies.
+    {
+        const obj = ClientObjectManager.getObjectById(action.objectId);
+        if (!obj)
+        {
+            console.error(`SinglePlayerActionMap :: Object doesn't exits (objectId = ${action.objectId})`);
+            return;
+        }
+        const easingMotion = obj.components.easingMotion as EasingMotion | undefined;
+        if (!easingMotion)
+        {
+            console.error(`SinglePlayerActionMap :: Object has no easingMotion component (objectId = ${action.objectId})`);
+            return;
+        }
+        easingMotion.bounce({
+            durationSeconds: action.durationSeconds,
+            positionOffset: action.positionOffset,
+            rotationOffset: action.rotationOffset,
+            scaleMultiplier: action.scaleMultiplier,
+            oscillations: action.oscillations,
+        });
     },
 }
 

@@ -120,6 +120,14 @@ export default class CanvasGameObject extends GameObject
         }
     }
 
+    // Re-bakes this canvas's instance so it follows a cosmetic transform of "visualObj" (e.g.
+    // EasingMotion's bounce). The transform is recomputed from the canvas's own state, which composes
+    // the moved visual node via InstancedMeshGraphics.
+    onVisualTransformChanged(): void
+    {
+        this.updateMeshInstanceTransform();
+    }
+
     private updateMeshInstanceTransform()
     {
         if (this.instanceId === -1)

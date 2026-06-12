@@ -57,7 +57,7 @@ This document catalogs all integration test scenarios organized by category.
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
 
-## Single-Player Mode (`single-player.test.ts`) — 5 tests
+## Single-Player Mode (`single-player.test.ts`) — 7 tests
 
 | Test | What it verifies |
 |------|-----------------|
@@ -66,6 +66,8 @@ This document catalogs all integration test scenarios organized by category.
 | joining a multiplayer room still registers the user as a participant | A Hub join registers the user (participant count 1) and leaves `isInSinglePlayerRoom` false |
 | builds the tutorial room with its hotspot blocks in place | The tutorial room generates on load via `SinglePlayerModeConfig.buildRoom`; the table (collision layer 1) and obstacle (collision layer 2) hotspot blocks exist at their metadata coordinates |
 | rejects a single-player user's edit signals without mutating the shared room | Defense-in-depth: firing all eight room-mutating signals (object add/remove/transform/metadata, voxel add/remove/move/setTexture) as a single-player user leaves the shared room untouched — the user stays unregistered and every handler bails at its no-room guard |
+| loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step | Tutorial steps form a name-keyed map (not a positional array), include the `initial` entry step, and have at least one terminal step (a rule whose `nextStep` is `""`) |
+| every transition targets an existing step or the terminal, and all steps are reachable from 'initial' | Step-graph integrity: every transition `nextStep` names a defined step (or `""`), and walking from `initial` reaches every step (none orphaned) |
 
 ## Signal Emission (`signals.test.ts`) — 6 tests
 
@@ -291,7 +293,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room | 9 |
 | Object | 8 |
 | Voxel | 9 |
-| Single-Player | 5 |
+| Single-Player | 7 |
 | Signals | 6 |
 | Permissions | 5 |
 | Extended Permissions | 16 |
@@ -301,4 +303,4 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 16 |
-| **Total** | **154** |
+| **Total** | **156** |

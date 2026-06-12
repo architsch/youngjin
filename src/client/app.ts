@@ -42,7 +42,7 @@ const App =
         user = User.fromString(env.userString);
         singlePlayerObservable.set({
             mode: user.singlePlayerMode,
-            step: user.singlePlayerMode != "" ? 0 : -1
+            step: user.singlePlayerMode != "" ? "initial" : ""
         });
     },
     getEnv: (): ThingsPoolEnv =>

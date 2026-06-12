@@ -20,7 +20,7 @@ export default class MeshGraphics extends GameObjectComponent
             this.componentConfig.geometryId,
             new TextureMaterialParams(`${App.getEnv().assets_url}/${this.componentConfig.path}`, -1, -1) // polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
         );
-        this.gameObject.obj.add(this.mesh);
+        this.gameObject.visualObj.add(this.mesh);
 
         const p = this.componentConfig.localPosition;
         this.mesh.position.set(p.x, p.y, p.z);

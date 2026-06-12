@@ -14,6 +14,16 @@
     50% { transform: translateY(20%); }
   }
 
+  /* Brief, one-shot attention pop for the headline as it appears: balloons outward while
+     dipping toward the screen center, then settles back to its resting size/position.
+     Anchored at top-center (see the element's `origin-top`) so it grows downward off the bar. */
+  --animate-headline-pop: headline-pop 0.5s ease-out;
+  @keyframes headline-pop {
+    0%   { transform: translateY(0) scale(1); }
+    45%  { transform: translateY(1.75rem) scale(1.6); }
+    100% { transform: translateY(0) scale(1); }
+  }
+
   /* Dramatic, rapid bright<->dark pulse (plus a pulsing glow) for the outline rect. */
   --animate-pulse-strong: pulse-strong 0.6s ease-in-out infinite;
   @keyframes pulse-strong {

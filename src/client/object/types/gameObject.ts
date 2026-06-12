@@ -21,7 +21,8 @@ const vec3Temp = new THREE.Vector3();
 export default abstract class GameObject
 {
     params: AddObjectSignal; // When a GameObject spawns, use these parameters to initialize it.
-    obj: THREE.Object3D = new THREE.Object3D(); // This Three.js object holds the GameObject's transform attributes such as position, rotation, and scale.
+    obj: THREE.Object3D = new THREE.Object3D(); // The GameObject's authoritative gameplay transform (position/rotation/scale). Networking (transform emitter/receiver), physics, camera, and proximity logic all read and write this.
+    visualObj: THREE.Object3D = new THREE.Object3D(); // A child of "obj" that carries only the visual representation (meshes/models). Cosmetic effects (e.g. EasingMotion's bounce) animate this node so they never disturb the gameplay transform on "obj". It rests at identity; per-mesh local transforms live on the meshes themselves.
     config: ObjectTypeConfig;
     components: {[componentName: string]: GameObjectComponent} = {};
     spawnFinished: boolean = false;
@@ -31,6 +32,7 @@ export default abstract class GameObject
         this.params = params;
 
         GraphicsManager.addObjectToScene(this.obj);
+        this.obj.add(this.visualObj);
         this.position.set(this.params.transform.pos.x, this.params.transform.pos.y, this.params.transform.pos.z);
         vec3Temp.set(
             this.params.transform.pos.x + this.params.transform.dir.x,
@@ -69,6 +71,11 @@ export default abstract class GameObject
                 component.onSetMetadata(key, value);
         }
     }
+    // Invoked after a cosmetic effect (e.g. EasingMotion) transforms this GameObject's "visualObj".
+    // Scene-graph meshes follow "visualObj" automatically and need nothing here; baked renderers such
+    // as instanced meshes don't, so those GameObjects override this to re-apply their instance
+    // transforms (recomputed from their own source of truth, which composes the moved "visualObj").
+    onVisualTransformChanged() {}
 
     async onSpawn(): Promise<void>
     {

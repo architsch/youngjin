@@ -7,5 +7,5 @@ export default interface SinglePlayerModeConfig
 {
     loadMetadata: () => SinglePlayerModeConfigMetadata;
     buildRoom: (voxelGrid: VoxelGrid, objectGroup: ObjectGroup) => void;
-    loadSteps: () => SinglePlayerStep[]; // array index = step number (starting from 0)
+    loadSteps: () => {[stepName: string]: SinglePlayerStep};
 }

@@ -10,6 +10,10 @@
  * - A multiplayer room (Hub/Regular) still registers the user as a participant.
  * - Defense-in-depth: because a single-player user is never bound to a server-side
  *   room, every room-mutating signal handler bails and the shared room stays untouched.
+ *
+ * Also covers the shared tutorial config: steps are keyed by name (not positional
+ * indices), so this file guards that named graph — every transition must name an
+ * existing step (or the "" terminal), and every step must be reachable from "initial".
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -154,5 +158,50 @@ describe("single-player scenarios", () => {
                 expect(roomMem.room.objectById["npc"].metadata[ObjectMetadataKeyEnumMap.SentMessage]).toBeUndefined();
             },
         });
+    });
+});
+
+describe("tutorial step graph", () => {
+    // The tutorial's steps are addressed by name, not by array position: each transition rule
+    // names the step to advance to, and "" marks the end of the mode. A mistyped or stale step
+    // name would silently strand the tutorial, so these tests assert the graph is well-formed.
+    const config = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
+
+    it("loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step", () => {
+        const steps = config.loadSteps();
+
+        // Steps form a name-keyed map, not a positional array.
+        expect(Array.isArray(steps)).toBe(false);
+        // "initial" is the entry point the client jumps to when the mode starts (see app.ts).
+        expect(steps["initial"]).toBeDefined();
+        // At least one step is terminal: a rule whose nextStep is "" finishes the mode.
+        const hasTerminal = Object.values(steps).some(
+            step => step.transitionRules.some(rule => rule.nextStep === ""));
+        expect(hasTerminal).toBe(true);
+    });
+
+    it("every transition targets an existing step or the terminal, and all steps are reachable from 'initial'", () => {
+        const steps = config.loadSteps();
+
+        // No rule may name a step that doesn't exist (anything but "" must be a defined key).
+        for (const [name, step] of Object.entries(steps))
+            for (const rule of step.transitionRules)
+                if (rule.nextStep !== "")
+                    expect(steps[rule.nextStep], `step "${name}" transitions to missing step "${rule.nextStep}"`).toBeDefined();
+
+        // Walk the graph from "initial": every defined step must be reachable, so none is orphaned.
+        const reachable = new Set<string>();
+        const frontier = ["initial"];
+        while (frontier.length > 0)
+        {
+            const name = frontier.pop()!;
+            if (reachable.has(name))
+                continue;
+            reachable.add(name);
+            for (const rule of steps[name].transitionRules)
+                if (rule.nextStep !== "")
+                    frontier.push(rule.nextStep);
+        }
+        expect(reachable).toEqual(new Set(Object.keys(steps)));
     });
 });

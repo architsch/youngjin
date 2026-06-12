@@ -125,8 +125,11 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${this.gameObject.params.objectId})`);
             return;
         }
-        this.gameObject.obj.updateMatrixWorld();
-        this.gameObject.obj.add(tempObj);
+        this.gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so its (possibly bounced) world matrix is current too.
+        // Bake under the visual node rather than obj, so any cosmetic transform applied there (e.g.
+        // EasingMotion's bounce, pivoting about the GameObject's center) composes into the instance.
+        // At rest the visual node is identity, so this is identical to baking directly under obj.
+        this.gameObject.visualObj.add(tempObj);
 
         tempObj.scale.set(xScale, yScale, zScale);
 

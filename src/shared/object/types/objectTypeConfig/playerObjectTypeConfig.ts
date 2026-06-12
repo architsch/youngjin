@@ -76,6 +76,10 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
                 scale: {x: 0.3, y: 0.3, z: 0.3},
             },
             periodicTransformReceiver: {},
+            // Lets the receptionist (and other remote players) play a cosmetic bounce, e.g. an NPC
+            // nodding when it replies. It animates the visual node, so it stays out of the way of
+            // the networked transform the receiver drives.
+            easingMotion: {},
         },
     },
 }
