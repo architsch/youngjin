@@ -3,6 +3,7 @@ import SinglePlayerStepTransitionRule from "./singlePlayerStepTransitionRule";
 
 export default interface SinglePlayerStep
 {
+    startDelay: number;
     actionsOnStart: SinglePlayerAction[];
     transitionRules: SinglePlayerStepTransitionRule[];
     actionsOnEnd: SinglePlayerAction[];

@@ -184,24 +184,28 @@ const SocketsServer =
 
                 // Determine which room the user should join.
                 // Priority:
-                //   1. targetRoomID from socket handshake (URL-based room access: /:roomID)
-                //   2. Singleplayer room (if the user is in singleplayer mode)
+                //   1. Singleplayer room (if the user is in singleplayer mode) — an unfinished
+                //      single-player experience (e.g. the first-time tutorial) gates everything
+                //      else. A targetRoomID requested via the URL is intentionally NOT honored
+                //      yet: the client remembers it and routes the user there once the tutorial
+                //      is over, during that same runtime.
+                //   2. targetRoomID from socket handshake (URL-based room access: /:roomID)
                 //   3. user.lastRoomID (the room the user was last in)
                 //   4. Hub room (fallback)
                 const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
-                
+
                 let preferredRoomID: string;
                 let fallbackRoomType = RoomTypeEnumMap.Hub;
 
-                if (targetRoomID && targetRoomID.length > 0) // roomID was specified in the URL
-                {
-                    preferredRoomID = targetRoomID;
-                    fallbackRoomType = RoomTypeEnumMap.Hub;
-                }
-                else if (user.singlePlayerMode != "") // user is in singleplayer mode.
+                if (user.singlePlayerMode != "") // user has an unfinished singleplayer experience (e.g. the tutorial).
                 {
                     preferredRoomID = "";
                     fallbackRoomType = RoomTypeEnumMap.SinglePlayer;
+                }
+                else if (targetRoomID && targetRoomID.length > 0) // roomID was specified in the URL
+                {
+                    preferredRoomID = targetRoomID;
+                    fallbackRoomType = RoomTypeEnumMap.Hub;
                 }
                 else
                 {

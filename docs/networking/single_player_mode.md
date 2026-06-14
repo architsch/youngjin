@@ -21,16 +21,18 @@ The shared single-player rooms (and the Hub room) are created at server boot by 
 
 `SocketsServer` resolves the target room by priority:
 
-1. A specific room requested via the connection URL.
-2. The user's single-player room, if their single-player mode flag is set.
+1. The user's single-player room, if their single-player mode flag is set. An unfinished single-player experience (e.g. the first-time tutorial) gates everything else: a specific room requested via the connection URL is deliberately *not* honored yet — the client remembers it and routes the user there once the experience is over (see [Finishing the tutorial](#finishing-the-tutorial)).
+2. A specific room requested via the connection URL.
 3. The last multi-player room the user was in.
 4. A Hub room, as the final fallback.
 
 If the preferred room fails to load, the server falls back to the first room of the resolved fallback type (single-player or Hub).
 
+The user's mode flag only *influences where the server routes them*; it is **not** what the client consults to decide whether to run a single-player experience. The room the server actually places the user in is the single source of truth: the client starts (or does not start) single-player mode purely from that room's `RoomType`, and a single-player room carries its mode identity in its name. This keeps the two from ever disagreeing — the single-player UI and scripted steps can never run on top of a multi-player room, nor a multi-player session inside a single-player room. (If, for example, the connection routing and the page-rendered user state ever resolved to different users, the client still simply follows the room it landed in.)
+
 ### The "hub" keyword
 
-The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to load it, `ServerRoomManager` resolves it to whichever Hub room is available (preferring one already in memory, otherwise picking a random hub to spread traffic). The client uses this to send the user back to a hub after the tutorial (see [Door behavior](#door-behavior)).
+The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to load it, `ServerRoomManager` resolves it to whichever Hub room is available (preferring one already in memory, otherwise picking a random hub to spread traffic). The client uses this as the default destination when sending the user out of the tutorial (see [Door behavior](#door-behavior)).
 
 ## Server-side contract for single-player rooms
 
@@ -80,11 +82,13 @@ A single "clear" action tears the whole layer down, which every step's end actio
 
 ### Door behavior
 
-The entrance door checks a feature flag: when set, clicking the door sends the user straight to a hub; otherwise it opens the normal room-list popup. See [room_entrance.md](../geometry/room_entrance.md#the-door-object).
+The entrance door checks a feature flag: when set, clicking the door sends the user straight out of the single-player experience — to the room they originally requested via the connection URL, or to a hub by default — instead of opening the normal room-list popup. See [room_entrance.md](../geometry/room_entrance.md#the-door-object).
 
 ## Finishing the tutorial
 
 When the tutorial completes, the client signals the server, which verifies the user is actually in the tutorial and then clears their single-player mode flag (in memory and in storage). On the next connect the user is no longer routed to the tutorial room.
+
+Leaving the tutorial is itself a room change: the user is moved into a real (multi-player) room, and it is landing in that non-single-player room that triggers the completion signal. If the user originally arrived via a room-specific URL — the destination that connect-time routing deferred — that is the room they are sent to now, within the same runtime; otherwise they go to a hub. This holds whether the tutorial is finished naturally (through the door) or skipped.
 
 ## Persistence
 

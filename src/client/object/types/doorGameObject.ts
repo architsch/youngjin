@@ -9,6 +9,7 @@ import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import { tryStartClientProcess } from "../../system/types/clientProcess";
 import SocketsClient from "../../networking/client/socketsClient";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
+import App from "../../app";
 
 export default class DoorGameObject extends GameObject
 {
@@ -33,12 +34,13 @@ export default class DoorGameObject extends GameObject
         if (!this.playerProximityDetector.isProximityOn())
             return;
 
-        if (clientFeatureFlagsObservable.has(FeatureFlag.GoToHubImmediatelyOnDoorClick))
+        if (clientFeatureFlagsObservable.has(FeatureFlag.ExitSinglePlayerOnDoorClick))
         {
             if (!tryStartClientProcess("roomChange", 1, 1))
                 return;
-            // "hub" is not an actual roomID. It is a special keyword which indicates that the user wants to join a Hub-type room.
-            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("hub"));
+            // Leave the single-player experience: head to wherever the user is meant to go next —
+            // the room they originally requested via URL, or a Hub-type room by default.
+            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(App.getPostSinglePlayerRoomID()));
         }
         else
         {

@@ -13,15 +13,15 @@ import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConsta
 const DBUserUtil =
 {
     createUser: async (userName: string, userType: UserType,
-        email: string): Promise<DBQueryResponse<{id: string}>> =>
+        email: string, singlePlayerMode: string = TUTORIAL_SINGLE_PLAYER_MODE): Promise<DBQueryResponse<{id: string}>> =>
     {
-        LogUtil.log("DBUserUtil.createUser", {userName, userType, email}, "low", "info");
+        LogUtil.log("DBUserUtil.createUser", {userName, userType, email, singlePlayerMode}, "low", "info");
         const user: DBUser = {
             version: DBUserVersionMigration.length,
             userName,
             userType,
             email,
-            singlePlayerMode: TUTORIAL_SINGLE_PLAYER_MODE,
+            singlePlayerMode,
             lastRoomID: "",
             lastLoginAt: Date.now(),
             createdAt: Date.now(),

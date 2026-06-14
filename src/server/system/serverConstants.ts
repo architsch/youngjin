@@ -11,6 +11,9 @@ export const GIT_COMMIT: string = typeof __GIT_COMMIT__ !== "undefined" ? __GIT_
 const DB_PREFIX = process.env.DB_PREFIX || "";
 export const COLLECTION_ROOMS = `${DB_PREFIX}rooms`;
 export const COLLECTION_USERS = `${DB_PREFIX}users`;
+// Dev-only: holds a single marker doc whose lifetime tracks the emulated DB, used to invalidate
+// stale browser cookies left over from a previous DevRunner runtime (see DevRuntimeUtil).
+export const COLLECTION_DEV_RUNTIME = `${DB_PREFIX}_dev_runtime`;
 
 // Hard cap on the number of editors a room owner can register. Anti-abuse: without
 // a bound, an owner could inflate DB read/write cost by stuffing the editors list.
@@ -28,6 +31,9 @@ export const GUEST_MAX_AGE_BY_TIER_PHASE = [
 export const URL_STATIC = "https://thingspool.net";
 export const URL_DYNAMIC = process.env.DB_PREFIX == "staging_" ? "https://staging.thingspool.net" : "https://app.thingspool.net";
 export const AUTH_TOKEN_NAME_BASE = "thingspool_token";
+export const TUTORIAL_FINISHED_COOKIE_NAME_BASE = "thingspool_tutorial_finished";
+// Dev-only cookie carrying the DevRunner runtime's boot id (see DevRuntimeUtil).
+export const DEV_BOOT_ID_COOKIE_NAME = "thingspool_dev_boot_id";
 
 // SSG (Static Site Generator)
 

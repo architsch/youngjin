@@ -14,14 +14,23 @@
     50% { transform: translateY(20%); }
   }
 
-  /* Brief, one-shot attention pop for the headline as it appears: balloons outward while
-     dipping toward the screen center, then settles back to its resting size/position.
-     Anchored at top-center (see the element's `origin-top`) so it grows downward off the bar. */
+  /* Brief, one-shot attention pop for the whole headline bar (black background + text
+     together) as it appears: balloons outward while dipping toward the screen center, then
+     settles back to its resting size/position. Anchored at top-center (see the element's
+     `origin-top`) so it grows downward from the top edge of the screen. */
   --animate-headline-pop: headline-pop 0.5s ease-out;
   @keyframes headline-pop {
     0%   { transform: translateY(0) scale(1); }
     45%  { transform: translateY(1.75rem) scale(1.6); }
     100% { transform: translateY(0) scale(1); }
+  }
+
+  /* Gentle, continuous scale oscillation on the headline text — keeps the message drawing
+     the eye even after the initial pop has settled. */
+  --animate-headline-breathe: headline-breathe 1.6s ease-in-out infinite;
+  @keyframes headline-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
   }
 
   /* Dramatic, rapid bright<->dark pulse (plus a pulsing glow) for the outline rect. */

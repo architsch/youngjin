@@ -46,6 +46,17 @@ This sets a JWT cookie, so subsequent visits to `http://127.0.0.1:3000` (without
 
 **Note:** The `?devuser` parameter is only available in `dev` mode and has no effect in staging or production.
 
+## Cookie Reset Across Dev Restarts
+
+The local Firestore emulator does not persist data: every fresh `npm run dev` starts with an empty DB (re-seeded dev users get brand-new document IDs). Auth cookies, however, live in the browser and survive across restarts — so without intervention a new runtime would try to resolve a user that no longer exists, or replay browser-scoped state (e.g. the "tutorial finished" flag) against a clean DB.
+
+To prevent this, the server stamps each browser with a **boot id** identifying the current DevRunner runtime (stored in the `thingspool_dev_boot_id` cookie). The matching server-side id is kept in a marker document in the emulated DB, so its lifetime tracks the DB itself:
+
+- **Full restart** (`npm stop` + `npm run dev`, or `Ctrl+C` then restart) resets the emulator → the marker is gone → a new boot id is minted. On the next page load the server sees the browser's stale boot id, clears its auth-related cookies, and treats it as a brand-new browser.
+- **Hot reload** (an automatic restart triggered by a file change) leaves the emulator running → the marker persists → the same boot id is reused → existing cookies stay valid and your session is undisturbed.
+
+This is dev-only; nothing of the sort runs in staging or production.
+
 ## How to Push to GitHub
 
 1. Stage the changes you want to commit.

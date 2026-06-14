@@ -7,6 +7,7 @@ import DBUserUtil from "../../db/util/dbUserUtil";
 import GuestCreationLimitUtil from "./guestCreationLimitUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DevUserSeedUtil from "./devUserSeedUtil";
+import DevRuntimeUtil from "../../system/util/devRuntimeUtil";
 import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 
 let cyclicCounter = 0;
@@ -51,6 +52,13 @@ async function identifyUserFromReq(req: Request, res: Response,
         }
 
         UserTokenUtil.addTokenForUserId(user.id, req, res);
+
+        // Remember, at the browser level, that this user has already finished (or skipped) the
+        // tutorial, so any brand-new account later created on this browser (e.g. the guest
+        // spawned after this user signs out) skips the tutorial instead of replaying it.
+        if (user.singlePlayerMode == "")
+            res.cookie(CookieUtil.getTutorialFinishedCookieName(), "1", CookieUtil.getTutorialFinishedCookieOptions());
+
         (req as any).userString = user.toString();
         next();
         return true;
@@ -65,6 +73,13 @@ async function identifyUserFromReq(req: Request, res: Response,
 
 async function getUserFromReq(req: Request, res: Response, updateLoginStats: boolean): Promise<User | undefined>
 {
+    // Dev mode: drop auth cookies left over from a previous DevRunner runtime (whose emulated DB
+    // has since been reset), so a freshly started runtime doesn't resurrect a now-nonexistent user
+    // or replay browser-scoped state. A no-op for cookies belonging to the current runtime, so it
+    // does not disturb hot reloads. Runs before any cookie/devuser resolution below.
+    if (process.env.MODE == "dev")
+        DevRuntimeUtil.invalidateStaleCookies(req, res);
+
     // Dev mode: allow switching to a seeded dev user via ?devuser=N query param
     if (process.env.MODE == "dev" && req.query.devuser)
     {
@@ -114,7 +129,12 @@ async function getUserFromReq(req: Request, res: Response, updateLoginStats: boo
     const uniqueHex = uniqueInt.toString(16);
     const guestName = `Guest-${uniqueHex}`;
 
-    const result = await DBUserUtil.createUser(guestName, UserTypeEnumMap.Guest, "");
+    // If this browser has already finished the tutorial, the new guest skips it (mode "");
+    // otherwise it starts in the tutorial like any first-time visitor.
+    const tutorialFinished = !!req.cookies[CookieUtil.getTutorialFinishedCookieName()];
+    const initialSinglePlayerMode = tutorialFinished ? "" : TUTORIAL_SINGLE_PLAYER_MODE;
+
+    const result = await DBUserUtil.createUser(guestName, UserTypeEnumMap.Guest, "", initialSinglePlayerMode);
     if (!result.success || result.data.length == 0)
     {
         LogUtil.logRaw("Failed to create guest user in Firestore", "high", "error");
@@ -124,7 +144,7 @@ async function getUserFromReq(req: Request, res: Response, updateLoginStats: boo
 
     UserTokenUtil.addTokenForUserId(guestId, req, res);
 
-    return new User(guestId, guestName, UserTypeEnumMap.Guest, "", TUTORIAL_SINGLE_PLAYER_MODE);
+    return new User(guestId, guestName, UserTypeEnumMap.Guest, "", initialSinglePlayerMode);
 }
 
 export default UserIdentificationUtil;

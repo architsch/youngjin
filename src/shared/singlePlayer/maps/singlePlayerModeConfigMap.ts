@@ -8,6 +8,7 @@ import RoomGenerationHelperUtil from "../../room/util/roomGenerationHelperUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, PLAYER_HEIGHT, TUTORIAL_SINGLE_PLAYER_MODE } from "../../system/sharedConstants";
 import { FeatureFlag } from "../../system/types/featureFlag";
 import VoxelGrid from "../../voxel/types/voxelGrid";
+import SinglePlayerAction from "../types/singlePlayerAction";
 import SinglePlayerModeConfig from "../types/singlePlayerModeConfig";
 import SinglePlayerModeConfigMetadata from "../types/singlePlayerModeConfigMetadata";
 import SinglePlayerStep from "../types/singlePlayerStep";
@@ -26,7 +27,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
         // Manually set parameters:
         const entranceVoxelCol = 5;
         const entranceVoxelRow = 30;
-        const X1 = 5, X2 = 5, X3 = 5, Z1 = 5, Z2 = 5, Z3 = 5;
+        const X1 = 5, X2 = 9, X3 = 7, Z1 = 7, Z2 = 5, Z3 = 9;
 
         if (X1 % 2 == 0 || X2 % 2 == 0 || X3 % 2 == 0 || Z1 % 2 == 0 || Z2 % 2 == 0 || Z3 % 2 == 0)
             throw new Error("X1,X2,X3,Z1,Z2,Z3 must all be positive odd integers.");
@@ -110,11 +111,12 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
 
         const steps: {[stepName: string]: SinglePlayerStep} = {
             "initial": { // Drag to move
+                startDelay: 0,
                 actionsOnStart: [
-                    {type: "ui_diagram", diagram: "drag_up", text: "Drag upward to move."},
+                    {type: "ui_diagram", diagram: "drag_up", text: "Drag to move"},
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: true},
-                    {type: "feature_flag", flag: FeatureFlag.GoToHubImmediatelyOnDoorClick, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.ExitSinglePlayerOnDoorClick, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
@@ -124,7 +126,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 transitionRules: [{
                     requirements: [{type: "player_is_nearby", negate: true,
                         targetX: m.entranceVoxelCol+0.5, targetZ: m.entranceVoxelRow+0.5,
-                        detectionDist: 0.75}],
+                        detectionDist: 0.5}],
                     nextStep: "go_to_table",
                     nextStepDelay: 500,
                 }],
@@ -133,6 +135,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "go_to_table": {
+                startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
@@ -150,6 +153,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "select_table": {
+                startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Select the table."},
                     {type: "gizmo_downward_arrow", targetX: m.hotspots.table.col+0.5,
@@ -172,6 +176,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "change_table_texture": {
+                startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Change the table's texture."},
                     {type: "ui_arrow", targetElementId: "voxelQuadTextureOptions"},
@@ -190,6 +195,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "add_block_to_table": {
+                startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Add a block to the table."},
                     {type: "ui_arrow", targetElementId: "addVoxelBlockButton"},
@@ -210,6 +216,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "go_to_obstacle": {
+                startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
@@ -234,6 +241,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "select_obstacle": {
+                startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Select the obstacle."},
                     {type: "gizmo_downward_arrow", targetX: m.hotspots.obstacle.col,
@@ -264,6 +272,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "remove_obstacle": {
+                startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Remove the obstacle."},
                     {type: "ui_arrow", targetElementId: "removeVoxelBlockButton"},
@@ -284,6 +293,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "go_to_npc": {
+                startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
@@ -308,15 +318,17 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "type_chat_message": {
+                startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "This is your receptionist.<br>Type your message to say \"Hello\"."},
                     {type: "ui_arrow", targetElementId: "chatTextInput"},
                     {type: "ui_outline_rect", targetElementId: "chatTextInput"},
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: false},
+                    {type: "feature_flag", flag: FeatureFlag.UseFallbackChatMessage, enable: true},
                 ],
                 transitionRules: [{
                     requirements: [{type: "chat_input_passes_condition",
-                        chatInputCondition: (str: string) => str.trim().length >= 2}],
+                        chatInputCondition: (str: string) => str.trim().length > 0}],
                     nextStep: "send_chat_message",
                     nextStepDelay: 500,
                 }],
@@ -325,6 +337,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "send_chat_message": {
+                startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Click 'Send' to send your message."},
                     {type: "ui_arrow", targetElementId: "chatSendButton"},
@@ -344,6 +357,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "watch_npc_reply": {
+                startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Look! The receptionist greeted you back."},
                     {type: "set_object_metadata", objectId: "npc",
@@ -361,6 +375,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 ],
             },
             "exit_through_door": {
+                startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Exit through the door."},
                     {type: "gizmo_navigation_arrow",
@@ -380,17 +395,26 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
-                    {type: "feature_flag", flag: FeatureFlag.GoToHubImmediatelyOnDoorClick, enable: false},
-                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: false},
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: false},
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockMovement, enable: false},
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: false},
+                    // Feature-flag teardown is handled centrally by onModeEnd (below), so it
+                    // also runs when the tutorial is skipped rather than exited through the door.
                 ],
             },
         };
         cachedStepsByMode[TUTORIAL_SINGLE_PLAYER_MODE] = steps;
         return steps;
+    },
+    onModeEnd: () =>
+    {
+        // The tutorial is the only thing that turns feature flags on, and none of the
+        // restrictions it imposes should outlive it — so when it ends (completed or skipped),
+        // disable every feature flag rather than tracking which ones happen to still be on.
+        const actions: SinglePlayerAction[] = [];
+        for (const flag of Object.values(FeatureFlag))
+        {
+            if (typeof flag === "number")
+                actions.push({type: "feature_flag", flag, enable: false});
+        }
+        return actions;
     },
 };
 

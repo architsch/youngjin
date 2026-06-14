@@ -5,6 +5,7 @@ import ThingsPoolEnv from "./system/types/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
+import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
@@ -40,10 +41,13 @@ const App =
     {
         env = newEnv;
         user = User.fromString(env.userString);
-        singlePlayerObservable.set({
-            mode: user.singlePlayerMode,
-            step: user.singlePlayerMode != "" ? "initial" : ""
-        });
+        // Single-player mode is activated from the room the server actually places us in
+        // (see onRoomChangedSignalReceived) — NOT from this page-embedded user flag. The two
+        // are independent reads of user state that can disagree (e.g. the socket authenticates
+        // a different user than the one rendered into the page), which would otherwise let the
+        // single-player UI run on top of a multiplayer room. Start cleared and let the joined
+        // room decide.
+        singlePlayerObservable.set({mode: "", step: ""});
     },
     getEnv: (): ThingsPoolEnv =>
     {
@@ -60,6 +64,15 @@ const App =
     getCurrentRoom: (): Room | undefined =>
     {
         return currentRoom;
+    },
+    // The room the user is sent to when their single-player experience (e.g. the tutorial)
+    // ends. If they originally arrived via a room-specific URL, that destination was deferred
+    // until the tutorial was cleared (see SocketsServer's connect-time routing) — honor it now.
+    // Otherwise fall back to a hub. ("hub" is a reserved keyword the server resolves to an
+    // available Hub room, not a real room ID.)
+    getPostSinglePlayerRoomID: (): string =>
+    {
+        return env.targetRoomID && env.targetRoomID.length > 0 ? env.targetRoomID : "hub";
     },
     onSetUserRoleSignalReceived: async (params: SetUserRoleSignal) => {
         // If this is a UserRole update on the current user's player, update the app-level role.
@@ -115,6 +128,27 @@ const App =
 
         // Remove superfluous trailing parts of the URL
         window.history.replaceState(null, "", "/");
+
+        // The room the server actually placed us in is the single source of truth for whether
+        // a single-player experience runs — this is what makes it impossible for the tutorial
+        // UI/steps to run on top of a multiplayer room (or vice versa). A single-player room's
+        // name is its mode identifier (Room.roomName == singlePlayerMode).
+        const joinedRoom = roomChangedSignal.roomRuntimeMemory.room;
+        if (joinedRoom.roomType == RoomTypeEnumMap.SinglePlayer)
+        {
+            // In a single-player room → run its scripted experience, starting at the initial step
+            // now that the room is fully loaded.
+            singlePlayerObservable.set({mode: joinedRoom.roomName, step: "initial"});
+        }
+        else
+        {
+            // In any other (multiplayer) room → no single-player experience should be running.
+            // If one was (i.e. we just left a single-player room, whether by reaching the exit or
+            // bailing out early), this ends it: tears down the local UI/flags and tells the server
+            // to clear the persisted mode flag. It is a no-op when nothing was running, so ordinary
+            // multiplayer-to-multiplayer navigation costs nothing.
+            SinglePlayerManager.finishSinglePlayerMode();
+        }
     },
 }
 

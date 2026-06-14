@@ -10,11 +10,19 @@ import { USER_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import AddressUtil from "../../networking/util/addressUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
+import DevOAuthUtil from "./devOAuthUtil";
 
 const UserAuthGoogleUtil =
 {
     login: async (req: Request, res: Response): Promise<void> =>
     {
+        // Dev mode: skip the provider round-trip entirely and fake a successful sign-in, so the
+        // guest→Member promotion can be tested locally without real OAuth credentials.
+        if (process.env.MODE == "dev")
+        {
+            await DevOAuthUtil.fakeSignIn(req, res);
+            return;
+        }
         res.redirect(generateOAuthURL());
     },
     loginCallback: async (req: Request, res: Response): Promise<void> =>

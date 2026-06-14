@@ -9,6 +9,7 @@ import Loading from "./loading";
 import Notification from "./notification";
 import Reconnecting from "./reconnecting";
 import Headline from "./headline";
+import SkipTutorialButton from "./skipTutorialButton";
 import ScreenArrow from "./screenArrow";
 import ScreenOutlineRect from "./screenOutlineRect";
 import ScreenDiagram from "./screenDiagram";
@@ -28,6 +29,7 @@ import VoxelQuadSelection from "../../../graphics/types/gizmo/voxelQuadSelection
 import ConfirmForm from "../form/confirmForm";
 import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -70,27 +72,30 @@ export default function UIRoot({ env, user }: UIRootProps)
         };
     }, []);
 
-    const roomID = useMemo(() =>
-        roomRuntimeMemory?.room.id
-        , [roomRuntimeMemory]);
+    const roomID = roomRuntimeMemory?.room.id;
+    const isRoomLoaded = roomRuntimeMemory != undefined;
+    const isMultiplayerRoomLoaded = isRoomLoaded &&
+        roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
+    const canModifyRoom = roomRuntimeMemory
+        ? RoomValidationUtil.canUserEditRoom(userRole, roomRuntimeMemory?.room)
+        : false;
 
-    const canModifyRoom = useMemo(() =>
-        roomRuntimeMemory
-            ? RoomValidationUtil.canUserEditRoom(userRole, roomRuntimeMemory?.room)
-            : false
-        , [userRole, roomRuntimeMemory]);
+    const selectionUIShown = canModifyRoom && (objectSelection != null || voxelQuadSelection != null);
+    const chatHidden = forceHideChat || !isRoomLoaded || selectionUIShown;
+    const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || selectionUIShown;
 
     return <>
-        <UserRoomIdentity
+        {isMultiplayerRoomLoaded && <UserRoomIdentity
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
-        />
-        <DebugStats env={env}/>
+        />}
+        {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             <ObjectSelectionMenu canModifyRoom/>
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
-            {<Chat hide={canModifyRoom && (objectSelection != null || voxelQuadSelection != null) && !forceHideChat}/>}
+            <Chat hide={chatHidden}/>
+            <SkipTutorialButton hide={hideSkipTutorialButton}/>
         </div>
         {popupStack.map((state, i) => {
             switch (state.popupType)
@@ -130,7 +135,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         <Headline/>
         <ScreenArrow/>
         <ScreenOutlineRect/>
-        <ScreenDiagram/>
+        {popupStack.length === 0 && <ScreenDiagram/>}
         <Loading/>
         <Reconnecting/>
     </>

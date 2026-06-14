@@ -7,7 +7,8 @@ export enum FeatureFlag
     DisableManualVoxelBlockMovement,
     DisableManualObjectAddition,
     DisableManualObjectRemoval,
-    GoToHubImmediatelyOnDoorClick,
+    ExitSinglePlayerOnDoorClick,
     HideChatInput,
     DisableChatSend,
+    UseFallbackChatMessage,
 }

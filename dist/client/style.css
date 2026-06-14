@@ -60,6 +60,7 @@
     --default-mono-font-family: var(--font-mono);
     --animate-bounce-strong: bounce-strong 0.55s ease-in-out infinite;
     --animate-headline-pop: headline-pop 0.5s ease-out;
+    --animate-headline-breathe: headline-breathe 1.6s ease-in-out infinite;
     --animate-pulse-strong: pulse-strong 0.6s ease-in-out infinite;
   }
 }
@@ -507,6 +508,9 @@
   .animate-bounce-strong {
     animation: var(--animate-bounce-strong);
   }
+  .animate-headline-breathe {
+    animation: var(--animate-headline-breathe);
+  }
   .animate-headline-pop {
     animation: var(--animate-headline-pop);
   }
@@ -569,6 +573,9 @@
   }
   .gap-y-0 {
     row-gap: calc(var(--spacing) * 0);
+  }
+  .self-end {
+    align-self: flex-end;
   }
   .justify-self-end {
     justify-self: flex-end;
@@ -685,16 +692,13 @@
       background-color: color-mix(in oklab, var(--color-gray-800) 50%, transparent);
     }
   }
+  .bg-gray-900 {
+    background-color: var(--color-gray-900);
+  }
   .bg-gray-900\/80 {
     background-color: color-mix(in srgb, oklch(21% 0.034 264.665) 80%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-gray-900) 80%, transparent);
-    }
-  }
-  .bg-gray-900\/85 {
-    background-color: color-mix(in srgb, oklch(21% 0.034 264.665) 85%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-gray-900) 85%, transparent);
     }
   }
   .bg-green-700 {
@@ -1212,6 +1216,14 @@
   }
   100% {
     transform: translateY(0) scale(1);
+  }
+}
+@keyframes headline-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
   }
 }
 @keyframes pulse-strong {

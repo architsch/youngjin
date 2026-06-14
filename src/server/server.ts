@@ -14,6 +14,7 @@ import { HOUR_IN_MS, setIsServer, TUTORIAL_SINGLE_PLAYER_MODE } from "../shared/
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
 import DevUserSeedUtil from "./user/util/devUserSeedUtil";
+import DevRuntimeUtil from "./system/util/devRuntimeUtil";
 import OwnerlessRoomCreationRoutine from "./room/routines/ownerlessRoomCreationRoutine";
 
 require("../shared/image/imageMapDependencies.ts");
@@ -68,9 +69,13 @@ ${LatencySimUtil.getConfigSummary()}
     await OwnerlessRoomCreationRoutine.createIfMissing("", RoomTypeEnumMap.Hub);
     await OwnerlessRoomCreationRoutine.createIfMissing(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
 
-    // Seed dev user accounts (dev mode only)
+    // Seed dev user accounts and establish this runtime's boot id (dev mode only). The boot id is
+    // loaded/minted before the server starts listening, so it is ready for the first request.
     if (dev)
+    {
         await DevUserSeedUtil.seed();
+        await DevRuntimeUtil.init();
+    }
 
     // express app
     const app = express();

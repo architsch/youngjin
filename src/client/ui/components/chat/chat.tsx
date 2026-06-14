@@ -52,9 +52,14 @@ export default function Chat({hide}: Props)
         if (clientFeatureFlagsObservable.has(FeatureFlag.DisableChatSend))
             return;
 
-        const message = str.trim();
+        let message = str.trim();
         if (message.length == 0)
-            return;
+        {
+            if (clientFeatureFlagsObservable.has(FeatureFlag.UseFallbackChatMessage))
+                message = "Hello";
+            else
+                return;
+        }
 
         const player = ClientObjectManager.getMyPlayer();
         if (!player)
