@@ -10,7 +10,7 @@ import ServerRoomManager from "./room/serverRoomManager";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBUserUtil from "./db/util/dbUserUtil";
 import LogUtil from "../shared/system/util/logUtil";
-import { HOUR_IN_MS, setIsServer, TUTORIAL_SINGLE_PLAYER_MODE } from "../shared/system/sharedConstants";
+import { HOUR_IN_MS, setIsServer } from "../shared/system/sharedConstants";
 import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
 import DevUserSeedUtil from "./user/util/devUserSeedUtil";
@@ -66,8 +66,10 @@ ${LatencySimUtil.getConfigSummary()}
         return;
     }
 
+    // Single-player rooms (e.g. the tutorial) are no longer created/stored in the DB: the client
+    // generates them locally and the server synthesizes a transient descriptor on connect (see
+    // ServerRoomManager.changeUserRoom). Only ownerless multi-player rooms (Hub) need seeding here.
     await OwnerlessRoomCreationRoutine.createIfMissing("", RoomTypeEnumMap.Hub);
-    await OwnerlessRoomCreationRoutine.createIfMissing(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
 
     // Seed dev user accounts and establish this runtime's boot id (dev mode only). The boot id is
     // loaded/minted before the server starts listening, so it is ready for the first request.

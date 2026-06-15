@@ -15,7 +15,7 @@ Single-player support is expressed through two independent pieces of state:
 - **A single-player room type** (`RoomType`) — a room type alongside Hub and Regular. A single-player room is a *shared template*: there is one such room per name (e.g. one tutorial room for the whole server), and every user who enters it sees the same starting layout but acts on their own **local** copy. The server never mutates a single-player room on a user's behalf, and these rooms have no owner.
 - **A single-player mode flag on the user** (`User`) — names which single-player experience, if any, the user should be routed into on their next connection. An empty value means the user is not in single-player mode. New users (guests and freshly-created members) start out routed to the tutorial.
 
-The shared single-player rooms (and the Hub room) are created at server boot by `OwnerlessRoomCreationRoutine` if they do not already exist.
+The Hub room is created at server boot by `OwnerlessRoomCreationRoutine` if it does not already exist. A single-player room, by contrast, is never stored anywhere: it is generated on demand by the client from its mode configuration (see [Local world construction](#local-world-construction)).
 
 ## Where the user lands on connect
 
@@ -26,7 +26,7 @@ The shared single-player rooms (and the Hub room) are created at server boot by 
 3. The last multi-player room the user was in.
 4. A Hub room, as the final fallback.
 
-If the preferred room fails to load, the server falls back to the first room of the resolved fallback type (single-player or Hub).
+If the preferred room cannot be resolved, the server falls back to a Hub room.
 
 The user's mode flag only *influences where the server routes them*; it is **not** what the client consults to decide whether to run a single-player experience. The room the server actually places the user in is the single source of truth: the client starts (or does not start) single-player mode purely from that room's `RoomType`, and a single-player room carries its mode identity in its name. This keeps the two from ever disagreeing — the single-player UI and scripted steps can never run on top of a multi-player room, nor a multi-player session inside a single-player room. (If, for example, the connection routing and the page-rendered user state ever resolved to different users, the client still simply follows the room it landed in.)
 
@@ -38,7 +38,7 @@ The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to loa
 
 Because a single-player room is a shared template that each client drives locally, the server deliberately does **not** treat the joining user as a participant:
 
-- **No participant registration.** The user's player object is created and updated entirely client-side; the server only flags the connection as being in a single-player room. Because the user is never added to the room's broadcast group, the server delivers the initial room snapshot straight to their own connection rather than through that group.
+- **No participant registration.** The user's player object is created and updated entirely client-side; the server only flags the connection as being in a single-player room. The server never sends the room's contents either: it hands the joining user a content-less descriptor (the room's identity only) over their own connection, and the client builds the room locally.
 - **No last-room write.** Single-player rooms are re-entered via the user's mode flag, not via the saved last room, so that write is skipped.
 - **No removal on exit.** Since the user was never registered as a participant, there is nothing to remove when they leave.
 
@@ -50,8 +50,8 @@ As defense-in-depth, every server signal handler that would mutate room state (o
 
 When the client loads a single-player room it takes a different path than for a multi-player room:
 
-- **Multi-player rooms:** the server includes the player object in the room data, and the client spawns the entrance door.
-- **Single-player rooms:** there is no server-provided player object, so the client spawns its own at the entrance defined by the mode's configuration.
+- **Multi-player rooms:** the server sends the full room — voxels and objects, including the player — and the client spawns the entrance door.
+- **Single-player rooms:** the server sends only the room's identity, so the client generates the room's voxels and objects locally from the mode's configuration (the same generation logic the server uses to build multi-player rooms) and spawns its own player at the entrance the configuration defines.
 
 The transform emitter that normally streams player movement to the server disables itself in single-player rooms, and every edit path guards its outgoing signal behind a check for the room type. The result: the player can move and edit freely, but nothing is sent to or persisted by the server.
 
@@ -92,7 +92,9 @@ Leaving the tutorial is itself a room change: the user is moved into a real (mul
 
 ## Persistence
 
-The user record stores which single-player mode (if any) the user should resume, and the room record stores a name used to distinguish single-player rooms from one another. Stored records are migrated to carry these fields; existing users who had already made tutorial progress are treated as having finished it, while those who had not are routed into the tutorial. Single-player rooms are excluded from the general room search and located by name instead.
+The user record stores which single-player mode (if any) the user should resume; an empty value means the experience is finished. Existing user records are migrated to carry this field, so that users who had already made tutorial progress are treated as having finished it, while those who had not are routed into the tutorial.
+
+Single-player rooms themselves are never persisted — they are not stored in the database, owned, or written back. Each is regenerated by the client from its mode configuration every time the user enters, so the room always reflects the current configuration.
 
 ## Room editability
 

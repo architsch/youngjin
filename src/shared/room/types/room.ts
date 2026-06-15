@@ -3,10 +3,11 @@ import EncodableData from "../../networking/types/encodableData";
 import VoxelGrid from "../../voxel/types/voxelGrid";
 import AddObjectSignal from "../../object/types/addObjectSignal";
 import EncodableByteString from "../../networking/types/encodableByteString";
-import { RoomType } from "./roomType";
+import { RoomType, RoomTypeEnumMap } from "./roomType";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import { UNDEFINED_DOCUMENT_ID_CHAR } from "../../system/sharedConstants";
 import ObjectGroup from "../../object/types/objectGroup";
+import VoxelQuadsRuntimeMemory from "../../voxel/types/voxelQuadsRuntimeMemory";
 
 let temp_participantUserNameByID: { [userID: string]: string } = {};
 
@@ -65,8 +66,15 @@ export default class Room extends EncodableData
         new EncodableByteString(this.ownerUserID).encode(bufferState);
         new EncodableByteString(this.ownerUserName).encode(bufferState);
         new EncodableByteString(this.texturePackPath).encode(bufferState);
-        this.voxelGrid.encode(bufferState);
-        this.objectGroup.encodeWithParams(bufferState, temp_participantUserNameByID);
+
+        // Single-player rooms carry no content on the wire: they are a shared template the client
+        // regenerates locally from RoomGenerationUtil/SinglePlayerModeConfigMap. Their roomType
+        // (already encoded above) is the discriminator the decoder uses to skip the content fields.
+        if (this.roomType != RoomTypeEnumMap.SinglePlayer)
+        {
+            this.voxelGrid.encode(bufferState);
+            this.objectGroup.encodeWithParams(bufferState, temp_participantUserNameByID);
+        }
     }
 
     static decode(bufferState: BufferState): EncodableData
@@ -79,8 +87,21 @@ export default class Room extends EncodableData
         const ownerUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const ownerUserName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-        const objectGroup = ObjectGroup.decodeWithParams(bufferState, id) as ObjectGroup;
+
+        // Single-player rooms omit their content on the wire (see encode); reconstruct empty
+        // placeholders here and let the client generate the real voxels/objects locally.
+        let voxelGrid: VoxelGrid;
+        let objectGroup: ObjectGroup;
+        if (roomType != RoomTypeEnumMap.SinglePlayer)
+        {
+            voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
+            objectGroup = ObjectGroup.decodeWithParams(bufferState, id) as ObjectGroup;
+        }
+        else
+        {
+            voxelGrid = new VoxelGrid([], new VoxelQuadsRuntimeMemory());
+            objectGroup = new ObjectGroup([]);
+        }
 
         return new Room(id, roomName, roomType, ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectGroup);
     }

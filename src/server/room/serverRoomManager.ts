@@ -17,6 +17,10 @@ import DBRoomEditor from "../db/types/row/dbRoomEditor";
 import { MAX_ROOM_EDITORS } from "../system/serverConstants";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import DBSearchUtil from "../db/util/dbSearchUtil";
+import SinglePlayerModeConfigMap from "../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
+import VoxelGrid from "../../shared/voxel/types/voxelGrid";
+import VoxelQuadsRuntimeMemory from "../../shared/voxel/types/voxelQuadsRuntimeMemory";
+import ObjectGroup from "../../shared/object/types/objectGroup";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -164,6 +168,22 @@ const ServerRoomManager =
         
         if (!roomID)
             return false;
+
+        // Single-player rooms (e.g. the tutorial) are client-generated shared templates: the room's
+        // ID equals its single-player mode, which is a key in SinglePlayerModeConfigMap. We never
+        // load or cache such a room server-side — we synthesize a transient, content-less descriptor
+        // (the client builds the actual voxels/objects locally) and hand it straight to the joining
+        // user. The user is deliberately NOT registered as a participant, given no role beyond
+        // Visitor, and has no last-room written, matching the "server isn't authoritative over
+        // single-player" contract.
+        if (SinglePlayerModeConfigMap[roomID] != undefined)
+        {
+            socketUserContext.isInSinglePlayerRoom = true;
+            const mem = buildSinglePlayerRoomRuntimeMemory(roomID);
+            socketUserContext.addPendingSignalToUser("roomChangedSignal",
+                new RoomChangedSignal(mem, UserRoleEnumMap.Visitor));
+            return true;
+        }
 
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
@@ -317,6 +337,19 @@ async function loadCurrentEditors(roomID: string): Promise<DBRoomEditor[] | null
     const dbRoom = await DBRoomUtil.getDBRoom(roomID);
     if (!dbRoom) return null;
     return dbRoom.editors ?? [];
+}
+
+// Builds a transient, content-less RoomRuntimeMemory for a single-player room. It is intentionally
+// NOT stored in roomRuntimeMemories and gets no server-side PhysicsManager world: the client owns
+// and regenerates the room's voxels/objects locally, so the server only needs an identity (the
+// id/name both equal the single-player mode). Content is omitted on the wire too (see Room.encode).
+function buildSinglePlayerRoomRuntimeMemory(mode: string): RoomRuntimeMemory
+{
+    const room = new Room(mode /*id*/, mode /*roomName*/, RoomTypeEnumMap.SinglePlayer,
+        "", "", "default",
+        new VoxelGrid([], new VoxelQuadsRuntimeMemory()),
+        new ObjectGroup([]));
+    return new RoomRuntimeMemory(room, {});
 }
 
 async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>

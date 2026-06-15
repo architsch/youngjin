@@ -11,6 +11,13 @@ const RoomGenerationHelperUtil =
         collisionLayerMin: number = COLLISION_LAYER_MIN,
         collisionLayerMax: number = COLLISION_LAYER_MAX)
     {
+        if (collisionLayerMin == COLLISION_LAYER_MIN &&
+            collisionLayerMax == COLLISION_LAYER_MAX &&
+            quadTextureIndicesWithinLayer)
+        {
+            RoomGenerationHelperUtil.paintFloorAndCeilingTexture(voxels[0].quadsMem.quads, row, col,
+                quadTextureIndicesWithinLayer[1], quadTextureIndicesWithinLayer[0]);
+        }
         for (let collisionLayer = collisionLayerMin; collisionLayer <= collisionLayerMax; ++collisionLayer)
         {
             VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxels,

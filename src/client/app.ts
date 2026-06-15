@@ -1,4 +1,6 @@
 import ClientObjectManager from "./object/clientObjectManager";
+import ClientObjectUtil from "./object/util/clientObjectUtil";
+import ClientVoxelManager from "./voxel/clientVoxelManager";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../shared/room/types/roomChangedSignal";
 import ThingsPoolEnv from "./system/types/thingsPoolEnv";
@@ -156,6 +158,11 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
 {
     currentRoom = roomRuntimeMemory.room;
 
+    // Single-player rooms come over the wire as a content-less descriptor; the client generates the
+    // actual voxels/objects locally and injects them before anything reads room.voxelGrid/objectById.
+    if (currentRoom.roomType == RoomTypeEnumMap.SinglePlayer)
+        ClientObjectUtil.buildSinglePlayerRoomContent(currentRoom);
+
     userRoleObservable.set(currentUserRole);
 
     const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, currentRoom.texturePackPath);
@@ -164,6 +171,7 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
     await ClientObjectManager.load(roomRuntimeMemory);
+    ClientVoxelManager.load();
 
     prevTime = performance.now() * 0.001;
     deltaTimePending = 0;
@@ -174,6 +182,7 @@ async function unloadCurrentRoom()
     if (currentRoom == undefined)
         throw new Error(`No room to unload.`);
 
+    ClientVoxelManager.unload();
     await ClientObjectManager.unload();
     PhysicsManager.unload(currentRoom.id);
     await GraphicsManager.unload();

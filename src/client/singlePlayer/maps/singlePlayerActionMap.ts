@@ -32,7 +32,7 @@ const SinglePlayerActionMap: {
     },
     "ui_arrow": (action) => // A React-based 2D downward arrow which points at the target, while pulsating up and down to grab the user's attention.
     {
-        screenArrowTargetObservable.set(action.targetElementId);
+        screenArrowTargetObservable.set({targetElementId: action.targetElementId, arrowBias: action.arrowBias});
     },
     "ui_outline_rect": (action) => // A React-based 2D rectangular outline which surrounds the target UI element for the purpose of highlighting.
     {

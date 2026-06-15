@@ -18,8 +18,14 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const ClientVoxelManager =
 {
-    // --- Public methods for local (optimistic) operations ---
-
+    load: () =>
+    {
+        voxelQuadChangeObservable.addListener("clientVoxelManager", onVoxelQuadChange);
+    },
+    unload: () =>
+    {
+        voxelQuadChangeObservable.removeListener("clientVoxelManager");
+    },
     addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer?: number[],
         validate: boolean = true): boolean =>
     {
@@ -155,7 +161,8 @@ function refreshSelection()
     }
 }
 
-voxelQuadChangeObservable.addListener("clientVoxelManager", async (change: VoxelQuadChange) => {
+async function onVoxelQuadChange(change: VoxelQuadChange): Promise<void>
+{
     const room = App.getCurrentRoom();
     if (!room)
     {
@@ -171,7 +178,7 @@ voxelQuadChangeObservable.addListener("clientVoxelManager", async (change: Voxel
         await voxelGameObject.applyVoxelQuadChange(change);
     else
         console.error(`VoxelGameObject is missing (change = ${String(change)})`);
-});
+}
 
 function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObject | null
 {

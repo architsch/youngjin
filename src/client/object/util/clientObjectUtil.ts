@@ -2,6 +2,8 @@ import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import Room from "../../../shared/room/types/room";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+import RoomGenerationUtil from "../../../shared/room/util/roomGenerationUtil";
 import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
 import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
@@ -15,6 +17,24 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 const ClientObjectUtil =
 {
+    // Room construction
+
+    // A single-player room arrives from the server as a content-less descriptor (its voxelGrid and
+    // objectGroup are empty — see Room.encode). The client is the sole authority over single-player
+    // content, so it generates the real room here from the shared SinglePlayerModeConfig and injects
+    // it into the room before the room is loaded. Must run before GraphicsManager/PhysicsManager/
+    // ClientObjectManager consume room.voxelGrid / room.objectById.
+    buildSinglePlayerRoomContent: (room: Room): void =>
+    {
+        const {voxelGrid, objectGroup} = RoomGenerationUtil.generateRoom(room.roomName, RoomTypeEnumMap.SinglePlayer);
+        // buildRoom hard-codes each object's roomID to "" (server-loaded rooms get it stamped by
+        // ObjectGroup.decodeWithParams, which never runs for client-generated content). Backfill it.
+        for (const obj of Object.values(objectGroup.objectById))
+            obj.roomID = room.id;
+        room.voxelGrid = voxelGrid;
+        room.objectGroup = objectGroup;
+    },
+
     // Spawn Actions
 
     spawnVoxelsFromGrid: async (room: Room): Promise<void> =>

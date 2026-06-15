@@ -68,9 +68,9 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
 
         // Add the floors and walls.
         const grid = new RoomGenerationVoxelGrid();
-        grid.createRegion(c.rects.floor1.rowStart, c.rects.floor1.colStart, c.rects.floor1.numRows, c.rects.floor1.numCols, 0, 1, 2);
-        grid.createRegion(c.rects.floor2.rowStart, c.rects.floor2.colStart, c.rects.floor2.numRows, c.rects.floor2.numCols, 3, 4, 5);
-        grid.createRegion(c.rects.floor3.rowStart, c.rects.floor3.colStart, c.rects.floor3.numRows, c.rects.floor3.numCols, 6, 7, 8);
+        grid.createRegion(c.rects.floor1.rowStart, c.rects.floor1.colStart, c.rects.floor1.numRows, c.rects.floor1.numCols, 16, 51, 41);
+        grid.createRegion(c.rects.floor2.rowStart, c.rects.floor2.colStart, c.rects.floor2.numRows, c.rects.floor2.numCols, 6, 51, 43);
+        grid.createRegion(c.rects.floor3.rowStart, c.rects.floor3.colStart, c.rects.floor3.numRows, c.rects.floor3.numCols, 31, 51, 46);
         grid.createWalls(c.rects.wall1.rowStart, c.rects.wall1.colStart, c.rects.wall1.numRows, c.rects.wall1.numCols);
         grid.createWalls(c.rects.wall2.rowStart, c.rects.wall2.colStart, c.rects.wall2.numRows, c.rects.wall2.numCols);
         grid.createWalls(c.rects.wall3.rowStart, c.rects.wall3.colStart, c.rects.wall3.numRows, c.rects.wall3.numCols);
@@ -79,12 +79,12 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
 
         // Add the table.
         RoomGenerationHelperUtil.addWall(voxelGrid.voxels, c.hotspots.table.row, c.hotspots.table.col,
-            undefined, 0, 1); // The table consists of layer-0 and layer-1 blocks. The player is meant to select the top (i.e. (+y)-facing) quad of the layer-1 block.
+            [29, 25, 29, 29, 29, 29], 0, 1); // The table consists of layer-0 and layer-1 blocks. The player is meant to select the top (i.e. (+y)-facing) quad of the layer-1 block.
 
         // Carve out part of the wall and add the obstacle.
         RoomGenerationHelperUtil.removeWall(voxelGrid.voxels, c.hotspots.obstacle.row, c.hotspots.obstacle.col);
         RoomGenerationHelperUtil.addWall(voxelGrid.voxels, c.hotspots.obstacle.row, c.hotspots.obstacle.col,
-            undefined, 2, 2); // The obstacle is a single voxel block which occupies layer-2 of the hotspot.
+            [43, 43, 43, 43, 43, 43], 2, 2); // The obstacle is a single voxel block which occupies layer-2 of the hotspot.
         
         // Add the NPC.
         objectGroup.objectById["npc"] = new AddObjectSignal("", "@npc", "Receptionist",
@@ -179,14 +179,14 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Change the table's texture."},
-                    {type: "ui_arrow", targetElementId: "voxelQuadTextureOptions"},
+                    {type: "ui_arrow", targetElementId: "voxelQuadTextureOptions", arrowBias: "right"},
                     {type: "ui_outline_rect", targetElementId: "voxelQuadTextureOptions"},
                 ],
                 transitionRules: [{
                     requirements: [{type: "voxel_quad_texture_equals", negate: true,
                         row: m.hotspots.table.row, col: m.hotspots.table.col,
                         collisionLayer: 1, facingAxis: "y", orientation: "+",
-                        textureIndex: 0}],
+                        textureIndex: 25}],
                     nextStep: "add_block_to_table",
                     nextStepDelay: 0,
                 }],
@@ -198,7 +198,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Add a block to the table."},
-                    {type: "ui_arrow", targetElementId: "addVoxelBlockButton"},
+                    {type: "ui_arrow", targetElementId: "addVoxelBlockButton", arrowBias: "center"},
                     {type: "ui_outline_rect", targetElementId: "addVoxelBlockButton"},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: false},
                 ],
@@ -275,7 +275,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Remove the obstacle."},
-                    {type: "ui_arrow", targetElementId: "removeVoxelBlockButton"},
+                    {type: "ui_arrow", targetElementId: "removeVoxelBlockButton", arrowBias: "center"},
                     {type: "ui_outline_rect", targetElementId: "removeVoxelBlockButton"},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: false},
                 ],
@@ -321,7 +321,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "This is your receptionist.<br>Type your message to say \"Hello\"."},
-                    {type: "ui_arrow", targetElementId: "chatTextInput"},
+                    {type: "ui_arrow", targetElementId: "chatTextInput", arrowBias: "center"},
                     {type: "ui_outline_rect", targetElementId: "chatTextInput"},
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: false},
                     {type: "feature_flag", flag: FeatureFlag.UseFallbackChatMessage, enable: true},
@@ -340,7 +340,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                 startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: "Click 'Send' to send your message."},
-                    {type: "ui_arrow", targetElementId: "chatSendButton"},
+                    {type: "ui_arrow", targetElementId: "chatSendButton", arrowBias: "center"},
                     {type: "ui_outline_rect", targetElementId: "chatSendButton"},
                     {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: false},
                 ],
@@ -350,7 +350,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                         metadataKey: ObjectMetadataKeyEnumMap.SentMessage,
                         metadataValueCondition: (str: string) => str.trim().length > 0}],
                     nextStep: "watch_npc_reply",
-                    nextStepDelay: 500,
+                    nextStepDelay: 1000,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
@@ -362,8 +362,8 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "ui_headline", text: "Look! The receptionist greeted you back."},
                     {type: "set_object_metadata", objectId: "npc",
                             metadataKey: ObjectMetadataKeyEnumMap.SentMessage, metadataValue: "Hello!"},
-                    {type: "object_bounce", objectId: "npc", durationSeconds: 0.6,
-                            positionOffset: {x: 0, y: 0.22, z: 0}, oscillations: 2}, // The NPC bobs up and down to "nod" as it greets back.
+                    {type: "object_bounce", objectId: "npc", durationSeconds: 1.25,
+                            positionOffset: {x: 0, y: 0.3, z: 0}, oscillations: 3}, // The NPC bobs up and down to "nod" as it greets back.
                 ],
                 transitionRules: [{
                     requirements: [{type: "always_true"}],

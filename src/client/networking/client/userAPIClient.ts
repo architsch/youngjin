@@ -15,6 +15,10 @@ const UserAPIClient =
         tryStartClientProcess("pageTerminated", 1, 0);
         return await RestAPI.post(getURL("logout"));
     },
+    restartTutorial: async (): Promise<RestAPIResponse> =>
+    {
+        return await RestAPI.post(getURL("restart_tutorial"));
+    },
 }
 
 function getURL(type: string): string

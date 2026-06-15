@@ -6,7 +6,7 @@ type SinglePlayerAction =
     | {type: "clear_all_ui_and_gizmo"}
     | {type: "ui_headline", text: string}
     | {type: "ui_diagram", diagram: "drag_up", text: string}
-    | {type: "ui_arrow", targetElementId: string}
+    | {type: "ui_arrow", targetElementId: string, arrowBias: "center" | "left" | "right"}
     | {type: "ui_outline_rect", targetElementId: string}
     | {type: "gizmo_navigation_arrow", targetX: number, targetZ: number}
     | {type: "gizmo_downward_arrow", targetX: number, targetY: number, targetZ: number}

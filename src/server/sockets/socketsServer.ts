@@ -199,8 +199,12 @@ const SocketsServer =
 
                 if (user.singlePlayerMode != "") // user has an unfinished singleplayer experience (e.g. the tutorial).
                 {
-                    preferredRoomID = "";
-                    fallbackRoomType = RoomTypeEnumMap.SinglePlayer;
+                    // Route into the client-generated single-player room. Its ID equals the user's
+                    // single-player mode (a key in SinglePlayerModeConfigMap), which changeUserRoom
+                    // recognizes and synthesizes locally — no DB room is involved. Should the mode
+                    // somehow be invalid, fall back to a Hub.
+                    preferredRoomID = user.singlePlayerMode;
+                    fallbackRoomType = RoomTypeEnumMap.Hub;
                 }
                 else if (targetRoomID && targetRoomID.length > 0) // roomID was specified in the URL
                 {

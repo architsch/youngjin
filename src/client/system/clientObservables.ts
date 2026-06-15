@@ -72,7 +72,7 @@ export const notificationMessageObservable = new Observable<string | null>(null)
 export const headlineMessageObservable = new Observable<string | null>(null);
 
 // The DOM element id that the 2D on-screen arrow should point down at, or null to hide it.
-export const screenArrowTargetObservable = new Observable<string | null>(null);
+export const screenArrowTargetObservable = new Observable<{targetElementId: string, arrowBias: "center" | "left" | "right"} | null>(null);
 
 // The DOM element id that the 2D on-screen rectangular outline should surround, or null to hide it.
 export const screenOutlineRectTargetObservable = new Observable<string | null>(null);

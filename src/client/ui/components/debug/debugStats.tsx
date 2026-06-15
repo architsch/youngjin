@@ -7,6 +7,7 @@ import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../basic/button";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 import TextInput from "../basic/textInput";
+import UserAPIClient from "../../../networking/client/userAPIClient";
 
 export default function DebugStats({env}: Props)
 {
@@ -94,6 +95,7 @@ export default function DebugStats({env}: Props)
                         case "hide dummy-rooms": roomListDebugEnabledObservable.set(false); break;
                         case "show dummy-images": imageListChooserDebugEnabledObservable.set(true); break;
                         case "hide dummy-images": imageListChooserDebugEnabledObservable.set(false); break;
+                        case "restart tutorial": void restartTutorial(); break;
                         default: notificationMessageObservable.set("Unknown debug command."); break;
                     }
                     setState({...state, debugCommand: ""});
@@ -101,6 +103,25 @@ export default function DebugStats({env}: Props)
             </div>
         </div>}
     </div>;
+}
+
+// "restart tutorial" debug command: send a user who has already finished the single-player
+// experience back through the tutorial (handy for testing tutorial gameplay in live/staging).
+// Rejected here (and on the server) unless the user is not currently in any single-player mode.
+async function restartTutorial(): Promise<void>
+{
+    if (App.getUser().singlePlayerMode != "")
+    {
+        notificationMessageObservable.set("Cannot restart the tutorial while a single-player mode is in progress.");
+        return;
+    }
+    // The server clears the "tutorial finished" cookie and flips the persisted singlePlayerMode back
+    // to the tutorial; reloading re-enters the tutorial from a clean page load.
+    const response = await UserAPIClient.restartTutorial();
+    if (response.status >= 200 && response.status < 300)
+        window.location.reload();
+    else
+        notificationMessageObservable.set("Failed to restart the tutorial.");
 }
 
 const className = "flex flex-col justify-start absolute left-0 top-0 max-w-full max-h-1/5";

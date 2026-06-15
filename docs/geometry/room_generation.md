@@ -50,6 +50,6 @@ The following image shows a set of graphical elements which will be used to illu
 
 ## Tutorial Room
 
-Every first-time user automatically enters the "tutorial room" in order to participate in the tutorial. The initial construction of the tutorial room relies heavily on the room generation system (i.e. `RoomGenerationVoxelGrid` and `RoomGenerationHelperUtil`), and its dimensions are parameterized for easy adjustment. The overall structure of the tutorial room is shown below.
+Every first-time user automatically enters the "tutorial room" in order to participate in the tutorial. The initial construction of the tutorial room relies heavily on the room generation system (i.e. `RoomGenerationVoxelGrid` and `RoomGenerationHelperUtil`), and its dimensions are parameterized for easy adjustment. Because the tutorial room is a single-player room, this construction happens on the client (the server stores no copy of it — see [single_player_mode.md](../networking/single_player_mode.md)). The overall structure of the tutorial room is shown below.
 
 ![Tutorial Room](figures/tutorial_room.jpg)
