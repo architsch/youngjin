@@ -2,8 +2,8 @@ import * as THREE from "three";
 import FirstPersonController from "../../firstPersonController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
-import InstancedMeshGraphics from "../../instancedMeshGraphics";
 import ClientObjectManager from "../../../clientObjectManager";
+import InstancedMeshBinding from "../../../../graphics/types/mesh/instancedMeshBinding";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 
@@ -132,7 +132,7 @@ export default class FirstPersonPointerInput
 
             if (instanceId != undefined) // Raycast target is an instanced mesh.
             {
-                const gameObject = InstancedMeshGraphics.findGameObject(intersection.object, instanceId);
+                const gameObject = InstancedMeshBinding.findGameObject(intersection.object, instanceId);
                 if (gameObject != undefined)
                 {
                     const instancedMeshGraphics = gameObject.components.instancedMeshGraphics;

@@ -2,8 +2,8 @@ import * as THREE from "three";
 import MeshFactory from "../factories/meshFactory";
 import GraphicsManager from "../graphicsManager";
 import GameObject from "../../object/types/gameObject";
-import InstancedMeshGraphics from "../../object/components/instancedMeshGraphics";
 import ClientObjectManager from "../../object/clientObjectManager";
+import InstancedMeshBinding from "../types/mesh/instancedMeshBinding";
 
 const raycaster: THREE.Raycaster = new THREE.Raycaster();
 const vec3Temp = new THREE.Vector3();
@@ -30,7 +30,7 @@ const CameraUtil =
 
             if (instanceId != undefined) // Raycast target is an instanced mesh.
             {
-                const gameObject = InstancedMeshGraphics.findGameObject(intersection.object, instanceId);
+                const gameObject = InstancedMeshBinding.findGameObject(intersection.object, instanceId);
                 if (gameObject != undefined)
                     return gameObject == lookTargetObject;
                 else

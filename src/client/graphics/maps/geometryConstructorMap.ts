@@ -4,6 +4,13 @@ export const GeometryConstructorMap: { [geometryId: string]: () => THREE.BufferG
 {
     "ArrowCone": () => new THREE.ConeGeometry(0.045, 0.09, 8),
     "ArrowCylinder": () => new THREE.CylinderGeometry(0.015, 0.015, 0.1, 6),
+    // Smooth unit-scale primitives (each fits roughly within a unit cube centered at the origin, so the
+    // caller's per-instance scale maps the same way the unit "Box" did). Their built-in UVs span [0,1],
+    // which is what the TexturePack atlas-cell mapping expects, so one cell wraps over the whole shape.
+    "Sphere": () => new THREE.SphereGeometry(0.5, 24, 16),
+    "Capsule": () => new THREE.CapsuleGeometry(0.32, 0.36, 8, 24),
+    "Cone": () => new THREE.ConeGeometry(0.5, 1, 24),
+    "Icosphere": () => new THREE.IcosahedronGeometry(0.5, 2),
     "Square": () =>
     {
         clear();

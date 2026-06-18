@@ -11,7 +11,7 @@ import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import { endClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
-import { roomChangedObservable, texturePackURLObservable, updateObservable, userRoleObservable, singlePlayerObservable } from "./system/clientObservables";
+import { roomChangedObservable, updateObservable, userRoleObservable, singlePlayerObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
@@ -20,7 +20,6 @@ import SetUserRoleSignal from "../shared/user/types/setUserRoleSignal";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
-import ImageMapUtil from "../shared/image/util/imageMapUtil";
 import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
 
 const minFramesPerSecond = 20;
@@ -92,7 +91,7 @@ const App =
         if (!success)
             return;
         currentRoom!.texturePackPath = params.texturePackPath;
-        await ClientObjectManager.updateVoxelTexturePack(params.texturePackPath);
+        await ClientVoxelManager.applyVoxelTexturePack(params.texturePackPath);
     },
     getVoxelQuads: (): Uint8Array =>
     {
@@ -165,13 +164,10 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
 
     userRoleObservable.set(currentUserRole);
 
-    const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, currentRoom.texturePackPath);
-    texturePackURLObservable.set(texturePackURL);
-
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
+    await ClientVoxelManager.load();
     await ClientObjectManager.load(roomRuntimeMemory);
-    ClientVoxelManager.load();
 
     prevTime = performance.now() * 0.001;
     deltaTimePending = 0;

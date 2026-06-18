@@ -13,6 +13,7 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
 {
     objectType: "Player",
     persistent: false,
+    autoUnload: true,
     canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
         return IS_SERVER; // Only the server can add a player character.
     },
@@ -35,8 +36,9 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
         if (obj.sourceUserID != user.id)
             return false;
 
-        // User can only set the player's message nothing else
-        if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage)
+        // User can only set the player's message or appearance, nothing else
+        if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage &&
+            signal.metadataKey != ObjectMetadataKeyEnumMap.PlayerAppearance)
             return false;
 
         return true;
@@ -70,15 +72,8 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             rigidbody: {},
         },
         spawnedByOther: {
-            modelGraphics: {
-                path: "lowpolyghost/lowpolyghost.glb",
-                localPosition: {x: 0, y: 0, z: 0},
-                scale: {x: 0.3, y: 0.3, z: 0.3},
-            },
+            instancedMeshGraphics: {},
             periodicTransformReceiver: {},
-            // Lets the receptionist (and other remote players) play a cosmetic bounce, e.g. an NPC
-            // nodding when it replies. It animates the visual node, so it stays out of the way of
-            // the networked transform the receiver drives.
             easingMotion: {},
         },
     },

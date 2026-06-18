@@ -24,8 +24,8 @@ export default class SpriteMaterialParams extends MaterialParams
         this.opacity = opacity;
     }
 
-    getMaterialId(): string
+    protected getDefaultMaterialId(): string
     {
-        return `${super.getMaterialId()}-${this.textureId}-${this.opacity}`;
+        return `${super.getDefaultMaterialId()}-${this.textureId}-${this.opacity}`;
     }
 }

@@ -19,6 +19,7 @@ import User from "../../../../shared/user/types/user";
 import AuthPromptForm from "../form/authPromptForm";
 import RoomListForm from "../form/roomListForm";
 import ConfigureMyRoomForm from "../form/configureMyRoomForm";
+import CustomizePlayerForm from "../form/customizePlayerForm";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { clientFeatureFlagsObservable, objectSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
@@ -115,6 +116,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                 </Popup>;
                 case "configureMyRoom": return <Popup key={i} showCloseButton={true}>
                     <ConfigureMyRoomForm/>
+                </Popup>;
+                case "customizePlayer": return <Popup key={i} showCloseButton={true}>
+                    <CustomizePlayerForm/>
                 </Popup>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>
                     {state.params.viewType === "list"

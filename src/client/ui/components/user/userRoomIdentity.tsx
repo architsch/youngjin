@@ -1,6 +1,7 @@
 import Button from "../basic/button";
 import IconButton from "../basic/iconButton";
 import GearIcon from "../basic/icons/gearIcon";
+import PersonIcon from "../basic/icons/personIcon";
 import User from "../../../../shared/user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
@@ -40,6 +41,7 @@ export default function UserRoomIdentity({
         </div>
         <div className="flex flex-row items-end justify-end gap-2">
             {showConfigureButton && <IconButton icon={<GearIcon/>} size="md" onClick={() => PopupUtil.openPopup({popupType: "configureMyRoom"})}/>}
+            <IconButton icon={<PersonIcon/>} size="md" onClick={() => PopupUtil.openPopup({popupType: "customizePlayer"})}/>
         </div>
     </div>;
 }

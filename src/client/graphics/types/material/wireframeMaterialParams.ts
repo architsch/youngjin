@@ -11,8 +11,8 @@ export default class WireframeMaterialParams extends MaterialParams
         this.colorHex = colorHex;
     }
 
-    getMaterialId(): string
+    protected getDefaultMaterialId(): string
     {
-        return `${super.getMaterialId()}-${this.colorHex}`;
+        return `${super.getDefaultMaterialId()}-${this.colorHex}`;
     }
 }

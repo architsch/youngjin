@@ -11,13 +11,11 @@ import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/image/util/imageMapUtil";
-import { clientFeatureFlagsObservable } from "../../system/clientObservables";
-import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 
 export default class CanvasGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
-
+    static latestMaterialParams: TexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
     static spawnedCanvasGameObjects: Map<string, CanvasGameObject> = new Map();
     private static loadQueue: Promise<void> = Promise.resolve();
 
@@ -31,21 +29,25 @@ export default class CanvasGameObject extends GameObject
         if (!this.instancedMeshGraphics)
             throw new Error("CanvasGameObject requires InstancedMeshGraphics component");
 
-        const materialParams = new TexturePackMaterialParams("canvas_texture_pack",
-            2048, 2048, 256, 256, "dynamicEmpty", -1, -1); // polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
-        this.instancedMeshGraphics.setInstancingProperties(materialParams,
-            "Square", MAX_CANVASES_PER_ROOM);
+        if (CanvasGameObject.latestMaterialParams == undefined)
+        {
+            CanvasGameObject.latestMaterialParams = new TexturePackMaterialParams("canvas_texture_pack",
+                2048, 2048, 256, 256, "dynamicEmpty", -1, -1); // polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
+        }
     }
 
     async onSpawn(): Promise<void>
     {
-        CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
-
+        if (CanvasGameObject.latestMaterialParams == undefined)
+            throw new Error(`Canvas material hasn't been defined yet.`);
         await super.onSpawn();
 
-        await this.instancedMeshGraphics.loadInstancedMesh();
+        CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
 
-        this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool();
+        await this.instancedMeshGraphics.loadInstancedMesh("main",
+            CanvasGameObject.latestMaterialParams, "Square", MAX_CANVASES_PER_ROOM, true);
+
+        this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool("main");
         this.updateMeshInstanceTransform();
         this.loadImage();
     }
@@ -59,7 +61,7 @@ export default class CanvasGameObject extends GameObject
     async onDespawn(): Promise<void>
     {
         await super.onDespawn();
-        this.instancedMeshGraphics.returnInstanceToPool(this.instanceId);
+        this.instancedMeshGraphics.returnInstanceToPool("main", this.instanceId);
 
         // Mark as despawned (in order to inform a potentially pending
         // "loadImageImpl" task that the canvas's mesh instance is now obsolete
@@ -109,14 +111,14 @@ export default class CanvasGameObject extends GameObject
             return;
         try
         {
-            this.instancedMeshGraphics.updateInstanceTextureUV(this.instanceId, this.instanceId % 64);
-            await this.instancedMeshGraphics.drawImageAtIndex(this.instanceId % 64, imageURL);
+            this.instancedMeshGraphics.updateInstanceTextureUV("main", this.instanceId, this.instanceId % 64);
+            await this.instancedMeshGraphics.drawImageAtIndex("main", this.instanceId % 64, imageURL);
         }
         catch (error)
         {
             console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadataValue}):`, error);
             // Paint a placeholder color so the canvas isn't stuck showing the old image
-            await this.instancedMeshGraphics.drawImageAtIndex(this.instanceId % 64, "");
+            await this.instancedMeshGraphics.drawImageAtIndex("main", this.instanceId % 64, "");
         }
     }
 
@@ -138,6 +140,7 @@ export default class CanvasGameObject extends GameObject
         const sizeY = colliderConfig.hitboxSize.sizeY;
 
         this.instancedMeshGraphics.updateInstanceTransform(
+            "main",
             this.instanceId,
             0, 0, 0.001,
             this.direction.x, this.direction.y, this.direction.z,

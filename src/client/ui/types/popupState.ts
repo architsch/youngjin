@@ -7,6 +7,7 @@ type PopupState =
     | { popupType: "confirm", params: ConfirmProps }
     | { popupType: "roomList" }
     | { popupType: "configureMyRoom" }
+    | { popupType: "customizePlayer" }
     | { popupType: "imageChooser"; params: ImageChooserProps }
 
 export default PopupState;

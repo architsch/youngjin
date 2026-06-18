@@ -1,9 +1,8 @@
 import ImageMapUtil from "../../../image/util/imageMapUtil";
 import Room from "../../../room/types/room";
-import { RoomTypeEnumMap } from "../../../room/types/roomType";
 import { MAX_CANVASES_PER_ROOM } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
-import { UserRole, UserRoleEnumMap } from "../../../user/types/userRole";
+import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../../types/addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../../types/objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
@@ -17,6 +16,7 @@ const CanvasObjectTypeConfig: ObjectTypeConfig =
 {
     objectType: "Canvas",
     persistent: true,
+    autoUnload: true,
     canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
@@ -72,9 +72,7 @@ const CanvasObjectTypeConfig: ObjectTypeConfig =
                 incomingSoftCollisionForceMultiplier: 0,
                 maxClimbableHeight: 0,
             },
-            instancedMeshGraphics: {
-                createInstanceIdPool: true,
-            },
+            instancedMeshGraphics: {},
         },
     },
 }

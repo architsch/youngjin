@@ -109,7 +109,10 @@ export const userRoleObservable = new Observable<UserRole>(UserRoleEnumMap.Visit
 
 // This observable tracks the current room's latest texture pack URL.
 // It is updated whenever a room loads or the current room's texture pack changes.
-export const texturePackURLObservable = new Observable<string>();
+// Defaults to "" (the "no pack applied yet" sentinel) so that the very first
+// applyVoxelTexturePack call can peek() it without throwing and always detects a
+// change against the first real URL.
+export const texturePackURLObservable = new Observable<string>("");
 
 // This observable notifies its listeners whenever the current user's
 // singlePlayerMode or singlePlayerStep changes on the client side

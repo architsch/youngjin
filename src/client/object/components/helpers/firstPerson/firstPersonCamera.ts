@@ -34,10 +34,6 @@ export default class FirstPersonCamera
 
         this.defaultQuaternion.copy(this.camera.quaternion);
         this.quaternionInterpTarget.copy(this.defaultQuaternion);
-
-        const pointLight = new THREE.PointLight(0xffffff, 4.0, 16, 0.5);
-        this.camera.add(pointLight);
-        pointLight.position.set(0, 0, 0);
     }
 
     update(deltaTime: number, controller: FirstPersonController): void

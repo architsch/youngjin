@@ -11,6 +11,7 @@ const VoxelObjectTypeConfig: ObjectTypeConfig =
 {
     objectType: "Voxel",
     persistent: false,
+    autoUnload: false, // Voxels persist across rooms (shared instanced mesh + texture pack); rebound, not recreated.
     canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
         return false;
     },
@@ -26,9 +27,7 @@ const VoxelObjectTypeConfig: ObjectTypeConfig =
     components: {
         spawnedByAny: {
             // Collider is not needed here because the physics system handles voxels under a separate logic.
-            instancedMeshGraphics: {
-                createInstanceIdPool: false,
-            },
+            instancedMeshGraphics: {},
         },
     },
 }

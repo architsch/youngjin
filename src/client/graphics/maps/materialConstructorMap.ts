@@ -99,6 +99,19 @@ async function createTexturePackMaterial(p: TexturePackMaterialParams): Promise<
             );
             `
         );
+        // Three.js computes vColor from the per-instance color (set via InstancedMesh.setColorAt),
+        // but its stock color_fragment chunk only tints diffuseColor when USE_COLOR is defined (i.e.
+        // material.vertexColors). Apply the instance color here so it works without a per-vertex color
+        // attribute. The #ifdef makes this a no-op for instanced meshes that never set an instance color.
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <color_fragment>",
+            `
+            #include <color_fragment>
+            #ifdef USE_INSTANCING_COLOR
+                diffuseColor.rgb *= vColor;
+            #endif
+            `
+        );
     };
     return newMaterial;
 }

@@ -76,6 +76,10 @@ export default abstract class GameObject
     // as instanced meshes don't, so those GameObjects override this to re-apply their instance
     // transforms (recomputed from their own source of truth, which composes the moved "visualObj").
     onVisualTransformChanged() {}
+    // Invoked once per frame for GameObjects registered as updatable — i.e. those that override this,
+    // or that carry at least one component with its own "update" method. Override to drive per-frame
+    // logic such as character-part animation. Default is a no-op.
+    update(deltaTime: number) {}
 
     async onSpawn(): Promise<void>
     {

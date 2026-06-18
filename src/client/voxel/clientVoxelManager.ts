@@ -1,4 +1,4 @@
-import { userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { texturePackURLObservable, userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import Room from "../../shared/room/types/room";
 import ClientObjectManager from "../object/clientObjectManager";
@@ -15,12 +15,31 @@ import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import VoxelGameObject from "../object/types/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
+import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
+import ImageMapUtil from "../../shared/image/util/imageMapUtil";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+
+const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
 const ClientVoxelManager =
 {
-    load: () =>
+    load: async (): Promise<void> =>
     {
+        // Apply the current room's texture pack to the shared voxel material before the voxels spawn
+        // (so the first room's voxels pick up the right texture) or are rebound (so a later room with a
+        // different pack swaps its texture in place). Must run before ClientObjectManager.load.
+        await ClientVoxelManager.applyVoxelTexturePack(App.getCurrentRoom()!.texturePackPath);
         voxelQuadChangeObservable.addListener("clientVoxelManager", onVoxelQuadChange);
+    },
+    applyVoxelTexturePack: async (texturePackPath: string): Promise<void> =>
+    {
+        const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap")
+            .getImageURLByPath(App.getEnv().assets_url, texturePackPath);
+        if (texturePackURLObservable.peek() === texturePackURL)
+            return;
+
+        await InstancedMeshGraphics.swapTexturePackTexture(voxelTypeIndex, "main", texturePackURL);
+        texturePackURLObservable.set(texturePackURL);
     },
     unload: () =>
     {

@@ -12,6 +12,7 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
 {
     objectType: "Door",
     persistent: false,
+    autoUnload: true,
     canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
         return false;
     },

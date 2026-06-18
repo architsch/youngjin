@@ -13,17 +13,14 @@ import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntry
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/voxelGameObject";
-import { objectSelectionObservable, texturePackURLObservable, userRoleObservable } from "../system/clientObservables";
+import { objectSelectionObservable, userRoleObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
 import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
-import MeshFactory from "../graphics/factories/meshFactory";
-import MaterialFactory from "../graphics/factories/materialFactory";
-import TextureFactory from "../graphics/factories/textureFactory";
-import TexturePackMaterialParams from "../graphics/types/material/texturePackMaterialParams";
-import ImageMapUtil from "../../shared/image/util/imageMapUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import Room from "../../shared/room/types/room";
+import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import ClientObjectUtil from "./util/clientObjectUtil";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
@@ -31,6 +28,10 @@ const updatableGameObjects: {[objectId: string]: GameObject} = {};
 const playerByUserID: {[userID: string]: GameObject} = {};
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
+
+// Voxel objects are created on the first room-load and then persist for the app's lifetime (their
+// type config has autoUnload=false). This tracks whether that one-time spawn has happened yet.
+let voxelsSpawned = false;
 
 const ClientObjectManager =
 {
@@ -50,7 +51,9 @@ const ClientObjectManager =
     {
         for (const id in updatableGameObjects)
         {
-            const components = updatableGameObjects[id].components;
+            const gameObject = updatableGameObjects[id];
+            gameObject.update(deltaTime);
+            const components = gameObject.components;
             for (const name in components)
             {
                 if (components[name].update)
@@ -61,7 +64,16 @@ const ClientObjectManager =
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
         const room = roomRuntimeMemory.room;
-        await ClientObjectUtil.spawnVoxelsFromGrid(room);
+        // Voxel objects (and their shared mesh/material/texture) persist across rooms, so they are
+        // created only on the first room-load; subsequent loads rebind the existing ones to the new
+        // room's grid and refresh them in place.
+        if (!voxelsSpawned)
+        {
+            await ClientObjectUtil.spawnVoxelsFromGrid(room);
+            voxelsSpawned = true;
+        }
+        else
+            resyncVoxelsToCurrentGrid(room);
         let playerPos: Vec3 = {x: 0, y: 0, z: 0};
 
         // Find the player's initial position for distance-based loading order
@@ -106,6 +118,11 @@ const ClientObjectManager =
     {
         for (const objectId of Object.keys(gameObjects))
         {
+            // Objects whose type config has autoUnload=false (e.g. voxels) persist across room
+            // changes and are rebound to the next room rather than being destroyed/recreated.
+            const config = ObjectTypeConfigMap.getConfigByIndex(gameObjects[objectId].params.objectTypeIndex);
+            if (!config.autoUnload)
+                continue;
             // Objects whose IDs start with "#" (i.e. client-only objects) are excluded from room data.
             await ClientObjectManager.removeObject(objectId, false, !objectId.startsWith("#"));
         }
@@ -127,7 +144,8 @@ const ClientObjectManager =
             if (object.params.objectTypeIndex === playerTypeIndex)
                 playerByUserID[object.params.sourceUserID] = object;
 
-            let updatable = false;
+            // Updatable if the GameObject itself overrides "update", or any component has an "update".
+            let updatable = object.update !== GameObject.prototype.update;
             for (const component of Object.values(object.components))
             {
                 if (component.update)
@@ -219,53 +237,6 @@ const ClientObjectManager =
         return true;
     },
 
-    updateVoxelTexturePack: async (newTexturePackPath: string): Promise<void> =>
-    {
-        const room = App.getCurrentRoom();
-        if (!room)
-            return;
-
-        // Collect all existing voxel objects along with the mesh/material/texture
-        // IDs that belong to the old texture pack (captured before despawn).
-        const voxelObjects: VoxelGameObject[] = [];
-        let oldMeshId: string | undefined;
-        let oldMaterialId: string | undefined;
-        let oldTexturePath: string | undefined;
-        for (const obj of Object.values(gameObjects))
-        {
-            if (obj.params.objectTypeIndex === voxelTypeIndex)
-            {
-                const voxelObj = obj as VoxelGameObject;
-                if (oldMeshId === undefined)
-                {
-                    oldMeshId = voxelObj.instancedMeshGraphics.getMeshId();
-                    const oldParams = voxelObj.instancedMeshGraphics.materialParams as TexturePackMaterialParams;
-                    oldMaterialId = oldParams.getMaterialId();
-                    oldTexturePath = oldParams.texturePath;
-                }
-                voxelObjects.push(voxelObj);
-            }
-        }
-
-        // Despawn all existing voxel objects (client-only — no server sync needed).
-        for (const voxelObj of voxelObjects)
-            await ClientObjectManager.removeObject(voxelObj.params.objectId, false, false);
-
-        // Now that nothing references the old texture pack's GPU resources,
-        // dispose of them via the factories.
-        if (oldMeshId !== undefined)
-        {
-            MeshFactory.unload(oldMeshId);
-            MaterialFactory.unload(oldMaterialId!);
-            TextureFactory.unload(oldTexturePath!);
-        }
-
-        // Update the observable so newly spawned voxels pick up the new texture pack.
-        const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, newTexturePackPath);
-        texturePackURLObservable.set(texturePackURL);
-
-        await ClientObjectUtil.spawnVoxelsFromGrid(room);
-    },
     // When the client receives an AddObjectSignal from the server,
     // the given object will spawn as soon as the room to which it belongs is available.
     onAddObjectSignalReceived: async (signal: AddObjectSignal) => {
@@ -322,6 +293,30 @@ const ClientObjectManager =
         ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
             signal.metadataValue, false);
     },
+}
+
+// Voxel objects persist across rooms (autoUnload=false), so on every room-load after the first they
+// must be rebound to the new room's grid and refreshed in place. The voxel grid is the same full,
+// row-major grid in every room, so each persisted voxel object is matched to the new room's voxel at
+// the same (row, col). Rebinding also re-stamps the new voxel's gameObjectId, which voxel-quad edits
+// rely on to find their object.
+const resyncVoxelsToCurrentGrid = (room: Room): void =>
+{
+    for (const obj of Object.values(gameObjects))
+    {
+        if (obj.params.objectTypeIndex !== voxelTypeIndex)
+            continue;
+        const voxelObj = obj as VoxelGameObject;
+        const cell = voxelObj.getVoxel();
+        const newVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, cell.row, cell.col);
+        if (!newVoxel)
+        {
+            console.error(`resyncVoxelsToCurrentGrid :: voxel not found in new room (row = ${cell.row}, col = ${cell.col})`);
+            continue;
+        }
+        voxelObj.setVoxel(newVoxel);
+        voxelObj.refreshAllQuads();
+    }
 }
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>

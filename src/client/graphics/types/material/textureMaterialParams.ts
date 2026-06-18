@@ -15,8 +15,8 @@ export default class TextureMaterialParams extends MaterialParams
         this.polygonOffsetUnits = polygonOffsetUnits;
     }
 
-    getMaterialId(): string
+    protected getDefaultMaterialId(): string
     {
-        return `${super.getMaterialId()}-${this.texturePath}`;
+        return `${super.getDefaultMaterialId()}-${this.texturePath}`;
     }
 }

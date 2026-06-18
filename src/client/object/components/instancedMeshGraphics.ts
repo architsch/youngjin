@@ -1,213 +1,90 @@
-import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
-import MeshFactory from "../../graphics/factories/meshFactory";
-import GameObject from "../types/gameObject";
-import TextureUtil from "../../graphics/util/textureUtil";
-import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
 import MaterialParams from "../../graphics/types/material/materialParams";
+import InstancedMeshBinding from "../../graphics/types/mesh/instancedMeshBinding";
 
-const tempObj = new THREE.Object3D();
-const vec3Temp = new THREE.Vector3();
-
-const objMap: {[meshId: string] : { [instanceId: number]: GameObject }} = {};
+// bindingKey = `${objectTypeIndex}/${bodyPartName}`
+const bindingMap: {[bindingKey: string]: InstancedMeshBinding } = {};
 
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
-    materialParams: MaterialParams | undefined; // must be set externally
-    geometryId: string = ""; // must be set externally
-    maxNumInstances: number = 0; // must be set externally
-    instancedMesh: THREE.InstancedMesh | undefined;
-
-    static findGameObject(instancedMeshObj: THREE.Object3D, instanceId: number): GameObject | undefined
+    // Swaps the texture of a shared TexturePack binding in place (e.g. when the voxel texture pack
+    // changes), preserving the binding's mesh/material/shader and reusing it. A no-op if the binding
+    // hasn't been created yet (e.g. before the first voxel has spawned).
+    static async swapTexturePackTexture(objectTypeIndex: number, bodyPartName: string, newTexturePath: string)
     {
-        const objByInstanceId = objMap[instancedMeshObj.name];
-        if (objByInstanceId == undefined)
-        {
-            console.error(`MeshId doesn't exist in objMap (meshId = ${instancedMeshObj.name})`);
-            return undefined;
-        }
-        return objByInstanceId[instanceId];
-    }
-
-    setInstancingProperties(materialParams: MaterialParams, geometryId: string, maxNumInstances: number)
-    {
-        this.materialParams = materialParams;
-        this.geometryId = geometryId;
-        this.maxNumInstances = maxNumInstances;
-    }
-
-    getMeshId(): string
-    {
-        if (this.instancedMesh) // If instancedMesh is already loaded, just grab the meshId from its name.
-            return this.instancedMesh.name;
-
-        if (!this.materialParams)
-            throw new Error("MaterialParams hasn't been set yet.");
-        const materialId = this.materialParams.getMaterialId();
-        return `${this.geometryId}-${materialId}`;
-    }
-
-    async loadInstancedMesh(): Promise<void>
-    {
-        if (this.instancedMesh) // instancedMesh is already loaded
+        const binding = bindingMap[InstancedMeshGraphics.getBindingKey(objectTypeIndex, bodyPartName)];
+        if (!binding)
             return;
-        if (!this.materialParams)
-            throw new Error("MaterialParams hasn't been set yet.");
-
-        const instancedMesh = await MeshFactory.loadInstancedMesh(
-            this.getMeshId(),
-            this.geometryId,
-            this.materialParams,
-            this.maxNumInstances,
-            this.componentConfig.createInstanceIdPool
-        );
-        this.instancedMesh = instancedMesh;
-
-        if (objMap[instancedMesh.name] == undefined)
-            objMap[instancedMesh.name] = {};
+        await binding.swapTexturePackTexture(newTexturePath);
     }
 
-    reserveInstance(instanceId: number)
+    async loadInstancedMesh(bodyPartName: string, materialParams: MaterialParams,
+        geometryId: string, maxNumInstances: number, createInstanceIdPool: boolean)
     {
-        if (!this.instancedMesh)
-            throw new Error("InstancedMesh hasn't been loaded yet.");
-
-        const objByInstanceId = objMap[this.getMeshId()];
-        if (objByInstanceId[instanceId] != undefined)
-            console.error(`instanceId already exists in objByInstanceId (instanceId = ${instanceId}, meshId = ${this.getMeshId()}, existingObjectId = ${objByInstanceId[instanceId].params.objectId}, objectId = ${this.gameObject.params.objectId})`);
-        objByInstanceId[instanceId] = this.gameObject;
+        const bindingKey = this.getBindingKey(bodyPartName);
+        if (bindingMap[bindingKey])
+            return;
+        const binding = new InstancedMeshBinding(materialParams, geometryId,
+            maxNumInstances, createInstanceIdPool);
+        await binding.loadInstancedMesh();
+        bindingMap[bindingKey] = binding;
     }
 
-    // Returns the rented instance's instanceId
-    rentInstanceFromPool(): number
+    reserveInstance(bodyPartName: string, instanceId: number)
     {
-        if (!this.instancedMesh)
-            throw new Error("InstancedMesh hasn't been loaded yet.");
-        if (!this.componentConfig.createInstanceIdPool)
-            throw new Error("You cannot rent an instance without an instanceId pool.");
-
-        const instanceId = MeshFactory.rentInstanceId(this.getMeshId());
-        this.reserveInstance(instanceId);
-        return instanceId;
+        bindingMap[this.getBindingKey(bodyPartName)].reserveInstance(this.gameObject, instanceId);
     }
-
-    unreserveInstance(instanceId: number)
+    unreserveInstance(bodyPartName: string, instanceId: number)
     {
-        if (!this.instancedMesh)
-            throw new Error("InstancedMesh hasn't been loaded yet.");
-
-        const objByInstanceId = objMap[this.getMeshId()];
-        if (objByInstanceId[instanceId] == undefined)
-            console.error(`instanceId doesn't exist in objByInstanceId (instanceId = ${instanceId}, meshId = ${this.getMeshId()}, objectId = ${this.gameObject.params.objectId})`);
-        delete objByInstanceId[instanceId];
-
-        this.updateInstanceTransform(instanceId, 0, -9999, 0, 0, -1, 0);
+        bindingMap[this.getBindingKey(bodyPartName)].unreserveInstance(this.gameObject, instanceId);
     }
 
-    returnInstanceToPool(instanceId: number)
+    rentInstanceFromPool(bodyPartName: string): number
     {
-        if (!this.instancedMesh)
-            throw new Error("InstancedMesh hasn't been loaded yet.");
-        if (!this.componentConfig.createInstanceIdPool)
-            throw new Error("You cannot return an instance without an instanceId pool.");
-
-        MeshFactory.returnInstanceId(this.getMeshId(), instanceId);
-        this.unreserveInstance(instanceId);
+        return bindingMap[this.getBindingKey(bodyPartName)].rentInstanceFromPool(this.gameObject);
+    }
+    returnInstanceToPool(bodyPartName: string, instanceId: number)
+    {
+        bindingMap[this.getBindingKey(bodyPartName)].returnInstanceToPool(this.gameObject, instanceId);
     }
 
-    updateInstanceTransform(instanceId: number,
+    updateInstanceTransform(bodyPartName: string, instanceId: number,
         offsetX: number, offsetY: number, offsetZ: number,
         dirX: number, dirY: number, dirZ: number,
         xScale: number = 1, yScale: number = 1, zScale: number = 1)
     {
-        if (!this.instancedMesh)
-        {
-            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${this.gameObject.params.objectId})`);
-            return;
-        }
-        this.gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so its (possibly bounced) world matrix is current too.
-        // Bake under the visual node rather than obj, so any cosmetic transform applied there (e.g.
-        // EasingMotion's bounce, pivoting about the GameObject's center) composes into the instance.
-        // At rest the visual node is identity, so this is identical to baking directly under obj.
-        this.gameObject.visualObj.add(tempObj);
-
-        tempObj.scale.set(xScale, yScale, zScale);
-
-        tempObj.position.set(0, 0, 0);
-        vec3Temp.set(
-            this.gameObject.position.x + dirX,
-            this.gameObject.position.y + dirY,
-            this.gameObject.position.z + dirZ
-        );
-        tempObj.lookAt(vec3Temp);
-        tempObj.getWorldDirection(vec3Temp);
-
-        tempObj.position.set(offsetX, offsetY, offsetZ);
-        tempObj.updateMatrixWorld();
-
-        this.instancedMesh.setMatrixAt(instanceId, tempObj.matrixWorld);
-        this.instancedMesh.instanceMatrix.needsUpdate = true;
-        // Invalidate the cached bounding sphere so that InstancedMesh.raycast
-        // recomputes it to include the updated instance position.
-        this.instancedMesh.boundingSphere = null;
-
-        tempObj.removeFromParent();
+        bindingMap[this.getBindingKey(bodyPartName)].updateInstanceTransform(
+            this.gameObject, instanceId,
+            offsetX, offsetY, offsetZ, dirX, dirY, dirZ, xScale, yScale, zScale);
     }
 
-    // Sample offsets and scales are normalized numbers in range [0,1], corresponding to the full range of pixels covered by the texture's sampling window.
-    updateInstanceTextureUV(instanceId: number, textureIndex: number,
+    updateInstanceTextureUV(bodyPartName: string, instanceId: number, textureIndex: number,
         sampleOffsetX: number = 0, sampleOffsetY: number = 0,
         sampleScaleX: number = 1, sampleScaleY: number = 1)
     {
-        if (!this.instancedMesh)
-        {
-            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${this.gameObject.params.objectId})`);
-            return;
-        }
-        const texturePackMaterialParams = this.materialParams as TexturePackMaterialParams;
-        const w = texturePackMaterialParams.textureWidth;
-        const h = texturePackMaterialParams.textureHeight;
-        const cw = texturePackMaterialParams.textureGridCellWidth;
-        const ch = texturePackMaterialParams.textureGridCellHeight;
-
-        const textureGridCellWidthScale = cw / w;
-        const textureGridCellHeightScale = ch / h;
-
-        const uvStartBufferAttrib = this.instancedMesh.geometry.getAttribute("uvStart");
-        // (0.5 / cw) = pixel-bleeding prevention shift
-        const uStart = textureGridCellWidthScale
-            * ((0.5 / cw) + textureIndex % (1 / textureGridCellWidthScale) + sampleOffsetX);
-        // (0.5 / ch) = pixel-bleeding prevention shift
-        const vStart = textureGridCellHeightScale
-            * ((0.5 / ch) + Math.floor(textureIndex * textureGridCellWidthScale) + sampleOffsetY);
-        uvStartBufferAttrib.setXY(instanceId, uStart, vStart);
-        uvStartBufferAttrib.needsUpdate = true;
-
-        const uvSampleSizeBufferAttrib = this.instancedMesh.geometry.getAttribute("uvSampleSize");
-        uvSampleSizeBufferAttrib.setXY(instanceId, sampleScaleX, sampleScaleY);
-        uvSampleSizeBufferAttrib.needsUpdate = true;
+        bindingMap[this.getBindingKey(bodyPartName)].updateInstanceTextureUV(
+            this.gameObject, instanceId, textureIndex,
+            sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }
 
-    async drawImageAtIndex(textureIndex: number, imageURL: string)
+    updateInstanceColor(bodyPartName: string, instanceId: number, colorHex: number)
     {
-        const texturePackMaterialParams = this.materialParams as TexturePackMaterialParams;
-        const w = texturePackMaterialParams.textureWidth;
-        const h = texturePackMaterialParams.textureHeight;
-        const cw = texturePackMaterialParams.textureGridCellWidth;
-        const ch = texturePackMaterialParams.textureGridCellHeight;
+        bindingMap[this.getBindingKey(bodyPartName)].updateInstanceColor(
+            this.gameObject, instanceId, colorHex);
+    }
 
-        const textureGridCellWidthScale = cw / w;
-        const textureGridCellHeightScale = ch / h;
-        
-        const textureRow = Math.floor(textureIndex * textureGridCellWidthScale);
-        const textureCol = textureIndex % (1 / textureGridCellWidthScale);
-        const u1 = textureGridCellWidthScale * textureCol;
-        const u2 = u1 + textureGridCellWidthScale;
-        const v1 = textureGridCellHeightScale * textureRow;
-        const v2 = v1 + textureGridCellHeightScale;
+    async drawImageAtIndex(bodyPartName: string, textureIndex: number, imageURL: string)
+    {
+        await bindingMap[this.getBindingKey(bodyPartName)].drawImageAtIndex(textureIndex, imageURL);
+    }
 
-        const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
-        const rt = material.map!.renderTarget as THREE.WebGLRenderTarget;
-        await TextureUtil.drawImageOnRenderTarget(imageURL, rt, u1, v1, u2, v2);
+    private getBindingKey(bodyPartName: string)
+    {
+        return InstancedMeshGraphics.getBindingKey(this.gameObject.params.objectTypeIndex, bodyPartName);
+    }
+
+    private static getBindingKey(objectTypeIndex: number, bodyPartName: string)
+    {
+        return `${objectTypeIndex}/${bodyPartName}`;
     }
 }

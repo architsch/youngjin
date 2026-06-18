@@ -10,6 +10,7 @@ export default interface ObjectTypeConfig
 {
     objectType: string;
     persistent: boolean;
+    autoUnload: boolean; // Whether the client-side object instance (i.e. GameObject) should automatically unload when the room unloads.
     canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => boolean,
     canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,
@@ -17,9 +18,7 @@ export default interface ObjectTypeConfig
     components: {
         spawnedByAny?: {
             collider?: ColliderConfig,
-            instancedMeshGraphics?: {
-                createInstanceIdPool: boolean,
-            },
+            instancedMeshGraphics?: {},
             meshGraphics?: {
                 path: string,
                 geometryId: string,
@@ -45,6 +44,7 @@ export default interface ObjectTypeConfig
         },
         spawnedByOther?: {
             periodicTransformReceiver?: {},
+            instancedMeshGraphics?: {},
             modelGraphics?: {
                 path: string,
                 localPosition: {x: number, y: number, z: number},

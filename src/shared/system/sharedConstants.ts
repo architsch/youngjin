@@ -28,6 +28,7 @@ export const ROOM_API_ROUTE_PATH = "api/room";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
 export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
+export const PLAYER_APPEARANCE_MAX_LENGTH = 256; // upper bound on the serialized player-appearance metadata string
 
 // Physics
 
@@ -76,6 +77,7 @@ export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.25, z: 0.5};
 // Object Limits
 
 export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, used for rendering canvas images based on mesh instances, is an 8x8 grid
+export const MAX_PLAYERS_PER_ROOM = 64; // Caps the player body-part instance pool (MAX_PLAYERS_PER_ROOM * parts-per-player). Oversizing is harmless; it must just not be exceeded by concurrent players.
 
 // Gameplay
 

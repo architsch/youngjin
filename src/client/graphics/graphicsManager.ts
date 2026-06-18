@@ -1,10 +1,5 @@
 import * as THREE from "three";
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import TextureFactory from "./factories/textureFactory";
-import MaterialFactory from "./factories/materialFactory";
-import ModelFactory from "./factories/modelFactory";
-import GeometryFactory from "./factories/geometryFactory";
-import MeshFactory from "./factories/meshFactory";
 
 const minAspectRatio = 0.6;
 const maxAspectRatio = 2;
@@ -21,7 +16,15 @@ let gameRenderer: THREE.WebGLRenderer;
 let overlayRenderer: CSS2DRenderer;
 let scene: THREE.Scene;
 let ambLight: THREE.AmbientLight;
+let pointLight: THREE.PointLight;
 let camera: THREE.PerspectiveCamera;
+
+// The scene, camera, lighting, renderers, and all graphical assets are created once and reused for
+// the app's whole lifetime — they are NOT torn down between rooms. Most assets (meshes, materials,
+// textures, geometries) are shared across rooms, so rebuilding them every room change would be pure
+// waste; obsolete assets are instead disposed explicitly at the point they become obsolete (e.g. a
+// replaced voxel texture pack). This flag guards that one-time initialization.
+let graphicsInitialized = false;
 
 const GraphicsManager =
 {
@@ -81,20 +84,25 @@ const GraphicsManager =
     },
     load: async (updateCallback: XRFrameRequestCallback | null) =>
     {
-        // Core elements
-
-        gameCanvasRoot = document.getElementById("gameCanvasRoot") as HTMLElement;
-        overlayCanvasRoot = document.getElementById("overlayCanvasRoot") as HTMLElement;
-
-        scene = new THREE.Scene();
-
-        ambLight = new THREE.AmbientLight(0xffffff, 0.15);
-        scene.add(ambLight);
-
-        camera = new THREE.PerspectiveCamera(60, 1, 0.1, 45); // 45 = roughly the maximum diagonal distance from one corner of the room to the other (Room comprises a 32x32 voxel grid)
-
-        if (!gameRenderer)
+        // Core elements — created once and reused for every subsequent room (see graphicsInitialized).
+        if (!graphicsInitialized)
         {
+            gameCanvasRoot = document.getElementById("gameCanvasRoot") as HTMLElement;
+            overlayCanvasRoot = document.getElementById("overlayCanvasRoot") as HTMLElement;
+
+            scene = new THREE.Scene();
+
+            ambLight = new THREE.AmbientLight(0xffffff, 0.15);
+            scene.add(ambLight);
+
+            camera = new THREE.PerspectiveCamera(60, 1, 0.1, 45); // 45 = roughly the maximum diagonal distance from one corner of the room to the other (Room comprises a 32x32 voxel grid)
+
+            // The point light is parented to the camera (so it follows the player's view) and, like the
+            // camera, is created once and reused for the app's whole lifetime — never re-created per room.
+            pointLight = new THREE.PointLight(0xffffff, 4.0, 16, 0.5);
+            pointLight.position.set(0, 1, 0);
+            camera.add(pointLight);
+
             gameRenderer = new THREE.WebGLRenderer({ antialias: true });
             gameRenderer.shadowMap.enabled = true;
             gameRenderer.setClearColor("#000000");
@@ -106,10 +114,7 @@ const GraphicsManager =
             gameRenderer.domElement.style.right = "0";
             gameRenderer.domElement.style.touchAction = "none";
             gameCanvasRoot.appendChild(gameRenderer.domElement);
-        }
 
-        if (!overlayRenderer)
-        {
             overlayRenderer = new CSS2DRenderer();
             overlayRenderer.domElement.style.position = "absolute";
             overlayRenderer.domElement.style.margin = "auto auto";
@@ -119,6 +124,8 @@ const GraphicsManager =
             overlayRenderer.domElement.style.right = "0";
             overlayRenderer.domElement.style.touchAction = "none";
             overlayCanvasRoot.appendChild(overlayRenderer.domElement);
+
+            graphicsInitialized = true;
         }
 
         window.addEventListener("resize", onResize);
@@ -130,20 +137,11 @@ const GraphicsManager =
     },
     unload: async () =>
     {
-        // Core elements
-
-        scene.remove();
-        camera.remove();
+        // The scene, camera, lighting, and graphical assets are intentionally preserved across rooms
+        // and reused (see graphicsInitialized). Only the per-room rendering hooks are torn down here;
+        // obsolete assets are disposed explicitly at the point of change (e.g. the voxel texture pack).
         window.removeEventListener("resize", onResize);
         gameRenderer.setAnimationLoop(null);
-
-        // Assets
-
-        TextureFactory.unloadAll();
-        MaterialFactory.unloadAll();
-        GeometryFactory.unloadAll();
-        MeshFactory.unloadAll();
-        ModelFactory.unloadAll();
     },
 }
 
