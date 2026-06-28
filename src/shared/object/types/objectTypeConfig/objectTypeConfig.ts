@@ -19,6 +19,9 @@ export default interface ObjectTypeConfig
         spawnedByAny?: {
             collider?: ColliderConfig,
             instancedMeshGraphics?: {},
+            instancedMeshComposer?: {
+                maxNumInstancesPerMesh: number
+            },
             meshGraphics?: {
                 path: string,
                 geometryId: string,

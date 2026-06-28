@@ -1,26 +1,24 @@
 import { useState } from "react";
-import Form from "../basic/form";
 import Text from "../basic/text";
+import IconButton from "../basic/iconButton";
+import CloseIcon from "../basic/icons/closeIcon";
 import AtlasCellSprite from "../image/atlasCellSprite";
 import App from "../../../app";
 import ClientObjectManager from "../../../object/clientObjectManager";
-import PlayerBodyConfig from "../../../object/types/playerBodyConfig";
+import PopupUtil from "../../util/popupUtil";
 import SocketsClient from "../../../networking/client/socketsClient";
 import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
+import useMouseDragScroll from "../../util/mouseDragScroll";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 
-// Lets the user pick, per body part, an atlas texture cell + a color tint for their own player character.
-// Each change is applied to the local player object (so it persists + is read back here) and broadcast to
-// the room (other clients render it). The user is in first-person and can't see their own body in-world,
-// so a small 2D preview stands in — it multiplies the chosen color over the cell, mirroring the in-world
-// tint (diffuseColor.rgb *= vColor). All body layout/defaults/choices come from PlayerBodyConfig.
 export default function CustomizePlayerForm()
 {
+    const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const materialParams = PlayerBodyConfig.getMaterialParams();
     const numCols = materialParams.textureWidth / materialParams.textureGridCellWidth;
 
-    // One {textureIndex, colorHex} per body part, in PlayerBodyConfig order (the PlayerAppearance contract).
+    // One {textureIndex, colorHex} per body part, in PlayerBodyConfig order (the appearance contract).
     const [parts, setParts] = useState<{ textureIndex: number; colorHex: number }[]>(readInitialParts);
 
     const setPart = (partIndex: number, change: Partial<{ textureIndex: number; colorHex: number }>) =>
@@ -33,74 +31,52 @@ export default function CustomizePlayerForm()
         });
     };
 
-    // A single tinted atlas-cell tile for the preview, looked up by the part's config name so the
-    // formation layout stays correct regardless of the parts' ordering.
-    const renderPreviewTile = (partName: string, sizeClassNames: string) =>
-    {
-        const partIndex = PlayerBodyConfig.parts.findIndex(part => part.name === partName);
-        if (partIndex < 0)
-            return <div className={sizeClassNames}/>;
-        const part = parts[partIndex];
-        return <div className={`${sizeClassNames} rounded-md overflow-hidden`} style={{ backgroundColor: toCssColor(part.colorHex) }}>
-            <AtlasCellSprite
-                atlasImageURL={materialParams.texturePath}
-                atlasWidth={materialParams.textureWidth} atlasHeight={materialParams.textureHeight}
-                atlasCellWidth={materialParams.textureGridCellWidth} atlasCellHeight={materialParams.textureGridCellHeight}
-                atlasCellCol={part.textureIndex % numCols} atlasCellRow={Math.floor(part.textureIndex / numCols)}
-                flipRow={true}
-                highlight={false} autoScrollToHighlight={false}
-                additionalClassNames="w-full h-full mix-blend-multiply"
-            />
-        </div>;
-    };
-
-    const emptyTile = <div className="w-12"/>;
-
-    return <Form>
-        <Text content="Customize Character" size="md"/>
-
-        {/* Live preview of the floating-limb formation: head on top, hands flanking the torso, tail below. */}
-        <div className="flex flex-col items-center gap-1 p-2 bg-gray-800/50 rounded-md">
-            {renderPreviewTile("Head", "w-12")}
-            <div className="flex flex-row items-center gap-1">
-                {renderPreviewTile("Left hand", "w-9")}
-                {renderPreviewTile("Torso", "w-12")}
-                {renderPreviewTile("Right hand", "w-9")}
+    return <div className="absolute bottom-0 left-0 w-full z-40 flex flex-col pointer-events-none">
+        <div className="m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700/90 rounded-lg pointer-events-auto">
+            <div className="flex flex-row items-center gap-2">
+                <Text content="Customize Character" size="sm"/>
+                <IconButton icon={<CloseIcon/>} size="sm" onClick={PopupUtil.closePopup} additionalClassNames="ml-auto"/>
             </div>
-            {renderPreviewTile("Tail", "w-10")}
+
+            {/* One column of controls per body part, laid out left-to-right and scrolled horizontally
+                when they don't all fit: a name + color picker on top, then the selectable texture cells. */}
+            <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
+                {PlayerBodyConfig.parts.map((partConfig, partIndex) =>
+                    <div key={partConfig.name} className="flex flex-row items-stretch gap-3 shrink-0">
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                            <div className="flex flex-row items-center gap-2">
+                                <Text content={partConfig.name} size="sm"/>
+                                <input
+                                    type="color"
+                                    className="w-8 h-8 p-0 shrink-0 bg-transparent border-2 border-gray-400 rounded-md cursor-pointer"
+                                    value={toCssColor(parts[partIndex].colorHex)}
+                                    onChange={(e) => setPart(partIndex, { colorHex: parseInt(e.target.value.slice(1), 16) })}
+                                />
+                            </div>
+                            <div className="flex flex-row gap-1 shrink-0">
+                                {partConfig.textureChoices.map((textureIndex) =>
+                                    <AtlasCellSprite
+                                        key={`${partConfig.name}.${textureIndex}`}
+                                        atlasImageURL={materialParams.texturePath}
+                                        atlasWidth={materialParams.textureWidth} atlasHeight={materialParams.textureHeight}
+                                        atlasCellWidth={materialParams.textureGridCellWidth} atlasCellHeight={materialParams.textureGridCellHeight}
+                                        atlasCellCol={textureIndex % numCols} atlasCellRow={Math.floor(textureIndex / numCols)}
+                                        flipRow={true}
+                                        highlight={textureIndex === parts[partIndex].textureIndex}
+                                        autoScrollToHighlight={false}
+                                        additionalClassNames="w-12 h-12 shrink-0 cursor-pointer rounded"
+                                        onClick={() => setPart(partIndex, { textureIndex })}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                        {partIndex < PlayerBodyConfig.parts.length - 1 &&
+                            <div className="w-px self-stretch bg-gray-500"/>}
+                    </div>
+                )}
+            </div>
         </div>
-
-        {/* One row of controls per body part: name + color picker, then the selectable texture cells. */}
-        {PlayerBodyConfig.parts.map((partConfig, partIndex) =>
-            <div key={partConfig.name} className="flex flex-col gap-1">
-                <div className="flex flex-row items-center gap-2">
-                    <Text content={partConfig.name} size="sm"/>
-                    <input
-                        type="color"
-                        className="w-8 h-8 p-0 shrink-0 bg-transparent border-2 border-gray-400 rounded-md cursor-pointer"
-                        value={toCssColor(parts[partIndex].colorHex)}
-                        onChange={(e) => setPart(partIndex, { colorHex: parseInt(e.target.value.slice(1), 16) })}
-                    />
-                </div>
-                <div className="flex flex-row gap-2 p-2 overflow-x-auto bg-gray-800/50 rounded-md">
-                    {partConfig.textureChoices.map((textureIndex) =>
-                        <AtlasCellSprite
-                            key={`${partConfig.name}.${textureIndex}`}
-                            atlasImageURL={materialParams.texturePath}
-                            atlasWidth={materialParams.textureWidth} atlasHeight={materialParams.textureHeight}
-                            atlasCellWidth={materialParams.textureGridCellWidth} atlasCellHeight={materialParams.textureGridCellHeight}
-                            atlasCellCol={textureIndex % numCols} atlasCellRow={Math.floor(textureIndex / numCols)}
-                            flipRow={true}
-                            highlight={textureIndex === parts[partIndex].textureIndex}
-                            autoScrollToHighlight={false}
-                            additionalClassNames="w-12 shrink-0 cursor-pointer rounded"
-                            onClick={() => setPart(partIndex, { textureIndex })}
-                        />
-                    )}
-                </div>
-            </div>
-        )}
-    </Form>;
+    </div>;
 }
 
 // Reads the user's current appearance from their own player object (restored into its metadata at spawn),
@@ -108,7 +84,7 @@ export default function CustomizePlayerForm()
 function readInitialParts(): { textureIndex: number; colorHex: number }[]
 {
     const myPlayer = ClientObjectManager.getMyPlayer();
-    const entry = myPlayer?.params.metadata[ObjectMetadataKeyEnumMap.PlayerAppearance];
+    const entry = myPlayer?.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
     return PlayerBodyConfig.resolveAppearance(entry?.str);
 }
 
@@ -123,12 +99,12 @@ function applyAndBroadcast(parts: { textureIndex: number; colorHex: number }[]):
 
     const objectId = myPlayer.params.objectId;
     const value = PlayerBodyConfig.encodeAppearance(parts);
-    if (!ClientObjectManager.setObjectMetadata(objectId, ObjectMetadataKeyEnumMap.PlayerAppearance, value))
+    if (!ClientObjectManager.setObjectMetadata(objectId, ObjectMetadataKeyEnumMap.InstancedMeshComposition, value))
         return;
 
     if (room.roomType != RoomTypeEnumMap.SinglePlayer)
         SocketsClient.emitSetObjectMetadataSignal(
-            new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.PlayerAppearance, value));
+            new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.InstancedMeshComposition, value));
 }
 
 // A 0xRRGGBB number → the "#rrggbb" string that <input type="color"> and CSS backgroundColor expect.

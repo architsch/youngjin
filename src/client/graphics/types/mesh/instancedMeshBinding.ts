@@ -3,7 +3,7 @@ import MaterialParams from "../material/materialParams";
 import MeshFactory from "../../factories/meshFactory";
 import TextureFactory from "../../factories/textureFactory";
 import GameObject from "../../../object/types/gameObject";
-import TexturePackMaterialParams from "../material/texturePackMaterialParams";
+import InstancedTexturePackMaterialParams from "../material/instancedTexturePackMaterialParams";
 import TextureUtil from "../../util/textureUtil";
 
 const tempObj = new THREE.Object3D();
@@ -71,7 +71,7 @@ export default class InstancedMeshBinding
             console.error("InstancedMesh hasn't been loaded yet.");
             return;
         }
-        const params = this.materialParams as TexturePackMaterialParams;
+        const params = this.materialParams as InstancedTexturePackMaterialParams;
         const oldTexturePath = params.texturePath;
         if (oldTexturePath === newTexturePath)
             return;
@@ -176,11 +176,11 @@ export default class InstancedMeshBinding
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
             return;
         }
-        const texturePackMaterialParams = this.materialParams as TexturePackMaterialParams;
-        const w = texturePackMaterialParams.textureWidth;
-        const h = texturePackMaterialParams.textureHeight;
-        const cw = texturePackMaterialParams.textureGridCellWidth;
-        const ch = texturePackMaterialParams.textureGridCellHeight;
+        const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
+        const w = instancedTexturePackMaterialParams.textureWidth;
+        const h = instancedTexturePackMaterialParams.textureHeight;
+        const cw = instancedTexturePackMaterialParams.textureGridCellWidth;
+        const ch = instancedTexturePackMaterialParams.textureGridCellHeight;
 
         const textureGridCellWidthScale = cw / w;
         const textureGridCellHeightScale = ch / h;
@@ -200,27 +200,26 @@ export default class InstancedMeshBinding
         uvSampleSizeBufferAttrib.needsUpdate = true;
     }
 
-    // Tints this instance by multiplying its sampled texture color with "colorHex" (e.g. 0xff8800).
-    // The default instance color is white, which leaves the texture unmodified until a color is set.
-    updateInstanceColor(gameObject: GameObject, instanceId: number, colorHex: number)
+    updateInstanceColor(gameObject: GameObject, instanceId: number,
+        r: number, g: number, b: number)
     {
         if (!this.instancedMesh)
         {
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
             return;
         }
-        colorTemp.set(colorHex);
+        colorTemp.set(r, g, b);
         this.instancedMesh.setColorAt(instanceId, colorTemp);
         this.instancedMesh.instanceColor!.needsUpdate = true;
     }
 
     async drawImageAtIndex(textureIndex: number, imageURL: string)
     {
-        const texturePackMaterialParams = this.materialParams as TexturePackMaterialParams;
-        const w = texturePackMaterialParams.textureWidth;
-        const h = texturePackMaterialParams.textureHeight;
-        const cw = texturePackMaterialParams.textureGridCellWidth;
-        const ch = texturePackMaterialParams.textureGridCellHeight;
+        const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
+        const w = instancedTexturePackMaterialParams.textureWidth;
+        const h = instancedTexturePackMaterialParams.textureHeight;
+        const cw = instancedTexturePackMaterialParams.textureGridCellWidth;
+        const ch = instancedTexturePackMaterialParams.textureGridCellHeight;
 
         const textureGridCellWidthScale = cw / w;
         const textureGridCellHeightScale = ch / h;
@@ -244,14 +243,19 @@ export default class InstancedMeshBinding
 
         if (!this.materialParams)
             throw new Error("MaterialParams hasn't been set yet.");
-        const materialId = this.materialParams.getMaterialId();
-        return `${this.geometryId}-${materialId}`;
+        return InstancedMeshBinding.getInstancedMeshId(this.geometryId, this.materialParams);
     }
 
-    private getInstanceKey(instanceId: number): string
+    static getInstancedMeshId(geometryId: string, materialParams: MaterialParams): string
+    {
+        const materialId = materialParams.getMaterialId();
+        return `${geometryId}-${materialId}`;
+    }
+
+    getInstanceKey(instanceId: number): string
     {
         if (!this.instancedMesh)
             throw new Error("InstancedMesh hasn't been loaded yet.");
-        return `${this.instancedMesh.name}/${instanceId}`;
+        return `${this.getInstancedMeshId()}/${instanceId}`;
     }
 }

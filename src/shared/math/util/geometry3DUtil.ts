@@ -2,7 +2,7 @@ import AABB3 from "../types/aabb3";
 import Vec3 from "../types/vec3";
 import RaycastHitResult3 from "../types/raycastHitResult3";
 import Vector3DUtil from "./vector3DUtil";
-import { DIR_VEC } from "../../system/sharedConstants";
+import { DIR_VEC_BY_NAME } from "../../system/sharedConstants";
 
 const Geometry3DUtil =
 {
@@ -66,7 +66,7 @@ const Geometry3DUtil =
             if (tentry > tmin)
             {
                 tmin = tentry;
-                hitNormal = DIR_VEC[ray.x > 0 ? "-x" : "+x"];
+                hitNormal = DIR_VEC_BY_NAME[ray.x > 0 ? "-x" : "+x"];
             }
             tmax = Math.min(tmax, texit);
         }
@@ -85,7 +85,7 @@ const Geometry3DUtil =
             if (tentry > tmin)
             {
                 tmin = tentry;
-                hitNormal = DIR_VEC[ray.y > 0 ? "-y" : "+y"];
+                hitNormal = DIR_VEC_BY_NAME[ray.y > 0 ? "-y" : "+y"];
             }
             tmax = Math.min(tmax, texit);
         }
@@ -104,7 +104,7 @@ const Geometry3DUtil =
             if (tentry > tmin)
             {
                 tmin = tentry;
-                hitNormal = DIR_VEC[ray.z > 0 ? "-z" : "+z"];
+                hitNormal = DIR_VEC_BY_NAME[ray.z > 0 ? "-z" : "+z"];
             }
             tmax = Math.min(tmax, texit);
         }

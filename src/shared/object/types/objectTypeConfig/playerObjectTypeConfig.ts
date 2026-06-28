@@ -1,5 +1,5 @@
 import Room from "../../../room/types/room";
-import { IS_SERVER, PLAYER_HEIGHT } from "../../../system/sharedConstants";
+import { IS_SERVER, MAX_MESH_INSTANCES_PER_PLAYER, MAX_PLAYERS_PER_ROOM, PLAYER_HEIGHT } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../addObjectSignal";
@@ -38,13 +38,17 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
 
         // User can only set the player's message or appearance, nothing else
         if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage &&
-            signal.metadataKey != ObjectMetadataKeyEnumMap.PlayerAppearance)
+            signal.metadataKey != ObjectMetadataKeyEnumMap.InstancedMeshComposition)
             return false;
 
         return true;
     },
     components: {
         spawnedByAny: {
+            instancedMeshGraphics: {},
+            instancedMeshComposer: {
+                maxNumInstancesPerMesh: MAX_PLAYERS_PER_ROOM * MAX_MESH_INSTANCES_PER_PLAYER,
+            },
             collider: {
                 colliderType: "rigidbody",
                 hitboxSize: {sizeX: 0.6, sizeY: PLAYER_HEIGHT, sizeZ: 0.6},
@@ -72,7 +76,6 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             rigidbody: {},
         },
         spawnedByOther: {
-            instancedMeshGraphics: {},
             periodicTransformReceiver: {},
             easingMotion: {},
         },

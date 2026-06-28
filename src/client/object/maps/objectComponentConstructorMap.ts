@@ -11,6 +11,7 @@ import SpeechBubble from "../components/speechBubble";
 import GameObject from "../types/gameObject";
 import Collider from "../components/collider";
 import EasingMotion from "../components/easingMotion";
+import InstancedMeshComposer from "../components/instancedMeshComposer";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
     (parentObject: GameObject, componentConfig: {[key: string]: any}) => GameObjectComponent} =
@@ -25,6 +26,8 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new MeshGraphics(parentObject, componentConfig),
     "instancedMeshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new InstancedMeshGraphics(parentObject, componentConfig),
+    "instancedMeshComposer": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new InstancedMeshComposer(parentObject, componentConfig),
     "modelGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new ModelGraphics(parentObject, componentConfig),
     "periodicTransformEmitter": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>

@@ -6,7 +6,7 @@ import Voxel from "../../../shared/voxel/types/voxel";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
-import TexturePackMaterialParams from "../../graphics/types/material/texturePackMaterialParams";
+import InstancedTexturePackMaterialParams from "../../graphics/types/material/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
@@ -15,11 +15,12 @@ import { texturePackURLObservable } from "../../system/clientObservables";
 let isDevMode: boolean | undefined;
 
 const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
+export const VOXEL_QUAD_GEOMETRY_ID = "Square";
 
 export default class VoxelGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
-    static latestMaterialParams: TexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
+    static latestMaterialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
 
     private voxel: Voxel | undefined;
 
@@ -37,7 +38,7 @@ export default class VoxelGameObject extends GameObject
         const currentTexturePackURL = texturePackURLObservable.peek();
         if (VoxelGameObject.latestMaterialParams?.texturePath !== currentTexturePackURL)
         {
-            VoxelGameObject.latestMaterialParams = new TexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
+            VoxelGameObject.latestMaterialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
             VoxelGameObject.latestMaterialParams.customMaterialId = VOXEL_TEXTURE_PACK_MATERIAL_ID;
         }
     }
@@ -50,14 +51,15 @@ export default class VoxelGameObject extends GameObject
             throw new Error(`Voxel material hasn't been defined yet.`);
         await super.onSpawn();
 
-        await this.instancedMeshGraphics.loadInstancedMesh("main",
-            VoxelGameObject.latestMaterialParams, "Square", NUM_VOXEL_QUADS_PER_ROOM, false);
+        await this.instancedMeshGraphics.loadInstancedMesh(VOXEL_QUAD_GEOMETRY_ID,
+            VoxelGameObject.latestMaterialParams, NUM_VOXEL_QUADS_PER_ROOM, false);
 
         const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.reserveInstance("main", quadIndex);
+            this.instancedMeshGraphics.reserveInstance(VOXEL_QUAD_GEOMETRY_ID,
+                VoxelGameObject.latestMaterialParams, quadIndex);
             this.updateVoxelQuadInstance(quadIndex);
         }
     }
@@ -71,7 +73,8 @@ export default class VoxelGameObject extends GameObject
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.unreserveInstance("main", quadIndex);
+            this.instancedMeshGraphics.unreserveInstance(VOXEL_QUAD_GEOMETRY_ID,
+                VoxelGameObject.latestMaterialParams!, quadIndex);
         }
     }
 
@@ -147,7 +150,9 @@ export default class VoxelGameObject extends GameObject
             throw new Error(`Voxel hasn't been defined yet.`);
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxel, quadIndex);
-        this.instancedMeshGraphics.updateInstanceTransform("main", quadIndex, offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
+        this.instancedMeshGraphics.updateInstanceTransform(VOXEL_QUAD_GEOMETRY_ID,
+            VoxelGameObject.latestMaterialParams!, quadIndex,
+            offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex, scaleX, scaleY);
     }
 
@@ -162,7 +167,8 @@ export default class VoxelGameObject extends GameObject
         const sampleScaleX = scaleX; // [0,1]
         const sampleScaleY = scaleY; // [0,1]
 
-        this.instancedMeshGraphics.updateInstanceTextureUV("main", quadIndex,
+        this.instancedMeshGraphics.updateInstanceTextureUV(VOXEL_QUAD_GEOMETRY_ID,
+            VoxelGameObject.latestMaterialParams!, quadIndex,
             quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }
 }

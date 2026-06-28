@@ -117,9 +117,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                 case "configureMyRoom": return <Popup key={i} showCloseButton={true}>
                     <ConfigureMyRoomForm/>
                 </Popup>;
-                case "customizePlayer": return <Popup key={i} showCloseButton={true}>
-                    <CustomizePlayerForm/>
-                </Popup>;
+                // Not a modal: a bottom panel that leaves the game (and the live self-view of the
+                // player's own character) visible above it. It manages its own layout + close button.
+                case "customizePlayer": return <CustomizePlayerForm key={i}/>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>
                     {state.params.viewType === "list"
                         ? <ImageListChooserForm

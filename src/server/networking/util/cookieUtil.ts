@@ -49,6 +49,13 @@ const CookieUtil =
             maxAge: 3155692600000, // 100 years
         };
     },
+    // res.clearCookie deprecation-warns on maxAge/expires (it always expires the cookie
+    // immediately), so strip them while keeping the attributes (secure/httpOnly/sameSite)
+    // needed to match the cookie being cleared.
+    toClearOptions: ({ maxAge, expires, ...rest }: CookieOptions): CookieOptions =>
+    {
+        return rest;
+    },
 }
 
 export default CookieUtil;

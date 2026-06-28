@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import GameObject from "../types/gameObject";
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
 

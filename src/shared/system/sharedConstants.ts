@@ -28,7 +28,7 @@ export const ROOM_API_ROUTE_PATH = "api/room";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
 export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
-export const PLAYER_APPEARANCE_MAX_LENGTH = 256; // upper bound on the serialized player-appearance metadata string
+export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 256;
 
 // Physics
 
@@ -52,7 +52,7 @@ export const COLLISION_LAYER_NULL = 8;
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
 
-export const DIR_VEC: {[key: string]: Vec3} = {
+export const DIR_VEC_BY_NAME: {[key: string]: Vec3} = {
     "+x": {x: 1, y: 0, z: 0},
     "-x": {x: -1, y: 0, z: 0},
     "+y": {x: 0, y: 1, z: 0},
@@ -61,7 +61,35 @@ export const DIR_VEC: {[key: string]: Vec3} = {
     "-z": {x: 0, y: 0, z: -1},
 };
 
-// Voxel Grid Dimensions
+export const DIR_VEC_BY_CODE: Vec3[] = [
+    {x: 0, y: -1, z: 0}, // -y = 0
+    {x: 0, y: 1, z: 0}, // +y = 1
+    {x: -1, y: 0, z: 0}, // -x = 2
+    {x: 1, y: 0, z: 0}, // +x = 3
+    {x: 0, y: 0, z: -1}, // -z = 4
+    {x: 0, y: 0, z: 1}, // +z = 5
+];
+
+// Graphics
+
+export const GEOMETRY_ID_BY_CODE: string[] = [
+    "Square", // 0
+    "Box", // 1
+    "Icosphere", // 2
+    "Cone", // 3
+    "Capsule", // 4
+];
+export const GEOMETRY_CODE_BY_ID: {[geometryId: string]: number} = {
+    "Square": 0,
+    "Box": 1,
+    "Icosphere": 2,
+    "Cone": 3,
+    "Capsule": 4,
+};
+
+export const MAX_MESH_INSTANCES_PER_PLAYER = 128;
+
+// Voxel Grid
 
 export const NUM_VOXEL_ROWS = 32;
 export const NUM_VOXEL_COLS = 32;

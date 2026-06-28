@@ -8,6 +8,7 @@ import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ClientProcess from "./types/clientProcess";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import PopupState from "../ui/types/popupState";
+import CameraMode from "../graphics/types/cameraMode";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 
 //--------------------------------------------------------------------------------
@@ -92,6 +93,12 @@ export const voxelQuadHighlightObservable = new Observable<VoxelQuadSelection | 
 
 // This observable notifies its listeners whenever a popup needs to be opened/closed.
 export const popupStateObservable = new Observable<PopupState>({ popupType: "none" });
+
+// This observable notifies its listeners whenever the user's player camera switches modes (e.g. from
+// the normal first-person view to the pulled-back self-view shown while customizing one's character).
+// The camera framing (FirstPersonCamera) and the visibility of the user's own body (PlayerGameObject)
+// both follow it.
+export const cameraModeObservable = new Observable<CameraMode>("firstPerson");
 
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");

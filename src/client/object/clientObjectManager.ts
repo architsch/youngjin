@@ -175,12 +175,12 @@ const ClientObjectManager =
         if (gameObjects[objectId] != undefined)
         {
             const object = gameObjects[objectId];
-            await object.onDespawn();
             delete gameObjects[objectId];
             if (updatableGameObjects[object.params.objectId] != undefined)
                 delete updatableGameObjects[object.params.objectId];
             if (object.params.objectTypeIndex === playerTypeIndex)
                 delete playerByUserID[object.params.sourceUserID];
+            await object.onDespawn(); // Asynchronous despawning process must be called AFTER unregistering the object, since the per-frame update call may still unexpectedly access the object while it is being partially torn down.
             return true;
         }
         else

@@ -39,6 +39,7 @@ export default class FirstPersonController extends GameObjectComponent
 
     async onDespawn(): Promise<void>
     {
+        this.firstPersonCamera.onDespawn();
         this.firstPersonPointerInput.onDespawn(this);
         this.firstPersonKeyInput.onDespawn(this);
     }

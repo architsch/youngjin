@@ -1,4 +1,4 @@
-import { OBJECT_MESSAGE_MAX_LENGTH, PLAYER_APPEARANCE_MAX_LENGTH } from "../../system/sharedConstants";
+import { OBJECT_MESSAGE_MAX_LENGTH, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH } from "../../system/sharedConstants";
 import StringUtil from "../../system/util/stringUtil";
 import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
@@ -12,8 +12,8 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
         preprocessingMethod: (rawValue: string) => rawValue,
         unselectObjectOnSet: true,
     },
-    [ObjectMetadataKeyEnumMap.PlayerAppearance]: {
-        preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue, PLAYER_APPEARANCE_MAX_LENGTH),
+    [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: {
+        preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH),
         unselectObjectOnSet: false,
     },
 };

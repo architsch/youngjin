@@ -37,7 +37,7 @@ const UserTokenUtil =
     clearToken: (req: Request, res: Response): void =>
     {
         res.clearCookie(CookieUtil.getAuthTokenName(),
-            CookieUtil.getAuthTokenCookieOptions()).status(200);
+            CookieUtil.toClearOptions(CookieUtil.getAuthTokenCookieOptions())).status(200);
     },
 }
 

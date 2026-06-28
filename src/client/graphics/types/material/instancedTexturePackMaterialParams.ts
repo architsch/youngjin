@@ -1,6 +1,6 @@
 import MaterialParams from "./materialParams";
 
-export default class TexturePackMaterialParams extends MaterialParams
+export default class InstancedTexturePackMaterialParams extends MaterialParams
 {
     texturePath: string;
     textureWidth: number;
@@ -16,7 +16,7 @@ export default class TexturePackMaterialParams extends MaterialParams
         textureLoadType: TextureLoadType,
         polygonOffsetFactor?: number, polygonOffsetUnits?: number)
     {
-        super("TexturePack");
+        super("InstancedTexturePack");
 
         this.texturePath = texturePath;
         this.textureWidth = textureWidth;

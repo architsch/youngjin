@@ -2,7 +2,7 @@ import * as THREE from "three";
 import TextureFactory from "../factories/textureFactory";
 import MaterialParams from "../types/material/materialParams";
 import WireframeMaterialParams from "../types/material/wireframeMaterialParams";
-import TexturePackMaterialParams from "../types/material/texturePackMaterialParams";
+import InstancedTexturePackMaterialParams from "../types/material/instancedTexturePackMaterialParams";
 import LineBasicMaterialParams from "../types/material/lineBasicMaterialParams";
 import TextureMaterialParams from "../types/material/textureMaterialParams";
 import SpriteMaterialParams from "../types/material/spriteMaterialParams";
@@ -10,13 +10,35 @@ import SpriteMaterialParams from "../types/material/spriteMaterialParams";
 export const MaterialConstructorMap: { [materialType: string]:
     (params: MaterialParams) => Promise<THREE.Material> } =
 {
-    "TexturePack": async (params: MaterialParams) =>
+    "InstancedTexturePack": async (params: MaterialParams) =>
     {
-        return await createTexturePackMaterial(params as TexturePackMaterialParams);
+        return await createInstancedTexturePackMaterial(params as InstancedTexturePackMaterialParams);
     },
     "Texture": async (params: MaterialParams) =>
     {
         return await createTextureMaterial(params as TextureMaterialParams);
+    },
+    "InstancedColor": async (params: MaterialParams) =>
+    {
+        const newMaterial = new THREE.MeshPhongMaterial();
+        newMaterial.transparent = false;
+        // Three.js folds the per-instance color (InstancedMesh.setColorAt) into vColor via the stock
+        // color_vertex chunk, but its color_fragment chunk only tints diffuseColor when USE_COLOR is
+        // defined (i.e. material.vertexColors). Apply the instance color here so it works on this
+        // texture-less material without a per-vertex color attribute. The #ifdef makes this a no-op
+        // for instanced meshes that never set an instance color.
+        newMaterial.onBeforeCompile = (shader) => {
+            shader.fragmentShader = shader.fragmentShader.replace(
+                "#include <color_fragment>",
+                `
+                #include <color_fragment>
+                #ifdef USE_INSTANCING_COLOR
+                    diffuseColor.rgb *= vColor;
+                #endif
+                `
+            );
+        };
+        return newMaterial
     },
     "Sprite": async (params: MaterialParams) =>
     {
@@ -45,7 +67,7 @@ export const MaterialConstructorMap: { [materialType: string]:
     },
 }
 
-async function createTexturePackMaterial(p: TexturePackMaterialParams): Promise<THREE.Material>
+async function createInstancedTexturePackMaterial(p: InstancedTexturePackMaterialParams): Promise<THREE.Material>
 {
     let texture: THREE.Texture;
     switch (p.textureLoadType)
@@ -97,19 +119,6 @@ async function createTexturePackMaterial(p: TexturePackMaterialParams): Promise<
                 uvSampleSize[0] * vMapUv[0] * ${uvScales[0].toFixed(7)},
                 uvSampleSize[1] * vMapUv[1] * ${uvScales[1].toFixed(7)}
             );
-            `
-        );
-        // Three.js computes vColor from the per-instance color (set via InstancedMesh.setColorAt),
-        // but its stock color_fragment chunk only tints diffuseColor when USE_COLOR is defined (i.e.
-        // material.vertexColors). Apply the instance color here so it works without a per-vertex color
-        // attribute. The #ifdef makes this a no-op for instanced meshes that never set an instance color.
-        shader.fragmentShader = shader.fragmentShader.replace(
-            "#include <color_fragment>",
-            `
-            #include <color_fragment>
-            #ifdef USE_INSTANCING_COLOR
-                diffuseColor.rgb *= vColor;
-            #endif
             `
         );
     };

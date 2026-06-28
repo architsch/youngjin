@@ -52,8 +52,8 @@ const DevRuntimeUtil =
         if (req.cookies[CookieUtil.getDevBootIdCookieName()] === bootId)
             return; // Same runtime (this includes hot reloads) → the browser's cookies are current.
 
-        res.clearCookie(CookieUtil.getAuthTokenName(), CookieUtil.getAuthTokenCookieOptions());
-        res.clearCookie(CookieUtil.getTutorialFinishedCookieName(), CookieUtil.getTutorialFinishedCookieOptions());
+        res.clearCookie(CookieUtil.getAuthTokenName(), CookieUtil.toClearOptions(CookieUtil.getAuthTokenCookieOptions()));
+        res.clearCookie(CookieUtil.getTutorialFinishedCookieName(), CookieUtil.toClearOptions(CookieUtil.getTutorialFinishedCookieOptions()));
         delete req.cookies[CookieUtil.getAuthTokenName()];
         delete req.cookies[CookieUtil.getTutorialFinishedCookieName()];
 

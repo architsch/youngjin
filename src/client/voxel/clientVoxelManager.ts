@@ -13,13 +13,10 @@ import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
-import VoxelGameObject from "../object/types/voxelGameObject";
+import VoxelGameObject, { VOXEL_QUAD_GEOMETRY_ID } from "../object/types/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
 import ImageMapUtil from "../../shared/image/util/imageMapUtil";
-import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
-
-const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
 const ClientVoxelManager =
 {
@@ -38,7 +35,8 @@ const ClientVoxelManager =
         if (texturePackURLObservable.peek() === texturePackURL)
             return;
 
-        await InstancedMeshGraphics.swapTexturePackTexture(voxelTypeIndex, "main", texturePackURL);
+        await InstancedMeshGraphics.swapTexturePackTexture(VOXEL_QUAD_GEOMETRY_ID,
+            VoxelGameObject.latestMaterialParams!, texturePackURL);
         texturePackURLObservable.set(texturePackURL);
     },
     unload: () =>

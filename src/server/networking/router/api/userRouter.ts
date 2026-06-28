@@ -44,7 +44,7 @@ UserRouter.post("/restart_tutorial", UserIdentificationUtil.identifyAnyUser, asy
     // identifyAnyUser just (re)set the "tutorial finished" browser cookie because this user's mode is
     // "". Clear it here so a fresh guest later spawned on this browser is not skipped past the tutorial
     // too; this clearCookie is queued after the middleware's set, so the browser ends up clearing it.
-    res.clearCookie(CookieUtil.getTutorialFinishedCookieName(), CookieUtil.getTutorialFinishedCookieOptions());
+    res.clearCookie(CookieUtil.getTutorialFinishedCookieName(), CookieUtil.toClearOptions(CookieUtil.getTutorialFinishedCookieOptions()));
 
     // Persist the mode flip so the next page load / socket connect routes the user into the tutorial.
     await DBUserUtil.setSinglePlayerMode(user.id, TUTORIAL_SINGLE_PLAYER_MODE);
