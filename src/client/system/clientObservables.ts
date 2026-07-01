@@ -52,12 +52,12 @@ export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | 
 // This observable notifies its listeners whenever the user selects or unselects an object.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
-// This observable notifies its listeners whenever a text input element (UI) either gets
-// focused or unfocused.
-// If the number of active text inputs goes down to 0, it will imply that the user is
-// currently not interacting with any text input element and thus should be able to interact
-// freely with the game's 3D environment (without interfering with the text input state).
-export const numActiveTextInputsObservable = new Observable<number>(0);
+// This observable notifies its listeners whenever an input element (UI)
+// either gets focused or unfocused.
+// If the number of active inputs goes down to 0, it will imply that the user is
+// currently not interacting with any input element and thus should be able to interact
+// freely with the game's 3D environment (without interfering with the input's state).
+export const numActiveInputElementsObservable = new Observable<number>(0);
 
 // This observable notifies its listeners whenever the user's player changes its viewTarget.
 // A "viewTarget" is the point in 3D space that is supposed to be the main focus of the

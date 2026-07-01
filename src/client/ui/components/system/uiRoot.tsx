@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ThingsPoolEnv from "../../../system/types/thingsPoolEnv";
 import Chat from "../chat/chat";
 import DebugStats from "../debug/debugStats";
@@ -117,8 +117,6 @@ export default function UIRoot({ env, user }: UIRootProps)
                 case "configureMyRoom": return <Popup key={i} showCloseButton={true}>
                     <ConfigureMyRoomForm/>
                 </Popup>;
-                // Not a modal: a bottom panel that leaves the game (and the live self-view of the
-                // player's own character) visible above it. It manages its own layout + close button.
                 case "customizePlayer": return <CustomizePlayerForm key={i}/>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>
                     {state.params.viewType === "list"

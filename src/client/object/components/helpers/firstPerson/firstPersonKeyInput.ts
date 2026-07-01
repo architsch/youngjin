@@ -1,4 +1,4 @@
-import { numActiveTextInputsObservable } from "../../../../system/clientObservables";
+import { numActiveInputElementsObservable } from "../../../../system/clientObservables";
 import FirstPersonController from "../../firstPersonController";
 
 export default class FirstPersonKeyInput
@@ -19,14 +19,14 @@ export default class FirstPersonKeyInput
         
         window.addEventListener("keydown", this.onKeyDown);
         window.addEventListener("keyup", this.onKeyUp);
-        numActiveTextInputsObservable.addListener(`${controller.gameObject.params.objectId}.FirstPersonController`, this.onNumActiveTextInputsUpdated);
+        numActiveInputElementsObservable.addListener(`${controller.gameObject.params.objectId}.FirstPersonController`, this.onNumActiveTextInputsUpdated);
     }
 
     onDespawn(controller: FirstPersonController): void
     {
         window.removeEventListener("keydown", this.onKeyDown);
         window.removeEventListener("keyup", this.onKeyUp);
-        numActiveTextInputsObservable.removeListener(`${controller.gameObject.params.objectId}.FirstPersonController`);
+        numActiveInputElementsObservable.removeListener(`${controller.gameObject.params.objectId}.FirstPersonController`);
     }
 
     update(deltaTime: number, controller: FirstPersonController): void
@@ -60,9 +60,9 @@ export default class FirstPersonKeyInput
 
     private processKey(ev: KeyboardEvent, keyDown: boolean)
     {
-        if (numActiveTextInputsObservable.peek() > 0)
+        if (numActiveInputElementsObservable.peek() > 0)
         {
-            return; // User is typing something in a text input, so don't process an alphabet key as a control key.
+            return; // User is using an input element (UI) which may require keyboard inputs, so don't process an alphabet key as a control key.
         }
         switch (ev.code)
         {

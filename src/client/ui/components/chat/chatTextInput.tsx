@@ -1,7 +1,7 @@
 import { CompositionEvent, FormEvent, FormEventHandler, useEffect, useRef } from "react";
-import { chatTextInputObservable, numActiveTextInputsObservable } from "../../../system/clientObservables";
+import { chatTextInputObservable, numActiveInputElementsObservable } from "../../../system/clientObservables";
 import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../../shared/system/sharedConstants";
-import StringUtil from "../../../../shared/system/util/stringUtil";
+import StringUtil from "../../../../shared/math/util/stringUtil";
 
 export default function ChatTextInput({textInput, setTextInput}
     : {textInput: string, setTextInput: (newTextInput: string) => void})
@@ -62,10 +62,10 @@ export default function ChatTextInput({textInput, setTextInput}
 
 function onFocus()
 {
-    numActiveTextInputsObservable.change(n => n + 1);
+    numActiveInputElementsObservable.change(n => n + 1);
 }
 
 function onBlur()
 {
-    numActiveTextInputsObservable.change(n => n - 1);
+    numActiveInputElementsObservable.change(n => n - 1);
 }

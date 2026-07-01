@@ -1,7 +1,7 @@
 import TextInput from "./textInput";
 import Text from "./text";
 
-export default function FormTextInput({label, type = "text", size = "md", placeholder = "", textInput,
+export default function FormTextInput({label, type = "text", size = "md", placeholder = "", currValue,
     filterTextInput = (str => str), setTextInput }: Props)
 {
     return <div className="flex flex-row gap-1">
@@ -10,7 +10,7 @@ export default function FormTextInput({label, type = "text", size = "md", placeh
             type={type}
             size={size}
             placeholder={placeholder}
-            textInput={textInput}
+            currValue={currValue}
             filterTextInput={filterTextInput}
             setTextInput={setTextInput}
         />
@@ -23,7 +23,7 @@ interface Props
     type?: "text" | "number" | "password" | "email";
     size?: "xs" | "sm" | "md" | "lg";
     placeholder?: string;
-    textInput: string;
+    currValue: string;
     filterTextInput?: (rawTextInput: string) => string;
     setTextInput: (newTextInput: string) => void;
 }

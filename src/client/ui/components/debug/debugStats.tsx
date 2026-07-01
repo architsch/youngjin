@@ -80,7 +80,7 @@ export default function DebugStats({env}: Props)
             <br/>
             <div className="flex flex-row items-center gap-1">
                 <TextInput size="xs" placeholder="Debug Command"
-                    textInput={state.debugCommand}
+                    currValue={state.debugCommand}
                     setTextInput={(input: string) => setState({...state, debugCommand: input})}
                 />
                 <Button name="Run" size="xs" onClick={() => {

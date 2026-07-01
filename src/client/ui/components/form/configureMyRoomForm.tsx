@@ -129,7 +129,7 @@ export default function ConfigureMyRoomForm()
         {/* Section 3: Editors */}
         <Text content="Editors:" size="sm"/>
         <div className="flex flex-row items-center gap-1">
-            <TextInput size="sm" placeholder="userName" textInput={editorUserName} setTextInput={setEditorUserName}/>
+            <TextInput size="sm" placeholder="userName" currValue={editorUserName} setTextInput={setEditorUserName}/>
             <Button name="Add" size="sm" onClick={addEditor}/>
         </div>
         {editors.length > 0 && <div className="flex flex-col gap-1">

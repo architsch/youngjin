@@ -5,7 +5,6 @@ import PersonIcon from "../basic/icons/personIcon";
 import User from "../../../../shared/user/types/user";
 import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
-import { popupStateObservable } from "../../../system/clientObservables";
 import UserAPIClient from "../../../networking/client/userAPIClient";
 import PopupUtil from "../../util/popupUtil";
 

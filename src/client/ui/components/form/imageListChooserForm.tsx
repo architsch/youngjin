@@ -53,7 +53,7 @@ export default function ImageListChooserForm({mapName, initialChoicePath, onChoo
 
     return <Form>
         <TextInput size="sm" placeholder="Search by title or author"
-            textInput={searchInput} setTextInput={setSearchInput}/>
+            currValue={searchInput} setTextInput={setSearchInput}/>
 
         <List<ImageMetadata>
             items={pageItems}

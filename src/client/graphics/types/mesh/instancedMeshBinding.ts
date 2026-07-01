@@ -243,13 +243,12 @@ export default class InstancedMeshBinding
 
         if (!this.materialParams)
             throw new Error("MaterialParams hasn't been set yet.");
-        return InstancedMeshBinding.getInstancedMeshId(this.geometryId, this.materialParams);
+        return InstancedMeshBinding.getInstancedMeshId(this.geometryId, this.materialParams.getMaterialId());
     }
 
-    static getInstancedMeshId(geometryId: string, materialParams: MaterialParams): string
+    static getInstancedMeshId(geometryId: string, materialId: string): string
     {
-        const materialId = materialParams.getMaterialId();
-        return `${geometryId}-${materialId}`;
+        return `${geometryId}+${materialId}`; // NOTE: The "+" symbol is necessary here in order to let us easily split the instancedMeshId into its corresponding geometryId and materialId.
     }
 
     getInstanceKey(instanceId: number): string

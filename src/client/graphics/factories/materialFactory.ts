@@ -3,6 +3,7 @@ import { MaterialConstructorMap } from "../maps/materialConstructorMap";
 import MaterialParams from "../types/material/materialParams";
 
 const loadedMaterials: { [materialId: string]: THREE.Material } = {};
+const loadedMaterialParams: { [materialId: string]: MaterialParams } = {};
 
 const MaterialFactory =
 {
@@ -15,7 +16,15 @@ const MaterialFactory =
 
         const newMaterial = await MaterialConstructorMap[materialParams.type](materialParams);
         loadedMaterials[materialId] = newMaterial;
+        loadedMaterialParams[materialId] = materialParams;
         return newMaterial;
+    },
+    getLoadedMaterialParams: (materialId: string): MaterialParams =>
+    {
+        const params = loadedMaterialParams[materialId];
+        if (params != undefined)
+            return params;
+        throw new Error(`Loaded material parameters not found (materialId = ${materialId})`);
     },
     unloadAll: (): void =>
     {
@@ -35,6 +44,7 @@ const MaterialFactory =
         }
         material.dispose();
         delete loadedMaterials[materialId];
+        delete loadedMaterialParams[materialId];
     },
 }
 

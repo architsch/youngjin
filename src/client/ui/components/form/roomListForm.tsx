@@ -171,7 +171,7 @@ export default function RoomListForm({ user, currentRoomID }: Props)
 
         <div className="flex flex-row items-center gap-1">
             <TextInput size="sm" placeholder="Search by user name"
-                textInput={searchInput} setTextInput={setSearchInput}/>
+                currValue={searchInput} setTextInput={setSearchInput}/>
             <IconButton icon={<SearchIcon/>} size="sm" onClick={submitSearch}/>
         </div>
     </Form>;

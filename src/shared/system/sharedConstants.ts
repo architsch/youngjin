@@ -1,5 +1,6 @@
 // Runtime Environment
 
+import InstancedColorMaterialParams from "../../client/graphics/types/material/instancedColorMaterialParams";
 import Vec3 from "../math/types/vec3";
 
 export let IS_SERVER = false;
@@ -28,7 +29,7 @@ export const ROOM_API_ROUTE_PATH = "api/room";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
 export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
-export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 256;
+export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 
 // Physics
 
@@ -86,6 +87,18 @@ export const GEOMETRY_CODE_BY_ID: {[geometryId: string]: number} = {
     "Cone": 3,
     "Capsule": 4,
 };
+
+export const INSTANCED_COLOR_MATERIAL_ID = new InstancedColorMaterialParams().getMaterialId();
+
+export const MATERIAL_ID_BY_CODE: string[] = [
+    INSTANCED_COLOR_MATERIAL_ID, // 0
+];
+export const MATERIAL_CODE_BY_ID: {[materialId: string]: number} = {};
+MATERIAL_CODE_BY_ID[INSTANCED_COLOR_MATERIAL_ID] = 0;
+
+export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
+export const VOXEL_QUAD_GEOMETRY_ID = "Square";
+export const CANVAS_GEOMETRY_ID = "Square";
 
 export const MAX_MESH_INSTANCES_PER_PLAYER = 128;
 

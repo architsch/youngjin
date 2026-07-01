@@ -1,3 +1,4 @@
+import InstancedMeshCompositionPart from "../../../../client/graphics/types/mesh/instancedMeshCompositionPart";
 import { ColliderConfig } from "../../../physics/types/colliderConfig";
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
@@ -20,7 +21,8 @@ export default interface ObjectTypeConfig
             collider?: ColliderConfig,
             instancedMeshGraphics?: {},
             instancedMeshComposer?: {
-                maxNumInstancesPerMesh: number
+                maxNumInstancesPerMesh: number,
+                generateDefaultParts: () => InstancedMeshCompositionPart[],
             },
             meshGraphics?: {
                 path: string,

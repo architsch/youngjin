@@ -1,14 +1,12 @@
 import { FormEvent, FormEventHandler, useCallback, useEffect, useRef } from "react";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 
-export default function TextInput({type = "text", size = "md", placeholder = "", currValue,
-    filterTextInput = (str => str), setTextInput }: Props)
+export default function ColorInput({ currValue, setColorHex }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const onInput: FormEventHandler<HTMLInputElement> = useCallback((event: FormEvent<HTMLInputElement>) => {
-        const filteredTextInput = filterTextInput(event.currentTarget.value);
-        setTextInput(filteredTextInput);
+    const onChange: FormEventHandler<HTMLInputElement> = useCallback((event: FormEvent<HTMLInputElement>) => {
+        setColorHex(event.currentTarget.value);
     }, []);
 
     const onKeyDown = useCallback((ev: KeyboardEvent) =>
@@ -26,11 +24,10 @@ export default function TextInput({type = "text", size = "md", placeholder = "",
 
     return <input
         ref={inputRef}
-        type={type}
-        className={`text-left ${textClassNames[size]} yj-panel-white`}
-        placeholder={placeholder}
+        type="color"
+        className={`w-8 h-8 p-0 shrink-0 bg-transparent border-2 border-gray-400 rounded-md cursor-pointer`}
         value={currValue}
-        onInput={onInput}
+        onChange={onChange}
         onFocus={onFocus}
         onBlur={onBlur}
     >
@@ -46,19 +43,8 @@ function onBlur()
     numActiveInputElementsObservable.change(n => n - 1);
 }
 
-const textClassNames = {
-    xs: "yj-text-xs",
-    sm: "yj-text-sm",
-    md: "yj-text-md",
-    lg: "yj-text-lg",
-};
-
 interface Props
 {
-    type?: "text" | "number" | "password" | "email";
-    size?: "xs" | "sm" | "md" | "lg";
-    placeholder?: string;
     currValue: string;
-    filterTextInput?: (rawTextInput: string) => string;
-    setTextInput: (newTextInput: string) => void;
+    setColorHex: (colorHex: string) => void;
 }

@@ -5,14 +5,12 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../graphics/types/material/instancedTexturePackMaterialParams";
 import ClientObjectManager from "../clientObjectManager";
-import { MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
+import { CANVAS_GEOMETRY_ID, MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/image/util/imageMapUtil";
-
-export const CANVAS_GEOMETRY_ID = "Square";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -50,7 +48,7 @@ export default class CanvasGameObject extends GameObject
             CanvasGameObject.latestMaterialParams, MAX_CANVASES_PER_ROOM, true);
 
         this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool(CANVAS_GEOMETRY_ID,
-            CanvasGameObject.latestMaterialParams);
+            CanvasGameObject.latestMaterialParams.getMaterialId());
         this.updateMeshInstanceTransform();
         this.loadImage();
     }
@@ -65,7 +63,7 @@ export default class CanvasGameObject extends GameObject
     {
         await super.onDespawn();
         this.instancedMeshGraphics.returnInstanceToPool(CANVAS_GEOMETRY_ID,
-            CanvasGameObject.latestMaterialParams!, this.instanceId);
+            CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId);
 
         // Mark as despawned (in order to inform a potentially pending
         // "loadImageImpl" task that the canvas's mesh instance is now obsolete
@@ -116,16 +114,16 @@ export default class CanvasGameObject extends GameObject
         try
         {
             this.instancedMeshGraphics.updateInstanceTextureUV(CANVAS_GEOMETRY_ID,
-                CanvasGameObject.latestMaterialParams!, this.instanceId, this.instanceId % 64);
+                CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId, this.instanceId % 64);
             await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID,
-                CanvasGameObject.latestMaterialParams!, this.instanceId % 64, imageURL);
+                CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId % 64, imageURL);
         }
         catch (error)
         {
             console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadataValue}):`, error);
             // Paint a placeholder color so the canvas isn't stuck showing the old image
             await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID,
-                CanvasGameObject.latestMaterialParams!, this.instanceId % 64, "");
+                CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId % 64, "");
         }
     }
 
@@ -148,7 +146,7 @@ export default class CanvasGameObject extends GameObject
 
         this.instancedMeshGraphics.updateInstanceTransform(
             CANVAS_GEOMETRY_ID,
-            CanvasGameObject.latestMaterialParams!,
+            CanvasGameObject.latestMaterialParams!.getMaterialId(),
             this.instanceId,
             0, 0, 0.001,
             this.direction.x, this.direction.y, this.direction.z,

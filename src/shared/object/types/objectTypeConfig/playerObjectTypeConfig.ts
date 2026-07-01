@@ -7,6 +7,7 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
+import InstancedMeshCompositionPart from "../../../../client/graphics/types/mesh/instancedMeshCompositionPart";
 
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig: ObjectTypeConfig =
@@ -48,6 +49,9 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             instancedMeshGraphics: {},
             instancedMeshComposer: {
                 maxNumInstancesPerMesh: MAX_PLAYERS_PER_ROOM * MAX_MESH_INSTANCES_PER_PLAYER,
+                generateDefaultParts: (): InstancedMeshCompositionPart[] => {
+                    return [];
+                }
             },
             collider: {
                 colliderType: "rigidbody",

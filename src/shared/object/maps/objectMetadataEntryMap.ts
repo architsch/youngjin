@@ -1,5 +1,5 @@
 import { OBJECT_MESSAGE_MAX_LENGTH, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH } from "../../system/sharedConstants";
-import StringUtil from "../../system/util/stringUtil";
+import StringUtil from "../../math/util/stringUtil";
 import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 

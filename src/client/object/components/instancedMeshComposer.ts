@@ -1,17 +1,19 @@
-import Vec3 from "../../../shared/math/types/vec3";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import { INSTANCED_COLOR_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+import MaterialFactory from "../../graphics/factories/materialFactory";
 import InstancedMeshComposition from "../../graphics/types/mesh/instancedMeshComposition";
+import InstancedMeshCompositionPart from "../../graphics/types/mesh/instancedMeshCompositionPart";
 import GameObject from "../types/gameObject";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 
-const nextIndexByGeometryIdTemp: {[geometryId: string]: number} = {};
+const nextIndexByInstancedMeshIdTemp: {[instancedMeshId: string]: number} = {};
 
 export default class InstancedMeshComposer extends GameObjectComponent
 {
     private instancedMeshGraphics: InstancedMeshGraphics;
     private instancedMeshComposition: InstancedMeshComposition = new InstancedMeshComposition();
-    private instanceIdsByGeometryId: {[geometryId: string]: number[]} = {};
+    private instanceIdsByInstancedMeshId: {[instancedMeshId: string]: number[]} = {};
     private instancedMeshUpdateOngoing: boolean = false;
     private hidden: boolean = false;
 
@@ -32,11 +34,14 @@ export default class InstancedMeshComposer extends GameObjectComponent
     async onDespawn(): Promise<void>
     {
         // Return all instances.
-        for (const geometryId in this.instanceIdsByGeometryId)
+        for (const instancedMeshId in this.instanceIdsByInstancedMeshId)
         {
-            const instanceIds = this.instanceIdsByGeometryId[geometryId];
+            const instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
+            const ids = instancedMeshId.split("+");
+            const geometryId = ids[0];
+            const materialId = ids[1];
             for (const instanceId of instanceIds)
-                this.instancedMeshGraphics.returnInstanceToPool(geometryId, playerMaterialParams, instanceId);
+                this.instancedMeshGraphics.returnInstanceToPool(geometryId, materialId, instanceId);
         }
     }
 
@@ -57,54 +62,59 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.hidden = hidden;
     }
 
-    addPart(geometryId: string, dir: Vec3, offset: Vec3, scale: Vec3, color: Vec3)
+    saveParts()
     {
-        const parts = this.instancedMeshComposition.parts;
-        parts.push({geometryId, dir, offset, scale, color});
         this.instancedMeshComposition.saveToMetadata(this.gameObject);
     }
-    removePart(geometryId: string, instanceId: number)
+    getParts(): InstancedMeshCompositionPart[]
     {
-        for (const geometryId in nextIndexByGeometryIdTemp)
-            nextIndexByGeometryIdTemp[geometryId] = 0;
+        return this.instancedMeshComposition.parts;
+    }
+    addPart(part: InstancedMeshCompositionPart)
+    {
+        this.instancedMeshComposition.parts.push(part);
+    }
+    updatePart(instancedMeshId: string, instanceId: number, partNew: InstancedMeshCompositionPart)
+    {
+        const partIndex = this.getPartIndex(instancedMeshId, instanceId);
+        this.updatePartAtIndex(partIndex, partNew);
+    }
+    updatePartAtIndex(partIndex: number, partNew: InstancedMeshCompositionPart)
+    {
+        if (partIndex >= 0)
+            this.instancedMeshComposition.parts[partIndex] = partNew;
+        else
+            console.error(`InstancedMeshComposer::updatePartAtIndex :: Part not found (partIndex = ${partIndex}, partNew = ${JSON.stringify(partNew)})`);
+    }
+    removePart(instancedMeshId: string, instanceId: number)
+    {
+        const partIndex = this.getPartIndex(instancedMeshId, instanceId);
+        if (partIndex >= 0)
+            this.instancedMeshComposition.parts.splice(partIndex, 1);
+        else
+            console.error(`InstancedMeshComposer::removePart :: Part not found (partIndex = ${partIndex})`);
+    }
 
-        let partIndex = -1;
+    private getPartIndex(instancedMeshId: string, instanceId: number): number
+    {
+        let instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
+        if (instanceIds == undefined)
+        {
+            console.error(`InstancedMeshComposer::getPartIndex :: InstanceIds not found (instancedMeshId = ${instancedMeshId}, instanceId = ${instanceId})`);
+            return -1;
+        }
+
+        let index = -1;
         const parts = this.instancedMeshComposition.parts;
         for (let i = 0; i < parts.length; ++i)
         {
-            const part = parts[i];
-            let nextIndex = nextIndexByGeometryIdTemp[part.geometryId];
-            if (nextIndex == undefined)
-            {
-                nextIndexByGeometryIdTemp[part.geometryId] = 0;
-                nextIndex = 0;
-            }
-            else
-            {
-                nextIndexByGeometryIdTemp[part.geometryId]++;
-            }
-
-            let instanceIds = this.instanceIdsByGeometryId[part.geometryId];
-            if (instanceIds == undefined)
-            {
-                console.error(`InstanceIds not found (part.geometryId = ${part.geometryId})`);
-                break;
-            }
-            
-            if (nextIndex > 0 && instanceIds[nextIndex-1] == instanceId)
-            {
-                partIndex = i;
-                break;
-            }
+            if (parts[i].instancedMeshId == instancedMeshId)
+                continue;
+            if (instanceIds[++index] === instanceId)
+                return i;
         }
-
-        if (partIndex >= 0)
-        {
-            parts.splice(partIndex, 1);
-            this.instancedMeshComposition.saveToMetadata(this.gameObject);
-        }
-        else
-            console.error(`Part not found (geometryId = ${geometryId}, instanceId = ${instanceId})`);
+        console.error(`InstancedMeshComposer::getPartIndex :: Part not found (instancedMeshId = ${instancedMeshId}, instanceId = ${instanceId})`);
+        return -1;
     }
 
     private async updateInstancedMeshes()
@@ -113,30 +123,34 @@ export default class InstancedMeshComposer extends GameObjectComponent
             return;
         this.instancedMeshUpdateOngoing = true;
 
-        for (const geometryId in nextIndexByGeometryIdTemp)
-            nextIndexByGeometryIdTemp[geometryId] = 0;
+        for (const instancedMeshId in nextIndexByInstancedMeshIdTemp)
+            nextIndexByInstancedMeshIdTemp[instancedMeshId] = 0;
 
         const parts = this.instancedMeshComposition.parts;
         for (let i = 0; i < parts.length; ++i)
         {
             const part = parts[i];
-            let nextIndex = nextIndexByGeometryIdTemp[part.geometryId];
+            let nextIndex = nextIndexByInstancedMeshIdTemp[part.instancedMeshId];
             if (nextIndex == undefined)
             {
-                nextIndexByGeometryIdTemp[part.geometryId] = 0;
+                nextIndexByInstancedMeshIdTemp[part.instancedMeshId] = 0;
                 nextIndex = 0;
             }
             else
             {
-                nextIndexByGeometryIdTemp[part.geometryId]++;
+                nextIndexByInstancedMeshIdTemp[part.instancedMeshId]++;
             }
 
-            let instanceIds = this.instanceIdsByGeometryId[part.geometryId];
+            let instanceIds = this.instanceIdsByInstancedMeshId[part.instancedMeshId];
             if (instanceIds == undefined)
             {
                 instanceIds = [];
-                this.instanceIdsByGeometryId[part.geometryId] = instanceIds;
+                this.instanceIdsByInstancedMeshId[part.instancedMeshId] = instanceIds;
             }
+
+            const ids = part.instancedMeshId.split("+");
+            const geometryId = ids[0];
+            const materialId = ids[1];
 
             // Rent a new instance if needed.
             let instanceId = instanceIds[nextIndex];
@@ -144,34 +158,40 @@ export default class InstancedMeshComposer extends GameObjectComponent
             {
                 // Ensure that the necessary InstancedMesh has been loaded.
                 await this.instancedMeshGraphics.loadInstancedMesh(
-                    part.geometryId, playerMaterialParams, this.componentConfig.maxNumInstancesPerMesh, true);
+                    geometryId, MaterialFactory.getLoadedMaterialParams(materialId),
+                    this.componentConfig.maxNumInstancesPerMesh, true);
 
-                instanceId = this.instancedMeshGraphics.rentInstanceFromPool(
-                    part.geometryId, playerMaterialParams);
+                instanceId = this.instancedMeshGraphics.rentInstanceFromPool(geometryId, materialId);
                 instanceIds.push(instanceId);
             }
 
             this.instancedMeshGraphics.updateInstanceTransform(
-                part.geometryId, playerMaterialParams, instanceId,
+                geometryId, materialId, instanceId,
                 part.offset.x, this.hidden ? -9999 : part.offset.y, part.offset.z,
                 part.dir.x, part.dir.y, part.dir.z, part.scale.x, part.scale.y, part.scale.z);
-            this.instancedMeshGraphics.updateInstanceColor(
-                part.geometryId, playerMaterialParams, instanceId,
-                part.color.x, part.color.y, part.color.z);
+            if (materialId == INSTANCED_COLOR_MATERIAL_ID)
+            {
+                this.instancedMeshGraphics.updateInstanceColor(
+                    geometryId, materialId, instanceId,
+                    part.color!.x, part.color!.y, part.color!.z);
+            }
         }
 
         // Return obsolete instances.
-        for (const geometryId in nextIndexByGeometryIdTemp)
+        for (const instancedMeshId in nextIndexByInstancedMeshIdTemp)
         {
-            const nextIndex = nextIndexByGeometryIdTemp[geometryId];
+            const nextIndex = nextIndexByInstancedMeshIdTemp[instancedMeshId];
 
-            const instanceIds = this.instanceIdsByGeometryId[geometryId];
+            const instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
             if (instanceIds !== undefined)
             {
+                const ids = instancedMeshId.split("+");
+                const geometryId = ids[0];
+                const materialId = ids[1];
                 for (let obsoleteIndex = nextIndex; obsoleteIndex < instanceIds.length; ++obsoleteIndex)
                 {
                     this.instancedMeshGraphics.returnInstanceToPool(
-                        geometryId, playerMaterialParams, instanceIds[obsoleteIndex]);
+                        geometryId, materialId, instanceIds[obsoleteIndex]);
                 }
             }
         }

@@ -8,14 +8,11 @@ import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import InstancedTexturePackMaterialParams from "../../graphics/types/material/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
+import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { texturePackURLObservable } from "../../system/clientObservables";
 
 let isDevMode: boolean | undefined;
-
-const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
-export const VOXEL_QUAD_GEOMETRY_ID = "Square";
 
 export default class VoxelGameObject extends GameObject
 {
@@ -59,7 +56,7 @@ export default class VoxelGameObject extends GameObject
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
             this.instancedMeshGraphics.reserveInstance(VOXEL_QUAD_GEOMETRY_ID,
-                VoxelGameObject.latestMaterialParams, quadIndex);
+                VoxelGameObject.latestMaterialParams.getMaterialId(), quadIndex);
             this.updateVoxelQuadInstance(quadIndex);
         }
     }
@@ -74,7 +71,7 @@ export default class VoxelGameObject extends GameObject
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
             this.instancedMeshGraphics.unreserveInstance(VOXEL_QUAD_GEOMETRY_ID,
-                VoxelGameObject.latestMaterialParams!, quadIndex);
+                VoxelGameObject.latestMaterialParams!.getMaterialId(), quadIndex);
         }
     }
 
@@ -151,7 +148,7 @@ export default class VoxelGameObject extends GameObject
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxel, quadIndex);
         this.instancedMeshGraphics.updateInstanceTransform(VOXEL_QUAD_GEOMETRY_ID,
-            VoxelGameObject.latestMaterialParams!, quadIndex,
+            VoxelGameObject.latestMaterialParams!.getMaterialId(), quadIndex,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex, scaleX, scaleY);
     }
@@ -168,7 +165,7 @@ export default class VoxelGameObject extends GameObject
         const sampleScaleY = scaleY; // [0,1]
 
         this.instancedMeshGraphics.updateInstanceTextureUV(VOXEL_QUAD_GEOMETRY_ID,
-            VoxelGameObject.latestMaterialParams!, quadIndex,
+            VoxelGameObject.latestMaterialParams!.getMaterialId(), quadIndex,
             quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }
 }
