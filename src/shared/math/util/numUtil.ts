@@ -1,22 +1,29 @@
 const NumUtil =
 {
-    normalizeInRange: (n: number, min: number, max: number): number =>
+    convertRange: (n: number, fromMin: number, fromMax: number,
+        toMin: number, toMax: number, withWarning: boolean = false): number =>
     {
-        return (NumUtil.clampInRange(n, min, max) - min) / (max - min);
+        const normalized = NumUtil.normalizeInRange(n, fromMin, fromMax, withWarning);
+        return toMin + normalized * (toMax - toMin);
     },
-    clampInRange: (n: number, min: number, max: number): number =>
+    normalizeInRange: (n: number, min: number, max: number, withWarning: boolean = false): number =>
     {
-        return Math.max(min, Math.min(max, n));
+        return (NumUtil.clampInRange(n, min, max, withWarning) - min)
+            / (max - min);
     },
-    normalizeInRangeWithWarning: (n: number, min: number, max: number): number =>
+    clampInRange: (n: number, min: number, max: number, withWarning: boolean = false): number =>
     {
-        return (NumUtil.clampInRangeWithWarning(n, min, max) - min) / (max - min);
-    },
-    clampInRangeWithWarning: (n: number, min: number, max: number): number =>
-    {
-        if (n < min || n > max)
+        if (withWarning && (n < min || n > max))
             console.warn(`'n' is out of its expected range (n = ${n}, min = ${min}, max = ${max})`);
         return Math.max(min, Math.min(max, n));
+    },
+    randomInt: (min: number, max: number): number => // range = [min,max]
+    {
+        return min + Math.floor(Math.random() * (max - min));
+    },
+    randomFloat: (min: number, max: number): number => // rand = [min,max)
+    {
+        return min + Math.random() * (max - min);
     },
 }
 

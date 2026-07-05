@@ -1,5 +1,5 @@
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { INSTANCED_COLOR_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+import { INSTANCED_COLOR_MATERIAL_ID, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import MaterialFactory from "../../graphics/factories/materialFactory";
 import InstancedMeshComposition from "../../graphics/types/mesh/instancedMeshComposition";
 import InstancedMeshCompositionPart from "../../graphics/types/mesh/instancedMeshCompositionPart";
@@ -12,7 +12,7 @@ const nextIndexByInstancedMeshIdTemp: {[instancedMeshId: string]: number} = {};
 export default class InstancedMeshComposer extends GameObjectComponent
 {
     private instancedMeshGraphics: InstancedMeshGraphics;
-    private instancedMeshComposition: InstancedMeshComposition = new InstancedMeshComposition();
+    private instancedMeshComposition: InstancedMeshComposition;
     private instanceIdsByInstancedMeshId: {[instancedMeshId: string]: number[]} = {};
     private instancedMeshUpdateOngoing: boolean = false;
     private hidden: boolean = false;
@@ -24,6 +24,9 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.instancedMeshGraphics = gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;
         if (!this.instancedMeshGraphics)
             throw new Error("InstancedMeshComposer requires InstancedMeshGraphics component");
+
+        this.instancedMeshComposition = new InstancedMeshComposition(
+            componentConfig.codecType, componentConfig.codecVersion);
     }
 
     async onSpawn(): Promise<void>
@@ -65,6 +68,14 @@ export default class InstancedMeshComposer extends GameObjectComponent
     saveParts()
     {
         this.instancedMeshComposition.saveToMetadata(this.gameObject);
+    }
+    encodeParts(): string
+    {
+        return this.instancedMeshComposition.encodeParts();
+    }
+    decodeParts(encodedParams: string)
+    {
+        this.instancedMeshComposition.decodeParts(encodedParams);
     }
     getParts(): InstancedMeshCompositionPart[]
     {
@@ -108,7 +119,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
         const parts = this.instancedMeshComposition.parts;
         for (let i = 0; i < parts.length; ++i)
         {
-            if (parts[i].instancedMeshId == instancedMeshId)
+            if (parts[i].instancedMeshId != instancedMeshId)
                 continue;
             if (instanceIds[++index] === instanceId)
                 return i;
@@ -174,6 +185,23 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 this.instancedMeshGraphics.updateInstanceColor(
                     geometryId, materialId, instanceId,
                     part.color!.x, part.color!.y, part.color!.z);
+            }
+            else if (materialId == INSTANCED_EYE_MATERIAL_ID)
+            {
+                this.instancedMeshGraphics.updateInstanceEyeColors(
+                    geometryId, materialId, instanceId,
+                    part.pupilColor!.x, part.pupilColor!.y, part.pupilColor!.z,
+                    part.irisColor!.x, part.irisColor!.y, part.irisColor!.z);
+
+                // The eye square is scaled to the larger of the two radii (see PlayerCompositionCodec),
+                // so that circle spans the full square; express both radii as fractions of the
+                // square's side length (0.5 = touches the square's edges).
+                const maxEyeRadius = Math.max(part.pupilRadius!, part.irisRadius!);
+                const radiusToSideFraction = (maxEyeRadius > 0) ? (0.5 / maxEyeRadius) : 0;
+                this.instancedMeshGraphics.updateInstanceEyeRadii(
+                    geometryId, materialId, instanceId,
+                    part.pupilRadius! * radiusToSideFraction,
+                    part.irisRadius! * radiusToSideFraction);
             }
         }
 

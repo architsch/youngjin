@@ -6,5 +6,5 @@ export default interface InstancedMeshCompositionPart
     dir: Vec3,
     offset: Vec3,
     scale: Vec3,
-    color?: Vec3,
+    [key: string]: any, // arbitrary optional properties
 }

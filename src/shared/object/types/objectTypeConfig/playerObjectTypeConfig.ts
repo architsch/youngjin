@@ -1,5 +1,5 @@
 import Room from "../../../room/types/room";
-import { IS_SERVER, MAX_MESH_INSTANCES_PER_PLAYER, MAX_PLAYERS_PER_ROOM, PLAYER_HEIGHT } from "../../../system/sharedConstants";
+import { IS_SERVER, MAX_MESH_INSTANCES_PER_PLAYER, MAX_PLAYERS_PER_ROOM, PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../addObjectSignal";
@@ -7,7 +7,8 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
-import InstancedMeshCompositionPart from "../../../../client/graphics/types/mesh/instancedMeshCompositionPart";
+import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../../client/graphics/types/mesh/instancedMeshCompositionCodecType";
+import { PlayerCompositionCodec } from "../../../../client/graphics/types/mesh/compositionCodec/playerCompositionCodec";
 
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig: ObjectTypeConfig =
@@ -49,18 +50,18 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             instancedMeshGraphics: {},
             instancedMeshComposer: {
                 maxNumInstancesPerMesh: MAX_PLAYERS_PER_ROOM * MAX_MESH_INSTANCES_PER_PLAYER,
-                generateDefaultParts: (): InstancedMeshCompositionPart[] => {
-                    return [];
-                }
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Player,
+                codecVersion: 0,
+                generateDefaultParts: PlayerCompositionCodec.getRandomComposition,
             },
             collider: {
                 colliderType: "rigidbody",
-                hitboxSize: {sizeX: 0.6, sizeY: PLAYER_HEIGHT, sizeZ: 0.6},
+                hitboxSize: {sizeX: 2 * PLAYER_RADIUS_XZ, sizeY: PLAYER_HEIGHT, sizeZ: 2 * PLAYER_RADIUS_XZ},
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 1,
                 outgoingSoftCollisionForceLimit: {x: 1, y: 0, z: 1},
                 incomingSoftCollisionForceMultiplier: 1,
-                maxClimbableHeight: 0.6, // a little bit more than the height of a voxel block
+                maxClimbableHeight: 0.2 * PLAYER_HEIGHT + 0.1, // a little bit more than the height of a voxel block, which is (0.2 * PLAYER_HEIGHT).
             },
             speechBubble: {
                 yOffset: 0.5*PLAYER_HEIGHT,

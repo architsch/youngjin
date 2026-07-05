@@ -208,9 +208,64 @@ export default class InstancedMeshBinding
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
             return;
         }
-        colorTemp.set(r, g, b);
+        // Colors arrive as sRGB values in range [0,255] (see ColorUtil); convert them into the
+        // renderer's working color space, the same treatment three.js gives material colors.
+        colorTemp.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
         this.instancedMesh.setColorAt(instanceId, colorTemp);
         this.instancedMesh.instanceColor!.needsUpdate = true;
+    }
+
+    updateInstanceEyeColors(gameObject: GameObject, instanceId: number,
+        r_pupil: number, g_pupil: number, b_pupil: number,
+        r_iris: number, g_iris: number, b_iris: number)
+    {
+        if (!this.instancedMesh)
+        {
+            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
+            return;
+        }
+        // Colors arrive as sRGB values in range [0,255] (see ColorUtil); convert them into the
+        // renderer's working color space, the same treatment three.js gives material colors.
+        const pupilColorAttrib = this.getOrCreateInstancedAttribute("pupilColor", 3);
+        colorTemp.setRGB(r_pupil / 255, g_pupil / 255, b_pupil / 255, THREE.SRGBColorSpace);
+        pupilColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
+        pupilColorAttrib.needsUpdate = true;
+
+        const irisColorAttrib = this.getOrCreateInstancedAttribute("irisColor", 3);
+        colorTemp.setRGB(r_iris / 255, g_iris / 255, b_iris / 255, THREE.SRGBColorSpace);
+        irisColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
+        irisColorAttrib.needsUpdate = true;
+    }
+
+    // Radii are fractions of the square's side length (0.5 = the circle touches the square's
+    // edges). They are squared here so the "InstancedEye" fragment shader can compare them
+    // directly against the squared UV-space distance from the square's center.
+    updateInstanceEyeRadii(gameObject: GameObject, instanceId: number,
+        pupilRadius: number, irisRadius: number)
+    {
+        if (!this.instancedMesh)
+        {
+            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
+            return;
+        }
+        const eyeRadiiSqrAttrib = this.getOrCreateInstancedAttribute("eyeRadiiSqr", 2);
+        eyeRadiiSqrAttrib.setXY(instanceId, pupilRadius * pupilRadius, irisRadius * irisRadius);
+        eyeRadiiSqrAttrib.needsUpdate = true;
+    }
+
+    // Per-instance attributes consumed by specialized instanced materials (e.g. "InstancedEye")
+    // are created lazily, so that instanced meshes which never use them don't pay for the buffers.
+    private getOrCreateInstancedAttribute(name: string, itemSize: number): THREE.InstancedBufferAttribute
+    {
+        const geometry = this.instancedMesh!.geometry;
+        let attrib = geometry.getAttribute(name) as THREE.InstancedBufferAttribute;
+        if (!attrib)
+        {
+            attrib = new THREE.InstancedBufferAttribute(
+                new Float32Array(this.maxNumInstances * itemSize), itemSize);
+            geometry.setAttribute(name, attrib);
+        }
+        return attrib;
     }
 
     async drawImageAtIndex(textureIndex: number, imageURL: string)

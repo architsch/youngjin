@@ -1,6 +1,7 @@
 // Runtime Environment
 
 import InstancedColorMaterialParams from "../../client/graphics/types/material/instancedColorMaterialParams";
+import InstancedEyeMaterialParams from "../../client/graphics/types/material/instancedEyeMaterialParams";
 import Vec3 from "../math/types/vec3";
 
 export let IS_SERVER = false;
@@ -89,18 +90,21 @@ export const GEOMETRY_CODE_BY_ID: {[geometryId: string]: number} = {
 };
 
 export const INSTANCED_COLOR_MATERIAL_ID = new InstancedColorMaterialParams().getMaterialId();
+export const INSTANCED_EYE_MATERIAL_ID = new InstancedEyeMaterialParams().getMaterialId();
 
 export const MATERIAL_ID_BY_CODE: string[] = [
     INSTANCED_COLOR_MATERIAL_ID, // 0
+    INSTANCED_EYE_MATERIAL_ID, // 1
 ];
 export const MATERIAL_CODE_BY_ID: {[materialId: string]: number} = {};
 MATERIAL_CODE_BY_ID[INSTANCED_COLOR_MATERIAL_ID] = 0;
+MATERIAL_CODE_BY_ID[INSTANCED_EYE_MATERIAL_ID] = 1;
 
 export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
 export const VOXEL_QUAD_GEOMETRY_ID = "Square";
 export const CANVAS_GEOMETRY_ID = "Square";
 
-export const MAX_MESH_INSTANCES_PER_PLAYER = 128;
+export const MAX_MESH_INSTANCES_PER_PLAYER = 4; // 4 <- (1 for head, 1 for torso, 1 for left arm, 1 for right arm)
 
 // Voxel Grid
 
@@ -118,11 +122,12 @@ export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.25, z: 0.5};
 // Object Limits
 
 export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, used for rendering canvas images based on mesh instances, is an 8x8 grid
-export const MAX_PLAYERS_PER_ROOM = 64; // Caps the player body-part instance pool (MAX_PLAYERS_PER_ROOM * parts-per-player). Oversizing is harmless; it must just not be exceeded by concurrent players.
+export const MAX_PLAYERS_PER_ROOM = 256;
 
 // Gameplay
 
 export const PLAYER_HEIGHT = 2.5;
+export const PLAYER_RADIUS_XZ = 0.3; // radius of the player on the XZ plane.
 export const MAX_WORLDSPACE_SELECT_DIST_SQR = 100; // = 10*10
 
 // Fixed spawn point used whenever a player enters a multiplayer room.

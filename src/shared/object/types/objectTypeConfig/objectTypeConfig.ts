@@ -1,3 +1,4 @@
+import { InstancedMeshCompositionCodecType } from "../../../../client/graphics/types/mesh/instancedMeshCompositionCodecType";
 import InstancedMeshCompositionPart from "../../../../client/graphics/types/mesh/instancedMeshCompositionPart";
 import { ColliderConfig } from "../../../physics/types/colliderConfig";
 import Room from "../../../room/types/room";
@@ -22,6 +23,8 @@ export default interface ObjectTypeConfig
             instancedMeshGraphics?: {},
             instancedMeshComposer?: {
                 maxNumInstancesPerMesh: number,
+                codecType: InstancedMeshCompositionCodecType,
+                codecVersion: number,
                 generateDefaultParts: () => InstancedMeshCompositionPart[],
             },
             meshGraphics?: {

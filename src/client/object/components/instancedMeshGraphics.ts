@@ -82,6 +82,23 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             this.gameObject, instanceId, r, g, b);
     }
 
+    updateInstanceEyeColors(geometryId: string, materialId: string, instanceId: number,
+        r_pupil: number, g_pupil: number, b_pupil: number,
+        r_iris: number, g_iris: number, b_iris: number)
+    {
+        const instancedMeshId = InstancedMeshBinding.getInstancedMeshId(geometryId, materialId);
+        bindingMap[instancedMeshId].updateInstanceEyeColors(
+            this.gameObject, instanceId, r_pupil, g_pupil, b_pupil, r_iris, g_iris, b_iris);
+    }
+
+    updateInstanceEyeRadii(geometryId: string, materialId: string, instanceId: number,
+        pupilRadius: number, irisRadius: number)
+    {
+        const instancedMeshId = InstancedMeshBinding.getInstancedMeshId(geometryId, materialId);
+        bindingMap[instancedMeshId].updateInstanceEyeRadii(
+            this.gameObject, instanceId, pupilRadius, irisRadius);
+    }
+
     async drawImageAtIndex(geometryId: string, materialId: string, textureIndex: number, imageURL: string)
     {
         const instancedMeshId = InstancedMeshBinding.getInstancedMeshId(geometryId, materialId);
