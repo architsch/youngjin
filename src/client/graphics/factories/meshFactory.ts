@@ -2,7 +2,7 @@ import * as THREE from "three";
 import GeometryFactory from "./geometryFactory";
 import MaterialFactory from "./materialFactory";
 import Pool from "../../../shared/system/types/pool";
-import MaterialParams from "../types/material/materialParams";
+import MaterialParams from "../../../shared/graphics/material/types/materialParams";
 import GraphicsManager from "../graphicsManager";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};

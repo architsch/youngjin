@@ -17,6 +17,7 @@ export default class TextureMaterialParams extends MaterialParams
 
     protected getDefaultMaterialId(): string
     {
-        return `${super.getDefaultMaterialId()}-${this.texturePath}`;
+        // "*" must be used to let us distinguish between materialType and its associated parameters.
+        return `${super.getDefaultMaterialId()}*${this.texturePath}`;
     }
 }

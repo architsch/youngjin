@@ -1,4 +1,4 @@
-const InstancedMeshIdUtil =
+const MeshDataUtil =
 {
     // Combines a geometryId and a materialId into a single instancedMeshId.
     // NOTE: The "+" symbol is necessary here in order to let us easily split the instancedMeshId
@@ -9,4 +9,4 @@ const InstancedMeshIdUtil =
     },
 }
 
-export default InstancedMeshIdUtil;
+export default MeshDataUtil;

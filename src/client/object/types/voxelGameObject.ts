@@ -6,7 +6,7 @@ import Voxel from "../../../shared/voxel/types/voxel";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
-import InstancedTexturePackMaterialParams from "../../graphics/types/material/instancedTexturePackMaterialParams";
+import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";

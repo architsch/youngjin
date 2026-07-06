@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import TextureFactory from "../factories/textureFactory";
-import MaterialParams from "../types/material/materialParams";
-import WireframeMaterialParams from "../types/material/wireframeMaterialParams";
-import InstancedTexturePackMaterialParams from "../types/material/instancedTexturePackMaterialParams";
-import LineBasicMaterialParams from "../types/material/lineBasicMaterialParams";
-import TextureMaterialParams from "../types/material/textureMaterialParams";
-import SpriteMaterialParams from "../types/material/spriteMaterialParams";
-import InstancedColorMaterialParams from "../types/material/instancedColorMaterialParams";
-import InstancedEyeMaterialParams from "../types/material/instancedEyeMaterialParams";
+import MaterialParams from "../../../shared/graphics/material/types/materialParams";
+import WireframeMaterialParams from "../../../shared/graphics/material/types/wireframeMaterialParams";
+import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
+import LineBasicMaterialParams from "../../../shared/graphics/material/types/lineBasicMaterialParams";
+import TextureMaterialParams from "../../../shared/graphics/material/types/textureMaterialParams";
+import SpriteMaterialParams from "../../../shared/graphics/material/types/spriteMaterialParams";
+import InstancedColorMaterialParams from "../../../shared/graphics/material/types/instancedColorMaterialParams";
+import InstancedEyeMaterialParams from "../../../shared/graphics/material/types/instancedEyeMaterialParams";
 
 export const MaterialConstructorMap: { [materialType: string]:
     (params: MaterialParams) => Promise<THREE.Material> } =

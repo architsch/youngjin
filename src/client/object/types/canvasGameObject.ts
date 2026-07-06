@@ -3,7 +3,7 @@ import GameObject from "./gameObject";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import InstancedTexturePackMaterialParams from "../../graphics/types/material/instancedTexturePackMaterialParams";
+import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import ClientObjectManager from "../clientObjectManager";
 import { CANVAS_GEOMETRY_ID, MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";

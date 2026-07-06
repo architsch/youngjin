@@ -1,1 +1,1 @@
-import "../../src/shared/image/imageMapDependencies";
+import "../../src/shared/graphics/image/imageMapDependencies";

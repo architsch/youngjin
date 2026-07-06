@@ -1,8 +1,8 @@
-// Runtime Environment
-
-import InstancedColorMaterialParams from "../../client/graphics/types/material/instancedColorMaterialParams";
-import InstancedEyeMaterialParams from "../../client/graphics/types/material/instancedEyeMaterialParams";
+import InstancedColorMaterialParams from "../graphics/material/types/instancedColorMaterialParams";
+import InstancedEyeMaterialParams from "../graphics/material/types/instancedEyeMaterialParams";
 import Vec3 from "../math/types/vec3";
+
+// Runtime Environment
 
 export let IS_SERVER = false;
 export function setIsServer() { IS_SERVER = true; }

@@ -1,19 +1,18 @@
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { INSTANCED_COLOR_MATERIAL_ID, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
-import MaterialFactory from "../../graphics/factories/materialFactory";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import GameObject from "../types/gameObject";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
-
-const nextIndexByInstancedMeshIdTemp: {[instancedMeshId: string]: number} = {};
+import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
 
 export default class InstancedMeshComposer extends GameObjectComponent
 {
     private instancedMeshGraphics: InstancedMeshGraphics;
     private instancedMeshComposition: InstancedMeshComposition;
     private instanceIdsByInstancedMeshId: {[instancedMeshId: string]: number[]} = {};
+    private nextIndexByInstancedMeshIdTemp: {[instancedMeshId: string]: number} = {};
     private instancedMeshUpdateOngoing: boolean = false;
     private hidden: boolean = false;
 
@@ -134,22 +133,22 @@ export default class InstancedMeshComposer extends GameObjectComponent
             return;
         this.instancedMeshUpdateOngoing = true;
 
-        for (const instancedMeshId in nextIndexByInstancedMeshIdTemp)
-            nextIndexByInstancedMeshIdTemp[instancedMeshId] = 0;
+        for (const instancedMeshId in this.nextIndexByInstancedMeshIdTemp)
+            this.nextIndexByInstancedMeshIdTemp[instancedMeshId] = 0;
 
         const parts = this.instancedMeshComposition.parts;
         for (let i = 0; i < parts.length; ++i)
         {
             const part = parts[i];
-            let nextIndex = nextIndexByInstancedMeshIdTemp[part.instancedMeshId];
+            let nextIndex = this.nextIndexByInstancedMeshIdTemp[part.instancedMeshId];
             if (nextIndex == undefined)
             {
-                nextIndexByInstancedMeshIdTemp[part.instancedMeshId] = 0;
                 nextIndex = 0;
+                this.nextIndexByInstancedMeshIdTemp[part.instancedMeshId] = 1;
             }
             else
             {
-                nextIndexByInstancedMeshIdTemp[part.instancedMeshId]++;
+                this.nextIndexByInstancedMeshIdTemp[part.instancedMeshId]++;
             }
 
             let instanceIds = this.instanceIdsByInstancedMeshId[part.instancedMeshId];
@@ -169,7 +168,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
             {
                 // Ensure that the necessary InstancedMesh has been loaded.
                 await this.instancedMeshGraphics.loadInstancedMesh(
-                    geometryId, MaterialFactory.getLoadedMaterialParams(materialId),
+                    geometryId, MaterialParamsMap.getParamsById(materialId),
                     this.componentConfig.maxNumInstancesPerMesh, true);
 
                 instanceId = this.instancedMeshGraphics.rentInstanceFromPool(geometryId, materialId);
@@ -206,9 +205,9 @@ export default class InstancedMeshComposer extends GameObjectComponent
         }
 
         // Return obsolete instances.
-        for (const instancedMeshId in nextIndexByInstancedMeshIdTemp)
+        for (const instancedMeshId in this.nextIndexByInstancedMeshIdTemp)
         {
-            const nextIndex = nextIndexByInstancedMeshIdTemp[instancedMeshId];
+            const nextIndex = this.nextIndexByInstancedMeshIdTemp[instancedMeshId];
 
             const instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
             if (instanceIds !== undefined)

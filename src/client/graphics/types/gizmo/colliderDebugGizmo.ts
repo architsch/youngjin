@@ -6,7 +6,7 @@ import { colliderDebugBoxMap, colliderDebugEnabledObservable } from "../../../..
 import { roomChangedObservable } from "../../../system/clientObservables";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import ColliderDebugBox from "../../../../shared/physics/types/colliderDebugBox";
-import LineBasicMaterialParams from "../../types/material/lineBasicMaterialParams";
+import LineBasicMaterialParams from "../../../../shared/graphics/material/types/lineBasicMaterialParams";
 
 const DEFAULT_COLOR = "#ff8800";
 

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
-import SpriteMaterialParams from "../../../../graphics/types/material/spriteMaterialParams";
+import SpriteMaterialParams from "../../../../../shared/graphics/material/types/spriteMaterialParams";
 
 const tempDir = new THREE.Vector3();
 let nextInstanceId = 0;

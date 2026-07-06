@@ -2,7 +2,7 @@ import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import App from "../../app";
 import MeshFactory from "../../graphics/factories/meshFactory";
-import TextureMaterialParams from "../../graphics/types/material/textureMaterialParams";
+import TextureMaterialParams from "../../../shared/graphics/material/types/textureMaterialParams";
 
 export default class MeshGraphics extends GameObjectComponent
 {

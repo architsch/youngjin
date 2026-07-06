@@ -1,7 +1,7 @@
 import Vec3 from "../../../../../math/types/vec3";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { GEOMETRY_CODE_BY_ID, GEOMETRY_ID_BY_CODE, INSTANCED_COLOR_MATERIAL_ID, MATERIAL_CODE_BY_ID, MATERIAL_ID_BY_CODE } from "../../../../../system/sharedConstants";
-import InstancedMeshIdUtil from "../../../util/instancedMeshIdUtil";
+import MeshDataUtil from "../../../util/meshDataUtil";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
@@ -50,7 +50,7 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
 
             const geometryId = GEOMETRY_ID_BY_CODE[StringUtil.convertVisibleASCIIToRawNumber(word, charOffset++)];
             const materialId = MATERIAL_ID_BY_CODE[StringUtil.convertVisibleASCIIToRawNumber(word, charOffset++)];
-            const instancedMeshId = InstancedMeshIdUtil.getInstancedMeshId(geometryId, materialId);
+            const instancedMeshId = MeshDataUtil.getInstancedMeshId(geometryId, materialId);
             
             const dir: Vec3 = {
                 x: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, -1, 1),

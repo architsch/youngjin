@@ -1,9 +1,16 @@
 import * as THREE from "three";
 import { MaterialConstructorMap } from "../maps/materialConstructorMap";
-import MaterialParams from "../types/material/materialParams";
+import MaterialParams from "../../../shared/graphics/material/types/materialParams";
+
+// Whenever you are implementing a new type of material, you must:
+//      (1) Create a new subclass of MaterialParams.
+//      (2) Add an entry to MaterialConstructorMap.
+//      (3) Add an entry to MaterialParamsMap (IF you ever need to look up the material's MaterialParams by materialId).
+//      (4) If the material needs to be referenced via an encoded
+//          numerical value (aka "materialCode"), add the corresponding constants/entries
+//          in "sharedConstants.ts" file.
 
 const loadedMaterials: { [materialId: string]: THREE.Material } = {};
-const loadedMaterialParams: { [materialId: string]: MaterialParams } = {};
 
 const MaterialFactory =
 {
@@ -16,15 +23,7 @@ const MaterialFactory =
 
         const newMaterial = await MaterialConstructorMap[materialParams.type](materialParams);
         loadedMaterials[materialId] = newMaterial;
-        loadedMaterialParams[materialId] = materialParams;
         return newMaterial;
-    },
-    getLoadedMaterialParams: (materialId: string): MaterialParams =>
-    {
-        const params = loadedMaterialParams[materialId];
-        if (params != undefined)
-            return params;
-        throw new Error(`Loaded material parameters not found (materialId = ${materialId})`);
     },
     unloadAll: (): void =>
     {
@@ -44,7 +43,6 @@ const MaterialFactory =
         }
         material.dispose();
         delete loadedMaterials[materialId];
-        delete loadedMaterialParams[materialId];
     },
 }
 
