@@ -1,5 +1,5 @@
-import ImageMap from "../../../shared/image/types/imageMap";
-import ImageMetadata from "../../../shared/image/types/imageMetadata";
+import ImageMap from "../../../shared/graphics/image/types/imageMap";
+import ImageMetadata from "../../../shared/graphics/image/types/imageMetadata";
 import { imageListChooserDebugEnabledObservable } from "../../../shared/system/sharedObservables";
 
 const ImageListChooserUtil =

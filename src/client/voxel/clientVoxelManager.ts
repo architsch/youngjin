@@ -16,7 +16,7 @@ import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMa
 import VoxelGameObject from "../object/types/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
-import ImageMapUtil from "../../shared/image/util/imageMapUtil";
+import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
 
 const ClientVoxelManager =
 {
@@ -35,8 +35,13 @@ const ClientVoxelManager =
         if (texturePackURLObservable.peek() === texturePackURL)
             return;
 
-        await InstancedMeshGraphics.swapTexturePackTexture(VOXEL_QUAD_GEOMETRY_ID,
-            VoxelGameObject.latestMaterialParams!.getMaterialId(), texturePackURL);
+        // Before the first voxel spawns, no voxel material exists yet: skip the in-place swap and just
+        // publish the URL, so the first VoxelGameObject's constructor initializes its material with this
+        // texture pack. Once a material exists (e.g. a later room with a different pack), swap its texture
+        // in place instead.
+        if (VoxelGameObject.latestMaterialParams != undefined)
+            await InstancedMeshGraphics.swapTexturePackTexture(VOXEL_QUAD_GEOMETRY_ID,
+                VoxelGameObject.latestMaterialParams.getMaterialId(), texturePackURL);
         texturePackURLObservable.set(texturePackURL);
     },
     unload: () =>

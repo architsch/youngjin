@@ -1,4 +1,4 @@
-import { imageListChooserDebugEnabledObservable } from "../../system/sharedObservables";
+import { imageListChooserDebugEnabledObservable } from "../../../system/sharedObservables";
 import ImageMetadata from "./imageMetadata";
 
 export default class ImageMap
@@ -92,10 +92,10 @@ export default class ImageMap
     getImageURLByPath(assetsURL: string, path: string): string
     {
         if (imageListChooserDebugEnabledObservable.peek())
-            return `${assetsURL}/${this.rootDirName}/1/1.jpg`;
+            return `${assetsURL}/${this.rootDirName}/1/1.webp`;
         if (path.length <= 0)
             return "";
-        return `${assetsURL}/${this.rootDirName}/${path}.jpg`;
+        return `${assetsURL}/${this.rootDirName}/${path}.webp`;
     }
     // coords = {subfolderName},{col},{row}
     // (subfolderName == "") if there is no subfolder.
@@ -111,7 +111,7 @@ export default class ImageMap
 
     getGridImageURL(assetsURL: string, subfolderName: string): string
     {
-        return `${assetsURL}/${this.rootDirName}/${subfolderName}/grid.jpg`;
+        return `${assetsURL}/${this.rootDirName}/${subfolderName}/grid.webp`;
     }
 
     getSubfolderNames(): string[]

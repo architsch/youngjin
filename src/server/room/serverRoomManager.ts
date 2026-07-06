@@ -12,7 +12,7 @@ import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYE
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
-import ImageMapUtil from "../../shared/image/util/imageMapUtil";
+import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
 import DBRoomEditor from "../db/types/row/dbRoomEditor";
 import { MAX_ROOM_EDITORS } from "../system/serverConstants";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";

@@ -10,7 +10,7 @@ import App from "../../../app";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 import { UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import RoomEditor from "../../../../shared/user/types/roomEditor";
-import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
+import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
 import Form from "../basic/form";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 import { editorListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";

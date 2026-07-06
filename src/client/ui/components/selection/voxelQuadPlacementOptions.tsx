@@ -18,7 +18,7 @@ import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../../shared/math/types/vec3";
 import ErrorUtil from "../../../../shared/system/util/errorUtil";
-import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
+import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
 import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 import VoxelUpdateUtil from "../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../shared/voxel/types/update/removeVoxelBlockSignal";

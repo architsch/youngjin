@@ -10,7 +10,7 @@ import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
-import ImageMapUtil from "../../../shared/image/util/imageMapUtil";
+import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 
 export default class CanvasGameObject extends GameObject
 {

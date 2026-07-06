@@ -5,6 +5,7 @@ import TextureFactory from "../../factories/textureFactory";
 import GameObject from "../../../object/types/gameObject";
 import InstancedTexturePackMaterialParams from "../material/instancedTexturePackMaterialParams";
 import TextureUtil from "../../util/textureUtil";
+import InstancedMeshIdUtil from "../../../../shared/graphics/mesh/util/instancedMeshIdUtil";
 
 const tempObj = new THREE.Object3D();
 const vec3Temp = new THREE.Vector3();
@@ -298,12 +299,7 @@ export default class InstancedMeshBinding
 
         if (!this.materialParams)
             throw new Error("MaterialParams hasn't been set yet.");
-        return InstancedMeshBinding.getInstancedMeshId(this.geometryId, this.materialParams.getMaterialId());
-    }
-
-    static getInstancedMeshId(geometryId: string, materialId: string): string
-    {
-        return `${geometryId}+${materialId}`; // NOTE: The "+" symbol is necessary here in order to let us easily split the instancedMeshId into its corresponding geometryId and materialId.
+        return InstancedMeshIdUtil.getInstancedMeshId(this.geometryId, this.materialParams.getMaterialId());
     }
 
     getInstanceKey(instanceId: number): string

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import Button from "../basic/button";
-import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
+import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
 import TabBar from "../basic/tabBar";
 import ImageGrid from "../image/imageGrid";
 import App from "../../../app";

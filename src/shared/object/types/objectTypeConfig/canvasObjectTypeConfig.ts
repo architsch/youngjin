@@ -1,4 +1,4 @@
-import ImageMapUtil from "../../../image/util/imageMapUtil";
+import ImageMapUtil from "../../../graphics/image/util/imageMapUtil";
 import Room from "../../../room/types/room";
 import { MAX_CANVASES_PER_ROOM } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";

@@ -1,6 +1,6 @@
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import ImageMapUtil from "../../../../shared/image/util/imageMapUtil";
+import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
 import Text from "../basic/text";
 
 export default function CanvasDesc(props: {selection: ObjectSelection})

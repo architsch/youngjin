@@ -2,12 +2,12 @@ import sharp from "sharp";
 import FileUtil from "../util/fileUtil";
 import ImageFileUtil from "../util/imageFileUtil";
 import { STATIC_PAGE_ROOT_DIR, SRC_ROOT_DIR } from "../../system/serverConstants";
-import ImageMapSeed from "../../../shared/image/types/imageMapSeed";
-import ImageMapSubfolderInfo from "../../../shared/image/types/imageMapSubfolderInfo";
+import ImageMapSeed from "../../../shared/graphics/image/types/imageMapSeed";
+import ImageMapSubfolderInfo from "../../../shared/graphics/image/types/imageMapSubfolderInfo";
 
-const JPEG_QUALITY = 80;
+const WEBP_QUALITY = 80;
 const ASSETS_ROOT_PATH = `${STATIC_PAGE_ROOT_DIR}/app/assets`;
-const MAPS_ROOT_PATH = `${SRC_ROOT_DIR}/shared/image/maps`;
+const MAPS_ROOT_PATH = `${SRC_ROOT_DIR}/shared/graphics/image/maps`;
 
 export default class ImageMapBuilder
 {
@@ -69,9 +69,9 @@ export default class ImageMapBuilder
         {
             imageMetadata.coords = `${subfolderInfo.name},${col},${row}`;
 
-            const imageFile = ImageFileUtil.readImage(`${imageMetadata.path}.jpg`, this.imageRootPath);
+            const imageFile = ImageFileUtil.readImage(`${imageMetadata.path}.webp`, this.imageRootPath);
             if (!imageFile)
-                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${imageMetadata.path}.jpg)`);
+                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${imageMetadata.path}.webp)`);
             const imageBuffer = await (imageFile
                 .resize(this.gridCellSize, this.gridCellSize, { fit: "cover" })
                 .toBuffer());
@@ -91,8 +91,8 @@ export default class ImageMapBuilder
 
         const gridImage = sharp({create: {width: gridWidth, height: gridHeight, channels: 3, background: {r: 0, g: 0, b: 0}}})
             .composite(composites)
-            .jpeg({ quality: JPEG_QUALITY });
-        await ImageFileUtil.writeImage(`${subfolderInfo.name.length == 0 ? "" : `${subfolderInfo.name}/`}grid.jpg`, gridImage, this.imageRootPath);
+            .webp({ quality: WEBP_QUALITY });
+        await ImageFileUtil.writeImage(`${subfolderInfo.name.length == 0 ? "" : `${subfolderInfo.name}/`}grid.webp`, gridImage, this.imageRootPath);
     }
 
     private async writeMapFile(subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo}): Promise<void>

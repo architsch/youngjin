@@ -1,5 +1,5 @@
-import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../../../shared/system/sharedConstants";
-import InstancedMeshBinding from "../instancedMeshBinding";
+import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../../../system/sharedConstants";
+import InstancedMeshIdUtil from "../../../util/instancedMeshIdUtil";
 
 //------------------------------------------------------------------------
 // Core dimensions:
@@ -98,8 +98,8 @@ const minArmSizeXZ = 0.05 * PLAYER_HEIGHT;
 
 export const PlayerCompositionParams = {
     ids: {
-        instancedMeshId_body: InstancedMeshBinding.getInstancedMeshId("Icosphere", "InstancedColor"),
-        instancedMeshId_eye: InstancedMeshBinding.getInstancedMeshId("Square", "InstancedEye"),
+        instancedMeshId_body: InstancedMeshIdUtil.getInstancedMeshId("Icosphere", "InstancedColor"),
+        instancedMeshId_eye: InstancedMeshIdUtil.getInstancedMeshId("Square", "InstancedEye"),
     },
     points: {
         colliderCenterY,

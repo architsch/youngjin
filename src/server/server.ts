@@ -17,7 +17,7 @@ import DevUserSeedUtil from "./user/util/devUserSeedUtil";
 import DevRuntimeUtil from "./system/util/devRuntimeUtil";
 import OwnerlessRoomCreationRoutine from "./room/routines/ownerlessRoomCreationRoutine";
 
-require("../shared/image/imageMapDependencies.ts");
+require("../shared/graphics/image/imageMapDependencies.ts");
 
 async function Server(): Promise<void>
 {

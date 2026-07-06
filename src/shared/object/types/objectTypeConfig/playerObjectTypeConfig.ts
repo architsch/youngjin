@@ -7,8 +7,8 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
-import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../../client/graphics/types/mesh/instancedMeshCompositionCodecType";
-import { PlayerCompositionCodec } from "../../../../client/graphics/types/mesh/compositionCodec/playerCompositionCodec";
+import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import { PlayerCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig: ObjectTypeConfig =

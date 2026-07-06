@@ -1,6 +1,6 @@
-import ColorUtil from "../../../../../shared/math/util/colorUtil";
-import NumUtil from "../../../../../shared/math/util/numUtil";
-import StringUtil from "../../../../../shared/math/util/stringUtil";
+import ColorUtil from "../../../../../math/util/colorUtil";
+import NumUtil from "../../../../../math/util/numUtil";
+import StringUtil from "../../../../../math/util/stringUtil";
 import { PlayerCompositionParams } from "../compositionParams/playerCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";

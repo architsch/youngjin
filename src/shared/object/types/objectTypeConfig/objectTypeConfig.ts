@@ -1,5 +1,5 @@
-import { InstancedMeshCompositionCodecType } from "../../../../client/graphics/types/mesh/instancedMeshCompositionCodecType";
-import InstancedMeshCompositionPart from "../../../../client/graphics/types/mesh/instancedMeshCompositionPart";
+import { InstancedMeshCompositionCodecType } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { ColliderConfig } from "../../../physics/types/colliderConfig";
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";

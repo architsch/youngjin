@@ -1,8 +1,8 @@
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { INSTANCED_COLOR_MATERIAL_ID, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import MaterialFactory from "../../graphics/factories/materialFactory";
-import InstancedMeshComposition from "../../graphics/types/mesh/instancedMeshComposition";
-import InstancedMeshCompositionPart from "../../graphics/types/mesh/instancedMeshCompositionPart";
+import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
+import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import GameObject from "../types/gameObject";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";

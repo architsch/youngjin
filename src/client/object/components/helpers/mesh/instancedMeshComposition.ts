@@ -1,14 +1,14 @@
-import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
-import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
-import App from "../../../app";
-import SocketsClient from "../../../networking/client/socketsClient";
-import ClientObjectManager from "../../../object/clientObjectManager";
-import GameObject from "../../../object/types/gameObject";
-import InstancedMeshCompositionPart from "./instancedMeshCompositionPart";
-import { InstancedMeshCompositionCodecMap } from "../../maps/instancedMeshCompositionCodecMap";
-import StringUtil from "../../../../shared/math/util/stringUtil";
-import { InstancedMeshCompositionCodecType, InstancedMeshCompositionCodecTypeEnumMap } from "./instancedMeshCompositionCodecType";
+import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
+import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
+import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
+import App from "../../../../app";
+import SocketsClient from "../../../../networking/client/socketsClient";
+import ClientObjectManager from "../../../clientObjectManager";
+import GameObject from "../../../types/gameObject";
+import InstancedMeshCompositionPart from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
+import { InstancedMeshCompositionCodecMap } from "../../../../../shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
+import StringUtil from "../../../../../shared/math/util/stringUtil";
+import { InstancedMeshCompositionCodecType, InstancedMeshCompositionCodecTypeEnumMap } from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 
 export default class InstancedMeshComposition
 {

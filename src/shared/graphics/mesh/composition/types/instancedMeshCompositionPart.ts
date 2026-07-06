@@ -1,4 +1,4 @@
-import Vec3 from "../../../../shared/math/types/vec3";
+import Vec3 from "../../../../math/types/vec3";
 
 export default interface InstancedMeshCompositionPart
 {
