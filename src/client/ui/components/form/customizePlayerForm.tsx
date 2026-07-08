@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Text from "../basic/text";
 import IconButton from "../basic/iconButton";
 import CloseIcon from "../basic/icons/closeIcon";
@@ -51,16 +51,12 @@ const paramGroups: {title: string, params: {charIndex: number, label: string, is
 const RAW_PARAM_MIN = "0";
 const RAW_PARAM_MAX = "93";
 
+let saveMyPlayerPartsTimeout: NodeJS.Timeout | undefined;
+
 export default function CustomizePlayerForm()
 {
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const [editCount, setEditCount] = useState(0);
-
-    useEffect(() => {
-        return () => {
-            saveMyPlayerParts(); // Save upon exit
-        };
-    }, []);
 
     // Update 'encodedParams' whenever 'editCount' changes.
     const encodedParams = useMemo(() => getMyPlayerEncodedParams(), [editCount]);
@@ -68,6 +64,15 @@ export default function CustomizePlayerForm()
         return null;
 
     const applyParam = (charIndex: number, rawValue: number) => {
+        if (!saveMyPlayerPartsTimeout)
+        {
+            // Prevent parameter changes from triggering the save-operation too often.
+            // One save per 2-second interval is enough.
+            saveMyPlayerPartsTimeout = setTimeout(() => {
+                saveMyPlayerParts();
+                saveMyPlayerPartsTimeout = undefined;
+            }, 2000);
+        }
         const newChar = StringUtil.convertRawNumberToVisibleASCII(rawValue);
         setMyPlayerEncodedParams(encodedParams.substring(0, charIndex)
             + newChar + encodedParams.substring(charIndex + 1));
@@ -129,6 +134,7 @@ function setMyPlayerEncodedParams(encodedParams: string)
 
 function saveMyPlayerParts()
 {
+    console.log("saveMyPlayerParts called");
     doForMyPlayer((c) => c.saveParts());
 }
 

@@ -9,6 +9,7 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { PlayerCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
+import StringUtil from "../../../math/util/stringUtil";
 
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig: ObjectTypeConfig =
@@ -52,7 +53,10 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
                 maxNumInstancesPerMesh: MAX_PLAYERS_PER_ROOM * MAX_MESH_INSTANCES_PER_PLAYER,
                 codecType: InstancedMeshCompositionCodecTypeEnumMap.Player,
                 codecVersion: 0,
-                generateDefaultParts: PlayerCompositionCodec.getRandomComposition,
+                generateDefaultParts: (sourceUserID: string) => {
+                    const hashCode = StringUtil.getHashCode(sourceUserID);
+                    return PlayerCompositionCodec.getRandomComposition(hashCode);
+                },
             },
             collider: {
                 colliderType: "rigidbody",

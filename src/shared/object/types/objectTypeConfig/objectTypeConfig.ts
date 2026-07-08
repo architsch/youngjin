@@ -25,7 +25,7 @@ export default interface ObjectTypeConfig
                 maxNumInstancesPerMesh: number,
                 codecType: InstancedMeshCompositionCodecType,
                 codecVersion: number,
-                generateDefaultParts: () => InstancedMeshCompositionPart[],
+                generateDefaultParts: (sourceUserID: string) => InstancedMeshCompositionPart[],
             },
             meshGraphics?: {
                 path: string,

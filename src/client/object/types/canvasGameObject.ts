@@ -144,12 +144,15 @@ export default class CanvasGameObject extends GameObject
         const sizeX = colliderConfig.hitboxSize.sizeX;
         const sizeY = colliderConfig.hitboxSize.sizeY;
 
+        // The canvas's facing already lives in its obj rotation (set from the spawn/update
+        // direction), so the instance just faces the object's local forward (+Z). InstancedMeshBinding
+        // rotates this local direction into world space by the obj's orientation.
         this.instancedMeshGraphics.updateInstanceTransform(
             CANVAS_GEOMETRY_ID,
             CanvasGameObject.latestMaterialParams!.getMaterialId(),
             this.instanceId,
             0, 0, 0.001,
-            this.direction.x, this.direction.y, this.direction.z,
+            0, 0, 1,
             sizeX, sizeY, 1);
     }
 }

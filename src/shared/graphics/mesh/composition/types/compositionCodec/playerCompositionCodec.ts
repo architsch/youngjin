@@ -1,5 +1,5 @@
+import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
 import ColorUtil from "../../../../../math/util/colorUtil";
-import NumUtil from "../../../../../math/util/numUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { PlayerCompositionParams } from "../compositionParams/playerCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
@@ -89,28 +89,28 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
 
         decodeOutput.push({ // head
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: 0, y: headCenterY - p.colliderCenterY, z: 0},
             scale: {x: headSizeXZ, y: headTopY - headBottomY, z: headSizeXZ},
             color: headColor,
         });
         decodeOutput.push({ // torso
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: 0, y: torsoCenterY - p.colliderCenterY, z: 0},
             scale: {x: torsoSizeXZ, y: torsoTopY - torsoBottomY, z: torsoSizeXZ},
             color: torsoColor,
         });
         decodeOutput.push({ // arm 1
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: 0.5 * torsoSizeXZ, y: armCenterY - p.colliderCenterY, z: 0},
             scale: {x: armSizeXZ, y: armLength, z: armSizeXZ},
             color: armColor,
         });
         decodeOutput.push({ // arm 2
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: -0.5 * torsoSizeXZ, y: armCenterY - p.colliderCenterY, z: 0},
             scale: {x: armSizeXZ, y: armLength, z: armSizeXZ},
             color: armColor,
@@ -130,24 +130,25 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
             pupilRadius, irisRadius, pupilColor, irisColor,
         });
     },
-    getRandomComposition: (): InstancedMeshCompositionPart[] =>
+    getRandomComposition: (seed: number): InstancedMeshCompositionPart[] =>
     {
+        const rand = new RandomNumberGenerator(seed);
         const parts: InstancedMeshCompositionPart[] = [];
 
-        const headTopY = NumUtil.randomFloat(r.headTopY[0], r.headTopY[1]);
-        const neckY = NumUtil.randomFloat(r.neckY[0], r.neckY[1]);
-        const torsoBottomY = NumUtil.randomFloat(r.torsoBottomY[0], r.torsoBottomY[1]);
-        const armLength = NumUtil.randomFloat(r.armLength[0], r.armLength[1]);
-        const headSizeXZ = NumUtil.randomFloat(r.headSizeXZ[0], r.headSizeXZ[1]);
-        const torsoSizeXZ = NumUtil.randomFloat(r.torsoSizeXZ[0], r.torsoSizeXZ[1]);
-        const armSizeXZ = NumUtil.randomFloat(r.armSizeXZ[0], r.armSizeXZ[1]);
-        const pupilRadius = NumUtil.randomFloat(r.pupilRadius[0], r.pupilRadius[1]);
-        const irisRadius = NumUtil.randomFloat(r.irisRadius[0], r.irisRadius[1]);
-        const headColor = ColorUtil.base94IndexToRGB(NumUtil.randomInt(0, 93));
-        const torsoColor = ColorUtil.base94IndexToRGB(NumUtil.randomInt(0, 93));
-        const armColor = ColorUtil.base94IndexToRGB(NumUtil.randomInt(0, 93));
-        const pupilColor = ColorUtil.base94IndexToRGB(NumUtil.randomInt(0, 93));
-        const irisColor = ColorUtil.base94IndexToRGB(NumUtil.randomInt(0, 93));
+        const headTopY = rand.randomFloat(r.headTopY[0], r.headTopY[1]);
+        const neckY = rand.randomFloat(r.neckY[0], r.neckY[1]);
+        const torsoBottomY = rand.randomFloat(r.torsoBottomY[0], r.torsoBottomY[1]);
+        const armLength = rand.randomFloat(r.armLength[0], r.armLength[1]);
+        const headSizeXZ = rand.randomFloat(r.headSizeXZ[0], r.headSizeXZ[1]);
+        const torsoSizeXZ = rand.randomFloat(r.torsoSizeXZ[0], r.torsoSizeXZ[1]);
+        const armSizeXZ = rand.randomFloat(r.armSizeXZ[0], r.armSizeXZ[1]);
+        const pupilRadius = rand.randomFloat(r.pupilRadius[0], r.pupilRadius[1]);
+        const irisRadius = rand.randomFloat(r.irisRadius[0], r.irisRadius[1]);
+        const headColor = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
+        const torsoColor = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
+        const armColor = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
+        const pupilColor = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
+        const irisColor = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
 
         const eyeRadius = Math.max(pupilRadius, irisRadius);
         const headBottomY = neckY + 0.5 * p.neckHeight;
@@ -159,28 +160,28 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
 
         parts.push({ // head
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: 0, y: headCenterY - p.colliderCenterY, z: 0},
             scale: {x: headSizeXZ, y: headTopY - headBottomY, z: headSizeXZ},
             color: headColor,
         });
         parts.push({ // torso
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: 0, y: torsoCenterY - p.colliderCenterY, z: 0},
             scale: {x: torsoSizeXZ, y: torsoTopY - torsoBottomY, z: torsoSizeXZ},
             color: torsoColor,
         });
         parts.push({ // arm 1
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: 0.5 * torsoSizeXZ, y: armCenterY - p.colliderCenterY, z: 0},
             scale: {x: armSizeXZ, y: armLength, z: armSizeXZ},
             color: armColor,
         });
         parts.push({ // arm 2
             instancedMeshId: ids.instancedMeshId_body,
-            dir: {x: 0, y: 1, z: 0},
+            dir: {x: 0, y: 0, z: -1},
             offset: {x: -0.5 * torsoSizeXZ, y: armCenterY - p.colliderCenterY, z: 0},
             scale: {x: armSizeXZ, y: armLength, z: armSizeXZ},
             color: armColor,

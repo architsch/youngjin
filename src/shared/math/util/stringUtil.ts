@@ -12,6 +12,15 @@ const StringUtil =
         return codePoints.slice(0, maxCodePoints).join("");
     },
 
+    // A polynomial rolling hash that fits in a few lines and returns a 32-bit integer (signed).
+    getHashCode: (str: string): number =>
+    {
+        let hash = 0;
+        for (let i = 0; i < str.length; ++i)
+            hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0;
+        return hash;
+    },
+
     //------------------------------------------------------------------------
     // NOTE: The purpose of the following methods is to be able to encode
     // arbitrary data as a string of printable characters (e.g. a GameObject's metadata),

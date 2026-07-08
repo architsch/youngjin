@@ -147,13 +147,14 @@ export default class InstancedMeshBinding
         tempObj.scale.set(xScale, yScale, zScale);
 
         tempObj.position.set(0, 0, 0);
-        vec3Temp.set(
-            gameObject.position.x + dirX,
-            gameObject.position.y + dirY,
-            gameObject.position.z + dirZ
-        );
+        // (dirX,dirY,dirZ) is a direction expressed in the GameObject's LOCAL frame — the same frame
+        // the offset above is baked in. Transform it into a world-space look-at target through
+        // visualObj's world matrix, so the instance faces the object's local direction (turning with
+        // the GameObject) rather than a fixed global axis. For an unrotated object (e.g. a voxel,
+        // whose obj rotation is identity) this reduces to gameObject.position + dir.
+        vec3Temp.set(dirX, dirY, dirZ);
+        gameObject.visualObj.localToWorld(vec3Temp);
         tempObj.lookAt(vec3Temp);
-        tempObj.getWorldDirection(vec3Temp);
 
         tempObj.position.set(offsetX, offsetY, offsetZ);
         tempObj.updateMatrixWorld();

@@ -83,7 +83,7 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
             }
         }
     },
-    getRandomComposition: (): InstancedMeshCompositionPart[] =>
+    getRandomComposition: (seed: number): InstancedMeshCompositionPart[] =>
     {
         throw new Error("DefaultCompositionCodec::getRandomComposition : NOT IMPLEMENTED");
     },

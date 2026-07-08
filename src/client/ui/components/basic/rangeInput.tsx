@@ -7,7 +7,7 @@ export default function RangeInput({ currValue, setValue, min, max, step }: Prop
 
     const onChange: FormEventHandler<HTMLInputElement> = useCallback((event: FormEvent<HTMLInputElement>) => {
         setValue(event.currentTarget.value);
-    }, []);
+    }, [setValue]);
 
     const onKeyDown = useCallback((ev: KeyboardEvent) =>
     {
@@ -19,6 +19,25 @@ export default function RangeInput({ currValue, setValue, min, max, step }: Prop
         window.addEventListener("keydown", onKeyDown);
         return () => {
             window.removeEventListener("keydown", onKeyDown);
+        };
+    }, []);
+
+    // Keep the press on the slider handle from bubbling to an ancestor drag-scroll container
+    // (see useMouseDragScroll), which would otherwise treat the drag as a scroll and
+    // preventDefault the pointer move — leaving the handle draggable-by-click only.
+    // These must be native listeners on the input itself: React delegates its synthetic
+    // events at the root container (above the scroll container), so a React-level
+    // stopPropagation would run only after the scroll container's own native mousedown
+    // listener has already fired.
+    useEffect(() => {
+        const input = inputRef.current;
+        if (!input)
+            return;
+        input.addEventListener("mousedown", stopPropagation);
+        input.addEventListener("touchstart", stopPropagation);
+        return () => {
+            input.removeEventListener("mousedown", stopPropagation);
+            input.removeEventListener("touchstart", stopPropagation);
         };
     }, []);
 
@@ -44,6 +63,10 @@ function onFocus()
 function onBlur()
 {
     numActiveInputElementsObservable.change(n => n - 1);
+}
+function stopPropagation(event: Event)
+{
+    event.stopPropagation();
 }
 
 interface Props

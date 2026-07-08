@@ -53,7 +53,7 @@ export default class InstancedMeshComposition
         if (!metadata)
         {
             const config = gameObject.components.instancedMeshComposer.componentConfig;
-            this.parts = config.generateDefaultParts();
+            this.parts = config.generateDefaultParts(gameObject.params.sourceUserID);
             return;
         }
 

@@ -17,14 +17,6 @@ const NumUtil =
             console.warn(`'n' is out of its expected range (n = ${n}, min = ${min}, max = ${max})`);
         return Math.max(min, Math.min(max, n));
     },
-    randomInt: (min: number, max: number): number => // range = [min,max]
-    {
-        return min + Math.floor(Math.random() * (max - min));
-    },
-    randomFloat: (min: number, max: number): number => // rand = [min,max)
-    {
-        return min + Math.random() * (max - min);
-    },
 }
 
 export default NumUtil;

@@ -4,5 +4,5 @@ export default interface InstancedMeshCompositionCodec
 {
     encode: (encodeInput: InstancedMeshCompositionPart[]) => string;
     decode: (strToDecode: string, decodeOutput: InstancedMeshCompositionPart[]) => void;
-    getRandomComposition: () => InstancedMeshCompositionPart[];
+    getRandomComposition: (seed: number) => InstancedMeshCompositionPart[];
 }
