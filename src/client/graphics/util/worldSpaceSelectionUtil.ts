@@ -4,7 +4,7 @@ import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
 
 export default class WorldSpaceSelectionUtil
 {
-    private static delayedUnselectTimeout: NodeJS.Timeout | undefined;
+    private static delayedUnselectTimeout: ReturnType<typeof setTimeout> | undefined;
 
     static isAnythingSelected(): boolean
     {

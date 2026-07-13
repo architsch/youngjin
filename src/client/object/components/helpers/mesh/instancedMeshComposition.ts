@@ -9,11 +9,13 @@ import InstancedMeshCompositionPart from "../../../../../shared/graphics/mesh/co
 import { InstancedMeshCompositionCodecMap } from "../../../../../shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
 import StringUtil from "../../../../../shared/math/util/stringUtil";
 import { InstancedMeshCompositionCodecType, InstancedMeshCompositionCodecTypeEnumMap } from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import { InstancedMeshCompositionParams } from "../../../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 
 export default class InstancedMeshComposition
 {
     codecType: InstancedMeshCompositionCodecType = InstancedMeshCompositionCodecTypeEnumMap.Default;
     codecVersion: number = 0;
+    params: InstancedMeshCompositionParams = {};
     parts: InstancedMeshCompositionPart[] = [];
 
     constructor(codecType: InstancedMeshCompositionCodecType, codecVersion: number)
@@ -48,12 +50,15 @@ export default class InstancedMeshComposition
 
     loadFromMetadata(gameObject: GameObject)
     {
+        this.params = {};
         this.parts.length = 0;
         let metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
         if (!metadata)
         {
             const config = gameObject.components.instancedMeshComposer.componentConfig;
-            this.parts = config.generateDefaultParts(gameObject.params.sourceUserID);
+            const {params, parts} = config.generateDefaultParts(gameObject.params.sourceUserID);
+            this.params = params;
+            this.parts = parts;
             return;
         }
 
@@ -67,14 +72,21 @@ export default class InstancedMeshComposition
         {
             console.error(`CodecVersion mismatch (expected: ${this.codecVersion}, decoded: ${codecVersion})`);
         }
-        InstancedMeshCompositionCodecMap[codecType].decode(metadata.str, this.parts);
+        InstancedMeshCompositionCodecMap[codecType].decode(metadata.str, this.params, this.parts);
     }
 
     // Encodes the current parts into their encoded-parameters form: a string holding
     // one visible-ASCII character per quantized parameter (without the codec type/version prefix).
     encodeParts(): string
     {
-        return InstancedMeshCompositionCodecMap[this.codecType].encode(this.parts);
+        return InstancedMeshCompositionCodecMap[this.codecType].encode(this.params, this.parts);
+    }
+
+    // Rebuilds all the parts from the current params, by round-tripping them through
+    // the codec (which guarantees that the parts match what will be persisted).
+    rebuildParts()
+    {
+        this.decodeParts(this.encodeParts());
     }
 
     // Rebuilds all the parts from the given encoded parameters (see "encodeParts").
@@ -82,7 +94,7 @@ export default class InstancedMeshComposition
     {
         this.parts.length = 0;
         InstancedMeshCompositionCodecMap[this.codecType].decode(
-            `${this.getCodecPrefix()}${encodedParams}`, this.parts);
+            `${this.getCodecPrefix()}${encodedParams}`, this.params, this.parts);
     }
 
     // The prefix consists of two characters, denoting the codec's type and version, respectively.

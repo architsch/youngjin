@@ -3,6 +3,7 @@ import App from "./app";
 import UIManager from "./ui/uiManager";
 
 import "../shared/graphics/image/imageMapDependencies.ts";
+import "../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies.ts";
 
 // Store the client-side env variables that were injected by the server via the game page route.
 const env = (window as any).thingspool_env;

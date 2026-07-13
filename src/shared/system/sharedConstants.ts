@@ -13,6 +13,8 @@ export const NEAR_EPSILON = 0.000000001;
 export const MINUTE_IN_MS = 60 * 1000;
 export const HOUR_IN_MS = 60 * MINUTE_IN_MS;
 export const DAY_IN_MS = 24 * HOUR_IN_MS;
+export const ZERO_VEC3: Vec3 = {x: 0, y: 0, z: 0};
+export const UNIT_VEC3: Vec3 = {x: 1, y: 1, z: 1};
 
 // Database
 
@@ -74,6 +76,11 @@ export const DIR_VEC_BY_CODE: Vec3[] = [
 
 // Graphics
 
+// The local -Z axis that Three.js `lookAt` treats as "facing the target": the engine's
+// forward-facing direction, and the reference frame that composition part dirs are authored against.
+export const FORWARD_DIR: Vec3 = {x: 0, y: 0, z: -1};
+export const BACKWARD_DIR: Vec3 = {x: 0, y: 0, z: 1};
+
 export const GEOMETRY_ID_BY_CODE: string[] = [
     "Square", // 0
     "Box", // 1
@@ -104,7 +111,10 @@ export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
 export const VOXEL_QUAD_GEOMETRY_ID = "Square";
 export const CANVAS_GEOMETRY_ID = "Square";
 
-export const MAX_MESH_INSTANCES_PER_PLAYER = 4; // 4 <- (1 for head, 1 for torso, 1 for left arm, 1 for right arm)
+export const MAX_MESH_INSTANCES_PER_PLAYER = 32;
+export const UNIT_PLAYER_PART_LENGTH = 0.125;
+export const SAFE_PLAYER_PART_CIRCLE_DIAMETER_IN_UNITS = 2 * Math.sqrt(5);
+export const SAFE_PLAYER_PART_CIRCLE_STICK_OUT_LENGTH_IN_UNITS = Math.sqrt(5) - 2;
 
 // Voxel Grid
 
@@ -127,7 +137,7 @@ export const MAX_PLAYERS_PER_ROOM = 256;
 // Gameplay
 
 export const PLAYER_HEIGHT = 2.5;
-export const PLAYER_RADIUS_XZ = 0.3; // radius of the player on the XZ plane.
+export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 export const MAX_WORLDSPACE_SELECT_DIST_SQR = 100; // = 10*10
 
 // Fixed spawn point used whenever a player enters a multiplayer room.

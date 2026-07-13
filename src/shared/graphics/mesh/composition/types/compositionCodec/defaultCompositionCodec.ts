@@ -2,16 +2,18 @@ import Vec3 from "../../../../../math/types/vec3";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { GEOMETRY_CODE_BY_ID, GEOMETRY_ID_BY_CODE, INSTANCED_COLOR_MATERIAL_ID, MATERIAL_CODE_BY_ID, MATERIAL_ID_BY_CODE } from "../../../../../system/sharedConstants";
 import MeshDataUtil from "../../../util/meshDataUtil";
+import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
 export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
-    encode: (encodeInput: InstancedMeshCompositionPart[]): string =>
+    encode: (params: InstancedMeshCompositionParams,
+        parts: InstancedMeshCompositionPart[]): string =>
     {
         const partChars: string[] = [];
-        for (let i = 0; i < encodeInput.length; ++i)
+        for (let i = 0; i < parts.length; ++i)
         {
-            const part = encodeInput[i];
+            const part = parts[i];
             const ids = part.instancedMeshId.split("+");
             const geometryId = ids[0];
             const materialId = ids[1];
@@ -34,12 +36,14 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
                 partChars.push(StringUtil.convertNumberToVisibleASCII(part.color!.z, 0, 255));
             }
 
-            if (i < encodeInput.length-1)
+            if (i < parts.length-1)
                 partChars.push(" ");
         }
         return partChars.join("");
     },
-    decode: (strToDecode: string, decodeOutput: InstancedMeshCompositionPart[]): void =>
+    decode: (strToDecode: string,
+        decodedParams: InstancedMeshCompositionParams,
+        decodedParts: InstancedMeshCompositionPart[]): void =>
     {
         // First two chars are for the codec's type and version, respectively.
         const wordsToDecode = strToDecode.substring(2).split(" ");
@@ -75,15 +79,16 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
                     y: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 0),
                     z: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 255),
                 };
-                decodeOutput.push({instancedMeshId, dir, offset, scale, color});
+                decodedParts.push({instancedMeshId, dir, offset, scale, color});
             }
             else
             {
-                decodeOutput.push({instancedMeshId, dir, offset, scale});
+                decodedParts.push({instancedMeshId, dir, offset, scale});
             }
         }
     },
-    getRandomComposition: (seed: number): InstancedMeshCompositionPart[] =>
+    getRandomComposition: (seed: number):
+        {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
         throw new Error("DefaultCompositionCodec::getRandomComposition : NOT IMPLEMENTED");
     },

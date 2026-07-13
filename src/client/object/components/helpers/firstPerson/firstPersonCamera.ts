@@ -17,13 +17,9 @@ const viewDir = new THREE.Vector3();
 const viewDirOnVerticalPlane = new THREE.Vector3();
 const playerForwardDir = new THREE.Vector3();
 
-// All positions are in the player object's local frame (the camera is a child of the player object).
-// The player faces local -Z, so a negative Z places the camera IN FRONT of the player's face.
 const firstPersonCameraPos = new THREE.Vector3(0, 0.3 * PLAYER_HEIGHT, 0); // at the eye
-const selfViewCameraPos = new THREE.Vector3(0, 0.7 * PLAYER_HEIGHT, -1.6 * PLAYER_HEIGHT); // up & out front
-// Aimed a little below the body's centre so the whole figure frames slightly ABOVE screen centre,
-// clearing the bottom customization panel. Tune freely.
-const selfViewLookTarget = new THREE.Vector3(0, 0.4 * PLAYER_HEIGHT, 0);
+const selfViewCameraPos = new THREE.Vector3(0.5 * PLAYER_HEIGHT, 0.7 * PLAYER_HEIGHT, -1 * PLAYER_HEIGHT); // up & out front
+const selfViewLookTarget = new THREE.Vector3(0, -0.15 * PLAYER_HEIGHT, 0);
 const lookMat4Temp = new THREE.Matrix4();
 
 export default class FirstPersonCamera

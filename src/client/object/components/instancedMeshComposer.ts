@@ -2,6 +2,7 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/obj
 import { INSTANCED_COLOR_MATERIAL_ID, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
+import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import GameObject from "../types/gameObject";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
@@ -75,6 +76,14 @@ export default class InstancedMeshComposer extends GameObjectComponent
     decodeParts(encodedParams: string)
     {
         this.instancedMeshComposition.decodeParts(encodedParams);
+    }
+    getParams(): InstancedMeshCompositionParams
+    {
+        return this.instancedMeshComposition.params;
+    }
+    rebuildParts()
+    {
+        this.instancedMeshComposition.rebuildParts();
     }
     getParts(): InstancedMeshCompositionPart[]
     {
@@ -220,6 +229,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
                     this.instancedMeshGraphics.returnInstanceToPool(
                         geometryId, materialId, instanceIds[obsoleteIndex]);
                 }
+                instanceIds.length = nextIndex;
             }
         }
         this.instancedMeshUpdateOngoing = false;

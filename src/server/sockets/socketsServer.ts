@@ -31,7 +31,7 @@ import LatencySimUtil from "../system/util/latencySimUtil";
 import ErrorUtil from "../../shared/system/util/errorUtil";
 
 let io: socketIO.Server;
-let signalProcessingInterval: NodeJS.Timeout;
+let signalProcessingInterval: ReturnType<typeof setInterval>;
 const staleSocketFirstDetectedAt: {[userID: string]: number} = {};
 const RECENT_DISCONNECT_METADATA_TTL_MS = 30000;
 

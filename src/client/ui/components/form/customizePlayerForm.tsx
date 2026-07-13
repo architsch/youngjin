@@ -6,76 +6,42 @@ import ClientObjectManager from "../../../object/clientObjectManager";
 import PopupUtil from "../../util/popupUtil";
 import useMouseDragScroll from "../../util/mouseDragScroll";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
-import StringUtil from "../../../../shared/math/util/stringUtil";
+import ColorUtil from "../../../../shared/math/util/colorUtil";
+import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
 import FormBase94ColorInput from "../basic/formBase94ColorInput";
 import FormRangeInput from "../basic/formRangeInput";
 
 //------------------------------------------------------------------------
-// This form edits the player's composition through its encoded-parameters form:
-// each control reads/writes a single character (i.e. a single quantized parameter)
-// of the encoded string, and decoding the edited string rebuilds all the parts,
-// which keeps every derived placement (neck, arms, eyes) consistent automatically.
-// "charIndex" refers to the position of the parameter's character within the string,
-// mirroring the parameter order defined in PlayerCompositionCodec.
+// This form edits the player's composition by directly manipulating its
+// PlayerCompositionParams object: each body part has a type (which selects
+// the part's shape variant) and a color. After every edit, the player's
+// parts are rebuilt from the params, which keeps every derived placement
+// consistent automatically.
 //------------------------------------------------------------------------
 
-const paramGroups: {title: string, params: {charIndex: number, label: string, isColor?: boolean}[]}[] = [
-    {title: "Head", params: [
-        {charIndex: 0, label: "Top:"},
-        {charIndex: 4, label: "Width:"},
-        {charIndex: 9, label: "Color:", isColor: true},
-    ]},
-    {title: "Neck", params: [
-        {charIndex: 1, label: "Height:"},
-    ]},
-    {title: "Torso", params: [
-        {charIndex: 2, label: "Bottom:"},
-        {charIndex: 5, label: "Width:"},
-        {charIndex: 10, label: "Color:", isColor: true},
-    ]},
-    {title: "Arms", params: [
-        {charIndex: 3, label: "Length:"},
-        {charIndex: 6, label: "Width:"},
-        {charIndex: 11, label: "Color:", isColor: true},
-    ]},
-    {title: "Eyes", params: [
-        {charIndex: 7, label: "Pupil Size:"},
-        {charIndex: 12, label: "Pupil Color:", isColor: true},
-        {charIndex: 8, label: "Iris Size:"},
-        {charIndex: 13, label: "Iris Color:", isColor: true},
-    ]},
+const partSlots: {title: string, key: keyof PlayerCompositionParams["types"]}[] = [
+    {title: "Head", key: "head"},
+    {title: "Ears", key: "ear"},
+    {title: "Hat", key: "hat"},
+    {title: "Torso", key: "torso"},
+    {title: "Arms", key: "arm"},
+    {title: "Bottom", key: "bottom"},
 ];
-
-// Each slider spans the full quantization range of a single encoded character
-// (see StringUtil's visible-ASCII encoding scheme).
-const RAW_PARAM_MIN = "0";
-const RAW_PARAM_MAX = "93";
-
-let saveMyPlayerPartsTimeout: NodeJS.Timeout | undefined;
 
 export default function CustomizePlayerForm()
 {
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const [editCount, setEditCount] = useState(0);
 
-    // Update 'encodedParams' whenever 'editCount' changes.
-    const encodedParams = useMemo(() => getMyPlayerEncodedParams(), [editCount]);
-    if (encodedParams == undefined)
+    // Re-read 'params' whenever 'editCount' changes.
+    const params = useMemo(() => getMyPlayerParams(), [editCount]);
+    if (params == undefined)
         return null;
 
-    const applyParam = (charIndex: number, rawValue: number) => {
-        if (!saveMyPlayerPartsTimeout)
-        {
-            // Prevent parameter changes from triggering the save-operation too often.
-            // One save per 2-second interval is enough.
-            saveMyPlayerPartsTimeout = setTimeout(() => {
-                saveMyPlayerParts();
-                saveMyPlayerPartsTimeout = undefined;
-            }, 2000);
-        }
-        const newChar = StringUtil.convertRawNumberToVisibleASCII(rawValue);
-        setMyPlayerEncodedParams(encodedParams.substring(0, charIndex)
-            + newChar + encodedParams.substring(charIndex + 1));
+    const applyEdit = (mutateParams: () => void) => {
+        trySave();
+        mutateParams();
+        rebuildMyPlayerParts();
         setEditCount(prev => prev + 1);
     };
 
@@ -87,30 +53,25 @@ export default function CustomizePlayerForm()
             </div>
 
             <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
-                {paramGroups.map((group, groupIndex) =>
-                    <div key={"param-group-" + groupIndex} className="flex flex-row items-stretch gap-3 shrink-0">
+                {partSlots.map((slot, slotIndex) =>
+                    <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
                         <div className="flex flex-col items-start gap-1 shrink-0">
-                            <Text content={group.title} size="sm"/>
-                            {group.params.map((param) =>
-                                param.isColor
-                                    ? <FormBase94ColorInput
-                                        key={"param-" + param.charIndex}
-                                        label={param.label}
-                                        currValue={StringUtil.convertVisibleASCIIToRawNumber(encodedParams, param.charIndex)}
-                                        setColorIndex={(index: number) => applyParam(param.charIndex, index)}
-                                    />
-                                    : <FormRangeInput
-                                        key={"param-" + param.charIndex}
-                                        label={param.label}
-                                        currValue={StringUtil.convertVisibleASCIIToRawNumber(encodedParams, param.charIndex).toString()}
-                                        min={RAW_PARAM_MIN}
-                                        max={RAW_PARAM_MAX}
-                                        step="1"
-                                        setValue={(value: string) => applyParam(param.charIndex, parseInt(value))}
-                                    />
-                            )}
+                            <Text content={slot.title} size="sm"/>
+                            <FormRangeInput
+                                label="Type:"
+                                currValue={params.types[slot.key].toString()}
+                                min={"0"}
+                                max={"2"}
+                                step="1"
+                                setValue={(value: string) => applyEdit(() => params.types[slot.key] = parseInt(value))}
+                            />
+                            <FormBase94ColorInput
+                                label="Color:"
+                                currValue={ColorUtil.rgbToBase94Index(params.colors[slot.key])}
+                                setColorIndex={(index: number) => applyEdit(() => params.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
+                            />
                         </div>
-                        {groupIndex < paramGroups.length - 1 &&
+                        {slotIndex < partSlots.length - 1 &&
                             <div className="w-px self-stretch bg-gray-500"/>}
                     </div>
                 )}
@@ -119,22 +80,35 @@ export default function CustomizePlayerForm()
     </div>;
 }
 
-// Reads the user's latest instanced-mesh composition from his/her own player object,
-// in its encoded-parameters form (one character per parameter).
-function getMyPlayerEncodedParams(): string | undefined
+let saveMyPlayerPartsTimeout: ReturnType<typeof setTimeout> | undefined;
+function trySave()
 {
-    return doForMyPlayer((c) => c.encodeParts());
+    if (!saveMyPlayerPartsTimeout)
+    {
+        // Prevent parameter changes from triggering the save-operation too often.
+        // One save per 2-second interval is enough.
+        saveMyPlayerPartsTimeout = setTimeout(() => {
+            saveMyPlayerParts();
+            saveMyPlayerPartsTimeout = undefined;
+        }, 2000);
+    }
 }
 
-// Rebuilds the player's composition from the given encoded parameters.
-function setMyPlayerEncodedParams(encodedParams: string)
+// Reads the user's own player object's composition params (the live object,
+// so that edits can be applied to it directly).
+function getMyPlayerParams(): PlayerCompositionParams | undefined
 {
-    doForMyPlayer((c) => c.decodeParts(encodedParams));
+    return doForMyPlayer((c) => c.getParams());
+}
+
+// Rebuilds the player's parts from its current composition params.
+function rebuildMyPlayerParts()
+{
+    doForMyPlayer((c) => c.rebuildParts());
 }
 
 function saveMyPlayerParts()
 {
-    console.log("saveMyPlayerParts called");
     doForMyPlayer((c) => c.saveParts());
 }
 

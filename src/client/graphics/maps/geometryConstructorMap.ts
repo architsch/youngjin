@@ -4,6 +4,7 @@ export const GeometryConstructorMap: { [geometryId: string]: () => THREE.BufferG
 {
     "ArrowCone": () => new THREE.ConeGeometry(0.045, 0.09, 8),
     "ArrowCylinder": () => new THREE.CylinderGeometry(0.015, 0.015, 0.1, 6),
+    "Cylinder": () => (new THREE.CylinderGeometry(0.5, 0.5, 1, 16, 1, false)).rotateX(0.5 * Math.PI), // forward(-z) facing cylinder
     "Capsule": () => new THREE.CapsuleGeometry(0.32, 0.36, 8, 12),
     "Cone": () => new THREE.ConeGeometry(0.5, 1, 12),
     "Icosphere": () => new THREE.IcosahedronGeometry(0.5, 3),

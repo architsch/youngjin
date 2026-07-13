@@ -1,3 +1,4 @@
+import { InstancedMeshCompositionParams } from "../../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import { InstancedMeshCompositionCodecType } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { ColliderConfig } from "../../../physics/types/colliderConfig";
@@ -25,7 +26,9 @@ export default interface ObjectTypeConfig
                 maxNumInstancesPerMesh: number,
                 codecType: InstancedMeshCompositionCodecType,
                 codecVersion: number,
-                generateDefaultParts: (sourceUserID: string) => InstancedMeshCompositionPart[],
+                generateDefaultParts: (sourceUserID: string) =>
+                    {params: InstancedMeshCompositionParams,
+                        parts: InstancedMeshCompositionPart[]},
             },
             meshGraphics?: {
                 path: string,
