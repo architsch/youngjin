@@ -30,7 +30,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
         super(gameObject, componentConfig);
 
         if (!this.gameObject.isMine())
-            throw new Error("Only the user's own object is allowed to have the FirstPersonController component.");
+            throw new Error("Only the user's own object is allowed to have the PeriodicTransformEmitter component.");
 
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
             this.gameObject.params.objectTypeIndex,

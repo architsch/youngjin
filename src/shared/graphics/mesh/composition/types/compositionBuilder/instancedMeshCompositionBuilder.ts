@@ -54,7 +54,8 @@ export default abstract class InstancedMeshCompositionBuilder
     {
         // Re-express the part's facing (authored against FORWARD_DIR) relative to baseDir.
         part.dir = Vector3DUtil.rotateFromTo(part.dir, FORWARD_DIR, this.baseDir);
-        part.offset = Vector3DUtil.add(this.baseOffset, part.offset);
+        part.offset = Vector3DUtil.add(this.baseOffset,
+            Vector3DUtil.rotateFromTo(part.offset, FORWARD_DIR, this.baseDir));
         part.scale = Vector3DUtil.mult(this.baseScale, part.scale);
         this.parts.push(part);
     }

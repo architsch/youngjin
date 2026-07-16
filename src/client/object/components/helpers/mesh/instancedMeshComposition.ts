@@ -52,8 +52,8 @@ export default class InstancedMeshComposition
     {
         this.params = {};
         this.parts.length = 0;
-        let metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
-        if (!metadata)
+        const metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
+        if (!metadata || !this.canDecode(metadata.str))
         {
             const config = gameObject.components.instancedMeshComposer.componentConfig;
             const {params, parts} = config.generateDefaultParts(gameObject.params.sourceUserID);
@@ -61,18 +61,26 @@ export default class InstancedMeshComposition
             this.parts = parts;
             return;
         }
+        InstancedMeshCompositionCodecMap[this.codecType].decode(metadata.str, this.params, this.parts);
+    }
 
-        const codecType = StringUtil.convertVisibleASCIIToRawNumber(metadata.str, 0, 0);
-        if (this.codecType != codecType)
+    private canDecode(str: string): boolean
+    {
+        const codecType = StringUtil.convertVisibleASCIIToRawNumber(str, 0, 0);
+        if (codecType != this.codecType || !InstancedMeshCompositionCodecMap[codecType])
         {
-            console.error(`CodecType mismatch (expected: ${this.codecType}, decoded: ${codecType})`);
+            console.error(`InstancedMeshComposition::canDecode :: CodecType mismatch (expected: ${this.codecType}, decoded: ${codecType})`);
+            return false;
         }
-        const codecVersion = StringUtil.convertVisibleASCIIToRawNumber(metadata.str, 1, 0);
-        if (this.codecVersion != codecVersion)
+        const codecVersion = StringUtil.convertVisibleASCIIToRawNumber(str, 1, 0);
+        if (codecVersion != this.codecVersion)
         {
-            console.error(`CodecVersion mismatch (expected: ${this.codecVersion}, decoded: ${codecVersion})`);
+            // Note: In case of a version number mismatch (which implies that the metadata's
+            // format is outdated), an automatic version migration is supposed to run
+            // inside the chosen codec's 'decode' method.
+            console.warn(`InstancedMeshComposition::canDecode :: CodecVersion mismatch (expected: ${this.codecVersion}, decoded: ${codecVersion}). An automatic version migration logic should run.`);
         }
-        InstancedMeshCompositionCodecMap[codecType].decode(metadata.str, this.params, this.parts);
+        return true;
     }
 
     // Encodes the current parts into their encoded-parameters form: a string holding

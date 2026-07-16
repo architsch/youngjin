@@ -1,5 +1,5 @@
 import Rigidbody from "../components/rigidbody";
-import FirstPersonController from "../components/firstPersonController";
+import PlayerController from "../components/playerController";
 import GameObjectComponent from "../components/gameObjectComponent";
 import MeshGraphics from "../components/meshGraphics";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
@@ -20,8 +20,8 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new Rigidbody(parentObject, componentConfig),
     "collider": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new Collider(parentObject, componentConfig),
-    "firstPersonController": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new FirstPersonController(parentObject, componentConfig),
+    "playerController": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new PlayerController(parentObject, componentConfig),
     "meshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new MeshGraphics(parentObject, componentConfig),
     "instancedMeshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>

@@ -1,6 +1,6 @@
 # Room Generation System
 
-Reference: @src/shared/room/util/roomGenerationUtil.ts , @src/shared/room/util/roomGenerationHelperUtil.ts , @src/shared/room/types/roomGeneration/roomGenerationVoxel.ts , @src/shared/room/types/roomGeneration/roomGenerationVoxelGrid.ts , @src/client/singlePlayer/maps/singlePlayerModeConfigMap.ts
+Reference: @src/shared/room/util/roomGenerationUtil.ts , @src/shared/room/util/roomGenerationHelperUtil.ts , @src/shared/room/types/roomGeneration/roomGenerationVoxel.ts , @src/shared/room/types/roomGeneration/roomGenerationVoxelGrid.ts , @src/shared/singlePlayer/maps/singlePlayerModeConfigMap.ts
 
 ## Overview
 
@@ -14,11 +14,11 @@ Although `RoomGenerationHelperUtil` provides us with a handful of useful methods
 
 ### Process
 
-A `RoomGenerationGrid`, by default, is entirely filled with walls (No empty space). Therefore, we need to selectively carve out these walls, one rectangular region at a time. Each region has its own floor, ceiling, and surrounding wall textures. Once regions are allocated, we can then proceed to split these regions by creating walls between them. This whole process (i.e. Region creation -> Wall creation) is sufficient to let us partition our room into distinct regions (each of which is uniquely textured), which are separated by walls.
+A `RoomGenerationVoxelGrid`, by default, is entirely filled with walls (No empty space). Therefore, we need to selectively carve out these walls, one rectangular region at a time. Each region has its own floor, ceiling, and surrounding wall textures. Once regions are allocated, we can then proceed to split these regions by creating walls between them. This whole process (i.e. Region creation -> Wall creation) is sufficient to let us partition our room into distinct regions (each of which is uniquely textured), which are separated by walls.
 
 ### Example
 
-Here is an example which demonstrates how the preliminary room generation process of `RoomGenerationGrid` works.
+Here is an example which demonstrates how the preliminary room generation process of `RoomGenerationVoxelGrid` works.
 
 #### Basic Setup
 
@@ -44,7 +44,7 @@ The following image shows a set of graphical elements which will be used to illu
 
 ![Example of a Room Generation Grid - Step 4](figures/room_generation_grid_5.jpg)
 
-5. Finalize the `RoomGenerationGrid`. This produces the room's actual `VoxelGrid` from the current layout of regions and walls.
+5. Finalize the `RoomGenerationVoxelGrid`. This produces the room's actual `VoxelGrid` from the current layout of regions and walls.
 
 ![Example of a Room Generation Grid - Step 5](figures/room_generation_grid_6.jpg)
 

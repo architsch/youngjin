@@ -14,7 +14,8 @@
 - **`/client`** - Client-side code (browser)
   - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos
   - `/networking` - Client-side networking (SocketsClient for Socket.IO, API clients for Axios)
-  - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, FirstPersonController, PeriodicTransformEmitter/Receiver)
+  - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, PlayerController, PeriodicTransformEmitter/Receiver)
+  - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, action/condition maps for scripted steps such as the tutorial)
   - `/system` - Client-side observables and state management
   - `/ui` - React UI components and styles
   - `/voxel` - Voxel management (ClientVoxelManager)
@@ -26,17 +27,19 @@
   - `/room` - Game room management
   - `/sockets` - Socket.IO initializer and event handlers
   - `/ssg` - Static Site Generator (builds static pages)
-  - `/system` - Server-side constants
+  - `/system` - Server-side constants and utilities
   - `/user` - User authentication and state management
   - `/voxel` - Server-side voxel management (ServerVoxelManager)
   
 - **`/shared`** - Code shared between client and server
+  - `/graphics` - Shared graphics data (image maps, material params, and the instanced mesh composition system with its codecs and builders)
   - `/localization` - Localization utilities
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
   - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil)
   - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity)
   - `/room` - Room types and generators
+  - `/singlePlayer` - Single-player mode configs and types (SinglePlayerModeConfig, steps, transition rules)
   - `/system` - Shared observables, constants, logging, and error handling
   - `/user` - User types and validators
   - `/voxel` - Voxel/block system (3D world building)
@@ -56,8 +59,11 @@
 - **`/scripts`** - Helper scripts (e.g. dev-server with hot-reloading capability, secrets injector)
 
 ### `/docs` - Documents explaining technical details
-- **`/devOps`** - Tests, Local Development, VPS
-- **`/networking`** - HTTP/Socket/Authentication Flows
+- **`/devOps`** - Local Development, VPS
+- **`/geometry`** - Voxel grid, physics, room generation/entrance, wall-attached objects, textures, player customization
+- **`/graphics`** - Camera control, instanced mesh composition
+- **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode
+- **`/testing`** - E2E and integration test workflows, framework, and scenario coverage
 
 ### `/tests` - All Tests
 - **`/e2e`** - E2E test fixtures, specs, configs, and helpers (Playwright)

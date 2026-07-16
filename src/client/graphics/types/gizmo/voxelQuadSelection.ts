@@ -31,8 +31,11 @@ export default class VoxelQuadSelection
 
     static trySelect(voxel: Voxel, quadIndex: number): boolean
     {
-        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableVoxelQuadSelectionChange))
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableVoxelQuadSelectionChange) ||
+            clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange))
+        {
             return false;
+        }
 
         // If the quadIndex doesn't even make sense, just unselect.
         if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
@@ -73,8 +76,12 @@ export default class VoxelQuadSelection
 
     static unselect(force: boolean = false)
     {
-        if (!force && clientFeatureFlagsObservable.has(FeatureFlag.DisableVoxelQuadSelectionChange))
+        if (!force &&
+            (clientFeatureFlagsObservable.has(FeatureFlag.DisableVoxelQuadSelectionChange) ||
+            clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange)))
+        {
             return;
+        }
         voxelQuadSelectionObservable.set(null);
     }
 }

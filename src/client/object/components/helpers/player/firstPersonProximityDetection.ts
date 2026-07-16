@@ -1,4 +1,4 @@
-import FirstPersonController from "../../firstPersonController";
+import PlayerController from "../../playerController";
 import App from "../../../../app";
 import ClientObjectManager from "../../../clientObjectManager";
 import PlayerProximityDetector from "../../playerProximityDetector";
@@ -8,7 +8,7 @@ const maxProximityDetectionDist = 6;
 
 export default class FirstPersonProximityDetection
 {
-    update(deltaTime: number, controller: FirstPersonController): void
+    update(deltaTime: number, controller: PlayerController): void
     {
         const currentRoom = App.getCurrentRoom();
 

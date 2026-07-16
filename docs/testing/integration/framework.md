@@ -78,6 +78,8 @@ Every atomic operation is an `Action` type:
 | `seedRoom` | Seed a room into mock DB |
 | `moveObject` | Update player transform |
 | `sendMessage` | Send chat message (object metadata) |
+| `setPlayerComposition` | Set a player's mesh composition (from a seed, or a raw string) |
+| `setObjectMetadata` | Set an arbitrary metadata key on a player object (optionally another user's) |
 | `addVoxel` | Add a voxel block |
 | `removeVoxel` | Remove a voxel block |
 | `moveVoxel` | Move a voxel block |

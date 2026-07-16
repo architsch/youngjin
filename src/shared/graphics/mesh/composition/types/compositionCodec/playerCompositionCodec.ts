@@ -1,13 +1,15 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
 import ColorUtil from "../../../../../math/util/colorUtil";
+import NumUtil from "../../../../../math/util/numUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
-import { UNIT_PLAYER_PART_LENGTH, ZERO_VEC3 } from "../../../../../system/sharedConstants";
+import { ZERO_VEC3 } from "../../../../../system/sharedConstants";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 import MeshDataUtil from "../../../util/meshDataUtil";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import PlayerCompositionParams from "../compositionParams/playerCompositionParams";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
+import PlayerCompositionConstants from "../compositionConstants/playerCompositionConstants";
 
 export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
     encode: (params: InstancedMeshCompositionParams,
@@ -34,12 +36,12 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
     {
         let charOffset = 2; // First two chars are for the codec's type and version, respectively.
         Object.assign(decodedParams, getBaseParams()); // Filled in place, so that the caller's params object gets updated.
-        decodedParams.types.head = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++);
-        decodedParams.types.ear = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++);
-        decodedParams.types.hat = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++);
-        decodedParams.types.torso = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++);
-        decodedParams.types.arm = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++);
-        decodedParams.types.bottom = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++);
+        decodedParams.types.head = decodePartType("head", strToDecode, charOffset++);
+        decodedParams.types.ear = decodePartType("ear", strToDecode, charOffset++);
+        decodedParams.types.hat = decodePartType("hat", strToDecode, charOffset++);
+        decodedParams.types.torso = decodePartType("torso", strToDecode, charOffset++);
+        decodedParams.types.arm = decodePartType("arm", strToDecode, charOffset++);
+        decodedParams.types.bottom = decodePartType("bottom", strToDecode, charOffset++);
         decodedParams.colors.head = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
         decodedParams.colors.ear = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
         decodedParams.colors.hat = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
@@ -54,12 +56,12 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         const rand = new RandomNumberGenerator(seed);
 
         const params = getBaseParams();
-        params.types.head = rand.randomInt(0, 3);
-        params.types.ear = rand.randomInt(0, 3);
-        params.types.hat = rand.randomInt(0, 3);
-        params.types.torso = rand.randomInt(0, 3);
-        params.types.arm = rand.randomInt(0, 3);
-        params.types.bottom = rand.randomInt(0, 3);
+        params.types.head = rand.randomInt(0, PlayerCompositionConstants.numTypes["head"]);
+        params.types.ear = rand.randomInt(0, PlayerCompositionConstants.numTypes["ear"]);
+        params.types.hat = rand.randomInt(0, PlayerCompositionConstants.numTypes["hat"]);
+        params.types.torso = rand.randomInt(0, PlayerCompositionConstants.numTypes["torso"]);
+        params.types.arm = rand.randomInt(0, PlayerCompositionConstants.numTypes["arm"]);
+        params.types.bottom = rand.randomInt(0, PlayerCompositionConstants.numTypes["bottom"]);
         params.colors.head = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
         params.colors.ear = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
         params.colors.hat = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
@@ -71,6 +73,19 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         constructParts(params, parts);
         return {params, parts};
     },
+}
+
+function decodePartType(partTypeName: string, strToDecode: string, charIndex: number): number
+{
+    return NumUtil.clampInRange(
+        StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charIndex),
+        0, PlayerCompositionConstants.numTypes[partTypeName] - 1);
+}
+
+function getBuilder(partName: string, partType: number)
+{
+    const map = InstancedMeshCompositionBuilderMap;
+    return map[`${partName}_${partType}`] ?? map[`${partName}_0`];
 }
 
 function getBaseParams(): PlayerCompositionParams
@@ -90,31 +105,31 @@ function constructParts(params: PlayerCompositionParams,
 {
     const map = InstancedMeshCompositionBuilderMap;
 
-    map[`PlayerHead_${params.types.head}`](params, parts)
+    getBuilder("PlayerHead", params.types.head)(params, parts)
         .offset(0, 6, 0).run();
 
-    map[`PlayerEar_${params.types.ear}`](params, parts)
+    getBuilder("PlayerEar", params.types.ear)(params, parts)
         .offset(2.5, 6, 0).run();
-    map[`PlayerEar_${params.types.ear}`](params, parts)
+    getBuilder("PlayerEar", params.types.ear)(params, parts)
         .offset(-2.5, 6, 0).backward().run();
-    
-    map[`PlayerHat_${params.types.hat}`](params, parts)
+
+    getBuilder("PlayerHat", params.types.hat)(params, parts)
         .offset(0, 9, 0).run();
-    
+
     map["PlayerNeckAndWaist"](params, parts)
         .offset(0, 3.5, 0).run();
-    
-    map[`PlayerTorso_${params.types.torso}`](params, parts)
+
+    getBuilder("PlayerTorso", params.types.torso)(params, parts)
         .offset(0, -1, 0).run();
-    
-    map[`PlayerArm_${params.types.arm}`](params, parts)
+
+    getBuilder("PlayerArm", params.types.arm)(params, parts)
         .offset(2.5, -1, 0).run();
-    map[`PlayerArm_${params.types.arm}`](params, parts)
+    getBuilder("PlayerArm", params.types.arm)(params, parts)
         .offset(-2.5, -1, 0).backward().run();
-    
+
     map["PlayerNeckAndWaist"](params, parts)
         .offset(0, -5.5, 0).run();
-    
-    map[`PlayerBottom_${params.types.bottom}`](params, parts)
+
+    getBuilder("PlayerBottom", params.types.bottom)(params, parts)
         .offset(0, -8, 0).run();
 }

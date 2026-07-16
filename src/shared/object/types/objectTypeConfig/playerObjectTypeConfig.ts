@@ -80,7 +80,7 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             },
         },
         spawnedByMe: {
-            firstPersonController: {},
+            playerController: {},
             periodicTransformEmitter: {},
             rigidbody: {},
         },

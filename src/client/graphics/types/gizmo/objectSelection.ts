@@ -24,8 +24,11 @@ export default class ObjectSelection
 
     static trySelect(gameObject: GameObject): boolean
     {
-        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange))
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange) ||
+            clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange))
+        {
             return false;
+        }
         const existingSelection = objectSelectionObservable.peek();
 
         if (existingSelection == null) // There was no selection before.
@@ -48,10 +51,14 @@ export default class ObjectSelection
         }
     }
 
-    static unselect()
+    static unselect(force: boolean = false)
     {
-        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange))
+        if (!force &&
+            (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange) ||
+            clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange)))
+        {
             return;
+        }
         objectSelectionObservable.set(null);
     }
 }

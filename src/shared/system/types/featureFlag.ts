@@ -1,5 +1,6 @@
 export enum FeatureFlag
 {
+    DisableAllSelectionChange,
     DisableVoxelQuadSelectionChange,
     DisableObjectSelectionChange,
     DisableManualVoxelBlockAddition,

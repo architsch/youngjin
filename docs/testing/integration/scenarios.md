@@ -57,17 +57,41 @@ This document catalogs all integration test scenarios organized by category.
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
 
-## Single-Player Mode (`single-player.test.ts`) — 7 tests
+## Single-Player Mode (`single-player.test.ts`) — 10 tests
 
 | Test | What it verifies |
 |------|-----------------|
-| joining a single-player room loads it without registering a participant | A `SinglePlayer` room loads, but the user is not a room participant (player is client-driven) and the socket context is flagged `isInSinglePlayerRoom` |
+| joining a single-player room does not load a server-side room or register a participant | No server-side room is loaded (the client generates it), the user is bound to no room, and the socket context is flagged `isInSinglePlayerRoom` |
 | does not persist lastRoomID when joining a single-player room | `lastRoomID` stays empty — single-player rooms are re-entered via `user.singlePlayerMode` |
 | joining a multiplayer room still registers the user as a participant | A Hub join registers the user (participant count 1) and leaves `isInSinglePlayerRoom` false |
-| builds the tutorial room with its hotspot blocks in place | The tutorial room generates on load via `SinglePlayerModeConfig.buildRoom`; the table (collision layer 1) and obstacle (collision layer 2) hotspot blocks exist at their metadata coordinates |
-| rejects a single-player user's edit signals without mutating the shared room | Defense-in-depth: firing all eight room-mutating signals (object add/remove/transform/metadata, voxel add/remove/move/setTexture) as a single-player user leaves the shared room untouched — the user stays unregistered and every handler bails at its no-room guard |
+| rejects a single-player user's edit signals — there is no server-side room to mutate | Defense-in-depth: firing all eight room-mutating signals (object add/remove/transform/metadata, voxel add/remove/move/setTexture) as a single-player user leaves the user unbound and creates no server-side room — every handler bails at its no-room guard |
+| omits content for a single-player room and reconstructs it empty | The wire format sends a single-player room as a content-less descriptor: `RoomRuntimeMemory.encode/decode` preserves the room's identity but omits its voxels/objects, reconstructing them empty |
+| still round-trips full content for a multiplayer room | A Hub room's voxel grid and object group survive the encode/decode round-trip intact |
+| generates the tutorial room with its hotspot blocks | `RoomGenerationUtil` (the same shared generator the client uses) builds the tutorial room with the table (collision layer 1) and obstacle (collision layer 2) hotspot blocks at their metadata coordinates |
+| emits per-quad change events during generation (why the client listens only after voxels spawn) | Generation fires `voxelQuadChangeObservable` events per quad — guarding the ordering assumption that the client registers its quad-change listener only after the room's voxel objects exist |
 | loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step | Tutorial steps form a name-keyed map (not a positional array), include the `initial` entry step, and have at least one terminal step (a rule whose `nextStep` is `""`) |
 | every transition targets an existing step or the terminal, and all steps are reachable from 'initial' | Step-graph integrity: every transition `nextStep` names a defined step (or `""`), and walking from `initial` reaches every step (none orphaned) |
+
+## Player Mesh Composition (`composition.test.ts`) — 16 tests
+
+| Test | What it verifies |
+|------|-----------------|
+| a composition survives an encode/decode round-trip | Encoding a random composition and decoding it reproduces the same part types, colors, and part count |
+| the same seed always yields the same composition | `PlayerCompositionCodec.getRandomComposition` is deterministic per seed (and different seeds differ) |
+| decoding is idempotent — re-encoding a decoded composition reproduces the string | Decode → re-encode is stable for any seed (property-based) |
+| decoding an arbitrary string never throws and still yields a full body | Property-based: any garbage string decodes without throwing into a renderable body |
+| decoded params are canonical, so a hostile string cannot smuggle an out-of-range part type | Every decoded part type names a registered body-part builder variant (property-based) |
+| part types far outside the valid range decode to a renderable body | A string encoding non-existent part-type indices still decodes to a renderable body |
+| a truncated composition decodes to a renderable body | Every truncation length of a valid string still decodes safely |
+| a user can set his/her own player's composition | The owner's composition metadata write is accepted and stored on the player object |
+| a user cannot set another player's composition | Authority check: writing someone else's composition is rejected and a correcting signal goes back to the sender |
+| a player rejects metadata keys outside the allowed set | A player object only accepts its allowed metadata keys (e.g. an `ImagePath` write is dropped) |
+| an oversized composition is truncated by the server | Server preprocessing caps the stored string at the max composition length, and the truncated remainder still decodes to a renderable body |
+| a composition change is relayed to the other participants | A composition update multicasts to the rest of the room |
+| a hostile composition is relayed but still decodes to a body on the receiving side | The server relays the string verbatim, so receivers must (and do) decode it into a renderable body |
+| a composition set in-session survives reconnection | The composition persists across a Case A reconnect |
+| a restored composition survives a room switch | A composition restored from stored player metadata follows the player through a room change |
+| the player object is configured with the codec these tests encode against | Guard: the player object's composer config uses the codec type/version the tests encode with |
 
 ## Signal Emission (`signals.test.ts`) — 6 tests
 
@@ -293,7 +317,8 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room | 9 |
 | Object | 8 |
 | Voxel | 9 |
-| Single-Player | 7 |
+| Single-Player | 10 |
+| Player Mesh Composition | 16 |
 | Signals | 6 |
 | Permissions | 5 |
 | Extended Permissions | 16 |
@@ -303,4 +328,4 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 16 |
-| **Total** | **156** |
+| **Total** | **175** |

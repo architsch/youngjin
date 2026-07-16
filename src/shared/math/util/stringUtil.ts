@@ -45,9 +45,9 @@ const StringUtil =
     convertVisibleASCIIToRawNumber: (str: string, charIndex: number,
         fallbackRawNumber: number = 0): number =>
     {
-        return (charIndex < str.length)
-            ? str.charCodeAt(charIndex)-33
-            : fallbackRawNumber; // = [0,93]
+        if (charIndex >= str.length)
+            return fallbackRawNumber;
+        return NumUtil.clampInRange(str.charCodeAt(charIndex)-33, 0, 93); // = [0,93]
     },
     convertRawNumberToVisibleASCII: (raw: number): string =>
     {

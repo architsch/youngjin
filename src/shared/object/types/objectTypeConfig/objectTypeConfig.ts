@@ -49,7 +49,7 @@ export default interface ObjectTypeConfig
             },
         },
         spawnedByMe?: {
-            firstPersonController?: {},
+            playerController?: {},
             periodicTransformEmitter?: {},
             rigidbody?: {},
         },

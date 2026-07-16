@@ -1,5 +1,5 @@
 import { numActiveInputElementsObservable } from "../../../../system/clientObservables";
-import FirstPersonController from "../../firstPersonController";
+import PlayerController from "../../playerController";
 
 export default class FirstPersonKeyInput
 {
@@ -10,7 +10,7 @@ export default class FirstPersonKeyInput
     private keyVelocityX: number = 0;
     private keyVelocityY: number = 0;
 
-    onSpawn(controller: FirstPersonController): void
+    onSpawn(controller: PlayerController): void
     {
         this.onKeyDown = this.onKeyDown.bind(this);
         this.onKeyUp = this.onKeyUp.bind(this);
@@ -19,17 +19,17 @@ export default class FirstPersonKeyInput
         
         window.addEventListener("keydown", this.onKeyDown);
         window.addEventListener("keyup", this.onKeyUp);
-        numActiveInputElementsObservable.addListener(`${controller.gameObject.params.objectId}.FirstPersonController`, this.onNumActiveTextInputsUpdated);
+        numActiveInputElementsObservable.addListener(`${controller.gameObject.params.objectId}.PlayerController`, this.onNumActiveTextInputsUpdated);
     }
 
-    onDespawn(controller: FirstPersonController): void
+    onDespawn(controller: PlayerController): void
     {
         window.removeEventListener("keydown", this.onKeyDown);
         window.removeEventListener("keyup", this.onKeyUp);
-        numActiveInputElementsObservable.removeListener(`${controller.gameObject.params.objectId}.FirstPersonController`);
+        numActiveInputElementsObservable.removeListener(`${controller.gameObject.params.objectId}.PlayerController`);
     }
 
-    update(deltaTime: number, controller: FirstPersonController): void
+    update(deltaTime: number, controller: PlayerController): void
     {
         const keyInputX = (this.leftKeyPressed ? -0.4 : 0) + (this.rightKeyPressed ? 0.4 : 0);
         const keyInputY = (this.upKeyPressed ? 0.5 : 0) + (this.downKeyPressed ? -0.5 : 0);

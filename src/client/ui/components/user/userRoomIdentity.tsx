@@ -7,6 +7,7 @@ import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRol
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
 import UserAPIClient from "../../../networking/client/userAPIClient";
 import PopupUtil from "../../util/popupUtil";
+import { cameraModeObservable } from "../../../system/clientObservables";
 
 export default function UserRoomIdentity({
     user,
@@ -40,7 +41,12 @@ export default function UserRoomIdentity({
         </div>
         <div className="flex flex-row items-end justify-end gap-2">
             {showConfigureButton && <IconButton icon={<GearIcon/>} size="md" onClick={() => PopupUtil.openPopup({popupType: "configureMyRoom"})}/>}
-            <IconButton icon={<PersonIcon/>} size="md" onClick={() => PopupUtil.openPopup({popupType: "customizePlayer"})}/>
+            <IconButton icon={<PersonIcon/>} size="md" onClick={() => {
+                if (cameraModeObservable.peek() == "firstPerson")
+                    PopupUtil.openPopup({popupType: "customizePlayer"});
+                else
+                    PopupUtil.closePopup();
+            }}/>
         </div>
     </div>;
 }

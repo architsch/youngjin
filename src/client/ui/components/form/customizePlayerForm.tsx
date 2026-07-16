@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Text from "../basic/text";
 import IconButton from "../basic/iconButton";
 import CloseIcon from "../basic/icons/closeIcon";
@@ -10,6 +10,10 @@ import ColorUtil from "../../../../shared/math/util/colorUtil";
 import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
 import FormBase94ColorInput from "../basic/formBase94ColorInput";
 import FormRangeInput from "../basic/formRangeInput";
+import { cameraModeObservable, clientFeatureFlagsObservable } from "../../../system/clientObservables";
+import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
+import WorldSpaceSelectionUtil from "../../../graphics/util/worldSpaceSelectionUtil";
+import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 
 //------------------------------------------------------------------------
 // This form edits the player's composition by directly manipulating its
@@ -32,6 +36,16 @@ export default function CustomizePlayerForm()
 {
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const [editCount, setEditCount] = useState(0);
+
+    useEffect(() => {
+        cameraModeObservable.set("selfView");
+        WorldSpaceSelectionUtil.unselectAll();
+        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableAllSelectionChange);
+        return () => {
+            cameraModeObservable.set("firstPerson");
+            clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableAllSelectionChange);
+        };
+    }, []);
 
     // Re-read 'params' whenever 'editCount' changes.
     const params = useMemo(() => getMyPlayerParams(), [editCount]);
@@ -60,8 +74,8 @@ export default function CustomizePlayerForm()
                             <FormRangeInput
                                 label="Type:"
                                 currValue={params.types[slot.key].toString()}
-                                min={"0"}
-                                max={"2"}
+                                min="0"
+                                max={(PlayerCompositionConstants.numTypes[slot.key] - 1).toString()}
                                 step="1"
                                 setValue={(value: string) => applyEdit(() => params.types[slot.key] = parseInt(value))}
                             />

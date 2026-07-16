@@ -96,7 +96,7 @@ export const popupStateObservable = new Observable<PopupState>({ popupType: "non
 
 // This observable notifies its listeners whenever the user's player camera switches modes (e.g. from
 // the normal first-person view to the pulled-back self-view shown while customizing one's character).
-// The camera framing (FirstPersonCamera) and the visibility of the user's own body (PlayerGameObject)
+// The camera framing (PlayerCamera) and the visibility of the user's own body (PlayerGameObject)
 // both follow it.
 export const cameraModeObservable = new Observable<CameraMode>("firstPerson");
 

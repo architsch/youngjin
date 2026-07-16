@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import FirstPersonController from "../../firstPersonController";
+import PlayerController from "../../playerController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
 import ClientObjectManager from "../../../clientObjectManager";
@@ -7,15 +7,28 @@ import InstancedMeshBinding from "../../../../graphics/types/mesh/instancedMeshB
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 
-export default class FirstPersonPointerInput
+//------------------------------------------------------------------------
+// Captures raw pointer input on the game canvas, independently of the camera
+// mode. It exposes the ongoing drag in two readings: a joystick-style offset
+// from the press point (fed into the controller's steering), and a grab-style
+// per-frame delta (dragDelta) for consumers that follow the pointer 1:1, such
+// as the self-view orbit. It also raycasts clicks into the scene to notify
+// the clicked game object.
+//------------------------------------------------------------------------
+
+export default class PlayerPointerInput
 {
+    // The pointer's movement since the previous frame while a drag is ongoing (in NDC units).
+    dragDelta: THREE.Vector2 = new THREE.Vector2();
+
     private pointerIsDown: boolean = false;
     private pointerDownPos: THREE.Vector2 = new THREE.Vector2();
     private pointerDragPos: THREE.Vector2 = new THREE.Vector2();
+    private pointerLastDragPos: THREE.Vector2 = new THREE.Vector2();
     private pointerPos: THREE.Vector2 = new THREE.Vector2();
     private raycaster: THREE.Raycaster = new THREE.Raycaster();
 
-    onSpawn(controller: FirstPersonController): void
+    onSpawn(controller: PlayerController): void
     {
         const canvas = GraphicsManager.getGameCanvas();
         this.onPointerPress = this.onPointerPress.bind(this);
@@ -24,7 +37,7 @@ export default class FirstPersonPointerInput
         this.onBlur = this.onBlur.bind(this);
         this.onPointerMove = this.onPointerMove.bind(this);
         this.onClick = this.onClick.bind(this);
-        
+
         canvas.addEventListener("pointerdown", this.onPointerPress);
         canvas.addEventListener("pointerup", this.onPointerRelease);
         canvas.addEventListener("pointercancel", this.onPointerRelease);
@@ -36,7 +49,7 @@ export default class FirstPersonPointerInput
         canvas.addEventListener("click", this.onClick);
     }
 
-    onDespawn(controller: FirstPersonController): void
+    onDespawn(controller: PlayerController): void
     {
         const canvas = GraphicsManager.getGameCanvas();
         canvas.removeEventListener("pointerdown", this.onPointerPress);
@@ -49,22 +62,27 @@ export default class FirstPersonPointerInput
         canvas.removeEventListener("click", this.onClick);
     }
 
-    update(deltaTime: number, controller: FirstPersonController): void
+    update(deltaTime: number, controller: PlayerController): void
     {
         if (this.pointerIsDown)
         {
+            this.dragDelta.subVectors(this.pointerDragPos, this.pointerLastDragPos);
+            this.pointerLastDragPos.copy(this.pointerDragPos);
+
             const canvas = GraphicsManager.getGameCanvas();
             const maxSize = Math.max(canvas.width, canvas.height);
 
             const mouse_x_sensitivity = 0.6 + 0.4 * (canvas.width / maxSize); // proportional to the measure of how wider the width is, compared to the height.
             const mouse_y_sensitivity = 0.7 + 0.3 * (canvas.height / maxSize); // proportional to the measure of how wider the height is, compared to the width.
 
-            const mouseInputX = this.pointerIsDown ? (this.pointerDragPos.x - this.pointerDownPos.x) : 0;
-            const mouseInputY = this.pointerIsDown ? (this.pointerDragPos.y - this.pointerDownPos.y) : 0;
-            
+            const mouseInputX = this.pointerDragPos.x - this.pointerDownPos.x;
+            const mouseInputY = this.pointerDragPos.y - this.pointerDownPos.y;
+
             controller.dx += mouseInputX * mouse_x_sensitivity;
             controller.dy += mouseInputY * mouse_y_sensitivity;
         }
+        else
+            this.dragDelta.set(0, 0);
     }
 
     private onPointerPress(ev: PointerEvent): void
@@ -79,6 +97,7 @@ export default class FirstPersonPointerInput
 
         getNDC(ev, this.pointerDownPos);
         getNDC(ev, this.pointerDragPos);
+        this.pointerLastDragPos.copy(this.pointerDragPos);
     }
 
     private onPointerRelease(ev: PointerEvent): void
@@ -121,7 +140,7 @@ export default class FirstPersonPointerInput
             return;
 
         getNDC(ev, vec2Temp);
-        
+
         this.raycaster.setFromCamera(vec2Temp, GraphicsManager.getCamera());
         const intersections = this.raycaster.intersectObjects(MeshFactory.getMeshes());
 

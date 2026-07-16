@@ -14,6 +14,8 @@ import { UserRole, UserRoleEnumMap } from "../../../src/shared/user/types/userRo
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import { encodePlayerComposition } from "./composition";
 import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomChangeSignal";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
@@ -43,6 +45,12 @@ export type Action =
         dirX?: number; dirY?: number; dirZ?: number }
     // Object — metadata (chat message)
     | { type: "sendMessage"; userIndex: number; message: string }
+    // Object — metadata (player appearance). `raw` sends the string as-is, bypassing the codec,
+    // to model a client that emits a malformed or hostile composition.
+    | { type: "setPlayerComposition"; userIndex: number; seed?: number; raw?: string }
+    // Object — metadata (arbitrary key, for permission testing)
+    | { type: "setObjectMetadata"; userIndex: number; metadataKey: number; metadataValue: string;
+        targetUserIndex?: number }
     // Voxel operations
     | { type: "addVoxel"; userIndex: number; row: number; col: number; layer: number;
         textures?: [number, number, number, number, number, number] }
@@ -163,7 +171,40 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (!roomID) return;
             const playerObj = harness.getPlayerObject(ctx.user.id);
             if (!playerObj) return;
-            const signal = new SetObjectMetadataSignal(roomID, playerObj.objectId, 0, action.message);
+            const signal = new SetObjectMetadataSignal(roomID, playerObj.objectId,
+                ObjectMetadataKeyEnumMap.SentMessage, action.message);
+            ServerObjectManager.onSetObjectMetadataSignalReceived(ctx.socketUserContext, signal);
+            break;
+        }
+        case "setPlayerComposition":
+        {
+            if (connectedUsers.length === 0) return;
+            const idx = action.userIndex % connectedUsers.length;
+            const ctx = connectedUsers[idx];
+            const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
+            if (!roomID) return;
+            const playerObj = harness.getPlayerObject(ctx.user.id);
+            if (!playerObj) return;
+            const metadataValue = action.raw ?? encodePlayerComposition(action.seed ?? 0);
+            const signal = new SetObjectMetadataSignal(roomID, playerObj.objectId,
+                ObjectMetadataKeyEnumMap.InstancedMeshComposition, metadataValue);
+            ServerObjectManager.onSetObjectMetadataSignalReceived(ctx.socketUserContext, signal);
+            break;
+        }
+        case "setObjectMetadata":
+        {
+            if (connectedUsers.length === 0) return;
+            const idx = action.userIndex % connectedUsers.length;
+            const ctx = connectedUsers[idx];
+            const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
+            if (!roomID) return;
+            // Defaults to the acting user's own player object, so that a differing target models
+            // one user trying to write to another user's player.
+            const targetIdx = (action.targetUserIndex ?? idx) % connectedUsers.length;
+            const targetObj = harness.getPlayerObject(connectedUsers[targetIdx].user.id);
+            if (!targetObj) return;
+            const signal = new SetObjectMetadataSignal(roomID, targetObj.objectId,
+                action.metadataKey, action.metadataValue);
             ServerObjectManager.onSetObjectMetadataSignalReceived(ctx.socketUserContext, signal);
             break;
         }
@@ -345,18 +386,18 @@ export function buildActionArbitrary(
         arbs.push({weight: w.addVoxel, arbitrary: fc.record({
             type: fc.constant("addVoxel" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.nat({min: 2, max: 29}),
-            col: fc.nat({min: 2, max: 29}),
-            layer: fc.nat({min: 0, max: 7}),
+            row: fc.integer({min: 2, max: 29}),
+            col: fc.integer({min: 2, max: 29}),
+            layer: fc.integer({min: 0, max: 7}),
         })});
 
     if (w.removeVoxel > 0)
         arbs.push({weight: w.removeVoxel, arbitrary: fc.record({
             type: fc.constant("removeVoxel" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.nat({min: 2, max: 29}),
-            col: fc.nat({min: 2, max: 29}),
-            layer: fc.nat({min: 0, max: 7}),
+            row: fc.integer({min: 2, max: 29}),
+            col: fc.integer({min: 2, max: 29}),
+            layer: fc.integer({min: 0, max: 7}),
         })});
 
     if (w.reconnectA > 0)
@@ -368,9 +409,9 @@ export function buildActionArbitrary(
         arbs.push({weight: w.moveVoxel, arbitrary: fc.record({
             type: fc.constant("moveVoxel" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.nat({min: 2, max: 28}),
-            col: fc.nat({min: 2, max: 28}),
-            layer: fc.nat({min: 0, max: 6}),
+            row: fc.integer({min: 2, max: 28}),
+            col: fc.integer({min: 2, max: 28}),
+            layer: fc.integer({min: 0, max: 6}),
             dRow: fc.constantFrom(-1, 0, 1),
             dCol: fc.constantFrom(-1, 0, 1),
             dLayer: fc.constantFrom(-1, 0, 1),
@@ -380,11 +421,11 @@ export function buildActionArbitrary(
         arbs.push({weight: w.setVoxelTexture, arbitrary: fc.record({
             type: fc.constant("setVoxelTexture" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.nat({min: 2, max: 29}),
-            col: fc.nat({min: 2, max: 29}),
-            layer: fc.nat({min: 0, max: 7}),
-            quadOffset: fc.nat({min: 0, max: 5}),
-            textureIndex: fc.nat({min: 0, max: 127}),
+            row: fc.integer({min: 2, max: 29}),
+            col: fc.integer({min: 2, max: 29}),
+            layer: fc.integer({min: 0, max: 7}),
+            quadOffset: fc.integer({min: 0, max: 5}),
+            textureIndex: fc.integer({min: 0, max: 127}),
         })});
 
     if (w.reconnectA > 0)
