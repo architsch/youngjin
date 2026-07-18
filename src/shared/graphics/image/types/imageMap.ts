@@ -8,7 +8,7 @@ export default class ImageMap
 
     // (subfolderName == "") if there is no subfolder.
     private subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}};
-    
+
     private imageMetadataByCoords: {[coords: string]: ImageMetadata} = {};
     private imageMetadataByPath: {[path: string]: ImageMetadata} = {};
     private imageMetadataByAuthor: {[author: string]: ImageMetadata} = {};
@@ -16,14 +16,22 @@ export default class ImageMap
 
     private imageMetadataList: ImageMetadata[];
 
+    // Name of a pre-composed atlas image file (without extension) located right under the root
+    // directory. If defined, the map's images are the atlas's grid cells (each image's "path" is
+    // its "{col},{row}" cell coordinates) instead of separate image files, and the grid image is
+    // the atlas itself.
+    private atlasImageName?: string;
+
     constructor(rootDirName: string, gridCellSize: number,
         subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}},
-        imageMetadataList: ImageMetadata[])
+        imageMetadataList: ImageMetadata[],
+        atlasImageName?: string)
     {
         this.rootDirName = rootDirName;
         this.gridCellSize = gridCellSize;
         this.subfolderGridSizes = subfolderGridSizes;
         this.imageMetadataList = imageMetadataList;
+        this.atlasImageName = atlasImageName;
 
         for (const imageMetadata of imageMetadataList)
         {
@@ -111,6 +119,8 @@ export default class ImageMap
 
     getGridImageURL(assetsURL: string, subfolderName: string): string
     {
+        if (this.atlasImageName)
+            return `${assetsURL}/${this.rootDirName}/${this.atlasImageName}.webp`;
         return `${assetsURL}/${this.rootDirName}/${subfolderName}/grid.webp`;
     }
 

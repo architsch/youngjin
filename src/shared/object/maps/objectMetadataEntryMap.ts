@@ -16,6 +16,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
         preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH),
         unselectObjectOnSet: false,
     },
+    [ObjectMetadataKeyEnumMap.CanvasFrameCoords]: {
+        preprocessingMethod: (rawValue: string) => rawValue,
+        unselectObjectOnSet: true,
+    },
 };
 
 const ObjectMetadataEntryMap =

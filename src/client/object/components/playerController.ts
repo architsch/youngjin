@@ -3,7 +3,7 @@ import GameObjectComponent from "./gameObjectComponent";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
 import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import PlayerCamera from "./helpers/player/playerCamera";
-import FirstPersonProximityDetection from "./helpers/player/firstPersonProximityDetection";
+import PlayerProximityDetectionUpdater from "./helpers/player/playerProximityDetectionUpdater";
 import PlayerPointerInput from "./helpers/player/playerPointerInput";
 import FirstPersonKeyInput from "./helpers/player/firstPersonKeyInput";
 import Rigidbody from "./rigidbody";
@@ -18,7 +18,7 @@ export default class PlayerController extends GameObjectComponent
     dy: number = 0;
 
     private playerCamera: PlayerCamera = new PlayerCamera();
-    private proximityDetection: FirstPersonProximityDetection = new FirstPersonProximityDetection();
+    private proxUpdater: PlayerProximityDetectionUpdater = new PlayerProximityDetectionUpdater();
     private pointerInput: PlayerPointerInput = new PlayerPointerInput();
     private keyInput: FirstPersonKeyInput = new FirstPersonKeyInput();
 
@@ -53,7 +53,7 @@ export default class PlayerController extends GameObjectComponent
         this.pointerInput.update(deltaTime, this);
         this.keyInput.update(deltaTime, this);
         this.playerCamera.update(deltaTime, this);
-        this.proximityDetection.update(deltaTime, this);
+        this.proxUpdater.update(deltaTime, this);
 
         if (cameraModeObservable.peek() === "selfView")
         {

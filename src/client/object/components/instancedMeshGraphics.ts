@@ -100,9 +100,18 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             this.gameObject, instanceId, pupilRadius, irisRadius);
     }
 
-    async drawImageAtIndex(geometryId: string, materialId: string, textureIndex: number, imageURL: string)
+    // The optional source UV rect restricts sampling to a sub-region of the source image
+    // (e.g. a single cell of an atlas image); by default the full image is drawn.
+    async drawImageAtIndex(geometryId: string, materialId: string,
+        textureIndex: number, imageURL: string,
+        widthScale: number = 1, heightScale: number = 1,
+        sourceU1: number = 0, sourceV1: number = 0,
+        sourceU2: number = 1, sourceV2: number = 1,
+        unloadTextureAfterDraw: boolean = true)
     {
         const instancedMeshId = MeshDataUtil.getInstancedMeshId(geometryId, materialId);
-        await bindingMap[instancedMeshId].drawImageAtIndex(textureIndex, imageURL);
+        await bindingMap[instancedMeshId].drawImageAtIndex(textureIndex, imageURL,
+            widthScale, heightScale, sourceU1, sourceV1, sourceU2, sourceV2,
+            unloadTextureAfterDraw);
     }
 }

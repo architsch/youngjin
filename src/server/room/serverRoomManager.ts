@@ -266,7 +266,7 @@ const ServerRoomManager =
     },
     changeRoomTexturePack: async (room: Room, newTexturePackPath: string): Promise<boolean> =>
     {
-        if (!ImageMapUtil.getImageMap("TexturePackImageMap").hasImagePath(newTexturePackPath))
+        if (!ImageMapUtil.getImageMap("VoxelTexturePackImageMap").hasImagePath(newTexturePackPath))
             return false;
 
         const success = await DBRoomUtil.changeRoomTexturePackPath(room, newTexturePackPath);

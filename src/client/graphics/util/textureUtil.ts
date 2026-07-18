@@ -4,8 +4,13 @@ import GraphicsManager from "../graphicsManager";
 
 const TextureUtil =
 {
+    // The optional source UV rect restricts sampling to a sub-region of the source texture
+    // (e.g. a single cell of an atlas image); by default the full texture is drawn.
     drawImageOnRenderTarget: async (textureURL: string, renderTarget: THREE.WebGLRenderTarget,
-        targetU1: number, targetV1: number, targetU2: number, targetV2: number): Promise<void> =>
+        targetU1: number, targetV1: number, targetU2: number, targetV2: number,
+        sourceU1: number = 0, sourceV1: number = 0,
+        sourceU2: number = 1, sourceV2: number = 1,
+        unloadTextureAfterDraw: boolean = true): Promise<void> =>
     {
         const renderer = GraphicsManager.getGameRenderer();
 
@@ -48,9 +53,9 @@ const TextureUtil =
         // See the section called "Fitting a Texture inside a Rectangular Region"
         // in @docs/geometry/texture.md for technical details.
         
-        // As = Aspect Ratio of the Source Texture
+        // As = Aspect Ratio of the Source Texture (its sampled sub-region, to be precise)
         const As = (texture.image?.width && texture.image?.height)
-            ? texture.image.width / texture.image.height
+            ? (texture.image.width * (sourceU2 - sourceU1)) / (texture.image.height * (sourceV2 - sourceV1))
             : 1.0;
 
         // At = Aspect Ratio of the Target Region
@@ -76,9 +81,10 @@ const TextureUtil =
         //------------------------------------------------------------
 
         setQuadPositions(x1, y1, x2, y2);
+        setQuadUVs(sourceU1, sourceV1, sourceU2, sourceV2);
         renderToTarget(renderer, renderTarget, targetTexWidth, targetTexHeight);
 
-        if (textureURL.length > 0)
+        if (unloadTextureAfterDraw && textureURL.length > 0)
             TextureFactory.unload(textureURL);
     }
 }
@@ -156,6 +162,17 @@ function setQuadPositions(x1: number, y1: number, x2: number, y2: number)
     positionAttrib.setXYZ(4, x2, y2, 0);
     positionAttrib.setXYZ(5, x1, y2, 0);
     positionAttrib.needsUpdate = true;
+}
+
+function setQuadUVs(u1: number, v1: number, u2: number, v2: number)
+{
+    uvAttrib.setXY(0, u1, v2);
+    uvAttrib.setXY(1, u1, v1);
+    uvAttrib.setXY(2, u2, v1);
+    uvAttrib.setXY(3, u2, v1);
+    uvAttrib.setXY(4, u2, v2);
+    uvAttrib.setXY(5, u1, v2);
+    uvAttrib.needsUpdate = true;
 }
 
 function renderToTarget(renderer: THREE.WebGLRenderer, renderTarget: THREE.WebGLRenderTarget,

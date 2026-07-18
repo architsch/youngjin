@@ -17,6 +17,7 @@ export default class ImageMapBuilder
     private readonly hasGrid: boolean;
     private readonly gridCellSize?: number;
     private readonly maxCols?: number;
+    private readonly atlasImageName?: string;
 
     constructor(seed: ImageMapSeed)
     {
@@ -26,6 +27,7 @@ export default class ImageMapBuilder
         this.hasGrid = seed.hasGrid;
         this.gridCellSize = seed.gridCellSize;
         this.maxCols = seed.maxCols;
+        this.atlasImageName = seed.atlasImageName;
     }
 
     async build(): Promise<void>
@@ -46,12 +48,48 @@ export default class ImageMapBuilder
         
         if (this.hasGrid)
         {
-            // Build the grid
+            // Build the grid (or, for an atlas-based map, adopt the pre-composed atlas's grid)
             for (const info of Object.values(subfolderInfoByName))
-                await this.buildGrid(info);
+            {
+                if (this.atlasImageName)
+                    await this.assignAtlasCellCoords(info);
+                else
+                    await this.buildGrid(info);
+            }
         }
 
         await this.writeMapFile(subfolderInfoByName);
+    }
+
+    // For an atlas-based map, no grid image needs to be composed — the atlas already is the grid.
+    // Each image's "path" holds its "{col},{row}" cell coordinates within the atlas, so this method
+    // only validates those coordinates against the atlas's dimensions and adopts them as coords.
+    private async assignAtlasCellCoords(subfolderInfo: ImageMapSubfolderInfo): Promise<void>
+    {
+        const atlasFile = ImageFileUtil.readImage(`${this.atlasImageName}.webp`, this.imageRootPath);
+        if (!atlasFile)
+            throw new Error(`Image map generation failed :: Failed to read atlas image (${this.imageRootPath}/${this.atlasImageName}.webp)`);
+        const atlasMetadata = await atlasFile.metadata();
+        if (!atlasMetadata.width || !atlasMetadata.height
+            || atlasMetadata.width % this.gridCellSize! != 0 || atlasMetadata.height % this.gridCellSize! != 0)
+            throw new Error(`Image map generation failed :: Atlas image's size (${atlasMetadata.width}x${atlasMetadata.height}) is not a multiple of the grid cell size (${this.gridCellSize})`);
+
+        const numCols = atlasMetadata.width / this.gridCellSize!;
+        const numRows = atlasMetadata.height / this.gridCellSize!;
+
+        for (const imageMetadata of subfolderInfo.imageMetadataList)
+        {
+            const cellCoords = imageMetadata.path.includes("/") ? imageMetadata.path.split("/")[1] : imageMetadata.path;
+            const words = cellCoords.split(",");
+            const col = parseInt(words[0]);
+            const row = parseInt(words[1]);
+            if (words.length != 2 || isNaN(col) || isNaN(row)
+                || col < 0 || col >= numCols || row < 0 || row >= numRows)
+                throw new Error(`Image map generation failed :: Image path "${imageMetadata.path}" is not a valid "{col},{row}" cell of the ${numCols}x${numRows} atlas (${this.atlasImageName}.webp)`);
+            imageMetadata.coords = `${subfolderInfo.name},${col},${row}`;
+        }
+        subfolderInfo.numGridCols = numCols;
+        subfolderInfo.numGridRows = numRows;
     }
 
     private async buildGrid(subfolderInfo: ImageMapSubfolderInfo): Promise<void>
@@ -116,7 +154,7 @@ import ImageMetadata from "../types/imageMetadata";
 const imageMetadataList: ImageMetadata[] = [${imageMetadataEntries}]
 const subfolderGridSizes: {[subfolder: string]: {numCols: number, numRows: number}} = {${subfolderGridSizesEntries}}
 
-ImageMapUtil.setImageMap("${this.mapName}", new ImageMap("${this.rootDirName}", ${this.gridCellSize ?? "0"}, subfolderGridSizes, imageMetadataList));
+ImageMapUtil.setImageMap("${this.mapName}", new ImageMap("${this.rootDirName}", ${this.gridCellSize ?? "0"}, subfolderGridSizes, imageMetadataList${this.atlasImageName ? `, "${this.atlasImageName}"` : ""}));
 `;
         const mapNameCamelCased = this.mapName[0].toLowerCase() + this.mapName.substring(1);
         await FileUtil.write(`${mapNameCamelCased}.ts`, text, MAPS_ROOT_PATH);

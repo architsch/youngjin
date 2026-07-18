@@ -9,16 +9,20 @@ import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMe
 import RemoveObjectSignal from "../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import { clientFeatureFlagsObservable, objectSelectionObservable, userRoleObservable } from "../../../system/clientObservables";
-import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import PopupUtil from "../../util/popupUtil";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import PictureIcon from "../basic/icons/pictureIcon";
+import PictureFrameIcon from "../basic/icons/pictureFrameIcon";
 
 export default function CanvasEditOptions(props: {selection: ObjectSelection})
 {
     const go = props.selection.gameObject;
-    const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
-    const initialChoicePath = metadata ? metadata.str : "";
+    const imagePathMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
+    const initialImagePath = imagePathMetadata ? imagePathMetadata.str : "";
+    const frameCoordsMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
+    const initialFrameCoords = frameCoordsMetadata ? frameCoordsMetadata.str : "";
 
     return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
         <IconButton icon={<TrashIcon/>} size="md" color="red"
@@ -27,10 +31,19 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
         />
         <ImageChooser
             title="Change Image"
+            icon={<PictureIcon/>}
             viewType="list"
             mapName="CanvasImageMap"
-            initialChoicePath={initialChoicePath}
-            onChoose={path => trySetCanvasImageMetadata(props.selection, path)}
+            initialChoicePath={initialImagePath}
+            onChoose={path => trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path)}
+        />
+        <ImageChooser
+            title="Change Frame"
+            icon={<PictureFrameIcon/>}
+            viewType="grid"
+            mapName="CanvasFrameImageMap"
+            initialChoicePath={initialFrameCoords}
+            onChoose={coords => trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.CanvasFrameCoords, coords)}
         />
     </div>;
 }
@@ -83,7 +96,7 @@ async function tryRemoveCanvas(selection: ObjectSelection)
     }
 }
 
-function canSetCanvasImageMetadata(selection: ObjectSelection, metadataValue: string): boolean
+function canSetCanvasMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string): boolean
 {
     const room = App.getCurrentRoom();
     if (!room)
@@ -92,22 +105,22 @@ function canSetCanvasImageMetadata(selection: ObjectSelection, metadataValue: st
     const userRole = userRoleObservable.peek();
 
     const objectId = selection.gameObject.params.objectId;
-    const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue);
+    const signal = new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue);
     return ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal);
 }
 
-function trySetCanvasImageMetadata(selection: ObjectSelection, metadataValue: string)
+function trySetCanvasMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string)
 {
-    if (!canSetCanvasImageMetadata(selection, metadataValue))
+    if (!canSetCanvasMetadata(selection, metadataKey, metadataValue))
         return;
 
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
-    if (!ClientObjectManager.setObjectMetadata(objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue))
+    if (!ClientObjectManager.setObjectMetadata(objectId, metadataKey, metadataValue))
         return;
 
     objectSelectionObservable.notify();
 
     if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-        SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.ImagePath, metadataValue));
+        SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue));
 }

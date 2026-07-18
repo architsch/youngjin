@@ -111,6 +111,10 @@ export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
 export const VOXEL_QUAD_GEOMETRY_ID = "Square";
 export const CANVAS_GEOMETRY_ID = "Square";
 
+export const CANVAS_FRAME_ATLAS_PATH = "object_texture_packs/canvas_frames.webp"; // relative to the app's assets_url
+export const CANVAS_FRAME_ATLAS_SIZE = 1024; // in pixels (the atlas is square)
+export const CANVAS_FRAME_ATLAS_CELL_SIZE = 256; // in pixels (each cell is square)
+
 export const MAX_MESH_INSTANCES_PER_PLAYER = 32;
 export const UNIT_PLAYER_PART_LENGTH = 0.125;
 export const SAFE_PLAYER_PART_CIRCLE_DIAMETER_IN_UNITS = 2 * Math.sqrt(5);

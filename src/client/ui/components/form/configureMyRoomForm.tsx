@@ -109,16 +109,16 @@ export default function ConfigureMyRoomForm()
 
         <Spacer size="sm"/>
 
-        {/* Section 2: Texture Pack */}
+        {/* Section 2: Voxel Texture Pack */}
         <Text content="Texture Pack:" size="sm"/>
         <div className="flex flex-row items-center gap-1">
             {texturePackPath.length > 0 && <Image
-                src={ImageMapUtil.getImageMap("TexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, texturePackPath)}
+                src={ImageMapUtil.getImageMap("VoxelTexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, texturePackPath)}
                 size="md" alt="Texture preview"/>}
             <ImageChooser
                 title="Change Texture Pack"
                 viewType="grid"
-                mapName="TexturePackImageMap"
+                mapName="VoxelTexturePackImageMap"
                 initialChoicePath={texturePackPath}
                 onChoose={(path) => setTexture(path)}
             />

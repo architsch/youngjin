@@ -93,7 +93,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         />}
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
-            <ObjectSelectionMenu canModifyRoom/>
+            <ObjectSelectionMenu canModifyRoom={canModifyRoom}/>
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
             <Chat hide={chatHidden}/>
             <SkipTutorialButton hide={hideSkipTutorialButton}/>

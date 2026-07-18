@@ -57,12 +57,16 @@ export default async function SSG(): Promise<void>
     // Generate Image Maps
 
     await new ImageMapBuilder({
-        rootDirName: "texture_packs", mapName: "TexturePackImageMap",
+        rootDirName: "voxel_texture_packs", mapName: "VoxelTexturePackImageMap",
         hasGrid: true, gridCellSize: 256, maxCols: 2,
     }).build();
     await new ImageMapBuilder({
         rootDirName: "canvas_images", mapName: "CanvasImageMap",
         hasGrid: false,
+    }).build();
+    await new ImageMapBuilder({
+        rootDirName: "object_texture_packs", mapName: "CanvasFrameImageMap",
+        hasGrid: true, gridCellSize: 256, atlasImageName: "canvas_frames",
     }).build();
 
     console.log("SSG END");

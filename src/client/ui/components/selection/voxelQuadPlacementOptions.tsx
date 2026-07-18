@@ -66,8 +66,11 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             disabled={getPlaceableWallAttachedObjectTransform(props.selection, canvasTypeIndex) == null}
             onClick={() => {
                 const randomImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();
-                tryAddObjectFromQuad(props.selection, canvasTypeIndex,
-                    {[ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath)});
+                const randomFrameCoords = ImageMapUtil.getImageMap("CanvasFrameImageMap").getRandomImagePath();
+                tryAddObjectFromQuad(props.selection, canvasTypeIndex, {
+                    [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath),
+                    [ObjectMetadataKeyEnumMap.CanvasFrameCoords]: new EncodableByteString(randomFrameCoords),
+                });
             }}
         />
     </div>;

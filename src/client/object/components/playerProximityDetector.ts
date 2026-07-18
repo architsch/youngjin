@@ -4,6 +4,7 @@ import GameObject from "../types/gameObject";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MeshGraphics from "./meshGraphics";
 import CameraUtil from "../../graphics/util/cameraUtil";
+import { cameraModeObservable } from "../../system/clientObservables";
 
 const vec3Temp = new THREE.Vector3();
 
@@ -49,45 +50,49 @@ export default class PlayerProximityDetector extends GameObjectComponent
     { 
         let proximityShouldBeOn = false;
 
-        const offsetX = this.gameObject.position.x - player.position.x;
-        const offsetZ = this.gameObject.position.z - player.position.z;
-        const distSqr = offsetX*offsetX + offsetZ*offsetZ;
-
-        if (distSqr <= this.maxDist * this.maxDist)
+        // Trigger proximity detection only during first-person view.
+        if (cameraModeObservable.peek() === "firstPerson")
         {
-            if (this.maxLookAngle <= 0)
-            {
-                proximityShouldBeOn = true;
-            }
-            else
-            {
-                player.obj.getWorldDirection(vec3Temp);
-                const lookX = -vec3Temp.x;
-                const lookZ = -vec3Temp.z;
+            const offsetX = this.gameObject.position.x - player.position.x;
+            const offsetZ = this.gameObject.position.z - player.position.z;
+            const distSqr = offsetX*offsetX + offsetZ*offsetZ;
 
-                const offsetLength = Math.sqrt(distSqr);
-                const lookLength = Math.sqrt(lookX*lookX + lookZ*lookZ);
-
-                if (offsetLength <= 0.001 || lookLength <= 0.001)
+            if (distSqr <= this.maxDist * this.maxDist)
+            {
+                if (this.maxLookAngle <= 0)
                 {
                     proximityShouldBeOn = true;
                 }
                 else
                 {
-                    // normalized vector coordinates
-                    const offsetXn = offsetX / offsetLength;
-                    const offsetZn = offsetZ / offsetLength;
-                    const lookXn = lookX / lookLength;
-                    const lookZn = lookZ / lookLength;
+                    player.obj.getWorldDirection(vec3Temp);
+                    const lookX = -vec3Temp.x;
+                    const lookZ = -vec3Temp.z;
 
-                    // angle measurement
-                    const dot = offsetXn*lookXn + offsetZn*lookZn;
-                    const lookAngle = Math.acos(dot);
+                    const offsetLength = Math.sqrt(distSqr);
+                    const lookLength = Math.sqrt(lookX*lookX + lookZ*lookZ);
 
-                    if (lookAngle <= this.maxLookAngle)
+                    if (offsetLength <= 0.001 || lookLength <= 0.001)
                     {
-                        if (CameraUtil.objectIsInLineOfSight(this.gameObject.position, this.gameObject))
-                            proximityShouldBeOn = true;
+                        proximityShouldBeOn = true;
+                    }
+                    else
+                    {
+                        // normalized vector coordinates
+                        const offsetXn = offsetX / offsetLength;
+                        const offsetZn = offsetZ / offsetLength;
+                        const lookXn = lookX / lookLength;
+                        const lookZn = lookZ / lookLength;
+
+                        // angle measurement
+                        const dot = offsetXn*lookXn + offsetZn*lookZn;
+                        const lookAngle = Math.acos(dot);
+
+                        if (lookAngle <= this.maxLookAngle)
+                        {
+                            if (CameraUtil.objectIsInLineOfSight(this.gameObject.position, this.gameObject))
+                                proximityShouldBeOn = true;
+                        }
                     }
                 }
             }

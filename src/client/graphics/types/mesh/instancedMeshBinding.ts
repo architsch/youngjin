@@ -270,7 +270,13 @@ export default class InstancedMeshBinding
         return attrib;
     }
 
-    async drawImageAtIndex(textureIndex: number, imageURL: string)
+    // The optional source UV rect restricts sampling to a sub-region of the source image
+    // (e.g. a single cell of an atlas image); by default the full image is drawn.
+    async drawImageAtIndex(textureIndex: number, imageURL: string,
+        widthScale: number = 1, heightScale: number = 1,
+        sourceU1: number = 0, sourceV1: number = 0,
+        sourceU2: number = 1, sourceV2: number = 1,
+        unloadTextureAfterDraw: boolean = true)
     {
         const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
         const w = instancedTexturePackMaterialParams.textureWidth;
@@ -288,9 +294,15 @@ export default class InstancedMeshBinding
         const v1 = textureGridCellHeightScale * textureRow;
         const v2 = v1 + textureGridCellHeightScale;
 
+        const widthMargin = textureGridCellWidthScale * (1 - widthScale) * 0.5;
+        const heightMargin = textureGridCellWidthScale * (1 - heightScale) * 0.5;
+
         const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
         const rt = material.map!.renderTarget as THREE.WebGLRenderTarget;
-        await TextureUtil.drawImageOnRenderTarget(imageURL, rt, u1, v1, u2, v2);
+        await TextureUtil.drawImageOnRenderTarget(imageURL, rt,
+            u1 + widthMargin, v1 + heightMargin,
+            u2 - widthMargin, v2 - heightMargin,
+            sourceU1, sourceV1, sourceU2, sourceV2, unloadTextureAfterDraw);
     }
 
     private getInstancedMeshId(): string

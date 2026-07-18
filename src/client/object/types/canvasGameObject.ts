@@ -5,12 +5,13 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import ClientObjectManager from "../clientObjectManager";
-import { CANVAS_GEOMETRY_ID, MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
+import { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH, CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID, MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
+import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -31,8 +32,9 @@ export default class CanvasGameObject extends GameObject
 
         if (CanvasGameObject.latestMaterialParams == undefined)
         {
+            // The polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
             CanvasGameObject.latestMaterialParams = new InstancedTexturePackMaterialParams("canvas_texture_pack",
-                2048, 2048, 256, 256, "dynamicEmpty", -1, -1); // polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
+                2048, 2048, 256, 256, "dynamicEmpty", -1, -1);
         }
     }
 
@@ -76,6 +78,8 @@ export default class CanvasGameObject extends GameObject
     onSetMetadata(key: ObjectMetadataKey, value: string)
     {
         super.onSetMetadata(key, value);
+        // Both the picture frame and the image live in the same render-target cell,
+        // so any metadata change simply re-draws the whole cell.
         this.loadImage();
     }
 
@@ -100,30 +104,75 @@ export default class CanvasGameObject extends GameObject
         return CanvasGameObject.loadQueue;
     }
 
+    // Re-draws this canvas's render-target cell: first the chosen picture frame (filling the
+    // whole cell), then the canvas's image on top of it (fitted inside the frame's inner window).
     private async loadImageImpl()
     {
         if (this.instanceId === -1) // Already despawned
             return;
-        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
-        if (!metadata)
-            return;
-        const metadataValue = metadata.str;
-        const imageURL = ImageMapUtil.getImageMap("CanvasImageMap").getImageURLByPath(App.getEnv().assets_url, metadataValue);
-        if (imageURL.length <= 0)
-            return;
+
+        const materialId = CanvasGameObject.latestMaterialParams!.getMaterialId();
+        const textureIndex = this.instanceId % 64;
+        this.instancedMeshGraphics.updateInstanceTextureUV(CANVAS_GEOMETRY_ID, materialId,
+            this.instanceId, textureIndex);
+
+        const frameCellCoords = this.getFrameCellCoords();
+        await this.drawFrame(materialId, textureIndex, frameCellCoords);
+        await this.drawImage(materialId, textureIndex, frameCellCoords);
+    }
+
+    // Draws the chosen picture frame's atlas cell so it fills this canvas's render-target cell.
+    private async drawFrame(materialId: string, textureIndex: number, frameCellCoords: string)
+    {
+        const words = frameCellCoords.split(",");
+        const col = parseInt(words[0]);
+        const row = parseInt(words[1]);
+
+        // The atlas image is flipped vertically at load time (three.js's default for image
+        // textures), so the chosen cell's V range counts rows from the bottom of the atlas
+        // image, while the cell coords count them from the top.
+        const numCols = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
+        const numRows = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
+        const frameAtlasURL = `${App.getEnv().assets_url}/${CANVAS_FRAME_ATLAS_PATH}`;
         try
         {
-            this.instancedMeshGraphics.updateInstanceTextureUV(CANVAS_GEOMETRY_ID,
-                CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId, this.instanceId % 64);
-            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID,
-                CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId % 64, imageURL);
+            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+                textureIndex, frameAtlasURL, 1, 1,
+                col / numCols, (numRows - 1 - row) / numRows,
+                (col + 1) / numCols, (numRows - row) / numRows,
+                false);
         }
         catch (error)
         {
-            console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadataValue}):`, error);
+            console.warn(`Failed to load canvas frame (objectId=${this.params.objectId}, coords=${frameCellCoords}):`, error);
+            // Paint a placeholder color so the cell isn't stuck showing the old frame
+            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+                textureIndex, "");
+        }
+    }
+
+    // Draws the canvas's image over the frame's inner window (scaled down so it fits inside it).
+    private async drawImage(materialId: string, textureIndex: number, frameCellCoords: string)
+    {
+        const imageDrawScale = CanvasFrameInnerWindowMap.getImageDrawScale(frameCellCoords);
+
+        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
+        const imageURL = metadata
+            ? ImageMapUtil.getImageMap("CanvasImageMap").getImageURLByPath(App.getEnv().assets_url, metadata.str)
+            : "";
+        try
+        {
+            // An empty URL paints the placeholder color, which still needs to happen so that
+            // the frame's placeholder-colored inner window never shows through.
+            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+                textureIndex, imageURL, imageDrawScale, imageDrawScale);
+        }
+        catch (error)
+        {
+            console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadata?.str}):`, error);
             // Paint a placeholder color so the canvas isn't stuck showing the old image
-            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID,
-                CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId % 64, "");
+            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+                textureIndex, "", imageDrawScale, imageDrawScale);
         }
     }
 
@@ -146,7 +195,8 @@ export default class CanvasGameObject extends GameObject
 
         // The canvas's facing already lives in its obj rotation (set from the spawn/update
         // direction), so the instance just faces the object's local forward (+Z). InstancedMeshBinding
-        // rotates this local direction into world space by the obj's orientation.
+        // rotates this local direction into world space by the obj's orientation. The quad sits
+        // slightly in front of the wall (assisted by the material's polygon offset).
         this.instancedMeshGraphics.updateInstanceTransform(
             CANVAS_GEOMETRY_ID,
             CanvasGameObject.latestMaterialParams!.getMaterialId(),
@@ -154,5 +204,16 @@ export default class CanvasGameObject extends GameObject
             0, 0, 0.001,
             0, 0, 1,
             sizeX, sizeY, 1);
+    }
+
+    // Returns the "{col},{row}" atlas cell coords of this canvas's picture frame, falling back to
+    // the first frame in CanvasFrameImageMap when the metadata is absent or invalid.
+    private getFrameCellCoords(): string
+    {
+        const frameImageMap = ImageMapUtil.getImageMap("CanvasFrameImageMap");
+        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
+        if (metadata && frameImageMap.hasImagePath(metadata.str))
+            return metadata.str;
+        return frameImageMap.getFirstImagePath();
     }
 }

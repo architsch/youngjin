@@ -5,7 +5,7 @@
 - **Frontend**: Three.js (3D graphics), React, Tailwind CSS, EJS
 - **Networking**: Express.js (HTTP requests, authentication), Socket.IO (real-time communication), Axios (client-side HTTP requests), Nginx (VPS's web server)
 - **Database**: Firebase (Firestore, Cloud Storage, Content Distribution)
-- **Build Tools**: Webpack (typescript compiler, bundler)
+- **Build Tools**: Webpack (typescript compiler, bundler), Sharp (static site image generation)
 - **Dev Tools**: Husky (git hooks), PM2 (runtime process management), GitHub (source control, workflows, and static page hosting), VS Code (IDE), Claude Code (AI assistant)
 - **Tests**: Playwright (E2E tests), Vitest (Integration tests), fast-check (Property-based testing)
 

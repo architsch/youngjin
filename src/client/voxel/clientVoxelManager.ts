@@ -30,7 +30,7 @@ const ClientVoxelManager =
     },
     applyVoxelTexturePack: async (texturePackPath: string): Promise<void> =>
     {
-        const texturePackURL = ImageMapUtil.getImageMap("TexturePackImageMap")
+        const texturePackURL = ImageMapUtil.getImageMap("VoxelTexturePackImageMap")
             .getImageURLByPath(App.getEnv().assets_url, texturePackPath);
         if (texturePackURLObservable.peek() === texturePackURL)
             return;

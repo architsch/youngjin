@@ -54,13 +54,13 @@ const CanvasObjectTypeConfig: ObjectTypeConfig =
         if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
-        // User can only set the canvas's image path and nothing else
-        if (signal.metadataKey != ObjectMetadataKeyEnumMap.ImagePath)
-            return false;
-        if (!ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(signal.metadataValue))
-            return false;
+        // User can only set the canvas's image path or picture-frame coords, and nothing else
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.ImagePath)
+            return ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(signal.metadataValue);
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.CanvasFrameCoords)
+            return ImageMapUtil.getImageMap("CanvasFrameImageMap").hasImagePath(signal.metadataValue);
 
-        return true;
+        return false;
     },
     components: {
         spawnedByAny: {
