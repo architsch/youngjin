@@ -12,11 +12,6 @@ const innerWindowSizeByCellCoords: {[cellCoords: string]: number} =
     "0,3": 190, "1,3": 166, "2,3": 190, "3,3": 166,
 };
 
-// The image slightly overlaps the frame's inner border (like a real picture tucked behind
-// a frame's rabbet), so no sliver of the frame's placeholder-colored window peeks out around
-// the image's antialiased edges.
-const OVERLAP_MARGIN_IN_PIXELS = 4;
-
 const CanvasFrameInnerWindowMap =
 {
     // Returns the scale at which a canvas's image should be drawn relative to its full
@@ -27,7 +22,7 @@ const CanvasFrameInnerWindowMap =
         const innerWindowSize = innerWindowSizeByCellCoords[cellCoords];
         if (innerWindowSize == undefined)
             return 1;
-        return (innerWindowSize + OVERLAP_MARGIN_IN_PIXELS) / CANVAS_FRAME_ATLAS_CELL_SIZE;
+        return innerWindowSize / CANVAS_FRAME_ATLAS_CELL_SIZE;
     },
 }
 

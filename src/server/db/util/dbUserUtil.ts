@@ -7,7 +7,7 @@ import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import { FieldValue } from "firebase-admin/firestore";
-import { COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE } from "../../system/serverConstants";
+import { COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_COUNT_MIN_GAP_MS } from "../../system/serverConstants";
 import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 
 const DBUserUtil =
@@ -104,13 +104,19 @@ const DBUserUtil =
             .run();
         return result;
     },
-    updateLastLogin: async (userID: string): Promise<void> =>
+    updateLastLogin: async (userID: string, prevLastLoginAt: number): Promise<void> =>
     {
         // Cache invalidation must NOT happen here ((Reason 1): Cache invalidation in this case will immediately invalidate the cache of a user who is currently logging in, resulting in redundant DB lookups. (Reason 2): 'lastLoginAt' and 'loginCount' are only used by deleteStaleGuestsByTier)
+        // loginCount counts distinct logins, not requests: it only increments when the previous
+        // login is at least LOGIN_COUNT_MIN_GAP_MS old, so the many identified requests fired
+        // within a single visit don't inflate the engagement tier used by deleteStaleGuestsByTier.
+        const isDistinctLogin = Date.now() - (prevLastLoginAt ?? 0) >= LOGIN_COUNT_MIN_GAP_MS;
         await new DBQuery<DBRow>()
             .update(COLLECTION_USERS)
             .noInvalidate()
-            .set({ lastLoginAt: Date.now(), loginCount: FieldValue.increment(1) })
+            .set(isDistinctLogin
+                ? { lastLoginAt: Date.now(), loginCount: FieldValue.increment(1) }
+                : { lastLoginAt: Date.now() })
             .where("id", "==", userID)
             .run();
     },
@@ -125,7 +131,16 @@ const DBUserUtil =
             .where("lastLoginAt", "<", cutoffTime)
             .run();
 
-        if (!selectResult.success || selectResult.data.length === 0)
+        if (!selectResult.success)
+        {
+            // Surface the failure instead of silently reporting "nothing to delete" — e.g. a
+            // missing composite index (userType + lastLoginAt) makes this query fail on every
+            // run, and without this log the cleanup task appears healthy while doing nothing.
+            LogUtil.log("DBUserUtil.deleteStaleGuestsByTier - stale-guest query failed",
+                { phase }, "high", "error");
+            return 0;
+        }
+        if (selectResult.data.length === 0)
             return 0;
 
         // Filter in-memory by tier engagement criteria (loginCount only).

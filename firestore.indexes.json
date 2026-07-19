@@ -7,6 +7,14 @@
         { "fieldPath": "userType", "order": "ASCENDING" },
         { "fieldPath": "lastLoginAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "staging_users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userType", "order": "ASCENDING" },
+        { "fieldPath": "lastLoginAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

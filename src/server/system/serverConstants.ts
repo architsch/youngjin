@@ -19,6 +19,11 @@ export const COLLECTION_DEV_RUNTIME = `${DB_PREFIX}_dev_runtime`;
 // a bound, an owner could inflate DB read/write cost by stuffing the editors list.
 export const MAX_ROOM_EDITORS = 32;
 
+// Minimum inactivity gap separating two "distinct logins". Identified requests arriving
+// closer together than this belong to the same visit and must not inflate loginCount
+// (a single visit fires many identified requests: page load, room APIs, etc.).
+export const LOGIN_COUNT_MIN_GAP_MS = 1 * DAY_IN_MS;
+
 export const GUEST_TIER_NAME_BY_TIER_PHASE = ["disposable", "casual", "dedicated"];
 export const GUEST_MAX_AGE_BY_TIER_PHASE = [
     3 * DAY_IN_MS, // max age of a "disposable" guest (3 days)

@@ -4,6 +4,7 @@
  * Covers:
  * - Scenario 10: Google OAuth — new account creation (guest upgrade) and existing account access
  * - Scenario 11: Stale guest account cleanup via deleteStaleGuestsByTier
+ * - Scenario 12: loginCount accuracy (only page-level identification of a distinct login counts)
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -251,6 +252,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
 import {
     GUEST_TIER_NAME_BY_TIER_PHASE,
     GUEST_MAX_AGE_BY_TIER_PHASE,
+    LOGIN_COUNT_MIN_GAP_MS,
 } from "../../../src/server/system/serverConstants";
 import { DAY_IN_MS } from "../../../src/shared/system/sharedConstants";
 
@@ -309,9 +311,11 @@ describe("loginCount accuracy (Scenario 12)", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("identifyAnyUser calls updateLastLogin for an existing user", async () => {
+    it("identifyAnyUser calls updateLastLogin with the user's stored lastLoginAt", async () => {
+        const storedLastLoginAt = Date.now() - 5000;
         _mockDBUserUtil.findUserById.mockResolvedValue({
             id: "user-1", userName: "testuser", userType: UserTypeEnumMap.Member, email: "test@test.com",
+            lastLoginAt: storedLastLoginAt,
         });
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-user-1" });
@@ -320,7 +324,7 @@ describe("loginCount accuracy (Scenario 12)", () => {
 
         expect(nextCalled).toBe(true);
         expect(_mockDBUserUtil.updateLastLogin).toHaveBeenCalledTimes(1);
-        expect(_mockDBUserUtil.updateLastLogin).toHaveBeenCalledWith("user-1");
+        expect(_mockDBUserUtil.updateLastLogin).toHaveBeenCalledWith("user-1", storedLastLoginAt);
     });
 
     it("identifyRegisteredUser does NOT call updateLastLogin", async () => {
@@ -362,5 +366,40 @@ describe("loginCount accuracy (Scenario 12)", () => {
         }
 
         expect(_mockDBUserUtil.updateLastLogin).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The real updateLastLogin is deeply coupled to DBQuery, so we test the
+ * distinct-login decision directly. This mirrors the inline check inside
+ * dbUserUtil.updateLastLogin: loginCount only increments when the previous
+ * login is at least LOGIN_COUNT_MIN_GAP_MS old, so the many identified
+ * requests fired within a single visit count as one login.
+ */
+function isDistinctLogin(nowMs: number, prevLastLoginAt: number | undefined): boolean
+{
+    return nowMs - (prevLastLoginAt ?? 0) >= LOGIN_COUNT_MIN_GAP_MS;
+}
+
+describe("distinct-login gap for loginCount (Scenario 12)", () => {
+    it("minimum gap between distinct logins is one day", () => {
+        expect(LOGIN_COUNT_MIN_GAP_MS).toBe(1 * DAY_IN_MS);
+    });
+
+    it("requests within the gap belong to the same login", () => {
+        const now = Date.now();
+        expect(isDistinctLogin(now, now)).toBe(false);
+        expect(isDistinctLogin(now, now - 5000)).toBe(false);
+        expect(isDistinctLogin(now, now - LOGIN_COUNT_MIN_GAP_MS + 1)).toBe(false);
+    });
+
+    it("a request after the gap counts as a new distinct login", () => {
+        const now = Date.now();
+        expect(isDistinctLogin(now, now - LOGIN_COUNT_MIN_GAP_MS)).toBe(true);
+        expect(isDistinctLogin(now, now - 2 * LOGIN_COUNT_MIN_GAP_MS)).toBe(true);
+    });
+
+    it("a missing previous login timestamp counts as a distinct login", () => {
+        expect(isDistinctLogin(Date.now(), undefined)).toBe(true);
     });
 });

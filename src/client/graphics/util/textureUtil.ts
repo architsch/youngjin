@@ -25,17 +25,6 @@ const TextureUtil =
         material.uniforms.sourceTexture.value.needsUpdate = true;
 
         //------------------------------------------------------------
-        // Render the background
-        //------------------------------------------------------------
-
-        let x1 = -1 + 2 * targetU1;
-        let x2 = -1 + 2 * targetU2;
-        let y1 = -1 + 2 * targetV1;
-        let y2 = -1 + 2 * targetV2;
-        setQuadPositions(x1, y1, x2, y2);
-        renderToTarget(renderer, renderTarget, targetTexWidth, targetTexHeight);
-
-        //------------------------------------------------------------
         // Load the texture
         //------------------------------------------------------------
 
@@ -53,6 +42,11 @@ const TextureUtil =
         // See the section called "Fitting a Texture inside a Rectangular Region"
         // in @docs/geometry/texture.md for technical details.
         
+        let x1 = -1 + 2 * targetU1;
+        let x2 = -1 + 2 * targetU2;
+        let y1 = -1 + 2 * targetV1;
+        let y2 = -1 + 2 * targetV2;
+
         // As = Aspect Ratio of the Source Texture (its sampled sub-region, to be precise)
         const As = (texture.image?.width && texture.image?.height)
             ? (texture.image.width * (sourceU2 - sourceU1)) / (texture.image.height * (sourceV2 - sourceV1))

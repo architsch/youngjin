@@ -16,7 +16,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
     const quadIndex = props.selection.quadIndex;
     const selectedTextureIndex = App.getVoxelQuads()[quadIndex] & 0b01111111;
 
-    const materialParams = VoxelGameObject.latestMaterialParams;
+    const materialParams = VoxelGameObject.materialParams;
     if (!materialParams)
         return null;
     const numCols = materialParams.textureWidth / materialParams.textureGridCellWidth;

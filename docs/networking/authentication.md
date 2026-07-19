@@ -46,7 +46,7 @@ On the client, a connection error carrying an error-page URL triggers a redirect
 
 Reference: @src/server/db/util/dbUserUtil.ts , @src/server/system/serverConstants.ts , @src/server/server.ts
 
-Unused guest accounts are deleted by a periodic background task, which cycles through engagement tiers on successive runs. Each guest is classified by how often it has been used, and more engaged accounts are retained longer before becoming eligible for deletion:
+Unused guest accounts are deleted by a periodic background task, which cycles through engagement tiers on successive runs. Each guest is classified by how many distinct logins it has accumulated, and more engaged accounts are retained longer before becoming eligible for deletion. Requests arriving in close succession belong to the same visit and count as a single login; only a return after a sufficiently long period of inactivity counts as another. This keeps the many requests fired during one play session from inflating a guest's engagement tier.
 
 | Tier | Engagement | Retained |
 |------|------------|----------|
@@ -54,4 +54,6 @@ Unused guest accounts are deleted by a periodic background task, which cycles th
 | Casual | occasionally used | medium |
 | Dedicated | frequently used | longest |
 
-For the active tier, the task finds guests whose last login is older than that tier's cutoff and deletes them.
+For the active tier, the task finds guests whose last login is older than that tier's cutoff and deletes them. If the lookup for stale guests fails, the task logs the failure rather than silently treating it as "nothing to delete", so a persistently broken cleanup does not masquerade as a healthy one.
+
+The lookup requires a Firestore composite index; see the [deployment guide](../devOps/vps/deployment.md) for how indexes are kept in sync with the DB.

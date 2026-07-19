@@ -90,13 +90,6 @@ export default class InstancedMeshComposition
         return InstancedMeshCompositionCodecMap[this.codecType].encode(this.params, this.parts);
     }
 
-    // Rebuilds all the parts from the current params, by round-tripping them through
-    // the codec (which guarantees that the parts match what will be persisted).
-    rebuildParts()
-    {
-        this.decodeParts(this.encodeParts());
-    }
-
     // Rebuilds all the parts from the given encoded parameters (see "encodeParts").
     decodeParts(encodedParams: string)
     {

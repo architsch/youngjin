@@ -8,16 +8,18 @@ import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
+import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { texturePackURLObservable } from "../../system/clientObservables";
 
-let isDevMode: boolean | undefined;
+let debugEnabled: boolean = false;
 
 export default class VoxelGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
-    static latestMaterialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
+    static materialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
+    static instancedMeshId: string; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of the string)
 
     private voxel: Voxel | undefined;
 
@@ -29,14 +31,13 @@ export default class VoxelGameObject extends GameObject
         if (!this.instancedMeshGraphics)
             throw new Error("VoxelGameObject requires InstancedMeshGraphics component");
 
-        if (isDevMode === undefined)
-            isDevMode = App.getEnv().mode == "dev";
-
         const currentTexturePackURL = texturePackURLObservable.peek();
-        if (VoxelGameObject.latestMaterialParams?.texturePath !== currentTexturePackURL)
+        if (VoxelGameObject.materialParams?.texturePath !== currentTexturePackURL)
         {
-            VoxelGameObject.latestMaterialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
-            VoxelGameObject.latestMaterialParams.customMaterialId = VOXEL_TEXTURE_PACK_MATERIAL_ID;
+            VoxelGameObject.materialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
+            VoxelGameObject.materialParams.customMaterialId = VOXEL_TEXTURE_PACK_MATERIAL_ID;
+            VoxelGameObject.instancedMeshId = MeshDataUtil.getInstancedMeshId(
+                VOXEL_QUAD_GEOMETRY_ID, VoxelGameObject.materialParams.getMaterialId());
         }
     }
 
@@ -44,19 +45,18 @@ export default class VoxelGameObject extends GameObject
     {        
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
-        if (VoxelGameObject.latestMaterialParams == undefined)
+        if (VoxelGameObject.materialParams == undefined)
             throw new Error(`Voxel material hasn't been defined yet.`);
         await super.onSpawn();
 
         await this.instancedMeshGraphics.loadInstancedMesh(VOXEL_QUAD_GEOMETRY_ID,
-            VoxelGameObject.latestMaterialParams, NUM_VOXEL_QUADS_PER_ROOM, false);
+            VoxelGameObject.materialParams, NUM_VOXEL_QUADS_PER_ROOM, false);
 
         const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.reserveInstance(VOXEL_QUAD_GEOMETRY_ID,
-                VoxelGameObject.latestMaterialParams.getMaterialId(), quadIndex);
+            this.instancedMeshGraphics.reserveInstance(VoxelGameObject.instancedMeshId, quadIndex);
             this.updateVoxelQuadInstance(quadIndex);
         }
     }
@@ -70,8 +70,7 @@ export default class VoxelGameObject extends GameObject
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.unreserveInstance(VOXEL_QUAD_GEOMETRY_ID,
-                VoxelGameObject.latestMaterialParams!.getMaterialId(), quadIndex);
+            this.instancedMeshGraphics.unreserveInstance(VoxelGameObject.instancedMeshId, quadIndex);
         }
     }
 
@@ -116,7 +115,7 @@ export default class VoxelGameObject extends GameObject
             return;
         }
         this.updateVoxelQuadInstance(voxelQuadChange.quadIndex);
-        if (isDevMode)
+        if (debugEnabled)
             console.log(String(voxelQuadChange));
     }
 
@@ -147,8 +146,7 @@ export default class VoxelGameObject extends GameObject
             throw new Error(`Voxel hasn't been defined yet.`);
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxel, quadIndex);
-        this.instancedMeshGraphics.updateInstanceTransform(VOXEL_QUAD_GEOMETRY_ID,
-            VoxelGameObject.latestMaterialParams!.getMaterialId(), quadIndex,
+        this.instancedMeshGraphics.updateInstanceTransform(VoxelGameObject.instancedMeshId, quadIndex,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex, scaleX, scaleY);
     }
@@ -164,8 +162,7 @@ export default class VoxelGameObject extends GameObject
         const sampleScaleX = scaleX; // [0,1]
         const sampleScaleY = scaleY; // [0,1]
 
-        this.instancedMeshGraphics.updateInstanceTextureUV(VOXEL_QUAD_GEOMETRY_ID,
-            VoxelGameObject.latestMaterialParams!.getMaterialId(), quadIndex,
+        this.instancedMeshGraphics.updateInstanceTextureUV(VoxelGameObject.instancedMeshId, quadIndex,
             quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }
 }

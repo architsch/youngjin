@@ -1,12 +1,18 @@
+import * as THREE from "three";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { INSTANCED_COLOR_MATERIAL_ID, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
-import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import GameObject from "../types/gameObject";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
+import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
+
+// Precomputed "+materialId" suffixes, so the refresh loop can branch on a part's material without
+// splitting its instancedMeshId (see MeshDataUtil.getInstancedMeshId for the id's format).
+const INSTANCED_COLOR_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_COLOR_MATERIAL_ID);
+const INSTANCED_EYE_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_EYE_MATERIAL_ID);
 
 export default class InstancedMeshComposer extends GameObjectComponent
 {
@@ -14,7 +20,20 @@ export default class InstancedMeshComposer extends GameObjectComponent
     private instancedMeshComposition: InstancedMeshComposition;
     private instanceIdsByInstancedMeshId: {[instancedMeshId: string]: number[]} = {};
     private nextIndexByInstancedMeshIdTemp: {[instancedMeshId: string]: number} = {};
-    private instancedMeshUpdateOngoing: boolean = false;
+
+    // The composer's update pipeline, expressed as a single state variable:
+    //   "refreshPending" - a full refresh is due (composition/visibility changed, or just spawned).
+    //                      update() first ensures every part's instanced mesh is loaded, then
+    //                      refreshes and settles into "upToDate".
+    //   "meshesLoading"  - an asynchronous instanced-mesh load is in flight; update() waits.
+    //   "upToDate"       - instances mirror the current parts; only movement triggers re-baking.
+    private updateState: "refreshPending" | "meshesLoading" | "upToDate" = "refreshPending";
+
+    // The instance matrices bake the GameObject's world transform (see InstancedMeshBinding), so a
+    // refresh is due not only when the composition changes but whenever the object moves. This holds
+    // the visual node's world matrix as of the last refresh, so stationary frames can be skipped.
+    private bakedWorldMatrix: THREE.Matrix4 = new THREE.Matrix4();
+
     private hidden: boolean = false;
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
@@ -32,6 +51,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
     async onSpawn(): Promise<void>
     {
         this.instancedMeshComposition.loadFromMetadata(this.gameObject);
+        this.updateState = "refreshPending";
     }
 
     async onDespawn(): Promise<void>
@@ -40,11 +60,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
         for (const instancedMeshId in this.instanceIdsByInstancedMeshId)
         {
             const instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
-            const ids = instancedMeshId.split("+");
-            const geometryId = ids[0];
-            const materialId = ids[1];
             for (const instanceId of instanceIds)
-                this.instancedMeshGraphics.returnInstanceToPool(geometryId, materialId, instanceId);
+                this.instancedMeshGraphics.returnInstanceToPool(instancedMeshId, instanceId);
         }
     }
 
@@ -53,16 +70,33 @@ export default class InstancedMeshComposer extends GameObjectComponent
         if (key !== ObjectMetadataKeyEnumMap.InstancedMeshComposition)
             return;
         this.instancedMeshComposition.loadFromMetadata(this.gameObject);
+        this.updateState = "refreshPending";
     }
 
     update(deltaTime: number)
     {
-        this.updateInstancedMeshes();
+        switch (this.updateState)
+        {
+            case "refreshPending": // Composition has been modified, so it needs a refresh.
+                if (this.allPartMeshesAreLoaded())
+                    this.refreshInstancedMeshes(); // Upon termination, this function call sets "updateState" to "upToDate".
+                else
+                    this.loadInstancedMeshes(); // Upon start, this function call sets "updateState" to "meshesLoading".
+                break;
+            case "upToDate":
+                if (!this.transformIsInSync())
+                    this.refreshInstancedMeshes();
+                break;
+            // Otherwise (i.e. updateState === "meshesLoading"), the meshes are still loading so we must skip this 'update' frame.
+        }
     }
 
     setHidden(hidden: boolean)
     {
+        if (this.hidden === hidden)
+            return;
         this.hidden = hidden;
+        this.updateState = "refreshPending";
     }
 
     saveParts()
@@ -76,6 +110,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
     decodeParts(encodedParams: string)
     {
         this.instancedMeshComposition.decodeParts(encodedParams);
+        this.updateState = "refreshPending";
     }
     getParams(): InstancedMeshCompositionParams
     {
@@ -83,65 +118,57 @@ export default class InstancedMeshComposer extends GameObjectComponent
     }
     rebuildParts()
     {
-        this.instancedMeshComposition.rebuildParts();
-    }
-    getParts(): InstancedMeshCompositionPart[]
-    {
-        return this.instancedMeshComposition.parts;
-    }
-    addPart(part: InstancedMeshCompositionPart)
-    {
-        this.instancedMeshComposition.parts.push(part);
-    }
-    updatePart(instancedMeshId: string, instanceId: number, partNew: InstancedMeshCompositionPart)
-    {
-        const partIndex = this.getPartIndex(instancedMeshId, instanceId);
-        this.updatePartAtIndex(partIndex, partNew);
-    }
-    updatePartAtIndex(partIndex: number, partNew: InstancedMeshCompositionPart)
-    {
-        if (partIndex >= 0)
-            this.instancedMeshComposition.parts[partIndex] = partNew;
-        else
-            console.error(`InstancedMeshComposer::updatePartAtIndex :: Part not found (partIndex = ${partIndex}, partNew = ${JSON.stringify(partNew)})`);
-    }
-    removePart(instancedMeshId: string, instanceId: number)
-    {
-        const partIndex = this.getPartIndex(instancedMeshId, instanceId);
-        if (partIndex >= 0)
-            this.instancedMeshComposition.parts.splice(partIndex, 1);
-        else
-            console.error(`InstancedMeshComposer::removePart :: Part not found (partIndex = ${partIndex})`);
+        this.decodeParts(this.encodeParts());
     }
 
-    private getPartIndex(instancedMeshId: string, instanceId: number): number
+    private allPartMeshesAreLoaded(): boolean
     {
-        let instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
-        if (instanceIds == undefined)
-        {
-            console.error(`InstancedMeshComposer::getPartIndex :: InstanceIds not found (instancedMeshId = ${instancedMeshId}, instanceId = ${instanceId})`);
-            return -1;
-        }
-
-        let index = -1;
         const parts = this.instancedMeshComposition.parts;
         for (let i = 0; i < parts.length; ++i)
         {
-            if (parts[i].instancedMeshId != instancedMeshId)
-                continue;
-            if (instanceIds[++index] === instanceId)
-                return i;
+            if (!this.instancedMeshGraphics.instancedMeshIsLoaded(parts[i].instancedMeshId))
+                return false;
         }
-        console.error(`InstancedMeshComposer::getPartIndex :: Part not found (instancedMeshId = ${instancedMeshId}, instanceId = ${instanceId})`);
-        return -1;
+        return true;
     }
 
-    private async updateInstancedMeshes()
+    // True while the visual node's world matrix still matches the one the instances were last baked
+    // under — i.e. the GameObject hasn't moved (nor bounced via a cosmetic transform) since the
+    // last refresh, so the baked instance matrices are still valid.
+    private transformIsInSync(): boolean
     {
-        if (this.instancedMeshUpdateOngoing)
-            return;
-        this.instancedMeshUpdateOngoing = true;
+        this.gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
+        return this.gameObject.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
+    }
 
+    private async loadInstancedMeshes()
+    {
+        this.updateState = "meshesLoading";
+        try
+        {
+            const parts = this.instancedMeshComposition.parts;
+            for (let i = 0; i < parts.length; ++i)
+            {
+                const ids = parts[i].instancedMeshId.split("+");
+                const geometryId = ids[0];
+                const materialId = ids[1];
+                await this.instancedMeshGraphics.loadInstancedMesh(
+                    geometryId, MaterialParamsMap.getParamsById(materialId),
+                    this.componentConfig.maxNumInstancesPerMesh, true);
+            }
+        }
+        catch (error)
+        {
+            console.error(`InstancedMeshComposer::loadInstancedMeshes :: Failed to load an instanced mesh:`, error);
+        }
+        finally
+        {
+            this.updateState = "refreshPending";
+        }
+    }
+
+    private refreshInstancedMeshes()
+    {
         for (const instancedMeshId in this.nextIndexByInstancedMeshIdTemp)
             this.nextIndexByInstancedMeshIdTemp[instancedMeshId] = 0;
 
@@ -149,55 +176,47 @@ export default class InstancedMeshComposer extends GameObjectComponent
         for (let i = 0; i < parts.length; ++i)
         {
             const part = parts[i];
-            let nextIndex = this.nextIndexByInstancedMeshIdTemp[part.instancedMeshId];
+            const instancedMeshId = part.instancedMeshId;
+            let nextIndex = this.nextIndexByInstancedMeshIdTemp[instancedMeshId];
             if (nextIndex == undefined)
             {
                 nextIndex = 0;
-                this.nextIndexByInstancedMeshIdTemp[part.instancedMeshId] = 1;
+                this.nextIndexByInstancedMeshIdTemp[instancedMeshId] = 1;
             }
             else
             {
-                this.nextIndexByInstancedMeshIdTemp[part.instancedMeshId]++;
+                this.nextIndexByInstancedMeshIdTemp[instancedMeshId]++;
             }
 
-            let instanceIds = this.instanceIdsByInstancedMeshId[part.instancedMeshId];
+            let instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
             if (instanceIds == undefined)
             {
                 instanceIds = [];
-                this.instanceIdsByInstancedMeshId[part.instancedMeshId] = instanceIds;
+                this.instanceIdsByInstancedMeshId[instancedMeshId] = instanceIds;
             }
 
-            const ids = part.instancedMeshId.split("+");
-            const geometryId = ids[0];
-            const materialId = ids[1];
-
-            // Rent a new instance if needed.
+            // Rent a new instance if this part doesn't have one yet.
             let instanceId = instanceIds[nextIndex];
             if (instanceId == undefined)
             {
-                // Ensure that the necessary InstancedMesh has been loaded.
-                await this.instancedMeshGraphics.loadInstancedMesh(
-                    geometryId, MaterialParamsMap.getParamsById(materialId),
-                    this.componentConfig.maxNumInstancesPerMesh, true);
-
-                instanceId = this.instancedMeshGraphics.rentInstanceFromPool(geometryId, materialId);
+                instanceId = this.instancedMeshGraphics.rentInstanceFromPool(instancedMeshId);
                 instanceIds.push(instanceId);
             }
 
             this.instancedMeshGraphics.updateInstanceTransform(
-                geometryId, materialId, instanceId,
+                instancedMeshId, instanceId,
                 part.offset.x, this.hidden ? -9999 : part.offset.y, part.offset.z,
                 part.dir.x, part.dir.y, part.dir.z, part.scale.x, part.scale.y, part.scale.z);
-            if (materialId == INSTANCED_COLOR_MATERIAL_ID)
+            if (instancedMeshId.endsWith(INSTANCED_COLOR_SUFFIX))
             {
                 this.instancedMeshGraphics.updateInstanceColor(
-                    geometryId, materialId, instanceId,
+                    instancedMeshId, instanceId,
                     part.color!.x, part.color!.y, part.color!.z);
             }
-            else if (materialId == INSTANCED_EYE_MATERIAL_ID)
+            else if (instancedMeshId.endsWith(INSTANCED_EYE_SUFFIX))
             {
                 this.instancedMeshGraphics.updateInstanceEyeColors(
-                    geometryId, materialId, instanceId,
+                    instancedMeshId, instanceId,
                     part.pupilColor!.x, part.pupilColor!.y, part.pupilColor!.z,
                     part.irisColor!.x, part.irisColor!.y, part.irisColor!.z);
 
@@ -207,31 +226,30 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 const maxEyeRadius = Math.max(part.pupilRadius!, part.irisRadius!);
                 const radiusToSideFraction = (maxEyeRadius > 0) ? (0.5 / maxEyeRadius) : 0;
                 this.instancedMeshGraphics.updateInstanceEyeRadii(
-                    geometryId, materialId, instanceId,
+                    instancedMeshId, instanceId,
                     part.pupilRadius! * radiusToSideFraction,
                     part.irisRadius! * radiusToSideFraction);
             }
         }
 
-        // Return obsolete instances.
+        // Return obsolete instances
         for (const instancedMeshId in this.nextIndexByInstancedMeshIdTemp)
         {
-            const nextIndex = this.nextIndexByInstancedMeshIdTemp[instancedMeshId];
-
+            const numInstancesInUse = this.nextIndexByInstancedMeshIdTemp[instancedMeshId];
             const instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
-            if (instanceIds !== undefined)
+            for (let obsoleteIndex = numInstancesInUse; obsoleteIndex < instanceIds.length; ++obsoleteIndex)
             {
-                const ids = instancedMeshId.split("+");
-                const geometryId = ids[0];
-                const materialId = ids[1];
-                for (let obsoleteIndex = nextIndex; obsoleteIndex < instanceIds.length; ++obsoleteIndex)
-                {
-                    this.instancedMeshGraphics.returnInstanceToPool(
-                        geometryId, materialId, instanceIds[obsoleteIndex]);
-                }
-                instanceIds.length = nextIndex;
+                this.instancedMeshGraphics.returnInstanceToPool(
+                    instancedMeshId, instanceIds[obsoleteIndex]);
             }
+            instanceIds.length = numInstancesInUse;
         }
-        this.instancedMeshUpdateOngoing = false;
+
+        // Capture the world transform the instances were just baked under (see transformIsInSync).
+        // The extra updateMatrixWorld covers the zero-part case, where no bake refreshed it above.
+        this.gameObject.obj.updateMatrixWorld();
+        this.bakedWorldMatrix.copy(this.gameObject.visualObj.matrixWorld);
+
+        this.updateState = "upToDate";
     }
 }

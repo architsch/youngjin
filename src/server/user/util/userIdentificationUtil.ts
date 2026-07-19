@@ -110,7 +110,7 @@ async function getUserFromReq(req: Request, res: Response, updateLoginStats: boo
             if (dbUser)
             {
                 if (updateLoginStats)
-                    DBUserUtil.updateLastLogin(userId);
+                    DBUserUtil.updateLastLogin(userId, dbUser.lastLoginAt);
                 return DBUserUtil.fromDBType(dbUser);
             }
         }

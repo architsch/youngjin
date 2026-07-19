@@ -276,7 +276,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | user without a room cannot change textures | 403 returned |
 | request without texturePackPath is rejected | 400 returned for the missing field |
 
-## Authentication Lifecycle (`auth-lifecycle.test.ts`) — 16 tests
+## Authentication Lifecycle (`auth-lifecycle.test.ts`) — 20 tests
 
 ### Google OAuth (Scenario 10)
 
@@ -304,10 +304,14 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 
 | Test | What it verifies |
 |------|-----------------|
-| identifyAnyUser calls updateLastLogin for an existing user | Page-level identification (`/`) increments `loginCount` |
-| identifyRegisteredUser does NOT call updateLastLogin | API-level identification does not increment `loginCount` |
-| identifyAdmin does NOT call updateLastLogin | Admin-level identification does not increment `loginCount` |
+| identifyAnyUser calls updateLastLogin with the user's stored lastLoginAt | Page-level identification (`/`) updates login stats, passing the previous login time |
+| identifyRegisteredUser does NOT call updateLastLogin | API-level identification does not update login stats |
+| identifyAdmin does NOT call updateLastLogin | Admin-level identification does not update login stats |
 | multiple API calls via identifyRegisteredUser do not inflate loginCount | Repeated API identifications never call `updateLastLogin` |
+| minimum gap between distinct logins is one day | Pins `LOGIN_COUNT_MIN_GAP_MS` to `1 * DAY_IN_MS` |
+| requests within the gap belong to the same login | Same-visit requests do not count as new logins |
+| a request after the gap counts as a new distinct login | A return after the inactivity gap increments `loginCount` |
+| a missing previous login timestamp counts as a distinct login | Absent `lastLoginAt` defaults to counting the login |
 
 ## Test Count Summary
 
@@ -327,5 +331,5 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Property-Based | 17 |
 | Room Ownership | 7 |
 | Room API | 12 |
-| Authentication Lifecycle | 16 |
-| **Total** | **175** |
+| Authentication Lifecycle | 20 |
+| **Total** | **179** |

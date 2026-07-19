@@ -51,8 +51,19 @@ You should also see the runner listed as "Idle" in the repository's `Settings ->
 - **Re-register the runner**: If the runner becomes stale, remove it with `./config.sh remove --token <TOKEN>` and repeat step 4 onwards.
 - **File permission issues**: If the browser cannot fetch files served by Nginx from the runner's working directory, see the `chmod` command in the [Important Notes](basic-setup.md#important-notes) section.
 
+## Firestore Composite Indexes
+
+`firestore.indexes.json` defines the composite indexes required by the server's Firestore queries (e.g. the stale-guest cleanup query filters on `userType` equality plus a `lastLoginAt` range, which Firestore can only serve with a composite index).
+
+Important details:
+
+- **Composite indexes match by collection ID.** The staging server stores its data in `staging_`-prefixed collections within the same Firebase project as the live server, so every composite index needed by the live (unprefixed) collections must have a twin entry for its `staging_`-prefixed counterpart. An index defined only for `users` does nothing for `staging_users`.
+- **The staging deploy workflow deploys indexes automatically.** On every push to `main`, `deploy-staging.yml` runs `npx firebase-tools deploy --only firestore:indexes --project thingspool`, authenticated via the service-account key already present on the VPS (`GOOGLE_APPLICATION_CREDENTIALS=/root/service-account-key.json`). This never deletes indexes that exist in the Firebase console but are absent from the file (firebase-tools requires `--force` for deletions).
+- **Manual deployment** from a dev machine: `firebase deploy --only firestore:indexes` (the project is taken from `.firebaserc`).
+- **The Firestore emulator does not enforce composite indexes**, so a missing index never reproduces in local dev — the affected queries only start failing (with `FAILED_PRECONDITION`) against the real Firestore backend. If a server-side query silently returns no results in staging/live but works locally, check the process logs for "DB Query Error" and verify the index exists in the Firebase console (`Firestore -> Indexes`).
+
 ## Workflows
 
-- `.github/workflows/deploy-staging.yml` - Workflow for automatically deploying the app bundles to the VPS whenever "git push" happens.
+- `.github/workflows/deploy-staging.yml` - Workflow for automatically deploying the app bundles and Firestore composite indexes to the VPS whenever "git push" happens.
 - `.github/workflows/promote-live.yml` - Workflow for applying the staging apps to the live apps.
 - `.github/workflows/rollback-live.yml` - Workflow for rolling back the latest live apps to their previous backup copies (in case the latest ones happen to be problematic).

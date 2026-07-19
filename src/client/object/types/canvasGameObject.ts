@@ -12,11 +12,13 @@ import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
+import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 
 export default class CanvasGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
-    static latestMaterialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
+    static materialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
+    static instancedMeshId: string; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of the string)
     static spawnedCanvasGameObjects: Map<string, CanvasGameObject> = new Map();
     private static loadQueue: Promise<void> = Promise.resolve();
 
@@ -30,27 +32,28 @@ export default class CanvasGameObject extends GameObject
         if (!this.instancedMeshGraphics)
             throw new Error("CanvasGameObject requires InstancedMeshGraphics component");
 
-        if (CanvasGameObject.latestMaterialParams == undefined)
+        if (CanvasGameObject.materialParams == undefined)
         {
             // The polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
-            CanvasGameObject.latestMaterialParams = new InstancedTexturePackMaterialParams("canvas_texture_pack",
+            CanvasGameObject.materialParams = new InstancedTexturePackMaterialParams("canvas_texture_pack",
                 2048, 2048, 256, 256, "dynamicEmpty", -1, -1);
+            CanvasGameObject.instancedMeshId = MeshDataUtil.getInstancedMeshId(
+                CANVAS_GEOMETRY_ID, CanvasGameObject.materialParams.getMaterialId());
         }
     }
 
     async onSpawn(): Promise<void>
     {
-        if (CanvasGameObject.latestMaterialParams == undefined)
+        if (CanvasGameObject.materialParams == undefined)
             throw new Error(`Canvas material hasn't been defined yet.`);
         await super.onSpawn();
 
         CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
 
         await this.instancedMeshGraphics.loadInstancedMesh(CANVAS_GEOMETRY_ID,
-            CanvasGameObject.latestMaterialParams, MAX_CANVASES_PER_ROOM, true);
+            CanvasGameObject.materialParams, MAX_CANVASES_PER_ROOM, true);
 
-        this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool(CANVAS_GEOMETRY_ID,
-            CanvasGameObject.latestMaterialParams.getMaterialId());
+        this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool(CanvasGameObject.instancedMeshId);
         this.updateMeshInstanceTransform();
         this.loadImage();
     }
@@ -64,8 +67,7 @@ export default class CanvasGameObject extends GameObject
     async onDespawn(): Promise<void>
     {
         await super.onDespawn();
-        this.instancedMeshGraphics.returnInstanceToPool(CANVAS_GEOMETRY_ID,
-            CanvasGameObject.latestMaterialParams!.getMaterialId(), this.instanceId);
+        this.instancedMeshGraphics.returnInstanceToPool(CanvasGameObject.instancedMeshId, this.instanceId);
 
         // Mark as despawned (in order to inform a potentially pending
         // "loadImageImpl" task that the canvas's mesh instance is now obsolete
@@ -111,18 +113,17 @@ export default class CanvasGameObject extends GameObject
         if (this.instanceId === -1) // Already despawned
             return;
 
-        const materialId = CanvasGameObject.latestMaterialParams!.getMaterialId();
         const textureIndex = this.instanceId % 64;
-        this.instancedMeshGraphics.updateInstanceTextureUV(CANVAS_GEOMETRY_ID, materialId,
+        this.instancedMeshGraphics.updateInstanceTextureUV(CanvasGameObject.instancedMeshId,
             this.instanceId, textureIndex);
 
         const frameCellCoords = this.getFrameCellCoords();
-        await this.drawFrame(materialId, textureIndex, frameCellCoords);
-        await this.drawImage(materialId, textureIndex, frameCellCoords);
+        await this.drawFrame(textureIndex, frameCellCoords);
+        await this.drawImage(textureIndex, frameCellCoords);
     }
 
     // Draws the chosen picture frame's atlas cell so it fills this canvas's render-target cell.
-    private async drawFrame(materialId: string, textureIndex: number, frameCellCoords: string)
+    private async drawFrame(textureIndex: number, frameCellCoords: string)
     {
         const words = frameCellCoords.split(",");
         const col = parseInt(words[0]);
@@ -136,7 +137,7 @@ export default class CanvasGameObject extends GameObject
         const frameAtlasURL = `${App.getEnv().assets_url}/${CANVAS_FRAME_ATLAS_PATH}`;
         try
         {
-            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+            await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
                 textureIndex, frameAtlasURL, 1, 1,
                 col / numCols, (numRows - 1 - row) / numRows,
                 (col + 1) / numCols, (numRows - row) / numRows,
@@ -146,13 +147,13 @@ export default class CanvasGameObject extends GameObject
         {
             console.warn(`Failed to load canvas frame (objectId=${this.params.objectId}, coords=${frameCellCoords}):`, error);
             // Paint a placeholder color so the cell isn't stuck showing the old frame
-            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+            await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
                 textureIndex, "");
         }
     }
 
     // Draws the canvas's image over the frame's inner window (scaled down so it fits inside it).
-    private async drawImage(materialId: string, textureIndex: number, frameCellCoords: string)
+    private async drawImage(textureIndex: number, frameCellCoords: string)
     {
         const imageDrawScale = CanvasFrameInnerWindowMap.getImageDrawScale(frameCellCoords);
 
@@ -164,14 +165,14 @@ export default class CanvasGameObject extends GameObject
         {
             // An empty URL paints the placeholder color, which still needs to happen so that
             // the frame's placeholder-colored inner window never shows through.
-            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+            await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
                 textureIndex, imageURL, imageDrawScale, imageDrawScale);
         }
         catch (error)
         {
             console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadata?.str}):`, error);
             // Paint a placeholder color so the canvas isn't stuck showing the old image
-            await this.instancedMeshGraphics.drawImageAtIndex(CANVAS_GEOMETRY_ID, materialId,
+            await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
                 textureIndex, "", imageDrawScale, imageDrawScale);
         }
     }
@@ -198,8 +199,7 @@ export default class CanvasGameObject extends GameObject
         // rotates this local direction into world space by the obj's orientation. The quad sits
         // slightly in front of the wall (assisted by the material's polygon offset).
         this.instancedMeshGraphics.updateInstanceTransform(
-            CANVAS_GEOMETRY_ID,
-            CanvasGameObject.latestMaterialParams!.getMaterialId(),
+            CanvasGameObject.instancedMeshId,
             this.instanceId,
             0, 0, 0.001,
             0, 0, 1,
