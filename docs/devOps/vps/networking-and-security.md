@@ -1,6 +1,6 @@
 # VPS Networking & Security
 
-> Part of the [VPS Hosting Guide](./) — see also: [Basic Setup](basic-setup.md), [Deployment](deployment.md), [Maintenance](maintenance.md)
+> Part of the [VPS Hosting Guide](./) — see also: [Basic Setup](basic-setup.md), [Deployment](deployment.md), [Maintenance](maintenance.md), [Firebase & Google Cloud](../firebase.md)
 
 ## Firewall rules for the VPS
 
@@ -69,12 +69,9 @@ ssh root@222.239.251.208 "pkill -f certbot"
 
 ## Firebase Admin SDK Credentials setup for the VPS
 
-1. Make sure that there is a service account for Firebase.
+1. Make sure that there is a service account for Firebase (`firebase-adminsdk-fbsvc@thingspool.iam.gserviceaccount.com`).
 
-2. Make sure that this service account has the following roles:
-    - `Datastore User`
-    - `Object Admin`
-    - `Secret Manager Secret Accessor`
+2. Make sure that this service account has all the IAM roles listed in [Firebase & Google Cloud → IAM roles](../firebase.md#iam-roles). Because this same account is reused by the CI index-deploy step, it needs both the runtime roles **and** the CI/CD roles — not just the runtime ones.
 
 3. Go to `Firebase Console -> Project settings -> Service accounts -> Firebase Admin SDK` and click `Generate new private key` to download a new JSON file.
 

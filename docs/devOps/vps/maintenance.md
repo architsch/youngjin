@@ -8,6 +8,7 @@
 ```
 ssh root@222.239.251.208
 ```
+(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound_rules_incoming_traffic_to_the_VPS))
 
 2. Check which kernel is currently running:
 ```

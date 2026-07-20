@@ -36,6 +36,14 @@ Fitting a circular cross section inside a 4x4 grid space will make the circle to
 
 The solution is to make the circle just as large as to let it fully cover the middle 2 grid cells (on every side of the 4x4 grid space), but not larger. It happens to be the case that, at this particular size, the area of the circle is approximately 15.708, which is very close to that of a 4x4 grid (i.e. 16). In addition, this exact size lets us safely attach other geometric shapes that are adjacent to at least the middle 2 grid cells on each side, without leaving unexpected spatial gaps.
 
+### Surface Material
+
+The player's solid forms are rendered with the `InstancedTin` material, which treats the color the user picked for a body part as aged paint over sheet metal instead of as a flat fill, so that the character reads as an antique tin toy rather than as a plastic figurine. The material derives the whole effect procedurally from the fragment's position within its own part, without any texture: paint wears through to bare metal along the part's edges and corners, corrosion blooms out of those worn spots and across scattered patches, and a fine grain mottles both the paint and its sheen. The metallic impression comes mostly from the sheen, which the material varies across the surface — bare metal glints, intact paint stays glossy, and corroded areas turn matte.
+
+The sheen also has to account for the scene's lamp being mounted on the camera. With the light and the viewer sharing a position, the usual highlight model degenerates: every surface turned toward the viewer peaks at once, so flat faces flare to the lamp's color all at the same time, and the angular falloff that distinguishes metal from plastic disappears. The material therefore derives its own falloff from the viewing angle, keeping the sheen restrained where a surface faces the viewer squarely and letting it rise toward the piece's silhouette — the way a real metal surface behaves. A highlight is additionally compressed as it grows, so that a piece lit from close up approaches white without ever flattening into a featureless patch.
+
+The player's face is the deliberate exception: it is drawn on flat squares that keep the plain instance-colored material, so that the eyes stay clean and legible instead of being eaten into by the weathering.
+
 ### Eyes on a Curved Surface
 
 Since the player's eyes are flat patches of color rendered on a flat surface, it can be problematic if we try to render the eyes on the side of a cylinder. Therefore, it is necessary to pad the cylinder's side with a box so as to provide a flat surface for the eyes. The figure top-down view illustrates how this solution is implemented. The circle shape is a cross section of the cylinder (which is the player's head).

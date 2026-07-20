@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { INSTANCED_COLOR_MATERIAL_ID, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
 import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import GameObject from "../types/gameObject";
@@ -11,8 +11,19 @@ import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 
 // Precomputed "+materialId" suffixes, so the refresh loop can branch on a part's material without
 // splitting its instancedMeshId (see MeshDataUtil.getInstancedMeshId for the id's format).
-const INSTANCED_COLOR_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_COLOR_MATERIAL_ID);
+const INSTANCE_COLORED_SUFFIXES = INSTANCE_COLORED_MATERIAL_IDS.map(
+    (materialId) => MeshDataUtil.getInstancedMeshId("", materialId));
 const INSTANCED_EYE_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_EYE_MATERIAL_ID);
+
+function usesInstanceColor(instancedMeshId: string): boolean
+{
+    for (let i = 0; i < INSTANCE_COLORED_SUFFIXES.length; ++i)
+    {
+        if (instancedMeshId.endsWith(INSTANCE_COLORED_SUFFIXES[i]))
+            return true;
+    }
+    return false;
+}
 
 export default class InstancedMeshComposer extends GameObjectComponent
 {
@@ -207,7 +218,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 instancedMeshId, instanceId,
                 part.offset.x, this.hidden ? -9999 : part.offset.y, part.offset.z,
                 part.dir.x, part.dir.y, part.dir.z, part.scale.x, part.scale.y, part.scale.z);
-            if (instancedMeshId.endsWith(INSTANCED_COLOR_SUFFIX))
+            if (usesInstanceColor(instancedMeshId))
             {
                 this.instancedMeshGraphics.updateInstanceColor(
                     instancedMeshId, instanceId,

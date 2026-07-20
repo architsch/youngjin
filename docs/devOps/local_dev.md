@@ -2,7 +2,7 @@
 
 ## Prerequisite
 
-1. Log into Google Cloud by running the following command. This will allow `devRunner.js` to fetch secrets from Google Secret Manager based on the local credentials.
+1. Log into Google Cloud by running the following command. This will allow `devRunner.js` to fetch secrets from Google Secret Manager based on the local credentials. For the full picture of the project, service account, and secrets, see [Firebase & Google Cloud](firebase.md).
 ```
 gcloud auth application-default login
 ```

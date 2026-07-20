@@ -61,7 +61,7 @@
 ### `/docs` - Documents explaining technical details
 - **`/devOps`** - Local Development, VPS
 - **`/geometry`** - Voxel grid, physics, room generation/entrance, wall-attached objects, textures, player customization
-- **`/graphics`** - Camera control, instanced mesh composition
+- **`/graphics`** - Camera control, instanced mesh composition, image map
 - **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode
 - **`/testing`** - E2E and integration test workflows, framework, and scenario coverage
 

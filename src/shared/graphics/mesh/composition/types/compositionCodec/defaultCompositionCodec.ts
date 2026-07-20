@@ -1,6 +1,6 @@
 import Vec3 from "../../../../../math/types/vec3";
 import StringUtil from "../../../../../math/util/stringUtil";
-import { GEOMETRY_CODE_BY_ID, GEOMETRY_ID_BY_CODE, INSTANCED_COLOR_MATERIAL_ID, MATERIAL_CODE_BY_ID, MATERIAL_ID_BY_CODE } from "../../../../../system/sharedConstants";
+import { GEOMETRY_CODE_BY_ID, GEOMETRY_ID_BY_CODE, INSTANCE_COLORED_MATERIAL_IDS, MATERIAL_CODE_BY_ID, MATERIAL_ID_BY_CODE } from "../../../../../system/sharedConstants";
 import MeshDataUtil from "../../../util/meshDataUtil";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
@@ -29,7 +29,7 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
             partChars.push(StringUtil.convertNumberToVisibleASCII(part.scale.x, 0, 2.5));
             partChars.push(StringUtil.convertNumberToVisibleASCII(part.scale.y, 0, 2.5));
             partChars.push(StringUtil.convertNumberToVisibleASCII(part.scale.z, 0, 2.5));
-            if (materialId == INSTANCED_COLOR_MATERIAL_ID)
+            if (INSTANCE_COLORED_MATERIAL_IDS.includes(materialId))
             {
                 partChars.push(StringUtil.convertNumberToVisibleASCII(part.color!.x, 0, 255));
                 partChars.push(StringUtil.convertNumberToVisibleASCII(part.color!.y, 0, 255));
@@ -72,7 +72,7 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
                 z: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 2.5, 1),
             };
 
-            if (materialId == INSTANCED_COLOR_MATERIAL_ID)
+            if (INSTANCE_COLORED_MATERIAL_IDS.includes(materialId))
             {
                 const color: Vec3 = {
                     x: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 255),

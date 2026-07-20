@@ -20,6 +20,7 @@ This section covers the full setup process for a fresh Ubuntu VPS. All commands 
 ```
 ssh root@222.239.251.208
 ```
+(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound_rules_incoming_traffic_to_the_VPS))
 
 ### 2. Update system packages
 

@@ -1,5 +1,6 @@
 import InstancedColorMaterialParams from "../types/instancedColorMaterialParams";
 import InstancedEyeMaterialParams from "../types/instancedEyeMaterialParams";
+import InstancedTinMaterialParams from "../types/instancedTinMaterialParams";
 import MaterialParams from "../types/materialParams";
 
 const materialParamsConstructorByType: {[materialType: string]:
@@ -10,6 +11,9 @@ const materialParamsConstructorByType: {[materialType: string]:
     },
     "InstancedEye": (...options: string[]) => {
         return new InstancedEyeMaterialParams();
+    },
+    "InstancedTin": (...options: string[]) => {
+        return new InstancedTinMaterialParams();
     },
 }
 const cachedMaterialParamsById: {[materialId: string]: MaterialParams} = {};

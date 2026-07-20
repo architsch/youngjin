@@ -90,9 +90,12 @@ function getBuilder(partName: string, partType: number)
 
 function getBaseParams(): PlayerCompositionParams
 {
+    // The player's solid forms are made of aged, faintly rusted sheet metal ("InstancedTin"), which
+    // gives the robot the look of an antique tin toy. The squares are the exception: they only carry
+    // the face, whose painted-on look should stay flat and clean.
     const ids = {
-        instancedMeshId_box: MeshDataUtil.getInstancedMeshId("Box", "InstancedColor"),
-        instancedMeshId_cylinder: MeshDataUtil.getInstancedMeshId("Cylinder", "InstancedColor"),
+        instancedMeshId_box: MeshDataUtil.getInstancedMeshId("Box", "InstancedTin"),
+        instancedMeshId_cylinder: MeshDataUtil.getInstancedMeshId("Cylinder", "InstancedTin"),
         instancedMeshId_square: MeshDataUtil.getInstancedMeshId("Square", "InstancedColor"),
     };
     const types = {head: 0, ear: 0, hat: 0, torso: 0, arm: 0, bottom: 0};

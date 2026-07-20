@@ -1,6 +1,6 @@
 # VPS Deployment
 
-> Part of the [VPS Hosting Guide](./) — see also: [Basic Setup](basic-setup.md), [Networking & Security](networking-and-security.md), [Maintenance](maintenance.md)
+> Part of the [VPS Hosting Guide](./) — see also: [Basic Setup](basic-setup.md), [Networking & Security](networking-and-security.md), [Maintenance](maintenance.md), [Firebase & Google Cloud](../firebase.md)
 
 ## Self-hosted GitHub Actions runner setup for the VPS
 
@@ -10,6 +10,7 @@ This section explains how to set up a self-hosted GitHub Actions runner on the V
 ```
 ssh root@222.239.251.208
 ```
+(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound_rules_incoming_traffic_to_the_VPS))
 
 2. Create a directory for the runner:
 ```
@@ -58,7 +59,7 @@ You should also see the runner listed as "Idle" in the repository's `Settings ->
 Important details:
 
 - **Composite indexes match by collection ID.** The staging server stores its data in `staging_`-prefixed collections within the same Firebase project as the live server, so every composite index needed by the live (unprefixed) collections must have a twin entry for its `staging_`-prefixed counterpart. An index defined only for `users` does nothing for `staging_users`.
-- **The staging deploy workflow deploys indexes automatically.** On every push to `main`, `deploy-staging.yml` runs `npx firebase-tools deploy --only firestore:indexes --project thingspool`, authenticated via the service-account key already present on the VPS (`GOOGLE_APPLICATION_CREDENTIALS=/root/service-account-key.json`). This never deletes indexes that exist in the Firebase console but are absent from the file (firebase-tools requires `--force` for deletions).
+- **The staging deploy workflow deploys indexes automatically.** On every push to `main`, `deploy-staging.yml` runs `npx firebase-tools deploy --only firestore:indexes --project thingspool`, authenticated via the service-account key already present on the VPS (`GOOGLE_APPLICATION_CREDENTIALS=/root/service-account-key.json`). This never deletes indexes that exist in the Firebase console but are absent from the file (firebase-tools requires `--force` for deletions). This step needs specific IAM roles on the service account beyond the app's runtime roles — if it fails with a `403`, see [Firebase & Google Cloud → IAM roles](../firebase.md#iam-roles) and the accompanying [Troubleshooting](../firebase.md#troubleshooting) table.
 - **Manual deployment** from a dev machine: `firebase deploy --only firestore:indexes` (the project is taken from `.firebaserc`).
 - **The Firestore emulator does not enforce composite indexes**, so a missing index never reproduces in local dev — the affected queries only start failing (with `FAILED_PRECONDITION`) against the real Firestore backend. If a server-side query silently returns no results in staging/live but works locally, check the process logs for "DB Query Error" and verify the index exists in the Firebase console (`Firestore -> Indexes`).
 
