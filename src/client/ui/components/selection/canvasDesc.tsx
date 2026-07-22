@@ -16,7 +16,7 @@ export default function CanvasDesc(props: {selection: ObjectSelection})
     const author = imageMetadata.author;
     const title = imageMetadata.title;
 
-    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
+    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
         <Text content={`Title: ${title}`} size="sm" color="gray"/>
         <Text content={`Author: ${author}`} size="sm" color="gray"/>
     </div>;

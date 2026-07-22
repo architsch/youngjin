@@ -81,6 +81,8 @@ export default function UIRoot({ env, user }: UIRootProps)
         ? RoomValidationUtil.canUserEditRoom(userRole, roomRuntimeMemory?.room)
         : false;
 
+    const isCustomizingPlayer = popupStack.some(state => state.popupType == "customizePlayer");
+
     const selectionUIShown = canModifyRoom && (objectSelection != null || voxelQuadSelection != null);
     const chatHidden = forceHideChat || !isRoomLoaded || selectionUIShown;
     const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || selectionUIShown;
@@ -90,6 +92,7 @@ export default function UIRoot({ env, user }: UIRootProps)
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
+            isCustomizingPlayer={isCustomizingPlayer}
         />}
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">

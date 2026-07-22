@@ -7,12 +7,12 @@ import { UserRole, UserRoleEnumMap } from "../../../../shared/user/types/userRol
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
 import UserAPIClient from "../../../networking/client/userAPIClient";
 import PopupUtil from "../../util/popupUtil";
-import { cameraModeObservable } from "../../../system/clientObservables";
 
 export default function UserRoomIdentity({
     user,
     userRole,
     currentRoomID,
+    isCustomizingPlayer,
 }: Props)
 {
     const isGuest = user.userType === UserTypeEnumMap.Guest;
@@ -23,30 +23,35 @@ export default function UserRoomIdentity({
         : userRole === UserRoleEnumMap.Editor ? "Editor"
         : "Visitor";
 
-    return <div className="flex flex-col justify-end gap-1 absolute right-0 top-0 py-1 px-2 text-right bg-gray-800/50 rounded-bl-lg">
-        <div className="flex flex-row items-end justify-end gap-2">
-            <div className="flex flex-row">
-                <div className="yj-text-sm text-amber-300">{user.userName}</div>
-                <div className="yj-text-xs text-gray-400">({roleName})</div>
+    return <div className="flex flex-col justify-end gap-1 absolute right-0 top-0 py-1 px-2 text-right rounded-bl-lg">
+        <div className="flex flex-row items-center justify-end gap-2">
+            {/* Tight leading keeps the stacked name + role shorter than the buttons
+                beside it, so the buttons alone drive the row's height. */}
+            <div className="flex flex-col items-end leading-tight px-1">
+                <div className="text-sm yj-text-outline text-amber-300">{user.userName}</div>
+                <div className="text-xs yj-text-outline text-gray-400">({roleName})</div>
             </div>
-            {isGuest && <Button name="Sign In" size="sm" onClick={() => PopupUtil.openPopup({popupType: "authPrompt"})}/>}
-            {!isGuest && <Button name="Sign Out" size="sm" onClick={() => PopupUtil.openPopup({
+            {isGuest && <Button name="Login" size="sm" onClick={() => PopupUtil.openPopup({popupType: "authPrompt"})}/>}
+            {!isGuest && <Button name="Logout" size="sm" onClick={() => PopupUtil.openPopup({
                     popupType: "confirm",
                     params: {
-                        message: "Want to sign out?",
+                        message: "Want to log out?",
                         onConfirm: logout,
                         onCancel: PopupUtil.closePopup
                     }
             })}/>}
+            {showConfigureButton && <IconButton icon={<GearIcon/>} size="sm" onClick={() => PopupUtil.openPopup({popupType: "configureMyRoom"})}/>}
+            {/* Toggles the player-customization form. Highlighting it while the form is
+                open is what tells the user that clicking it again closes the form. */}
+            <IconButton icon={<PersonIcon/>} size="sm" highlight={isCustomizingPlayer} onClick={() => {
+                if (isCustomizingPlayer)
+                    PopupUtil.closePopup();
+                else
+                    PopupUtil.openPopup({popupType: "customizePlayer"});
+            }}/>
         </div>
         <div className="flex flex-row items-end justify-end gap-2">
-            {showConfigureButton && <IconButton icon={<GearIcon/>} size="md" onClick={() => PopupUtil.openPopup({popupType: "configureMyRoom"})}/>}
-            <IconButton icon={<PersonIcon/>} size="md" onClick={() => {
-                if (cameraModeObservable.peek() == "firstPerson")
-                    PopupUtil.openPopup({popupType: "customizePlayer"});
-                else
-                    PopupUtil.closePopup();
-            }}/>
+
         </div>
     </div>;
 }
@@ -61,7 +66,7 @@ async function logout(): Promise<void>
     else
     {
         PopupUtil.closePopup();
-        alert("Failed to sign out. Please try again.");
+        alert("Failed to log out. Please try again.");
     }
 }
 
@@ -70,4 +75,5 @@ interface Props
     user: User;
     userRole: UserRole;
     currentRoomID: string;
+    isCustomizingPlayer: boolean;
 }

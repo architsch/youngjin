@@ -148,7 +148,7 @@ export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.25, z: 0.5};
 // Object Limits
 
 export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, used for rendering canvas images based on mesh instances, is an 8x8 grid
-export const MAX_PLAYERS_PER_ROOM = 256;
+export const MAX_PLAYERS_PER_ROOM = 64;
 
 // Gameplay
 

@@ -1,61 +1,36 @@
 import NumUtil from "./numUtil";
 import Vec3 from "../types/vec3";
 
-//------------------------------------------------------------------------
-// 94-color palette, mirroring the base-94 "Visible ASCII" encoding scheme
-// (see StringUtil) so that any color choice can be stored as a single printable character.
-// Composition: 10 grayscale levels + 12 hues x 7 saturation/lightness variants = 94 colors.
-//------------------------------------------------------------------------
-
-const NUM_GRAYSCALE_LEVELS = 10;
-const NUM_HUES = 12;
-const SATURATION_LIGHTNESS_VARIANTS: [number, number][] = [
-    [1.0, 0.2], // dark & vivid
-    [1.0, 0.35],
-    [1.0, 0.5], // pure hue
-    [1.0, 0.65],
-    [1.0, 0.8], // light & vivid (pastel)
-    [0.45, 0.35], // dark & muted
-    [0.45, 0.65], // light & muted
+const BASE_94_PALETTE_COLUMNS = 4;
+const BASE_94_PALETTE_HEX = [
+    // Neutrals and warm off-whites: only the few gray steps that read as distinct
+    "#000000", "#2a2a2a", "#979797", "#ffffff", "#f5e69f", "#c6b492",
+    // Earth tones
+    "#877666", "#622001", "#754921", "#ac4e00", "#cc903e", "#879000",
+    // Reds and pinks
+    "#95002d", "#ce0048", "#ff0324", "#ff715b", "#fdc3c7", "#fc38ab",
+    // Oranges and yellows
+    "#d86100", "#ff9e00", "#dec900", "#f5ff05", "#9bfe00", "#86c53a",
+    // Greens
+    "#006903", "#00ac0b", "#0a8a49", "#00ec63", "#9ce9a1", "#00d5b9",
+    // Teals and cyans
+    "#165258", "#009d9f", "#00f9fd", "#00b8de", "#82ccfd", "#bfe6f4",
+    // Blues
+    "#070081", "#0905ff", "#008bfe", "#516e9b", "#96a3f1", "#dbaef2",
+    // Purples and magentas
+    "#5700a3", "#8600ff", "#b76bec", "#a1009c", "#ec00fc", "#fa75ff",
 ];
 
-const palette: Vec3[] = [];
-for (let i = 0; i < NUM_GRAYSCALE_LEVELS; ++i)
+const palette: Vec3[] = BASE_94_PALETTE_HEX.map(hex =>
 {
-    const value = Math.round(255 * i / (NUM_GRAYSCALE_LEVELS - 1));
-    palette.push({x: value, y: value, z: value});
-}
-for (let hueIndex = 0; hueIndex < NUM_HUES; ++hueIndex)
-{
-    for (const [saturation, lightness] of SATURATION_LIGHTNESS_VARIANTS)
-        palette.push(hslToRGB(hueIndex / NUM_HUES, saturation, lightness));
-}
-
-// h, s, l = Hue, saturation, and lightness, each as a normalized number in range [0,1]
-// Returns RGB values in range [0,255]
-function hslToRGB(h: number, s: number, l: number): Vec3
-{
-    const q = (l < 0.5) ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    return {
-        x: Math.round(255 * hueToChannel(p, q, h + 1/3)),
-        y: Math.round(255 * hueToChannel(p, q, h)),
-        z: Math.round(255 * hueToChannel(p, q, h - 1/3)),
-    };
-}
-
-function hueToChannel(p: number, q: number, t: number): number
-{
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1/6) return p + (q - p) * 6 * t;
-    if (t < 1/2) return q;
-    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-    return p;
-}
+    const num = parseInt(hex.slice(1), 16);
+    return {x: (num >> 16) & 255, y: (num >> 8) & 255, z: num & 255};
+});
 
 const ColorUtil =
 {
+    base94PaletteSize: palette.length,
+    base94PaletteColumns: BASE_94_PALETTE_COLUMNS,
     // hex = Color expressed in a hexadecimal form (e.g. "#ffffff")
     // Returns RGB values in range [0,255]
     hexToRGB: (hex: string): Vec3 =>
@@ -78,7 +53,7 @@ const ColorUtil =
     {
         return "#" + [rgb.x, rgb.y, rgb.z].map(x => x.toString(16).padStart(2, "0")).join("");
     },
-    // index = index in a color palette which consists of 94 color choices.
+    // index = index in the color palette (see paletteSize)
     // Returns RGB values in range [0,255]
     base94IndexToRGB: (index: number): Vec3 =>
     {
@@ -86,7 +61,7 @@ const ColorUtil =
         return {x: color.x, y: color.y, z: color.z}; // Copied, so that the caller cannot mutate the palette.
     },
     // rgb = RGB values in range [0,255]
-    // Returns an index in a color palette which consists of 94 color choices.
+    // Returns an index in the color palette (see paletteSize)
     rgbToBase94Index: (rgb: Vec3): number =>
     {
         // Nearest palette entry, measured by squared distance in RGB space.

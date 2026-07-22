@@ -71,6 +71,14 @@
   .yj-text-lg {
     @apply px-6 py-2 text-lg font-semibold
   }
+  /* Black contour drawn around each glyph, so light-colored text stays legible
+     when it sits directly on top of a bright 3D scene. */
+  .yj-text-outline {
+    text-shadow:
+      -1px -1px 0 #000,  0   -1px 0 #000,  1px -1px 0 #000,
+      -1px  0   0 #000,                    1px  0   0 #000,
+      -1px  1px 0 #000,  0    1px 0 #000,  1px  1px 0 #000;
+  }
   .yj-panel-white {
     @apply text-gray-800 bg-gray-100 border border-gray-400 rounded-md pointer-events-auto
   }
@@ -82,5 +90,24 @@
   }
   .yj-panel-red {
     @apply text-pink-200 bg-pink-700 border border-pink-500 rounded-md pointer-events-auto
+  }
+  .yj-panel-white-no-outline {
+    @apply text-gray-800 bg-gray-100 rounded-md pointer-events-auto
+  }
+  .yj-panel-gray-no-outline {
+    @apply text-gray-200 bg-gray-700 rounded-md pointer-events-auto
+  }
+  .yj-panel-green-no-outline {
+    @apply text-green-200 bg-green-700 rounded-md pointer-events-auto
+  }
+  .yj-panel-red-no-outline {
+    @apply text-pink-200 bg-pink-700 rounded-md pointer-events-auto
+  }
+  /* Marks a button as being toggled on. Declared after the panel colors above so it
+     overrides their text/background/border, and it alters no box-model property, so
+     a highlighted button keeps the exact footprint of its unhighlighted self. */
+  .yj-panel-highlight {
+    @apply text-amber-100 bg-amber-600 border-amber-300;
+    box-shadow: 0 0 8px 2px rgba(253, 224, 71, 0.5);
   }
 }

@@ -8,12 +8,12 @@ import useMouseDragScroll from "../../util/mouseDragScroll";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
 import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
-import FormBase94ColorInput from "../basic/formBase94ColorInput";
-import FormRangeInput from "../basic/formRangeInput";
 import { cameraModeObservable, clientFeatureFlagsObservable } from "../../../system/clientObservables";
 import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import WorldSpaceSelectionUtil from "../../../graphics/util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import StepperInput from "../basic/stepperInput";
+import Base94ColorInput from "../basic/base94ColorInput";
 
 //------------------------------------------------------------------------
 // This form edits the player's composition by directly manipulating its
@@ -60,29 +60,25 @@ export default function CustomizePlayerForm()
     };
 
     return <div className="absolute bottom-0 left-0 w-full z-40 flex flex-col pointer-events-none">
-        <div className="m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700/90 rounded-lg pointer-events-auto">
-            <div className="flex flex-row items-center gap-2">
-                <Text content="Customize Character" size="sm"/>
-                <IconButton icon={<CloseIcon/>} size="sm" onClick={PopupUtil.closePopup} additionalClassNames="ml-auto"/>
-            </div>
+        <div className="relative m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto">
+            <IconButton icon={<CloseIcon/>} size="sm" onClick={PopupUtil.closePopup}
+                additionalClassNames="absolute right-0 bottom-full mb-1"/>
 
             <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
                 {partSlots.map((slot, slotIndex) =>
                     <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
-                        <div className="flex flex-col items-start gap-1 shrink-0">
-                            <Text content={slot.title} size="sm"/>
-                            <FormRangeInput
-                                label="Type:"
-                                currValue={params.types[slot.key].toString()}
-                                min="0"
-                                max={(PlayerCompositionConstants.numTypes[slot.key] - 1).toString()}
-                                step="1"
-                                setValue={(value: string) => applyEdit(() => params.types[slot.key] = parseInt(value))}
-                            />
-                            <FormBase94ColorInput
-                                label="Color:"
-                                currValue={ColorUtil.rgbToBase94Index(params.colors[slot.key])}
-                                setColorIndex={(index: number) => applyEdit(() => params.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                            <div className="flex flex-row items-center gap-1 shrink-0">
+                                <Text content={slot.title} size="sm"/>
+                                <Base94ColorInput
+                                    currValue={ColorUtil.rgbToBase94Index(params.colors[slot.key])}
+                                    setColorIndex={(index: number) => applyEdit(() => params.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
+                                />
+                            </div>
+                            <StepperInput
+                                currValue={params.types[slot.key]}
+                                numValues={PlayerCompositionConstants.numTypes[slot.key]}
+                                setValue={(value: number) => applyEdit(() => params.types[slot.key] = value)}
                             />
                         </div>
                         {slotIndex < partSlots.length - 1 &&

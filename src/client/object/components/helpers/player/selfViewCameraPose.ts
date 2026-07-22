@@ -6,7 +6,7 @@ import { PLAYER_HEIGHT } from "../../../../../shared/system/sharedConstants";
 // Default framing: above, slightly off to the side, and out front of the player,
 // looking back toward the body.
 const defaultCameraPos = new THREE.Vector3(0.5 * PLAYER_HEIGHT, 0.7 * PLAYER_HEIGHT, -1 * PLAYER_HEIGHT);
-const orbitPivot = new THREE.Vector3(0, -0.15 * PLAYER_HEIGHT, 0);
+const orbitPivot = new THREE.Vector3(0, 0, 0);
 const defaultOrbitOffset = new THREE.Vector3().subVectors(defaultCameraPos, orbitPivot);
 
 // How fast a pointer-drag orbits the camera (radians per NDC unit of pointer travel).

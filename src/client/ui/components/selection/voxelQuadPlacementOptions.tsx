@@ -55,7 +55,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         };
     }, []);
 
-    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
+    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
         <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveVoxelBlock(props.selection)}
             onClick={() => tryRemoveVoxelBlock(props.selection)}/>

@@ -59,12 +59,17 @@ You should also see the runner listed as "Idle" in the repository's `Settings ->
 Important details:
 
 - **Composite indexes match by collection ID.** The staging server stores its data in `staging_`-prefixed collections within the same Firebase project as the live server, so every composite index needed by the live (unprefixed) collections must have a twin entry for its `staging_`-prefixed counterpart. An index defined only for `users` does nothing for `staging_users`.
-- **The staging deploy workflow deploys indexes automatically.** On every push to `main`, `deploy-staging.yml` runs `npx firebase-tools deploy --only firestore:indexes --project thingspool`, authenticated via the service-account key already present on the VPS (`GOOGLE_APPLICATION_CREDENTIALS=/root/service-account-key.json`). This never deletes indexes that exist in the Firebase console but are absent from the file (firebase-tools requires `--force` for deletions). This step needs specific IAM roles on the service account beyond the app's runtime roles — if it fails with a `403`, see [Firebase & Google Cloud → IAM roles](../firebase.md#iam-roles) and the accompanying [Troubleshooting](../firebase.md#troubleshooting) table.
-- **Manual deployment** from a dev machine: `firebase deploy --only firestore:indexes` (the project is taken from `.firebaserc`).
+- **Indexes are deployed manually, not by CI.** No workflow touches Firebase. After editing `firestore.indexes.json`, deploy it from a dev machine:
+  ```
+  firebase deploy --only firestore:indexes
+  ```
+  The project is taken from `.firebaserc`, and the credentials from `gcloud auth application-default login`. This never deletes indexes that exist in the Firebase console but are absent from the file (firebase-tools requires `--force` for deletions). If the deploy fails with a `403`, see [Firebase & Google Cloud → IAM roles](../firebase.md#iam-roles) and its [Troubleshooting](../firebase.md#troubleshooting) table.
+- **A deploy is project-wide.** Because live and staging share one Firebase project, deploying reconciles the entire file — both the live (`users`) and staging (`staging_`-prefixed) entries — so it affects both environments at once. Deploy before shipping code that depends on a new index, and confirm in the Firebase console that the index has finished building: index creation is asynchronous, and queries needing it keep failing until it is enabled.
+- **A missing index announces itself in the logs.** Queries that depend on a composite index log a distinct error when they fail, so a forgotten deploy surfaces in the process logs rather than silently returning nothing.
 - **The Firestore emulator does not enforce composite indexes**, so a missing index never reproduces in local dev — the affected queries only start failing (with `FAILED_PRECONDITION`) against the real Firestore backend. If a server-side query silently returns no results in staging/live but works locally, check the process logs for "DB Query Error" and verify the index exists in the Firebase console (`Firestore -> Indexes`).
 
 ## Workflows
 
-- `.github/workflows/deploy-staging.yml` - Workflow for automatically deploying the app bundles and Firestore composite indexes to the VPS whenever "git push" happens.
+- `.github/workflows/deploy-staging.yml` - Workflow for automatically deploying the app bundles to the VPS whenever "git push" happens.
 - `.github/workflows/promote-live.yml` - Workflow for applying the staging apps to the live apps.
 - `.github/workflows/rollback-live.yml` - Workflow for rolling back the latest live apps to their previous backup copies (in case the latest ones happen to be problematic).

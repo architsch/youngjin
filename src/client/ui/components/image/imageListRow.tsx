@@ -20,7 +20,7 @@ export default function ImageListRow({ imageURL, title, author, selected,
     return <div
         ref={myRef}
         onClick={onClick}
-        className={`flex flex-row items-center gap-2 p-2 cursor-pointer rounded-md bg-gray-800/50 hover:bg-gray-700/50 ${selectionClassNames}`}
+        className={`flex flex-row items-center gap-2 p-2 cursor-pointer rounded-md bg-gray-800 hover:bg-gray-700 ${selectionClassNames}`}
     >
         <Image src={imageURL} size="sm" alt={title} additionalClassNames="rounded-md shrink-0"/>
         <div className="flex flex-col min-w-0 flex-1 text-left">

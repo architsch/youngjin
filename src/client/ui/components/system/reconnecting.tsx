@@ -17,7 +17,7 @@ export default function Reconnecting()
 
     return <>
         {reconnecting && <div className={className}>
-            <ScreenCenterText text="Reconnecting..." customClassNames="text-amber-600 text-4xl bg-black"/>
+            <ScreenCenterText text="Reconnecting..." customClassNames="text-amber-600 bg-black"/>
         </div>}
     </>;
 }

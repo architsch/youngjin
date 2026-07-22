@@ -62,17 +62,6 @@ jobs:
       # `firebase-admin` that we very much DO need at runtime).
       run: rm -rf node_modules/sharp
 
-    - name: Deploy Firestore indexes
-      # Firestore composite indexes match by collection ID, so the staging-prefixed
-      # collections need their own entries in firestore.indexes.json alongside the
-      # live ones. Deploying on every push keeps the project's indexes in sync with
-      # the queries the server runs — a missing composite index makes those queries
-      # fail at runtime. This never deletes indexes that exist in the console but
-      # are absent from the file (firebase-tools requires --force for that).
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: /root/service-account-key.json
-      run: npx --yes firebase-tools deploy --only firestore:indexes --project thingspool --non-interactive
-
     - name: Restart staging server
       run: pm2 startOrRestart ecosystem.config.js --only staging
 

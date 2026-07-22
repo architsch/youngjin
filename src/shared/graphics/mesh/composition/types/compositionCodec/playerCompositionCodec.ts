@@ -62,12 +62,12 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         params.types.torso = rand.randomInt(0, PlayerCompositionConstants.numTypes["torso"]);
         params.types.arm = rand.randomInt(0, PlayerCompositionConstants.numTypes["arm"]);
         params.types.bottom = rand.randomInt(0, PlayerCompositionConstants.numTypes["bottom"]);
-        params.colors.head = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
-        params.colors.ear = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
-        params.colors.hat = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
-        params.colors.torso = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
-        params.colors.arm = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
-        params.colors.bottom = ColorUtil.base94IndexToRGB(rand.randomInt(0, 94));
+        params.colors.head = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
+        params.colors.ear = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
+        params.colors.hat = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
+        params.colors.torso = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
+        params.colors.arm = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
+        params.colors.bottom = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
 
         const parts: InstancedMeshCompositionPart[] = [];
         constructParts(params, parts);

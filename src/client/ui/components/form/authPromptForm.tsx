@@ -8,9 +8,9 @@ import UserAPIClient from "../../../networking/client/userAPIClient";
 export default function AuthPromptForm()
 {
     return <Form>
-        <Text content="Sign In" size="lg"/>
+        <Text content="Login" size="lg"/>
         <Spacer size="sm"/>
         <Button name="Continue as Guest" size="md" onClick={PopupUtil.closePopup}/>
-        <Button name="Sign In with Google" size="md" onClick={UserAPIClient.loginWithGoogle}/>
+        <Button name="Login with Google" size="md" onClick={UserAPIClient.loginWithGoogle}/>
     </Form>
 }

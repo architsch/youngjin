@@ -18,7 +18,7 @@ export default function Loading()
 
     return <>
         {state.loading && <div className={className}>
-            <ScreenCenterText text="Loading..." customClassNames="text-amber-600 text-4xl bg-black"/>
+            <ScreenCenterText text="Loading..." customClassNames="text-amber-600 bg-black"/>
         </div>}
     </>;
 }

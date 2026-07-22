@@ -1,10 +1,10 @@
 import { ReactNode } from "react";
 
-export default function IconButton({icon, size = "md", color = "gray", disabled = false, onClick, additionalClassNames = "", id }: Props)
+export default function IconButton({icon, size = "md", color = "gray", disabled = false, highlight = false, onClick, additionalClassNames = "", id }: Props)
 {
     return <div
         id={id}
-        className={`flex items-center justify-center shrink-0 ${disabled ? "" : "cursor-pointer"} ${sizeClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]} ${additionalClassNames}`}
+        className={`flex items-center justify-center shrink-0 select-none touch-manipulation ${disabled ? "" : "cursor-pointer"} ${sizeClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]} ${!disabled && highlight ? highlightClassName : ""} ${additionalClassNames}`}
         onClick={disabled ? undefined : onClick}
     >
         {icon}
@@ -26,12 +26,18 @@ const panelClassNames = {
     transparent: "pointer-events-auto",
 };
 
+// Layered on top of the color class above, so it reads as an "on" state of that
+// same button rather than as a separate color.
+const highlightClassName = "yj-panel-highlight";
+
 interface Props
 {
     icon: ReactNode;
     size?: "xs" | "sm" | "md" | "lg";
     color?: "gray" | "green" | "red" | "transparent";
     disabled?: boolean;
+    // Marks the button as currently active — e.g. a toggle whose target is open.
+    highlight?: boolean;
     onClick: () => void;
     additionalClassNames?: string;
     id?: string;

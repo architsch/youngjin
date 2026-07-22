@@ -24,7 +24,7 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
     const frameCoordsMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
     const initialFrameCoords = frameCoordsMetadata ? frameCoordsMetadata.str : "";
 
-    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800/50 rounded-md">
+    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
             onClick={() => openRemoveConfirmPopup(props.selection)}
