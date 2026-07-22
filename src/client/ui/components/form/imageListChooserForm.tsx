@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Button from "../basic/button";
-import TextInput from "../basic/textInput";
+import Button from "../input/button";
+import TextInput from "../input/textInput";
 import List from "../basic/list";
-import ImageListRow from "../image/imageListRow";
+import ImageListRow from "../basic/image/imageListRow";
 import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
 import ImageMetadata from "../../../../shared/graphics/image/types/imageMetadata";
 import App from "../../../app";
-import Form from "../basic/form";
+import Form from "./form";
 import PopupUtil from "../../util/popupUtil";
 import ImageListChooserUtil from "../../util/imageListChooserUtil";
 

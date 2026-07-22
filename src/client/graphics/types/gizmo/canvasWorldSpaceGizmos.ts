@@ -2,7 +2,7 @@ import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
 import { objectSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
-import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
+import WorldSpaceArrow from "./generic/worldSpaceArrow";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";

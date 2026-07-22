@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import GraphicsManager from "../../graphicsManager";
-import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
-import WorldSpaceSpriteArrow from "../../../ui/components/basic/worldspace/worldSpaceSpriteArrow";
-import WorldSpaceOutlineRect from "../../../ui/components/basic/worldspace/worldSpaceOutlineRect";
+import WorldSpaceArrow from "./generic/worldSpaceArrow";
+import WorldSpaceSpriteArrow from "./generic/worldSpaceSpriteArrow";
+import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 import VoxelQuadSelection from "./voxelQuadSelection";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";

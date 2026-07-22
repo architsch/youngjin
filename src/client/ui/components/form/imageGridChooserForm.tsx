@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
-import Button from "../basic/button";
+import Button from "../input/button";
 import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
 import TabBar from "../basic/tabBar";
-import ImageGrid from "../image/imageGrid";
+import ImageGrid from "../basic/image/imageGrid";
 import App from "../../../app";
-import Form from "../basic/form";
+import Form from "./form";
 import PopupUtil from "../../util/popupUtil";
 
 export default function ImageGridChooserForm({mapName, initialChoicePath, onChoose}: Props)

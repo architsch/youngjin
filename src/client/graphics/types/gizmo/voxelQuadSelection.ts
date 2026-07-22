@@ -7,7 +7,7 @@ import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
-import WorldSpaceOutlineRect from "../../../ui/components/basic/worldspace/worldSpaceOutlineRect";
+import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 
 const tempPos = new THREE.Vector3();
 const tempDir = new THREE.Vector3();

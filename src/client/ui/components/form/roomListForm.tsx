@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Button from "../basic/button";
-import IconButton from "../basic/iconButton";
-import SearchIcon from "../basic/icons/searchIcon";
-import TextInput from "../basic/textInput";
+import Button from "../input/button";
+import IconButton from "../input/iconButton";
+import SearchIcon from "../../svg/icons/searchIcon";
+import TextInput from "../input/textInput";
 import List from "../basic/list";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import SocketsClient from "../../../networking/client/socketsClient";
@@ -12,7 +12,7 @@ import { RoomTypeEnumMap, RoomType } from "../../../../shared/room/types/roomTyp
 import User from "../../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
-import Form from "../basic/form";
+import Form from "./form";
 import PopupUtil from "../../util/popupUtil";
 import { roomListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 

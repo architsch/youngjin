@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Text from "../basic/text";
-import IconButton from "../basic/iconButton";
-import CloseIcon from "../basic/icons/closeIcon";
+import IconButton from "../input/iconButton";
+import CloseIcon from "../../svg/icons/closeIcon";
 import ClientObjectManager from "../../../object/clientObjectManager";
 import PopupUtil from "../../util/popupUtil";
 import useMouseDragScroll from "../../util/mouseDragScroll";
@@ -12,8 +12,8 @@ import { cameraModeObservable, clientFeatureFlagsObservable } from "../../../sys
 import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import WorldSpaceSelectionUtil from "../../../graphics/util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
-import StepperInput from "../basic/stepperInput";
-import Base94ColorInput from "../basic/base94ColorInput";
+import StepperInput from "../input/stepperInput";
+import Base94ColorInput from "../input/base94ColorInput";
 
 //------------------------------------------------------------------------
 // This form edits the player's composition by directly manipulating its

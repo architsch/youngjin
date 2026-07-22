@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import Text from "../basic/text";
-import Button from "../basic/button";
-import TextInput from "../basic/textInput";
-import Image from "../image/image";
+import Button from "../input/button";
+import TextInput from "../input/textInput";
+import Image from "../basic/image/image";
 import Spacer from "../basic/spacer";
-import ImageChooser from "../image/imageChooser";
+import ImageChooser from "../input/imageChooser";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import App from "../../../app";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 import { UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import RoomEditor from "../../../../shared/user/types/roomEditor";
 import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
-import Form from "../basic/form";
+import Form from "./form";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 import { editorListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
-import IconButton from "../basic/iconButton";
-import CloseIcon from "../basic/icons/closeIcon";
-import CopyIcon from "../basic/icons/copyIcon";
+import IconButton from "../input/iconButton";
+import CloseIcon from "../../svg/icons/closeIcon";
+import CopyIcon from "../../svg/icons/copyIcon";
 
 export default function ConfigureMyRoomForm()
 {

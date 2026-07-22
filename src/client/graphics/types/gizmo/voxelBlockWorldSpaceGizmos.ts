@@ -1,7 +1,7 @@
 import VoxelQuadSelection from "./voxelQuadSelection";
 import { voxelQuadSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable, clientFeatureFlagsObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
-import WorldSpaceArrow from "../../../ui/components/basic/worldspace/worldSpaceArrow";
+import WorldSpaceArrow from "./generic/worldSpaceArrow";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../../shared/voxel/util/voxelUpdateUtil";
 import App from "../../../app";

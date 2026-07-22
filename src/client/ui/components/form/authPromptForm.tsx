@@ -1,7 +1,7 @@
 import Spacer from "../basic/spacer";
-import Button from "../basic/button";
+import Button from "../input/button";
 import Text from "../basic/text";
-import Form from "../basic/form";
+import Form from "./form";
 import PopupUtil from "../../util/popupUtil";
 import UserAPIClient from "../../../networking/client/userAPIClient";
 
