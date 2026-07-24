@@ -10,6 +10,13 @@ import MeshDataUtil from "../../../../shared/graphics/mesh/util/meshDataUtil";
 const tempObj = new THREE.Object3D();
 const vec3Temp = new THREE.Vector3();
 const colorTemp = new THREE.Color();
+const sphereTemp = new THREE.Sphere();
+
+// Where an instance goes when it must not be drawn: far below any room, so no camera ever sees it.
+// (An instance cannot be dropped from the draw call individually, since the whole mesh is drawn
+// as one — the instances share a single visibility flag, that of the mesh object itself.)
+const HIDDEN_INSTANCE_Y = -9999;
+const hiddenInstanceMatrix = new THREE.Matrix4().makeTranslation(0, HIDDEN_INSTANCE_Y, 0);
 
 // instanceKey = `${instancedMeshId}/${instanceId}`
 const objMap: {[instanceKey: string]: GameObject } = {};
@@ -21,6 +28,11 @@ export default class InstancedMeshBinding
     maxNumInstances: number;
     createInstanceIdPool: boolean;
     instancedMesh: THREE.InstancedMesh | undefined;
+
+    // The transform each temporarily hidden instance is holding on to while it stays out of sight
+    // (see setInstanceHidden), keyed by instanceId. Left undefined while nothing is hidden — which
+    // is the normal case — so the per-frame transform path pays no more than one check for it.
+    private ownerMatrixByHiddenInstanceId: Map<number, THREE.Matrix4> | undefined;
 
     constructor(materialParams: MaterialParams, geometryId: string, maxNumInstances: number,
         createInstanceIdPool: boolean)
@@ -98,12 +110,72 @@ export default class InstancedMeshBinding
     }
     unreserveInstance(gameObject: GameObject, instanceId: number)
     {
+        // An instance being handed back must not stay hidden: whoever reserves it next owns its
+        // transform, and a hidden instance withholds its owner's transform (see setInstanceHidden).
+        this.setInstanceHidden(instanceId, false);
+
         const instanceKey = this.getInstanceKey(instanceId);
         if (!objMap[instanceKey])
             console.error(`instanceKey is not registered (instanceKey = ${instanceKey})`);
         delete objMap[instanceKey];
 
-        this.updateInstanceTransform(gameObject, instanceId, 0, -9999, 0, 0, -1, 0);
+        this.updateInstanceTransform(gameObject, instanceId, 0, HIDDEN_INSTANCE_Y, 0, 0, -1, 0);
+    }
+
+    // Temporarily takes a single instance out of sight (or brings it back), leaving the instance's
+    // owner none the wiser: a hidden instance parks where unused instances go, and the transforms
+    // its owner keeps baking meanwhile are held rather than drawn — so revealing it restores
+    // whatever its owner asked for most recently, however many times the owner re-baked it. This is
+    // what lets a passing effect (e.g. clearing the self-view camera's line of sight) hide one
+    // instance of a shared instanced mesh, which the mesh object's own visibility flag cannot do:
+    // that flag governs the whole draw call, hence every instance in it.
+    setInstanceHidden(instanceId: number, hidden: boolean)
+    {
+        if (!this.instancedMesh)
+        {
+            console.error(`InstancedMesh hasn't been loaded yet (instanceId = ${instanceId})`);
+            return;
+        }
+        if (hidden)
+        {
+            if (this.ownerMatrixByHiddenInstanceId == undefined)
+                this.ownerMatrixByHiddenInstanceId = new Map<number, THREE.Matrix4>();
+            else if (this.ownerMatrixByHiddenInstanceId.has(instanceId))
+                return; // Already hidden.
+
+            const ownerMatrix = new THREE.Matrix4();
+            this.instancedMesh.getMatrixAt(instanceId, ownerMatrix);
+            this.ownerMatrixByHiddenInstanceId.set(instanceId, ownerMatrix);
+            // Taking an instance out of sight only ever shrinks what the mesh spans, so the cached
+            // bounding sphere still covers everything drawn from it and is left alone. (Discarding
+            // it, as a moved instance does, would cost a pass over every instance of the mesh.)
+            this.writeInstanceMatrix(instanceId, hiddenInstanceMatrix);
+        }
+        else
+        {
+            const ownerMatrix = this.ownerMatrixByHiddenInstanceId?.get(instanceId);
+            if (ownerMatrix == undefined)
+                return; // Not hidden.
+
+            this.ownerMatrixByHiddenInstanceId!.delete(instanceId);
+            this.writeInstanceMatrix(instanceId, ownerMatrix);
+            // The instance may reappear somewhere the sphere was never computed over, because its
+            // owner is free to have moved it while it was hidden.
+            this.expandBoundingSphereToInstance(ownerMatrix);
+        }
+    }
+
+    // Grows the cached bounding sphere to cover one instance's transform — the same union
+    // InstancedMesh.computeBoundingSphere performs per instance, so that raycasts keep reaching
+    // this mesh without a full recompute.
+    private expandBoundingSphereToInstance(instanceMatrix: THREE.Matrix4)
+    {
+        const boundingSphere = this.instancedMesh!.boundingSphere;
+        const geometrySphere = this.instancedMesh!.geometry.boundingSphere;
+        if (boundingSphere == null || geometrySphere == null)
+            return; // Nothing cached to keep valid: the next raycast computes it over every instance.
+        sphereTemp.copy(geometrySphere).applyMatrix4(instanceMatrix);
+        boundingSphere.union(sphereTemp);
     }
 
     rentInstanceFromPool(gameObject: GameObject): number
@@ -159,13 +231,28 @@ export default class InstancedMeshBinding
         tempObj.position.set(offsetX, offsetY, offsetZ);
         tempObj.updateMatrixWorld();
 
-        this.instancedMesh.setMatrixAt(instanceId, tempObj.matrixWorld);
-        this.instancedMesh.instanceMatrix.needsUpdate = true;
-        // Invalidate the cached bounding sphere so that InstancedMesh.raycast
-        // recomputes it to include the updated instance position.
-        this.instancedMesh.boundingSphere = null;
+        // While the instance is hidden, its owner's transform is held instead of being drawn, and
+        // takes effect the moment the instance is revealed again (see setInstanceHidden).
+        const ownerMatrix = this.ownerMatrixByHiddenInstanceId?.get(instanceId);
+        if (ownerMatrix != undefined)
+        {
+            ownerMatrix.copy(tempObj.matrixWorld);
+        }
+        else
+        {
+            this.writeInstanceMatrix(instanceId, tempObj.matrixWorld);
+            // Invalidate the cached bounding sphere so that InstancedMesh.raycast
+            // recomputes it to include the updated instance position.
+            this.instancedMesh.boundingSphere = null;
+        }
 
         tempObj.removeFromParent();
+    }
+
+    private writeInstanceMatrix(instanceId: number, matrix: THREE.Matrix4)
+    {
+        this.instancedMesh!.setMatrixAt(instanceId, matrix);
+        this.instancedMesh!.instanceMatrix.needsUpdate = true;
     }
 
     // Sample offsets and scales are normalized numbers in range [0,1], corresponding to the full range of pixels covered by the texture's sampling window.

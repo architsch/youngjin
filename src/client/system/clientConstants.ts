@@ -6,6 +6,11 @@ import * as THREE from "three";
 // for the gesture to still count as a click rather than a drag.
 export const DRAG_THRESHOLD_PX = 8;
 
+// UI
+
+// How long a notification message stays on screen (in milliseconds).
+export const NOTIFICATION_DURATION_MS = 3000;
+
 // three.js
 
 export const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {

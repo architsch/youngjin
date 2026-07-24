@@ -6,8 +6,6 @@ import { PLAYER_HEIGHT } from "../../../../../shared/system/sharedConstants";
 // Default framing: above, slightly off to the side, and out front of the player,
 // looking back toward the body.
 const defaultCameraPos = new THREE.Vector3(0.5 * PLAYER_HEIGHT, 0.7 * PLAYER_HEIGHT, -1 * PLAYER_HEIGHT);
-const orbitPivot = new THREE.Vector3(0, 0, 0);
-const defaultOrbitOffset = new THREE.Vector3().subVectors(defaultCameraPos, orbitPivot);
 
 // How fast a pointer-drag orbits the camera (radians per NDC unit of pointer travel).
 const orbitSensitivity = 2.5;
@@ -30,6 +28,13 @@ const lookMat4Temp = new THREE.Matrix4();
 
 export default class SelfViewCameraPose
 {
+    // The point on the player's body that the camera orbits around and looks at,
+    // in the player's local frame.
+    static readonly orbitPivot = new THREE.Vector3(0, 0, 0);
+
+    private static readonly defaultOrbitOffset =
+        new THREE.Vector3().subVectors(defaultCameraPos, SelfViewCameraPose.orbitPivot);
+
     private spherical = new THREE.Spherical();
 
     constructor()
@@ -40,7 +45,7 @@ export default class SelfViewCameraPose
     // Returns to the default framing (called each time the self-view mode is entered).
     reset(): void
     {
-        this.spherical.setFromVector3(defaultOrbitOffset);
+        this.spherical.setFromVector3(SelfViewCameraPose.defaultOrbitOffset);
     }
 
     updatePose(dragDelta: THREE.Vector2, outPos: THREE.Vector3, outQuat: THREE.Quaternion): void
@@ -50,8 +55,8 @@ export default class SelfViewCameraPose
             this.spherical.phi + orbitSensitivity * dragDelta.y, minPolarAngle, maxPolarAngle);
 
         orbitOffsetTemp.setFromSpherical(this.spherical);
-        outPos.copy(orbitPivot).add(orbitOffsetTemp);
-        lookMat4Temp.lookAt(outPos, orbitPivot, DIRECTION_VECTORS["+y"]);
+        outPos.copy(SelfViewCameraPose.orbitPivot).add(orbitOffsetTemp);
+        lookMat4Temp.lookAt(outPos, SelfViewCameraPose.orbitPivot, DIRECTION_VECTORS["+y"]);
         outQuat.setFromRotationMatrix(lookMat4Temp);
     }
 }

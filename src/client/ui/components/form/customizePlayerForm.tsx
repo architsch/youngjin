@@ -14,6 +14,7 @@ import WorldSpaceSelectionUtil from "../../../graphics/util/worldSpaceSelectionU
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import StepperInput from "../input/stepperInput";
 import Base94ColorInput from "../input/base94ColorInput";
+import PartShapeIcon from "../../svg/icons/partShapeIcon";
 
 //------------------------------------------------------------------------
 // This form edits the player's composition by directly manipulating its
@@ -23,13 +24,16 @@ import Base94ColorInput from "../input/base94ColorInput";
 // consistent automatically.
 //------------------------------------------------------------------------
 
-const partSlots: {title: string, key: keyof PlayerCompositionParams["types"]}[] = [
-    {title: "Head", key: "head"},
-    {title: "Ears", key: "ear"},
-    {title: "Hat", key: "hat"},
-    {title: "Torso", key: "torso"},
-    {title: "Arms", key: "arm"},
-    {title: "Bottom", key: "bottom"},
+// 'builderName' joins with the slot's selected type to name the composition builder
+// that shape belongs to, which is both what assembles the part and what the stepper's
+// preview icon is drawn from.
+const partSlots: {title: string, key: keyof PlayerCompositionParams["types"], builderName: string}[] = [
+    {title: "Head", key: "head", builderName: "PlayerHead"},
+    {title: "Ears", key: "ear", builderName: "PlayerEar"},
+    {title: "Hat", key: "hat", builderName: "PlayerHat"},
+    {title: "Torso", key: "torso", builderName: "PlayerTorso"},
+    {title: "Arms", key: "arm", builderName: "PlayerArm"},
+    {title: "Bottom", key: "bottom", builderName: "PlayerBottom"},
 ];
 
 export default function CustomizePlayerForm()
@@ -79,6 +83,8 @@ export default function CustomizePlayerForm()
                                 currValue={params.types[slot.key]}
                                 numValues={PlayerCompositionConstants.numTypes[slot.key]}
                                 setValue={(value: number) => applyEdit(() => params.types[slot.key] = value)}
+                                preview={<PartShapeIcon params={params}
+                                    builderType={`${slot.builderName}_${params.types[slot.key]}`}/>}
                             />
                         </div>
                         {slotIndex < partSlots.length - 1 &&

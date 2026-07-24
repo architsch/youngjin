@@ -40,6 +40,7 @@ export default class PlayerController extends GameObjectComponent
 
     async onDespawn(): Promise<void>
     {
+        this.playerCamera.onDespawn(this);
         this.pointerInput.onDespawn(this);
         this.keyInput.onDespawn(this);
     }

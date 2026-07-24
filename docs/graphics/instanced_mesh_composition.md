@@ -17,6 +17,13 @@ The instanced mesh composition system lets any `GameObject` render itself as a c
 - `InstancedMeshComposition` internally uses a codec of the appropriate type (i.e. `InstancedMeshCompositionCodec`) for encoding/decoding the composition metadata.
 - `InstancedMeshCompositionCodec` may utilize `InstancedMeshCompositionBuilder`'s helper methods in order to efficiently place geometric forms in their right dimensions (e.g. offsets, directions, scales).
 
+## Hiding One Instance
+
+Every instance of an `InstancedMesh` is drawn in the same draw call, so the mesh's visibility is shared by all of them and cannot single one out. An individual instance is therefore hidden by parking it far outside the room — which is also what an instance does once it is returned, so that a mesh never draws its unused instances.
+
+An instance may additionally be hidden *temporarily*, by something other than its owner, for as long as it happens to be in the way of something (see [Camera Control](camera_control.md)). Since its owner goes on renting, transforming, and returning instances unaware of any of this, `InstancedMeshBinding` holds on to the transforms baked for a hidden instance instead of drawing them, and applies the most recent one as soon as the instance is shown again. An instance that is returned while hidden stops being hidden, since whoever rents it next owns it.
+
 ## Related docs
 
 - [Player Customization](../geometry/player_customization.md) — primary use case of the instanced mesh composition system
+- [Camera Control](camera_control.md) — hides instances that stand between the self-view camera and the player

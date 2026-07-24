@@ -1,7 +1,6 @@
 import NumUtil from "./numUtil";
 import Vec3 from "../types/vec3";
 
-const BASE_94_PALETTE_COLUMNS = 4;
 const BASE_94_PALETTE_HEX = [
     // Neutrals and warm off-whites: only the few gray steps that read as distinct
     "#000000", "#2a2a2a", "#979797", "#ffffff", "#f5e69f", "#c6b492",
@@ -30,7 +29,6 @@ const palette: Vec3[] = BASE_94_PALETTE_HEX.map(hex =>
 const ColorUtil =
 {
     base94PaletteSize: palette.length,
-    base94PaletteColumns: BASE_94_PALETTE_COLUMNS,
     // hex = Color expressed in a hexadecimal form (e.g. "#ffffff")
     // Returns RGB values in range [0,255]
     hexToRGB: (hex: string): Vec3 =>

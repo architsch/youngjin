@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { notificationMessageObservable } from "../../../system/clientObservables";
-
-const NOTIFICATION_DURATION_MS = 3000;
+import { NOTIFICATION_DURATION_MS } from "../../../system/clientConstants";
 
 export default function Notification()
 {

@@ -22,6 +22,17 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         await binding.swapTexturePackTexture(newTexturePath);
     }
 
+    // Temporarily takes a single instance out of sight (or brings it back), without disturbing the
+    // GameObject that owns it (see InstancedMeshBinding.setInstanceHidden) — as opposed to the
+    // instanced mesh's own visibility, which every instance drawn from that mesh shares. Callers
+    // reach an instance by the mesh it is drawn from, rather than through its owner, because they
+    // find it that way in the first place (e.g. as a raycast hit). A no-op if the binding hasn't
+    // been created yet.
+    static setInstanceHidden(instancedMeshId: string, instanceId: number, hidden: boolean)
+    {
+        bindingMap[instancedMeshId]?.setInstanceHidden(instanceId, hidden);
+    }
+
     async loadInstancedMesh(geometryId: string, materialParams: MaterialParams,
         maxNumInstances: number, createInstanceIdPool: boolean)
     {
