@@ -272,13 +272,11 @@ RoomRouter.post("/search_rooms", UserIdentificationUtil.identifyAnyUser, async (
     res.status(200).json({ rooms: slice.map(toRoomListEntry), hasMore });
 });
 
-// Returns a single room's metadata for the special "hub" entry. The client pins this
-// at the top of the list independently of pagination.
-RoomRouter.post("/get_hub_room", UserIdentificationUtil.identifyAnyUser, async (_req: Request, res: Response): Promise<void> => {
+RoomRouter.post("/get_hub_room_list_entries", UserIdentificationUtil.identifyAnyUser, async (_req: Request, res: Response): Promise<void> => {
     const result = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
     if (!result.success)
     {
-        res.status(500).send("Failed to query hub room.");
+        res.status(500).send("Failed to query hub rooms.");
         return;
     }
     if (result.data.length === 0)
@@ -286,12 +284,12 @@ RoomRouter.post("/get_hub_room", UserIdentificationUtil.identifyAnyUser, async (
         res.status(404).send("Hub room not found.");
         return;
     }
-    res.status(200).json({ room: toRoomListEntry(result.data[0]) });
+    res.status(200).json({
+        rooms: result.data.map(dataEntry => toRoomListEntry(dataEntry))
+    });
 });
 
-// Returns the current user's owned-room DB data (or null if they don't own one yet).
-// Used by the client to populate the "My Room" special entry.
-RoomRouter.post("/get_my_room", UserIdentificationUtil.identifyAnyUser, async (req: Request, res: Response): Promise<void> => {
+RoomRouter.post("/get_my_room_list_entry", UserIdentificationUtil.identifyAnyUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
     const dbUser = await DBUserUtil.findUserById(user.id);

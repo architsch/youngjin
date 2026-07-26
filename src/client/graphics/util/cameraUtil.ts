@@ -8,9 +8,21 @@ import InstancedMeshBinding from "../types/mesh/instancedMeshBinding";
 const raycaster: THREE.Raycaster = new THREE.Raycaster();
 const vec3Temp = new THREE.Vector3();
 const vec3Temp2 = new THREE.Vector3();
+const frustumTemp = new THREE.Frustum();
+const viewProjMat4Temp = new THREE.Matrix4();
 
 const CameraUtil =
 {
+    // Whether a world-space point falls inside the camera's view frustum (i.e. is in front of the
+    // camera and within its field of view). Points behind the camera or off to the side return false.
+    pointIsInFieldOfView: (worldPosition: THREE.Vector3): boolean =>
+    {
+        const camera = GraphicsManager.getCamera();
+        viewProjMat4Temp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        frustumTemp.setFromProjectionMatrix(viewProjMat4Temp);
+        return frustumTemp.containsPoint(worldPosition);
+    },
+
     objectIsInLineOfSight: (lookTargetWorldPosition: THREE.Vector3, lookTargetObject: GameObject): boolean =>
     {
         const camera = GraphicsManager.getCamera();

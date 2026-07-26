@@ -43,8 +43,6 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
                 yOffset: 2,
                 checkLineOfSight: false,
                 prependUserNameToMessage: false,
-                showMessageIfSpawnedByMe: true,
-                showMessageIfSpawnedByOther: true,
             },
             meshGraphics: {
                 path: "door.webp",

@@ -8,7 +8,7 @@ import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import SocketsClient from "../../../networking/client/socketsClient";
 import RequestRoomChangeSignal from "../../../../shared/room/types/requestRoomChangeSignal";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
-import { RoomTypeEnumMap, RoomType } from "../../../../shared/room/types/roomType";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import User from "../../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
@@ -22,7 +22,7 @@ const MY_ROOM_PLACEHOLDER_ID = "__my-room-placeholder__";
 
 export default function RoomListForm({ user, currentRoomID }: Props)
 {
-    const [hubRoom, setHubRoom] = useState<RoomListEntry | null>(null);
+    const [hubRooms, setHubRooms] = useState<RoomListEntry[] | null>(null);
     const [myRoom, setMyRoom] = useState<RoomListEntry | null>(null);
     const [otherRooms, setOtherRooms] = useState<RoomListEntry[]>([]);
     const [hasMore, setHasMore] = useState<boolean>(false);
@@ -45,21 +45,26 @@ export default function RoomListForm({ user, currentRoomID }: Props)
     // IDs pinned at the top of the list — filtered out of the regular paginated list
     // so they don't appear twice.
     const pinnedIDs = new Set<string>();
-    if (hubRoom) pinnedIDs.add(hubRoom.id);
-    if (myRoom && myRoom.id !== MY_ROOM_PLACEHOLDER_ID) pinnedIDs.add(myRoom.id);
+    if (myRoom && myRoom.id !== MY_ROOM_PLACEHOLDER_ID)
+        pinnedIDs.add(myRoom.id);
+    if (hubRooms)
+    {
+        for (const hubRoom of hubRooms)
+            pinnedIDs.add(hubRoom.id);
+    }
 
     // Load the special entries (Hub and My Room) — these are independent of pagination
     // and the search query.
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            const hubResponse = await RoomAPIClient.getHubRoom();
-            if (!cancelled && hubResponse.status >= 200 && hubResponse.status < 300 && hubResponse.data?.room)
-                setHubRoom(hubResponse.data.room as RoomListEntry);
+            const hubResponse = await RoomAPIClient.getHubRoomListEntries();
+            if (!cancelled && hubResponse.status >= 200 && hubResponse.status < 300 && hubResponse.data?.rooms)
+                setHubRooms(hubResponse.data.rooms as RoomListEntry[]);
 
             if (showMyRoomEntry)
             {
-                const myResponse = await RoomAPIClient.getMyRoom();
+                const myResponse = await RoomAPIClient.getMyRoomListEntry();
                 if (cancelled) return;
                 if (myResponse.status >= 200 && myResponse.status < 300 && myResponse.data?.room)
                     setMyRoom(myResponse.data.room as RoomListEntry);
@@ -151,8 +156,16 @@ export default function RoomListForm({ user, currentRoomID }: Props)
     // doesn't match the query should disappear from search results the same way the
     // server omits non-matches from the paginated body.
     const pinned: RoomListEntry[] = [];
-    if (hubRoom && pinnedMatchesQuery(hubRoom, activeQuery)) pinned.push(hubRoom);
-    if (showMyRoomEntry && myRoom && pinnedMatchesQuery(myRoom, activeQuery)) pinned.push(myRoom);
+    if (showMyRoomEntry && myRoom && pinnedMatchesQuery(myRoom, activeQuery))
+        pinned.push(myRoom);
+    if (hubRooms)
+    {
+        for (const hubRoom of hubRooms)
+        {
+            if (pinnedMatchesQuery(hubRoom, activeQuery))
+                pinned.push(hubRoom);
+        }
+    }
 
     // Filter out pinned entries from the paginated list so they don't appear twice.
     const visibleOtherRooms = otherRooms.filter(r => !pinnedIDs.has(r.id));
@@ -181,13 +194,13 @@ function RoomEntryRow({ entry, user, currentRoomID, onVisit }: RowProps)
 {
     const isMyRoom = entry.ownerUserID === user.id || entry.id === MY_ROOM_PLACEHOLDER_ID ||
         (user.ownedRoomID.length > 0 && user.ownedRoomID === entry.id);
-    const ownerLabel = formatOwnerLabel(entry, isMyRoom);
+    const roomTitle = getRoomTitle(entry, isMyRoom);
     const idLabel = entry.id === MY_ROOM_PLACEHOLDER_ID ? "ID: ?" : `ID: ${entry.id}`;
     const isCurrentRoom = entry.id !== MY_ROOM_PLACEHOLDER_ID && entry.id === currentRoomID;
 
     return <div className="flex flex-row items-center justify-between gap-2 py-1 border-b border-gray-700">
         <div className="flex flex-col min-w-0">
-            <div className="yj-text-xs text-amber-300 truncate">{ownerLabel}</div>
+            <div className="yj-text-xs text-amber-300 truncate">{roomTitle}</div>
             <div className="yj-text-xs text-gray-400 truncate">{idLabel}</div>
         </div>
         {isCurrentRoom
@@ -198,24 +211,22 @@ function RoomEntryRow({ entry, user, currentRoomID, onVisit }: RowProps)
 
 function pinnedMatchesQuery(entry: RoomListEntry, query: string): boolean
 {
-    if (query.length === 0) return true;
+    if (query.length === 0)
+        return true;
     const name = entry.ownerUserName ?? "";
     return name.toLowerCase().includes(query.toLowerCase());
 }
 
-function formatOwnerLabel(entry: RoomListEntry, isMyRoom: boolean): string
+function getRoomTitle(entry: RoomListEntry, isMyRoom: boolean): string
 {
-    if (isMyRoom) return "My Room";
+    if (isMyRoom)
+        return "My Room";
     if (entry.ownerUserName && entry.ownerUserName.length > 0)
         return `${entry.ownerUserName}'s Room`;
     if (entry.ownerUserID && entry.ownerUserID.length > 0)
         return "Unknown User's Room";
-    return roomTypeName(entry.roomType);
-}
-
-function roomTypeName(roomType: RoomType): string
-{
-    return (roomType === RoomTypeEnumMap.Hub) ? "Hub" : "Room";
+    const hubName = entry.id.substring(0, 4);
+    return `Hub ${hubName}`;
 }
 
 function makeMyRoomPlaceholder(): RoomListEntry
@@ -266,7 +277,7 @@ async function visitRoom(entry: RoomListEntry, user: User): Promise<void>
         {
             const roomID = response.data.roomID as string;
             user.ownedRoomID = roomID;
-            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(roomID));
+            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(roomID, false));
         }
         else
         {
@@ -276,7 +287,7 @@ async function visitRoom(entry: RoomListEntry, user: User): Promise<void>
         return;
     }
 
-    SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(entry.id));
+    SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(entry.id, false));
 }
 
 interface Props

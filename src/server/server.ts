@@ -15,7 +15,7 @@ import { GUEST_TIER_NAME_BY_TIER_PHASE } from "./system/serverConstants";
 import LatencySimUtil from "./system/util/latencySimUtil";
 import DevUserSeedUtil from "./user/util/devUserSeedUtil";
 import DevRuntimeUtil from "./system/util/devRuntimeUtil";
-import OwnerlessRoomCreationRoutine from "./room/routines/ownerlessRoomCreationRoutine";
+import HubRoomUtil from "./room/util/hubRoomUtil";
 
 require("../shared/graphics/image/imageMapDependencies.ts");
 
@@ -66,10 +66,7 @@ ${LatencySimUtil.getConfigSummary()}
         return;
     }
 
-    // Single-player rooms (e.g. the tutorial) are no longer created/stored in the DB: the client
-    // generates them locally and the server synthesizes a transient descriptor on connect (see
-    // ServerRoomManager.changeUserRoom). Only ownerless multi-player rooms (Hub) need seeding here.
-    await OwnerlessRoomCreationRoutine.createIfMissing("", RoomTypeEnumMap.Hub);
+    await HubRoomUtil.setupHubs();
 
     // Seed dev user accounts and establish this runtime's boot id (dev mode only). The boot id is
     // loaded/minted before the server starts listening, so it is ready for the first request.
@@ -131,9 +128,9 @@ ${LatencySimUtil.getConfigSummary()}
     const gracefulShutdown = async (signal: string) =>
     {
         console.log(`[${signal}] Graceful shutdown initiated...`);
-        console.log("Saving all rooms and user gameplay states before shutdown...");
+        console.log("Saving all multiplayer rooms and user gameplay states before shutdown...");
 
-        await ServerRoomManager.saveRooms(true);
+        await ServerRoomManager.saveMultiplayerRooms(true);
         console.log("All rooms saved.");
 
         await SocketsServer.saveAndDisconnectAllUsers();

@@ -29,6 +29,8 @@ import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import UserCommandUtil from "../user/util/userCommandUtil";
 import LatencySimUtil from "../system/util/latencySimUtil";
 import ErrorUtil from "../../shared/system/util/errorUtil";
+import HubRoomUtil from "../room/util/hubRoomUtil";
+import RoomPickerUtil from "../room/util/roomPickerUtil";
 
 let io: socketIO.Server;
 let signalProcessingInterval: ReturnType<typeof setInterval>;
@@ -103,7 +105,7 @@ const SocketsServer =
                     const oldContext = ServerUserManager.getSocketUserContext(user.id)!;
 
                     ServerUserManager.removeUser(user.id);
-                    await ServerRoomManager.changeUserRoom(oldContext, undefined, false, true);
+                    await ServerRoomManager.changeUserRoom(oldContext, undefined, false, true, false);
                     oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
                     oldContext.socket.disconnect(true);
                 }
@@ -179,65 +181,12 @@ const SocketsServer =
                     // before kicking off the DBUser write, so a near-instant reconnect can
                     // still read the latest chat message etc.
                     ServerUserManager.removeUser(user.id);
-                    await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, true);
+                    await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, true, false);
                 });
 
-                // Determine which room the user should join.
-                // Priority:
-                //   1. Singleplayer room (if the user is in singleplayer mode) — an unfinished
-                //      single-player experience (e.g. the first-time tutorial) gates everything
-                //      else. A targetRoomID requested via the URL is intentionally NOT honored
-                //      yet: the client remembers it and routes the user there once the tutorial
-                //      is over, during that same runtime.
-                //   2. targetRoomID from socket handshake (URL-based room access: /:roomID)
-                //   3. user.lastRoomID (the room the user was last in)
-                //   4. Hub room (fallback)
-                const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
-
-                let preferredRoomID: string;
-                let fallbackRoomType = RoomTypeEnumMap.Hub;
-
-                if (user.singlePlayerMode != "") // user has an unfinished singleplayer experience (e.g. the tutorial).
-                {
-                    // Route into the client-generated single-player room. Its ID equals the user's
-                    // single-player mode (a key in SinglePlayerModeConfigMap), which changeUserRoom
-                    // recognizes and synthesizes locally — no DB room is involved. Should the mode
-                    // somehow be invalid, fall back to a Hub.
-                    preferredRoomID = user.singlePlayerMode;
-                    fallbackRoomType = RoomTypeEnumMap.Hub;
-                }
-                else if (targetRoomID && targetRoomID.length > 0) // roomID was specified in the URL
-                {
-                    preferredRoomID = targetRoomID;
-                    fallbackRoomType = RoomTypeEnumMap.Hub;
-                }
-                else
-                {
-                    preferredRoomID = user.lastRoomID; // = "" if the user hasn't visited any multiplayer room yet.
-                    fallbackRoomType = RoomTypeEnumMap.Hub;
-                }
-
-                if (!(await ServerRoomManager.changeUserRoom(socketUserContext, preferredRoomID, false, false)))
-                {
-                    // Check in-memory rooms first to avoid a Firestore query
-                    let fallbackRoomID: string | undefined;
-                    for (const [roomID, mem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
-                    {
-                        if (mem.room.roomType === fallbackRoomType)
-                        {
-                            fallbackRoomID = roomID;
-                            break;
-                        }
-                    }
-                    if (!fallbackRoomID)
-                    {
-                        const roomSearchResult = await DBSearchUtil.rooms.withRoomType(fallbackRoomType);
-                        if (roomSearchResult.success && roomSearchResult.data.length > 0)
-                            fallbackRoomID = roomSearchResult.data[0].id as string;
-                    }
-                    if (fallbackRoomID)
-                        await ServerRoomManager.changeUserRoom(socketUserContext, fallbackRoomID, false, false);
-                }
+                // Try to join the best room. If it is full, fall back to a room that is NOT full.
+                const roomID = await RoomPickerUtil.pickBestRoomID(socketUserContext, "appStart");
+                await ServerRoomManager.changeUserRoom(socketUserContext, roomID, false, false, true);
             } catch (err) {
                 console.error(`Exception while establishing a socket connection with a client :: Error: ${ErrorUtil.getErrorMessage(err)}`);
                 socket.disconnect(true);
@@ -273,7 +222,7 @@ const SocketsServer =
                         console.warn(`(SocketsServer) Stale socket detected, cleaning up :: userID = ${userID}`);
                         delete staleSocketFirstDetectedAt[userID];
                         ServerUserManager.removeUser(userID);
-                        await ServerRoomManager.changeUserRoom(ctx, undefined, false, true);
+                        await ServerRoomManager.changeUserRoom(ctx, undefined, false, true, false);
                     }
                 }
                 else
@@ -292,7 +241,7 @@ const SocketsServer =
 
         for (const [userID, socketUserContext] of Object.entries(ServerUserManager.socketUserContexts))
         {
-            await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, false);
+            await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, false, false);
             socketUserContext.socket.disconnect(true);
         }
     },

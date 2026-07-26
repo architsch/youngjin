@@ -138,7 +138,10 @@ const ServerUserManager =
         if (savePlayerMetadata && metadataSnapshot)
             await DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot);
 
-        if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer &&
+        // Only Regular rooms should be unloaded when there is no player in it.
+        // (Hub rooms should NOT be unloaded because the presence of its RoomRuntimeMemory is essential for load-balancing incoming user traffic without frequent DB lookup.)
+        // (SinglePlayer rooms should NOT be unloaded because they follow a different loading/unloading logic.)
+        if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Regular &&
             Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))

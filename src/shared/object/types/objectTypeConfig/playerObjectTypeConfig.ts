@@ -71,8 +71,6 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
                 yOffset: 0.5*PLAYER_HEIGHT,
                 checkLineOfSight: true,
                 prependUserNameToMessage: true,
-                showMessageIfSpawnedByMe: false,
-                showMessageIfSpawnedByOther: true,
             },
             playerProximityDetector: { // This is to prevent the mesh of any nearby player from clipping through the camera's view.
                 maxDist: 0.45,

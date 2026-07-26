@@ -66,15 +66,6 @@ const App =
     {
         return currentRoom;
     },
-    // The room the user is sent to when their single-player experience (e.g. the tutorial)
-    // ends. If they originally arrived via a room-specific URL, that destination was deferred
-    // until the tutorial was cleared (see SocketsServer's connect-time routing) — honor it now.
-    // Otherwise fall back to a hub. ("hub" is a reserved keyword the server resolves to an
-    // available Hub room, not a real room ID.)
-    getPostSinglePlayerRoomID: (): string =>
-    {
-        return env.targetRoomID && env.targetRoomID.length > 0 ? env.targetRoomID : "hub";
-    },
     onSetUserRoleSignalReceived: async (params: SetUserRoleSignal) => {
         // If this is a UserRole update on the current user's player, update the app-level role.
         if (params.userID !== App.getUser()?.id)

@@ -40,8 +40,6 @@ export default interface ObjectTypeConfig
                 yOffset: number,
                 checkLineOfSight: boolean,
                 prependUserNameToMessage: boolean,
-                showMessageIfSpawnedByMe: boolean,
-                showMessageIfSpawnedByOther: boolean,
             },
             playerProximityDetector?: {
                 maxDist: number,

@@ -75,11 +75,12 @@ const SinglePlayerManager =
     {
         if (singlePlayerObservable.peek().mode == "")
             return;
-        // On natural completion the exit door carries the player out of the single-player experience;
-        // when skipping there is no door, so request that same room change here (mirroring
-        // DoorGameObject) before finishing — honoring the URL-requested destination if there was one.
         if (tryStartClientProcess("roomChange", 1, 1))
-            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(App.getPostSinglePlayerRoomID()));
+        {
+            // Since roomID is not specified (i.e. left as ""), the server will
+            // pick the most appropriate destination for the user.
+            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("", true));
+        }
         SinglePlayerManager.finishSinglePlayerMode();
     },
 }

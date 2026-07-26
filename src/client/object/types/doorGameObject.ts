@@ -38,9 +38,9 @@ export default class DoorGameObject extends GameObject
         {
             if (!tryStartClientProcess("roomChange", 1, 1))
                 return;
-            // Leave the single-player experience: head to wherever the user is meant to go next —
-            // the room they originally requested via URL, or a Hub-type room by default.
-            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(App.getPostSinglePlayerRoomID()));
+            // Since roomID is not specified (i.e. left as ""), the server will
+            // pick the most appropriate destination for the user.
+            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("", true));
         }
         else
         {

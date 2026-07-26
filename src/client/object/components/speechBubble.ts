@@ -31,8 +31,6 @@ export default class SpeechBubble extends GameObjectComponent
 
     async onDespawn(): Promise<void>
     {
-        if (!this.shouldShowMessage())
-            return;
         this.hideSpeechBubble();
     }
 
@@ -45,7 +43,12 @@ export default class SpeechBubble extends GameObjectComponent
             GraphicsManager.getCamera().getWorldPosition(this.vecTemp2);
             const dist = this.vecTemp1.distanceTo(this.vecTemp2);
 
-            if (dist < 12 && (!this.componentConfig.checkLineOfSight ||
+            // Show the bubble only where it can actually be read: near enough, inside the camera's
+            // field of view, and (if required) not blocked by anything. The field-of-view test is
+            // what keeps one's own bubble hidden in first-person — it sits above the head, out of
+            // frame — while letting it appear in self-view, where the camera looks back at the body.
+            if (dist < 12 && CameraUtil.pointIsInFieldOfView(this.vecTemp1) &&
+                (!this.componentConfig.checkLineOfSight ||
                 CameraUtil.objectIsInLineOfSight(this.vecTemp1, this.gameObject)))
             {
                 const scaleFactor = Math.max(0.1, 1.5 - 0.12 * dist);
@@ -90,14 +93,10 @@ export default class SpeechBubble extends GameObjectComponent
     }
 
     // "animate" plays a brief bouncy scale to flag that the message just changed. We bounce on
-    // every change (local setMessage and remote onSetMetadata alike), not just setMessage: a
-    // bubble is only ever visible to *other* clients, which receive the change via onSetMetadata,
-    // so bouncing solely in setMessage would mean no spectator ever sees the effect.
+    // every change, whether it arrived through the local setMessage or a remote onSetMetadata, so
+    // the effect plays for whoever happens to have the bubble in their field of view at the time.
     private displayMessage(message: string, animate: boolean): void
     {
-        if (!this.shouldShowMessage())
-            return;
-
         const prepend = this.componentConfig.prependUserNameToMessage;
 
         if (!prepend && message.length === 0)
@@ -170,11 +169,5 @@ export default class SpeechBubble extends GameObjectComponent
             this.textCSS2DObject?.removeFromParent();
             this.textCSS2DObject = undefined;
         }
-    }
-
-    private shouldShowMessage(): boolean
-    {
-        return (this.componentConfig.showMessageIfSpawnedByMe && this.gameObject.isMine()) ||
-            (this.componentConfig.showMessageIfSpawnedByOther && !this.gameObject.isMine());
     }
 }

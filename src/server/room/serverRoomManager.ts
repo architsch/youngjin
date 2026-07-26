@@ -8,7 +8,7 @@ import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { MAX_PLAYERS_PER_ROOM, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
@@ -16,11 +16,13 @@ import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
 import DBRoomEditor from "../db/types/row/dbRoomEditor";
 import { MAX_ROOM_EDITORS } from "../system/serverConstants";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
-import DBSearchUtil from "../db/util/dbSearchUtil";
 import SinglePlayerModeConfigMap from "../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
 import VoxelGrid from "../../shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../shared/object/types/objectGroup";
+import UserRoomChangeResult from "./types/userRoomChangeResult";
+import HubRoomUtil from "./util/hubRoomUtil";
+import RoomPickerUtil from "./util/roomPickerUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -40,28 +42,6 @@ const ServerRoomManager =
     loadRoom: async (roomID: string): Promise<RoomRuntimeMemory | null> =>
     {
         console.log(`ServerRoomManager.loadRoom :: roomID = ${roomID}`);
-
-        // "hub" is a special keyword which means that the user wants to join whichever Hub-type room is available.
-        if (roomID == "hub")
-        {
-            // Search for a hub among the already loaded rooms.
-            for (const roomRuntimeMemory of Object.values(ServerRoomManager.roomRuntimeMemories))
-            {
-                if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Hub)
-                    return roomRuntimeMemory;
-            }
-            // If no hub is currently loaded, load one.
-            const roomSearchResult = await DBSearchUtil.rooms.withRoomType(RoomTypeEnumMap.Hub);
-            if (roomSearchResult.success && roomSearchResult.data.length > 0)
-            {
-                // If there are multiple hub rooms, choose a random one of them
-                // (This will help distribute the user traffic evenly).
-                roomID = roomSearchResult.data[Math.floor(Math.random() * roomSearchResult.data.length)].id as string;
-            }
-            else
-                return null;
-        }
-
         if (ServerRoomManager.roomRuntimeMemories[roomID] != undefined)
             return ServerRoomManager.roomRuntimeMemories[roomID];
 
@@ -109,14 +89,13 @@ const ServerRoomManager =
         }
         return roomRuntimeMemory.room;
     },
-    saveRooms: async (force: boolean = false) =>
+    saveMultiplayerRooms: async (force: boolean = false) =>
     {
         const currTimeInMillis = Date.now();
         const roomsToSave: RoomRuntimeMemory[] = [];
         for (const roomRuntimeMemory of Object.values(roomRuntimeMemories))
         {
-            if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer &&
-                roomRuntimeMemory.room.dirty &&
+            if (roomRuntimeMemory.room.dirty &&
                 (force || currTimeInMillis >= roomRuntimeMemory.lastSavedTimeInMillis + ROOM_AUTO_SAVE_INTERVAL))
             {
                 roomsToSave.push(roomRuntimeMemory);
@@ -133,10 +112,10 @@ const ServerRoomManager =
                 {
                     mem.lastSavedTimeInMillis = Date.now();
                     mem.room.dirty = false;
-                    console.log(`ServerRoomManager.saveRooms :: Saved room (roomID = ${mem.room.id})`);
+                    console.log(`ServerRoomManager.saveMultiplayerRooms :: Saved room (roomID = ${mem.room.id})`);
                 }
                 else
-                    console.error(`ServerRoomManager.saveRooms :: Failed to save room (roomID = ${mem.room.id})`);
+                    console.error(`ServerRoomManager.saveMultiplayerRooms :: Failed to save room (roomID = ${mem.room.id})`);
             }));
         }
     },
@@ -155,7 +134,7 @@ const ServerRoomManager =
         await DBUserUtil.saveMultipleUsersPlayerMetadata(updates);
     },
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
-        savePlayerMetadata: boolean): Promise<boolean> =>
+        savePlayerMetadata: boolean, allowFallback: boolean): Promise<UserRoomChangeResult> =>
     {
         const user = socketUserContext.user;
         console.log(`ServerRoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
@@ -166,36 +145,48 @@ const ServerRoomManager =
         if (!socketUserContext.isInSinglePlayerRoom)
             await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
         
-        if (!roomID)
-            return false;
+        if (!roomID) // (roomID == undefined) means "Do not add the user to any of the rooms."
+            return {type: "success", newRoomID: undefined};
 
-        // Single-player rooms (e.g. the tutorial) are client-generated shared templates: the room's
-        // ID equals its single-player mode, which is a key in SinglePlayerModeConfigMap. We never
-        // load or cache such a room server-side — we synthesize a transient, content-less descriptor
-        // (the client builds the actual voxels/objects locally) and hand it straight to the joining
-        // user. The user is deliberately NOT registered as a participant, given no role beyond
-        // Visitor, and has no last-room written, matching the "server isn't authoritative over
-        // single-player" contract.
-        if (SinglePlayerModeConfigMap[roomID] != undefined)
+        if (SinglePlayerModeConfigMap[roomID] != undefined) // User is joining a single-player room.
         {
             socketUserContext.isInSinglePlayerRoom = true;
             const mem = buildSinglePlayerRoomRuntimeMemory(roomID);
             socketUserContext.addPendingSignalToUser("roomChangedSignal",
                 new RoomChangedSignal(mem, UserRoleEnumMap.Visitor));
-            return true;
+            return {type: "success", newRoomID: roomID};
         }
 
+        // Check in-memory multiplayer rooms first to avoid a Firestore query.
+        // If the in-memory instance is unavailable, load it from the DB.
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
             const mem = await ServerRoomManager.loadRoom(roomID);
-            if (mem)
-                roomRuntimeMemory = mem;
-        }
-        if (!roomRuntimeMemory)
-        {
-            console.error(`Failed to load room (ID = ${roomID})`);
-            return false;
+            if (!mem)
+            {
+                console.error(`Failed to load room (ID = ${roomID})`);
+                return {type: "error"};
+            }
+            // If the room is full,
+            // either find an alternative room (if fallback is allowed)
+            // or simply reject the user from joining the room (if fallback is NOT allowed).
+            if (Object.keys(mem.participantUserNameByID).length >= MAX_PLAYERS_PER_ROOM)
+            {
+                if (allowFallback)
+                {
+                    // Fall back to a hub room that is not full.
+                    roomID = await RoomPickerUtil.pickBestHubRoomID(socketUserContext);
+                    console.warn(`ServerRoomManager.changeUserRoom :: Original destination is full. Falling back to -> roomID = ${roomID} (userID = ${user.id})`);
+                    return await ServerRoomManager.changeUserRoom(socketUserContext,
+                        roomID, prevRoomShouldExist, savePlayerMetadata, false);
+                }
+                else
+                {
+                    return {type: "rejected", reason: "roomIsFull"};
+                }
+            }
+            roomRuntimeMemory = mem;
         }
 
         // Player metadata is per-user (stored on DBUser), so it follows the user
@@ -226,30 +217,22 @@ const ServerRoomManager =
         if (roomRuntimeMemory.room.ownerUserID === user.id)
             userRole = UserRoleEnumMap.Owner;
 
-        // Add the user to the room.
+        // Add the user to the multiplayer room.
         // (In case of a singleplayer room, the user's player object will be added/handled directly by the client.)
-        if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer)
-        {
-            socketUserContext.isInSinglePlayerRoom = false;
-            ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
-                new ObjectTransform(
-                    {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5},
-                    {x: 0, y: 0, z: 1}
-                ),
-                playerMetadata, userRole
-            );
-        }
-        else // If the user is joining a singleplayer room, mark him/her as so for future reference.
-            socketUserContext.isInSinglePlayerRoom = true;
+        socketUserContext.isInSinglePlayerRoom = false;
+        ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
+            new ObjectTransform(
+                {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5},
+                {x: 0, y: 0, z: 1}
+            ),
+            playerMetadata, userRole
+        );
 
         // Persist the user's latest room to DBUser, so that the user will come back to the same room when reconnected.
         // (A singleplayer room is not meant to be revisited based on the user's lastRoomID. It will be visited based on the user's singlePlayerMode.)
-        if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer)
-        {
-            DBUserUtil.setLastRoomID(user.id, roomID).catch(err =>
-                console.error(`ServerRoomManager.changeUserRoom :: setLastRoomID failed for userID = ${user.id}: ${err}`)
-            );
-        }
+        DBUserUtil.setLastRoomID(user.id, roomID).catch(err =>
+            console.error(`ServerRoomManager.changeUserRoom :: setLastRoomID failed for userID = ${user.id}: ${err}`)
+        );
 
         // Wrap the room memory and user role in a RoomChangedSignal and send it to the joining user.
         // The signal goes straight to the user's own socket context rather than being routed through
@@ -258,11 +241,22 @@ const ServerRoomManager =
         // pure unicast to the joining user, the direct path is equivalent for multiplayer rooms too.
         const roomChangedSignal = new RoomChangedSignal(roomRuntimeMemory, userRole);
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
-        return true;
+        return {type: "success", newRoomID: roomID};
     },
     onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>
     {
-        await ServerRoomManager.changeUserRoom(socketUserContext, params.roomID, true, true);
+        let roomID = params.roomID;
+        if (!roomID || roomID.length == 0) // If roomID is not specified, pick the best one.
+            roomID = await RoomPickerUtil.pickBestRoomID(socketUserContext, "requestFromUser");
+        const result = await ServerRoomManager.changeUserRoom(socketUserContext,
+            params.roomID, true, true, params.allowFallback);
+        if (result.type !== "success")
+        {
+            // TODO: Send an appropriate "RoomChangeRejectedSignal" back to the user,
+            // with an appropriate message as its parameter.
+            // The user's client UI should then display such a rejection message
+            // as a notification UI element.
+        }
     },
     changeRoomTexturePack: async (room: Room, newTexturePackPath: string): Promise<boolean> =>
     {
@@ -372,13 +366,13 @@ async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
     return roomRuntimeMemory;
 }
 
-// periodic room saving
+// periodic multiplayer room saving
 let savingInProgress = false;
 setInterval(async () => {
     if (savingInProgress)
         return;
     savingInProgress = true;
-    await ServerRoomManager.saveRooms();
+    await ServerRoomManager.saveMultiplayerRooms();
     savingInProgress = false;
 }, 3000);
 

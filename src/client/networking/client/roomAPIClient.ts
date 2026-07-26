@@ -28,13 +28,13 @@ const RoomAPIClient =
     {
         return await RestAPI.post(getURL("search_rooms"), { data: { query, page } });
     },
-    getHubRoom: async (): Promise<RestAPIResponse> =>
+    getHubRoomListEntries: async (): Promise<RestAPIResponse> =>
     {
-        return await RestAPI.post(getURL("get_hub_room"));
+        return await RestAPI.post(getURL("get_hub_room_list_entries"));
     },
-    getMyRoom: async (): Promise<RestAPIResponse> =>
+    getMyRoomListEntry: async (): Promise<RestAPIResponse> =>
     {
-        return await RestAPI.post(getURL("get_my_room"));
+        return await RestAPI.post(getURL("get_my_room_list_entry"));
     },
 }
 
