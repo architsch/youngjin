@@ -53,7 +53,14 @@ export default class CanvasGameObject extends GameObject
         await this.instancedMeshGraphics.loadInstancedMesh(CANVAS_GEOMETRY_ID,
             CanvasGameObject.materialParams, MAX_CANVASES_PER_ROOM, true);
 
-        this.instanceId = this.instancedMeshGraphics.rentInstanceFromPool(CanvasGameObject.instancedMeshId);
+        // The room may hold more canvases than the mesh has instances for, in which case this
+        // canvas stays unrendered (the same state it is in once despawned) rather than taking the
+        // whole room's rendering down with it.
+        const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(CanvasGameObject.instancedMeshId);
+        if (rentedInstanceId == undefined)
+            return;
+
+        this.instanceId = rentedInstanceId;
         this.updateMeshInstanceTransform();
         this.loadImage();
     }
@@ -67,7 +74,10 @@ export default class CanvasGameObject extends GameObject
     async onDespawn(): Promise<void>
     {
         await super.onDespawn();
-        this.instancedMeshGraphics.returnInstanceToPool(CanvasGameObject.instancedMeshId, this.instanceId);
+        // Nothing to hand back if the canvas never got an instance in the first place (the mesh
+        // was out of them when it spawned).
+        if (this.instanceId !== -1)
+            this.instancedMeshGraphics.returnInstanceToPool(CanvasGameObject.instancedMeshId, this.instanceId);
 
         // Mark as despawned (in order to inform a potentially pending
         // "loadImageImpl" task that the canvas's mesh instance is now obsolete

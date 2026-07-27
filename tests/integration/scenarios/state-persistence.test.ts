@@ -146,8 +146,10 @@ describe("state persistence scenarios", () => {
             skipInvariants: true,
             skipCleanup: true,
             assertions: () => {
-                // Room was unloaded after last user left — voxels are in the mock DB
-                expect(harness.isRoomLoaded("voxel-persist")).toBe(false);
+                // The hub stays resident after its last user left (hubs are never unloaded),
+                // and the voxels the builder placed are still in it.
+                expect(harness.isRoomLoaded("voxel-persist")).toBe(true);
+                expect(harness.getRoomParticipantCount("voxel-persist")).toBe(0);
             },
         });
     });

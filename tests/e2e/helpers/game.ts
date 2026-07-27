@@ -10,7 +10,7 @@
  * specs stay concise and don't duplicate low-level evaluate calls.
  */
 import { Page, expect } from "@playwright/test";
-import { TIMEOUTS } from "./constants";
+import { LOADING_INDICATOR_TEXT, TIMEOUTS } from "./constants";
 
 // ─── Game Initialization ────────────────────────────────────────────────
 
@@ -37,6 +37,20 @@ export async function waitForGameReady(page: Page): Promise<void>
     }
 
     page.off("console", logHandler);
+}
+
+/**
+ * Wait until the client has actually been placed in a room.
+ *
+ * The full-screen loading indicator is put up when the room change starts and only comes
+ * down once the server's roomChangedSignal has been applied, so its disappearance is the
+ * client-visible proof that the user ended up in a room (rather than being left waiting
+ * for a room change that never completes).
+ */
+export async function waitForRoomLoaded(page: Page): Promise<void>
+{
+    await expect(page.getByText(LOADING_INDICATOR_TEXT, { exact: true }))
+        .toBeHidden({ timeout: TIMEOUTS.ROOM_LOAD });
 }
 
 /** Wait for the Socket.IO instance to exist on the page. */

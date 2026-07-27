@@ -178,7 +178,9 @@ export default class InstancedMeshBinding
         boundingSphere.union(sphereTemp);
     }
 
-    rentInstanceFromPool(gameObject: GameObject): number
+    // Returns undefined when the mesh has run out of instances (see MeshFactory.rentInstanceId),
+    // which leaves it to the caller to go without one.
+    rentInstanceFromPool(gameObject: GameObject): number | undefined
     {
         if (!this.instancedMesh)
             throw new Error("InstancedMesh hasn't been loaded yet.");
@@ -186,6 +188,8 @@ export default class InstancedMeshBinding
             throw new Error("You cannot rent an instance without an instanceId pool.");
 
         const instanceId = MeshFactory.rentInstanceId(this.getInstancedMeshId());
+        if (instanceId == undefined)
+            return undefined;
         this.reserveInstance(gameObject, instanceId);
         return instanceId;
     }

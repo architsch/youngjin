@@ -4,6 +4,7 @@ import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import RoomChangedSignal from "../../../shared/room/types/roomChangedSignal";
+import RoomChangeRejectedSignal from "../../../shared/room/types/roomChangeRejectedSignal";
 import ThingsPoolEnv from "../../system/types/thingsPoolEnv";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import EncodableArray from "../../../shared/networking/types/encodableArray";
@@ -31,6 +32,8 @@ let socket: Socket;
 const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "roomChangedSignal": (data: EncodableData) =>
         App.onRoomChangedSignalReceived(data as RoomChangedSignal),
+    "roomChangeRejectedSignal": (data: EncodableData) =>
+        App.onRoomChangeRejectedSignalReceived(data as RoomChangeRejectedSignal),
     "addObjectSignal": (data: EncodableData) =>
         ClientObjectManager.onAddObjectSignalReceived(data as AddObjectSignal),
     "removeObjectSignal": (data: EncodableData) =>
@@ -158,12 +161,6 @@ const SocketsClient =
 
     emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
     emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),
-    tryEmitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
-        if (tryStartClientProcess("roomChange", 1, 1))
-            emitWhenReady("requestRoomChangeSignal", params);
-        else
-            console.warn("Cannot change room because 'roomChange' process is ongoing.");
-    },
     emitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
         emitWhenReady("requestRoomChangeSignal", params);
     },

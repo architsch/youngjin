@@ -27,8 +27,78 @@ This document catalogs all integration test scenarios organized by category.
 | users in different rooms have independent room IDs persisted to DBUser | Per-user `lastRoomID` stays independent across rooms |
 | switching rooms saves state from previous room | A room switch persists the previous room's state |
 | requestRoomChange persists the new lastRoomID + flushes prev room's metadata | `onRequestRoomChangeSignalReceived` writes the new `lastRoomID` and flushes the prior room's metadata |
-| room unloads when last user leaves | An empty room is removed from memory |
+| room unloads when last user leaves | An empty Regular room is removed from memory |
 | graceful shutdown saves all rooms and user metadata | Shutdown persists and unloads all rooms and users |
+
+## Room Population (`room-population.test.ts`) — 34 tests
+
+See [room_population.md](../../networking/room_population.md) for the behavior under test.
+
+### Per-room player cap
+
+| Test | What it verifies |
+|------|-----------------|
+| a room fills up to its admission cap and turns further users away | The room stops admitting once it is almost full; the next join is rejected and leaves the user roomless |
+| a room change refused for capacity leaves the user in the room they were already in | A refused join does not evict the user from their current room |
+| a user re-entering the room they already occupy is not blocked by their own slot | Re-entering a room at exactly the admission cap succeeds, since the user releases their own slot |
+| a full destination re-routes the user to an available hub when fallback is allowed | A routed-to (rather than asked-for) full destination lands the user in a hub |
+| a destination that no longer exists re-routes the user to a hub when fallback is allowed | An unloadable destination also falls back rather than leaving the user roomless |
+| a destination that could not be resolved at all is refused rather than left roomless | An empty destination is a refusal, not a request to put the user in no room |
+
+### Telling the client about a refusal
+
+| Test | What it verifies |
+|------|-----------------|
+| the client is told why its room change request was refused | A `roomChangeRejectedSignal` (reason: room is full) is queued, and no `roomChangedSignal` is |
+| a room change request for a room that does not exist is refused as unavailable | The rejection reason distinguishes an unavailable room from a full one |
+| a successful room change sends no rejection signal | The signal is only emitted on failure |
+
+### Hub picking
+
+| Test | What it verifies |
+|------|-----------------|
+| keeps filling one under-populated hub instead of spreading users across all of them | The busiest under-populated hub is still the one chosen |
+| moves on to the next hub once the current one is no longer under-populated | Sitting at the threshold still counts as under-populated; one past it hands over to the next hub |
+| distributes users evenly once every hub is medium-populated | With no under-populated hub left, the emptiest one wins |
+| never routes a user into a hub that is already almost full | Such a hub is excluded from the candidates |
+| opens a new hub once every existing hub is over-populated | A brand new, empty hub is created and preloaded |
+| opens only one new hub when several users arrive at the same moment | Concurrent picks share a single hub creation |
+| falls back to an over-populated hub when a new one cannot be opened | A failed hub creation still yields the emptiest hub that has a free slot |
+| picks nothing when every hub is capped and no new one can be opened | The picker yields nothing, which the caller turns into a refusal |
+| routes the reserved "hub" target through the hub balancer | The reserved hub keyword resolves via the same balancing rules |
+
+### Where a user lands when the app starts
+
+Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` does on connection: pick a destination, join with a fallback allowed, and report a refusal.
+
+| Test | What it verifies |
+|------|-----------------|
+| sends a returning user back to the room they were last in | The last room outranks the hub balancer |
+| re-routes a returning user to a hub when their last room has filled up | A routed-to destination diverts silently — no rejection signal |
+| re-routes a returning user to a hub when their last room no longer exists | A deleted last room is treated the same as a full one |
+| sends a first-time user to the hub the balancer picks | With no history, the balancing rules decide |
+| honours a room named in the connection URL over the user's last room | The URL target outranks the last room |
+| sends a user who owes a single-player mode there first, whatever else they have | Single-player wins over both URL target and last room, and registers no participant |
+| tells a connecting user when no room at all can take them | An empty pick reaches the client as a rejection rather than an endless wait |
+
+### Leaving single-player mode (tutorial door / skip)
+
+| Test | What it verifies |
+|------|-----------------|
+| routes a user leaving single-player mode through the picker | An unnamed destination means "you choose", not "refuse" |
+| re-routes a user leaving single-player mode when the room they came for is full | The fallback applies on the way out of single-player too |
+
+### Page refresh and server restart
+
+| Test | What it verifies |
+|------|-----------------|
+| gives a refreshing user their slot back in a room that is otherwise full | The old socket is evicted before the new one picks, so the slot is free again |
+| re-routes a refreshing user whose slot was taken while they were away | Losing the slot mid-refresh diverts rather than strands |
+| lets everyone back into their room after a server restart | A shutdown followed by a simultaneous mass reconnect puts everyone back |
+| records where every user was before the shutdown finishes | The shutdown leaves each user's room persisted, which is what the return trip reads |
+| returns each user to their own room after a restart, not to a common one | Users spread across regular rooms and a hub each go back to their own |
+| returns a hub visitor to the same hub rather than re-balancing them | Being remembered outranks being balanced, even though every hub is empty afterwards |
+| takes a user who was mid-tutorial at shutdown back into the tutorial | A single-player user holds no room, and their mode still decides where they land |
 
 ## Object Management (`object.test.ts`) — 8 tests
 
@@ -243,9 +313,9 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 
 | Test | What it verifies |
 |------|-----------------|
-| user moves from default hub to their own regular room | User ends up in their own room with Owner role; hub unloads |
+| user moves from default hub to their own regular room | User ends up in their own room with Owner role; the vacated hub stays loaded but empty |
 | user moves from one regular room to another regular room | Source room unloads; destination has both users |
-| user moves between rooms via URL-style navigation (join by room ID) | Joining by room ID works; the source room unloads |
+| user moves between rooms via URL-style navigation (join by room ID) | Joining by room ID works; the source hub is left empty |
 
 ## Room API (`room-api.test.ts`) — 12 tests
 
@@ -319,6 +389,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 |----------|-------|
 | Connection | 9 |
 | Room | 9 |
+| Room Population | 34 |
 | Object | 8 |
 | Voxel | 9 |
 | Single-Player | 10 |
@@ -332,4 +403,4 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 20 |
-| **Total** | **179** |
+| **Total** | **213** |

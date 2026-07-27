@@ -37,8 +37,8 @@ export type Action =
     | { type: "reconnectCaseA"; userIndex: number }
     | { type: "reconnectCaseB"; userIndex: number }
     // Room
-    | { type: "joinRoom"; userIndex: number; roomID: string }
-    | { type: "requestRoomChange"; userIndex: number; roomID: string }
+    | { type: "joinRoom"; userIndex: number; roomID: string; allowFallback?: boolean }
+    | { type: "requestRoomChange"; userIndex: number; roomID: string; allowFallback?: boolean }
     | { type: "seedRoom"; roomID: string; roomType?: RoomType }
     // Object — player movement
     | { type: "moveObject"; userIndex: number; x: number; y: number; z: number;
@@ -128,7 +128,7 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (connectedUsers.length === 0) return;
             const idx = action.userIndex % connectedUsers.length;
             const ctx = connectedUsers[idx];
-            await harness.joinRoom(ctx, action.roomID);
+            await harness.joinRoom(ctx, action.roomID, action.allowFallback ?? false);
             break;
         }
         case "requestRoomChange":
@@ -136,7 +136,7 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (connectedUsers.length === 0) return;
             const idx = action.userIndex % connectedUsers.length;
             const ctx = connectedUsers[idx];
-            const signal = new RequestRoomChangeSignal(action.roomID);
+            const signal = new RequestRoomChangeSignal(action.roomID, action.allowFallback ?? false);
             await ServerRoomManager.onRequestRoomChangeSignalReceived(ctx.socketUserContext, signal);
             break;
         }

@@ -59,7 +59,9 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         bindingMap[instancedMeshId].unreserveInstance(this.gameObject, instanceId);
     }
 
-    rentInstanceFromPool(instancedMeshId: string): number
+    // Returns undefined when the mesh has run out of instances (see MeshFactory.rentInstanceId),
+    // which leaves it to the caller to go without one.
+    rentInstanceFromPool(instancedMeshId: string): number | undefined
     {
         return bindingMap[instancedMeshId].rentInstanceFromPool(this.gameObject);
     }

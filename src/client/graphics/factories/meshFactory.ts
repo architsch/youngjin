@@ -9,6 +9,9 @@ const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const loadedLineSegments: { [id: string]: THREE.LineSegments } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
 const ongoingInstancedMeshLoads: { [meshId: string]: Promise<THREE.InstancedMesh> } = {};
+// Meshes whose instance pool has been reported as exhausted, so that the shortage is logged once
+// rather than on every frame the callers spend retrying.
+const exhaustedMeshIds: Set<string> = new Set();
 
 const MeshFactory =
 {
@@ -74,12 +77,30 @@ const MeshFactory =
         }
         return ongoingLoad;
     },
-    rentInstanceId: (meshId: string): number =>
+    // Returns undefined when the mesh has no instance left to give out. A pool is sized for the
+    // most a room is expected to need, so this means the room is holding more of something (e.g.
+    // players) than that: the caller leaves whatever it was going to draw undrawn and retries
+    // later, which degrades the scene rather than breaking it.
+    rentInstanceId: (meshId: string): number | undefined =>
     {
         const pool = instanceIdPools[meshId];
         if (pool == undefined)
-            throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
+        {
+            console.error(`Instance ID pool not found (meshId = ${meshId})`);
+            return undefined;
+        }
         const instanceId = pool.rentItem();
+        if (instanceId == undefined)
+        {
+            // Reported once per mesh: the callers retry every frame, so logging each attempt
+            // would bury everything else in the console.
+            if (!exhaustedMeshIds.has(meshId))
+            {
+                exhaustedMeshIds.add(meshId);
+                console.warn(`MeshFactory.rentInstanceId :: Instance pool exhausted, so some parts will go undrawn (meshId = ${meshId})`);
+            }
+            return undefined;
+        }
         const mesh = loadedMeshes[meshId] as THREE.InstancedMesh;
         if (instanceId + 1 > mesh.count)
             mesh.count = instanceId + 1;
@@ -91,6 +112,7 @@ const MeshFactory =
         if (pool == undefined)
             throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
         pool.returnItem(instanceId);
+        exhaustedMeshIds.delete(meshId); // The mesh has capacity again, so a later shortage is worth reporting afresh.
         if (pool.allItemsAreFree())
             (loadedMeshes[meshId] as THREE.InstancedMesh).count = 0;
     },

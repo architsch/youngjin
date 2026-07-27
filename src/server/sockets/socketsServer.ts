@@ -23,13 +23,10 @@ import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
-import DBSearchUtil from "../db/util/dbSearchUtil";
-import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import UserCommandUtil from "../user/util/userCommandUtil";
 import LatencySimUtil from "../system/util/latencySimUtil";
 import ErrorUtil from "../../shared/system/util/errorUtil";
-import HubRoomUtil from "../room/util/hubRoomUtil";
 import RoomPickerUtil from "../room/util/roomPickerUtil";
 
 let io: socketIO.Server;
@@ -186,7 +183,8 @@ const SocketsServer =
 
                 // Try to join the best room. If it is full, fall back to a room that is NOT full.
                 const roomID = await RoomPickerUtil.pickBestRoomID(socketUserContext, "appStart");
-                await ServerRoomManager.changeUserRoom(socketUserContext, roomID, false, false, true);
+                const roomChangeResult = await ServerRoomManager.changeUserRoom(socketUserContext, roomID, false, false, true);
+                ServerRoomManager.notifyRoomChangeRejection(socketUserContext, roomChangeResult);
             } catch (err) {
                 console.error(`Exception while establishing a socket connection with a client :: Error: ${ErrorUtil.getErrorMessage(err)}`);
                 socket.disconnect(true);

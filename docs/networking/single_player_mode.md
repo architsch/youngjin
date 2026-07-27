@@ -1,6 +1,6 @@
 # Single-Player Mode
 
-Reference: @src/shared/room/types/roomType.ts , @src/shared/user/types/user.ts , @src/shared/system/types/featureFlag.ts , @src/server/room/serverRoomManager.ts , @src/server/room/routines/ownerlessRoomCreationRoutine.ts , @src/server/sockets/socketsServer.ts , @src/shared/singlePlayer/maps/singlePlayerModeConfigMap.ts , @src/client/singlePlayer/singlePlayerManager.ts , @src/client/singlePlayer/maps/singlePlayerActionMap.ts , @src/client/singlePlayer/maps/singlePlayerConditionMap.ts , @src/client/object/util/clientObjectUtil.ts
+Reference: @src/shared/room/types/roomType.ts , @src/shared/user/types/user.ts , @src/shared/system/types/featureFlag.ts , @src/server/room/serverRoomManager.ts , @src/server/room/util/hubRoomUtil.ts , @src/server/room/util/roomPickerUtil.ts , @src/server/sockets/socketsServer.ts , @src/shared/singlePlayer/maps/singlePlayerModeConfigMap.ts , @src/client/singlePlayer/singlePlayerManager.ts , @src/client/singlePlayer/maps/singlePlayerActionMap.ts , @src/client/singlePlayer/maps/singlePlayerConditionMap.ts , @src/client/object/util/clientObjectUtil.ts
 
 ## What it is
 
@@ -15,7 +15,7 @@ Single-player support is expressed through two independent pieces of state:
 - **A single-player room type** (`RoomType`) — a room type alongside Hub and Regular. A single-player room is a *shared template*: there is one such room per name (e.g. one tutorial room for the whole server), and every user who enters it sees the same starting layout but acts on their own **local** copy. The server never mutates a single-player room on a user's behalf, and these rooms have no owner.
 - **A single-player mode flag on the user** (`User`) — names which single-player experience, if any, the user should be routed into on their next connection. An empty value means the user is not in single-player mode. New users (guests and freshly-created members) start out routed to the tutorial.
 
-The Hub room is created at server boot by `OwnerlessRoomCreationRoutine` if it does not already exist. A single-player room, by contrast, is never stored anywhere: it is generated on demand by the client from its mode configuration (see [Local world construction](#local-world-construction)).
+Hub rooms are preloaded at server boot by `HubRoomUtil`, which creates one if none exists yet (see [room_population.md](room_population.md#hub-residency)). A single-player room, by contrast, is never stored anywhere: it is generated on demand by the client from its mode configuration (see [Local world construction](#local-world-construction)).
 
 ## Where the user lands on connect
 
@@ -26,13 +26,13 @@ The Hub room is created at server boot by `OwnerlessRoomCreationRoutine` if it d
 3. The last multi-player room the user was in.
 4. A Hub room, as the final fallback.
 
-If the preferred room cannot be resolved, the server falls back to a Hub room.
+If the preferred room cannot be entered — it no longer exists, or it has reached its player cap — the server falls back to a Hub room. See [room_population.md](room_population.md#entering-a-specific-room).
 
 The user's mode flag only *influences where the server routes them*; it is **not** what the client consults to decide whether to run a single-player experience. The room the server actually places the user in is the single source of truth: the client starts (or does not start) single-player mode purely from that room's `RoomType`, and a single-player room carries its mode identity in its name. This keeps the two from ever disagreeing — the single-player UI and scripted steps can never run on top of a multi-player room, nor a multi-player session inside a single-player room. (If, for example, the connection routing and the page-rendered user state ever resolved to different users, the client still simply follows the room it landed in.)
 
 ### The "hub" keyword
 
-The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to load it, `ServerRoomManager` resolves it to whichever Hub room is available (preferring one already in memory, otherwise picking a random hub to spread traffic). The client uses this as the default destination when sending the user out of the tutorial (see [Door behavior](#door-behavior)).
+The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to load it, `RoomPickerUtil` resolves it to whichever Hub room the incoming user should be load-balanced into (see [room_population.md](room_population.md#picking-a-hub)). The client uses this as the default destination when sending the user out of the tutorial (see [Door behavior](#door-behavior)).
 
 ## Server-side contract for single-player rooms
 

@@ -150,6 +150,20 @@ export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.25, z: 0.5};
 export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, used for rendering canvas images based on mesh instances, is an 8x8 grid
 export const MAX_PLAYERS_PER_ROOM = 64;
 
+// Population bands used to load-balance the users across the rooms.
+// A room at or above the over-population threshold is considered "over-populated"
+// (i.e. crowded enough that no more users should be routed into it),
+// and a room at or below the under-population threshold is considered "under-populated"
+// (i.e. still empty enough that it should be filled up before another room is filled).
+// Anything in between is a medium-populated room.
+export const ROOM_OVER_POPULATION_THRESHOLD = 50;
+export const ROOM_UNDER_POPULATION_THRESHOLD = 20;
+
+// Slots held in reserve below the hard cap. A room is considered "almost full" — and stops
+// admitting anyone new — once its population reaches (MAX_PLAYERS_PER_ROOM - this margin),
+// so that a handful of joins that were already in flight cannot push it past the hard cap.
+export const ROOM_ALMOST_FULL_MARGIN = 4;
+
 // Gameplay
 
 export const PLAYER_HEIGHT = 2.5;

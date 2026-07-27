@@ -3,15 +3,17 @@ import ClientObjectUtil from "./object/util/clientObjectUtil";
 import ClientVoxelManager from "./voxel/clientVoxelManager";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../shared/room/types/roomChangedSignal";
+import RoomChangeRejectedSignal from "../shared/room/types/roomChangeRejectedSignal";
+import { RoomChangeRejectionReason, RoomChangeRejectionReasonEnumMap } from "../shared/room/types/roomChangeRejectionReason";
 import ThingsPoolEnv from "./system/types/thingsPoolEnv";
 import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
-import { endClientProcess } from "./system/types/clientProcess";
+import { endClientProcess, ongoingClientProcessExists } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
-import { roomChangedObservable, updateObservable, userRoleObservable, singlePlayerObservable } from "./system/clientObservables";
+import { roomChangedObservable, updateObservable, userRoleObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
@@ -142,6 +144,26 @@ const App =
             SinglePlayerManager.finishSinglePlayerMode();
         }
     },
+    // The room change the user was waiting for is not going to happen (e.g. the destination
+    // turned out to be full), so no RoomChangedSignal is coming. Release the "Loading"
+    // indicator that the request put up, and tell the user why they are staying put.
+    onRoomChangeRejectedSignalReceived: (roomChangeRejectedSignal: RoomChangeRejectedSignal) =>
+    {
+        if (ongoingClientProcessExists("roomChange"))
+            endClientProcess("roomChange");
+        notificationMessageObservable.set(getRoomChangeRejectionMessage(roomChangeRejectedSignal.reason));
+    },
+}
+
+function getRoomChangeRejectionMessage(reason: RoomChangeRejectionReason): string
+{
+    switch (reason)
+    {
+        case RoomChangeRejectionReasonEnumMap.RoomIsAlmostFull:
+            return "That room is full. Please try another one.";
+        default:
+            return "Could not enter that room. Please try again.";
+    }
 }
 
 async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: UserRole)

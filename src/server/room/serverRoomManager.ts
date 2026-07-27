@@ -2,13 +2,15 @@ import PhysicsManager from "../../shared/physics/physicsManager";
 import Room from "../../shared/room/types/room";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../../shared/room/types/roomChangedSignal";
+import RoomChangeRejectedSignal from "../../shared/room/types/roomChangeRejectedSignal";
+import { RoomChangeRejectionReason, RoomChangeRejectionReasonEnumMap } from "../../shared/room/types/roomChangeRejectionReason";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import { MAX_PLAYERS_PER_ROOM, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
@@ -21,7 +23,6 @@ import VoxelGrid from "../../shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../shared/object/types/objectGroup";
 import UserRoomChangeResult from "./types/userRoomChangeResult";
-import HubRoomUtil from "./util/hubRoomUtil";
 import RoomPickerUtil from "./util/roomPickerUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
@@ -138,24 +139,39 @@ const ServerRoomManager =
     {
         const user = socketUserContext.user;
         console.log(`ServerRoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
-        
-        // Remove the user from the previous room (if applicable).
-        // However, don't attempt to remove the user if the previous room was a single-player environment.
-        // A user never gets added to a single-player environment, so he/she is never meant to be removed from one either.
-        if (!socketUserContext.isInSinglePlayerRoom)
-            await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
-        
-        if (!roomID) // (roomID == undefined) means "Do not add the user to any of the rooms."
+
+        if (roomID == undefined) // (roomID == undefined) means "Do not add the user to any of the rooms". This scenario occurs usually when the user simply exits the app (i.e. disconnects from the server).
+        {
+            await leavePreviousRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
             return {type: "success", newRoomID: undefined};
+        }
+
+        // An empty room ID means a destination was wanted but none could be found (i.e. every
+        // room that could have taken this user is full). That is a refusal, not a request to
+        // leave the user roomless, so it must not be mistaken for the case above.
+        if (roomID.length == 0)
+            return {type: "rejected", reason: RoomChangeRejectionReasonEnumMap.RoomUnavailable};
 
         if (SinglePlayerModeConfigMap[roomID] != undefined) // User is joining a single-player room.
         {
+            await leavePreviousRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
             socketUserContext.isInSinglePlayerRoom = true;
             const mem = buildSinglePlayerRoomRuntimeMemory(roomID);
             socketUserContext.addPendingSignalToUser("roomChangedSignal",
                 new RoomChangedSignal(mem, UserRoleEnumMap.Visitor));
             return {type: "success", newRoomID: roomID};
         }
+
+        // Everything from here down to the point where the user actually leaves their current
+        // room is about vetting the destination. Doing it in that order is what makes a refusal
+        // harmless: a user turned away from a full room stays exactly where they were, instead
+        // of being stranded in no room at all.
+        //
+        // "allowFallback" separates the two kinds of destination a user can end up with: one
+        // they picked by name (fallback NOT allowed — if it can't be entered, they are simply
+        // turned away) and one the server routed them to, such as the room from their last
+        // session or a room ID carried in the URL (fallback allowed — an unusable destination
+        // sends them to a hub instead of leaving them roomless).
 
         // Check in-memory multiplayer rooms first to avoid a Firestore query.
         // If the in-memory instance is unavailable, load it from the DB.
@@ -165,29 +181,31 @@ const ServerRoomManager =
             const mem = await ServerRoomManager.loadRoom(roomID);
             if (!mem)
             {
-                console.error(`Failed to load room (ID = ${roomID})`);
-                return {type: "error"};
-            }
-            // If the room is full,
-            // either find an alternative room (if fallback is allowed)
-            // or simply reject the user from joining the room (if fallback is NOT allowed).
-            if (Object.keys(mem.participantUserNameByID).length >= MAX_PLAYERS_PER_ROOM)
-            {
-                if (allowFallback)
-                {
-                    // Fall back to a hub room that is not full.
-                    roomID = await RoomPickerUtil.pickBestHubRoomID(socketUserContext);
-                    console.warn(`ServerRoomManager.changeUserRoom :: Original destination is full. Falling back to -> roomID = ${roomID} (userID = ${user.id})`);
-                    return await ServerRoomManager.changeUserRoom(socketUserContext,
-                        roomID, prevRoomShouldExist, savePlayerMetadata, false);
-                }
-                else
-                {
-                    return {type: "rejected", reason: "roomIsFull"};
-                }
+                console.error(`ServerRoomManager.changeUserRoom :: Failed to load room (ID = ${roomID})`);
+                if (!allowFallback)
+                    return {type: "error"};
+                return await fallBackToHub(socketUserContext, prevRoomShouldExist, savePlayerMetadata,
+                    RoomChangeRejectionReasonEnumMap.RoomUnavailable);
             }
             roomRuntimeMemory = mem;
         }
+
+        // Every room holds a limited number of players, both to keep the client's per-room
+        // instanced-mesh pool from running dry and to stop one room from degrading everyone's
+        // performance.
+        // (A user re-entering the room they are already in is not blocked by their own slot,
+        // since they release it on the way in.)
+        if (RoomPickerUtil.isRoomAlmostFull(roomRuntimeMemory) &&
+            roomRuntimeMemory.participantUserNameByID[user.id] == undefined)
+        {
+            if (!allowFallback)
+                return {type: "rejected", reason: RoomChangeRejectionReasonEnumMap.RoomIsAlmostFull};
+            return await fallBackToHub(socketUserContext, prevRoomShouldExist, savePlayerMetadata,
+                RoomChangeRejectionReasonEnumMap.RoomIsAlmostFull);
+        }
+
+        // The destination has been vetted, so the user can now give up their current room.
+        await leavePreviousRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
 
         // Player metadata is per-user (stored on DBUser), so it follows the user
         // across rooms. Resolution order:
@@ -217,16 +235,28 @@ const ServerRoomManager =
         if (roomRuntimeMemory.room.ownerUserID === user.id)
             userRole = UserRoleEnumMap.Owner;
 
+        // Theoretically, it is possible for other users to have joined the room
+        // during the preceding DBUser lookup process (which is very brief but nevertheless
+        // asynchronous), thereby resulting in the room becoming full AFTER it was decided
+        // that it was not full yet and thus safe for the user to enter.
+        // However, since our initial check was based on the
+        // "Almost Full" (instead of just "Full") condition which includes a
+        // margin to take account of this potential race condition, we are probably safe here.
+
         // Add the user to the multiplayer room.
         // (In case of a singleplayer room, the user's player object will be added/handled directly by the client.)
+        // The room the user actually lands in is whichever instance was live at registration time,
+        // which is not necessarily the one resolved above (see addUserToRoom).
         socketUserContext.isInSinglePlayerRoom = false;
-        ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
+        const joinedRoomRuntimeMemory = await ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
             new ObjectTransform(
                 {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5},
                 {x: 0, y: 0, z: 1}
             ),
             playerMetadata, userRole
         );
+        if (!joinedRoomRuntimeMemory)
+            return {type: "error"};
 
         // Persist the user's latest room to DBUser, so that the user will come back to the same room when reconnected.
         // (A singleplayer room is not meant to be revisited based on the user's lastRoomID. It will be visited based on the user's singlePlayerMode.)
@@ -239,7 +269,7 @@ const ServerRoomManager =
         // the room's SocketRoomContext: a single-player user is intentionally never registered in the
         // room context (see above), so an indirect unicast would fail to find them. Since this is a
         // pure unicast to the joining user, the direct path is equivalent for multiplayer rooms too.
-        const roomChangedSignal = new RoomChangedSignal(roomRuntimeMemory, userRole);
+        const roomChangedSignal = new RoomChangedSignal(joinedRoomRuntimeMemory, userRole);
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
         return {type: "success", newRoomID: roomID};
     },
@@ -249,14 +279,21 @@ const ServerRoomManager =
         if (!roomID || roomID.length == 0) // If roomID is not specified, pick the best one.
             roomID = await RoomPickerUtil.pickBestRoomID(socketUserContext, "requestFromUser");
         const result = await ServerRoomManager.changeUserRoom(socketUserContext,
-            params.roomID, true, true, params.allowFallback);
-        if (result.type !== "success")
-        {
-            // TODO: Send an appropriate "RoomChangeRejectedSignal" back to the user,
-            // with an appropriate message as its parameter.
-            // The user's client UI should then display such a rejection message
-            // as a notification UI element.
-        }
+            roomID, true, true, params.allowFallback);
+        ServerRoomManager.notifyRoomChangeRejection(socketUserContext, result);
+    },
+    // Tells the user that the room change they were waiting for is not going to happen, so
+    // that their client can stop blocking on it and show the reason instead. Does nothing for
+    // a successful room change, which the user learns about through the RoomChangedSignal.
+    notifyRoomChangeRejection: (socketUserContext: SocketUserContext, result: UserRoomChangeResult): void =>
+    {
+        if (result.type == "success")
+            return;
+        const reason = (result.type == "rejected")
+            ? result.reason
+            : RoomChangeRejectionReasonEnumMap.RoomUnavailable;
+        socketUserContext.addPendingSignalToUser("roomChangeRejectedSignal",
+            new RoomChangeRejectedSignal(reason));
     },
     changeRoomTexturePack: async (room: Room, newTexturePackPath: string): Promise<boolean> =>
     {
@@ -319,6 +356,31 @@ const ServerRoomManager =
     {
         return (await loadCurrentEditors(roomID)) ?? [];
     },
+}
+
+// Sends a user whose intended destination turned out to be unusable to a hub that still has
+// room for them, so they are never left without a room to be in. The rejection reason is what
+// the user is told when even that is impossible (i.e. no hub can take another player).
+async function fallBackToHub(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
+    savePlayerMetadata: boolean, rejectionReason: RoomChangeRejectionReason): Promise<UserRoomChangeResult>
+{
+    const fallbackRoomID = await RoomPickerUtil.pickBestHubRoomID();
+    console.warn(`ServerRoomManager :: Original destination is unusable. Falling back to -> roomID = ${fallbackRoomID} (userID = ${socketUserContext.user.id})`);
+    if (fallbackRoomID.length == 0)
+        return {type: "rejected", reason: rejectionReason};
+    return await ServerRoomManager.changeUserRoom(socketUserContext, fallbackRoomID,
+        prevRoomShouldExist, savePlayerMetadata, false);
+}
+
+// Removes the user from the room they are currently in (if any).
+// A single-player environment is skipped: a user never gets added to one, so they are never
+// meant to be removed from one either.
+async function leavePreviousRoom(socketUserContext: SocketUserContext,
+    prevRoomShouldExist: boolean, savePlayerMetadata: boolean): Promise<void>
+{
+    if (socketUserContext.isInSinglePlayerRoom)
+        return;
+    await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
 }
 
 // Returns the room's current editor list, preferring the in-memory copy (loaded

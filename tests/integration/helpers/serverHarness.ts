@@ -40,6 +40,10 @@ const _latencyConfig = vi.hoisted(() => ({
     maxMs: 0,
 }));
 
+// Serial number for rooms created through the mocked DBRoomUtil.createRoom (e.g. the hubs
+// that RoomPickerUtil opens once every existing hub is over-populated).
+const _autoRoomCounter = vi.hoisted(() => ({ value: 0 }));
+
 function _randomDelay(): Promise<void>
 {
     if (!_latencyConfig.enabled) return Promise.resolve();
@@ -77,7 +81,18 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             return true;
         }),
         deleteRoomContent: vi.fn(async () => true),
-        createRoom: vi.fn(async () => ({ success: true, data: [{ id: "room-auto" }] })),
+        // Generates a real (loadable) room, so that server code which creates rooms on demand
+        // — hub creation in particular — can be exercised end to end.
+        createRoom: vi.fn(async (roomName: string, roomType: number,
+            ownerUserID: string, ownerUserName: string, texturePackPath: string) => {
+            if (_latencyConfig.enabled) await _randomDelay();
+            const { seedRoom: seedRoomInStore } = await import("./mockDB");
+            const roomID = `room-auto-${++_autoRoomCounter.value}`;
+            const room = seedRoomInStore(roomID, roomType);
+            room.roomName = roomName;
+            _roomStore[roomID] = { room, editors: [], ownerUserID, ownerUserName, roomType, texturePackPath };
+            return { success: true, data: [{ id: roomID }] };
+        }),
         deleteRoom: vi.fn(async () => true),
         changeRoomTexturePackPath: vi.fn(async () => true),
         setEditors: vi.fn(async (roomID: string, editors: any[]) => {
@@ -197,6 +212,9 @@ import User from "../../../src/shared/user/types/user";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
+import RoomPickerUtil from "../../../src/server/room/util/roomPickerUtil";
+import HubRoomUtil from "../../../src/server/room/util/hubRoomUtil";
+import UserRoomChangeResult from "../../../src/server/room/types/userRoomChangeResult";
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -243,11 +261,17 @@ const _pendingMetadata: {[userID: string]: {[key: string]: string}} = {};
 // which the subsequent joinRoom consumes — so the new context just needs to exist.
 function reconnectSocket(oldCtx: ConnectedUser): ConnectedUser
 {
+    // The real server rebuilds the User from DBUser on every connection (see the socket auth
+    // middleware), so the reconnecting user carries whatever the previous session persisted —
+    // which is precisely what the room picker consults to send them back where they were.
+    const storedUser = _userStore[oldCtx.user.id];
     const { user: newUser } = createMockUser({
         id: oldCtx.user.id,
         userName: oldCtx.user.userName,
         userType: oldCtx.user.userType,
         email: oldCtx.user.email,
+        singlePlayerMode: storedUser?.singlePlayerMode ?? oldCtx.user.singlePlayerMode,
+        lastRoomID: storedUser?.lastRoomID ?? oldCtx.user.lastRoomID,
     });
     const socket = new MockSocket(newUser);
     const socketUserContext = new SocketUserContext(socket as any);
@@ -286,6 +310,7 @@ export const harness = {
         for (const k in _roomStore) delete _roomStore[k];
         for (const k in _userStore) delete _userStore[k];
         _savedMetadataRecords.length = 0;
+        _autoRoomCounter.value = 0;
 
         for (const k in _pendingMetadata) delete _pendingMetadata[k];
 
@@ -367,15 +392,39 @@ export const harness = {
      * Moves a connected user into a room (loads the room if needed).
      * Seeds the user's playerMetadata on DBUser before joining so the server
      * reads the latest value from the mocked DB.
+     *
+     * `allowFallback` mirrors the server-side flag: when true, a full destination
+     * re-routes the user to a hub that still has room, instead of rejecting them.
      */
-    async joinRoom(ctx: ConnectedUser, roomID: string): Promise<boolean>
+    async joinRoom(ctx: ConnectedUser, roomID: string, allowFallback: boolean = false): Promise<UserRoomChangeResult>
     {
         // Player metadata is per-user (stored on DBUser), so it must be present in the
         // user store before changeUserRoom reads it.
         const pending = _pendingMetadata[ctx.user.id];
         if (pending && _userStore[ctx.user.id])
             _userStore[ctx.user.id].playerMetadata = pending;
-        return ServerRoomManager.changeUserRoom(ctx.socketUserContext, roomID, false, false);
+        return ServerRoomManager.changeUserRoom(ctx.socketUserContext, roomID, false, false, allowFallback);
+    },
+
+    /**
+     * Mirrors what SocketsServer does the moment a client connects: let RoomPickerUtil decide
+     * where the user belongs (single-player mode, URL target, last room, or a balanced hub),
+     * join them there with a fallback allowed, and tell them if it could not happen.
+     *
+     * Use this instead of `joinRoom` whenever the destination itself is what is under test —
+     * `joinRoom` names a room outright and so bypasses the picker entirely.
+     */
+    async appStartJoin(ctx: ConnectedUser): Promise<UserRoomChangeResult>
+    {
+        const pending = _pendingMetadata[ctx.user.id];
+        if (pending && _userStore[ctx.user.id])
+            _userStore[ctx.user.id].playerMetadata = pending;
+
+        const roomID = await RoomPickerUtil.pickBestRoomID(ctx.socketUserContext, "appStart");
+        const result = await ServerRoomManager.changeUserRoom(ctx.socketUserContext, roomID,
+            false, false, /*allowFallback*/ true);
+        ServerRoomManager.notifyRoomChangeRejection(ctx.socketUserContext, result);
+        return result;
     },
 
     /**
@@ -384,8 +433,51 @@ export const harness = {
     async disconnectUser(ctx: ConnectedUser, saveState: boolean = true): Promise<void>
     {
         ServerUserManager.removeUser(ctx.user.id);
-        await ServerRoomManager.changeUserRoom(ctx.socketUserContext, undefined, false, saveState);
+        await ServerRoomManager.changeUserRoom(ctx.socketUserContext, undefined, false, saveState, false);
         ctx.socket.connected = false;
+    },
+
+    /**
+     * Preloads a seeded room into memory without putting anyone in it. Mirrors the way
+     * HubRoomUtil preloads every hub at server start-up, which is what the room picker
+     * assumes when it scans the loaded hubs.
+     */
+    async loadRoom(roomID: string): Promise<void>
+    {
+        await ServerRoomManager.loadRoom(roomID);
+    },
+
+    /**
+     * Overwrites a loaded room's participant table with `population` synthetic entries, so
+     * that population-dependent logic (room picking, capacity gates) can be exercised without
+     * standing up one real socket per player. Rooms populated this way have no player objects
+     * and no socket contexts, so scenarios using it must skip the structural invariants.
+     */
+    setSyntheticRoomPopulation(roomID: string, population: number): void
+    {
+        const mem = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!mem) throw new Error(`setSyntheticRoomPopulation :: room is not loaded (roomID = ${roomID})`);
+        for (const uid of Object.keys(mem.participantUserNameByID))
+            delete mem.participantUserNameByID[uid];
+        for (let i = 0; i < population; ++i)
+            mem.participantUserNameByID[`synthetic-${roomID}-${i}`] = `synthetic-${i}`;
+    },
+
+    /**
+     * Connects `count` users and joins them all into the same room. Returns the contexts of
+     * the users who actually made it in (a join rejected by the room's capacity gate yields
+     * a connected-but-roomless user, which is still returned so cleanup can disconnect it).
+     */
+    async fillRoomWithUsers(roomID: string, count: number): Promise<ConnectedUser[]>
+    {
+        const contexts: ConnectedUser[] = [];
+        for (let i = 0; i < count; ++i)
+        {
+            const ctx = harness.connectUser();
+            contexts.push(ctx);
+            await harness.joinRoom(ctx, roomID);
+        }
+        return contexts;
     },
 
     /**
@@ -486,7 +578,7 @@ export const harness = {
     async reconnectCaseA(oldCtx: ConnectedUser): Promise<ConnectedUser>
     {
         ServerUserManager.removeUser(oldCtx.user.id);
-        await ServerRoomManager.changeUserRoom(oldCtx.socketUserContext, undefined, false, true);
+        await ServerRoomManager.changeUserRoom(oldCtx.socketUserContext, undefined, false, true, false);
         oldCtx.socket.connected = false;
 
         return reconnectSocket(oldCtx);
@@ -507,16 +599,27 @@ export const harness = {
     },
 
     /**
+     * Rebuilds a user's socket context without disconnecting first — what happens when a client
+     * that the server already dropped (a graceful shutdown, say) reloads and connects afresh.
+     * Like a real reconnection, the returned context carries whatever the previous session
+     * persisted to DBUser.
+     */
+    reconnectUser(oldCtx: ConnectedUser): ConnectedUser
+    {
+        return reconnectSocket(oldCtx);
+    },
+
+    /**
      * Simulates a graceful server shutdown.
      */
     async gracefulShutdown(): Promise<void>
     {
-        await ServerRoomManager.saveRooms(true);
+        await ServerRoomManager.saveMultiplayerRooms(true);
         await ServerRoomManager.saveAllUsersPlayerMetadata(ServerUserManager.socketUserContexts);
 
         for (const [_userID, ctx] of Object.entries(ServerUserManager.socketUserContexts))
         {
-            await ServerRoomManager.changeUserRoom(ctx, undefined, false, false);
+            await ServerRoomManager.changeUserRoom(ctx, undefined, false, false, false);
             ctx.socket.disconnect(true);
         }
 
@@ -564,5 +667,7 @@ export const harness = {
     ServerRoomManager,
     ServerUserManager,
     ServerObjectManager,
+    RoomPickerUtil,
+    HubRoomUtil,
     PhysicsManager,
 };

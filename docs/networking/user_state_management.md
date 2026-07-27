@@ -2,7 +2,7 @@
 
 Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.ts , @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/room/serverRoomManager.ts , @src/server/user/serverUserManager.ts , @src/server/sockets/types/socketUserContext.ts
 
-> For how single-player rooms (e.g. the tutorial) differ from the multi-player flows described here — they are not registered as participants and never write a last-room — see [single_player_mode.md](single_player_mode.md).
+> For how single-player rooms (e.g. the tutorial) differ from the multi-player flows described here — they are not registered as participants and never write a last-room — see [single_player_mode.md](single_player_mode.md). For the rules governing which room a user may enter and how many users a room holds, see [room_population.md](room_population.md).
 
 ## Where user state lives
 
@@ -12,18 +12,19 @@ Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.
 
 ## When the user moves from one room to another without reloading the game page
 1. The client sends a room-change request and blocks further requests until the current one completes.
-2. The server removes the user from the previous room (despawning their player object and, when requested, flushing player metadata to `DBUser`) and loads the target room (from cache or the database).
-3. The server places the user at the designated [entrance position](../geometry/room_entrance.md) and restores their player metadata (see "Player Metadata Restoration" below).
-4. The server writes the new last room to `DBUser` and notifies the client that the room has changed.
+2. The server loads the target room (from cache or the database) and checks that it can take another player. If it cannot, the user is turned away and stays in their current room (see [room_population.md](room_population.md)).
+3. The server removes the user from the previous room, despawning their player object and, when requested, flushing player metadata to `DBUser`.
+4. The server places the user at the designated [entrance position](../geometry/room_entrance.md) and restores their player metadata (see "Player Metadata Restoration" below).
+5. The server writes the new last room to `DBUser` and notifies the client that the room has changed.
 
 ## When the user opens "/" without a room ID in the URL
 1. The standard authentication and socket connection flow runs (see [authentication.md](authentication.md)).
-2. With no room specified, the server picks the target room by priority: the user's single-player room if their mode flag is set; otherwise their last room; otherwise a Hub room.
+2. With no room specified, the server picks the target room by priority: the user's single-player room if their mode flag is set; otherwise their last room; otherwise a Hub room chosen by the [load balancer](room_population.md#picking-a-hub).
 3. The server tells the client which room it joined, and the client initializes the game.
 
 ## When the user opens "/:roomID" with a room ID in the URL
 1. The standard authentication and socket connection flow runs with the URL-specified room ID.
-2. The server joins the user to that room, falling back to a Hub room if it doesn't exist.
+2. The server joins the user to that room, falling back to a Hub room if the room doesn't exist or has reached its player cap.
 3. The server tells the client which room it joined, and the client initializes the game.
 
 ## When the user closes the page and reopens it

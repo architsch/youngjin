@@ -37,11 +37,12 @@ The integration test framework exercises real server-side game logic (room manag
 ### Server Harness (`helpers/serverHarness.ts`)
 
 The harness is the foundation. It:
-- Mocks the database utilities (`dbRoomUtil`, `dbUserUtil`, `dbSearchUtil`) with in-memory stores
+- Mocks the database utilities (`dbRoomUtil`, `dbUserUtil`, `dbSearchUtil`) with in-memory stores. Room creation is mocked into a real, loadable room, so server code that creates rooms on demand (hub creation in particular) can be exercised end to end.
 - Calls `setIsServer()` so server-only validation gates (e.g. Player `canUserAddObject`) pass
-- Provides convenience methods: `connectUser()`, `joinRoom()`, `disconnectUser()`, `reconnectCaseA()`, `reconnectCaseB()`, `gracefulShutdown()`
+- Provides convenience methods: `connectUser()`, `joinRoom()`, `appStartJoin()`, `disconnectUser()`, `reconnectCaseA()`, `reconnectCaseB()`, `gracefulShutdown()`. `joinRoom()` names a destination outright; `appStartJoin()` instead mirrors what the socket server does on connection — let the room picker choose, join with a fallback allowed, and report a refusal — so the destination itself can be put under test. A reconnecting context is rebuilt from the mocked `DBUser`, the way the real auth middleware does, so it carries the previous session's last room and single-player mode.
+- Provides population helpers: `loadRoom()` (preload a room with nobody in it, the way hubs are preloaded at start-up), `fillRoomWithUsers()` (connect and join N real users), and `setSyntheticRoomPopulation()` (stuff a room's participant table so that population-dependent logic can be tested without one socket per player — scenarios using it must skip the structural invariants)
 - Supports configurable latency simulation on DB operations
-- Exposes direct access to `ServerRoomManager`, `ServerUserManager`, `ServerObjectManager`, `PhysicsManager`
+- Exposes direct access to `ServerRoomManager`, `ServerUserManager`, `ServerObjectManager`, `RoomPickerUtil`, `HubRoomUtil`, `PhysicsManager`
 
 ### Scenario Runner (`helpers/scenarioRunner.ts`)
 
@@ -73,7 +74,7 @@ Every atomic operation is an `Action` type:
 | `disconnect` | Disconnect a user (optionally saving state) |
 | `reconnectCaseA` | New socket before old disconnect |
 | `reconnectCaseB` | Old disconnect before new socket |
-| `joinRoom` | Move user into a room |
+| `joinRoom` | Move user into a room (optionally allowing a fallback when the room can't take them) |
 | `requestRoomChange` | Room change via `onRequestRoomChangeSignalReceived` (saves previous room state) |
 | `seedRoom` | Seed a room into mock DB |
 | `moveObject` | Update player transform |
@@ -109,6 +110,8 @@ Structural invariants that must hold after any valid action sequence:
 11. **User role consistency** - Room owners in the room have the Owner role
 
 Invariant sets: `"structural"` (checks 1–7), `"full"` (adds 8), `"extended"` (adds 9–11).
+
+There is also a clean-state check for use after every user has disconnected. It requires no user or room reference to be left behind, and no room to still be loaded — except hubs, which stay resident by design (see [room_population.md](../../networking/room_population.md#hub-residency)) and must simply be empty.
 
 Signal utilities:
 - `getPendingSignals(ctx, signalType)` - Read buffered signals from a user's `SocketUserContext`

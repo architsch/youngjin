@@ -9,19 +9,20 @@
  */
 import { test, expect } from "../fixtures/auth.fixture";
 import { TIMEOUTS } from "../helpers/constants";
-import { waitForGameReady, isSocketConnected, captureConsole } from "../helpers/game";
-
-// Room load involves socket communication + room data transfer, so use a generous timeout.
-const ROOM_LOAD_TIMEOUT = 30_000;
+import { waitForGameReady, waitForRoomLoaded, isSocketConnected, captureConsole } from "../helpers/game";
 
 test.describe("Room Navigation", () => {
     test("visiting / loads a default room and establishes socket", async ({ authenticatedPage }) => {
         await waitForGameReady(authenticatedPage);
         const connected = await isSocketConnected(authenticatedPage);
         expect(connected).toBe(true);
+
+        // The server picks the room on the user's behalf here, so reaching a loaded room is
+        // what proves the pick resolved to a room that could actually take the user.
+        await waitForRoomLoaded(authenticatedPage);
     });
 
-    test("visiting /:roomID with a non-existent room ID still loads the game", async ({ page }) => {
+    test("visiting /:roomID with a non-existent room ID falls back to a room that exists", async ({ page }) => {
         const console = captureConsole(page);
 
         await page.goto("/this-room-does-not-exist-12345", { waitUntil: "networkidle" });
@@ -31,7 +32,12 @@ test.describe("Room Navigation", () => {
         expect(response).toBe("complete");
 
         // Socket should eventually connect (server redirects to fallback room)
-        await console.waitFor("Successfully connected to socket server", ROOM_LOAD_TIMEOUT);
+        await console.waitFor("Successfully connected to socket server", TIMEOUTS.ROOM_LOAD);
+
+        // A room ID carried in the URL is a destination the server routed the user to rather
+        // than one they asked for by name, so an unusable one must hand them to a hub instead
+        // of leaving them stuck behind the loading indicator forever.
+        await waitForRoomLoaded(page);
 
         console.stop();
 

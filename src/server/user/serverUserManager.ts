@@ -46,24 +46,45 @@ const ServerUserManager =
     {
         return socketUserContexts[userID] != undefined;
     },
-    addUserToRoom: (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
+    // Registers the user as a participant of the given room and spawns their player object in it.
+    // Returns the RoomRuntimeMemory the user ended up in, or undefined if the room turned out to
+    // be unavailable.
+    addUserToRoom: async (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
         userID: string, playerObjectTransform: ObjectTransform, playerMetadata: {[key: string]: string},
-        userRole: UserRole) =>
+        userRole: UserRole): Promise<RoomRuntimeMemory | undefined> =>
     {
         const user = socketUserContext.user;
+        const roomID = roomRuntimeMemory.room.id;
 
-        console.log(`ServerUserManager.addUserToRoom :: roomID = ${roomRuntimeMemory.room.id}, userID = ${userID}`);
+        console.log(`ServerUserManager.addUserToRoom :: roomID = ${roomID}, userID = ${userID}`);
+
+        // The caller resolved this RoomRuntimeMemory before awaiting its way here, so it may no
+        // longer be the live instance: a Regular room is unloaded as soon as its last participant
+        // leaves, which can happen (even as a result of this very user's own departure from it)
+        // while the join is still in flight. Registering into a detached instance would leave the
+        // user in a room nobody else can see, so revive the room and use the live instance instead.
+        if (ServerRoomManager.roomRuntimeMemories[roomID] != roomRuntimeMemory)
+        {
+            const reloaded = await ServerRoomManager.loadRoom(roomID);
+            if (!reloaded)
+            {
+                console.error(`ServerUserManager.addUserToRoom :: Room is no longer available (roomID = ${roomID})`);
+                return undefined;
+            }
+            roomRuntimeMemory = reloaded;
+        }
+
         if (roomRuntimeMemory.participantUserNameByID[userID] != undefined)
         {
-            console.error(`ServerUserManager.addUserToRoom :: User is already registered (roomID = ${roomRuntimeMemory.room.id}, userID = ${userID})`);
-            return;
+            console.error(`ServerUserManager.addUserToRoom :: User is already registered (roomID = ${roomID}, userID = ${userID})`);
+            return undefined;
         }
-        ServerRoomManager.currentRoomIDByUserID[userID] = roomRuntimeMemory.room.id;
+        ServerRoomManager.currentRoomIDByUserID[userID] = roomID;
         roomRuntimeMemory.participantUserNameByID[userID] = user.userName;
 
-        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomRuntimeMemory.room.id];
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (!socketRoomContext)
-            console.error(`ServerUserManager.addUserToRoom :: SocketRoomContext not found (roomID = ${roomRuntimeMemory.room.id})`);
+            console.error(`ServerUserManager.addUserToRoom :: SocketRoomContext not found (roomID = ${roomID})`);
         else
             socketRoomContext.addSocketUserContext(userID, socketUserContext);
 
@@ -72,7 +93,7 @@ const ServerUserManager =
         for (const key of Object.keys(playerMetadata))
             restoredMetadata[parseInt(key)] = new EncodableByteString(playerMetadata[key]);
         const playerAddObjectSignal = new AddObjectSignal(
-            roomRuntimeMemory.room.id,
+            roomID,
             user.id,
             user.userName,
             ObjectTypeConfigMap.getIndexByType("Player"),
@@ -83,6 +104,7 @@ const ServerUserManager =
         if (ServerObjectManager.onAddObjectSignalReceived(socketUserContext, playerAddObjectSignal))
             playerObjectByUserID[userID] = playerAddObjectSignal;
         userRoleByUserID[userID] = userRole;
+        return roomRuntimeMemory;
     },
     removeUserFromRoom: async (socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
         savePlayerMetadata: boolean) =>

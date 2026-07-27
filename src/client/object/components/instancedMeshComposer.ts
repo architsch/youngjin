@@ -206,11 +206,22 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 this.instanceIdsByInstancedMeshId[instancedMeshId] = instanceIds;
             }
 
-            // Rent a new instance if this part doesn't have one yet.
+            // Rent a new instance if this part doesn't have one yet. The mesh may have none left
+            // to give (a room holding more players than its instance pools were sized for), in
+            // which case the part simply goes undrawn until one frees up — the rest of the body,
+            // and everything else in the room, keeps being drawn as usual.
             let instanceId = instanceIds[nextIndex];
             if (instanceId == undefined)
             {
-                instanceId = this.instancedMeshGraphics.rentInstanceFromPool(instancedMeshId);
+                // A part can only ever take the next slot in the list, so once one part of this
+                // mesh has gone without an instance, the parts behind it go without one too
+                // rather than taking the missing part's place.
+                if (nextIndex != instanceIds.length)
+                    continue;
+                const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(instancedMeshId);
+                if (rentedInstanceId == undefined)
+                    continue;
+                instanceId = rentedInstanceId;
                 instanceIds.push(instanceId);
             }
 
@@ -253,7 +264,11 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 this.instancedMeshGraphics.returnInstanceToPool(
                     instancedMeshId, instanceIds[obsoleteIndex]);
             }
-            instanceIds.length = numInstancesInUse;
+            // Only ever shrinks: the list is shorter than the part count whenever some parts went
+            // without an instance, and padding it out would leave holes that later get handed back
+            // to the pool as if they were instances.
+            if (instanceIds.length > numInstancesInUse)
+                instanceIds.length = numInstancesInUse;
         }
 
         // Capture the world transform the instances were just baked under (see transformIsInSync).

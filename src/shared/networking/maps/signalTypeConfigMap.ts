@@ -7,6 +7,7 @@ import SetObjectTransformSignal from "../../object/types/setObjectTransformSigna
 import UserCommandSignal from "../../user/types/userCommandSignal";
 import RequestRoomChangeSignal from "../../room/types/requestRoomChangeSignal";
 import RoomChangedSignal from "../../room/types/roomChangedSignal";
+import RoomChangeRejectedSignal from "../../room/types/roomChangeRejectedSignal";
 import AddVoxelBlockSignal from "../../voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../voxel/types/update/removeVoxelBlockSignal";
@@ -47,6 +48,17 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 0, // should be 0 because room-loading must be immediate on the client side.
         decode: (bufferState: BufferState) => RoomChangedSignal.decode(bufferState),
+    }],
+    [13, { // Unidirectional (client <- server)
+        // (Overall Flow):
+        // The server decides that the user cannot enter the room they were headed for
+        // (e.g. because the room has reached its player capacity), so it sends the
+        // "roomChangeRejectedSignal" instead of the "roomChangedSignal".
+        // The client receives it, stops waiting for the room to load, and shows the reason.
+        signalType: "roomChangeRejectedSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        maxClientSideReceptionPeriod: 0, // should be 0 because the client is blocked on a loading indicator until this arrives.
+        decode: (bufferState: BufferState) => RoomChangeRejectedSignal.decode(bufferState),
     }],
 
     //------------------------------------------------------------------------

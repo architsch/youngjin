@@ -267,12 +267,20 @@ export function checkUserRoleConsistency(): void
 
 /**
  * Verifies the server is in a clean state after all users have disconnected.
+ *
+ * Hub rooms stay resident even when empty — the room picker load-balances incoming users
+ * by scanning the hubs held in memory, so unloading them would force a DB query per join.
+ * Every other room type must have been unloaded once its last participant left.
  */
 export function checkCleanState(): void
 {
     expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(0);
     expect(Object.keys(ServerRoomManager.currentRoomIDByUserID)).toHaveLength(0);
-    expect(Object.keys(ServerRoomManager.roomRuntimeMemories)).toHaveLength(0);
+    for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+    {
+        expect(roomMem.room.roomType, `Room ${roomID} should have been unloaded`).toBe(RoomTypeEnumMap.Hub);
+        expect(Object.keys(roomMem.participantUserNameByID), `Hub ${roomID} should be empty`).toHaveLength(0);
+    }
 }
 
 // ─── Composite Invariant Sets ──────────────────────────────────────────────

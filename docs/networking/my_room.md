@@ -14,6 +14,8 @@ A room may have at most a fixed maximum number of editors — an anti-abuse boun
 2. The client checks whether the user already owns a room. If not, it asks the server to create one (with an empty editor list) and associates it with the user; if so, it uses the existing room.
 3. The client requests a room change to move the user into their room.
 
+Every Visit in the room list names a specific destination, so a room that cannot take another player refuses the request outright rather than diverting the user elsewhere — they stay in the room they were in and are shown why. See [room_population.md](room_population.md#entering-a-specific-room).
+
 ## Copy Room URL
 The client computes the room URL locally and copies it to the clipboard. No server request is made.
 

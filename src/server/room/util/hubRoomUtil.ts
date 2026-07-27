@@ -3,6 +3,8 @@ import DBRoomUtil from "../../db/util/dbRoomUtil";
 import DBSearchUtil from "../../db/util/dbSearchUtil";
 import ServerRoomManager from "../serverRoomManager";
 
+let pendingHubCreation: Promise<string> | undefined = undefined;
+
 const HubRoomUtil =
 {
     setupHubs: async () =>
@@ -22,13 +24,7 @@ const HubRoomUtil =
         // running DB queries repeatedly.
         if (roomSearchResult.data.length == 0)
         {
-            let result = await DBRoomUtil.createRoom("", RoomTypeEnumMap.Hub, "", "", "default");
-            if (!result.success)
-            {
-                console.error(`HubRoomUtil :: Failed to create a hub.`);
-                return;
-            }
-            await ServerRoomManager.loadRoom(result.data[0].id);
+            await HubRoomUtil.createHub();
         }
         else
         {
@@ -41,6 +37,43 @@ const HubRoomUtil =
             }
         }
     },
+    // Creates a brand new hub, preloads it into ServerRoomManager, and returns its ID
+    // (or an empty string if the hub could not be made available).
+    // Concurrent callers share a single creation, so a burst of users arriving while every
+    // existing hub is over-populated opens exactly one new hub instead of one hub per user.
+    createHub: async (): Promise<string> =>
+    {
+        if (pendingHubCreation != undefined)
+            return pendingHubCreation;
+
+        pendingHubCreation = _createHub();
+        try
+        {
+            return await pendingHubCreation;
+        }
+        finally
+        {
+            pendingHubCreation = undefined;
+        }
+    },
+}
+
+async function _createHub(): Promise<string>
+{
+    const result = await DBRoomUtil.createRoom("", RoomTypeEnumMap.Hub, "", "", "default");
+    if (!result.success || !result.data[0] || !result.data[0].id)
+    {
+        console.error(`HubRoomUtil.createHub :: Failed to create a hub.`);
+        return "";
+    }
+
+    const roomID = result.data[0].id;
+    if (!await ServerRoomManager.loadRoom(roomID))
+    {
+        console.error(`HubRoomUtil.createHub :: Failed to preload the newly created hub (roomID = ${roomID}).`);
+        return "";
+    }
+    return roomID;
 }
 
 export default HubRoomUtil;
