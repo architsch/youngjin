@@ -11,6 +11,7 @@ import AddressUtil from "../../networking/util/addressUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
 import DevOAuthUtil from "./devOAuthUtil";
+import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
 
 const UserAuthGoogleUtil =
 {
@@ -73,6 +74,11 @@ const UserAuthGoogleUtil =
             const currentToken = req.cookies[CookieUtil.getAuthTokenName()];
             const guestId = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
 
+            // Where the browser is sent once the sign-in is settled. A brand-new member is sent
+            // into the room created for them below; everyone else lands on the plain page, which
+            // resumes them wherever they were before signing in.
+            let redirectPath = "/";
+
             if (existingUsersResult.data.length == 0) // new user
             {
                 // Find an available userName
@@ -97,11 +103,13 @@ const UserAuthGoogleUtil =
                     return;
                 }
 
+                let memberUserID: string;
                 if (guestId)
                 {
                     // Upgrade the existing guest document in-place (preserves gameplay state)
                     await DBUserUtil.upgradeGuestToMember(guestId, userName, email);
                     // JWT stays the same — same document ID
+                    memberUserID = guestId;
                 }
                 else
                 {
@@ -113,7 +121,16 @@ const UserAuthGoogleUtil =
                         return;
                     }
                     UserTokenUtil.addTokenForUserId(result.data[0].id, req, res);
+                    memberUserID = result.data[0].id;
                 }
+
+                // Signing up is what earns the user a room of their own, so it is opened for them
+                // right away and named as the redirect target, which is what lands them inside it.
+                // Having to go and ask for a room first is the kind of friction a first-time user
+                // never gets past.
+                const ownedRoomID = await OwnedRoomUtil.setUpFirstOwnedRoom(memberUserID);
+                if (ownedRoomID.length > 0)
+                    redirectPath = `/${ownedRoomID}`;
             }
             else // previously registered user
             {
@@ -127,7 +144,7 @@ const UserAuthGoogleUtil =
                 UserTokenUtil.addTokenForUserId(dbUser.id!, req, res);
             }
 
-            res.redirect("/");
+            res.redirect(redirectPath);
         }
         catch (err)
         {

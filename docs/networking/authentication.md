@@ -21,7 +21,8 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
     - **New user with an existing guest session:** the guest account is upgraded to a Member in place, preserving its identity, token, and gameplay state.
     - **New user with no guest session:** a fresh Member account is created.
     - **Returning user:** a token is issued for the existing account, and any orphaned guest account is deleted.
-5. The server redirects the browser back to the game, where the standard connection flow re-authenticates the user as a Member.
+5. A user who has just become a Member and owns no room yet is given one, so that signing up is all it takes to have a place of one's own. A Member who already owns a room is signing in rather than signing up, so nothing is created for them.
+6. The server redirects the browser back to the game, where the standard connection flow re-authenticates the user as a Member. A newly created room is named as the redirect target, which is what places the user inside it; everyone else resumes in the room they were in before signing in.
 
 ## Client Logout
 1. The client asks the server to log out.

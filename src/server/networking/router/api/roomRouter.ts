@@ -10,6 +10,7 @@ import DBRoomUtil from "../../../db/util/dbRoomUtil";
 import DBSearchUtil from "../../../db/util/dbSearchUtil";
 import ServerUserManager from "../../../user/serverUserManager";
 import ServerRoomManager from "../../../room/serverRoomManager";
+import OwnedRoomUtil from "../../../room/util/ownedRoomUtil";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import DBRoom from "../../../db/types/row/dbRoom";
 import { MAX_ROOM_EDITORS } from "../../../system/serverConstants";
@@ -45,18 +46,12 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
         return;
     }
 
-    const defaultTexturePackPath = "default";
-    const createResult = await DBRoomUtil.createRoom(
-        "", RoomTypeEnumMap.Regular, user.id, dbUser.userName, defaultTexturePackPath);
-
-    if (!createResult.success || createResult.data.length === 0)
+    const newRoomID = await OwnedRoomUtil.createOwnedRoom(user.id, dbUser.userName);
+    if (newRoomID.length === 0)
     {
         res.status(500).send("Failed to create room.");
         return;
     }
-
-    const newRoomID = createResult.data[0].id;
-    await DBUserUtil.setOwnedRoomID(user.id, newRoomID);
 
     res.status(200).json({ roomID: newRoomID });
 });

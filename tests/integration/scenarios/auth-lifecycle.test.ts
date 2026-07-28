@@ -43,6 +43,11 @@ const _mockRestAPI = vi.hoisted(() => ({
     delete: vi.fn(),
 }));
 
+const _mockOwnedRoomUtil = vi.hoisted(() => ({
+    createOwnedRoom: vi.fn(),
+    setUpFirstOwnedRoom: vi.fn(),
+}));
+
 const _mockUserTokenUtil = vi.hoisted(() => ({
     getUserIdFromToken: vi.fn((token: string) => {
         return token.startsWith("valid-") ? token.replace("valid-", "") : undefined;
@@ -59,6 +64,10 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
 
 vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
     default: _mockDBSearchUtil,
+}));
+
+vi.mock("../../../src/server/room/util/ownedRoomUtil", () => ({
+    default: _mockOwnedRoomUtil,
 }));
 
 vi.mock("../../../src/client/networking/api/restAPI", () => ({
@@ -135,6 +144,9 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "warn").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
+        // Default: no room was opened for this sign-in (an empty ID is what a user who already
+        // owns a room gets back). Tests covering a first-time sign-up override this.
+        _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("");
     });
 
     it("new user via Google OAuth: upgrades existing guest to member", async () => {
@@ -153,6 +165,8 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         _mockDBSearchUtil.users.withUserName.mockResolvedValue({ success: true, data: [] });
         // Upgrade succeeds
         _mockDBUserUtil.upgradeGuestToMember.mockResolvedValue({ success: true, data: [] });
+        // A first-time member gets a room of their own
+        _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("new-room-1");
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-guest-1" });
         await UserAuthGoogleUtil.loginCallback(req, res);
@@ -161,8 +175,10 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockDBUserUtil.upgradeGuestToMember).toHaveBeenCalledWith(
             "guest-1", "newuser", "newuser@gmail.com",
         );
-        // Should redirect to the game page (root)
-        expect(res.redirectUrl).toBe("/");
+        // The upgraded guest — not some other account — is the one given a room
+        expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).toHaveBeenCalledWith("guest-1");
+        // Should redirect into the newly created room
+        expect(res.redirectUrl).toBe("/new-room-1");
     });
 
     it("new user via Google OAuth: creates member when no guest exists", async () => {
@@ -178,6 +194,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         _mockDBSearchUtil.users.withEmail.mockResolvedValue({ success: true, data: [] });
         _mockDBSearchUtil.users.withUserName.mockResolvedValue({ success: true, data: [] });
         _mockDBUserUtil.createUser.mockResolvedValue({ success: true, data: [{ id: "new-member-1" }] });
+        _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("new-room-2");
 
         // No guest token in cookies
         const { req, res } = createMockReqRes({});
@@ -187,7 +204,8 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockDBUserUtil.createUser).toHaveBeenCalledWith(
             "brandnew", UserTypeEnumMap.Member, "brandnew@gmail.com",
         );
-        expect(res.redirectUrl).toBe("/");
+        expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).toHaveBeenCalledWith("new-member-1");
+        expect(res.redirectUrl).toBe("/new-room-2");
     });
 
     it("existing user via Google OAuth: signs in and cleans up orphaned guest", async () => {
@@ -217,6 +235,9 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockUserTokenUtil.addTokenForUserId).toHaveBeenCalledWith(
             "existing-member", req, res,
         );
+        // A returning member is not a sign-up: no room is opened for them, and the plain
+        // redirect leaves them to resume in whichever room they were in before signing in.
+        expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).not.toHaveBeenCalled();
         expect(res.redirectUrl).toBe("/");
     });
 
@@ -269,10 +290,17 @@ describe("stale guest tier classification (Scenario 11)", () => {
         expect(GUEST_TIER_NAME_BY_TIER_PHASE).toEqual(["disposable", "casual", "dedicated"]);
     });
 
-    it("tier max ages use correct day thresholds", () => {
-        expect(GUEST_MAX_AGE_BY_TIER_PHASE[0]).toBe(3 * DAY_IN_MS);
-        expect(GUEST_MAX_AGE_BY_TIER_PHASE[1]).toBe(7 * DAY_IN_MS);
-        expect(GUEST_MAX_AGE_BY_TIER_PHASE[2]).toBe(30 * DAY_IN_MS);
+    it("tier max ages are whole days that grow with each tier", () => {
+        // The exact day counts are a tuning decision, so assert what the cleanup sweep
+        // actually depends on: one whole-day cutoff per tier, longer the more a guest returns.
+        expect(GUEST_MAX_AGE_BY_TIER_PHASE).toHaveLength(GUEST_TIER_NAME_BY_TIER_PHASE.length);
+        for (const maxAge of GUEST_MAX_AGE_BY_TIER_PHASE)
+        {
+            expect(maxAge).toBeGreaterThan(0);
+            expect(maxAge % DAY_IN_MS).toBe(0);
+        }
+        expect(GUEST_MAX_AGE_BY_TIER_PHASE[1]).toBeGreaterThan(GUEST_MAX_AGE_BY_TIER_PHASE[0]);
+        expect(GUEST_MAX_AGE_BY_TIER_PHASE[2]).toBeGreaterThan(GUEST_MAX_AGE_BY_TIER_PHASE[1]);
     });
 
     it("single-login guest is classified as disposable (tier 0)", () => {

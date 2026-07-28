@@ -23,7 +23,11 @@ const MY_ROOM_PLACEHOLDER_ID = "__my-room-placeholder__";
 export default function RoomListForm({ user, currentRoomID }: Props)
 {
     const [hubRooms, setHubRooms] = useState<RoomListEntry[] | null>(null);
-    const [myRoom, setMyRoom] = useState<RoomListEntry | null>(null);
+    // Seeded before anything is fetched, so the entry holds the top slot from the first render.
+    // The paginated list carries the user's own room among its results, so pinning the entry only
+    // once a round-trip had answered would let that room surface in the middle of the list first
+    // and jump to the top afterwards.
+    const [myRoom, setMyRoom] = useState<RoomListEntry | null>(() => makeInitialMyRoom(user));
     const [otherRooms, setOtherRooms] = useState<RoomListEntry[]>([]);
     const [hasMore, setHasMore] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
@@ -40,7 +44,6 @@ export default function RoomListForm({ user, currentRoomID }: Props)
     const loadGenerationRef = useRef<number>(0);
 
     const isGuest = user.userType === UserTypeEnumMap.Guest;
-    const showMyRoomEntry = !isGuest;
 
     // IDs pinned at the top of the list — filtered out of the regular paginated list
     // so they don't appear twice.
@@ -62,18 +65,23 @@ export default function RoomListForm({ user, currentRoomID }: Props)
             if (!cancelled && hubResponse.status >= 200 && hubResponse.status < 300 && hubResponse.data?.rooms)
                 setHubRooms(hubResponse.data.rooms as RoomListEntry[]);
 
-            if (showMyRoomEntry)
-            {
-                const myResponse = await RoomAPIClient.getMyRoomListEntry();
-                if (cancelled) return;
-                if (myResponse.status >= 200 && myResponse.status < 300 && myResponse.data?.room)
-                    setMyRoom(myResponse.data.room as RoomListEntry);
-                else
-                    setMyRoom(makeMyRoomPlaceholder());
-            }
+            // The seeded entry already settles every case but one: a member whose profile named
+            // no room of their own. Theirs may have come into being after the page handed them
+            // that profile — opened in another tab — and mistaking an owner for a roomless member
+            // offers them a room they are not allowed to create. So that case, and only that one,
+            // is worth asking about; the placeholder stands if no room comes back.
+            if (isGuest || user.ownedRoomID.length > 0)
+                return;
+
+            const myResponse = await RoomAPIClient.getMyRoomListEntry();
+            if (cancelled) return;
+            if (myResponse.status >= 200 && myResponse.status < 300 && myResponse.data?.room)
+                setMyRoom(myResponse.data.room as RoomListEntry);
+            else
+                setMyRoom(makeMyRoomPlaceholder());
         })();
         return () => { cancelled = true; };
-    }, [showMyRoomEntry]);
+    }, [isGuest, user.ownedRoomID]);
 
     // Reset and load the first page whenever the active query changes.
     useEffect(() => {
@@ -156,7 +164,7 @@ export default function RoomListForm({ user, currentRoomID }: Props)
     // doesn't match the query should disappear from search results the same way the
     // server omits non-matches from the paginated body.
     const pinned: RoomListEntry[] = [];
-    if (showMyRoomEntry && myRoom && pinnedMatchesQuery(myRoom, activeQuery))
+    if (myRoom && pinnedMatchesQuery(myRoom, activeQuery))
         pinned.push(myRoom);
     if (hubRooms)
     {
@@ -194,18 +202,22 @@ function RoomEntryRow({ entry, user, currentRoomID, onVisit }: RowProps)
 {
     const isMyRoom = entry.ownerUserID === user.id || entry.id === MY_ROOM_PLACEHOLDER_ID ||
         (user.ownedRoomID.length > 0 && user.ownedRoomID === entry.id);
-    const roomTitle = getRoomTitle(entry, isMyRoom);
+    // A guest has no room yet and can't get one without an account, so their placeholder
+    // entry leads to the login prompt instead of to a room.
+    const needsLogin = entry.id === MY_ROOM_PLACEHOLDER_ID && user.userType === UserTypeEnumMap.Guest;
+    const roomTitle = getRoomTitle(entry, isMyRoom, needsLogin);
     const idLabel = entry.id === MY_ROOM_PLACEHOLDER_ID ? "ID: ?" : `ID: ${entry.id}`;
     const isCurrentRoom = entry.id !== MY_ROOM_PLACEHOLDER_ID && entry.id === currentRoomID;
 
     return <div className="flex flex-row items-center justify-between gap-2 py-1 border-b border-gray-700">
         <div className="flex flex-col min-w-0">
             <div className="yj-text-xs text-amber-300 truncate">{roomTitle}</div>
-            <div className="yj-text-xs text-gray-400 truncate">{idLabel}</div>
+            {!(isMyRoom && needsLogin) && <div className="yj-text-xs text-gray-400 truncate">{idLabel}</div>}
         </div>
         {isCurrentRoom
             ? <div className="yj-text-xs text-gray-400">You are Here</div>
-            : <Button name="Visit" size="xs" color="green" onClick={() => onVisit(entry)}/>}
+            : <Button name={needsLogin ? "Login" : "Visit"} size="xs" color="green"
+                onClick={needsLogin ? promptLogin : () => onVisit(entry)}/>}
     </div>;
 }
 
@@ -217,8 +229,10 @@ function pinnedMatchesQuery(entry: RoomListEntry, query: string): boolean
     return name.toLowerCase().includes(query.toLowerCase());
 }
 
-function getRoomTitle(entry: RoomListEntry, isMyRoom: boolean): string
+function getRoomTitle(entry: RoomListEntry, isMyRoom: boolean, needsLogin: boolean): string
 {
+    if (needsLogin)
+        return "Login to create your own room";
     if (isMyRoom)
         return "My Room";
     if (entry.ownerUserName && entry.ownerUserName.length > 0)
@@ -227,6 +241,26 @@ function getRoomTitle(entry: RoomListEntry, isMyRoom: boolean): string
         return "Unknown User's Room";
     const hubName = entry.id.substring(0, 4);
     return `Hub ${hubName}`;
+}
+
+// Everything about the user's own room that is known before a single request goes out: an
+// owner carries the room's ID in their own profile, and a guest's entry is always the login
+// placeholder. Only a member without a room ID has to wait — the fetch decides whether one
+// exists. The fetched entry carries the same ID, so it replaces this one in place.
+function makeInitialMyRoom(user: User): RoomListEntry | null
+{
+    if (user.ownedRoomID.length > 0)
+    {
+        return {
+            id: user.ownedRoomID,
+            roomType: RoomTypeEnumMap.Regular,
+            ownerUserID: user.id,
+            ownerUserName: user.userName,
+        };
+    }
+    if (user.userType === UserTypeEnumMap.Guest)
+        return makeMyRoomPlaceholder();
+    return null;
 }
 
 function makeMyRoomPlaceholder(): RoomListEntry
@@ -259,6 +293,13 @@ function makeDummyRoomPage(page: number): { rooms: RoomListEntry[], hasMore: boo
         });
     }
     return { rooms, hasMore: end < DEBUG_DUMMY_ROOM_TOTAL };
+}
+
+// Swaps the room list out for the login prompt — a guest has to gain an account
+// before a room of their own can exist.
+function promptLogin(): void
+{
+    PopupUtil.openPopup({popupType: "authPrompt"});
 }
 
 async function visitRoom(entry: RoomListEntry, user: User): Promise<void>

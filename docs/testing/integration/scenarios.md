@@ -367,7 +367,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | frequent guest (4+ logins) is classified as dedicated (tier 2) | A 4+ login guest maps to tier 2 |
 | tier boundary: loginCount=1 stays disposable | The lower boundary stays in tier 0 |
 | tier boundary: loginCount=3 stays casual | The upper boundary stays in tier 1 |
-| tier max ages use correct day thresholds | Each tier maps to its expected max-age threshold |
+| tier max ages are whole days that grow with each tier | Every tier has a whole-day max-age cutoff, and returning guests get longer ones |
 | tier names are defined for all 3 phases | All three tier names are present |
 
 ### loginCount Accuracy (Scenario 12)

@@ -5,6 +5,7 @@ import UserTokenUtil from "./userTokenUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import LogUtil from "../../../shared/system/util/logUtil";
+import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
 
 // Dev mode only. Imitates a successful OAuth provider (e.g. Google) sign-in without contacting any
 // external provider, so the guest→Member promotion can be exercised end-to-end on a local machine.
@@ -27,12 +28,14 @@ const DevOAuthUtil =
         const currentToken = req.cookies[CookieUtil.getAuthTokenName()];
         const guestId = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
 
+        let memberUserID = "";
         if (guestId)
         {
             // Promote the guest document in-place (preserves gameplay state); the JWT keeps pointing
             // at the same document id, so no new token is needed.
             await DBUserUtil.upgradeGuestToMember(guestId, userName, email);
             LogUtil.logRaw(`[DevOAuth] Promoted guest ${guestId} to Member "${userName}" (${email})`, "low", "info");
+            memberUserID = guestId;
         }
         else
         {
@@ -42,6 +45,7 @@ const DevOAuthUtil =
             {
                 UserTokenUtil.addTokenForUserId(result.data[0].id, req, res);
                 LogUtil.logRaw(`[DevOAuth] Created Member "${userName}" (${email})`, "low", "info");
+                memberUserID = result.data[0].id;
             }
             else
             {
@@ -49,7 +53,13 @@ const DevOAuthUtil =
             }
         }
 
-        res.redirect("/");
+        // Mirrors the real callback: a first-time member gets their own room and is redirected
+        // into it, so the sign-up experience can be exercised end-to-end locally.
+        const ownedRoomID = memberUserID.length > 0
+            ? await OwnedRoomUtil.setUpFirstOwnedRoom(memberUserID)
+            : "";
+
+        res.redirect(ownedRoomID.length > 0 ? `/${ownedRoomID}` : "/");
     },
 }
 

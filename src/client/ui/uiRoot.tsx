@@ -19,6 +19,7 @@ import User from "../../shared/user/types/user";
 import AuthPromptForm from "./components/form/authPromptForm";
 import RoomListForm from "./components/form/roomListForm";
 import ConfigureMyRoomForm from "./components/form/configureMyRoomForm";
+import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
 import CustomizePlayerForm from "./components/form/customizePlayerForm";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import { clientFeatureFlagsObservable, numActiveInputElementsObservable, objectSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
@@ -51,6 +52,13 @@ export default function UIRoot({ env, user }: UIRootProps)
         });
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
             setRoomRuntimeMemory(roomRuntimeMemory);
+
+            // Arriving in the room that belongs to this user is worth saying out loud: it is the
+            // one room they are free to build in, and nothing else on screen would tell them so.
+            // The popup is stacked while the loading indicator still covers the screen, so it is
+            // revealed the moment the room finishes loading.
+            if (roomRuntimeMemory.room.ownerUserID == user.id)
+                PopupUtil.openPopup({popupType: "myRoomWelcome"});
         });
         userRoleObservable.addListener("ui_root", (role: UserRole) => {
             setUserRole(role);
@@ -155,6 +163,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                 </Popup>;
                 case "configureMyRoom": return <Popup key={i} showCloseButton={true}>
                     <ConfigureMyRoomForm/>
+                </Popup>;
+                case "myRoomWelcome": return <Popup key={i} title="" showCloseButton={true}>
+                    <MyRoomWelcomeForm/>
                 </Popup>;
                 case "customizePlayer": return <CustomizePlayerForm key={i}/>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>

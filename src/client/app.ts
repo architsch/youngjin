@@ -160,9 +160,9 @@ function getRoomChangeRejectionMessage(reason: RoomChangeRejectionReason): strin
     switch (reason)
     {
         case RoomChangeRejectionReasonEnumMap.RoomIsAlmostFull:
-            return "That room is full. Please try another one.";
+            return "This room is full. Please try another one.";
         default:
-            return "Could not enter that room. Please try again.";
+            return "Failed to enter the room. Please try again.";
     }
 }
 

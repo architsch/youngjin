@@ -26,9 +26,9 @@ export const LOGIN_COUNT_MIN_GAP_MS = 1 * DAY_IN_MS;
 
 export const GUEST_TIER_NAME_BY_TIER_PHASE = ["disposable", "casual", "dedicated"];
 export const GUEST_MAX_AGE_BY_TIER_PHASE = [
-    3 * DAY_IN_MS, // max age of a "disposable" guest (3 days)
-    7 * DAY_IN_MS, // max age of a "casual" guest (7 days)
-    30 * DAY_IN_MS, // max age of a "dedicated" guest (30 days)
+    1 * DAY_IN_MS, // max age of a "disposable" guest (1 day)
+    3 * DAY_IN_MS, // max age of a "casual" guest (3 days)
+    20 * DAY_IN_MS, // max age of a "dedicated" guest (20 days)
 ];
 
 // Networking
