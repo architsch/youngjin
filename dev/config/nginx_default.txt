@@ -33,6 +33,22 @@ server {
         add_header Cache-Control "no-cache";
     }
 
+    # Served in place of any page whose Node.js process is unreachable — during a deployment, a
+    # restart, or a crash. Without it the visitor gets Nginx's bare "502 Bad Gateway", which reads
+    # as a broken site rather than as a temporary update.
+    # No proxy_intercept_errors here on purpose: these statuses are the ones Nginx itself produces
+    # when it cannot reach the upstream, so the app's own error responses still pass through
+    # untouched (the health route in particular must keep reporting its real status).
+    error_page 502 503 504 /error/deploying.html;
+    location = /error/deploying.html {
+        root /root/actions-runner/_work/youngjin/youngjin/public;
+        internal;
+        # "always" is required: the page is delivered with the original 5xx status, and a plain
+        # add_header is dropped on anything outside Nginx's default 2xx/3xx set. Without it the
+        # browser could cache this page against the URL the visitor was actually trying to reach.
+        add_header Cache-Control "no-store" always;
+    }
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_redirect off;
@@ -83,6 +99,18 @@ server {
         alias /root/actions-runner/_work/youngjin/youngjin/dist/client/style.css;
         types { text/css css; }
         add_header Cache-Control "no-cache";
+    }
+
+    # See the live server block above for why this is wired the way it is. Staging carries it too
+    # because staging is where deployments land first, and thus where the gap is seen most often.
+    error_page 502 503 504 /error/deploying.html;
+    location = /error/deploying.html {
+        root /root/actions-runner/_work/youngjin/youngjin/public;
+        internal;
+        # "always" is required: the page is delivered with the original 5xx status, and a plain
+        # add_header is dropped on anything outside Nginx's default 2xx/3xx set. Without it the
+        # browser could cache this page against the URL the visitor was actually trying to reach.
+        add_header Cache-Control "no-store" always;
     }
 
     location / {

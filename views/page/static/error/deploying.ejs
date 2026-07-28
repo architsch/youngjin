@@ -1,0 +1,122 @@
+<%_ /*
+    Shown by the reverse proxy in place of any page whose app server is unreachable — most often
+    because a deployment is replacing it. Being a static file is the whole point: it is served
+    without involving the very process that is missing.
+
+    It is therefore written to stand on its own. The presentation is inline rather than borrowed
+    from the shared stylesheet, so the page still reads correctly even when nothing else loads,
+    and the palette below simply mirrors the site's own so it does not look like a foreign page.
+
+    The copy is kept to a couple of very short sentences on purpose: a visitor who has just been
+    interrupted skims, so the page has to land "nothing is broken, it comes back by itself" at a
+    glance or not at all.
+*/ _%>
+<%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {
+    includeFullscreenPanel: true,
+    title: "Update in progress — ThingsPool"
+}) %>
+<style>
+.deployNotice {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    font-family: sans-serif;
+    line-height: 1.6;
+    color: #c0c0c0;
+    text-align: left;
+}
+.deployNotice h2 {
+    margin: 0 0 1rem 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #d0c090;
+}
+.deployNotice p {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: #c0c0c0;
+}
+.deployNotice .deployStatus {
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid #707070;
+    background-color: #101010;
+    color: #a0a0a0;
+    font-size: 0.95rem;
+}
+.deployNotice .deployActions {
+    margin-top: 1.5rem;
+}
+.deployNotice .deployActions a {
+    display: inline-block;
+    margin: 0 1rem 0.5rem 0;
+    color: #a0a0a0;
+}
+.deployNotice .deployActions a:hover {
+    color: #d0c090;
+}
+</style>
+<div class="deployNotice">
+    <h2>Update in progress</h2>
+    <p>ThingsPool is being redeployed. Your progress is saved.</p>
+    <p>This page will bring you back automatically once the app is ready.</p>
+    <p class="deployStatus" id="deployStatus">Waiting for the app...</p>
+    <noscript>
+        <p class="deployStatus">Please reload in a few minutes.</p>
+    </noscript>
+    <p class="deployActions">
+        <a href="javascript:window.location.reload()">Try again now</a>
+        <a href="<%= URL_STATIC %>">Go to thingspool.net</a>
+    </p>
+</div>
+<script>
+(function() {
+    // Waits for an app server that can actually serve the page, then returns the visitor to
+    // whichever URL they originally asked for.
+    //
+    // The readiness test is the health route's status code, never the mere arrival of a response:
+    // the proxy that served THIS page is itself perfectly reachable, and answers on the missing
+    // app's behalf with a gateway error. Since fetch() settles successfully for error statuses
+    // too, treating "we got a reply" as "the app is back" would reload straight into this page
+    // again. The request stays same-origin for the same reason — an opaque cross-origin response
+    // carries no readable status to test.
+    //
+    // The interval widens as the wait goes on, so a deployment that stalls (or a page left open
+    // overnight) settles into an occasional check rather than a steady stream of requests.
+    var INITIAL_INTERVAL_MS = 3000;
+    var MAX_INTERVAL_MS = 30000;
+    var interval = INITIAL_INTERVAL_MS;
+
+    var statusElement = document.getElementById("deployStatus");
+
+    function setStatus(text)
+    {
+        if (statusElement)
+            statusElement.textContent = text;
+    }
+
+    function poll()
+    {
+        fetch("/<%= HEALTH_ROUTE_PATH %>", { method: "GET", cache: "no-store" })
+            .then(function(res) { return res.ok; })
+            .catch(function() { return false; })
+            .then(function(appIsReady) {
+                if (appIsReady)
+                {
+                    setStatus("Ready. Taking you back...");
+                    window.location.reload();
+                    return;
+                }
+                interval = Math.min(interval * 1.5, MAX_INTERVAL_MS);
+                setStatus("Still updating. Retrying in "
+                    + Math.round(interval / 1000) + "s...");
+                window.setTimeout(poll, interval);
+            });
+    }
+
+    window.setTimeout(poll, interval);
+})();
+</script>
+<%- include(`${ejsPartialRootPath}/common/footer_min.ejs`, {
+    includeFullscreenPanel: true
+}) %>

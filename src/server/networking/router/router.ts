@@ -4,8 +4,9 @@ import UserRouter from "./api/userRouter";
 import RoomRouter from "./api/roomRouter";
 import FileUtil from "../../ssg/util/fileUtil";
 import EJSUtil from "../../ssg/util/ejsUtil";
-import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH, HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import RateLimitUtil from "../util/rateLimitUtil";
+import ServerLifecycleUtil from "../../system/util/serverLifecycleUtil";
 
 export default function Router(app: Express): void
 {
@@ -36,9 +37,17 @@ export default function Router(app: Express): void
         });
     }
 
-    // Health check endpoint
-    app.get("/health", (req: Request, res: Response) => {
-        res.status(200).send("Server is running");
+    // Health check endpoint. Reaching it at all means this process is past its startup work and
+    // listening, so the only thing left to report is whether it is on its way out. A shutting-down
+    // process answers "not ready", so that a client waiting for the next deployment's server keeps
+    // waiting instead of reloading into a process that is about to stop listening.
+    app.get(`/${HEALTH_ROUTE_PATH}`, (req: Request, res: Response) => {
+        if (ServerLifecycleUtil.isShuttingDown())
+        {
+            res.status(503).set("Cache-Control", "no-store").send("Server is shutting down");
+            return;
+        }
+        res.status(200).set("Cache-Control", "no-store").send("Server is running");
     });
 
     app.get("/robots.txt", (req: Request, res: Response) => {

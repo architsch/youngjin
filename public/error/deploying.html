@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="ThingsPool is an experimental web community for collaborative research and development in arts, games, and other forms of interactive media.">
+<meta name="keywords" content="thingspool, software toys, technical design, computer science, systems engineering, game design, game development">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Update in progress — ThingsPool</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+</head>
+<body style="background-color: black;">
+<div class="fullscreenPanel" style="top: 0; bottom: 0; left: 0; right: 0; width: 95%; height: 100%;">
+
+<style>
+.deployNotice {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    font-family: sans-serif;
+    line-height: 1.6;
+    color: #c0c0c0;
+    text-align: left;
+}
+.deployNotice h2 {
+    margin: 0 0 1rem 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #d0c090;
+}
+.deployNotice p {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: #c0c0c0;
+}
+.deployNotice .deployStatus {
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid #707070;
+    background-color: #101010;
+    color: #a0a0a0;
+    font-size: 0.95rem;
+}
+.deployNotice .deployActions {
+    margin-top: 1.5rem;
+}
+.deployNotice .deployActions a {
+    display: inline-block;
+    margin: 0 1rem 0.5rem 0;
+    color: #a0a0a0;
+}
+.deployNotice .deployActions a:hover {
+    color: #d0c090;
+}
+</style>
+<div class="deployNotice">
+    <h2>Update in progress</h2>
+    <p>ThingsPool is being redeployed. Your progress is saved.</p>
+    <p>This page will bring you back automatically once the app is ready.</p>
+    <p class="deployStatus" id="deployStatus">Waiting for the app...</p>
+    <noscript>
+        <p class="deployStatus">Please reload in a few minutes.</p>
+    </noscript>
+    <p class="deployActions">
+        <a href="javascript:window.location.reload()">Try again now</a>
+        <a href="https://thingspool.net">Go to thingspool.net</a>
+    </p>
+</div>
+<script>
+(function() {
+    // Waits for an app server that can actually serve the page, then returns the visitor to
+    // whichever URL they originally asked for.
+    //
+    // The readiness test is the health route's status code, never the mere arrival of a response:
+    // the proxy that served THIS page is itself perfectly reachable, and answers on the missing
+    // app's behalf with a gateway error. Since fetch() settles successfully for error statuses
+    // too, treating "we got a reply" as "the app is back" would reload straight into this page
+    // again. The request stays same-origin for the same reason — an opaque cross-origin response
+    // carries no readable status to test.
+    //
+    // The interval widens as the wait goes on, so a deployment that stalls (or a page left open
+    // overnight) settles into an occasional check rather than a steady stream of requests.
+    var INITIAL_INTERVAL_MS = 3000;
+    var MAX_INTERVAL_MS = 30000;
+    var interval = INITIAL_INTERVAL_MS;
+
+    var statusElement = document.getElementById("deployStatus");
+
+    function setStatus(text)
+    {
+        if (statusElement)
+            statusElement.textContent = text;
+    }
+
+    function poll()
+    {
+        fetch("/health", { method: "GET", cache: "no-store" })
+            .then(function(res) { return res.ok; })
+            .catch(function() { return false; })
+            .then(function(appIsReady) {
+                if (appIsReady)
+                {
+                    setStatus("Ready. Taking you back...");
+                    window.location.reload();
+                    return;
+                }
+                interval = Math.min(interval * 1.5, MAX_INTERVAL_MS);
+                setStatus("Still updating. Retrying in "
+                    + Math.round(interval / 1000) + "s...");
+                window.setTimeout(poll, interval);
+            });
+    }
+
+    window.setTimeout(poll, interval);
+})();
+</script>
+</div>
+</body>
+</html>

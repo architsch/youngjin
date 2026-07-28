@@ -3,18 +3,20 @@ import ejs from "ejs";
 import { Request, Response } from "express";
 import AddressUtil from "../../networking/util/addressUtil";
 import { URL_DYNAMIC, URL_STATIC, VIEWS_ROOT_DIR } from "../../system/serverConstants";
-import { PAGE_NAME_MAP } from "../../../shared/system/sharedConstants";
+import { HEALTH_ROUTE_PATH, PAGE_NAME_MAP } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 const ejsPartialRootPath = `${process.env.PWD}/${VIEWS_ROOT_DIR}/partial`;
 
 const baseStaticPageEJSParams = {
     PAGE_NAME_MAP,
+    HEALTH_ROUTE_PATH,
     URL_STATIC, URL_DYNAMIC,
     ejsPartialRootPath,
     isStaticPage: true,
 };
 const baseDynamicPageEJSParams = {
+    HEALTH_ROUTE_PATH,
     URL_STATIC, URL_DYNAMIC,
     ejsPartialRootPath,
     isStaticPage: false,

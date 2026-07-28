@@ -7,7 +7,6 @@ import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
 import SocketsServer from "./sockets/socketsServer";
 import ServerRoomManager from "./room/serverRoomManager";
-import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import DBUserUtil from "./db/util/dbUserUtil";
 import LogUtil from "../shared/system/util/logUtil";
 import { HOUR_IN_MS, setIsServer } from "../shared/system/sharedConstants";
@@ -16,6 +15,7 @@ import LatencySimUtil from "./system/util/latencySimUtil";
 import DevUserSeedUtil from "./user/util/devUserSeedUtil";
 import DevRuntimeUtil from "./system/util/devRuntimeUtil";
 import HubRoomUtil from "./room/util/hubRoomUtil";
+import ServerLifecycleUtil from "./system/util/serverLifecycleUtil";
 
 require("../shared/graphics/image/imageMapDependencies.ts");
 
@@ -127,6 +127,15 @@ ${LatencySimUtil.getConfigSummary()}
     // graceful shutdown
     const gracefulShutdown = async (signal: string) =>
     {
+        // Flip the health route over to "not ready" first. From this moment on, the clients that
+        // are polling for the next deployment's server are told to keep waiting, so none of them
+        // reloads into this process while it is busy saving and about to stop listening.
+        if (!ServerLifecycleUtil.beginShutdown())
+        {
+            console.log(`[${signal}] Shutdown already in progress. Ignoring.`);
+            return;
+        }
+
         console.log(`[${signal}] Graceful shutdown initiated...`);
         console.log("Saving all multiplayer rooms and user gameplay states before shutdown...");
 

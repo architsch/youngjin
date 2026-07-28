@@ -66,21 +66,32 @@ test.describe("Socket Disconnection Handling", () => {
             await page.goto("/", { waitUntil: "networkidle" });
             await waitForSocketConnection(page, consoleLogs);
 
-            // 1. Intercept the polling HEAD requests at the Playwright network
-            //    layer. Fail the first 2 attempts, then let the 3rd through.
-            //    This simulates the server being briefly unavailable after a
-            //    graceful shutdown before it comes back up.
+            // 1. Intercept the health polls at the Playwright network layer and
+            //    reproduce, in order, the two ways a server can be unavailable
+            //    during a deployment:
+            //      1st — the reverse proxy answers on the missing server's
+            //            behalf with a gateway error. This is the important one:
+            //            the response arrives intact, so only its status code
+            //            distinguishes it from a healthy server. A client that
+            //            reloads here lands on the proxy's error page.
+            //      2nd — nothing answers at all (connection refused).
+            //      3rd — the server is back, so the reload may proceed.
             const pollUrls: string[] = [];
             let pollCount = 0;
-            await page.route("**/*", (route) => {
-                const request = route.request();
-                if (request.method() === "HEAD") {
-                    pollUrls.push(request.url());
-                    pollCount++;
-                    if (pollCount <= 2) {
-                        route.abort("connectionrefused");
-                        return;
-                    }
+            await page.route("**/health", (route) => {
+                pollUrls.push(route.request().url());
+                pollCount++;
+                if (pollCount === 1) {
+                    route.fulfill({
+                        status: 502,
+                        contentType: "text/html",
+                        body: "<html><body><h1>502 Bad Gateway</h1></body></html>",
+                    });
+                    return;
+                }
+                if (pollCount === 2) {
+                    route.abort("connectionrefused");
+                    return;
                 }
                 route.continue();
             });
@@ -116,14 +127,16 @@ test.describe("Socket Disconnection Handling", () => {
             expect(disconnectLog).toBeTruthy();
 
             // 4. Wait for the page to reload. pollServerAndReload calls
-            //    window.location.reload() once a HEAD request succeeds.
-            //    After 2 failed polls (3 s each) + 1 success, the reload
-            //    triggers a real navigation which Playwright can detect.
+            //    window.location.reload() only once a health poll comes back
+            //    with a success status. After the gateway error + the refused
+            //    connection + 1 success, the reload triggers a real navigation
+            //    which Playwright can detect.
             await page.waitForEvent("load", { timeout: 20_000 });
 
-            // 5. Verify that fetch polling occurred (at least the 2 failed +
-            //    1 successful attempt).
-            expect(pollUrls.length).toBeGreaterThanOrEqual(2);
+            // 5. All three polls must have been made. Stopping at 1 would mean
+            //    the client treated the gateway error as a healthy server and
+            //    reloaded into it.
+            expect(pollUrls.length).toBeGreaterThanOrEqual(3);
         });
     });
 
@@ -268,11 +281,10 @@ test.describe("Socket Disconnection Handling", () => {
             });
 
             // 3. Wait for the "All reconnection attempts exhausted" message.
-            //    The reconnect_failed handler logs this warning and then
-            //    calls window.location.reload() in the same synchronous
-            //    block, so seeing this log guarantees the reload was
-            //    triggered. We cannot call page.evaluate() after this
-            //    because the reload destroys the execution context.
+            //    The reconnect_failed handler logs this warning and then starts
+            //    polling for a server that can serve the page. The reload comes
+            //    only once a poll succeeds, which cannot happen until the
+            //    network is restored in step 5.
             await page.waitForEvent("console", {
                 predicate: (msg) =>
                     msg
@@ -287,8 +299,8 @@ test.describe("Socket Disconnection Handling", () => {
             );
             expect(exhaustionLog).toBeTruthy();
 
-            // 5. Restore the network so the reload (already triggered by the
-            //    client) can complete and afterEach cleanup can work.
+            // 5. Restore the network so the next health poll succeeds, which is
+            //    what lets the client reload and afterEach cleanup work.
             await cdp.send("Network.emulateNetworkConditions", {
                 offline: false,
                 latency: 0,

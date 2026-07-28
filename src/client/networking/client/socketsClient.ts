@@ -26,8 +26,10 @@ import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
+import { HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 
 let socket: Socket;
+let pollingForServer = false;
 
 const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "roomChangedSignal": (data: EncodableData) =>
@@ -109,17 +111,16 @@ const SocketsClient =
                 // Server-initiated disconnect (graceful shutdown / deployment).
                 // Socket.IO won't auto-reconnect for this reason, so poll
                 // the server until it's back up and then reload the page.
-                pollServerAndReload(env.socket_server_url);
+                pollServerAndReload();
             }
         });
 
         socket.io.on("reconnect_failed", () => {
             // All automatic reconnection attempts exhausted (network disconnect).
-            console.warn("All reconnection attempts exhausted. Reloading page...");
-            connectionStateObservable.set("disconnected");
-            if (ongoingClientProcessExists("reconnect"))
-                endClientProcess("reconnect");
-            window.location.reload();
+            // Reloading right away would land on whatever the reverse proxy serves while the
+            // server is still missing, so wait for a server that can serve the page first.
+            console.warn("All reconnection attempts exhausted. Waiting for the server to come back...");
+            pollServerAndReload();
         });
 
         socket.on("connect_error", (err) => {
@@ -229,12 +230,42 @@ function trySendEncodedSignal(signalType: string, signalData: EncodableData): bo
     return true;
 }
 
-function pollServerAndReload(serverUrl: string, interval: number = 3000)
+// Waits until a server is actually able to serve the page again, and only then reloads into it.
+//
+// The reverse proxy in front of the app stays up across a deployment even while the app process
+// behind it does not, so "the host answered" is not the same as "the app is back": the proxy
+// replies on the app's behalf with a gateway error status. A fetch() settles successfully for any
+// response it receives, error statuses included, so the readiness test has to be the status code
+// itself. That in turn requires a same-origin request, since an opaque cross-origin response
+// carries no readable status. The health route is used rather than the page itself because it is
+// the one endpoint whose only job is to answer this question, and it answers "not ready" for a
+// process that is on its way out as well as for one that is not there yet.
+//
+// Polling continues (with a widening interval) for as long as the page is open. Giving up would
+// only strand the user on a frozen page, whereas waiting costs almost nothing and recovers the
+// session whenever the server does return.
+function pollServerAndReload(initialInterval: number = 2000, maxInterval: number = 30000)
 {
+    if (pollingForServer) // Both disconnect paths can lead here, but one waiting loop is enough.
+        return;
+    pollingForServer = true;
+
+    let interval = initialInterval;
+
     const poll = () => {
-        fetch(serverUrl, { method: "HEAD", mode: "no-cors" })
-            .then(() => window.location.reload())
-            .catch(() => setTimeout(poll, interval));
+        fetch(`/${HEALTH_ROUTE_PATH}`, { method: "GET", cache: "no-store" })
+            .then(res => res.ok)
+            .catch(() => false)
+            .then(serverIsReady => {
+                if (serverIsReady)
+                {
+                    console.log("Server is back up. Reloading the page...");
+                    window.location.reload();
+                    return;
+                }
+                interval = Math.min(interval * 1.5, maxInterval);
+                setTimeout(poll, interval);
+            });
     };
     setTimeout(poll, interval);
 }

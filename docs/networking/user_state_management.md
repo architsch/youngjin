@@ -47,6 +47,10 @@ All in-memory state (including the metadata buffer) is lost, and clients attempt
 ## When the server undergoes a graceful shutdown
 The server batches a save of every connected user's player metadata, then routes each user out of their room (no further DB write needed) and disconnects them. Clients detect the server-initiated disconnect, wait for the server to come back, then reload and read their state from `DBUser`.
 
+Waiting is the delicate part, because the reverse proxy in front of the app stays up while the app process behind it does not, and answers on its behalf with a gateway error. A response therefore proves only that the host is reachable, not that the app is back, so clients decide readiness from the *status* of the health route rather than from the mere arrival of a reply. This also requires the poll to be same-origin, since a cross-origin response carries no readable status.
+
+The health route reports "not ready" for a process that is on its way out, as well as for one that is not yet listening. Both must count as unavailable: a client that reloaded into the outgoing process would only be disconnected again moments later. Clients keep polling (at a widening interval) for as long as the page is open, so the session recovers whenever the server does return.
+
 ## User role resolution
 A user's role within a room is derived (not stored separately) at join time:
 1. **Owner** — if the user owns the room.
