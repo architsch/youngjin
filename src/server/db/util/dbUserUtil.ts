@@ -27,6 +27,7 @@ const DBUserUtil =
             createdAt: Date.now(),
             loginCount: 0,
             ownedRoomID: "",
+            ftue: "",
             playerMetadata: {},
         };
         const result = await new DBQuery<{id: string}>()
@@ -49,10 +50,20 @@ const DBUserUtil =
     },
     setSinglePlayerMode: async (userID: string, singlePlayerMode: string): Promise<DBQueryResponse<DBRow>> =>
     {
-        LogUtil.log("DBUserUtil.setSinglePlayerMode", {userId: userID, singlePlayerMode}, "low", "info");
+        LogUtil.log("DBUserUtil.setSinglePlayerMode", {userID, singlePlayerMode}, "low", "info");
         const result = await new DBQuery<DBRow>()
             .update(COLLECTION_USERS)
             .set({"singlePlayerMode": singlePlayerMode})
+            .where("id", "==", userID)
+            .run();
+        return result;
+    },
+    setFTUE: async (userID: string, ftue: string): Promise<DBQueryResponse<DBRow>> =>
+    {
+        LogUtil.log("DBUserUtil.setFTUE", {userID, ftue}, "low", "info");
+        const result = await new DBQuery<DBRow>()
+            .update(COLLECTION_USERS)
+            .set({"ftue": ftue})
             .where("id", "==", userID)
             .run();
         return result;
@@ -199,7 +210,8 @@ const DBUserUtil =
             dbUser.email,
             dbUser.singlePlayerMode,
             dbUser.lastRoomID ?? "",
-            dbUser.ownedRoomID ?? ""
+            dbUser.ownedRoomID ?? "",
+            dbUser.ftue ?? ""
         );
     },
 }

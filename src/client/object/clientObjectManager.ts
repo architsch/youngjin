@@ -22,6 +22,7 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import Room from "../../shared/room/types/room";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import ClientObjectUtil from "./util/clientObjectUtil";
+import RoomLoadProgressUtil from "../system/util/roomLoadProgressUtil";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -64,6 +65,15 @@ const ClientObjectManager =
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
         const room = roomRuntimeMemory.room;
+
+        // Everything spawned from here on is counted as it goes in, which is what turns the loading
+        // indicator's progress bar into a real measurement rather than an estimate: the voxels (only
+        // on the first load, since they outlive a room change), the room's own objects, and the one
+        // client-side singleton this room calls for.
+        RoomLoadProgressUtil.expectUnits(
+            (voxelsSpawned ? 0 : room.voxelGrid.voxels.length) +
+            Object.keys(room.objectById).length + 1);
+
         // Voxel objects (and their shared mesh/material/texture) persist across rooms, so they are
         // created only on the first room-load; subsequent loads rebind the existing ones to the new
         // room's grid and refresh them in place.
@@ -154,6 +164,10 @@ const ClientObjectManager =
             if (updatable)
                 updatableGameObjects[object.params.objectId] = object;
             await object.onSpawn();
+            // Spawning is the bulk of a room load, and every one of the things a load spawns comes
+            // through here — including the voxels, which take a path of their own. Outside a room
+            // load (e.g. someone else's object showing up mid-game) this counts toward nothing.
+            RoomLoadProgressUtil.reportUnitSpawned();
             return true;
         }
         else

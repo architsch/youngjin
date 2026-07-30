@@ -8,6 +8,7 @@ import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ClientProcess from "./types/clientProcess";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import PopupState from "../ui/types/popupState";
+import CoachMark from "../ui/types/coachMark";
 import CameraMode from "../graphics/types/cameraMode";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 
@@ -77,6 +78,12 @@ export const screenArrowTargetObservable = new Observable<{targetElementId: stri
 
 // The DOM element id that the 2D on-screen rectangular outline should surround, or null to hide it.
 export const screenOutlineRectTargetObservable = new Observable<string | null>(null);
+
+// Every coach mark (a short message pointing at a UI element, identified by its DOM element id)
+// that is currently on screen. Several may be up at once, so a mark appearing joins this list
+// instead of replacing it — a mark cut short by a newer one would be guidance the user never got
+// to read. Each mark is taken off the list once it has had its say.
+export const screenCoachMarksObservable = new Observable<CoachMark[]>([]);
 
 // The vector-graphics diagram (with its caption) to show centered on screen, or null to hide it.
 // "diagram" selects which built-in drawing the ScreenDiagram component renders.

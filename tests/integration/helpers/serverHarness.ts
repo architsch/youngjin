@@ -166,9 +166,22 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
         }),
         createUser: vi.fn(async () => ({ success: true, data: [{ id: "user-auto" }] })),
         setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
+        setFTUE: vi.fn(async (userID: string, ftue: string) => {
+            if (_latencyConfig.enabled) await _randomDelay();
+            const u = _userStore[userID];
+            if (u) u.ftue = ftue;
+            return { success: true, data: [] };
+        }),
         deleteStaleGuestsByTier: vi.fn(async () => 0),
         deleteUser: vi.fn(async () => ({ success: true, data: [] })),
-        fromDBType: vi.fn((u: any) => u),
+        fromDBType: vi.fn((u: any) => {
+            // The real fromDBType defaults a missing FTUE record to "" (rows written before the
+            // field existed). Mirrored here — in place, so callers keep observing the stored row —
+            // otherwise a user seeded without one reaches the code that reads the record as
+            // undefined.
+            u.ftue = u.ftue ?? "";
+            return u;
+        }),
         updateLastLogin: vi.fn(async () => {}),
         upgradeGuestToMember: vi.fn(async () => ({ success: true, data: [] })),
         setOwnedRoomID: vi.fn(async (userID: string, roomID: string) => {
@@ -199,7 +212,9 @@ vi.mock("../../../src/server/system/util/latencySimUtil", () => ({
 
 vi.mock("../../../src/server/user/util/userCommandUtil", () => ({
     default: {
-        handleCommand: vi.fn(async () => {}),
+        // Must match the real module's entry point (the one SocketsServer calls), or a
+        // harness-emitted user command dies on an undefined function instead of no-opping.
+        onUserCommandSignalReceived: vi.fn(async () => {}),
     },
 }));
 
@@ -216,6 +231,7 @@ import RoomPickerUtil from "../../../src/server/room/util/roomPickerUtil";
 import HubRoomUtil from "../../../src/server/room/util/hubRoomUtil";
 import UserRoomChangeResult from "../../../src/server/room/types/userRoomChangeResult";
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
+import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
@@ -376,8 +392,11 @@ export const harness = {
             singlePlayerMode: user.singlePlayerMode,
             lastRoomID: user.lastRoomID,
             ownedRoomID: user.ownedRoomID,
+            ftue: user.ftue,
             playerMetadata,
-            version: 1,
+            // Taken from the migration list rather than written out, so a newly added migration
+            // cannot leave the seeded row claiming a version the schema has already moved past.
+            version: DBUserVersionMigration.length,
         };
 
         const socket = new MockSocket(user);

@@ -86,7 +86,7 @@ The entrance door checks a feature flag: when set, clicking the door sends the u
 
 ## Finishing the tutorial
 
-When the tutorial completes, the client signals the server, which verifies the user is actually in the tutorial and then clears their single-player mode flag (in memory and in storage). On the next connect the user is no longer routed to the tutorial room.
+When the tutorial completes, the client signals the server, which verifies the user is actually in the tutorial and then clears their single-player mode flag (in memory and in storage). On the next connect the user is no longer routed to the tutorial room. Guiding the user from there on is the job of the post-tutorial [FTUE system](ftue.md).
 
 Leaving the tutorial is itself a room change: the user is moved into a real (multi-player) room, and it is landing in that non-single-player room that triggers the completion signal. If the user originally arrived via a room-specific URL — the destination that connect-time routing deferred — that is the room they are sent to now, within the same runtime; otherwise they go to a hub. This holds whether the tutorial is finished naturally (through the door) or skipped.
 
@@ -102,5 +102,6 @@ The shared editability check (used by both client and server) grants edit permis
 
 ## Related docs
 
+- [First-Time User Experience](ftue.md) — the guidance that takes over once the tutorial is done.
 - [User State Management Flows](user_state_management.md) — room-join resolution and where user state lives.
 - [Room Entrance](../geometry/room_entrance.md) — entrance geometry for multi-player vs. single-player rooms.

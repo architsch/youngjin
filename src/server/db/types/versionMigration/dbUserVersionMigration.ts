@@ -15,6 +15,11 @@ const DBUserVersionMigration: DBVersionMigration = [
         delete row.tutorialStep;
         return row;
     },
+    // v2 -> v3: add "ftue" (first-time user experience).
+    async (row: any) => {
+        row.ftue = "";
+        return row;
+    },
 ];
 
 export default DBUserVersionMigration;

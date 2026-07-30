@@ -23,6 +23,7 @@ import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackCh
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
+import RoomLoadProgressUtil from "./system/util/roomLoadProgressUtil";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -96,7 +97,10 @@ const App =
     onRoomChangedSignalReceived: async (roomChangedSignal: RoomChangedSignal) =>
     {
         if (currentRoom != undefined)
+        {
+            RoomLoadProgressUtil.enterPhase("unloadingRoom");
             await unloadCurrentRoom();
+        }
         await loadRoom(roomChangedSignal.roomRuntimeMemory, roomChangedSignal.currentUserRole);
 
         // Notify listeners that the room has changed. This disposes the previous room's world-space
@@ -108,6 +112,7 @@ const App =
         // pre-compile every material's shader program. This pays the one-time shader-compilation
         // cost up front, instead of stalling the frame the first time a gizmo appears mid-gameplay.
         // A failure here only forfeits the optimization, so don't let it strand the loading screen.
+        RoomLoadProgressUtil.enterPhase("compilingShaders");
         try
         {
             await preloadGenericWorldSpaceGizmos();
@@ -177,9 +182,12 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
 
     userRoleObservable.set(currentUserRole);
 
+    RoomLoadProgressUtil.enterPhase("loadingGraphics");
     await GraphicsManager.load(update);
     PhysicsManager.load(roomRuntimeMemory);
+    RoomLoadProgressUtil.enterPhase("loadingVoxels");
     await ClientVoxelManager.load();
+    RoomLoadProgressUtil.enterPhase("loadingObjects");
     await ClientObjectManager.load(roomRuntimeMemory);
 
     prevTime = performance.now() * 0.001;

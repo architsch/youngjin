@@ -123,7 +123,7 @@ function compile(webpackConfig, onAfterCompile)
     const devModeWebpackConfig = {};
     Object.assign(devModeWebpackConfig, webpackConfig);
     devModeWebpackConfig.mode = "development";
-    devModeWebpackConfig.devtool = "inline-source-map";
+    devModeWebpackConfig.devtool = "source-map";
 
     const compiler = webpack(devModeWebpackConfig, (err, stats) => {
         if (err || stats.hasErrors())

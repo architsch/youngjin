@@ -158,6 +158,14 @@ it("my new test", async () => {
 });
 ```
 
+### New Test Outside the Harness
+
+Some subjects are not room/session gameplay: HTTP route handlers, user commands, DB row migrations, and client-side utilities. Those tests skip the harness (which globally mocks `userCommandUtil` and only exposes the DB fields gameplay needs) and declare their own `vi.mock` factories per file, then import the module under test afterwards — see `ftue.test.ts`, `auth-lifecycle.test.ts` and `room-api.test.ts`.
+
+Recurring recipes in those files:
+- **Route handlers** — find the layer in the router's `stack` by path and method, then walk `layer.route.stack` with a mock `req`/`res`. A pre-set `req.userString` plus a mocked `userIdentificationUtil` stands in for an identified user.
+- **Client-side utilities** — mock `src/client/app` and `src/client/networking/client/socketsClient` so the util runs against a plain user object and a recorded list of emitted signals. Mock `src/client/system/clientObservables` too (the real module reaches into three.js), re-exporting real `Observable` instances for the channels under test.
+
 ### New Action Type
 
 1. Add the type to the `Action` union in `actions.ts`

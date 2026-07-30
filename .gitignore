@@ -5,6 +5,11 @@ node_modules
 
 *.log
 
+# Dev build source maps (emitted beside the bundle; the committed bundles are production builds,
+# which carry no map)
+dist/client/bundle.js.map
+dist/server/bundle.js.map
+
 # VPS deployment artifacts (live bundle copy and backup for rollback)
 dist/server/bundle.live.js
 dist/server/bundle.backup.js

@@ -1,6 +1,7 @@
-export default function Button({name, size = "md", color = "gray", disabled = false, highlight = false, onClick, additionalClassNames = "" }: Props)
+export default function Button({name, size = "md", color = "gray", disabled = false, highlight = false, onClick, additionalClassNames = "", id }: Props)
 {
     return <div
+        id={id}
         className={`flex items-center justify-center text-center select-none touch-manipulation ${disabled ? "" : "cursor-pointer"} ${sizeClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]} ${!disabled && highlight ? highlightClassName : ""} ${additionalClassNames}`}
         onClick={disabled ? undefined : onClick}
     >
@@ -39,4 +40,5 @@ interface Props
     highlight?: boolean;
     onClick: () => void;
     additionalClassNames?: string;
+    id?: string;
 }

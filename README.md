@@ -39,6 +39,7 @@ ThingsPool is open source and built with a modern real-time web stack — Three.
     - [Authentication Flows](docs/networking/authentication.md)
     - [User State Management Flows](docs/networking/user_state_management.md)
     - [Single-Player Mode](docs/networking/single_player_mode.md)
+    - [First-Time User Experience](docs/networking/ftue.md)
     - [Room Population Flows](docs/networking/room_population.md)
     - ["My Room" Flows](docs/networking/my_room.md)
     - [Voxel Grid Update Flows](docs/networking/voxel_grid_update.md)

@@ -142,6 +142,60 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step | Tutorial steps form a name-keyed map (not a positional array), include the `initial` entry step, and have at least one terminal step (a rule whose `nextStep` is `""`) |
 | every transition targets an existing step or the terminal, and all steps are reachable from 'initial' | Step-graph integrity: every transition `nextStep` names a defined step (or `""`), and walking from `initial` reaches every step (none orphaned) |
 
+## FTUE (`ftue.test.ts`) — 25 tests
+
+See [ftue.md](../../networking/ftue.md) for the behavior under test.
+
+### Client side: how an experience is recorded
+
+| Test | What it verifies |
+|------|-----------------|
+| stores each element as its own letter | Every FTUE element code maps to a distinct `[A-Za-z]` character — the record is embedded verbatim in the boot page, and two features sharing a character would silence each other |
+| reports an element the user's stored record already carries | A record loaded from the server is read back per element (one experienced, one not) |
+| reports an element as added the moment it is added, without waiting for the server | The client's own copy is updated locally, and the user command is emitted once |
+| tells the server about an element once, no matter how often the feature is used again | Repeated use of the same feature emits a single command and stores a single character |
+| keeps every element the user goes through in one session | Three elements added in a row are all present and all reported as experienced |
+
+### Client side: when a coach mark is shown
+
+| Test | What it verifies |
+|------|-----------------|
+| puts a coach mark on the control the user has not used yet | `screenCoachMarksObservable` carries the target element id and the text |
+| stays quiet about a feature the user has already been through | A mark whose element became experienced while it was pending is suppressed |
+| leaves the marks already on screen alone when another one appears | A second mark joins the first, in the order they appeared, instead of replacing it |
+| keeps one mark per control, no matter how often the trigger fires | A repeated trigger for the same control adds no second mark |
+| takes a mark down the moment the user uses the feature it points at | Recording the element removes its mark from `screenCoachMarksObservable` |
+| leaves the other marks up when one feature is used | Only the used feature's mark is removed; the rest stay exactly as they were |
+| keeps a mark that records itself as it is shown | The sign-up mark survives its own record (made before the mark goes up) while the element is recorded and the command emitted |
+| does not show a self-recording mark twice | Once dismissed, the record it made on the way up suppresses any later attempt, with no second command |
+
+### Client and server agreement
+
+| Test | What it verifies |
+|------|-----------------|
+| the server accepts every element the client can send | Each element the client emits is accepted by `UserCommandUtil` and persisted with the same character — the two sides cannot drift apart silently |
+
+### Server side: the add-FTUE-element command
+
+| Test | What it verifies |
+|------|-----------------|
+| appends the element to the user's record and persists it | The in-memory user carries the element and `DBUserUtil.setFTUE` is called once with it |
+| accumulates elements across one session rather than overwriting | Three commands on the same session-long user object yield all three elements (a DB-only write would drop the earlier ones) |
+| keeps whatever the user already had stored | A new element is appended to a pre-existing record |
+| ignores an element the user already has | A duplicate performs no write |
+| stores nothing that is not a single letter | Empty, multi-character, digit, quote, backslash, `<`, space and `$` are all rejected with no write |
+| ignores an unknown command without touching the record | An unrecognized command type leaves the record alone |
+
+### Persistence
+
+| Test | What it verifies |
+|------|-----------------|
+| restarting the tutorial wipes the record, so the guidance runs again | `POST /restart_tutorial` sets the tutorial single-player mode and clears the FTUE record |
+| does not wipe the record when the tutorial cannot be restarted | A user already in single-player mode gets 409 and nothing is written |
+| carries the record across the user wire format | `User.toString`/`fromString` round-trips the record |
+| treats a user string written before the record existed as an empty record | A positional user string without the field yields an empty record |
+| migrates a user record written before the field existed to an empty record | Running `DBUserVersionMigration` from version 0 yields an empty record, leaving the rest of the row intact |
+
 ## Player Mesh Composition (`composition.test.ts`) — 16 tests
 
 | Test | What it verifies |
@@ -393,6 +447,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Object | 8 |
 | Voxel | 9 |
 | Single-Player | 10 |
+| FTUE | 25 |
 | Player Mesh Composition | 16 |
 | Signals | 6 |
 | Permissions | 5 |
@@ -403,4 +458,4 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 20 |
-| **Total** | **213** |
+| **Total** | **238** |

@@ -14,5 +14,6 @@ export default interface DBUser extends DBRow
     createdAt: number;
     loginCount: number;
     ownedRoomID: string;
+    ftue: string; // ftue = (first-time user experience)
     playerMetadata: {[key: string]: string};
 }

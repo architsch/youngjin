@@ -210,9 +210,12 @@ function RoomEntryRow({ entry, user, currentRoomID, onVisit }: RowProps)
     const isCurrentRoom = entry.id !== MY_ROOM_PLACEHOLDER_ID && entry.id === currentRoomID;
 
     return <div className="flex flex-row items-center justify-between gap-2 py-1 border-b border-gray-700">
-        <div className="flex flex-col min-w-0">
-            <div className="yj-text-xs text-amber-300 truncate">{roomTitle}</div>
-            {!(isMyRoom && needsLogin) && <div className="yj-text-xs text-gray-400 truncate">{idLabel}</div>}
+        {/* min-w-0 lets the text column shrink past its longest word, and wrap-break-word lets
+            that word itself break, so a long room title spills onto the next line instead of
+            being clipped or pushing the Visit button out of the row. */}
+        <div className="flex flex-col min-w-0 text-left">
+            <div className="yj-text-xs text-amber-300 wrap-break-word">{roomTitle}</div>
+            {!(isMyRoom && needsLogin) && <div className="yj-text-xs text-gray-400 wrap-break-word">{idLabel}</div>}
         </div>
         {isCurrentRoom
             ? <div className="yj-text-xs text-gray-400">You are Here</div>

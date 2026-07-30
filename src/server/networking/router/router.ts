@@ -25,6 +25,11 @@ export default function Router(app: Express): void
             res.status(200).setHeader("content-type", "text/javascript")
                 .sendFile(FileUtil.getAbsoluteFilePath("bundle.js", "dist/client"));
         });
+        // The dev build's source map. It lives beside the bundle instead of inside it, so unlike
+        // the bundle it needs a route of its own — the ".js" rule below does not cover it.
+        app.get("/app/bundle.js.map", (req: Request, res: Response): void => {
+            res.sendFile(FileUtil.getAbsoluteFilePath("bundle.js.map", "dist/client"));
+        });
         app.get("/app/style.css", (req: Request, res: Response): void => {
             res.sendFile(FileUtil.getAbsoluteFilePath("style.css", "dist/client"));
         });

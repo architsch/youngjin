@@ -8,6 +8,7 @@ import Room from "../../../src/shared/room/types/room";
 import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import DBRoomEditor from "../../../src/server/db/types/row/dbRoomEditor";
+import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 
 // ─── In-memory stores ────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ interface StoredUser
     lastLoginAt: number;
     createdAt: number;
     loginCount: number;
+    ftue: string;
     playerMetadata: {[key: string]: string};
     version: number;
 }
@@ -210,15 +212,31 @@ export const mockDBUserUtil = {
             singlePlayerMode: "tutorial", lastRoomID: "", ownedRoomID: "",
             lastLoginAt: Date.now(), createdAt: Date.now(),
             loginCount: 1,
+            ftue: "",
             playerMetadata: {},
-            version: 1,
+            // Taken from the migration list rather than written out, so a newly added migration
+            // cannot leave the seeded row claiming a version the schema has already moved past.
+            version: DBUserVersionMigration.length,
         };
         return { success: true, data: [{ id }] };
     }),
     setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
+    setFTUE: vi.fn(async (userID: string, ftue: string) =>
+    {
+        const u = userStore[userID];
+        if (u) u.ftue = ftue;
+        return { success: true, data: [] };
+    }),
     deleteStaleGuestsByTier: vi.fn(async () => 0),
     deleteUser: vi.fn(async () => ({ success: true, data: [] })),
-    fromDBType: vi.fn((dbUser: any) => dbUser),
+    fromDBType: vi.fn((dbUser: any) =>
+    {
+        // The real fromDBType defaults a missing FTUE record to "" (rows written before the field
+        // existed). Mirrored here — in place, so callers keep observing the stored row — otherwise
+        // a user seeded without one reaches the code that reads the record as undefined.
+        dbUser.ftue = dbUser.ftue ?? "";
+        return dbUser;
+    }),
     updateLastLogin: vi.fn(async () => {}),
     upgradeGuestToMember: vi.fn(async () => ({ success: true, data: [] })),
     setOwnedRoomID: vi.fn(async (userID: string, roomID: string) =>

@@ -29,8 +29,12 @@ import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
+import FTUEUtil from "../../../util/ftueUtil";
+import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+
+let addCanvasButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -55,6 +59,25 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         };
     }, []);
 
+    const canAddCanvas = getPlaceableWallAttachedObjectTransform(
+        props.selection, canvasTypeIndex) !== null;
+
+    useEffect(() => {
+        clearFTUETimeouts();
+        if (canAddCanvas && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.AddCanvas))
+        {
+            // If the user hasn't added any canvas yet,
+            // we will show a coach mark which tells he user to try adding one.
+            addCanvasButtonFTUETimeout = setTimeout(() => {
+                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.AddCanvas,
+                    "addCanvasButton", "Hang a picture on this wall.");
+            }, 750);
+        }
+        return () => {
+            clearFTUETimeouts();
+        };
+    }, [canAddCanvas]);
+
     return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
         <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveVoxelBlock(props.selection)}
@@ -62,8 +85,8 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         <IconButton id="addVoxelBlockButton" icon={<AddBlockIcon/>} size="md"
             disabled={!canAddVoxelBlock(props.selection)}
             onClick={() => tryAddVoxelBlock(props.selection)}/>
-        <IconButton icon={<AddCanvasIcon/>} size="md"
-            disabled={getPlaceableWallAttachedObjectTransform(props.selection, canvasTypeIndex) == null}
+        <IconButton id="addCanvasButton" icon={<AddCanvasIcon/>} size="md"
+            disabled={!canAddCanvas}
             onClick={() => {
                 const randomImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();
                 const randomFrameCoords = ImageMapUtil.getImageMap("CanvasFrameImageMap").getRandomImagePath();
@@ -71,9 +94,19 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                     [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath),
                     [ObjectMetadataKeyEnumMap.CanvasFrameCoords]: new EncodableByteString(randomFrameCoords),
                 });
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.AddCanvas);
             }}
         />
     </div>;
+}
+
+function clearFTUETimeouts()
+{
+    if (addCanvasButtonFTUETimeout)
+    {
+        clearTimeout(addCanvasButtonFTUETimeout);
+        addCanvasButtonFTUETimeout = undefined;
+    }
 }
 
 function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,

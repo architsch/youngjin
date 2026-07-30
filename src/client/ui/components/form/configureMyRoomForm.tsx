@@ -17,6 +17,9 @@ import { editorListDebugEnabledObservable } from "../../../../shared/system/shar
 import IconButton from "../input/iconButton";
 import CloseIcon from "../../svg/icons/closeIcon";
 import CopyIcon from "../../svg/icons/copyIcon";
+import TooltipPanel from "../overlay/tooltipPanel";
+import CompactIconButton from "../input/compactIconButton";
+import QuestionMarkIcon from "../../svg/icons/questionMarkIcon";
 
 export default function ConfigureMyRoomForm()
 {
@@ -27,6 +30,15 @@ export default function ConfigureMyRoomForm()
     const [texturePackPath, setTexturePackPath] = useState(room?.texturePackPath ?? "");
     const [editorUserName, setEditorUserName] = useState("");
     const [editors, setEditors] = useState<RoomEditor[]>([]);
+    const [tooltip, setTooltip] = useState<{targetElementId: string, text: string} | null>(null);
+
+    // Only one section's explanation is up at a time — a click anywhere else takes the panel down
+    // anyway, so a second one could only ever appear by clicking another section's "?" button,
+    // which is also that click's chance to close the one already up.
+    const toggleTooltip = useCallback((targetElementId: string, text: string) => {
+        setTooltip(prev => prev?.targetElementId == targetElementId ? null : {targetElementId, text});
+    }, []);
+    const closeTooltip = useCallback(() => setTooltip(null), []);
 
     const loadEditors = useCallback(async () => {
         if (editorListDebugEnabledObservable.peek())
@@ -101,7 +113,12 @@ export default function ConfigureMyRoomForm()
 
     return <Form>
         {/* Section 1: Room URL */}
-        <Text content="My Room's URL:" size="sm"/>
+        <div className="flex flex-row items-center">
+            <CompactIconButton id="roomURLTooltipButton" icon={<QuestionMarkIcon/>} size="md" onClick={() => toggleTooltip(
+                "roomURLTooltipButton",
+                "Anyone with this link can visit your room.")}/>
+            <Text content="Link to My Room:" size="sm"/>
+        </div>
         <div className="flex flex-row items-center gap-1">
             <div className="yj-text-xs text-gray-300 bg-gray-800 px-2 py-1 rounded-md break-all select-all">{roomURL}</div>
             <IconButton icon={<CopyIcon/>} size="sm" onClick={copyURL}/>
@@ -110,7 +127,12 @@ export default function ConfigureMyRoomForm()
         <Spacer size="sm"/>
 
         {/* Section 2: Voxel Texture Pack */}
-        <Text content="Texture Pack:" size="sm"/>
+        <div className="flex flex-row items-center">
+            <CompactIconButton id="texturePackTooltipButton" icon={<QuestionMarkIcon/>} size="md" onClick={() => toggleTooltip(
+                "texturePackTooltipButton",
+                "Change your room's texture pack here.")}/>
+            <Text content="Texture Pack:" size="sm"/>
+        </div>
         <div className="flex flex-row items-center gap-1">
             {texturePackPath.length > 0 && <Image
                 src={ImageMapUtil.getImageMap("VoxelTexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, texturePackPath)}
@@ -127,7 +149,12 @@ export default function ConfigureMyRoomForm()
         <Spacer size="sm"/>
 
         {/* Section 3: Editors */}
-        <Text content="Editors:" size="sm"/>
+        <div className="flex flex-row items-center">
+            <CompactIconButton id="editorsTooltipButton" icon={<QuestionMarkIcon/>} size="md" onClick={() => toggleTooltip(
+                "editorsTooltipButton",
+                "Anyone in this list can edit your room.")}/>
+            <Text content="Editors:" size="sm"/>
+        </div>
         <div className="flex flex-row items-center gap-1">
             <TextInput size="sm" placeholder="userName" currValue={editorUserName} setTextInput={setEditorUserName}/>
             <Button name="Add" size="sm" onClick={addEditor}/>
@@ -140,5 +167,13 @@ export default function ConfigureMyRoomForm()
                 </div>
             ))}
         </div>}
+
+        {/* Fixed to the viewport rather than laid out in the form, so it neither takes up a row of
+            its own nor gets cut off by the form's scrolling. */}
+        {tooltip && <TooltipPanel
+            targetElementId={tooltip.targetElementId}
+            text={tooltip.text}
+            onDismiss={closeTooltip}
+        />}
     </Form>;
 }

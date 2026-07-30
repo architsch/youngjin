@@ -12,6 +12,7 @@ import Headline from "./components/overlay/headline";
 import SkipTutorialButton from "./components/hud/singlePlayer/skipTutorialButton";
 import ScreenArrow from "./components/overlay/screenArrow";
 import ScreenOutlineRect from "./components/overlay/screenOutlineRect";
+import ScreenCoachMarks from "./components/overlay/screenCoachMarks";
 import ScreenDiagram from "./components/overlay/screenDiagram";
 import Popup from "./components/form/popup";
 import PopupState from "./types/popupState";
@@ -36,6 +37,8 @@ import useCloseGesture from "./util/closeGesture";
 import PopupUtil from "./util/popupUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
 import WorldSpaceSelectionUtil from "../graphics/util/worldSpaceSelectionUtil";
+import FTUEUtil from "./util/ftueUtil";
+import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -53,12 +56,11 @@ export default function UIRoot({ env, user }: UIRootProps)
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
             setRoomRuntimeMemory(roomRuntimeMemory);
 
-            // Arriving in the room that belongs to this user is worth saying out loud: it is the
-            // one room they are free to build in, and nothing else on screen would tell them so.
-            // The popup is stacked while the loading indicator still covers the screen, so it is
-            // revealed the moment the room finishes loading.
-            if (roomRuntimeMemory.room.ownerUserID == user.id)
+            if (roomRuntimeMemory.room.ownerUserID == user.id && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.EnterMyRoom))
+            {
                 PopupUtil.openPopup({popupType: "myRoomWelcome"});
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.EnterMyRoom);
+            }
         });
         userRoleObservable.addListener("ui_root", (role: UserRole) => {
             setUserRole(role);
@@ -83,6 +85,16 @@ export default function UIRoot({ env, user }: UIRootProps)
             voxelQuadSelectionObservable.removeListener("ui_root");
             popupStateObservable.removeListener("ui_root");
         };
+    }, []);
+
+    // The game page carries a loading indicator of its own, which is what holds the screen while
+    // the bundle this code arrived in is still being fetched and parsed. It is given up here, once
+    // this tree has an indicator of its own on screen to replace it. An effect is what makes that
+    // ordering true: it runs only after the first render has been committed to the DOM, so the two
+    // indicators — drawn to look alike precisely for this moment — swap places invisibly. Doing it
+    // any earlier would take the page's indicator away and leave nothing behind in its place.
+    useEffect(() => {
+        document.getElementById("bootLoadingIndicator")?.remove();
     }, []);
 
     // Going back, in whatever way the user's device offers, closes the topmost thing that is open —
@@ -187,6 +199,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         <Headline/>
         <ScreenArrow/>
         <ScreenOutlineRect/>
+        <ScreenCoachMarks/>
         {popupStack.length === 0 && <ScreenDiagram/>}
         <Loading/>
         <Reconnecting/>

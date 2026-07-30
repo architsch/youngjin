@@ -15,6 +15,12 @@ import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import PictureIcon from "../../../svg/icons/pictureIcon";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
+import { useEffect } from "react";
+import FTUEUtil from "../../../util/ftueUtil";
+import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
+
+let changeImageButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
+let changeFrameButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 
 export default function CanvasEditOptions(props: {selection: ObjectSelection})
 {
@@ -24,6 +30,32 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
     const frameCoordsMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
     const initialFrameCoords = frameCoordsMetadata ? frameCoordsMetadata.str : "";
 
+    useEffect(() => {
+        clearFTUETimeouts();
+        if (!FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasImage))
+        {
+            // If the user hasn't change a canvas's image yet,
+            // we will show a coach mark which tells he user to try changing it.
+            changeImageButtonFTUETimeout = setTimeout(() => {
+                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.ChangeCanvasImage,
+                    "changeCanvasImageButton", "Choose your own picture.");
+            }, 750);
+        }
+        if (FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasImage) &&
+            !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasFrame))
+        {
+            // If the user hasn't change a canvas's frame yet (but already has changed a canvas's image),
+            // we will show a coach mark which tells he user to try changing it.
+            changeFrameButtonFTUETimeout = setTimeout(() => {
+                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.ChangeCanvasFrame,
+                    "changeCanvasFrameButton", "Try a different frame.");
+            }, 750);
+        }
+        return () => {
+            clearFTUETimeouts();
+        };
+    }, []);
+
     return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
@@ -31,21 +63,43 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
         />
         <ImageChooser
             title="Change Image"
+            id="changeCanvasImageButton"
             icon={<PictureIcon/>}
             viewType="list"
             mapName="CanvasImageMap"
             initialChoicePath={initialImagePath}
-            onChoose={path => trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path)}
+            onChoose={path => {
+                trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasImage);
+            }}
         />
         <ImageChooser
             title="Change Frame"
+            id="changeCanvasFrameButton"
             icon={<PictureFrameIcon/>}
             viewType="grid"
             mapName="CanvasFrameImageMap"
             initialChoicePath={initialFrameCoords}
-            onChoose={coords => trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.CanvasFrameCoords, coords)}
+            onChoose={coords => {
+                trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.CanvasFrameCoords, coords);
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasFrame);
+            }}
         />
     </div>;
+}
+
+function clearFTUETimeouts()
+{
+    if (changeImageButtonFTUETimeout)
+    {
+        clearTimeout(changeImageButtonFTUETimeout);
+        changeImageButtonFTUETimeout = undefined;
+    }
+    if (changeFrameButtonFTUETimeout)
+    {
+        clearTimeout(changeFrameButtonFTUETimeout);
+        changeFrameButtonFTUETimeout = undefined;
+    }
 }
 
 function canRemoveCanvas(selection: ObjectSelection): boolean

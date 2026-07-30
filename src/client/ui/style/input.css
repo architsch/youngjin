@@ -33,6 +33,16 @@
     50%      { transform: scale(1.08); }
   }
 
+  /* Unhurried bright<->dim oscillation for a full-screen status message ("Loading...",
+     "Reconnecting..."), so that a screen which is genuinely busy never looks like a hung one.
+     Animates `opacity` only — the browser can run that off the main thread, which is what keeps
+     the message breathing while the work it is announcing occupies the main thread. */
+  --animate-status-breathe: status-breathe 1.4s ease-in-out infinite;
+  @keyframes status-breathe {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+  }
+
   /* Dramatic, rapid bright<->dark pulse (plus a pulsing glow) for the outline rect. */
   --animate-pulse-strong: pulse-strong 0.6s ease-in-out infinite;
   @keyframes pulse-strong {
@@ -46,6 +56,18 @@
       box-shadow: 0 0 4px 0 rgba(253, 224, 71, 0.15);
       opacity: 0.55;
     }
+  }
+}
+
+@layer base {
+  /* The app owns the whole viewport and never scrolls the document, so any downward
+     overscroll that reaches the viewport is unintended. Left alone, Chrome on Android
+     reads it as a pull-to-refresh gesture and reloads the page mid-session — most easily
+     triggered by swiping over a popup, whose backdrop (unlike the 3D canvases) doesn't
+     suppress touch gestures. Containing the overscroll keeps the gesture inside the app
+     while still allowing scrollable panels to scroll normally. */
+  html, body {
+    overscroll-behavior: contain;
   }
 }
 
@@ -90,6 +112,12 @@
   }
   .yj-panel-red {
     @apply text-pink-200 bg-pink-700 border border-pink-500 rounded-md pointer-events-auto
+  }
+  /* The look worn by CompactIconButton: round rather than boxy, and with its border pulled in
+     close to its fill in brightness, so that a button sitting beside other content stays a quiet
+     marker on it instead of reading as a control of its own. */
+  .yj-panel-gray-compact {
+    @apply text-gray-300 bg-gray-700 border border-gray-600 rounded-full pointer-events-auto
   }
   .yj-panel-white-no-outline {
     @apply text-gray-800 bg-gray-100 rounded-md pointer-events-auto

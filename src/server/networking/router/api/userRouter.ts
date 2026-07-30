@@ -49,6 +49,9 @@ UserRouter.post("/restart_tutorial", UserIdentificationUtil.identifyAnyUser, asy
     // Persist the mode flip so the next page load / socket connect routes the user into the tutorial.
     await DBUserUtil.setSinglePlayerMode(user.id, TUTORIAL_SINGLE_PLAYER_MODE);
 
+    // Reset the user's FTUE, so that post-tutorial guidance UI will show up again.
+    await DBUserUtil.setFTUE(user.id, "");
+
     res.status(200).send("Tutorial restarted.");
 });
 

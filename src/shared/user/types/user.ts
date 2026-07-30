@@ -9,9 +9,11 @@ export default class User
     singlePlayerMode: string;
     lastRoomID: string;
     ownedRoomID: string;
+    ftue: string;
 
     constructor(id: string | undefined, userName: string, userType: UserType, email: string,
-        singlePlayerMode: string, lastRoomID: string = "", ownedRoomID: string = "")
+        singlePlayerMode: string, lastRoomID: string = "", ownedRoomID: string = "",
+        ftue: string = "")
     {
         this.id = (id != undefined) ? id : "";
         this.userName = userName;
@@ -20,6 +22,7 @@ export default class User
         this.singlePlayerMode = singlePlayerMode;
         this.lastRoomID = lastRoomID;
         this.ownedRoomID = ownedRoomID;
+        this.ftue = ftue;
     }
 
     static fromString(userString: string): User
@@ -31,15 +34,16 @@ export default class User
         const email = fields.length > 3 ? fields[3] : "";
         const singlePlayerMode = fields.length > 4 ? fields[4] : "";
         const ownedRoomID = fields.length > 5 ? fields[5] : "";
+        const ftue = fields.length > 6 ? fields[6] : "";
 
         if (isNaN(userType))
             throw new Error(`userType is NaN (userString = "${userString}")`);
 
-        return new User(id, userName, userType, email, singlePlayerMode, "", ownedRoomID);
+        return new User(id, userName, userType, email, singlePlayerMode, "", ownedRoomID, ftue);
     }
 
     toString(): string
     {
-        return `${this.id} ${this.userName} ${this.userType} ${this.email} ${this.singlePlayerMode} ${this.ownedRoomID}`;
+        return `${this.id} ${this.userName} ${this.userType} ${this.email} ${this.singlePlayerMode} ${this.ownedRoomID} ${this.ftue}`;
     }
 }

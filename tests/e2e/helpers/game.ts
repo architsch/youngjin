@@ -10,7 +10,7 @@
  * specs stay concise and don't duplicate low-level evaluate calls.
  */
 import { Page, expect } from "@playwright/test";
-import { LOADING_INDICATOR_TEXT, TIMEOUTS } from "./constants";
+import { LOADING_INDICATOR_TEXT, SELECTORS, TIMEOUTS } from "./constants";
 
 // ─── Game Initialization ────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ export async function waitForGameReady(page: Page): Promise<void>
  */
 export async function waitForRoomLoaded(page: Page): Promise<void>
 {
-    await expect(page.getByText(LOADING_INDICATOR_TEXT, { exact: true }))
+    await expect(page.locator(SELECTORS.UI_ROOT).getByText(LOADING_INDICATOR_TEXT, { exact: true }))
         .toBeHidden({ timeout: TIMEOUTS.ROOM_LOAD });
 }
 

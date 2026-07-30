@@ -6,7 +6,7 @@ Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.
 
 ## Where user state lives
 
-- **`DBUser`** — per-user, persistent. Holds the user's last room, their player metadata, their single-player mode (see [single_player_mode.md](single_player_mode.md)), account info, and login bookkeeping. Player metadata follows the user across rooms; it is not per-room.
+- **`DBUser`** — per-user, persistent. Holds the user's last room, their player metadata, their single-player mode (see [single_player_mode.md](single_player_mode.md)), the features they have already been introduced to (see [ftue.md](ftue.md)), account info, and login bookkeeping. Player metadata follows the user across rooms; it is not per-room.
 - **`DBRoom`** — per-room, persistent. Holds the owner, the texture pack, and the editor list (a denormalized list of editor identities, so listing editors in the UI never needs an extra user lookup). The product invariant is that a user's name/email never change after account creation, so the denormalized snapshot does not drift.
 - **State is not bundled into a per-session snapshot.** Players always spawn at the designated entrance position, a user's role is derived from `DBRoom` at join time, and the last room and player metadata are written to `DBUser` directly.
 
@@ -85,4 +85,6 @@ A background cycle saves rooms that are marked dirty, rate-limited so that a bus
 Signals are not sent one at a time. They accumulate per signal type on each connection and are flushed together on a fixed interval. Each signal type has a minimum send interval that throttles how often it may be sent; signals tied to expensive operations (such as room changes and user commands) are throttled more aggressively, while most are not throttled at all. The server rejects signals that arrive too soon, and the client retries a few times before giving up.
 
 ## User Commands
-The server supports an extensible command system: the client sends a command string, which the server parses and dispatches to the matching handler. For example, the **finish-tutorial** command verifies the user is in the tutorial, then clears their single-player mode and persists it (see [single_player_mode.md](single_player_mode.md)).
+The server supports an extensible command system: the client sends a command string, which the server parses and dispatches to the matching handler. For example, the **finish-tutorial** command verifies the user is in the tutorial, then clears their single-player mode and persists it (see [single_player_mode.md](single_player_mode.md)); the **add-FTUE-element** command records that the user has been through one of the features the app introduces to first-time users (see [ftue.md](ftue.md)).
+
+Because these commands mutate the user record, each handler updates the in-memory user alongside the write to `DBUser`: the same user object serves the rest of the socket session, so a handler that only wrote to the database would leave the next command reading stale state.

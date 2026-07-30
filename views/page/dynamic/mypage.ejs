@@ -9,6 +9,23 @@
     <div id="gameCanvasRoot" class="fixed w-full h-full overflow-hidden font-mono pointer-events-auto"></div>
     <div id="overlayCanvasRoot" class="fixed w-full h-full overflow-hidden font-mono pointer-events-none"></div>
     <div id="uiRoot" class="fixed w-full h-full overflow-hidden font-mono pointer-events-none select-none"></div>
+    <%_ /* Stands in for the app's own loading indicator, which cannot appear until the client
+          bundle has been fetched, parsed and mounted. Without this the visitor faces a blank black
+          window for that whole stretch — several seconds on a slow mobile connection — with
+          nothing on screen and nothing in the console either, since the code that would report
+          progress is the very thing still being downloaded. The React tree removes it as soon as
+          it is itself on screen (see BootIndicatorUtil), which is why the two are deliberately
+          given the same position, type, colour and pulse: the handoff should not be visible.
+          Styled inline, and with its own copy of the keyframes, on purpose — this is the fallback
+          that has to survive a stylesheet which has not arrived yet or a skipped CSS build. */ _%>
+    <style>@keyframes bootStatusBreathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }</style>
+    <div id="bootLoadingIndicator" style="position: fixed; top: 0; bottom: 0; left: 0; right: 0;
+        margin: auto; width: fit-content; height: fit-content; max-width: 91.666667%;
+        padding: clamp(0.75rem, 3vw, 2.5rem); border-radius: 2rem; background-color: black;
+        color: #d97706; font-family: 'Lucida Console', 'Lucida Sans Typewriter', 'Monaco', Consolas, monospace;
+        font-size: clamp(1.25rem, 5vw, 2.25rem); line-height: 1.5; text-align: center;">
+        <span style="display: inline-block; animation: bootStatusBreathe 1.4s ease-in-out infinite;">Loading...</span>
+    </div>
     <script type="text/javascript">
         window.thingspool_env = { // client-side environment variables
             mode: "<%- process.env.MODE %>",
