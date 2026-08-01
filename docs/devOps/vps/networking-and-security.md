@@ -31,7 +31,7 @@ The self-hosted runner on the VPS communicates with GitHub via an **outbound** H
 
 ## Nginx setup for the VPS
 
-1. Make sure that Nginx is installed and running (see [Basic Setup](basic-setup.md) step 5).
+1. Make sure that Nginx is installed and running (see [Basic Setup](basic-setup.md) step 6).
 
 2. Navigate to the project's root directory and run the following command:
 ```
@@ -41,7 +41,7 @@ This will apply the latest Nginx config files in `/dev/config/` to the VPS, and 
 
 ## DNS/SSL setup for the VPS
 
-1. Make sure that Certbot is installed (see [Basic Setup](basic-setup.md) step 6).
+1. Make sure that Certbot is installed (see [Basic Setup](basic-setup.md) step 7).
 
 2. Make sure that the DNS A record is configured in the following way:
     - `app.thingspool.net` points to `222.239.251.208`

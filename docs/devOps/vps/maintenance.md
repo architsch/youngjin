@@ -8,7 +8,7 @@
 
 The subtlety worth knowing: the PM2 daemon spawns app processes with the `node` it inherited when the daemon itself started. Installing a newer Node.js does **not** move the running apps onto it — the daemon has to be respawned as well, which is what `pm2 update` does.
 
-1. In the repository, set `.nvmrc` and package.json's `engines.node` to the new major, and bump `@types/node` to match. Switch your own machine over — see [Switching your own machine over](#switching-your-own-machine-over) — then run `npm install -g pm2` if you want your local PM2 on the new runtime.
+1. In the repository, set `.nvmrc` and package.json's `engines.node` to the new major, and bump `@types/node` to match. Switch your own machine over — see [Switching your own machine over](#switching-your-own-machine-over) — then reinstall the global CLIs, which do not follow you across the switch: see [Global CLIs do not survive a Node.js switch](#global-clis-do-not-survive-a-nodejs-switch).
 
 2. Connect to the VPS:
 ```
@@ -63,6 +63,21 @@ afterwards; reloading its window re-uses the copy rather than rebuilding it. So 
 completely and start it again, then confirm with `node -v` in a fresh terminal. A stale environment
 gives itself away as an old version directory still sitting on `PATH`.
 
+### Global CLIs do not survive a Node.js switch
+
+nvm gives every Node.js version its own installation prefix, and `npm install -g` writes into whichever one is active at the time. Switching majors swaps that prefix out wholesale. Nothing is deleted — the packages are still sitting under the old version — but they are no longer on `PATH`, so they read as never having been installed.
+
+This bites locally because `npm run dev` shells out to two CLIs that are deliberately *not* `package.json` dependencies: `firebase` (firebase-tools), which starts the Firestore and Storage emulators, and `pm2`, which supervises the dev runner and has to outlive the npm process that launched it. Everything else the script needs is a local dev dependency and resolves through `node_modules/.bin` on its own, so those are the only two that a version switch can strand. Reinstate both on the new runtime and confirm they resolve:
+
+```
+npm install -g firebase-tools pm2
+command -v firebase pm2
+```
+
+The resulting failure is easy to misread. The dev script runs the emulators and the server together under `concurrently -k`, so a missing binary exits `127` and `-k` immediately terminates the healthy half as well — one absent CLI presents as the whole command dying during startup rather than as a single `command not found`. When `npm run dev` stops abruptly after a version bump, check these two before anything else.
+
+The VPS has the same hazard for a different reason: there the trigger is removing nvm rather than switching within it, but the packages are stranded identically — see [Keep a single Node.js on the VPS](#keep-a-single-nodejs-on-the-vps).
+
 ### Keep a single Node.js on the VPS
 
 The VPS must have exactly one Node.js, the system one from NodeSource. PM2 and the Actions runner both pick their interpreter by resolving `node` against `PATH`, so a second install silently decides which version the apps run on. `which -a node` should therefore list only the system path.
@@ -88,13 +103,137 @@ Once those files name only stable paths, an upgrade needs nothing here: NodeSour
 
 The runner also carries a bundled Node.js of its own, under its `externals` directory, used to execute JavaScript actions such as `actions/checkout`. That copy is independent of both `.nvmrc` and the system install, and moves only when the runner itself updates — which self-hosted runners do automatically.
 
+## Keeping the OS patched
+
+Security updates are applied automatically by `unattended-upgrades`, scheduled through
+`/etc/apt/apt.conf.d/20auto-upgrades` — see [Basic Setup](basic-setup.md#5-enable-automatic-security-updates)
+for the setup and what each setting does.
+
+The failure mode worth knowing is that this mechanism goes quiet rather than loud. If the schedule
+file is missing, `APT::Periodic::Unattended-Upgrade` defaults to off and nothing is ever installed,
+yet `systemctl status unattended-upgrades` still reports the service as enabled and active — the
+unit visible under systemd is a shutdown hook, not the upgrade run. The service therefore looks
+healthy on a machine that has not taken a patch in years.
+
+### Verifying that automatic updates actually run
+
+Check the outcome, not the service state:
+```
+apt-get update && apt list --upgradable
+```
+A machine that is keeping up returns few or no entries. A long list means the automation is not
+running, regardless of what systemd reports. Confirm the schedule and the timer directly:
+```
+apt-config dump | grep APT::Periodic
+systemctl list-timers | grep apt-daily-upgrade
+```
+`APT::Periodic::Unattended-Upgrade` must read `"1"` and the timer must show a next run time.
+
+Two further things can stall the run even once it is scheduled. An outdated `distro-info-data`
+makes the script abort while trying to identify the release, which surfaces as
+`Could not figure out development release`; installing that package on its own clears it. And
+`unattended-upgrades` only draws from the origins listed in
+`/etc/apt/apt.conf.d/50unattended-upgrades`, which by default covers the security pocket but not
+the general updates pocket — so a handful of non-security packages legitimately linger.
+
+To catch up a machine that has fallen behind, apply everything by hand. The config-preserving flags
+matter here: without them a package upgrade can replace a customised config file, which for
+`sshd_config` or the Nginx site config is how a maintenance window turns into an outage.
+```
+apt-get update
+apt-get -y -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef upgrade
+apt-get -y --purge autoremove
+```
+Plain `upgrade` never installs new packages, so a new kernel is held back and reported as
+`not upgraded`. Pulling one in requires `full-upgrade` — see below.
+
+### Applying a kernel update
+
+Automatic reboots are deliberately disabled, so a new kernel is installed but never booted until
+someone does it by hand. `/var/run/reboot-required` is what says one is pending.
+
+A kernel arrives as a *new* package rather than an upgrade of an existing one, so it needs
+`full-upgrade`. Because that verb is also allowed to remove packages, check what it intends to do
+before running it — expect installs and zero removals:
+```
+apt-get -s full-upgrade | grep -E '^(Inst|Remv)'
+apt-get -y -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef full-upgrade
+```
+
+Before rebooting, make sure the apps will come back. The PM2 boot unit resurrects whatever was in
+its saved process list at the time of the last `pm2 save`, **not** whatever happens to be running
+now — so an unsaved deployment is silently lost across a reboot:
+```
+pm2 save
+systemctl is-enabled pm2-root
+```
+Confirm the previous kernel is still installed as a fallback, and that nothing is mid-install:
+```
+ls /boot/vmlinuz-*
+dpkg --audit
+```
+Then reboot, and verify the runtime afterwards — the kernel moved, so this is also the moment a
+stale PM2 daemon or a failed service would show itself:
+```
+systemctl reboot
+```
+```
+uname -r
+pm2 status
+systemctl is-active nginx ssh fail2ban pm2-root
+curl -s -o /dev/null -w '%{http_code}\n' https://app.thingspool.net/health
+```
+
+## Reclaiming disk space
+
+Log growth is bounded at setup time — see [Basic Setup](basic-setup.md#10-bound-the-logs). On a
+machine where those limits were applied late, the existing backlog is not removed retroactively and
+has to be cleared once.
+
+Check the usual accumulators first:
+```
+journalctl --disk-usage
+du -sh /root/.pm2/logs /var/cache/apt
+```
+
+The journal honours a new ceiling only for future writes, so vacuum it down explicitly:
+```
+journalctl --vacuum-size=200M
+```
+
+The package cache refills on every upgrade and is safe to drop at any time:
+```
+apt-get clean
+```
+
+PM2's own logs need attention in two places. Files belonging to apps that no longer exist are never
+touched by rotation and simply sit there, so delete those by name after confirming against
+`pm2 status`. Already-rotated files can be compressed, which typically reclaims well over ninety
+percent of their size:
+```
+gzip -f /root/.pm2/logs/*__*.log
+```
+
+Superseded kernels are removed automatically once
+`Unattended-Upgrade::Remove-Unused-Kernel-Packages` is enabled. Packages left in the `rc` state —
+removed, but with config files still on disk — are not covered by that and accumulate over a
+machine's life:
+```
+dpkg -l | awk '/^rc/ {print $2}' | xargs -r dpkg --purge
+```
+
 ## How to clean up unused Linux kernels
+
+Normally this is handled automatically by `unattended-upgrades` (see
+[Reclaiming disk space](#reclaiming-disk-space)). The manual procedure below is the fallback for a
+machine where that was never enabled, or where a failed upgrade has left `/boot` full and dpkg in a
+broken state.
 
 1. Connect to the VPS via:
 ```
 ssh root@222.239.251.208
 ```
-(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound_rules_incoming_traffic_to_the_VPS))
+(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound-rules-incoming-traffic-to-the-vps))
 
 2. Check which kernel is currently running:
 ```

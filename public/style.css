@@ -429,14 +429,17 @@ hr {
 .postEntryButton:hover {
 	border-color: #d0c090;
 }
+/* The label is a single phrase, so it stays on one line rather than breaking mid-sentence. The
+   tightened sides above are what earn that: they leave a narrow screen enough room for the whole
+   phrase at full size, instead of spending it all on the button's own margin and padding. */
 .bigButton {
 	position: relative;
 	display: block;
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 3.60% 6.00% 3.60% 6.00%;
-	margin: 3.60% 6.00% 3.60% 0;
+	padding: 3.60% 4.50% 3.60% 4.50%;
+	margin: 3.60% 4.50% 3.60% 0;
 	font-size: min(2.18vmax, 19.20px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -448,6 +451,7 @@ hr {
 	border-right: 0.75vmin #707070 solid;
 	text-decoration: none;
 	text-align: center;
+	white-space: nowrap;
 }
 .bigButton:hover {
 	border-color: #d0c090;
@@ -1042,14 +1046,17 @@ hr {
 .postEntryButton:hover {
 	border-color: #d0c090;
 }
+/* The label is a single phrase, so it stays on one line rather than breaking mid-sentence. The
+   tightened sides above are what earn that: they leave a narrow screen enough room for the whole
+   phrase at full size, instead of spending it all on the button's own margin and padding. */
 .bigButton {
 	position: relative;
 	display: block;
 	max-width: none;
 	width: fit-content;
 	block-size: fit-content;
-	padding: 6.00% 15.00% 6.00% 15.00%;
-	margin: 6.00% 15.00% 6.00% 0;
+	padding: 6.00% 6.25% 6.00% 6.25%;
+	margin: 6.00% 6.25% 6.00% 0;
 	font-size: min(2.18vmax, 19.20px);
 	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
 	font-style: italic;
@@ -1061,6 +1068,7 @@ hr {
 	border-right: 0.75vmin #707070 solid;
 	text-decoration: none;
 	text-align: center;
+	white-space: nowrap;
 }
 .bigButton:hover {
 	border-color: #d0c090;

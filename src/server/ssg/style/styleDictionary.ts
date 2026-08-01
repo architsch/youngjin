@@ -206,6 +206,12 @@ const l_spacing = (landscape: boolean): string => spacing(landscape, 3, 3);
 const xl_spacing = (landscape: boolean): string => spacing(landscape, 4, 4);
 const xxl_spacing = (landscape: boolean): string => spacing(landscape, 6, 6);
 
+// An xxl element spends its full horizontal allowance on its own padding and margin, which on a
+// phone leaves little of the row for the content. This keeps the vertical generosity of xxl while
+// holding the sides to what the narrowest screen of each orientation can actually spare — portrait
+// most of all, whose horizontal unit is several times the landscape one.
+const xxl_spacing_narrowHorizontal = (landscape: boolean): string => spacing(landscape, 6, landscape ? 4.5 : 2.5);
+
 const xs_spacing_paddingOnly = (landscape: boolean): string => spacing(landscape, 0.5, 1, true, false);
 const xs_spacing_marginOnly = (landscape: boolean): string => spacing(landscape, 0.5, 1, false, true);
 
@@ -469,13 +475,17 @@ hr {
 .postEntryButton:hover {
 	border-color: ${lightYellowColor};
 }
+/* The label is a single phrase, so it stays on one line rather than breaking mid-sentence. The
+   tightened sides above are what earn that: they leave a narrow screen enough room for the whole
+   phrase at full size, instead of spending it all on the button's own margin and padding. */
 .bigButton {
 	${flexible_row_area(landscape)}
-	${xxl_spacing(landscape)}
+	${xxl_spacing_narrowHorizontal(landscape)}
 	${m_bold_font}
 	${big_button_frame}
 	text-decoration: none;
 	text-align: center;
+	white-space: nowrap;
 }
 .bigButton:hover {
 	border-color: ${lightYellowColor};

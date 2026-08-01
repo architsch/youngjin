@@ -7,6 +7,16 @@
 gcloud auth application-default login
 ```
 
+2. Install the two CLIs the dev scripts invoke as executables:
+```
+npm install -g firebase-tools pm2
+```
+These are global rather than `package.json` dependencies because nothing imports them — `firebase` is spawned to run the Firestore and Storage emulators, and `pm2` supervises the dev runner as a process that outlives the npm command that started it. The rest of the toolchain is a local dev dependency and needs no separate install.
+
+Being global ties them to the Node.js version that was active when you installed them, so **changing Node.js versions strands them and breaks `npm run dev`** until they are reinstalled on the new runtime. This is the most common cause of the dev script exiting immediately after a version bump — see [Global CLIs do not survive a Node.js switch](vps/maintenance.md#global-clis-do-not-survive-a-nodejs-switch).
+
+3. Make sure a JDK is on `PATH` (`java -version`), since the Firestore and Storage emulators run on the JVM.
+
 ## How to Run the Project Locally
 
 1. Open up the terminal and navigate to the project's root directory.

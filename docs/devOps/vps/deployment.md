@@ -10,7 +10,7 @@ This section explains how to set up a self-hosted GitHub Actions runner on the V
 ```
 ssh root@222.239.251.208
 ```
-(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound_rules_incoming_traffic_to_the_VPS))
+(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound-rules-incoming-traffic-to-the-vps))
 
 2. Create a directory for the runner:
 ```
@@ -41,7 +41,7 @@ Accept the defaults when prompted (or customize the runner name/labels as needed
 ```
 You should also see the runner listed as "Idle" in the repository's `Settings -> Actions -> Runners` page.
 
-7. Make sure Node.js and PM2 are installed on the VPS (see [Basic Setup](basic-setup.md) steps 7–8).
+7. Make sure Node.js and PM2 are installed on the VPS (see [Basic Setup](basic-setup.md) steps 8–9).
 
 8. The workflows (defined in `.github/workflows/`) use `runs-on: self-hosted` to target this runner. Once the runner is active, any push to `main` will trigger the staging deployment workflow, and the promote/rollback workflows can be triggered manually via GitHub's UI.
 

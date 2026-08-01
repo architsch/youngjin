@@ -27,14 +27,37 @@ export default function useCloseGesture(
         // CloseWatcher already hears Android's back gesture, this is what catches the back controls
         // that no CloseWatcher hears: the browser's own button, a mouse's back button, the keyboard
         // shortcut, and the edge swipe on iOS.
+        //
+        // The entry only ever goes up while an interaction of the user's own is in hand, never on
+        // the page's own initiative. A page that adds history entries at moments when the user was
+        // touching nothing is exactly what back-button hijacking looks like from the outside, and
+        // the browsers that guard against it answer by stepping straight over such an entry when
+        // the user goes back — the page is left behind, and no popstate ever arrives to say so.
+        // Waiting for an interaction is what tells the two apart, and it costs nothing that is
+        // wanted: before the user has touched the page there is nothing open for a back gesture to
+        // close, so letting it mean what it says is the right answer anyway.
         let guardPushed = false;
+        let guardWanted = false;
         let leaving = false;
-        const pushHistoryGuard = () => {
-            if (!guardPushed)
+        const pushHistoryGuard = (userIsInteracting = false) => {
+            if (guardPushed)
+                return;
+            // A browser that keeps no reading of user activation has no intervention riding on one
+            // either, so there the entry goes up whenever it is asked for.
+            const activationHeld = (navigator.userActivation == undefined) ||
+                navigator.userActivation.isActive;
+            if (!userIsInteracting && !activationHeld)
             {
-                guardPushed = true;
-                history.pushState(HISTORY_GUARD_STATE, "");
+                guardWanted = true; // Goes up the moment the user next touches the page
+                return;
             }
+            guardWanted = false;
+            guardPushed = true;
+            history.pushState(HISTORY_GUARD_STATE, "");
+        };
+        const onUserInteraction = (ev: Event) => {
+            if (guardWanted && ev.isTrusted)
+                pushHistoryGuard(true);
         };
         // Gives the page up after all. The guard entry is spent first, and the entry the user
         // asked for is travelled to only once that first step has been seen to land — so a history
@@ -52,7 +75,7 @@ export default function useCloseGesture(
                 history.back(); // On to wherever the user was before this page
                 // Nowhere further to go means the page is still here a moment later, so the guard
                 // goes back up and everything carries on as it was.
-                setTimeout(pushHistoryGuard, GUARD_REARM_DELAY_MS);
+                setTimeout(() => pushHistoryGuard(), GUARD_REARM_DELAY_MS);
                 return;
             }
             pushHistoryGuard(); // Re-armed, so that the next back gesture is caught as well
@@ -60,6 +83,10 @@ export default function useCloseGesture(
         };
         pushHistoryGuard();
         window.addEventListener("popstate", onPopState);
+        // Capturing, so that the guard's arming does not depend on what the element under the
+        // user's finger does with the event.
+        for (const eventType of USER_INTERACTION_EVENT_TYPES)
+            window.addEventListener(eventType, onUserInteraction, true);
 
         // Where CloseWatcher exists, it is the one reading that covers both the Escape key and
         // Android's back button/gesture, and it takes them before the browser can treat them as
@@ -98,6 +125,8 @@ export default function useCloseGesture(
             watcher?.destroy();
             window.removeEventListener("keydown", onKeyDown, true);
             window.removeEventListener("popstate", onPopState);
+            for (const eventType of USER_INTERACTION_EVENT_TYPES)
+                window.removeEventListener(eventType, onUserInteraction, true);
             // The guard entry is left where it stands. This only runs as the page itself is going
             // away, and a traversal asked for at that point would be a navigation of its own.
         };
@@ -105,6 +134,11 @@ export default function useCloseGesture(
 }
 
 const HISTORY_GUARD_STATE = { closeGestureGuard: true };
+// The interactions a browser counts as the user having acted on the page. Each is the completion
+// of a gesture rather than its beginning, which is the point at which every browser agrees that
+// the user has acted; the pair covering touch and pointer both fire for a tap, and whichever
+// arrives first is the one that raises the guard.
+const USER_INTERACTION_EVENT_TYPES = ["pointerup", "touchend", "keydown"] as const;
 // How soon after an Escape key press a close request may still be put down to that key press
 // rather than to a back gesture (in milliseconds).
 const ESCAPE_ATTRIBUTION_WINDOW_MS = 200;
