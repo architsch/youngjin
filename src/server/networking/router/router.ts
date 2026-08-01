@@ -7,6 +7,7 @@ import EJSUtil from "../../ssg/util/ejsUtil";
 import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH, HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import RateLimitUtil from "../util/rateLimitUtil";
 import ServerLifecycleUtil from "../../system/util/serverLifecycleUtil";
+import { GIT_COMMIT } from "../../system/serverConstants";
 
 export default function Router(app: Express): void
 {
@@ -46,13 +47,18 @@ export default function Router(app: Express): void
     // listening, so the only thing left to report is whether it is on its way out. A shutting-down
     // process answers "not ready", so that a client waiting for the next deployment's server keeps
     // waiting instead of reloading into a process that is about to stop listening.
+    //
+    // A ready process also names the build it is running. That is what lets a page which has been
+    // sitting in a background tab across a deployment discover that it is running code the server
+    // has since moved on from — the one thing no amount of reconnecting can tell it.
     app.get(`/${HEALTH_ROUTE_PATH}`, (req: Request, res: Response) => {
         if (ServerLifecycleUtil.isShuttingDown())
         {
             res.status(503).set("Cache-Control", "no-store").send("Server is shutting down");
             return;
         }
-        res.status(200).set("Cache-Control", "no-store").send("Server is running");
+        res.status(200).set("Cache-Control", "no-store")
+            .json({ status: "Server is running", gitCommit: GIT_COMMIT });
     });
 
     app.get("/robots.txt", (req: Request, res: Response) => {

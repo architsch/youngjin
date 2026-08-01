@@ -10,5 +10,6 @@ type PopupState =
     | { popupType: "myRoomWelcome" }
     | { popupType: "customizePlayer" }
     | { popupType: "imageChooser"; params: ImageChooserProps }
+    | { popupType: "consoleLog" }
 
 export default PopupState;

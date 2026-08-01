@@ -450,6 +450,9 @@
   .h-\[0\.35em\] {
     height: 0.35em;
   }
+  .h-\[55vh\] {
+    height: 55vh;
+  }
   .h-fit {
     height: fit-content;
   }
@@ -515,6 +518,9 @@
   }
   .w-\[60vw\] {
     width: 60vw;
+  }
+  .w-\[70vw\] {
+    width: 70vw;
   }
   .w-fit {
     width: fit-content;
@@ -676,6 +682,11 @@
   }
   .justify-self-start {
     justify-self: flex-start;
+  }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .overflow-auto {
     overflow: auto;
@@ -948,6 +959,9 @@
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
   }
+  .text-\[10px\] {
+    font-size: 10px;
+  }
   .text-\[clamp\(1\.25rem\,5vw\,2\.25rem\)\] {
     font-size: clamp(1.25rem, 5vw, 2.25rem);
   }
@@ -982,6 +996,9 @@
   }
   .whitespace-nowrap {
     white-space: nowrap;
+  }
+  .whitespace-pre-wrap {
+    white-space: pre-wrap;
   }
   .text-amber-300 {
     color: var(--color-amber-300);
@@ -1071,6 +1088,10 @@
     -webkit-user-select: none;
     user-select: none;
   }
+  .select-text {
+    -webkit-user-select: text;
+    user-select: text;
+  }
   .hover\:bg-gray-600 {
     &:hover {
       @media (hover: hover) {
@@ -1127,6 +1148,9 @@
   }
 }
 @layer base {
+  :root {
+    color-scheme: only light;
+  }
   html, body {
     overscroll-behavior: contain;
   }

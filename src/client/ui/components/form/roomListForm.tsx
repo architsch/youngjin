@@ -215,7 +215,7 @@ function RoomEntryRow({ entry, user, currentRoomID, onVisit }: RowProps)
             being clipped or pushing the Visit button out of the row. */}
         <div className="flex flex-col min-w-0 text-left">
             <div className="yj-text-xs text-amber-300 wrap-break-word">{roomTitle}</div>
-            {!(isMyRoom && needsLogin) && <div className="yj-text-xs text-gray-400 wrap-break-word">{idLabel}</div>}
+            {!(isMyRoom && needsLogin) && <div className="yj-text-xs text-gray-400 truncate">{idLabel}</div>}
         </div>
         {isCurrentRoom
             ? <div className="yj-text-xs text-gray-400">You are Here</div>

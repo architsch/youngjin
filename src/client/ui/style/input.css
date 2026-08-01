@@ -60,6 +60,22 @@
 }
 
 @layer base {
+  /* Every colour in this UI is authored explicitly, so a browser is never doing the app a favour
+     by recolouring them. A mobile browser whose "dark mode" is set to darken web pages (Samsung
+     Internet, Chrome on Android) otherwise runs its own inversion pass over the finished page:
+     contrast collapses, and any element the algorithm classifies differently from its neighbours
+     comes out a different colour than the thing it belongs to — the coach mark's pointer, a
+     rotated square meant to read as one piece with the bubble behind it, is the clearest example.
+     Naming a single supported scheme opts the page out of that pass and leaves the authored
+     colours alone. The keyword says which scheme the page is rendered against, not how the design
+     looks: `light` is what keeps browser-drawn widgets (text fields, checkboxes, scrollbars) in
+     the same appearance they have on desktop, and `only` refuses the automatic dark treatment on
+     top of it. Also declared as a meta tag in the page head, which takes effect before this
+     stylesheet has arrived. */
+  :root {
+    color-scheme: only light;
+  }
+
   /* The app owns the whole viewport and never scrolls the document, so any downward
      overscroll that reaches the viewport is unintended. Left alone, Chrome on Android
      reads it as a pull-to-refresh gesture and reloads the page mid-session — most easily

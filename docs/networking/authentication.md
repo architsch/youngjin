@@ -30,7 +30,11 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
 3. On the next page load, the user is treated as a new guest (see "Client-Server Connection").
 
 ## Guest Account Rate Limiting
-Guest account creation is capped along two independent dimensions — per IP address and per User-Agent — each over a rolling time window with periodic cleanup. Both limits must be satisfied for creation to proceed; if either is exceeded, the request is rejected. This curbs automated mass account creation.
+Guest account creation is capped along two dimensions, both scoped to the requesting client, each over a rolling time window with periodic cleanup:
+- a looser cap per IP address, so that one shared network is not mistaken for one visitor;
+- a tighter cap per client, identified by IP address and User-Agent *together*. A User-Agent on its own identifies a browser version rather than a visitor, and is shared by everyone running it, so a cap keyed on it alone would be global — a few visitors could lock out every other user of the same browser.
+
+Both limits must be satisfied for creation to proceed, and both are evaluated before either is charged, so a request turned away by one limit does not spend budget against the other. This curbs automated mass account creation without letting one visitor's activity block unrelated visitors.
 
 ## HTTP API Rate Limiting
 All page and API routes are rate-limited per IP, and violations are logged with the offending IP and path.

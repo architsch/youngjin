@@ -8,6 +8,10 @@
 <meta name="description" content="<%= v_desc %>">
 <meta name="keywords" content="<%= v_keywords %>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<%_ /* Opts the page out of a mobile browser's automatic page-darkening, which would otherwise
+      recolour the app's UI (see the `color-scheme` rule in the client's stylesheet). Declared
+      here as well so it holds during the stretch before that stylesheet has loaded. */ _%>
+<meta name="color-scheme" content="only light">
 <title><%= v_title %></title>
 <link rel="shortcut icon" href="<%= URL_STATIC %>/favicon.ico">
 <%_ if (locals.useTailwindCSS) { _%>

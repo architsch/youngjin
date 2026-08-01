@@ -437,6 +437,18 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | a request after the gap counts as a new distinct login | A return after the inactivity gap increments `loginCount` |
 | a missing previous login timestamp counts as a distinct login | Absent `lastLoginAt` defaults to counting the login |
 
+## Guest Creation Limits (`guest-creation-limit.test.ts`) — 4 tests
+
+See [authentication.md](../../networking/authentication.md) for the behavior under test. These run
+with the production caps in force, rather than the relaxed dev ones.
+
+| Test | What it verifies |
+|------|-----------------|
+| allows up to the cap for one IP + User-Agent, then blocks | The per-client cap admits its budget and refuses the next request |
+| gives each User-Agent on one IP its own budget, up to the IP cap | Several browsers behind one address get separate budgets, bounded by the per-IP cap |
+| does not let one visitor exhaust the cap for others sharing a User-Agent | A visitor at their limit does not block unrelated visitors on the same browser version |
+| does not spend IP budget on attempts the per-client cap rejects | Requests refused by one cap are not charged against the other |
+
 ## Test Count Summary
 
 | Category | Tests |
@@ -458,4 +470,5 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 20 |
-| **Total** | **238** |
+| Guest Creation Limits | 4 |
+| **Total** | **242** |

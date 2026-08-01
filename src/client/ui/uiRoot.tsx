@@ -27,6 +27,7 @@ import { clientFeatureFlagsObservable, numActiveInputElementsObservable, objectS
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ImageListChooserForm from "./components/form/imageListChooserForm";
+import ConsoleLogForm from "./components/form/consoleLogForm";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "./components/form/confirmForm";
@@ -192,6 +193,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                             initialChoicePath={state.params.initialChoicePath}
                             onChoose={(path) => state.params.onChoose(path)}
                         />}
+                </Popup>;
+                case "consoleLog": return <Popup key={i} title="Console Log" showCloseButton={true}>
+                    <ConsoleLogForm/>
                 </Popup>;
             }
         })}

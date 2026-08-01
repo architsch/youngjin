@@ -6,7 +6,13 @@ const cache: {[key: string]: { data: DBRow, expiry: number }} = {};
 const keysToRemove: string[] = [];
 const CACHE_TTL_MS = 30_000; // 30 seconds
 
-// Periodically sweep expired entries to prevent unbounded growth
+// Periodically sweep expired entries to prevent unbounded growth.
+//
+// Unref'd, so that this sweep is never itself a reason for the process to stay alive. A cache with
+// nothing left to serve is not worth running for, and this module is reached from the server's entry
+// point in every mode — including the one-shot static-site generation run, which would otherwise
+// never end. While the server is actually serving, the listening socket keeps the loop alive and
+// this timer fires exactly as before.
 setInterval(() => {
     const now = Date.now();
     keysToRemove.length = 0;
@@ -17,7 +23,7 @@ setInterval(() => {
     }
     for (const key of keysToRemove)
         delete cache[key];
-}, CACHE_TTL_MS);
+}, CACHE_TTL_MS).unref();
 
 function getCacheKey(tableId: string, docId: string): string
 {

@@ -13,6 +13,7 @@ import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
+import { graphicsContextRestoredObservable } from "../../system/clientObservables";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -227,3 +228,14 @@ export default class CanvasGameObject extends GameObject
         return frameImageMap.getFirstImagePath();
     }
 }
+
+// Every canvas's picture — its frame and its image both — is drawn into a render target, which is to
+// say straight onto the GPU, with no copy kept anywhere else. A drawing context the browser took
+// away and gave back therefore comes back holding an empty one: the renderer restores the texture,
+// but has nothing to restore its contents from. So every canvas currently in the room draws its own
+// cell over again, which is the same work it does when it spawns, queued behind the others exactly
+// as it is then, since they all share the one render target.
+graphicsContextRestoredObservable.addListener("canvasGameObject", () => {
+    CanvasGameObject.spawnedCanvasGameObjects.forEach(
+        (canvasGameObject: CanvasGameObject) => void canvasGameObject.loadImage());
+});

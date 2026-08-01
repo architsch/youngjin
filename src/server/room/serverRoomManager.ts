@@ -429,6 +429,13 @@ async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
 }
 
 // periodic multiplayer room saving
+//
+// Unref'd, so that this timer is never itself a reason for the process to stay alive: there are no
+// rooms to save in a process that has nothing else left to do, and this module is reached from the
+// server's entry point in every mode — including the one-shot static-site generation run, which
+// would otherwise never end. While the server is actually serving, the listening socket keeps the
+// loop alive and this timer fires exactly as before; shutdown saves the rooms explicitly rather
+// than relying on a final tick here.
 let savingInProgress = false;
 setInterval(async () => {
     if (savingInProgress)
@@ -436,6 +443,6 @@ setInterval(async () => {
     savingInProgress = true;
     await ServerRoomManager.saveMultiplayerRooms();
     savingInProgress = false;
-}, 3000);
+}, 3000).unref();
 
 export default ServerRoomManager;

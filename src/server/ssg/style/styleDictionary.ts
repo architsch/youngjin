@@ -597,7 +597,15 @@ hr {
 //------------------------------------------------------------------------
 
 const css =
-`* {
+`/* These pages already carry a dark palette of their own, so a mobile browser set to darken web
+   pages (Samsung Internet, Chrome on Android) only takes contrast away when it inverts them a
+   second time. Naming a single supported scheme opts the page out of that pass; the keyword says
+   which scheme the page is rendered against, not how the design looks, and "only light" is what
+   leaves every authored colour, and every browser-drawn widget, exactly as written. */
+:root {
+	color-scheme: only light;
+}
+* {
 	overflow: hidden;
 	vertical-align: middle;
 }

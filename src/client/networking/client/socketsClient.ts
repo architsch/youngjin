@@ -27,6 +27,7 @@ import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import VersionSyncUtil from "../../system/util/versionSyncUtil";
 
 let socket: Socket;
 let pollingForServer = false;
@@ -93,6 +94,12 @@ const SocketsClient =
                 // Reconnection: start a new roomChange process so the server's
                 // auto-join flow (which sends roomChangedSignal) can complete.
                 tryStartClientProcess("roomChange", 1, 0);
+
+                // A socket that dropped and came back may well have come back to a different build
+                // of the server: a deployment is one of the reasons a socket drops, and a page that
+                // slept through one never saw the server-initiated disconnect that would have
+                // reloaded it — it simply re-connected, on the build it was already running.
+                void VersionSyncUtil.reloadIfOutdated(env.gitCommit);
             }
             hasConnectedBefore = true;
         });

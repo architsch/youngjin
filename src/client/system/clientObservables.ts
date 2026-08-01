@@ -50,6 +50,14 @@ export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
 // Each voxel consists of a stack of voxelBlocks.
 export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | null>(null);
 
+// This observable notifies its listeners whenever the browser has taken the WebGL drawing context
+// away and then handed it back — which is what a mobile browser does to a tab it has been keeping
+// in the background. The renderer rebuilds everything the scene itself describes without help; what
+// it cannot bring back is anything the app drew straight onto the GPU and kept no copy of (i.e. into
+// a render target), so whoever drew into one draws it again upon being notified here. The value
+// counts how many restorations there have been, which is of no interest beyond telling them apart.
+export const graphicsContextRestoredObservable = new Observable<number>(0);
+
 // This observable notifies its listeners whenever the user selects or unselects an object.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 

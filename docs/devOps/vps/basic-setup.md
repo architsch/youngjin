@@ -71,15 +71,24 @@ certbot --version
 
 ### 7. Install Node.js
 
+The repository's `.nvmrc` is the single source of truth for the Node.js major version — install
+the major it names (currently `24`), so the VPS matches CI and local development.
+
 ```
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt-get install -y nodejs
 ```
-Verify the version:
+Verify that the version reported is the one just installed, and that nothing else provides `node`:
 ```
 node -v
 npm -v
+which -a node
 ```
+`which -a node` must list only the system install. Do not install nvm on the VPS, and remove it if
+present — see [Keep a single Node.js on the VPS](maintenance.md#keep-a-single-nodejs-on-the-vps).
+
+To change the version later, follow [Upgrading Node.js](maintenance.md#how-to-upgrade-the-nodejs-version) —
+installing a new Node.js on its own does **not** move the already-running app processes onto it.
 
 ### 8. Install PM2 (process manager)
 
@@ -88,8 +97,16 @@ npm install -g pm2
 ```
 Enable PM2 to start on boot so that the app processes survive reboots:
 ```
-pm2 startup
+pm2 startup systemd
 ```
+Once the apps have been deployed, record them into that unit with `pm2 save`. Confirm the unit
+actually exists — without it the apps are lost on the next reboot, which stays invisible until one
+happens:
+```
+systemctl is-enabled pm2-root
+```
+The generated unit hardcodes the path to the PM2 executable, so if PM2 is ever reinstalled elsewhere
+the unit must be regenerated with `pm2 unstartup systemd` followed by `pm2 startup systemd`.
 
 ### 9. Install Git
 
