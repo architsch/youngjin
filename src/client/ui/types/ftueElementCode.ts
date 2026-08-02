@@ -9,4 +9,5 @@ export const FTUEElementCodeEnumMap: Record<string, number> =
     AddCanvas: 4,
     ChangeCanvasImage: 5,
     ChangeCanvasFrame: 6,
+    EnterHub: 7,
 }

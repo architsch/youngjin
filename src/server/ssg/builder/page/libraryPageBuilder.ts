@@ -4,7 +4,6 @@ import LibraryPostListPageBuilder from "./libraryPostListPageBuilder";
 import SitemapBuilder from "../sitemapBuilder";
 import AtomFeedBuilder from "../atomFeedBuilder";
 import { LibraryData } from "../../data/libraryData";
-import { ArcadeData } from "../../data/arcadeData";
 
 export default class LibraryPageBuilder
 {
@@ -23,7 +22,6 @@ export default class LibraryPageBuilder
 
         builder.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/library.ejs", {
             entriesByCategory: LibraryData.entriesByCategory,
-            gameEntries: ArcadeData.gameEntries,
         }));
         await builder.build("library.html");
 

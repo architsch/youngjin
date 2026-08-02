@@ -40,6 +40,7 @@ import ExitConfirmationUtil from "./util/exitConfirmationUtil";
 import WorldSpaceSelectionUtil from "../graphics/util/worldSpaceSelectionUtil";
 import FTUEUtil from "./util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
+import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -61,6 +62,11 @@ export default function UIRoot({ env, user }: UIRootProps)
             {
                 PopupUtil.openPopup({popupType: "myRoomWelcome"});
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.EnterMyRoom);
+            }
+            if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Hub && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.EnterHub))
+            {
+                PopupUtil.openPopup({popupType: "hubRoomWelcome"});
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.EnterHub);
             }
         });
         userRoleObservable.addListener("ui_root", (role: UserRole) => {
@@ -179,6 +185,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                 </Popup>;
                 case "myRoomWelcome": return <Popup key={i} title="" showCloseButton={true}>
                     <MyRoomWelcomeForm/>
+                </Popup>;
+                case "hubRoomWelcome": return <Popup key={i} title="" showCloseButton={true}>
+                    <HubRoomWelcomeForm/>
                 </Popup>;
                 case "customizePlayer": return <CustomizePlayerForm key={i}/>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>

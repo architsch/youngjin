@@ -59,9 +59,10 @@ const FTUEUtil =
                 ? coachMarks
                 : [...coachMarks, {ftueElementCode, targetElementId, text}]);
     },
-    // Takes the given feature's coach mark off screen, if it has one up. Marks are also dismissed
-    // this way when they run out of time (see ScreenCoachMark), so that the list of marks on screen
-    // is added to and taken from in one place.
+    // Takes the given feature's coach mark off screen, if it has one up. A mark has no clock of its
+    // own, so this is how every mark ends other than by its feature being used: the UI that
+    // scheduled the mark takes it down once the control it points at is gone or beyond use — a mark
+    // merely losing sight of its target leaves it on the list, ready to reappear with the target.
     hideCoachMark: (ftueElementCode: FTUEElementCode) =>
     {
         screenCoachMarksObservable.change(coachMarks =>

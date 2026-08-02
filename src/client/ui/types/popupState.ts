@@ -8,6 +8,7 @@ type PopupState =
     | { popupType: "roomList" }
     | { popupType: "configureMyRoom" }
     | { popupType: "myRoomWelcome" }
+    | { popupType: "hubRoomWelcome" }
     | { popupType: "customizePlayer" }
     | { popupType: "imageChooser"; params: ImageChooserProps }
     | { popupType: "consoleLog" }

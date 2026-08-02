@@ -9,6 +9,8 @@
 <div class="s_row"></div>
 <h2>Featured Articles</h2>
 <%- include(`${ejsPartialRootPath}/info/featureLinks.ejs`) %>
+<h2>Games</h2>
+<%- include(`${ejsPartialRootPath}/info/gameLinks.ejs`, { entries: gameEntries }) %>
 <%- include(`${ejsPartialRootPath}/common/footer.ejs`, {
     hidePortal: true,
 }) %>

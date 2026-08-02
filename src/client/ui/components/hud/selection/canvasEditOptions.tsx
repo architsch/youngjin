@@ -53,6 +53,12 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
         }
         return () => {
             clearFTUETimeouts();
+            // Both marks belong to this menu, which is only on screen while a canvas is selected.
+            // A mark is not taken off the list by going out of view with its target, so one left
+            // behind here would come back the moment any canvas was selected again — instantly,
+            // without the beat that is meant to let the menu settle first.
+            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.ChangeCanvasImage);
+            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.ChangeCanvasFrame);
         };
     }, []);
 

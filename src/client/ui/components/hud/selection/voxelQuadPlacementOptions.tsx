@@ -75,6 +75,13 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         }
         return () => {
             clearFTUETimeouts();
+            // Cancelling the pending mark is not enough on its own: one that is already up stays up
+            // until it is taken down, and the button it points at outlives the quad it was shown
+            // for — it merely turns disabled when the selection moves to a quad that takes no
+            // canvas, and it returns with the next selection after the menu closes. So the mark is
+            // taken down along with the invitation that raised it, rather than being left to urge
+            // the user towards a button that would do nothing.
+            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.AddCanvas);
         };
     }, [canAddCanvas]);
 

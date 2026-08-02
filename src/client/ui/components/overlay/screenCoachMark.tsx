@@ -7,9 +7,11 @@ const SCREEN_MARGIN_PX = 8; // how close to the viewport's edge the bubble may s
 
 // A small text bubble that sits next to a target UI element and points at it, telling a first-time
 // user what that control is for (see FTUEUtil). One of these is rendered per mark that is up (see
-// ScreenCoachMarks), and each is on its own: it tracks its own target as that element moves, keeps
-// its own clock, and disappears once it has had its say — or right away if the target isn't on
-// screen (e.g. the menu holding it was closed), since a mark pointing at nothing says nothing.
+// ScreenCoachMarks), and each is on its own: it tracks its own target as that element moves, and
+// draws nothing at all while that target isn't on screen (e.g. the menu holding it was closed),
+// since a mark pointing at nothing says nothing. Drawing nothing is all it does about that, though
+// — a mark stays up until it is taken down (see FTUEUtil), and it is up to whoever put the mark
+// there to do so once the control it advertises is gone or beyond use.
 //
 // The bubble is placed on whichever side of the target has room for it: below a control near the
 // top of the screen, above one near the bottom. It is pulled inward when it would otherwise hang

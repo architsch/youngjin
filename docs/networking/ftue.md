@@ -18,9 +18,9 @@ A coach mark is an offer rather than an instruction, and it behaves like one:
 - It is layered below popups, so whatever the control opens covers it.
 - It shows up on whichever side of the control has room, and is pulled inward when it would otherwise hang off the edge of the screen, while its pointer stays on the control.
 - It goes the instant its element is recorded as experienced — the user is already doing what it suggested, so there is nothing left to say.
-- Failing that, it takes itself down after a while anyway, and shows nothing at all while its target is off screen (e.g. the menu holding it was closed).
+- Failing that, it stays for as long as its control is on offer. A mark has no clock of its own: it draws nothing while its target is off screen (e.g. the menu holding it was closed), but that alone does not end it — see [When a coach mark goes away](#when-a-coach-mark-goes-away).
 
-Several marks may be on screen at once. Because each is triggered by whatever UI owns its control, marks for unrelated features fall due independently, and a newcomer that replaced the mark already up would amount to guidance the user never got to read — so a new mark joins the others rather than taking their place. Each mark then lives its own life: its own target to follow, its own clock, and its own departure, which leaves the marks beside it untouched. A mark is identified by the element it advertises, so one feature carries at most one mark and a repeated trigger neither doubles the bubble nor extends its stay.
+Several marks may be on screen at once. Because each is triggered by whatever UI owns its control, marks for unrelated features fall due independently, and a newcomer that replaced the mark already up would amount to guidance the user never got to read — so a new mark joins the others rather than taking their place. Each mark then lives its own life: its own target to follow and its own departure, which leaves the marks beside it untouched. A mark is identified by the element it advertises, so one feature carries at most one mark and a repeated trigger neither doubles the bubble nor extends its stay.
 
 ## When a coach mark appears
 
@@ -29,9 +29,15 @@ Guidance is scheduled by the UI that owns the control, and the triggers come in 
 - **Dwell** — the control has been within reach, unused, for a stretch of uninterrupted time in the room. This is how the character-customization button, the sign-up button (guests only), and the own-room settings button (in the user's own room only) are advertised, each after its own wait.
 - **Context** — the user has just selected something and the menu for it has opened. The mark follows a short beat later, so it does not race the menu's own appearance. This is how adding a picture to a wall, and then changing that picture's image and frame, are advertised.
 
-Because guidance is scheduled ahead of time, the user may well discover the feature on their own before the mark is due — so `FTUEUtil` re-checks at that moment and stays quiet if there is nothing left to say. Leaving the situation behind (unselecting, or changing rooms) cancels anything still pending.
+Because guidance is scheduled ahead of time, the user may well discover the feature on their own before the mark is due — so `FTUEUtil` re-checks at that moment and stays quiet if there is nothing left to say.
 
 Entering one's own room for the first time is handled by the same record but not by a coach mark: it is worth a full welcome popup, since nothing else on screen tells the user that this is the one room they are free to build in.
+
+## When a coach mark goes away
+
+A mark that is up stays up until something takes it down, and losing sight of its target is not enough on its own: a mark whose control has left the screen is simply not drawn, and would come back with the control — instantly, without the wait that earned it the first time — if nothing else had ended it in the meantime.
+
+So the same condition that schedules a mark also ends it: the UI that owns the control cancels the guidance still pending *and* takes down the mark already up as soon as that control stops being on offer — the selection moving to something the feature cannot be applied to, the menu or the button leaving the screen, the user leaving the room the guidance belonged to. A control that is still on screen but disabled counts as gone this way, since a mark urging the user towards a button that does nothing is worse than no mark at all. Whichever of these ends it, the guidance is not lost: the element is still unexperienced, so the mark is scheduled afresh — wait and all — the next time its control is genuinely on offer.
 
 ## What counts as being experienced
 

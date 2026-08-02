@@ -12,10 +12,6 @@ import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
 import FTUEUtil from "../../../util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 
-let configureButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
-let loginButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
-let customizeButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
-
 export default function UserRoomIdentity({
     user,
     userRole,
@@ -31,39 +27,64 @@ export default function UserRoomIdentity({
         : userRole === UserRoleEnumMap.Editor ? "Editor"
         : "Visitor";
 
+    // Each mark below keeps to the button it points at: it is scheduled while that button is on
+    // offer, and taken back down once it is not. A mark is not taken off the list merely by its
+    // target leaving the screen, so one left behind by a button that has gone would return the
+    // moment the button did — skipping the wait that is supposed to earn it — which is why every
+    // condition that puts a mark up is also the one that clears it away.
+
     useEffect(() => {
-        clearFTUETimeouts();
-        if (showConfigureButton && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings))
-        {
-            // For any member-type user who stays in his/her own room for 2 minutes straight,
-            // we will show a coach mark for the "Configure" button if the user hasn't clicked it before.
-            configureButtonFTUETimeout = setTimeout(() => {
-                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings,
-                    "configureMyRoomButton", "View your room's settings here.");
-            }, 2 * MINUTE_IN_MS);
-        }
-        if (isGuest && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.Login))
-        {
-            // For any guest-type user who stays in a room for 3 minutes straight,
-            // we will show a coach mark for the "Login" button if the user hasn't clicked it before.
-            loginButtonFTUETimeout = setTimeout(() => {
-                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.Login,
-                    "loginButton", "Login to create your own room.");
-            }, 3 * MINUTE_IN_MS);
-        }
-        if (!FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer))
-        {
-            // For any user who stays in a room for 15 seconds straight,
-            // we will show a coach mark for the "Customize" button if the user hasn't clicked it before.
-            customizeButtonFTUETimeout = setTimeout(() => {
-                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.CustomizePlayer,
-                    "customizePlayerButton", "Customize your avatar.");
-            }, 15000);
-        }
+        if (!showConfigureButton || FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings))
+            return;
+
+        // For any member-type user who stays in his/her own room for 2 minutes straight,
+        // we will show a coach mark for the "Configure" button if the user hasn't clicked it before.
+        const timeout = setTimeout(() => {
+            FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings,
+                "configureMyRoomButton", "View your room's settings here.");
+        }, 2 * MINUTE_IN_MS);
+
         return () => {
-            clearFTUETimeouts();
+            clearTimeout(timeout);
+            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.MyRoomSettings);
         };
-    }, [isGuest, showConfigureButton]);
+    }, [showConfigureButton]);
+
+    useEffect(() => {
+        if (!isGuest || FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.Login))
+            return;
+
+        // For any guest-type user who stays in a room for 5 minutes straight,
+        // we will show a coach mark for the "Login" button if the user hasn't clicked it before.
+        const timeout = setTimeout(() => {
+            FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.Login,
+                "loginButton", "Login to create your own room.");
+        }, 5 * MINUTE_IN_MS);
+
+        return () => {
+            clearTimeout(timeout);
+            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.Login);
+        };
+    }, [isGuest]);
+
+    useEffect(() => {
+        if (FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer))
+            return;
+
+        // The "Customize" button is there for every user, whichever room they are in, so this one
+        // is only bound to the lifetime of the HUD it sits in.
+        // For any user who stays in a room for 1 minute straight,
+        // we will show a coach mark for the "Customize" button if the user hasn't clicked it before.
+        const timeout = setTimeout(() => {
+            FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.CustomizePlayer,
+                "customizePlayerButton", "Customize your avatar.");
+        }, MINUTE_IN_MS);
+
+        return () => {
+            clearTimeout(timeout);
+            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.CustomizePlayer);
+        };
+    }, []);
 
     return <div className="flex flex-col justify-end gap-1 absolute right-0 top-0 py-1 px-2 text-right rounded-bl-lg">
         <div className="flex flex-row items-center justify-end gap-2">
@@ -120,25 +141,6 @@ async function logout(): Promise<void>
     {
         PopupUtil.closePopup();
         alert("Failed to log out. Please try again.");
-    }
-}
-
-function clearFTUETimeouts()
-{
-    if (configureButtonFTUETimeout)
-    {
-        clearTimeout(configureButtonFTUETimeout);
-        configureButtonFTUETimeout = undefined;
-    }
-    if (loginButtonFTUETimeout)
-    {
-        clearTimeout(loginButtonFTUETimeout);
-        loginButtonFTUETimeout = undefined;
-    }
-    if (customizeButtonFTUETimeout)
-    {
-        clearTimeout(customizeButtonFTUETimeout);
-        customizeButtonFTUETimeout = undefined;
     }
 }
 

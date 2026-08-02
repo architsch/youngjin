@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
-import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import PlayerCamera from "./helpers/player/playerCamera";
 import PlayerProximityDetectionUpdater from "./helpers/player/playerProximityDetectionUpdater";
 import PlayerPointerInput from "./helpers/player/playerPointerInput";
@@ -56,32 +56,45 @@ export default class PlayerController extends GameObjectComponent
         this.playerCamera.update(deltaTime, this);
         this.proxUpdater.update(deltaTime, this);
 
-        if (cameraModeObservable.peek() === "selfView")
+        const playerIsInEntrance =
+            this.gameObject.position.x >= MULTI_PLAYER_ENTRANCE_VOXEL_COL &&
+            this.gameObject.position.x <= MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1 &&
+            this.gameObject.position.z >= MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1 &&
+            this.gameObject.position.z <= MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 1;
+
+        if (playerIsInEntrance)
         {
-            // In self-view, drag input orbits the camera (see SelfViewCameraPose)
-            // instead of steering the player, so the player stands still.
-            this.rigidbody?.setDesiredVelocity(0, 0, 0);
+            this.rigidbody?.setDesiredVelocity(0, 0, -2);
         }
-        else // cameraMode === "firstPerson"
+        else
         {
-            // Speed Limit
-            this.dx = Math.max(-1, Math.min(1, this.dx));
-            this.dy = Math.max(-0.4, Math.min(0.4, this.dy));
-
-            if (Math.abs(this.dx) > NEAR_EPSILON)
-                this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"], -3 * deltaTime * this.dx);
-
-            let vx = 0, vz = 0;
-            if (Math.abs(this.dy) > NEAR_EPSILON)
+            if (cameraModeObservable.peek() === "selfView")
             {
-                this.gameObject.obj.getWorldDirection(forwardTemp);
-                forwardTemp.negate(); // Player-camera's "forward" direction is the opposite of the player-gameObject's forward direction.
-
-                const speed = 9 * this.dy;
-                vx = forwardTemp.x * speed;
-                vz = forwardTemp.z * speed;
+                // In self-view, drag input orbits the camera (see SelfViewCameraPose)
+                // instead of steering the player, so the player stands still.
+                this.rigidbody?.setDesiredVelocity(0, 0, 0);
             }
-            this.rigidbody?.setDesiredVelocity(vx, 0, vz);
+            else // cameraMode === "firstPerson"
+            {
+                // Speed Limit
+                this.dx = Math.max(-1, Math.min(1, this.dx));
+                this.dy = Math.max(-0.4, Math.min(0.4, this.dy));
+
+                if (Math.abs(this.dx) > NEAR_EPSILON)
+                    this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"], -3 * deltaTime * this.dx);
+
+                let vx = 0, vz = 0;
+                if (Math.abs(this.dy) > NEAR_EPSILON)
+                {
+                    this.gameObject.obj.getWorldDirection(forwardTemp);
+                    forwardTemp.negate(); // Player-camera's "forward" direction is the opposite of the player-gameObject's forward direction.
+
+                    const speed = 9 * this.dy;
+                    vx = forwardTemp.x * speed;
+                    vz = forwardTemp.z * speed;
+                }
+                this.rigidbody?.setDesiredVelocity(vx, 0, vz);
+            }
         }
         this.dx = 0;
         this.dy = 0;

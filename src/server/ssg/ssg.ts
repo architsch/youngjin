@@ -7,6 +7,7 @@ import LibraryPageBuilder from "./builder/page/libraryPageBuilder";
 import TextFileBuilder from "./builder/textFileBuilder";
 import styleDictionary from "./style/styleDictionary";
 import ErrorPageBuilder from "./builder/page/errorPageBuilder";
+import { ArcadeData } from "./data/arcadeData";
 
 export default async function SSG(): Promise<void>
 {
@@ -24,7 +25,9 @@ export default async function SSG(): Promise<void>
     const atomFeedB = new AtomFeedBuilder();
 
     let tb = new TextFileBuilder();
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {}));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
+        gameEntries: ArcadeData.gameEntries,
+    }));
     await tb.build("index.html");
 
     tb = new TextFileBuilder();

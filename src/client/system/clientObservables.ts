@@ -90,7 +90,9 @@ export const screenOutlineRectTargetObservable = new Observable<string | null>(n
 // Every coach mark (a short message pointing at a UI element, identified by its DOM element id)
 // that is currently on screen. Several may be up at once, so a mark appearing joins this list
 // instead of replacing it — a mark cut short by a newer one would be guidance the user never got
-// to read. Each mark is taken off the list once it has had its say.
+// to read. A mark stays on the list until it is taken off (see FTUEUtil): either by the user going
+// through the feature it advertises, or by the UI that put it there once the control it points at
+// is gone or beyond use.
 export const screenCoachMarksObservable = new Observable<CoachMark[]>([]);
 
 // The vector-graphics diagram (with its caption) to show centered on screen, or null to hide it.
