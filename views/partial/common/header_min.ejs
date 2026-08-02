@@ -1,17 +1,42 @@
 <%_ const v_title = locals.title ? locals.title.replaceAll("\"", "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;") : "ThingsPool"; _%>
 <%_ const v_desc = locals.desc ? locals.desc.replaceAll("\"", "&quot;") : "ThingsPool is an experimental web community for collaborative research and development in arts, games, and other forms of interactive media."; _%>
 <%_ const v_keywords = locals.keywords ? locals.keywords.replaceAll("\"", "&quot;") : "thingspool, software toys, technical design, computer science, systems engineering, game design, game development"; _%>
+<%_ const v_ogImageURLOverride = locals.ogImageURLOverride ? locals.ogImageURLOverride : undefined; _%>
+<%_ const v_ogImageAlt = locals.ogImageAlt ? locals.ogImageAlt.replaceAll("\"", "&quot;") : v_title; _%>
+<%_ const v_url = locals.url ? locals.url : URL_STATIC _%>
+<%_ const v_ogType = locals.ogType ? locals.ogType : "website" _%>
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="description" content="<%= v_desc %>">
 <meta name="keywords" content="<%= v_keywords %>">
+<meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <%_ /* Opts the page out of a mobile browser's automatic page-darkening, which would otherwise
       recolour the app's UI (see the `color-scheme` rule in the client's stylesheet). Declared
       here as well so it holds during the stretch before that stylesheet has loaded. */ _%>
 <meta name="color-scheme" content="only light">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="<%= v_title %>"/>
+<meta property="og:url" content="<%= v_url %>"/>
+<meta property="og:type" content="<%= v_ogType %>"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="<%= v_desc %>"/>
+<meta property="og:image" content="<%= (v_ogImageURLOverride != undefined) ? v_ogImageURLOverride : `${URL_STATIC}/share.jpg` %>"/>
+<meta property="og:image:alt" content="<%= v_ogImageAlt %>">
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
 <title><%= v_title %></title>
 <link rel="shortcut icon" href="<%= URL_STATIC %>/favicon.ico">
 <%_ if (locals.useTailwindCSS) { _%>
@@ -19,6 +44,8 @@
 <%_ } else { _%>
 <link rel="stylesheet" href="<%= URL_STATIC %>/style.css">
 <%_ } _%>
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="canonical" href="<%= v_url %>">
 </head>
 <body style="background-color: black;">
 <%_ if (includeFullscreenPanel) { _%>
