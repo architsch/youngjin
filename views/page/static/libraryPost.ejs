@@ -2,7 +2,9 @@
     title: title,
     desc: desc,
     keywords: keywords,
-    ogImageURLOverride: customOGImagePath,
+    // A figure lifted from the article itself, whose dimensions vary from one post to the next
+    // and are not measured at build time — so none are declared alongside it.
+    ogImageURL: customOGImagePath,
     url: `${URL_STATIC}/${entry.dirName}/page-${pageNumber}.html`,
     ogType: "article",
     pageName: "library",

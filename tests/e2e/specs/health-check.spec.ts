@@ -14,10 +14,13 @@ test.describe("Health Check", () => {
         expect(json.timestamp).toBeTruthy();
     });
 
-    test("GET /robots.txt returns disallow for socket.io", async ({ request }) => {
+    test("GET /robots.txt keeps crawlers off the socket endpoint", async ({ request }) => {
         const response = await request.get("/robots.txt");
         expect(response.status()).toBe(200);
         const text = await response.text();
-        expect(text).toContain("Disallow: /socket.io/");
+        // Which of the two forms appears depends on the deployment under test: a non-public one
+        // (staging, this suite's usual target) closes itself to crawlers wholesale, which covers
+        // the socket endpoint along with everything else, while the live site singles it out.
+        expect(text).toMatch(/^Disallow: (\/|\/socket\.io\/)$/m);
     });
 });

@@ -4,14 +4,16 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
 
 ## Client-Server Connection
 1. The user requests the game page from the server. Page and API routes are rate-limited per IP.
-2. The server identifies the user:
+2. A request naming a room is checked against the shape a room address has before anything else happens, and one of any other shape is answered as "not found". A room address is simply a name at the site's root, so everything the server is asked for that is not one of its own routes arrives looking like one — and identifying a user is too costly a thing to spend on a request that was never for a room.
+3. The server identifies the user:
     - **If a valid auth-token cookie exists:** the token is verified and the existing user is loaded.
-    - **If not:** a new guest account is created (subject to rate limits) and a token is issued as an HTTP-only cookie.
-3. The server renders the game page, injecting the serialized user data and environment into it.
-4. The client loads the page, parses the user data, and opens a socket connection; the auth-token cookie is sent automatically.
-5. Before accepting the socket, the server runs a pre-connection check that rejects connections whose User-Agent looks like a bot or crawler.
-6. The server's socket auth middleware verifies the token, looks up the user, and attaches it to the socket. On failure the connection is rejected and the client is redirected to an error page (see below).
-7. Once connected, the server registers the user, joins them to a room, and tells the client which room it joined.
+    - **If a self-declared crawler or link-preview fetcher is asking:** no account is made, and the page is rendered without a session. Such a client keeps no cookies, so it would otherwise mint a guest on every visit, and be refused outright once the guest allowance ran out — which is what would break the share previews and the site's standing with search engines.
+    - **If neither:** a new guest account is created (subject to rate limits) and a token is issued as an HTTP-only cookie.
+4. The server renders the game page, injecting the serialized user data and environment into it. Rendered without a session, the page presents a plain description of the site in place of the game, which cannot run without one.
+5. The client loads the page, parses the user data, and opens a socket connection; the auth-token cookie is sent automatically.
+6. Before accepting the socket, the server runs a pre-connection check that rejects connections whose User-Agent looks like a bot or crawler.
+7. The server's socket auth middleware verifies the token, looks up the user, and attaches it to the socket. On failure the connection is rejected and the client is redirected to an error page (see below).
+8. Once connected, the server registers the user, joins them to a room, and tells the client which room it joined.
 
 ## Client Sign-In & Sign-Up
 1. A guest selects an auth provider (e.g. Google OAuth2); the browser is redirected through the provider's authorization page.

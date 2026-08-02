@@ -21,10 +21,22 @@ test.describe("Error Handling", () => {
     });
 
     test("unknown multi-segment routes return 404", async ({ request }) => {
-        // Single-segment paths (e.g. /foo) are now valid game URLs (treated as room IDs),
-        // so we use a multi-segment path to trigger the default 404.
         const response = await request.get("/this/page/does/not/exist");
         expect(response.status()).toBe(404);
+    });
+
+    test("single-segment paths that are not room addresses return 404", async ({ request }) => {
+        // A room address is just a name at the root, so anything the server is asked for that is
+        // not one of its own routes arrives looking like one. Turning these away on shape alone is
+        // what stops a passing scanner from spending a guest account per probe, so it is worth
+        // holding onto: the cost of losing it is invisible until the account count is examined.
+        // Kept clear of anything carrying a static file's extension, which a local dev server
+        // answers from the public directory before the room route is ever consulted.
+        for (const path of ["/wp-login.php", "/.env", "/admin", "/short", "/this-is-not-a-room-id"])
+        {
+            const response = await request.get(path);
+            expect(response.status(), `Expected 404 for ${path}`).toBe(404);
+        }
     });
 
     test("rate limit headers are present on page responses", async ({ request }) => {

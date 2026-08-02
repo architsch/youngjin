@@ -4,9 +4,16 @@
     title: "ThingsPool - Build Your Own 3D World in the Browser",
     desc: "Build your own 3D room in virtual space. Make your own avatar and chat with people. Play free in your browser - no download needed.",
     keywords: "3d chat, open world, online game, browser game, voxel sandbox, metaverse, avatar creator, multiplayer",
-    url: URL_DYNAMIC,
+    // A room is handed around by its own address, so that is the address its preview card has to
+    // carry — otherwise every room posted into a chat opens the front door instead. Search engines
+    // are pointed back at that front door on purpose, though: rooms come and go with the people
+    // who make them, and not one of them is a page worth holding in an index of its own.
+    url: targetRoomID ? `${URL_DYNAMIC}/${targetRoomID}` : URL_DYNAMIC,
+    canonicalURL: URL_DYNAMIC,
     ogType: "website",
-    ogImageURLOverride: `${URL_STATIC}/share_app.jpg`,
+    ogImageURL: `${URL_STATIC}/share_app.jpg`,
+    ogImageWidth: 1200,
+    ogImageHeight: 630,
     ogImageAlt: "A fully immersive 3D sandbox metaverse of ThingsPool, which includes interactive 3D chat rooms, digital art exhibition areas, customizable avatars, and real-time multiplayer gameplay experience.",
 }) %>
 
@@ -33,21 +40,45 @@
         font-size: clamp(1.25rem, 5vw, 2.25rem); line-height: 1.5; text-align: center;">
         <span style="display: inline-block; animation: bootStatusBreathe 1.4s ease-in-out infinite;">Loading...</span>
     </div>
+    <%_ /* Client-side environment variables, written out as JSON rather than as hand-quoted
+          literals. Quoting each value by hand leaves the value free to end its own string and be
+          read as code after it; encoding the object supplies every delimiter and escapes the
+          contents to match, so whatever a field turns out to hold stays data. Worth doing here
+          even though the values happen to be safe today — the user's record is assembled far from
+          this page, and this is the page that would pay for it (see UserCommandUtil, which guards
+          the one part of that record a client can influence, for this very reason).
+
+          Escaping `<` covers the one thing the encoding cannot: the HTML parser ends a script
+          element at the first closing tag appearing anywhere in its text, quoted or not, and
+          `<` denotes that character to JavaScript without spelling it out here. */ _%>
     <script type="text/javascript">
-        window.thingspool_env = { // client-side environment variables
-            mode: "<%- process.env.MODE %>",
-            serverType: "<%- process.env.DB_PREFIX == 'staging_' ? 'Staging' : 'Live' %>",
-            userString: "<%- userString %>",
-            socket_server_url: "<%= URL_DYNAMIC %>",
-            rest_api_server_url: "<%= URL_DYNAMIC %>",
-            assets_url: "<%= URL_STATIC %>/app/assets",
-            gitCommit: "<%= gitCommit %>",
-            targetRoomID: "<%= targetRoomID %>",
-        };
+        window.thingspool_env = <%- JSON.stringify({
+            mode: process.env.MODE ?? "",
+            serverType: process.env.DB_PREFIX == "staging_" ? "Staging" : "Live",
+            userString: userString,
+            socket_server_url: URL_DYNAMIC,
+            rest_api_server_url: URL_DYNAMIC,
+            assets_url: `${URL_STATIC}/app/assets`,
+            gitCommit: gitCommit,
+            targetRoomID: targetRoomID,
+        }).replace(/</g, "\\u003c") %>;
     </script>
     <script type="text/javascript" src="<%= URL_DYNAMIC %>/app/bundle.js"></script>
 <%_ } else { _%>
-    <h3>Error: No user found</h3>
+    <%_ /* Reached when the request was deliberately not given an account of its own, which in
+          practice means a crawler or a link-preview fetcher (see UserIdentificationUtil). The game
+          cannot run without a session, so what is served instead is a plain description of the
+          place — no loss, given that the running app is a canvas and would have read as an empty
+          page to them anyway. Styled inline for the same reason the boot indicator above is: this
+          is the one thing on the page, and it has to read correctly on its own. */ _%>
+    <div style="position: fixed; top: 0; bottom: 0; left: 0; right: 0; margin: auto;
+        width: fit-content; height: fit-content; max-width: 85%; padding: 2rem; text-align: center;
+        color: #d97706; font-family: 'Lucida Console', 'Lucida Sans Typewriter', 'Monaco', Consolas, monospace;">
+        <h1 style="font-size: 1.75rem; line-height: 1.4;">ThingsPool</h1>
+        <p style="margin-top: 1.5rem; line-height: 1.6;">Build your own 3D room in virtual space.
+            Make your own avatar and chat with people. Play free in your browser — no download needed.</p>
+        <p style="margin-top: 1.5rem;"><a href="<%= URL_STATIC %>" style="color: #d97706;">thingspool.net</a></p>
+    </div>
 <%_ } _%>
 
 <%- include(`${ejsPartialRootPath}/common/footer_min.ejs`, {

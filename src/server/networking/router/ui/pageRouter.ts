@@ -32,12 +32,35 @@ else
     });
 }
 
-PageRouter.get("/", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
+PageRouter.get("/", UserIdentificationUtil.identifyAnyUserUnlessBot, (req: Request, res: Response): void => {
     EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: "" });
 });
 
-PageRouter.get("/:roomID", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: req.params.roomID });
-});
+PageRouter.get("/:roomID", rejectMalformedRoomID, UserIdentificationUtil.identifyAnyUserUnlessBot,
+    (req: Request, res: Response): void => {
+        EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: req.params.roomID });
+    });
+
+// Room IDs are Firestore document IDs, which are always exactly this many characters drawn from
+// this one alphabet.
+const ROOM_ID_PATTERN = /^[A-Za-z0-9]{20}$/;
+
+// Everything the server is asked for that is not one of its own routes lands on the room route,
+// since a room address is just a name at the root. That includes a browser's unbidden
+// "/favicon.ico" and the steady background traffic of scanners trying "/wp-login.php", "/.env" and
+// the like. A room address has exactly one shape, so anything of another shape is turned away here
+// — before it reaches the identification step, where it would otherwise have cost a guest account
+// and a Firestore write apiece. Checking the shape also leaves the ID safe to place into the URL
+// that the page advertises as its own.
+function rejectMalformedRoomID(req: Request, res: Response, next: () => void): void
+{
+    const roomID = req.params.roomID;
+    if (typeof roomID != "string" || !ROOM_ID_PATTERN.test(roomID))
+    {
+        res.status(404).send("Page not found");
+        return;
+    }
+    next();
+}
 
 export default PageRouter;

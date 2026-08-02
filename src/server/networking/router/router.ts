@@ -7,7 +7,7 @@ import EJSUtil from "../../ssg/util/ejsUtil";
 import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH, HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import RateLimitUtil from "../util/rateLimitUtil";
 import ServerLifecycleUtil from "../../system/util/serverLifecycleUtil";
-import { GIT_COMMIT } from "../../system/serverConstants";
+import { GIT_COMMIT, IS_PUBLIC_SITE } from "../../system/serverConstants";
 
 export default function Router(app: Express): void
 {
@@ -61,9 +61,13 @@ export default function Router(app: Express): void
             .json({ status: "Server is running", gitCommit: GIT_COMMIT });
     });
 
+    // Only the public deployment invites crawlers at all. Staging answers on an address of its own
+    // while serving the very same pages, so anything indexed there becomes a second copy of the
+    // site competing with the real one — which is worth refusing outright rather than untangling
+    // afterwards. The socket endpoint is never worth crawling in either case.
     app.get("/robots.txt", (req: Request, res: Response) => {
         res.type("text/plain");
-        res.send("User-agent: *\nDisallow: /socket.io/");
+        res.send(IS_PUBLIC_SITE ? "User-agent: *\nDisallow: /socket.io/" : "User-agent: *\nDisallow: /");
     });
 
     // Debug endpoint to check server connectivity and headers

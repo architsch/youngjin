@@ -2,11 +2,16 @@ import FileUtil from "./fileUtil";
 import ejs from "ejs";
 import { Request, Response } from "express";
 import AddressUtil from "../../networking/util/addressUtil";
-import { URL_DYNAMIC, URL_STATIC, VIEWS_ROOT_DIR } from "../../system/serverConstants";
+import { IS_PUBLIC_SITE, URL_DYNAMIC, URL_STATIC, VIEWS_ROOT_DIR } from "../../system/serverConstants";
 import { HEALTH_ROUTE_PATH, PAGE_NAME_MAP } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 const ejsPartialRootPath = `${process.env.PWD}/${VIEWS_ROOT_DIR}/partial`;
+
+// Everything a page marks as belonging to the public site alone — its share-preview metadata and
+// its analytics tag. The character class, rather than a dot, is what lets the match run past the
+// newlines such a block always spans.
+const PROD_CODE_BLOCK_PATTERN = /PROD_CODE_BEGIN[\s\S]*?PROD_CODE_END/g;
 
 const baseStaticPageEJSParams = {
     PAGE_NAME_MAP,
@@ -41,21 +46,26 @@ const EJSUtil =
             }
         });
     },
+    // Applied to every page on its way out — both the ones rendered per request and, in dev mode,
+    // the pre-generated static files (see Router). Deliberately not applied when those static files
+    // are *generated*: they are generated in dev as well, and a build that quietly wrote away the
+    // live site's own metadata would ship that loss the next time the public directory was
+    // committed. Generation always emits the full page; what varies is what each deployment serves.
     postProcessHTML: (html: string): string => {
+        let processedHTML = html;
+
+        if (!IS_PUBLIC_SITE)
+            processedHTML = processedHTML.replace(PROD_CODE_BLOCK_PATTERN, "REMOVED_PROD_CODE");
+
+        // In dev mode, the dynamic server also plays the role of the static server.
         if (process.env.MODE == "dev")
         {
-            html = html
-                .replaceAll("\n", "!*NEW_LINE*!")
-                .replace(/(PROD_CODE_BEGIN).*?(PROD_CODE_END)/g, "REMOVED_PROD_CODE")
-                .replaceAll("!*NEW_LINE*!", "\n")
-                .replaceAll(URL_STATIC as string, AddressUtil.getEnvStaticURL()) // In dev mode, the dynamic server will also play the role of the static server simultaneously.
+            processedHTML = processedHTML
+                .replaceAll(URL_STATIC as string, AddressUtil.getEnvStaticURL())
                 .replaceAll(URL_DYNAMIC as string, AddressUtil.getEnvDynamicURL());
-            return html;
         }
-        else
-        {
-            return html;
-        }
+
+        return processedHTML;
     },
     makeEJSParams: (req: Request, customEJSParams: {[key: string]: any}): {[key: string]: any} =>
     {

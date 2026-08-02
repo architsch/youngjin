@@ -5,6 +5,7 @@ import UserTokenUtil from "./userTokenUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import GuestCreationLimitUtil from "./guestCreationLimitUtil";
+import BotDetectionUtil from "../../networking/util/botDetectionUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DevUserSeedUtil from "./devUserSeedUtil";
 import DevRuntimeUtil from "../../system/util/devRuntimeUtil";
@@ -28,6 +29,22 @@ const UserIdentificationUtil =
     identifyAnyUser: async (req: Request, res: Response, next: () => void): Promise<void> =>
     {
         await identifyUserFromReq(req, res, _ => true, next, true);
+    },
+    // As above, except that a self-declared crawler or link-preview fetcher is passed straight
+    // through without an account being made for it. Such a client keeps no cookies, so every one
+    // of its visits would otherwise mint a guest — and once a run of them exhausted the guest
+    // allowance, the ones that followed would be answered with a 401. That answer is the expensive
+    // part: it is what turns a link posted into a chat window into a card that will not load, and
+    // what tells a search engine that the site's own front door is unavailable. The page renders
+    // for them without a session instead (see the game page's no-session branch).
+    identifyAnyUserUnlessBot: async (req: Request, res: Response, next: () => void): Promise<void> =>
+    {
+        if (BotDetectionUtil.isBot(req.headers["user-agent"]))
+        {
+            next();
+            return;
+        }
+        await UserIdentificationUtil.identifyAnyUser(req, res, next);
     },
 }
 

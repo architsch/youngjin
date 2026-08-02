@@ -25,7 +25,11 @@ test.describe("Room Navigation", () => {
     test("visiting /:roomID with a non-existent room ID falls back to a room that exists", async ({ page }) => {
         const console = captureConsole(page);
 
-        await page.goto("/this-room-does-not-exist-12345", { waitUntil: "networkidle" });
+        // Well-formed but unclaimed — the shape of a room address is checked before the request is
+        // allowed to cost anything, so an ID of any other shape would be turned away as a 404 long
+        // before reaching the fallback this test is about. That is the case a shared link to a room
+        // which has since been deleted actually presents.
+        await page.goto("/nonexistentRoom00001", { waitUntil: "networkidle" });
 
         // The page should still load (server falls back to a Hub room)
         const response = await page.evaluate(() => document.readyState);

@@ -28,6 +28,7 @@ import UserCommandUtil from "../user/util/userCommandUtil";
 import LatencySimUtil from "../system/util/latencySimUtil";
 import ErrorUtil from "../../shared/system/util/errorUtil";
 import RoomPickerUtil from "../room/util/roomPickerUtil";
+import BotDetectionUtil from "../networking/util/botDetectionUtil";
 
 let io: socketIO.Server;
 let signalProcessingInterval: ReturnType<typeof setInterval>;
@@ -53,9 +54,7 @@ const SocketsServer =
                 console.log(`[allowRequest] User-Agent: ${userAgent}, URL: ${req.url}`);
 
                 // Block known bot/crawler user-agents from establishing socket connections.
-                const isBot = /bot|crawler|spider|robot|crawling/i.test(userAgent);
-
-                if (isBot) {
+                if (BotDetectionUtil.isBot(userAgent)) {
                     console.log(`[allowRequest] Blocking bot: ${userAgent}`);
                     return callback(null, false); // Reject the connection with 403 (forbidden)
                 }

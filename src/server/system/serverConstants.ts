@@ -35,6 +35,14 @@ export const GUEST_MAX_AGE_BY_TIER_PHASE = [
 
 export const URL_STATIC = "https://thingspool.net";
 export const URL_DYNAMIC = process.env.DB_PREFIX == "staging_" ? "https://staging.thingspool.net" : "https://app.thingspool.net";
+
+// Whether this deployment is the one the outside world is meant to know about. Only it may
+// present a page's share-preview metadata and carry the analytics tag, because both of those
+// announce a page as *the* ThingsPool site. Staging serves the same pages from an address of its
+// own, so leaving them in place there would offer search engines a second, competing copy of the
+// site and fold staging's traffic — every automated test run included — into the live site's
+// analytics. Dev serves throwaway builds and has no business in either.
+export const IS_PUBLIC_SITE = process.env.MODE != "dev" && process.env.DB_PREFIX != "staging_";
 export const AUTH_TOKEN_NAME_BASE = "thingspool_token";
 export const TUTORIAL_FINISHED_COOKIE_NAME_BASE = "thingspool_tutorial_finished";
 // Dev-only cookie carrying the DevRunner runtime's boot id (see DevRuntimeUtil).
