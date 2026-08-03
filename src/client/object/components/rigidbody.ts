@@ -61,6 +61,11 @@ export default class Rigidbody extends GameObjectComponent
         }
     }
 
+    getDesiredVelocity(): Vec3
+    {
+        return this.desiredVelocity;
+    }
+
     setDesiredVelocity(x: number, y: number, z: number): void
     {
         this.desiredVelocity.x = x;

@@ -17,6 +17,8 @@ export default class PlayerController extends GameObjectComponent
     dx: number = 0;
     dy: number = 0;
 
+    private fullyEntered: boolean = false;
+
     private playerCamera: PlayerCamera = new PlayerCamera();
     private proxUpdater: PlayerProximityDetectionUpdater = new PlayerProximityDetectionUpdater();
     private pointerInput: PlayerPointerInput = new PlayerPointerInput();
@@ -28,6 +30,8 @@ export default class PlayerController extends GameObjectComponent
     {
         if (!this.gameObject.isMine())
             throw new Error("Only the user's own object is allowed to have the PlayerController component.");
+
+        this.fullyEntered = false;
 
         this.rigidbody = this.gameObject.components.rigidbody as Rigidbody;
         if (!this.rigidbody)
@@ -56,15 +60,21 @@ export default class PlayerController extends GameObjectComponent
         this.playerCamera.update(deltaTime, this);
         this.proxUpdater.update(deltaTime, this);
 
-        const playerIsInEntrance =
-            this.gameObject.position.x >= MULTI_PLAYER_ENTRANCE_VOXEL_COL &&
-            this.gameObject.position.x <= MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1 &&
-            this.gameObject.position.z >= MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1 &&
-            this.gameObject.position.z <= MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 1;
-
-        if (playerIsInEntrance)
+        if (!this.fullyEntered)
         {
-            this.rigidbody?.setDesiredVelocity(0, 0, -2);
+            const playerIsInEntrance =
+                this.gameObject.position.x >= MULTI_PLAYER_ENTRANCE_VOXEL_COL &&
+                this.gameObject.position.x <= MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1 &&
+                this.gameObject.position.z >= MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1.5 &&
+                this.gameObject.position.z <= MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 1;
+            if (!playerIsInEntrance)
+                this.fullyEntered = true;
+        }
+
+        if (!this.fullyEntered)
+        {
+            const v = this.rigidbody?.getDesiredVelocity()!;
+            this.rigidbody?.setDesiredVelocity(v.x, v.y, Math.min(v.z, -3));
         }
         else
         {

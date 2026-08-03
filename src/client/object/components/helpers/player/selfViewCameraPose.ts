@@ -7,8 +7,12 @@ import { PLAYER_HEIGHT } from "../../../../../shared/system/sharedConstants";
 // looking back toward the body.
 const defaultCameraPos = new THREE.Vector3(0.5 * PLAYER_HEIGHT, 0.7 * PLAYER_HEIGHT, -1 * PLAYER_HEIGHT);
 
-// How fast a pointer-drag orbits the camera (radians per NDC unit of pointer travel).
-const orbitSensitivity = 2.5;
+// How far the pointer travels, in CSS pixels, to carry the camera one full turn around the player.
+// A physical distance rather than a share of the canvas, so the orbit answers a given movement of
+// the finger the same way whichever way the device is held (PlayerPointerInput documents why a
+// canvas-relative measure does not).
+const orbitPixelsPerFullTurn = 960;
+const orbitSensitivity = (2 * Math.PI) / orbitPixelsPerFullTurn; // radians per CSS pixel
 
 // Keep the orbit away from the poles (straight above/below the player),
 // where the look-at up-vector would degenerate.

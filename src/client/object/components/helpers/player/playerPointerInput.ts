@@ -6,6 +6,38 @@ import ClientObjectManager from "../../../clientObjectManager";
 import InstancedMeshBinding from "../../../../graphics/types/mesh/instancedMeshBinding";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
+const canvasSizeTemp: THREE.Vector2 = new THREE.Vector2();
+const dragOffsetTemp: THREE.Vector2 = new THREE.Vector2();
+
+// How far the pointer travels, as a physical distance, for a drag to read as one full unit of
+// steering input. CSS pixels stand in for physical distance here: the page is served at
+// "width=device-width, initial-scale=1", which makes one CSS pixel a density-independent unit
+// rather than a hardware pixel, so this length is roughly constant across handheld screens.
+//
+// Measuring the drag against a fixed length, rather than against the canvas, is what keeps the
+// control feeling the same whichever way the device is held. A canvas-relative measure makes the
+// longer edge of the canvas the least responsive axis, and in portrait that axis is the one the
+// player walks along.
+const dragReferenceLengthPx = 120;
+
+// Steering produced per reference length of pointer travel, per axis. Independent knobs: turning
+// and walking are clamped to different ranges by PlayerController, so matching gains here do not
+// imply the two axes reach full deflection at the same drag distance.
+const dragSensitivityX = 0.42;
+const dragSensitivityY = 0.6;
+
+// A mouse is dragged from the wrist across a desk rather than with a thumb across a screen being
+// held, so the same physical travel can warrant a different gain than a touch drag gets. Left
+// neutral because the fixed-length measure already leaves a mouse drag more responsive than a
+// canvas-relative one did on a large window; this is the knob to turn if that proves wrong.
+// Applies to the steering reading only: the orbit reading is grab-style, and a control that follows
+// the pointer is expected to follow it identically whatever is doing the pointing.
+const mouseDragMultiplier = 1.0;
+
+// How far the pointer may travel, in CSS pixels, while a press still counts as a click on whatever
+// it started on rather than as a drag. A physical distance, so the same small slip of the finger is
+// tolerated on every screen shape.
+const clickSlopPx = 10;
 
 //------------------------------------------------------------------------
 // Captures raw pointer input on the game canvas, independently of the camera
@@ -18,10 +50,16 @@ const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 
 export default class PlayerPointerInput
 {
-    // The pointer's movement since the previous frame while a drag is ongoing (in NDC units).
+    // The pointer's movement since the previous frame while a drag is ongoing (in CSS pixels).
     dragDelta: THREE.Vector2 = new THREE.Vector2();
 
     private pointerIsDown: boolean = false;
+
+    // Which kind of pointer started the ongoing drag, taken from the press rather than assumed from
+    // the device: a touchscreen laptop and a tablet with a mouse attached both make the device a
+    // poor proxy for how the drag is actually being performed.
+    private pointerIsMouse: boolean = false;
+
     private pointerDownPos: THREE.Vector2 = new THREE.Vector2();
     private pointerDragPos: THREE.Vector2 = new THREE.Vector2();
     private pointerLastDragPos: THREE.Vector2 = new THREE.Vector2();
@@ -66,29 +104,37 @@ export default class PlayerPointerInput
     {
         if (this.pointerIsDown)
         {
-            this.dragDelta.subVectors(this.pointerDragPos, this.pointerLastDragPos);
+            this.getPixelOffset(this.pointerLastDragPos, this.pointerDragPos, this.dragDelta);
             this.pointerLastDragPos.copy(this.pointerDragPos);
 
-            const canvas = GraphicsManager.getGameCanvas();
-            const maxSize = Math.max(canvas.width, canvas.height);
+            this.getPixelOffset(this.pointerDownPos, this.pointerDragPos, dragOffsetTemp);
 
-            const mouse_x_sensitivity = 0.6 + 0.4 * (canvas.width / maxSize); // proportional to the measure of how wider the width is, compared to the height.
-            const mouse_y_sensitivity = 0.7 + 0.3 * (canvas.height / maxSize); // proportional to the measure of how wider the height is, compared to the width.
+            const mouseInputX = dragOffsetTemp.x / dragReferenceLengthPx;
+            const mouseInputY = dragOffsetTemp.y / dragReferenceLengthPx;
+            const deviceMultiplier = this.pointerIsMouse ? mouseDragMultiplier : 1;
 
-            const mouseInputX = this.pointerDragPos.x - this.pointerDownPos.x;
-            const mouseInputY = this.pointerDragPos.y - this.pointerDownPos.y;
-
-            controller.dx += mouseInputX * mouse_x_sensitivity;
-            controller.dy += mouseInputY * mouse_y_sensitivity;
+            controller.dx += mouseInputX * dragSensitivityX * deviceMultiplier;
+            controller.dy += mouseInputY * dragSensitivityY * deviceMultiplier;
         }
         else
             this.dragDelta.set(0, 0);
+    }
+
+    // Pointer positions are captured in NDC, where each axis is normalized by its own edge of the
+    // canvas — so on a canvas that is not square, the same NDC distance means different amounts of
+    // travel on the two axes. Scaling by half the canvas size (half, because NDC spans -1..1 across
+    // a full edge) recovers CSS pixels, the unit every drag measurement in this class works in.
+    private getPixelOffset(fromPos: THREE.Vector2, toPos: THREE.Vector2, outVec: THREE.Vector2): THREE.Vector2
+    {
+        GraphicsManager.getGameRenderer().getSize(canvasSizeTemp);
+        return outVec.subVectors(toPos, fromPos).multiply(canvasSizeTemp).multiplyScalar(0.5);
     }
 
     private onPointerPress(ev: PointerEvent): void
     {
         //console.log("onPointerPress");
         this.pointerIsDown = true;
+        this.pointerIsMouse = (ev.pointerType === "mouse");
 
         // Capture the pointer so drag continues even when the cursor passes
         // over CSS2D overlays (e.g. WorldSpaceArrow click targets).
@@ -136,7 +182,8 @@ export default class PlayerPointerInput
 
     private clickRaycast(ev: PointerEvent): void
     {
-        if (this.pointerDragPos.distanceToSquared(this.pointerDownPos) > 0.0009)
+        if (this.getPixelOffset(this.pointerDownPos, this.pointerDragPos, dragOffsetTemp).lengthSq()
+            > clickSlopPx * clickSlopPx)
             return;
 
         getNDC(ev, vec2Temp);
