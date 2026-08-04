@@ -51,7 +51,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
         let proximityShouldBeOn = false;
 
         // Trigger proximity detection only during first-person view.
-        if (cameraModeObservable.peek() === "firstPerson")
+        if (cameraModeObservable.peek().type === "firstPerson")
         {
             const offsetX = this.gameObject.position.x - player.position.x;
             const offsetZ = this.gameObject.position.z - player.position.z;

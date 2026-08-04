@@ -40,7 +40,7 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
         };
         // A press that lands outside the palette closes it too — but only once it ends
         // without having travelled, since a press that travels is the user dragging the
-        // screen behind the palette to orbit the self-view camera, and that drag must
+        // screen behind the palette to orbit the camera, and that drag must
         // not cost them the palette they are picking a color from. The button counts as
         // part of the palette here, so that its own toggling stays the only thing that
         // decides what a press on it does.
@@ -132,7 +132,7 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
         {paletteOpen &&
             // The overlay only gives the palette a screen-sized frame to be anchored in; it takes
             // no pointer input of its own, so that everything it covers — the game canvas above
-            // all, where a drag orbits the self-view camera — keeps receiving presses as usual.
+            // all, where a drag orbits the camera — keeps receiving presses as usual.
             <div className="fixed inset-0 z-50 pointer-events-none">
                 {/* The palette stays hidden until measured, so that it never flashes at an unanchored spot. */}
                 <div ref={onPaletteRefChange}

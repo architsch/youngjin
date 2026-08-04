@@ -15,7 +15,6 @@ import User from "../shared/user/types/user";
 import { UserRole } from "../shared/user/types/userRole";
 import { roomChangedObservable, updateObservable, userRoleObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
-import "./graphics/types/gizmo/voxelBlockWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for voxel block selection
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import SetUserRoleSignal from "../shared/user/types/setUserRoleSignal";

@@ -46,7 +46,7 @@ export default class SpeechBubble extends GameObjectComponent
             // Show the bubble only where it can actually be read: near enough, inside the camera's
             // field of view, and (if required) not blocked by anything. The field-of-view test is
             // what keeps one's own bubble hidden in first-person — it sits above the head, out of
-            // frame — while letting it appear in self-view, where the camera looks back at the body.
+            // frame — while letting it appear once the camera orbits the body and looks back at it.
             if (dist < 12 && CameraUtil.pointIsInFieldOfView(this.vecTemp1) &&
                 (!this.componentConfig.checkLineOfSight ||
                 CameraUtil.objectIsInLineOfSight(this.vecTemp1, this.gameObject)))

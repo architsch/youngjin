@@ -21,7 +21,7 @@ export default class PlayerGameObject extends GameObject
     {
         await super.onSpawn();
 
-        // Self-view camera mode (in case the player is mine)
+        // Orbit camera mode (in case the player is mine)
         if (this.isMine())
         {
             this.applyCameraModeVisibility(cameraModeObservable.peek());
@@ -34,7 +34,7 @@ export default class PlayerGameObject extends GameObject
     {
         await super.onDespawn();
 
-        // Self-view camera mode (in case the player is mine)
+        // Orbit camera mode (in case the player is mine)
         if (this.isMine())
             cameraModeObservable.removeListener(this.cameraModeListenerKey());
     }
@@ -53,10 +53,10 @@ export default class PlayerGameObject extends GameObject
             this.instancedMeshComposer.setHidden(false);
     }
 
-    // The user's own body is visible only in the self-view; first-person hides it.
+    // The user's own body is visible only while the camera orbits; first-person hides it.
     private applyCameraModeVisibility(mode: CameraMode)
     {
-        this.instancedMeshComposer.setHidden(mode === "firstPerson");
+        this.instancedMeshComposer.setHidden(mode.type === "firstPerson");
     }
 
     private cameraModeListenerKey(): string

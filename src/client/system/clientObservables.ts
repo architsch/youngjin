@@ -112,10 +112,12 @@ export const voxelQuadHighlightObservable = new Observable<VoxelQuadSelection | 
 export const popupStateObservable = new Observable<PopupState>({ popupType: "none" });
 
 // This observable notifies its listeners whenever the user's player camera switches modes (e.g. from
-// the normal first-person view to the pulled-back self-view shown while customizing one's character).
+// the normal first-person view to the pulled-back orbit view shown while inspecting one's character
+// or whatever is currently selected). The orbit's target travels with the mode, so pointing the
+// camera at something else is the same kind of change as switching modes.
 // The camera framing (PlayerCamera) and the visibility of the user's own body (PlayerGameObject)
 // both follow it.
-export const cameraModeObservable = new Observable<CameraMode>("firstPerson");
+export const cameraModeObservable = new Observable<CameraMode>({type: "firstPerson"});
 
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");

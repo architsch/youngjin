@@ -9,7 +9,6 @@ import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
-import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/voxelGameObject";
@@ -235,18 +234,20 @@ const ClientObjectManager =
         if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal, validate))
             return false;
 
-        if (ObjectMetadataEntryMap.shouldUnselectObjectOnSet(key))
-        {
-            const sel = objectSelectionObservable.peek();
-            if (sel && sel.gameObject.params.objectId === objectId)
-                ObjectSelection.unselect();
-        }
-
         const object = ClientObjectManager.getObjectById(objectId);
         if (object)
             object.onSetMetadata(key, value);
         else
             console.error(`ClientObjectManager.setObjectMetadata :: GameObject not found (objectId = ${objectId})`);
+
+        // An edit leaves the object it was made to selected: a canvas takes a few tries to get
+        // right, and having to pick it out of the room again between them would make a chore of it.
+        // The selection is re-announced rather than merely left alone, so that whatever is showing
+        // the object's metadata — the selection's menu, and the chooser it opens — reads the new
+        // value instead of the one it was rendered with.
+        const selection = objectSelectionObservable.peek();
+        if (selection && selection.gameObject.params.objectId === objectId)
+            objectSelectionObservable.notify();
 
         return true;
     },

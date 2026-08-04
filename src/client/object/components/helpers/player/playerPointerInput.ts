@@ -23,8 +23,8 @@ const dragReferenceLengthPx = 120;
 // Steering produced per reference length of pointer travel, per axis. Independent knobs: turning
 // and walking are clamped to different ranges by PlayerController, so matching gains here do not
 // imply the two axes reach full deflection at the same drag distance.
-const dragSensitivityX = 0.42;
-const dragSensitivityY = 0.6;
+const dragSensitivityX = 0.85;
+const dragSensitivityY = 1.25;
 
 // A mouse is dragged from the wrist across a desk rather than with a thumb across a screen being
 // held, so the same physical travel can warrant a different gain than a touch drag gets. Left
@@ -32,7 +32,7 @@ const dragSensitivityY = 0.6;
 // canvas-relative one did on a large window; this is the knob to turn if that proves wrong.
 // Applies to the steering reading only: the orbit reading is grab-style, and a control that follows
 // the pointer is expected to follow it identically whatever is doing the pointing.
-const mouseDragMultiplier = 1.0;
+const mouseDragMultiplier = 0.6;
 
 // How far the pointer may travel, in CSS pixels, while a press still counts as a click on whatever
 // it started on rather than as a drag. A physical distance, so the same small slip of the finger is
@@ -44,7 +44,7 @@ const clickSlopPx = 10;
 // mode. It exposes the ongoing drag in two readings: a joystick-style offset
 // from the press point (fed into the controller's steering), and a grab-style
 // per-frame delta (dragDelta) for consumers that follow the pointer 1:1, such
-// as the self-view orbit. It also raycasts clicks into the scene to notify
+// as the orbit camera. It also raycasts clicks into the scene to notify
 // the clicked game object.
 //------------------------------------------------------------------------
 

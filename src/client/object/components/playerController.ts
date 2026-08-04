@@ -78,9 +78,9 @@ export default class PlayerController extends GameObjectComponent
         }
         else
         {
-            if (cameraModeObservable.peek() === "selfView")
+            if (cameraModeObservable.peek().type === "orbit")
             {
-                // In self-view, drag input orbits the camera (see SelfViewCameraPose)
+                // In the orbit mode, drag input orbits the camera (see OrbitCameraPose)
                 // instead of steering the player, so the player stands still.
                 this.rigidbody?.setDesiredVelocity(0, 0, 0);
             }
@@ -88,7 +88,7 @@ export default class PlayerController extends GameObjectComponent
             {
                 // Speed Limit
                 this.dx = Math.max(-1, Math.min(1, this.dx));
-                this.dy = Math.max(-0.4, Math.min(0.4, this.dy));
+                this.dy = Math.max(-0.6, Math.min(0.6, this.dy));
 
                 if (Math.abs(this.dx) > NEAR_EPSILON)
                     this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"], -3 * deltaTime * this.dx);

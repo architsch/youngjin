@@ -126,7 +126,7 @@ export default class InstancedMeshBinding
     // owner none the wiser: a hidden instance parks where unused instances go, and the transforms
     // its owner keeps baking meanwhile are held rather than drawn — so revealing it restores
     // whatever its owner asked for most recently, however many times the owner re-baked it. This is
-    // what lets a passing effect (e.g. clearing the self-view camera's line of sight) hide one
+    // what lets a passing effect (e.g. clearing the orbit camera's line of sight) hide one
     // instance of a shared instanced mesh, which the mesh object's own visibility flag cannot do:
     // that flag governs the whole draw call, hence every instance in it.
     setInstanceHidden(instanceId: number, hidden: boolean)

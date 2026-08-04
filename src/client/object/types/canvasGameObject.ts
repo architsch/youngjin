@@ -13,7 +13,7 @@ import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
-import { graphicsContextRestoredObservable } from "../../system/clientObservables";
+import { cameraModeObservable, graphicsContextRestoredObservable } from "../../system/clientObservables";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -104,9 +104,12 @@ export default class CanvasGameObject extends GameObject
             console.error("My player not found in CanvasGameObject's onClick.");
             return;
         }
-        const distSqr = hitPoint.distanceToSquared(player.position);
-        if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
-            return;
+        if (cameraModeObservable.peek().type == "firstPerson")
+        {
+            const distSqr = hitPoint.distanceToSquared(player.position);
+            if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
+                return;
+        }
 
         ObjectSelection.trySelect(this);
     }

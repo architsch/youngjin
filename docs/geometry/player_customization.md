@@ -56,4 +56,4 @@ Since the player's eyes are flat patches of color rendered on a flat surface, it
 ## Related docs
 
 - [Instanced Mesh Composition](../graphics/instanced_mesh_composition.md) — underlying mechanism which powers the player customization logic
-- [Camera Control](../graphics/camera_control.md) — the self-view camera mode used while customizing the character
+- [Camera Control](../graphics/camera_control.md) — the orbit camera mode used while customizing the character

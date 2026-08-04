@@ -179,8 +179,6 @@ function trySetCanvasMetadata(selection: ObjectSelection, metadataKey: ObjectMet
     if (!ClientObjectManager.setObjectMetadata(objectId, metadataKey, metadataValue))
         return;
 
-    objectSelectionObservable.notify();
-
     if (room.roomType != RoomTypeEnumMap.SinglePlayer)
         SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue));
 }

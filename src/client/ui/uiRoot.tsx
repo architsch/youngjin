@@ -4,6 +4,7 @@ import Chat from "./components/hud/chat/chat";
 import DebugStats from "./components/hud/debug/debugStats";
 import VoxelQuadSelectionMenu from "./components/hud/selection/voxelQuadSelectionMenu";
 import ObjectSelectionMenu from "./components/hud/selection/objectSelectionMenu";
+import SelectionCloseButton from "./components/hud/selection/selectionCloseButton";
 import UserRoomIdentity from "./components/hud/user/userRoomIdentity";
 import Loading from "./components/overlay/loading";
 import Notification from "./components/overlay/notification";
@@ -159,6 +160,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         />}
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
+            <SelectionCloseButton/>
             <ObjectSelectionMenu canModifyRoom={canModifyRoom}/>
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
             <Chat hide={chatHidden}/>

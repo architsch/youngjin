@@ -5,7 +5,6 @@ export enum FeatureFlag
     DisableObjectSelectionChange,
     DisableManualVoxelBlockAddition,
     DisableManualVoxelBlockRemoval,
-    DisableManualVoxelBlockMovement,
     DisableManualObjectAddition,
     DisableManualObjectRemoval,
     ExitSinglePlayerOnDoorClick,
