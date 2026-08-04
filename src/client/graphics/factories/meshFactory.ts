@@ -19,6 +19,12 @@ const MeshFactory =
     {
         return Object.values(loadedMeshes);
     },
+    // Undefined until the mesh has been loaded, which lets a caller holding an id alone (e.g. one of
+    // an object's parts) reach the mesh that draws it.
+    getMesh: (meshId: string): THREE.Mesh | undefined =>
+    {
+        return loadedMeshes[meshId];
+    },
     loadMesh: async (meshId: string, geometryId: string, materialParams: MaterialParams): Promise<THREE.Mesh> =>
     {
         const loadedMesh = loadedMeshes[meshId];

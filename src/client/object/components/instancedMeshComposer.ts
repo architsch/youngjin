@@ -110,6 +110,20 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.updateState = "refreshPending";
     }
 
+    // Visits every instance this object is currently drawn from. A composed object is scattered over
+    // as many instances as it has parts, across several instanced meshes, so anything that acts on
+    // it as a whole (e.g. taking it out of a camera's line of sight) has to reach all of them rather
+    // than the single part it happened to find the object by.
+    forEachInstance(visit: (instancedMeshId: string, instanceId: number) => void)
+    {
+        for (const instancedMeshId in this.instanceIdsByInstancedMeshId)
+        {
+            const instanceIds = this.instanceIdsByInstancedMeshId[instancedMeshId];
+            for (let i = 0; i < instanceIds.length; ++i)
+                visit(instancedMeshId, instanceIds[i]);
+        }
+    }
+
     saveParts()
     {
         this.instancedMeshComposition.saveToMetadata(this.gameObject);

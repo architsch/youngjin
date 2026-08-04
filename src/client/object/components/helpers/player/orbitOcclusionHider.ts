@@ -5,6 +5,7 @@ import ClientObjectManager from "../../../clientObjectManager";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
 import InstancedMeshBinding from "../../../../graphics/types/mesh/instancedMeshBinding";
 import HiddenOccluder from "../../../../graphics/types/mesh/hiddenOccluder";
+import InstancedMeshComposer from "../../instancedMeshComposer";
 import InstancedMeshGraphics from "../../instancedMeshGraphics";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import Geometry3DUtil from "../../../../../shared/math/util/geometry3DUtil";
@@ -31,7 +32,9 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MAX_ROO
 //     voxel grid. A room holds tens of thousands of quads — far too many to raycast repeatedly —
 //     and the grid answers the question directly, covering the target completely by construction.
 //   - Everything else (canvases, doors, players) is found by raycasting the remaining meshes,
-//     which are few, along a grid of samples spread over the target's silhouette.
+//     which are few, along a grid of samples spread over the target's silhouette. Whatever a ray
+//     strikes is hidden as a whole object rather than at the point of the hit, since an object drawn
+//     out of many parts (a player) would otherwise be left standing there in pieces.
 //
 // Whatever the orbit is looking *at* is exempt from all of this, since hiding it is precisely what
 // would defeat the mode (see the protected neighbourhood below).
@@ -216,21 +219,48 @@ export default class OrbitOcclusionHider
         {
             const mesh = intersection.object as THREE.Mesh;
             const instanceId = (intersection.instanceId != undefined) ? intersection.instanceId : -1;
+            const gameObject = findGameObject(mesh, instanceId);
 
-            // What the camera is looking at is never something in its way. The user's own body
-            // falls under the same rule whenever it stands that close to what is being framed,
-            // and is hidden like anything else when it does not.
-            if (objectIsProtected(mesh, instanceId))
+            // What the camera is looking at is never something in its way. This is what keeps the
+            // user's own body in view while the orbit frames the character himself; every other
+            // orbit has it out of sight before any ray goes looking for it (see PlayerGameObject).
+            if (objectIsProtected(gameObject))
                 continue;
 
-            const occluderKey = `${mesh.name}/${instanceId}`;
-            if (this.hiddenOccluderByKey[occluderKey] != undefined)
-                continue; // Already hidden, by an earlier sample of this same sweep.
-
-            const occluder: HiddenOccluder = {mesh, instanceId};
-            setOccluderHidden(occluder, true);
-            this.hiddenOccluderByKey[occluderKey] = occluder;
+            this.hideOccluder(mesh, instanceId);
+            if (gameObject)
+                this.hideRemainingPartsOf(gameObject);
         }
+    }
+
+    private hideOccluder(mesh: THREE.Mesh, instanceId: number): void
+    {
+        const occluderKey = `${mesh.name}/${instanceId}`;
+        if (this.hiddenOccluderByKey[occluderKey] != undefined)
+            return; // Already hidden, by an earlier sample of this same sweep.
+
+        const occluder: HiddenOccluder = {mesh, instanceId};
+        setOccluderHidden(occluder, true);
+        this.hiddenOccluderByKey[occluderKey] = occluder;
+    }
+
+    // A ray reports the one piece of geometry it struck, but a player is not one piece: each of the
+    // parts he is composed of is an instance of its own, and hiding only the part a sample happened
+    // to land on would leave the rest of the body — a head with no torso under it — standing in
+    // front of what the camera is meant to see. So an object found in the way goes out of sight
+    // whole. (Objects drawn as a single piece have nothing further to hide, and say so by carrying
+    // no composer.)
+    private hideRemainingPartsOf(gameObject: GameObject): void
+    {
+        const composer = gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;
+        if (composer == undefined)
+            return;
+
+        composer.forEachInstance((instancedMeshId: string, instanceId: number) => {
+            const mesh = MeshFactory.getMesh(instancedMeshId);
+            if (mesh)
+                this.hideOccluder(mesh, instanceId);
+        });
     }
 
     private revealHiddenMeshOccluders(): void
@@ -277,14 +307,19 @@ function blockIsProtected(row: number, col: number, collisionLayer: number): boo
         Math.abs(collisionLayer - protectedCenterLayer) <= 1;
 }
 
-// Whether the game object a ray hit is one of those the orbit is looking at, i.e. one whose own
-// volume reaches into the protected neighbourhood of blocks.
-function objectIsProtected(mesh: THREE.Mesh, instanceId: number): boolean
+// The game object a ray hit belongs to, if it belongs to one at all (a gizmo does not).
+function findGameObject(mesh: THREE.Mesh, instanceId: number): GameObject | undefined
 {
-    const gameObject: GameObject | undefined = (instanceId >= 0)
+    return (instanceId >= 0)
         ? InstancedMeshBinding.findGameObject(mesh, instanceId)
         // For regular (non-instanced) meshes, (mesh.name == meshId == objectId).
         : ClientObjectManager.getObjectById(mesh.name);
+}
+
+// Whether the game object a ray hit is one of those the orbit is looking at, i.e. one whose own
+// volume reaches into the protected neighbourhood of blocks.
+function objectIsProtected(gameObject: GameObject | undefined): boolean
+{
     if (gameObject == undefined)
         return false;
 

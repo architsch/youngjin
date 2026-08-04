@@ -19,6 +19,11 @@ export default class SpeechBubble extends GameObjectComponent
     private vecTemp1 = new THREE.Vector3();
     private vecTemp2 = new THREE.Vector3();
 
+    // Set by whoever owns the object when the body this bubble belongs to is not being drawn (see
+    // PlayerGameObject). A bubble left hanging in the air where its speaker is not would be read as
+    // belonging to whatever it happened to hang over.
+    private hidden: boolean = false;
+
     async onSpawn(): Promise<void>
     {
         this.gameObject.obj.add(this.speechBubbleHotspot);
@@ -39,14 +44,21 @@ export default class SpeechBubble extends GameObjectComponent
         // If the speech bubble is active (visible), update its position and size.
         if (this.textElement)
         {
+            if (this.hidden)
+            {
+                this.textElement.hidden = true;
+                return;
+            }
+
             this.speechBubbleHotspot.getWorldPosition(this.vecTemp1);
             GraphicsManager.getCamera().getWorldPosition(this.vecTemp2);
             const dist = this.vecTemp1.distanceTo(this.vecTemp2);
 
             // Show the bubble only where it can actually be read: near enough, inside the camera's
             // field of view, and (if required) not blocked by anything. The field-of-view test is
-            // what keeps one's own bubble hidden in first-person — it sits above the head, out of
-            // frame — while letting it appear once the camera orbits the body and looks back at it.
+            // what keeps a bubble hidden while its speaker is out of frame, which is where one's
+            // own sits in first-person — above the head — and it lets that one appear again once
+            // the camera orbits the body and looks back at it.
             if (dist < 12 && CameraUtil.pointIsInFieldOfView(this.vecTemp1) &&
                 (!this.componentConfig.checkLineOfSight ||
                 CameraUtil.objectIsInLineOfSight(this.vecTemp1, this.gameObject)))
@@ -61,6 +73,11 @@ export default class SpeechBubble extends GameObjectComponent
                 this.textElement.hidden = true;
             }
         }
+    }
+
+    setHidden(hidden: boolean)
+    {
+        this.hidden = hidden;
     }
 
     setMessage(message: string, broadcastToServer: boolean)
