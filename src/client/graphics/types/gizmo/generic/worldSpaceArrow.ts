@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import GeometryFactory from "../../../../graphics/factories/geometryFactory";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { DIRECTION_VECTORS, DRAG_THRESHOLD_PX } from "../../../../../client/system/clientConstants";
+import { DIRECTION_VECTORS, MOUSE_DRAG_THRESHOLD_PX, TOUCH_DRAG_THRESHOLD_PX } from "../../../../../client/system/clientConstants";
 
 const tempQuat = new THREE.Quaternion();
 const vecTemp1 = new THREE.Vector3();
@@ -99,6 +99,7 @@ export default class WorldSpaceArrow
         let pressStartX = 0;
         let pressStartY = 0;
         let pressPointerId: number | null = null;
+        let pressIsMouse = false;
 
         function cleanupPress(): void {
             pressArmed = false;
@@ -112,7 +113,8 @@ export default class WorldSpaceArrow
             if (!pressArmed || ev.pointerId !== pressPointerId) return;
             const dx = ev.clientX - pressStartX;
             const dy = ev.clientY - pressStartY;
-            if (dx * dx + dy * dy < DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) return;
+            const thresholdPx = pressIsMouse ? MOUSE_DRAG_THRESHOLD_PX : TOUCH_DRAG_THRESHOLD_PX;
+            if (dx * dx + dy * dy < thresholdPx * thresholdPx) return;
 
             cleanupPress();
 
@@ -132,6 +134,7 @@ export default class WorldSpaceArrow
             pressStartX = ev.clientX;
             pressStartY = ev.clientY;
             pressPointerId = ev.pointerId;
+            pressIsMouse = (ev.pointerType === "mouse");
             document.addEventListener("pointermove", onPressMove);
             document.addEventListener("pointerup", cleanupPress);
             document.addEventListener("pointercancel", cleanupPress);

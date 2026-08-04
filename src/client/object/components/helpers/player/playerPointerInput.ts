@@ -4,6 +4,7 @@ import GraphicsManager from "../../../../graphics/graphicsManager";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
 import ClientObjectManager from "../../../clientObjectManager";
 import InstancedMeshBinding from "../../../../graphics/types/mesh/instancedMeshBinding";
+import { MOUSE_DRAG_THRESHOLD_PX, TOUCH_DRAG_THRESHOLD_PX } from "../../../../system/clientConstants";
 
 const vec2Temp: THREE.Vector2 = new THREE.Vector2();
 const canvasSizeTemp: THREE.Vector2 = new THREE.Vector2();
@@ -33,11 +34,6 @@ const dragSensitivityY = 1.25;
 // Applies to the steering reading only: the orbit reading is grab-style, and a control that follows
 // the pointer is expected to follow it identically whatever is doing the pointing.
 const mouseDragMultiplier = 0.6;
-
-// How far the pointer may travel, in CSS pixels, while a press still counts as a click on whatever
-// it started on rather than as a drag. A physical distance, so the same small slip of the finger is
-// tolerated on every screen shape.
-const clickSlopPx = 10;
 
 //------------------------------------------------------------------------
 // Captures raw pointer input on the game canvas, independently of the camera
@@ -182,8 +178,13 @@ export default class PlayerPointerInput
 
     private clickRaycast(ev: PointerEvent): void
     {
+        // Measured against the press that produced this click, not against the device: a touchscreen
+        // laptop and a tablet with a mouse attached both make the device a poor proxy for how
+        // steadily the pointer can be held.
+        const thresholdPx = this.pointerIsMouse ? MOUSE_DRAG_THRESHOLD_PX : TOUCH_DRAG_THRESHOLD_PX;
+
         if (this.getPixelOffset(this.pointerDownPos, this.pointerDragPos, dragOffsetTemp).lengthSq()
-            > clickSlopPx * clickSlopPx)
+            > thresholdPx * thresholdPx)
             return;
 
         getNDC(ev, vec2Temp);

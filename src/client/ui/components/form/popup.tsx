@@ -2,7 +2,7 @@ import { ReactNode, useRef } from "react";
 import Text from "../basic/text";
 import IconButton from "../input/iconButton";
 import CloseIcon from "../../svg/icons/closeIcon";
-import { DRAG_THRESHOLD_PX } from "../../../system/clientConstants";
+import { MOUSE_DRAG_THRESHOLD_PX, TOUCH_DRAG_THRESHOLD_PX } from "../../../system/clientConstants";
 import PopupUtil from "../../util/popupUtil";
 
 export default function Popup({ children, showCloseButton = false, title = "" }: Props)
@@ -10,12 +10,14 @@ export default function Popup({ children, showCloseButton = false, title = "" }:
     const hasTopBar = showCloseButton || title.length > 0;
     const downOnBackdropRef = useRef(false);
     const downPosRef = useRef({ x: 0, y: 0 });
+    const downIsMouseRef = useRef(false);
 
     return <div
         className={className}
         onPointerDown={(e) => {
             downOnBackdropRef.current = e.target === e.currentTarget;
             downPosRef.current = { x: e.clientX, y: e.clientY };
+            downIsMouseRef.current = (e.pointerType === "mouse");
         }}
         onClick={(e) => {
             // Close on click (not pointerup) so the backdrop is still mounted when the
@@ -24,7 +26,10 @@ export default function Popup({ children, showCloseButton = false, title = "" }:
             // which lets the click fall through to the game canvas and fire a raycast.
             const dx = e.clientX - downPosRef.current.x;
             const dy = e.clientY - downPosRef.current.y;
-            const movedTooFar = dx * dx + dy * dy > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX;
+            // The pointer type is remembered from the press, since a click event does not carry one.
+            const thresholdPx = downIsMouseRef.current
+                ? MOUSE_DRAG_THRESHOLD_PX : TOUCH_DRAG_THRESHOLD_PX;
+            const movedTooFar = dx * dx + dy * dy > thresholdPx * thresholdPx;
             const shouldClose = downOnBackdropRef.current && e.target === e.currentTarget && !movedTooFar;
             downOnBackdropRef.current = false;
             if (shouldClose)
