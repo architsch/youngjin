@@ -24,7 +24,7 @@ export default function ObjectSelectionMenu({ canModifyRoom }: Props)
     {
         const typeIndex = state.selection.gameObject.params.objectTypeIndex;
         const objectId = state.selection.gameObject.params.objectId;
-        return <div className="flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden">
+        return <div className="flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden relative z-10">
             {typeIndex === canvasTypeIndex && canModifyRoom &&
                 <CanvasEditOptions key={`edit-${objectId}`} selection={state.selection}/>}
             {typeIndex === canvasTypeIndex &&

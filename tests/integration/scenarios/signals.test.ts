@@ -137,8 +137,8 @@ describe("signal emission scenarios", () => {
                 userAt(20, 20, "regular"),
             ],
             actions: [
-                // Trigger a desync by teleporting too far (>3 units)
-                { type: "moveObject", userIndex: 0, x: 25, y: 0, z: 25 },
+                // Trigger a desync by moving an object the sender has no authority over
+                { type: "moveObject", userIndex: 0, targetUserIndex: 1, x: 25, y: 0, z: 25 },
             ],
             assertions: ({ users }) => {
                 // Both users (including sender) should independently have transform signals.
@@ -147,6 +147,10 @@ describe("signal emission scenarios", () => {
                 const u1Signals = getPendingSignals(users[1], "setObjectTransformSignal");
                 expect(u0Signals.length, "sender should receive desync correction").toBeGreaterThanOrEqual(1);
                 expect(u1Signals.length, "observer should receive desync correction").toBeGreaterThanOrEqual(1);
+                // The correction carries the server-authoritative transform, so it must override
+                // the client's own physics rather than be re-simulated by it.
+                const correction = u0Signals[u0Signals.length - 1];
+                expect(correction.ignorePhysics, "correction must be authoritative").toBe(true);
             },
         });
     });

@@ -13,7 +13,10 @@ import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
-import { cameraModeObservable, graphicsContextRestoredObservable } from "../../system/clientObservables";
+import { graphicsContextRestoredObservable } from "../../system/clientObservables";
+import GraphicsManager from "../../graphics/graphicsManager";
+
+const vector3Temp = new THREE.Vector3();
 
 export default class CanvasGameObject extends GameObject
 {
@@ -104,12 +107,11 @@ export default class CanvasGameObject extends GameObject
             console.error("My player not found in CanvasGameObject's onClick.");
             return;
         }
-        if (cameraModeObservable.peek().type == "firstPerson")
-        {
-            const distSqr = hitPoint.distanceToSquared(player.position);
-            if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
-                return;
-        }
+
+        GraphicsManager.getCamera().getWorldPosition(vector3Temp);
+        const distSqr = hitPoint.distanceToSquared(vector3Temp);
+        if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
+            return;
 
         ObjectSelection.trySelect(this);
     }

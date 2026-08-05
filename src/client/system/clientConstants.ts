@@ -11,7 +11,7 @@ import * as THREE from "three";
 // makes an ordinary tap read as a drag, and the click that would have selected whatever was under
 // it never happens — so touch is given a much more generous allowance than a mouse.
 export const MOUSE_DRAG_THRESHOLD_PX = 8;
-export const TOUCH_DRAG_THRESHOLD_PX = 24;
+export const TOUCH_DRAG_THRESHOLD_PX = 32;
 
 // UI
 

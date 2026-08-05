@@ -11,9 +11,11 @@ import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import { cameraModeObservable, texturePackURLObservable } from "../../system/clientObservables";
+import { texturePackURLObservable } from "../../system/clientObservables";
+import GraphicsManager from "../../graphics/graphicsManager";
 
 let debugEnabled: boolean = false;
+const vector3Temp = new THREE.Vector3();
 
 export default class VoxelGameObject extends GameObject
 {
@@ -84,12 +86,11 @@ export default class VoxelGameObject extends GameObject
             console.error("My player not found in VoxelGameObject's onClick.");
             return;
         }
-        if (cameraModeObservable.peek().type == "firstPerson")
-        {
-            const distSqr = hitPoint.distanceToSquared(player.position);
-            if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
-                return;
-        }
+
+        GraphicsManager.getCamera().getWorldPosition(vector3Temp);
+        const distSqr = hitPoint.distanceToSquared(vector3Temp);
+        if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
+            return;
 
         const voxel = this.getVoxel();
         VoxelQuadSelection.trySelect(voxel, instanceId);

@@ -4,9 +4,9 @@
  * Covers:
  * - Player spawn at correct position
  * - Player transform updates
- * - Authority checks (can't move another's object)
+ * - Authority checks (can't move another's object), which are what trigger a resync
  * - Objects removed when user leaves
- * - Desync detection and recovery
+ * - Movement bounded by physics alone, not by how far the position jumped
  * - Player metadata snapshot mirrors the live player object
  * - Metadata (chat messages)
  */
@@ -61,7 +61,7 @@ describe("object scenarios", () => {
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id);
                 expect(obj).toBeDefined();
-                // Small movement (2 units into the room) is within the desync threshold,
+                // Movement across open floor is unobstructed,
                 // so the server should accept a position close to the target
                 expect(obj!.transform.pos.x).toBeCloseTo(SPAWN_X, 0);
                 expect(obj!.transform.pos.z).toBeCloseTo(SPAWN_Z - 2, 0);
@@ -113,21 +113,22 @@ describe("object scenarios", () => {
         });
     });
 
-    it("desync detection triggers when position jumps too far", async () => {
+    it("a far position jump is accepted rather than force-resynced", async () => {
         await runScenario({
-            name: "desync detection",
+            name: "no distance-based desync",
             rooms: [EMPTY_REGULAR],
             users: [userAt(5, 5, "regular")],
             actions: [
-                // Try to teleport far away (>3 units should trigger desync)
+                // A long jump across open floor — distance alone must not revert it,
+                // since network latency makes large legitimate gaps routine.
                 { type: "moveObject", userIndex: 0, x: SPAWN_X, y: 0, z: SPAWN_Z - 20 },
             ],
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id)!;
-                // Desync resets to the last known server position (the entrance)
-                // when the distance is >= 3 units (distSqr >= 9)
+                // Only physics (collision) constrains the move, and the path here is clear,
+                // so the player ends up at the requested position.
                 expect(obj.transform.pos.x).toBeCloseTo(SPAWN_X, 0);
-                expect(obj.transform.pos.z).toBeCloseTo(SPAWN_Z, 0);
+                expect(obj.transform.pos.z).toBeCloseTo(SPAWN_Z - 20, 0);
             },
         });
     });

@@ -1,6 +1,4 @@
 import { useEffect, useReducer } from "react";
-import IconButton from "../../input/iconButton";
-import CloseIcon from "../../../svg/icons/closeIcon";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
@@ -19,9 +17,13 @@ const selectionFeatureFlags = [
 // Lets the user put the current selection down — which, for a user who may edit the room, is also
 // what gives him back the first-person view and the run of the room, since the camera orbits
 // whatever is selected for as long as something is.
+//
+// It takes over the whole top bar for as long as it is up, in place of the identity and room
+// controls that normally live there: a selection is a mode the user is in, and a bar spanning the
+// screen says so — and gives the way out of it a target no one can miss on a small screen.
 //------------------------------------------------------------------------
 
-export default function SelectionCloseButton()
+export default function SelectionCloseButton({ canModifyRoom }: Props)
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
 
@@ -41,10 +43,13 @@ export default function SelectionCloseButton()
     if (!selectionCanBeDropped())
         return null;
 
-    return <div className="flex flex-row px-2 pb-1">
-        <IconButton id="closeSelectionButton" icon={<CloseIcon/>} size="sm"
-            onClick={() => WorldSpaceSelectionUtil.unselectAll()}
-            additionalClassNames="pointer-events-auto"/>
+    // Editing is what a selection means to a user who may edit the room — the camera has gone into
+    // an orbit and the player has stopped answering — so the way out is named for the mode being
+    // left, not for the selection that stands behind it. To everyone else it is only a selection.
+    return <div id="closeSelectionButton" className={className}
+        onClick={() => WorldSpaceSelectionUtil.unselectAll()}
+    >
+        {canModifyRoom ? "Exit Edit-Mode" : "Exit Selection"}
     </div>;
 }
 
@@ -62,4 +67,18 @@ function selectionCanBeDropped(): boolean
     }
     return ObjectSelection.isSelected() &&
         !clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange);
+}
+
+// Spans the top edge of the screen, wearing the raised look kept for a button of that shape (see
+// `yj-bar-convex`), since a bar of text across the top of a screen is otherwise read as a caption
+// and never pressed. Its height is a comfortable target for a thumb, and about what the top bar it
+// stands in for occupied. No stacking order is claimed here, which leaves the bar behind both the
+// things that share the top edge with it: the headline, which raises itself above everything and
+// lets clicks through to whatever it covers, and the debugger, which is simply drawn after it.
+const className = "absolute top-0 left-0 w-full h-11 flex items-center justify-center " +
+    "text-base font-semibold yj-bar-convex cursor-pointer select-none touch-manipulation";
+
+interface Props
+{
+    canModifyRoom: boolean;
 }

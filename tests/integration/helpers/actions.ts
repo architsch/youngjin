@@ -40,9 +40,10 @@ export type Action =
     | { type: "joinRoom"; userIndex: number; roomID: string; allowFallback?: boolean }
     | { type: "requestRoomChange"; userIndex: number; roomID: string; allowFallback?: boolean }
     | { type: "seedRoom"; roomID: string; roomType?: RoomType }
-    // Object — player movement
+    // Object — player movement. `targetUserIndex` defaults to the acting user's own player
+    // object, so that a differing target models one user trying to move another user's player.
     | { type: "moveObject"; userIndex: number; x: number; y: number; z: number;
-        dirX?: number; dirY?: number; dirZ?: number }
+        dirX?: number; dirY?: number; dirZ?: number; targetUserIndex?: number }
     // Object — metadata (chat message)
     | { type: "sendMessage"; userIndex: number; message: string }
     // Object — metadata (player appearance). `raw` sends the string as-is, bypassing the codec,
@@ -152,13 +153,14 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             const ctx = connectedUsers[idx];
             const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
             if (!roomID) return;
-            const playerObj = harness.getPlayerObject(ctx.user.id);
-            if (!playerObj) return;
+            const targetIdx = (action.targetUserIndex ?? idx) % connectedUsers.length;
+            const targetObj = harness.getPlayerObject(connectedUsers[targetIdx].user.id);
+            if (!targetObj) return;
             const transform = new ObjectTransform(
                 {x: action.x, y: action.y, z: action.z},
                 {x: action.dirX ?? 0, y: action.dirY ?? 0, z: action.dirZ ?? 1},
             );
-            const signal = new SetObjectTransformSignal(roomID, playerObj.objectId, transform, false);
+            const signal = new SetObjectTransformSignal(roomID, targetObj.objectId, transform, false);
             ServerObjectManager.onSetObjectTransformSignalReceived(ctx.socketUserContext, signal);
             break;
         }

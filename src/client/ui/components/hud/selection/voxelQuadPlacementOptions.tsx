@@ -261,7 +261,13 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
     {
         const voxelFound = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
         if (voxelFound)
-            VoxelQuadSelection.trySelect(voxelFound, targetQuadIndex);
+        {
+            let selectionSucceeded = false;
+            selectionSucceeded = VoxelQuadSelection.trySelect(voxelFound, targetQuadIndex);
+            let trial = 0;
+            while (!selectionSucceeded && trial++ < 6)
+                selectionSucceeded = VoxelQuadSelection.trySelect(voxelFound, VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, quadDirections[trial].facingAxis, quadDirections[trial].orientation, newCollisionLayer));
+        }
         if (room.roomType != RoomTypeEnumMap.SinglePlayer)
             SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, targetQuadIndex, quadTextureIndicesWithinLayer));
     }

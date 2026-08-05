@@ -147,20 +147,25 @@ export default function UIRoot({ env, user }: UIRootProps)
 
     const isCustomizingPlayer = popupStack.some(state => state.popupType == "customizePlayer");
 
-    const selectionUIShown = canModifyRoom && (objectSelection != null || voxelQuadSelection != null);
-    const chatHidden = forceHideChat || !isRoomLoaded || selectionUIShown;
-    const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || selectionUIShown;
+    const anythingSelected = objectSelection != null || voxelQuadSelection != null;
+    const selectionEditUIShown = canModifyRoom && anythingSelected;
+    const chatHidden = forceHideChat || !isRoomLoaded || selectionEditUIShown;
+    const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || selectionEditUIShown;
 
     return <>
-        {isMultiplayerRoomLoaded && <UserRoomIdentity
+        {/* A selection takes the top bar for itself, so the identity and room controls that
+            normally hold it step aside for as long as one is up. The debugger is the exception:
+            it is a development tool, and it is wanted most in the states that hide everything
+            else — hence its place after the bar here, which keeps it drawn on top of it. */}
+        {isMultiplayerRoomLoaded && !anythingSelected && <UserRoomIdentity
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
             isCustomizingPlayer={isCustomizingPlayer}
         />}
+        <SelectionCloseButton canModifyRoom={canModifyRoom}/>
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
-            <SelectionCloseButton/>
             <ObjectSelectionMenu canModifyRoom={canModifyRoom}/>
             {canModifyRoom && <VoxelQuadSelectionMenu/>}
             <Chat hide={chatHidden}/>

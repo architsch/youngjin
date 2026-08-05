@@ -25,11 +25,12 @@ const PhysicsCollisionUtil =
 
         // Any attempt to move more than 3 units from the server's last synced location
         // will be subject to forced resync.
-        if (Vector3DUtil.distSqr(target, start) >= 9)
+        // (NOTE: Turning this OFF for now, since false alarm seems too frequent due to network latency.)
+        /*if (Vector3DUtil.distSqr(target, start) >= 9)
         {
             console.warn(`Physics-position desync due to distance gap`);
             return {transform: new ObjectTransform(start, targetDir), desyncDetected: true};
-        }
+        }*/
         const result1 = applyHardCollisionToAABBMovement(physicsRoom, object,
             start, target, halfSize, maxClimbableHeight);
         let resolvedTarget = result1.closestHitPos;

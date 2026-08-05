@@ -1,6 +1,6 @@
-export default function Text({content, size = "md", color = "gray" }: Props)
+export default function Text({content, size = "md", color = "gray", additionalClassNames = "" }: Props)
 {
-    return <div className={`text-left ${textClassNames[size]} ${panelClassNames[color]}`}>
+    return <div className={`text-left ${textClassNames[size]} ${panelClassNames[color]} ${additionalClassNames}`}>
         {content}
     </div>
 }
@@ -23,4 +23,5 @@ interface Props
     content: string;
     size?: "xs" | "sm" | "md" | "lg";
     color?: "gray" | "green" | "red";
+    additionalClassNames?: string;
 }

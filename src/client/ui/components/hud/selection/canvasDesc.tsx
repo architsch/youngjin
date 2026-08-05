@@ -2,9 +2,12 @@ import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil";
 import Text from "../../basic/text";
+import useMouseDragScroll from "../../../util/mouseDragScroll";
 
 export default function CanvasDesc(props: {selection: ObjectSelection})
 {
+    const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
+
     const go = props.selection.gameObject;
     const metadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
 
@@ -16,8 +19,10 @@ export default function CanvasDesc(props: {selection: ObjectSelection})
     const author = imageMetadata.author;
     const title = imageMetadata.title;
 
-    return <div className="flex flex-row gap-2 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
-        <Text content={`Title: ${title}`} size="sm" color="gray"/>
-        <Text content={`Author: ${author}`} size="sm" color="gray"/>
+    // A long title or author name is not truncated: the panel stays within the screen and the text
+    // runs past its edge, to be scrolled through sideways (by drag on a mouse, by swipe on touch).
+    return <div ref={onRefChange} className="flex flex-row gap-2 p-2 w-fit max-w-full pointer-events-auto overflow-x-auto no-scrollbar bg-gray-800 rounded-md">
+        <Text content={`Title: ${title}`} size="sm" color="gray" additionalClassNames="shrink-0 whitespace-nowrap"/>
+        <Text content={`Author: ${author}`} size="sm" color="gray" additionalClassNames="shrink-0 whitespace-nowrap"/>
     </div>;
 }

@@ -105,10 +105,10 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | Test | What it verifies |
 |------|-----------------|
 | two players both spawn at the room entrance | Both players spawn at the entrance cell (`MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5`, `MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5`) |
-| player can update own object transform | A small move (within the desync threshold) is accepted near the target |
+| player can update own object transform | A move across open floor is accepted near the target |
 | player cannot move another player's object | Authority check: a user cannot move someone else's player |
 | objects are removed when user leaves room | A player object is cleaned up when its user leaves |
-| desync detection triggers when position jumps too far | A jump ≥ 3 units resets the player to the server-authoritative position |
+| a far position jump is accepted rather than force-resynced | Distance alone never reverts a move; only collision constrains it |
 | ServerUserManager.getPlayerMetadata mirrors live player-object metadata | The metadata snapshot matches the live player object |
 | disconnect-with-save persists lastRoomID and flushes the latest metadata | Disconnect-with-save writes `lastRoomID` and the latest metadata |
 | chat messages are stored in player metadata | A chat message lands in the player object's metadata |
@@ -226,7 +226,7 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | failed voxel operation sends rollback unicast to sender only | A rejected voxel op unicasts a rollback to the sender only |
 | no signal leaks to users in other rooms | A signal in one room never reaches users in another |
 | chat message multicast reaches room participants | `setObjectMetadataSignal` reaches room participants |
-| desync transform signal reaches ALL participants including sender | A desync correction broadcasts to everyone, sender included |
+| desync transform signal reaches ALL participants including sender | A rejected transform broadcasts an authoritative correction to everyone, sender included |
 
 ## Permissions (`permissions.test.ts`) — 5 tests
 

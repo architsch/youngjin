@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import PlayerController from "../../playerController";
 import GameObject from "../../../types/gameObject";
-import { playerViewTargetPosObservable } from "../../../../system/clientObservables";
+import { cameraModeObservable, playerViewTargetPosObservable } from "../../../../system/clientObservables";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
@@ -64,18 +64,8 @@ export default class FirstPersonCameraPose
 
         // If the current selection is out of the camera view for a certain duration,
         // automatically remove that selection so as to make the camera recover its normal pitch.
-        if (frustum.containsPoint(playerViewTargetPos)) // selection is in camera view
-        {
-            // Cancel the plan to unselect the current selection if it
-            // came back into the camera view before the timeout.
-            WorldSpaceSelectionUtil.cancelDelayedUnselectTimeout();
-        }
-        else // selection is NOT in camera view
-        {
-            // Unselect the current selection after a bit of delay.
-            if (!WorldSpaceSelectionUtil.unselectionPending())
-                WorldSpaceSelectionUtil.unselectAllAfterDelay(300);
-        }
+        if (!frustum.containsPoint(playerViewTargetPos))
+            WorldSpaceSelectionUtil.unselectAll();
 
         camera.getWorldPosition(cameraPos);
         player.obj.getWorldDirection(playerRightDir);

@@ -22,8 +22,6 @@ const minSelectionOrbitDistance = 5;
 
 export default class WorldSpaceSelectionUtil
 {
-    private static delayedUnselectTimeout: ReturnType<typeof setTimeout> | undefined;
-
     static isAnythingSelected(): boolean
     {
         return VoxelQuadSelection.isSelected() || ObjectSelection.isSelected();
@@ -33,26 +31,6 @@ export default class WorldSpaceSelectionUtil
     {
         VoxelQuadSelection.unselect();
         ObjectSelection.unselect();
-    }
-
-    static unselectionPending(): boolean
-    {
-        return this.delayedUnselectTimeout != undefined;
-    }
-
-    static unselectAllAfterDelay(delayInMillis: number)
-    {
-        this.cancelDelayedUnselectTimeout();
-        this.delayedUnselectTimeout = setTimeout(this.unselectAll, delayInMillis);
-    }
-
-    static cancelDelayedUnselectTimeout()
-    {
-        if (this.delayedUnselectTimeout)
-        {
-            clearTimeout(this.delayedUnselectTimeout);
-            this.delayedUnselectTimeout = undefined;
-        }
     }
 }
 
@@ -141,19 +119,5 @@ function getSelectionOrbitTarget(): AABB3 | null
     return null;
 }
 
-// If the previous selection was about to be unselected but then a new selection was made,
-// discard the pending unselection routine (because the previous selection became irrelevant).
-voxelQuadSelectionObservable.addListener("worldSpaceSelectionUtil", (selection: VoxelQuadSelection | null) => {
-    if (selection)
-    {
-        WorldSpaceSelectionUtil.cancelDelayedUnselectTimeout();
-    }
-    syncCameraModeWithSelection();
-});
-objectSelectionObservable.addListener("worldSpaceSelectionUtil", (selection: ObjectSelection | null) => {
-    if (selection)
-    {
-        WorldSpaceSelectionUtil.cancelDelayedUnselectTimeout();
-    }
-    syncCameraModeWithSelection();
-});
+voxelQuadSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
+objectSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
