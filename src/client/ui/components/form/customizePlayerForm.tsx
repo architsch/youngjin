@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Text from "../basic/text";
-import IconButton from "../input/iconButton";
-import CloseIcon from "../../svg/icons/closeIcon";
 import ClientObjectManager from "../../../object/clientObjectManager";
-import PopupUtil from "../../util/popupUtil";
 import useMouseDragScroll from "../../util/mouseDragScroll";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
@@ -82,10 +79,9 @@ export default function CustomizePlayerForm()
     };
 
     return <div className="absolute bottom-0 left-0 w-full z-40 flex flex-col pointer-events-none">
-        <div className="relative m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto">
-            <IconButton icon={<CloseIcon/>} size="sm" onClick={PopupUtil.closePopup}
-                additionalClassNames="absolute right-0 bottom-full mb-1"/>
-
+        {/* No close control of its own: this form is a mode, and while it is up the top bar carries
+            the single button that ends it (see ModeExitBar). */}
+        <div className="m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex">
             <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
                 {partSlots.map((slot, slotIndex) =>
                     <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">

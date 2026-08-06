@@ -9,7 +9,7 @@ export default function TabBar({ tabNames, selectedTabName, onSelect }: Props)
     // the bg would force `overflow-y` to `auto` per spec, which clips descenders
     // and the bottom edge by a few pixels in flex column ancestors. The inner div
     // is the actual horizontal scroller.
-    return <div className="bg-gray-800 p-1 shrink-0 rounded-md">
+    return <div className="bg-gray-800 p-1 shrink-0 rounded-md yj-surface-concave">
         <div ref={onRefChange}
             className="flex flex-row gap-1 w-full overflow-x-auto no-scrollbar">
             {tabNames.map(tabName => {

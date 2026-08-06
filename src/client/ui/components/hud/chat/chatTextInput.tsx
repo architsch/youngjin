@@ -50,7 +50,7 @@ export default function ChatTextInput({textInput, setTextInput}
         id="chatTextInput"
         type="text"
         ref={inputRef}
-        className="flex-4 m-1 p-1 justify-self-start text-left align-middle border-2 border-gray-700 rounded-md text-base text-gray-900 bg-gray-200 pointer-events-auto"
+        className="flex-4 m-1 px-2 h-10 justify-self-start text-left align-middle rounded-md text-base text-gray-900 bg-gray-200 pointer-events-auto yj-surface-concave"
         onInput={onInput}
         onCompositionEnd={onCompositionEnd}
         onFocus={onFocus}

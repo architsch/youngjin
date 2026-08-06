@@ -22,6 +22,7 @@ import Room from "../../shared/room/types/room";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import ClientObjectUtil from "./util/clientObjectUtil";
 import RoomLoadProgressUtil from "../system/util/roomLoadProgressUtil";
+import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
 const gameObjects: {[objectId: string]: GameObject} = {};
 const updatableGameObjects: {[objectId: string]: GameObject} = {};
@@ -272,7 +273,10 @@ const ClientObjectManager =
         // If the removed object was selected, unselect it.
         const sel = objectSelectionObservable.peek();
         if (sel && sel.gameObject.params.objectId === signal.objectId)
+        {
             ObjectSelection.unselect();
+            VoxelQuadSelection.trySelectBestQuadNearby(sel.gameObject.params.transform.pos);
+        }
         await ClientObjectManager.removeObject(signal.objectId, false);
     },
     onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {
@@ -288,14 +292,15 @@ const ClientObjectManager =
         ClientObjectManager.setObjectTransform(signal.objectId,
             signal.transform.pos, signal.transform.dir, signal.ignorePhysics, false);
 
-        // If the moved object was selected by this client, unselect it so the selection
-        // outline doesn't linger at the obsolete location. Gated on ignorePhysics to
-        // avoid clearing selections from continuous real-time physics updates.
+        // If the moved object was selected by this client, let the selection follow it to its new
+        // location: the outline and the menu are placed from the object's transform, so they would
+        // otherwise be left behind where it used to stand. Gated on ignorePhysics so that
+        // continuous real-time physics updates don't re-announce the selection every frame.
         if (signal.ignorePhysics)
         {
             const sel = objectSelectionObservable.peek();
             if (sel && sel.gameObject.params.objectId === signal.objectId)
-                ObjectSelection.unselect();
+                objectSelectionObservable.notify();
         }
     },
     // When the client receives a SetObjectMetadataSignal from the server,

@@ -21,7 +21,7 @@ export default function ScreenDiagram()
     if (!content) return null;
 
     return <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-        <div className="flex flex-col items-center gap-4 px-10 py-8 rounded-2xl bg-gray-900/80 border border-gray-600 shadow-xl">
+        <div className="flex flex-col items-center gap-4 px-10 py-8 rounded-2xl bg-gray-900/80 yj-surface-convex">
             {content.diagram === "drag_up" && <DragUpDiagram additionalClassNames="w-32 h-56"/>}
             <div className="max-w-[14rem] text-center text-base font-semibold text-gray-100"
                 dangerouslySetInnerHTML={{ __html: content.text }}/>

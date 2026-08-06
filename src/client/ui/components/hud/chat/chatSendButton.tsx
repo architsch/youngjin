@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import Button from "../../input/button";
 
 let cachedTextInput = "";
 
@@ -24,10 +25,14 @@ export default function ChatSendButton({textInput, sendMessage}
         }
     }, []);
 
-    return <button
+    // Wears the app's standard button look rather than one of its own, so that the one control the
+    // user reaches for most often is not the odd one out. It only takes the share of the chat row
+    // the text field beside it leaves over.
+    return <Button
         id="chatSendButton"
-        className="flex-1 m-1 px-2 py-1 justify-self-end text-center select-none touch-manipulation cursor-pointer align-middle border-2 border-green-900 rounded-md text-base text-gray-100 bg-green-700 pointer-events-auto"
-        onClick={() => sendMessage(textInput)}>
-            Send
-    </button>;
+        name="Send"
+        color="green"
+        onClick={() => sendMessage(textInput)}
+        additionalClassNames="flex-1 m-1"
+    />;
 }

@@ -1,5 +1,6 @@
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
+import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions";
 
 const VoxelQueryUtil =
 {
@@ -48,6 +49,8 @@ const VoxelQueryUtil =
         collisionLayer: number): number
     {
         const firstIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
+        if (firstIndex < 0)
+            return -1; // invalid voxel
         const offset = VoxelQueryUtil.getVoxelQuadIndexOffsetInsideLayer(facingAxis, orientation);
         if (offset >= NUM_VOXEL_QUADS_PER_COLLISION_LAYER)
             return -1; // invalid quad
@@ -57,12 +60,19 @@ const VoxelQueryUtil =
 
     getFirstVoxelQuadIndexInLayer(row: number, col: number, collisionLayer: number): number
     {
-        return VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(row, col) +
-            NUM_VOXEL_QUADS_PER_COLLISION_LAYER * collisionLayer;
+        const firstIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(row, col);
+        if (firstIndex < 0)
+            return -1; // invalid voxel
+        return firstIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER * collisionLayer;
     },
 
+    // Returns -1 if the coords fall outside the voxelGrid. A voxel's index is (row * NUM_VOXEL_COLS + col),
+    // so without this check a col of -1 or NUM_VOXEL_COLS would land on a real voxel one row away, letting
+    // a neighbor derived from a quad on the room's edge silently address the opposite edge.
     getFirstVoxelQuadIndexInVoxel(row: number, col: number): number
     {
+        if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
+            return -1; // invalid voxel
         const voxelIndex = row * NUM_VOXEL_COLS + col;
         return NUM_VOXEL_QUADS_PER_VOXEL * voxelIndex;
     },
@@ -120,13 +130,10 @@ const VoxelQueryUtil =
     // Get transform dimensions from properties
     //-------------------------------------------------------------------------------------
 
-    getVoxelQuadTransformDimensions(voxel: Voxel, quadIndex: number)
-        : { offsetX: number, offsetY: number, offsetZ: number,
-            dirX: number, dirY: number, dirZ: number,
-            scaleX: number, scaleY: number, scaleZ: number }
+    getVoxelQuadTransformDimensions(voxel: Voxel, quadIndex: number, ignoreVisibility: boolean = false): VoxelQuadTransformDimensions
     {
         const quad = voxel.quadsMem.quads[quadIndex];
-        if ((quad & 0b10000000) == 0) // quad is hidden
+        if (!ignoreVisibility && (quad & 0b10000000) == 0) // quad is hidden
             return { offsetX: 0, offsetY: -9999, offsetZ: 0, dirX: 0, dirY: -1, dirZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1 };
 
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);

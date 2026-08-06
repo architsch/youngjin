@@ -20,6 +20,7 @@ import CopyIcon from "../../svg/icons/copyIcon";
 import TooltipPanel from "../overlay/tooltipPanel";
 import CompactIconButton from "../input/compactIconButton";
 import QuestionMarkIcon from "../../svg/icons/questionMarkIcon";
+import PopupUtil from "../../util/popupUtil";
 
 export default function ConfigureMyRoomForm()
 {
@@ -99,16 +100,17 @@ export default function ConfigureMyRoomForm()
     }, [editorUserName, loadEditors]);
 
     const removeEditor = useCallback(async (userName: string) => {
-        if (!window.confirm("Do you really want to ban this user from editing your room?"))
-            return;
-        const response = await RoomAPIClient.setRoomUserRole(userName, UserRoleEnumMap.Visitor);
-        if (response.status >= 200 && response.status < 300)
-        {
-            notificationMessageObservable.set("Editor removed!");
-            loadEditors();
-        }
-        else
-            notificationMessageObservable.set("Failed to remove editor.");
+        PopupUtil.openPopup({
+            popupType: "confirm",
+            params: {
+                message: "Do you really want to ban this user from editing your room?",
+                onConfirm: () => {
+                    tryRemoveEditor(userName, loadEditors);
+                    PopupUtil.closePopup();
+                },
+                onCancel: PopupUtil.closePopup
+            }
+        });
     }, [loadEditors]);
 
     return <Form>
@@ -120,7 +122,7 @@ export default function ConfigureMyRoomForm()
             <Text content="Link to My Room:" size="sm"/>
         </div>
         <div className="flex flex-row items-center gap-1">
-            <div className="yj-text-xs text-gray-300 bg-gray-800 px-2 py-1 rounded-md break-all select-all">{roomURL}</div>
+            <div className="yj-text-xs text-gray-300 bg-gray-800 px-2 py-1 rounded-md break-all select-all yj-surface-concave">{roomURL}</div>
             <IconButton icon={<CopyIcon/>} size="sm" onClick={copyURL}/>
         </div>
 
@@ -176,4 +178,16 @@ export default function ConfigureMyRoomForm()
             onDismiss={closeTooltip}
         />}
     </Form>;
+}
+
+async function tryRemoveEditor(userName: string, callback: () => void)
+{
+    const response = await RoomAPIClient.setRoomUserRole(userName, UserRoleEnumMap.Visitor);
+    if (response.status >= 200 && response.status < 300)
+    {
+        notificationMessageObservable.set("Editor removed!");
+        callback();
+    }
+    else
+        notificationMessageObservable.set("Failed to remove editor.");
 }

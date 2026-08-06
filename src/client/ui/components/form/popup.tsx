@@ -36,7 +36,7 @@ export default function Popup({ children, showCloseButton = false, title = "" }:
                 PopupUtil.closePopup();
         }}
     >
-        <div className="relative w-fit h-fit text-lg text-gray-200 bg-gray-600 border-gray-400 border-2 rounded-lg">
+        <div className="relative w-fit h-fit p-1 text-lg text-gray-200 bg-gray-600 rounded-lg yj-surface-convex">
             {hasTopBar && <div className="flex flex-col">
                 <div className="flex flex-row">
                     {title.length > 0 && <Text size="sm" content={title}/>}

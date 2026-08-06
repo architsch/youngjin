@@ -4,7 +4,7 @@ import Chat from "./components/hud/chat/chat";
 import DebugStats from "./components/hud/debug/debugStats";
 import VoxelQuadSelectionMenu from "./components/hud/selection/voxelQuadSelectionMenu";
 import ObjectSelectionMenu from "./components/hud/selection/objectSelectionMenu";
-import SelectionCloseButton from "./components/hud/selection/selectionCloseButton";
+import ModeExitBar from "./components/hud/mode/modeExitBar";
 import UserRoomIdentity from "./components/hud/user/userRoomIdentity";
 import Loading from "./components/overlay/loading";
 import Notification from "./components/overlay/notification";
@@ -148,22 +148,25 @@ export default function UIRoot({ env, user }: UIRootProps)
     const isCustomizingPlayer = popupStack.some(state => state.popupType == "customizePlayer");
 
     const anythingSelected = objectSelection != null || voxelQuadSelection != null;
+    // A selection and the player-customization form amount to the same thing as far as the top edge
+    // of the screen is concerned: a mode that has suspended normal play and taken the top bar for
+    // its own way out. Whichever of the two is up, the controls that normally live there stand down.
+    const inExclusiveMode = anythingSelected || isCustomizingPlayer;
     const selectionEditUIShown = canModifyRoom && anythingSelected;
     const chatHidden = forceHideChat || !isRoomLoaded || selectionEditUIShown;
     const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || selectionEditUIShown;
 
     return <>
-        {/* A selection takes the top bar for itself, so the identity and room controls that
-            normally hold it step aside for as long as one is up. The debugger is the exception:
-            it is a development tool, and it is wanted most in the states that hide everything
-            else — hence its place after the bar here, which keeps it drawn on top of it. */}
-        {isMultiplayerRoomLoaded && !anythingSelected && <UserRoomIdentity
+        {/* A mode takes the top bar for itself, so the identity and room controls that normally
+            hold it step aside for as long as one is up. The debugger is the exception: it is a
+            development tool, and it is wanted most in the states that hide everything else — hence
+            its place after the bar here, which keeps it drawn on top of it. */}
+        {isMultiplayerRoomLoaded && !inExclusiveMode && <UserRoomIdentity
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
-            isCustomizingPlayer={isCustomizingPlayer}
         />}
-        <SelectionCloseButton canModifyRoom={canModifyRoom}/>
+        <ModeExitBar canModifyRoom={canModifyRoom} isCustomizingPlayer={isCustomizingPlayer}/>
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             <ObjectSelectionMenu canModifyRoom={canModifyRoom}/>
@@ -174,7 +177,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         {popupStack.map((state, i) => {
             switch (state.popupType)
             {
-                case "authPrompt": return <Popup key={i}>
+                case "authPrompt": return <Popup key={i} title="Login" showCloseButton={true}>
                     <AuthPromptForm/>
                 </Popup>;
                 case "confirm": return <Popup key={i}>

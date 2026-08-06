@@ -25,7 +25,7 @@ export default function ColorInput({ currValue, setColorHex }: Props)
     return <input
         ref={inputRef}
         type="color"
-        className={`w-8 h-8 p-0 shrink-0 bg-transparent border-2 border-gray-400 rounded-md cursor-pointer`}
+        className={`w-8 h-8 p-0 shrink-0 bg-transparent rounded-md cursor-pointer yj-surface-concave`}
         value={currValue}
         onChange={onChange}
         onFocus={onFocus}

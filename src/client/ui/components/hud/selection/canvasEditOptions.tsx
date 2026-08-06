@@ -18,6 +18,7 @@ import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
 import { useEffect } from "react";
 import FTUEUtil from "../../../util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
+import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 
 let changeImageButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 let changeFrameButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
@@ -62,7 +63,7 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
         };
     }, []);
 
-    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
+    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
             onClick={() => openRemoveConfirmPopup(props.selection)}
@@ -148,6 +149,7 @@ async function tryRemoveCanvas(selection: ObjectSelection)
 
     // Remove the game object locally, and report it to the server if successful.
     ObjectSelection.unselect();
+    VoxelQuadSelection.trySelectBestQuadNearby(selection.gameObject.params.transform.pos);
     const success = await ClientObjectManager.removeObject(objectId);
     if (success)
     {

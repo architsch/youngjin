@@ -172,11 +172,12 @@ function refreshSelection()
             return;
         }
 
-        // If the quad is hidden, just unselect.
+        // If the quad is hidden, select a nearby visible quad.
         const quad = existingSelection.voxel.quadsMem.quads[quadIndex];
         if ((quad & 0b10000000) == 0)
         {
             VoxelQuadSelection.unselect();
+            VoxelQuadSelection.trySelectBestQuad(existingSelection.voxel, quadIndex);
             return;
         }
 

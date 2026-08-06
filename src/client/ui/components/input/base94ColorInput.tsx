@@ -125,7 +125,7 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
     return <>
         <button
             ref={buttonRef}
-            className="w-8 h-6 p-0 shrink-0 border-2 border-gray-400 rounded-md cursor-pointer select-none touch-manipulation"
+            className="w-8 h-6 p-0 shrink-0 rounded-md cursor-pointer select-none touch-manipulation yj-surface-concave"
             style={{backgroundColor: ColorUtil.rgbToHex(ColorUtil.base94IndexToRGB(currValue))}}
             onClick={() => setPaletteOpen(prev => !prev)}
         />
@@ -136,7 +136,7 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
             <div className="fixed inset-0 z-50 pointer-events-none">
                 {/* The palette stays hidden until measured, so that it never flashes at an unanchored spot. */}
                 <div ref={onPaletteRefChange}
-                    className={`absolute p-2 flex flex-col gap-0.5 bg-gray-700 rounded-lg overflow-y-auto pointer-events-auto ${(paletteStyle == undefined) ? "invisible" : ""}`}
+                    className={`absolute p-2 flex flex-col gap-0.5 bg-gray-700 rounded-lg overflow-y-auto pointer-events-auto yj-surface-convex ${(paletteStyle == undefined) ? "invisible" : ""}`}
                     style={paletteStyle}>
                     {Array.from({length: Math.ceil(ColorUtil.base94PaletteSize / paletteColumns)}, (_, rowIndex) =>
                         <div key={"palette-row-" + rowIndex} className="flex flex-row gap-0.5">

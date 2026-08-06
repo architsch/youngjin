@@ -22,8 +22,7 @@ import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
-import Room from "../../../../../shared/room/types/room";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../../../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
@@ -31,6 +30,7 @@ import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import FTUEUtil from "../../../util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
+import NumUtil from "../../../../../shared/math/util/numUtil";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
@@ -85,7 +85,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         };
     }, [canAddCanvas]);
 
-    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md">
+    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
         <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveVoxelBlock(props.selection)}
             onClick={() => tryRemoveVoxelBlock(props.selection)}/>
@@ -167,8 +167,6 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
         if (tr == null)
             return;
 
-        VoxelQuadSelection.unselect();
-
         const room = App.getCurrentRoom()!;
         const user = App.getUser();
         const objectId = ObjectIdUtil.generateRandomObjectId();
@@ -181,6 +179,7 @@ async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
         {
             if (room.roomType != RoomTypeEnumMap.SinglePlayer)
                 SocketsClient.emitAddObjectSignal(signal);
+            VoxelQuadSelection.unselect();
             ObjectSelection.trySelect(gameObject);
         }
     } catch (err) {
@@ -256,20 +255,15 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
     for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
         quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
 
-    const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    if (ClientVoxelManager.addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
+    const idealQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
+    if (ClientVoxelManager.addVoxelBlock(room, idealQuadIndex, quadTextureIndicesWithinLayer))
     {
-        const voxelFound = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
-        if (voxelFound)
-        {
-            let selectionSucceeded = false;
-            selectionSucceeded = VoxelQuadSelection.trySelect(voxelFound, targetQuadIndex);
-            let trial = 0;
-            while (!selectionSucceeded && trial++ < 6)
-                selectionSucceeded = VoxelQuadSelection.trySelect(voxelFound, VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, quadDirections[trial].facingAxis, quadDirections[trial].orientation, newCollisionLayer));
-        }
+        VoxelQuadSelection.unselect();
+        const idealVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
+        if (idealVoxel)
+            VoxelQuadSelection.trySelectBestQuad(idealVoxel, idealQuadIndex);
         if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-            SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, targetQuadIndex, quadTextureIndicesWithinLayer));
+            SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, idealQuadIndex, quadTextureIndicesWithinLayer));
     }
 }
 
@@ -294,61 +288,30 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
 
     if (ClientVoxelManager.removeVoxelBlock(room, quadIndex))
     {
+        VoxelQuadSelection.unselect();
+
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-        let dirIndex = -1;
-        for (let i = 0; i < quadDirections.length; ++i)
-        {
-            const dir = quadDirections[i];
-            if (dir.facingAxis == facingAxis && dir.orientation == orientation)
-            {
-                dirIndex = i;
-                break;
-            }
-        }
-        for (let i = 0; i < quadDirections.length; ++i)
-        {
-            const dir = quadDirections[dirIndex];
-            if (trySelectNeighboringVoxelQuadInDirectionOfRemoval(
-                room, quadIndex, dir.facingAxis, dir.orientation))
-            {
-                break;
-            }
-            dirIndex = (dirIndex + 1) % quadDirections.length;
-        }
+        const newRow = NumUtil.clampInRange(
+            (facingAxis == "z") ? (orientation == "-" ? row+1 : row-1) : row,
+            0, NUM_VOXEL_ROWS-1);
+        const newCol = NumUtil.clampInRange(
+            (facingAxis == "x") ? (orientation == "-" ? col+1 : col-1) : col,
+            0, NUM_VOXEL_COLS-1);
+        const newCollisionLayer = (facingAxis == "y")
+            ? VoxelQueryUtil.getVoxelQuadCollisionLayerAfterOffset(quadIndex, (orientation == "-") ? 1 : -1)
+            : collisionLayer;
+        
+        const idealQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
+        const idealVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
+        if (idealVoxel)
+            VoxelQuadSelection.trySelectBestQuad(idealVoxel, idealQuadIndex);
 
         if (room.roomType != RoomTypeEnumMap.SinglePlayer)
             SocketsClient.emitRemoveVoxelBlockSignal(new RemoveVoxelBlockSignal(room.id, quadIndex));
     }
 }
-
-function trySelectNeighboringVoxelQuadInDirectionOfRemoval(room: Room, quadIndex: number,
-    facingAxis: "x" | "y" | "z", orientation: "-" | "+"): boolean
-{
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-    const newRow = (facingAxis == "z") ? (orientation == "-" ? row+1 : row-1) : row;
-    const newCol = (facingAxis == "x") ? (orientation == "-" ? col+1 : col-1) : col;
-    const newCollisionLayer = (facingAxis == "y")
-        ? VoxelQueryUtil.getVoxelQuadCollisionLayerAfterOffset(quadIndex, (orientation == "-") ? 1 : -1)
-        : collisionLayer;
-    const voxelFound = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
-    if (voxelFound)
-    {
-        return (VoxelQuadSelection.trySelect(voxelFound,
-            VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer)));
-    }
-    else
-        return false;
-}
-
-const quadDirections: { facingAxis: "x" | "y" | "z", orientation: "-" | "+" }[] = [
-    { facingAxis: "y", orientation: "-" },
-    { facingAxis: "y", orientation: "+" },
-    { facingAxis: "x", orientation: "-" },
-    { facingAxis: "x", orientation: "+" },
-    { facingAxis: "z", orientation: "-" },
-    { facingAxis: "z", orientation: "+" },
-];

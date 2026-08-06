@@ -22,7 +22,7 @@ const panelClassNames = {
     gray: "yj-panel-gray",
     green: "yj-panel-green",
     red: "yj-panel-red",
-    disabled: "yj-panel-gray opacity-50 cursor-not-allowed",
+    disabled: "yj-panel-disabled opacity-50 cursor-not-allowed",
     transparent: "pointer-events-auto",
 };
 

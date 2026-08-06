@@ -117,17 +117,62 @@
       -1px  0   0 #000,                    1px  0   0 #000,
       -1px  1px 0 #000,  0    1px 0 #000,  1px  1px 0 #000;
   }
+  /* The light fill of a text field. Its edge comes from `yj-surface-concave`, which every use of
+     this pairs with — a field is a well, and the well is what the edge draws. */
   .yj-panel-white {
-    @apply text-gray-800 bg-gray-100 border border-gray-400 rounded-md pointer-events-auto
+    @apply text-gray-800 bg-gray-100 rounded-md pointer-events-auto
+  }
+  /* The look worn by Button and IconButton. A control barely wider than the fingertip that presses
+     it has nothing around it to explain what it is, so its shape has to say it can be pressed: a
+     face shaded from light at the top to dark at the bottom, a border carrying that same fall of
+     light, and a shadow beneath lifting it off the 3D scene behind — together, a surface bulging
+     out of the screen rather than a patch of colour printed on it.
+     The lit and shaded edges are kept to a couple of pixels: the same shape the screen-wide bar
+     wears, only scaled down, since at these sizes a thicker one would swallow the button instead of
+     framing it. Pressing turns the shading around and drops the shadow, so the face sinks in under
+     the finger; on a touch screen there is no hover, and this is the only answer a press ever gets. */
+  .yj-panel-gray,
+  .yj-panel-green,
+  .yj-panel-red {
+    @apply border rounded-md pointer-events-auto;
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.20),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+      inset 2px 0 0 rgba(255, 255, 255, 0.08),
+      inset -2px 0 0 rgba(0, 0, 0, 0.16),
+      0 2px 4px rgba(0, 0, 0, 0.40);
   }
   .yj-panel-gray {
-    @apply text-gray-200 bg-gray-700 border border-gray-500 rounded-md pointer-events-auto
+    @apply text-gray-100 bg-linear-to-b from-gray-600 to-gray-800
+      border-t-gray-400 border-b-gray-900 border-x-gray-600;
   }
   .yj-panel-green {
-    @apply text-green-200 bg-green-700 border border-green-500 rounded-md pointer-events-auto
+    @apply text-green-50 bg-linear-to-b from-green-600 to-green-800
+      border-t-green-400 border-b-green-900 border-x-green-600;
   }
   .yj-panel-red {
-    @apply text-pink-200 bg-pink-700 border border-pink-500 rounded-md pointer-events-auto
+    @apply text-pink-50 bg-linear-to-b from-pink-600 to-pink-800
+      border-t-pink-400 border-b-pink-900 border-x-pink-600;
+  }
+  .yj-panel-gray:active,
+  .yj-panel-green:active,
+  .yj-panel-red:active {
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55);
+  }
+  .yj-panel-gray:active {
+    @apply from-gray-800 to-gray-700 border-t-gray-900 border-b-gray-500 border-x-gray-700;
+  }
+  .yj-panel-green:active {
+    @apply from-green-800 to-green-700 border-t-green-900 border-b-green-500 border-x-green-700;
+  }
+  .yj-panel-red:active {
+    @apply from-pink-800 to-pink-700 border-t-pink-900 border-b-pink-500 border-x-pink-700;
+  }
+  /* A control that cannot be pressed is drawn flat, keeping none of the raised shading above: a
+     surface that bulges out of the screen is an invitation, and a disabled control has none to
+     make. It keeps the footprint of the raised look exactly, borders included. */
+  .yj-panel-disabled {
+    @apply text-gray-200 bg-gray-700 border border-gray-500 rounded-md pointer-events-auto
   }
   /* The look worn by CompactIconButton: round rather than boxy, and with its border pulled in
      close to its fill in brightness, so that a button sitting beside other content stays a quiet
@@ -135,47 +180,49 @@
   .yj-panel-gray-compact {
     @apply text-gray-300 bg-gray-700 border border-gray-600 rounded-full pointer-events-auto
   }
-  .yj-panel-white-no-outline {
-    @apply text-gray-800 bg-gray-100 rounded-md pointer-events-auto
-  }
-  .yj-panel-gray-no-outline {
-    @apply text-gray-200 bg-gray-700 rounded-md pointer-events-auto
-  }
-  .yj-panel-green-no-outline {
-    @apply text-green-200 bg-green-700 rounded-md pointer-events-auto
-  }
-  .yj-panel-red-no-outline {
-    @apply text-pink-200 bg-pink-700 rounded-md pointer-events-auto
-  }
-  /* The look worn by a button that spans a whole edge of the screen. Such a button has no
-     neighbours to be told apart from and no room to be boxed in, so the shape it is given is what
-     has to say it can be pressed: a face shaded from light at the top to dark at the bottom, thick
-     borders that carry the same fall of light, and a shadow beneath it lifting it off the 3D scene
-     behind — together, a surface bulging out of the screen rather than a caption printed on it.
-     The border is closed on all four sides, the two ends in a tone between the lit top and the
-     shaded bottom: a bar whose ends are left open runs off the screen to the eye instead of ending
-     at it, and a button that appears to be cut off is not one the user reads as whole.
-     Pressing it turns the shading around and drops the shadow, so the face sinks in under the
-     finger; on a touch screen there is no hover, and this is the only answer a press ever gets. */
-  .yj-bar-convex {
-    @apply text-gray-100 bg-linear-to-b from-gray-600 to-gray-800
-      border-2 border-t-gray-400 border-b-gray-900 border-x-gray-600 pointer-events-auto;
-    box-shadow:
-      inset 0 3px 0 rgba(255, 255, 255, 0.22),
-      inset 0 -3px 0 rgba(0, 0, 0, 0.30),
-      inset 3px 0 0 rgba(255, 255, 255, 0.10),
-      inset -3px 0 0 rgba(0, 0, 0, 0.18),
-      0 3px 7px rgba(0, 0, 0, 0.45);
-  }
-  .yj-bar-convex:active {
-    @apply from-gray-800 to-gray-700 border-t-gray-900 border-b-gray-500 border-x-gray-700;
-    box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.55);
-  }
-  /* Marks a button as being toggled on. Declared after the panel colors above so it
-     overrides their text/background/border, and it alters no box-model property, so
-     a highlighted button keeps the exact footprint of its unhighlighted self. */
+  /* Marks a button as being toggled on. Declared after the panel colors above so it overrides their
+     shading, and it alters no box-model property, so a highlighted button keeps the exact footprint
+     of its unhighlighted self. It stays raised like any other button — being on is not the same as
+     being held down — with the glow of an "on" state added around it. */
   .yj-panel-highlight {
-    @apply text-amber-100 bg-amber-600 border-amber-300;
-    box-shadow: 0 0 8px 2px rgba(253, 224, 71, 0.5);
+    @apply text-amber-50 bg-linear-to-b from-amber-500 to-amber-700
+      border-t-amber-200 border-b-amber-800 border-x-amber-500;
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.28),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+      0 0 8px 2px rgba(253, 224, 71, 0.5);
+  }
+  /* Declared last of all, so that pressing a highlighted button sinks it in the same way as any
+     other, rather than the press style of the color underneath winning on source order. */
+  .yj-panel-highlight:active {
+    @apply from-amber-700 to-amber-600 border-t-amber-900 border-b-amber-400 border-x-amber-600;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.50);
+  }
+  /* The edge worn by a panel that holds controls — a popup body, a HUD tray, a dropdown. Now that
+     the buttons standing on them bulge out of the screen, a panel bounded by a flat hairline reads
+     as a hole those buttons are floating over; this gives the panel the same fall of light at a
+     fraction of the strength, so it reads instead as a slab they are resting on. Restraint is the
+     whole point: a container competing with its own contents for the eye has failed at being one.
+     The panel keeps its own background — only the lit top edge, the shaded bottom one, and the
+     shadow underneath are supplied here, which lets a single bevel serve every background in the
+     app, opaque or translucent. */
+  .yj-surface-convex {
+    @apply border border-t-white/25 border-x-white/10 border-b-black/50;
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.09),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+      0 4px 10px rgba(0, 0, 0, 0.45);
+  }
+  /* The same idea turned inside out, for anything that holds a value the user puts there — a text
+     field, a slider, a colour well, a readout, the track a set of tabs sits in. The shadow falls
+     across the top edge and the light catches the bottom, so the surface reads as a well cut into
+     the panel rather than a tile sitting on it: it looks like it has room to hold something, and
+     it can never be mistaken for one of the raised things that are meant to be pressed. Nothing is
+     cast outward, since a recess has nothing to cast a shadow onto. */
+  .yj-surface-concave {
+    @apply border border-t-black/45 border-x-black/25 border-b-white/25;
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.38),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   }
 }

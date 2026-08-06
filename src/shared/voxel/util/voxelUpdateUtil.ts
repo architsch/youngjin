@@ -47,7 +47,12 @@ const VoxelUpdateUtil =
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col)!;
+        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+        if (!voxel)
+        {
+            console.error(`VoxelUpdateUtil::addVoxelBlock :: Voxel not found (quadIndex=${quadIndex})`);
+            return false;
+        }
         voxel.collisionLayerMask |= (1 << collisionLayer);
 
         updateAllVoxelBlockSides(voxels, voxel, collisionLayer, quadTextureIndicesWithinLayer);
@@ -115,7 +120,12 @@ const VoxelUpdateUtil =
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col)!;
+        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+        if (!voxel)
+        {
+            console.error(`VoxelUpdateUtil::removeVoxelBlock :: Voxel not found (quadIndex=${quadIndex})`);
+            return false;
+        }
         voxel.collisionLayerMask &= ~(1 << collisionLayer);
 
         updateAllVoxelBlockSides(voxels, voxel, collisionLayer);
@@ -186,11 +196,17 @@ const VoxelUpdateUtil =
         const addCol = VoxelQueryUtil.getVoxelColFromQuadIndex(targetQuadIndex);
         const addCollisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(targetQuadIndex);
 
-        const addVoxel = VoxelQueryUtil.getVoxel(voxels, addRow, addCol)!;
+        const addVoxel = VoxelQueryUtil.getVoxel(voxels, addRow, addCol);
+        const removeVoxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+        if (!addVoxel || !removeVoxel)
+        {
+            console.error(`VoxelUpdateUtil::moveVoxelBlock :: Voxel not found (quadIndex=${quadIndex}, targetQuadIndex=${targetQuadIndex})`);
+            return false;
+        }
+
         addVoxel.collisionLayerMask |= (1 << addCollisionLayer);
         updateAllVoxelBlockSides(voxels, addVoxel, addCollisionLayer, quadTextureIndicesWithinLayer);
 
-        const removeVoxel = VoxelQueryUtil.getVoxel(voxels, row, col)!;
         removeVoxel.collisionLayerMask &= ~(1 << collisionLayer);
         updateAllVoxelBlockSides(voxels, removeVoxel, collisionLayer);
 
@@ -227,7 +243,12 @@ const VoxelUpdateUtil =
         }
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col)!;
+        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+        if (!voxel)
+        {
+            console.error(`VoxelUpdateUtil::setVoxelQuadTexture :: Voxel not found (quadIndex=${quadIndex})`);
+            return false;
+        }
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);

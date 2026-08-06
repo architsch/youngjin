@@ -4,12 +4,19 @@ import { clientFeatureFlagsObservable, objectSelectionObservable, playerViewTarg
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
-import { NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
+import VoxelQuadTransformDimensions from "../../../../shared/voxel/types/voxelQuadTransformDimensions";
+import App from "../../../app";
+import Vec3 from "../../../../shared/math/types/vec3";
+import NumUtil from "../../../../shared/math/util/numUtil";
 
 const tempPos = new THREE.Vector3();
+const tempPos2 = new THREE.Vector3();
+const tempPos3 = new THREE.Vector3();
+const tempPos4 = new THREE.Vector3();
 const tempDir = new THREE.Vector3();
 const tempScale = new THREE.Vector3();
 
@@ -27,6 +34,94 @@ export default class VoxelQuadSelection
     static isSelected(): boolean
     {
         return voxelQuadSelectionObservable.peek() != null;
+    }
+
+    static trySelectBestQuadNearby(position: Vec3): boolean
+    {
+        const room = App.getCurrentRoom();
+        if (!room)
+            return false;
+        const voxels = room.voxelGrid.voxels;
+        const idealVoxel = VoxelQueryUtil.getVoxel(voxels, Math.floor(position.z), Math.floor(position.x));
+        if (!idealVoxel)
+            return false;
+        const idealCollisionLayer = NumUtil.clampInRange(
+            COLLISION_LAYER_MIN + Math.floor(2 * position.y),
+            COLLISION_LAYER_MIN, COLLISION_LAYER_MAX);
+        const idealQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
+            idealVoxel.row, idealVoxel.col, "y", "+", idealCollisionLayer);
+        return VoxelQuadSelection.trySelectBestQuad(idealVoxel, idealQuadIndex);
+    }
+
+    static trySelectBestQuad(idealVoxel: Voxel, idealQuadIndex: number): boolean
+    {
+        if (VoxelQuadSelection.trySelect(idealVoxel, idealQuadIndex))
+            return true;
+
+        // If selecting the ideal voxelQuad failed, try selecting the best alternative (e.g. nearest voxelQuad).
+        const idealDims = VoxelQueryUtil.getVoxelQuadTransformDimensions(idealVoxel, idealQuadIndex, true);
+        const idealCollisionLayer = getCollisionLayerToSearchAround(idealQuadIndex);
+        const minCollisionLayer = Math.max(idealCollisionLayer-1, COLLISION_LAYER_MIN);
+        const maxCollisionLayer = Math.min(idealCollisionLayer+1, COLLISION_LAYER_MAX);
+        const candidates: VoxelQuadSelectionCandidate[] = [];
+        const room = App.getCurrentRoom();
+        if (!room)
+            return false;
+        const voxels = room.voxelGrid.voxels;
+        for (let row = idealVoxel.row-1; row <= idealVoxel.row+1; ++row)
+        {
+            for (let col = idealVoxel.col-1; col <= idealVoxel.col+1; ++col)
+            {
+                const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+                if (!voxel)
+                    continue;
+                for (let collisionLayer = minCollisionLayer; collisionLayer <= maxCollisionLayer; ++collisionLayer)
+                    addVoxelQuadSelectionCandidatesFromLayer(voxel, collisionLayer, candidates);
+                addVoxelQuadSelectionCandidatesFromLayer(voxel, COLLISION_LAYER_NULL, candidates);
+            }
+        }
+        const camera = GraphicsManager.getCamera();
+        const cameraPos = tempPos;
+        camera.getWorldPosition(cameraPos);
+        const idealQuadPos = tempPos2;
+        idealQuadPos.set(
+            idealVoxel.col + 0.5 + idealDims.offsetX,
+            idealDims.offsetY,
+            idealVoxel.row + 0.5 + idealDims.offsetZ
+        );
+
+        candidates.sort((a, b) => {
+            const aPos = tempPos3;
+            aPos.set(
+                a.voxel.col + 0.5 + a.dims.offsetX,
+                a.dims.offsetY,
+                a.voxel.row + 0.5 + a.dims.offsetZ
+            );
+            const bPos = tempPos4;
+            bPos.set(
+                b.voxel.col + 0.5 + b.dims.offsetX,
+                b.dims.offsetY,
+                b.voxel.row + 0.5 + b.dims.offsetZ
+            );
+            
+            const aDistFromIdealQuad = idealQuadPos.distanceTo(aPos);
+            const bDistFromIdealQuad = idealQuadPos.distanceTo(bPos);
+            const aDistFromCamera = cameraPos.distanceTo(aPos);
+            const bDistFromCamera = cameraPos.distanceTo(bPos);
+            const aDistScore = aDistFromIdealQuad + 0.1 * aDistFromCamera;
+            const bDistScore = bDistFromIdealQuad + 0.1 * bDistFromCamera;
+
+            // Prioritize voxelQuads that are closer to the ideal voxelQuad.
+            // In case of a tie (or near-tie), prefer the one which is closer to the camera.
+            return aDistScore - bDistScore;
+        });
+
+        for (const candidate of candidates)
+        {
+            if (VoxelQuadSelection.trySelect(candidate.voxel, candidate.quadIndex))
+                return true;
+        }
+        return false;
     }
 
     static trySelect(voxel: Voxel, quadIndex: number): boolean
@@ -134,3 +229,45 @@ roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemor
         selectionOutline = null;
     }
 });
+
+// The collisionLayer whose neighborhood should be searched for an alternative to the given quad.
+// A quad belonging to the room's own floor or ceiling sits in no collisionLayer at all,
+// so it is answered for by the layer lying against whichever end of the room it belongs to.
+function getCollisionLayerToSearchAround(quadIndex: number): number
+{
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    if (collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX)
+        return collisionLayer;
+    return (VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex) == "+")
+        ? COLLISION_LAYER_MIN // the floor, which faces upward
+        : COLLISION_LAYER_MAX; // the ceiling, which faces downward
+}
+
+function addVoxelQuadSelectionCandidatesFromLayer(voxel: Voxel, collisionLayer: number,
+    candidates: VoxelQuadSelectionCandidate[])
+{
+    const numQuadsInLayer = (collisionLayer == COLLISION_LAYER_NULL)
+        ? 2 // floor + ceiling
+        : NUM_VOXEL_QUADS_PER_COLLISION_LAYER;
+
+    for (let quadIndexOffset = 0; quadIndexOffset < numQuadsInLayer; ++quadIndexOffset)
+    {
+        const firstIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
+            voxel.row, voxel.col, collisionLayer);
+        const quadIndex = firstIndex + quadIndexOffset;
+        // Register the quad as a candidate only if it is visible.
+        if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) != 0)
+        {
+            const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(
+                voxel, quadIndex);
+            candidates.push({voxel, quadIndex, dims});
+        }
+    }
+}
+
+interface VoxelQuadSelectionCandidate
+{
+    voxel: Voxel,
+    quadIndex: number,
+    dims: VoxelQuadTransformDimensions,
+}

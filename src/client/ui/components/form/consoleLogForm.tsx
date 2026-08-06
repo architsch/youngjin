@@ -76,7 +76,7 @@ const followingThresholdInPixels = 24;
 // select-text overrides the page-wide select-none, so the log can also be picked up by hand where
 // the clipboard is unavailable; break-all keeps a long unbroken token (a URL, a stack frame) from
 // widening the panel instead of wrapping inside it.
-const logPanelClassName = "w-[70vw] h-[55vh] min-h-0 p-2 overflow-auto rounded-md " +
+const logPanelClassName = "w-[70vw] h-[55vh] min-h-0 p-2 overflow-auto rounded-md yj-surface-concave " +
     "bg-black text-gray-300 text-left text-[10px] leading-snug font-mono " +
     "whitespace-pre-wrap break-all select-text pointer-events-auto";
 

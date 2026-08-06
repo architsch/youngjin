@@ -16,7 +16,6 @@ export default function UserRoomIdentity({
     user,
     userRole,
     currentRoomID,
-    isCustomizingPlayer,
 }: Props)
 {
     const isGuest = user.userType === UserTypeEnumMap.Guest;
@@ -110,18 +109,12 @@ export default function UserRoomIdentity({
                 PopupUtil.openPopup({popupType: "configureMyRoom"});
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings);
             }}/>}
-            {/* Toggles the player-customization form. Highlighting it while the form is
-                open is what tells the user that clicking it again closes the form. */}
-            <IconButton id="customizePlayerButton" icon={<PersonIcon/>} size="sm" highlight={isCustomizingPlayer} onClick={() => {
-                if (isCustomizingPlayer)
-                {
-                    PopupUtil.closePopup();
-                }
-                else
-                {
-                    PopupUtil.openPopup({popupType: "customizePlayer"});
-                    FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer);
-                }
+            {/* Opens the player-customization form, which takes the top bar — and with it this
+                whole row — for as long as it is up, so closing the form is the top bar's job
+                rather than this button's. */}
+            <IconButton id="customizePlayerButton" icon={<PersonIcon/>} size="sm" onClick={() => {
+                PopupUtil.openPopup({popupType: "customizePlayer"});
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer);
             }}/>
         </div>
         <div className="flex flex-row items-end justify-end gap-2">
@@ -149,5 +142,4 @@ interface Props
     user: User;
     userRole: UserRole;
     currentRoomID: string;
-    isCustomizingPlayer: boolean;
 }

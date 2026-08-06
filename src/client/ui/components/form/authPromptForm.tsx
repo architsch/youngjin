@@ -1,16 +1,12 @@
-import Spacer from "../basic/spacer";
 import Button from "../input/button";
-import Text from "../basic/text";
 import Form from "./form";
-import PopupUtil from "../../util/popupUtil";
 import UserAPIClient from "../../../networking/client/userAPIClient";
+import Spacer from "../basic/spacer";
 
 export default function AuthPromptForm()
 {
     return <Form>
-        <Text content="Login" size="lg"/>
         <Spacer size="sm"/>
-        <Button name="Continue as Guest" size="md" onClick={PopupUtil.closePopup}/>
         <Button name="Login with Google" size="md" onClick={UserAPIClient.loginWithGoogle}/>
     </Form>
 }

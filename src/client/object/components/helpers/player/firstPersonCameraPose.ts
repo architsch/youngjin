@@ -62,7 +62,7 @@ export default class FirstPersonCameraPose
         mat4Temp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
         frustum.setFromProjectionMatrix(mat4Temp);
 
-        // If the current selection is out of the camera view for a certain duration,
+        // If the current selection is out of the camera view,
         // automatically remove that selection so as to make the camera recover its normal pitch.
         if (!frustum.containsPoint(playerViewTargetPos))
             WorldSpaceSelectionUtil.unselectAll();

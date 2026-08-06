@@ -27,7 +27,7 @@ export default function TextInput({type = "text", size = "md", placeholder = "",
     return <input
         ref={inputRef}
         type={type}
-        className={`text-left ${textClassNames[size]} yj-panel-white`}
+        className={`text-left ${textClassNames[size]} yj-panel-white yj-surface-concave`}
         placeholder={placeholder}
         value={currValue}
         onInput={onInput}

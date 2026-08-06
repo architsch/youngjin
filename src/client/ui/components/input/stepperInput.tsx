@@ -24,7 +24,9 @@ export default function StepperInput({ currValue, numValues, setValue, preview, 
 
     return <div className={`flex flex-row items-center gap-1 shrink-0 ${additionalClassNames}`}>
         <IconButton icon={<TriangleLeftIcon/>} onClick={() => step(-1)}/>
-        <div className="flex items-center justify-center shrink-0 min-w-10 h-10 px-1 text-sm select-none yj-panel-gray-no-outline">
+        {/* Sunken between the two raised arrows: it is what the stepper currently holds,
+            not a third thing to press. */}
+        <div className="flex items-center justify-center shrink-0 min-w-10 h-10 px-1 text-sm select-none rounded-md bg-gray-700 text-gray-200 yj-surface-concave">
             {preview ?? `${currValue + 1}/${numValues}`}
         </div>
         <IconButton icon={<TriangleRightIcon/>} onClick={() => step(1)}/>

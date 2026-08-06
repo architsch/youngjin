@@ -21,7 +21,7 @@ export default function CanvasDesc(props: {selection: ObjectSelection})
 
     // A long title or author name is not truncated: the panel stays within the screen and the text
     // runs past its edge, to be scrolled through sideways (by drag on a mouse, by swipe on touch).
-    return <div ref={onRefChange} className="flex flex-row gap-2 p-2 w-fit max-w-full pointer-events-auto overflow-x-auto no-scrollbar bg-gray-800 rounded-md">
+    return <div ref={onRefChange} className="flex flex-row gap-2 p-2 w-fit max-w-full pointer-events-auto overflow-x-auto no-scrollbar bg-gray-800 rounded-md yj-surface-convex">
         <Text content={`Title: ${title}`} size="sm" color="gray" additionalClassNames="shrink-0 whitespace-nowrap"/>
         <Text content={`Author: ${author}`} size="sm" color="gray" additionalClassNames="shrink-0 whitespace-nowrap"/>
     </div>;

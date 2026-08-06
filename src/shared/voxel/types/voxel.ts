@@ -40,9 +40,9 @@ export default class Voxel extends EncodableData
         const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.row, this.col);
         
         bufferState.view[bufferState.byteIndex++] =
-            quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2]; // Floor Byte (= second last quad of the voxel)
+            quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2]; // Ceiling Byte (= second last quad of the voxel)
         bufferState.view[bufferState.byteIndex++] =
-            quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1]; // Ceiling Byte (= last quad of the voxel)
+            quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1]; // Floor Byte (= last quad of the voxel)
 
         // CollisionLayerMask Byte
         bufferState.view[bufferState.byteIndex++] = this.collisionLayerMask;
@@ -75,9 +75,9 @@ export default class Voxel extends EncodableData
         const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(temp_row, temp_col);
 
         quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2] =
-            bufferState.view[bufferState.byteIndex++]; // Floor Byte (= second last quad of the voxel)
+            bufferState.view[bufferState.byteIndex++]; // Ceiling Byte (= second last quad of the voxel)
         quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1] =
-            bufferState.view[bufferState.byteIndex++]; // Ceiling Byte (= last quad of the voxel)
+            bufferState.view[bufferState.byteIndex++]; // Floor Byte (= last quad of the voxel)
 
         // CollisionLayerMask Byte
         const collisionLayerMask = bufferState.view[bufferState.byteIndex++];
@@ -135,13 +135,13 @@ export default class Voxel extends EncodableData
 // Each Voxel's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Floor Byte][Ceiling Byte][CollisionLayerMask Byte][6-Byte CollisionLayer Content][6-Byte CollisionLayer Content]...
-//
-// [Floor Byte]:
-//     8 bits for the floor's (+y) facing quad
+// Layout: [Ceiling Byte][Floor Byte][CollisionLayerMask Byte][6-Byte CollisionLayer Content][6-Byte CollisionLayer Content]...
 //
 // [Ceiling Byte]:
 //     8 bits for the ceiling's (-y) facing quad
+//
+// [Floor Byte]:
+//     8 bits for the floor's (+y) facing quad
 //
 // [CollisionLayerMask Byte]:
 //     8 bits for the voxel's collisionLayerMask (e.g. Least significant bit represents whether the range y=[0,0.5] is occupied, second least significant bit represents whether the range y=[0.5,1] is occupied, and so on)
