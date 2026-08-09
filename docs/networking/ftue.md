@@ -4,7 +4,7 @@ Reference: @src/client/ui/util/ftueUtil.ts , @src/client/ui/types/ftueElementCod
 
 ## What it is
 
-The tutorial teaches the basics in a room of its own (see [single_player_mode.md](single_player_mode.md)). The FTUE system picks up where it leaves off: once the user is in a real room, it points out the features they have not tried yet — customizing their character, signing up, setting up their own room, hanging a picture on a wall and dressing it up.
+The tutorial teaches the basics in a room of its own (see [single_player_mode.md](single_player_mode.md)). The FTUE system picks up where it leaves off: once the user is in a real room, it points out the features they have not tried yet — customizing their character, setting up their own room, hanging a picture on a wall and dressing it up.
 
 Each such feature is an **FTUE element**. An element is *experienced* once the user has been through it, and guidance for an experienced element never appears again. That record is persisted, so it also holds across sessions.
 
@@ -26,7 +26,7 @@ Several marks may be on screen at once. Because each is triggered by whatever UI
 
 Guidance is scheduled by the UI that owns the control, and the triggers come in two shapes:
 
-- **Dwell** — the control has been within reach, unused, for a stretch of uninterrupted time in the room. This is how the character-customization button, the sign-up button (guests only), and the own-room settings button (in the user's own room only) are advertised, each after its own wait.
+- **Dwell** — the control has been within reach, unused, for a stretch of uninterrupted time in the room. This is how the character-customization button and the own-room settings button (in the user's own room only) are advertised, each after its own wait.
 - **Context** — the user has just selected something and the menu for it has opened. The mark follows a short beat later, so it does not race the menu's own appearance. This is how adding a picture to a wall, and then changing that picture's image and frame, are advertised.
 
 Because guidance is scheduled ahead of time, the user may well discover the feature on their own before the mark is due — so `FTUEUtil` re-checks at that moment and stays quiet if there is nothing left to say.
@@ -41,15 +41,15 @@ So the same condition that schedules a mark also ends it: the UI that owns the c
 
 ## What counts as being experienced
 
-For most elements it is the user's own use of the control: clicking it (or choosing something in the popup it opens) records the element, and recording it is also what takes its coach mark down.
+It is always the user's own use of the control, never the guidance being shown: clicking the control records the element, and recording it is also what takes its coach mark down. Showing a mark records nothing on its own — it is an offer, and an offer the user ignores leaves them no more experienced than before.
 
-For guidance whose feature ends the session — signing up takes the user away as a different user — there is no such follow-up click to wait for, so showing the mark once *is* the experience and it is recorded as it goes up. Since a record dismisses its own mark, that one is made before the mark appears rather than after, which is why `FTUEUtil` treats showing-and-recording as a single step instead of leaving the order to each call site.
+Reaching the control is the whole of it. Where the control opens a chooser, the element is recorded on opening it rather than on settling for something inside: a user who opened the chooser and backed out has already found the feature, and pointing them at it again would be telling them something they know.
 
 ## Where the record lives
 
 The experienced elements are kept as a single string on the user record, one character per element, so that introducing a new element never needs a schema change. Two properties of that encoding matter:
 
-- **The mapping is positional and permanent.** An element's character must never change once users have it stored.
+- **The mapping is positional and permanent.** An element's character must never change once users have it stored. A retired element is therefore left in place as a reserved hole rather than removed: closing the gap up would shift every element after it onto another feature's character, so returning users would be credited with guidance they never saw and re-offered guidance they did.
 - **Only letters are stored.** The user's record is embedded verbatim in the page that boots the client app, so a character such as a quote or a backslash finding its way in would break that page. The server enforces this on the way in, and rejects anything else.
 
 Updating the record follows the same shape as the rest of the client-authored user state (see [user_state_management.md](user_state_management.md#user-commands)):

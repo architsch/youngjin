@@ -5,6 +5,7 @@ type PopupState =
     | { popupType: "none" }
     | { popupType: "authPrompt" }
     | { popupType: "confirm", params: ConfirmProps }
+    | { popupType: "exitPrompt" }
     | { popupType: "roomList" }
     | { popupType: "configureMyRoom" }
     | { popupType: "myRoomWelcome" }

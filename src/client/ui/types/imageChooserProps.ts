@@ -9,4 +9,5 @@ export default interface ImageChooserProps
     mapName: string;
     initialChoicePath: string; // "" if no initial choice
     onChoose: (path: string) => void;
+    onClick?: () => void;
 }

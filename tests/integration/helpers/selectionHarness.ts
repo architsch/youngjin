@@ -10,7 +10,6 @@ import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
@@ -20,19 +19,19 @@ import NumUtil from "../../../src/shared/math/util/numUtil";
 import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
+import { createTestRoom } from "./roomContent";
 
 export type FacingAxis = "x" | "y" | "z";
 export type Orientation = "-" | "+";
 
 /**
- * A freshly generated room of the given type, ready to be handed to the App stub. The room is
+ * A freshly built room of the given type, ready to be handed to the App stub. The room is
  * registered with the physics engine too, since the voxel-removal rules consult it in order to
  * find any wall-attached object that would lose its support.
  */
 export function createRoom(id: string = "test-room", type: RoomType = RoomTypeEnumMap.Hub): Room
 {
-    const {voxelGrid, objectGroup} = RoomGenerationUtil.generateRoom(id, type);
-    const room = new Room(id, id, type, "owner-user", "Owner", "default", voxelGrid, objectGroup);
+    const room = createTestRoom(id, id, type, "owner-user", "Owner", "default");
     if (PhysicsManager.hasRoom(id))
         PhysicsManager.unload(id);
     PhysicsManager.load(new RoomRuntimeMemory(room, {}));

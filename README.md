@@ -6,11 +6,11 @@ A web-based 3D sandbox multiplayer game powered by Node.js. No downloads, no ins
 
 ## What is ThingsPool?
 
-ThingsPool is a shared virtual space made up of interconnected **Rooms**. Each Room is a fully interactive 3D environment where you can:
+ThingsPool is a shared metaverse made up of interconnected **Rooms**. Each Room is a fully interactive 3D virtual space where you can:
 
 - **Explore** — Travel across rooms and discover what others have built
 - **Chat** — Meet and talk with other people in real time
-- **Build** — Make your own room and turn it into anything you imagine
+- **Build** — Make your own world and turn it into anything you imagine
 - **Customize** — Style your character from head to toe; give it a look of its own
 
 ## For Artists and Creators
@@ -19,7 +19,7 @@ ThingsPool doubles as a creative platform. Build your own virtual gallery, desig
 
 ## For Developers
 
-ThingsPool is open source and built with a modern real-time web stack — Three.js for 3D rendering, Socket.IO for multiplayer networking, and a custom physics and voxel engine for world building. If you are building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase.
+ThingsPool is an open source project, built with a modern real-time web stack: Three.js for 3D rendering, Socket.IO for multiplayer networking, and a custom physics and voxel engine for game mechanics. If you are building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase.
 
 ## Documentation
 

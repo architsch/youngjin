@@ -84,13 +84,14 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
         // Generates a real (loadable) room, so that server code which creates rooms on demand
         // — hub creation in particular — can be exercised end to end.
         createRoom: vi.fn(async (roomName: string, roomType: number,
-            ownerUserID: string, ownerUserName: string, texturePackPath: string) => {
+            ownerUserID: string, ownerUserName: string) => {
             if (_latencyConfig.enabled) await _randomDelay();
             const { seedRoom: seedRoomInStore } = await import("./mockDB");
             const roomID = `room-auto-${++_autoRoomCounter.value}`;
             const room = seedRoomInStore(roomID, roomType);
             room.roomName = roomName;
-            _roomStore[roomID] = { room, editors: [], ownerUserID, ownerUserName, roomType, texturePackPath };
+            _roomStore[roomID] = { room, editors: [], ownerUserID, ownerUserName, roomType,
+                texturePackPath: room.texturePackPath };
             return { success: true, data: [{ id: roomID }] };
         }),
         deleteRoom: vi.fn(async () => true),

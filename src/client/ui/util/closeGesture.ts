@@ -7,10 +7,12 @@ import { CloseGestureKind } from "../types/closeGestureKind";
 // back control (its toolbar button, a mouse's back button, the keyboard shortcut).
 //
 // Every one of those signals is claimed, so that none of them can take the user off the page on
-// its own. The callback is told which kind of gesture arrived, and is handed the means to give the
-// page up after all — to be called once it has found nothing left on screen to close.
+// its own, and the callback is told which kind of gesture arrived. What to do about a gesture that
+// found nothing left on screen to close is the callback's own business: leaving the app is a
+// navigation to a destination of its own rather than a retreat back through the history, so nothing
+// here has any part in it.
 export default function useCloseGesture(
-    onCloseGesture: (kind: CloseGestureKind, leavePage: () => void) => void): void
+    onCloseGesture: (kind: CloseGestureKind) => void): void
 {
     // Held in a ref so that a caller passing a freshly built closure on every render does not cost
     // a teardown and rebuild of everything the effect below sets up.
@@ -38,7 +40,6 @@ export default function useCloseGesture(
         // close, so letting it mean what it says is the right answer anyway.
         let guardPushed = false;
         let guardWanted = false;
-        let leaving = false;
         const pushHistoryGuard = (userIsInteracting = false) => {
             if (guardPushed)
                 return;
@@ -59,27 +60,10 @@ export default function useCloseGesture(
             if (guardWanted && ev.isTrusted)
                 pushHistoryGuard(true);
         };
-        // Gives the page up after all. The guard entry is spent first, and the entry the user
-        // asked for is travelled to only once that first step has been seen to land — so a history
-        // stack with nowhere further back to go leaves the page where it stands, rather than
-        // half-unwound with its guard already gone.
-        const leavePage = () => {
-            leaving = true;
-            history.back();
-        };
         const onPopState = () => {
             guardPushed = false; // Spent by the traversal being handled here
-            if (leaving)
-            {
-                leaving = false;
-                history.back(); // On to wherever the user was before this page
-                // Nowhere further to go means the page is still here a moment later, so the guard
-                // goes back up and everything carries on as it was.
-                setTimeout(() => pushHistoryGuard(), GUARD_REARM_DELAY_MS);
-                return;
-            }
             pushHistoryGuard(); // Re-armed, so that the next back gesture is caught as well
-            onCloseGestureRef.current("back", leavePage);
+            onCloseGestureRef.current("back");
         };
         pushHistoryGuard();
         window.addEventListener("popstate", onPopState);
@@ -102,7 +86,7 @@ export default function useCloseGesture(
                 return;
             lastEscapeKeyDownTime = Date.now();
             if (!closeWatcherSupported)
-                onCloseGestureRef.current("escape", leavePage);
+                onCloseGestureRef.current("escape");
         };
         // Capturing, so that this reading does not depend on what the focused element does with the key.
         window.addEventListener("keydown", onKeyDown, true);
@@ -115,7 +99,7 @@ export default function useCloseGesture(
                     const cameFromEscapeKey =
                         (Date.now() - lastEscapeKeyDownTime) < ESCAPE_ATTRIBUTION_WINDOW_MS;
                     lastEscapeKeyDownTime = 0;
-                    onCloseGestureRef.current(cameFromEscapeKey ? "escape" : "back", leavePage);
+                    onCloseGestureRef.current(cameFromEscapeKey ? "escape" : "back");
                 };
             };
             armWatcher();
@@ -142,5 +126,3 @@ const USER_INTERACTION_EVENT_TYPES = ["pointerup", "touchend", "keydown"] as con
 // How soon after an Escape key press a close request may still be put down to that key press
 // rather than to a back gesture (in milliseconds).
 const ESCAPE_ATTRIBUTION_WINDOW_MS = 200;
-// How long to wait before concluding that a back traversal had nowhere to go (in milliseconds).
-const GUARD_REARM_DELAY_MS = 500;

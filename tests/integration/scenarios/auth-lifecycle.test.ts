@@ -147,6 +147,11 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         // Default: no room was opened for this sign-in (an empty ID is what a user who already
         // owns a room gets back). Tests covering a first-time sign-up override this.
         _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("");
+        // Default: whatever account the browser arrives holding a token for is a guest, which is
+        // the only kind the sign-in may carry into the account being signed in to. Tests covering
+        // a member who never signed out override this.
+        _mockDBUserUtil.findUserById.mockImplementation(async (userID: string) =>
+            ({ id: userID, userName: userID, userType: UserTypeEnumMap.Guest }));
     });
 
     it("new user via Google OAuth: upgrades existing guest to member", async () => {
@@ -239,6 +244,63 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         // redirect leaves them to resume in whichever room they were in before signing in.
         expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).not.toHaveBeenCalled();
         expect(res.redirectUrl).toBe("/");
+    });
+
+    it("signed-in member via Google OAuth: a new email leaves the member's own account untouched", async () => {
+        _mockRestAPI.post.mockResolvedValue({
+            status: 200,
+            data: { access_token: "google-access-token-abc" },
+        });
+        _mockRestAPI.get.mockResolvedValue({
+            status: 200,
+            data: { email: "second@gmail.com", name: "Second Account" },
+        });
+
+        _mockDBSearchUtil.users.withEmail.mockResolvedValue({ success: true, data: [] });
+        _mockDBSearchUtil.users.withUserName.mockResolvedValue({ success: true, data: [] });
+        _mockDBUserUtil.createUser.mockResolvedValue({ success: true, data: [{ id: "second-member" }] });
+        // The browser is still signed in as a member who never signed out.
+        _mockDBUserUtil.findUserById.mockResolvedValue(
+            { id: "member-1", userName: "member", userType: UserTypeEnumMap.Member });
+
+        const { req, res } = createMockReqRes({ auth_token_dev: "valid-member-1" });
+        await UserAuthGoogleUtil.loginCallback(req, res);
+
+        // The signed-in member is an account in its own right, so the new identity goes into an
+        // account of its own rather than being written over the one the browser arrived with.
+        expect(_mockDBUserUtil.upgradeGuestToMember).not.toHaveBeenCalled();
+        expect(_mockDBUserUtil.createUser).toHaveBeenCalledWith(
+            "second", UserTypeEnumMap.Member, "second@gmail.com",
+        );
+        expect(_mockUserTokenUtil.addTokenForUserId).toHaveBeenCalledWith("second-member", req, res);
+    });
+
+    it("signed-in member via Google OAuth: an existing email does not delete the account being left", async () => {
+        _mockRestAPI.post.mockResolvedValue({
+            status: 200,
+            data: { access_token: "google-access-token-def" },
+        });
+        _mockRestAPI.get.mockResolvedValue({
+            status: 200,
+            data: { email: "existing@gmail.com", name: "Existing User" },
+        });
+
+        _mockDBSearchUtil.users.withEmail.mockResolvedValue({
+            success: true,
+            data: [{ id: "existing-member", userName: "existing", email: "existing@gmail.com", userType: UserTypeEnumMap.Member }],
+        });
+        // The browser is still signed in as a different member who never signed out.
+        _mockDBUserUtil.findUserById.mockResolvedValue(
+            { id: "member-1", userName: "member", userType: UserTypeEnumMap.Member });
+
+        const { req, res } = createMockReqRes({ auth_token_dev: "valid-member-1" });
+        await UserAuthGoogleUtil.loginCallback(req, res);
+
+        // Only a guest is an orphan of the sign-in; the member left behind keeps their account.
+        expect(_mockDBUserUtil.deleteUser).not.toHaveBeenCalled();
+        expect(_mockUserTokenUtil.addTokenForUserId).toHaveBeenCalledWith(
+            "existing-member", req, res,
+        );
     });
 
     it("Google OAuth fails gracefully when no auth code provided", async () => {

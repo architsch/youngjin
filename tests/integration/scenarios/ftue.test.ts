@@ -221,6 +221,33 @@ describe("FTUE element records (client)", () => {
         expect(chars.size).toBe(allFTUEElementCodes.length);
     });
 
+    it("stores every element as the same character it has always been stored as", () => {
+        // The mapping is by position and users already have these characters in their records, so a
+        // code may never be reassigned. This pins the whole mapping rather than any one element,
+        // because the way it breaks is renumbering: a retired element leaves a hole behind, and
+        // closing that hole up would silently shift every element after it onto another feature's
+        // stored character — handing returning users guidance they have seen and hiding guidance
+        // they have not.
+        const storedChars: Record<string, string> = {};
+        for (const [name, code] of Object.entries(FTUEElementCodeEnumMap))
+        {
+            _clientUser.current = makeUser();
+            FTUEUtil.tryAddFTUEElement(code);
+            storedChars[name] = _clientUser.current.ftue;
+        }
+
+        expect(storedChars).toEqual({
+            CustomizePlayer: "A",
+            _NOT_USED_: "B", // retired element: the slot stays reserved, never reused
+            EnterMyRoom: "C",
+            MyRoomSettings: "D",
+            AddCanvas: "E",
+            ChangeCanvasImage: "F",
+            ChangeCanvasFrame: "G",
+            EnterHub: "H",
+        });
+    });
+
     it("reports an element the user's stored record already carries", () => {
         // What the server sent down for a returning user: they have customized their character.
         FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer);
@@ -316,25 +343,30 @@ describe("FTUE coach marks (client)", () => {
         expect(screenCoachMarksObservable.peek().map(mark => mark.targetElementId)).toEqual(["addCanvasButton"]);
     });
 
-    it("keeps a mark that records itself as it is shown", () => {
-        // A mark for a feature that ends the session (signing up) is recorded the moment it is
-        // shown — but recording an element takes its mark down, so the two must not collide here:
-        // the mark the user has yet to read has to survive its own record.
-        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.Login, "loginButton", "Log in.", {recordOnShow: true});
-
-        expect(screenCoachMarksObservable.peek().map(mark => mark.targetElementId)).toEqual(["loginButton"]);
-        expect(FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.Login)).toBe(true);
-        expect(_emittedUserCommands.length).toBe(1);
-    });
-
-    it("does not show a self-recording mark twice", () => {
-        // The record it makes on the way up is also what keeps it from ever being offered again.
-        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.Login, "loginButton", "Log in.", {recordOnShow: true});
-        FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.Login); // as its own clock would
-        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.Login, "loginButton", "Log in.", {recordOnShow: true});
+    it("leaves a mark up when its target goes off screen, and takes it down only when told to", () => {
+        // A mark has no clock of its own: losing sight of the control is not what ends it, so the
+        // UI that scheduled it has to take it down explicitly once the control is beyond use.
+        // Otherwise the mark would come straight back with the control, skipping the wait that
+        // earned it the first time.
+        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings, "configureMyRoomButton", "Your room.");
+        FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.MyRoomSettings);
 
         expect(screenCoachMarksObservable.peek()).toEqual([]);
-        expect(_emittedUserCommands.length).toBe(1);
+
+        // Still unexperienced, so the guidance is not lost — it is offered afresh next time.
+        expect(FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings)).toBe(false);
+        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings, "configureMyRoomButton", "Your room.");
+        expect(screenCoachMarksObservable.peek().map(mark => mark.targetElementId))
+            .toEqual(["configureMyRoomButton"]);
+    });
+
+    it("shows a mark without recording anything, so the control still has to be used", () => {
+        // Showing guidance is an offer, not the experience itself: every element is recorded by the
+        // user's own use of its control, never by the mark going up.
+        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.CustomizePlayer, "customizePlayerButton", "Your look.");
+
+        expect(FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer)).toBe(false);
+        expect(_emittedUserCommands.length).toBe(0);
     });
 });
 

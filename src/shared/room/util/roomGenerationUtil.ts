@@ -1,94 +1,61 @@
 import SinglePlayerModeConfigMap from "../../singlePlayer/maps/singlePlayerModeConfigMap";
 import ObjectGroup from "../../object/types/objectGroup";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
-import Voxel from "../../voxel/types/voxel";
 import VoxelGrid from "../../voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../voxel/types/voxelQuadsRuntimeMemory";
+import Room from "../types/room";
 import { RoomType, RoomTypeEnumMap } from "../types/roomType";
-import RoomGenerationHelperUtil from "./roomGenerationHelperUtil";
+import ProceduralRoomGenerationUtil from "./proceduralRoomGenerationUtil";
 
 const RoomGenerationUtil =
 {
-    generateRoom: (roomName: string, roomType: RoomType): {voxelGrid: VoxelGrid, objectGroup: ObjectGroup} =>
+    // Fills in everything about a room that generation gets to decide: the voxels it is built
+    // out of, the objects it comes furnished with, and the room-level parameters those were
+    // chosen to suit. The room's identity (ID, name, type, owner) is left untouched, so this can
+    // be run over a room that already exists as a descriptor as well as over a brand new one.
+    //
+    // Every room-level parameter belongs here. One that no generator sets is one that every room
+    // in the game is silently left holding its default value for — see
+    // @docs/geometry/room_generation.md .
+    generateRoomContent: (room: Room): void =>
     {
-        switch (roomType)
+        room.voxelGrid = VoxelGrid.createEmpty();
+        room.objectGroup = new ObjectGroup([]);
+
+        switch (room.roomType)
         {
             case RoomTypeEnumMap.Hub:
             case RoomTypeEnumMap.Regular:
-                return generateMultiplayerRoom(0, 1, 2);
+                // Every multiplayer room is laid out procedurally, from a seed drawn when it is
+                // created, so that no two rooms open on the same interior. The seed is not kept:
+                // the room it produced is saved as ordinary content, and is edited from then on
+                // like any other room's.
+                ProceduralRoomGenerationUtil.generateMultiplayerRoom(room,
+                    Math.floor(Math.random() * 0x7FFFFFFF));
+                return;
             case RoomTypeEnumMap.SinglePlayer:
-                return generateSingleplayerRoom(roomName); // (roomName == singlePlayerMode) if the room is a singleplayer room.
-            default: throw new Error(`Unknown room type :: ${roomType}`);
+                generateSinglePlayerRoom(room);
+                return;
+            default: throw new Error(`Unknown room type :: ${room.roomType}`);
         }
+    },
+    // A brand new room of the given type, generated and ready to be stored. Its ID stays empty
+    // until the DB assigns one.
+    generateRoom: (roomName: string, roomType: RoomType,
+        ownerUserID: string = "", ownerUserName: string = ""): Room =>
+    {
+        const room = new Room(undefined, roomName, roomType, ownerUserID, ownerUserName,
+            "", new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
+        RoomGenerationUtil.generateRoomContent(room);
+        return room;
     },
 }
 
-function generateMultiplayerRoom(floorTextureIndex: number, wallTextureIndex: number,
-    ceilingTextureIndex: number): {voxelGrid: VoxelGrid, objectGroup: ObjectGroup}
+function generateSinglePlayerRoom(room: Room): void
 {
-    const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
-    const quadsMem = new VoxelQuadsRuntimeMemory();
-    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
-    {
-        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-        {
-            voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, 0b00000000);
-        }
-    }
-    const quadTextureIndicesWithinLayer = [
-        ceilingTextureIndex, // -y
-        floorTextureIndex, // +y
-        wallTextureIndex, // -x
-        wallTextureIndex, // +x
-        wallTextureIndex, // -z
-        wallTextureIndex, // +z
-    ];
-
-    // Paint floor and ceiling quads
-    for (let row = 1; row < NUM_VOXEL_ROWS-1; ++row)
-    {
-        for (let col = 1; col < NUM_VOXEL_COLS-1; ++col)
-        {
-            RoomGenerationHelperUtil.paintFloorAndCeilingTexture(quadsMem.quads, row, col, floorTextureIndex, ceilingTextureIndex);
-        }
-    }
-
-    // Add corner/boundary walls
-    for (let col = 1; col < NUM_VOXEL_COLS-1; ++col)
-    {
-        RoomGenerationHelperUtil.addWall(voxels, 0, col, quadTextureIndicesWithinLayer);
-        RoomGenerationHelperUtil.addWall(voxels, NUM_VOXEL_ROWS-1, col, quadTextureIndicesWithinLayer);
-    }
-    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
-    {
-        RoomGenerationHelperUtil.addWall(voxels, row, 0, quadTextureIndicesWithinLayer);
-        RoomGenerationHelperUtil.addWall(voxels, row, NUM_VOXEL_COLS-1, quadTextureIndicesWithinLayer);
-    }
-
-    // Make the player's entrance point (i.e. behind the entrance door) hollow, so as to prevent the player from experiencing collision on entrance.
-    RoomGenerationHelperUtil.removeWall(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL, 0, 4);
-
-    return {
-        voxelGrid: new VoxelGrid(voxels, quadsMem),
-        objectGroup: new ObjectGroup([]),
-    };
-}
-
-function generateSingleplayerRoom(singlePlayerMode: string): {voxelGrid: VoxelGrid, objectGroup: ObjectGroup}
-{
-    const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
-    const quadsMem = new VoxelQuadsRuntimeMemory();
-    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
-    {
-        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-        {
-            voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, 0b00000000);
-        }
-    }
-    const voxelGrid = new VoxelGrid(voxels, quadsMem);
-    const objectGroup = new ObjectGroup([]);
-    SinglePlayerModeConfigMap[singlePlayerMode].buildRoom(voxelGrid, objectGroup);
-    return {voxelGrid, objectGroup};
+    // (roomName == singlePlayerMode) if the room is a singleplayer room.
+    const config = SinglePlayerModeConfigMap[room.roomName];
+    room.texturePackPath = config.texturePackPath;
+    config.buildRoom(room.voxelGrid, room.objectGroup);
 }
 
 export default RoomGenerationUtil;

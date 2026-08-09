@@ -58,6 +58,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
         cachedMetadataByMode[TUTORIAL_SINGLE_PLAYER_MODE] = metadata;
         return metadata;
     },
+    texturePackPath: "default",
     buildRoom: (voxelGrid: VoxelGrid, objectGroup: ObjectGroup) =>
     {
         // Note: See the "Tutorial Room" section of `docs/geometry/room_generation.md` for

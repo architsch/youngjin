@@ -76,10 +76,11 @@ export function checkRoomIDReferences(): void
     }
 }
 
-/** Invariant 5: Every object in a room belongs to a participant of that room.
- *  Single-player rooms are exempt: they have no participants and contain system-owned
- *  objects (e.g. NPCs and doors spawned by room generation), so participant ownership
- *  does not apply. */
+/** Invariant 5: Every object a user put in a room belongs to a participant of that room.
+ *  Objects with no source user are exempt: those belong to the room itself, having been placed
+ *  by room generation (e.g. the paintings a multiplayer room is generated with, or a
+ *  single-player room's NPCs and doors), and outlive any participant.
+ *  Single-player rooms are exempt altogether, since they have no participants at all. */
 export function checkObjectOwnership(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
@@ -89,6 +90,8 @@ export function checkObjectOwnership(): void
         for (const [objId, obj] of Object.entries(roomMem.room.objectById))
         {
             const sourceUser = obj.sourceUserID;
+            if (sourceUser.length == 0)
+                continue;
             expect(roomMem.participantUserNameByID[sourceUser]).toBeDefined();
         }
     }

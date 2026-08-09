@@ -259,14 +259,14 @@
   .inset-x-0 {
     inset-inline: calc(var(--spacing) * 0);
   }
+  .top-\(--yj-headline-height\,0px\) {
+    top: var(--yj-headline-height,0px);
+  }
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
   .top-16 {
     top: calc(var(--spacing) * 16);
-  }
-  .top-\[var\(--yj-headline-height\,0px\)\] {
-    top: var(--yj-headline-height,0px);
   }
   .right-0 {
     right: calc(var(--spacing) * 0);

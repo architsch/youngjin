@@ -87,6 +87,19 @@
 - **Observable Pattern**: Used for state management. Each listener can subscribe to an observable and react to its state changes.
 - **Optional Sign-Up**: A new user automatically joins the game as a guest, which is a temporary user profile. In order to save one's progress, the user needs to create his/her own account by selecting one of the given auth providers (such as Google OAuth2). Detailed flows are illustrated in `docs/networking/authentication.md`.
 - **Separation between Static and Dynamic Pages**: Static pages (HTML files in the "public" directory) are being served via GitHub Pages, under the URL: `https://thingspool.net`. Dynamic pages and the server/client apps are being hosted in the VPS, under the URL: `https://app.thingspool.net` (live server) or `https://staging.thingspool.net` (staging server). During local dev test, a local URL (`http://127.0.0.1:3000`) is used to serve both static and dynamic contents.
+- **Room Generation Defines What a Room Is**: See the section below.
+
+## Room Generation Defines What a Room Is
+
+Every room in the game is born from `RoomGenerationUtil` — multiplayer rooms laid out procedurally by `ProceduralRoomGenerationUtil`, single-player rooms built from their `SinglePlayerModeConfig` — and nothing else ever produces one. That makes room generation the *definition* of a complete room: not only the voxels and objects inside it, but every room-level parameter those contents were chosen to suit.
+
+**Whenever a new room-level parameter or a new kind of placeable content is introduced, room generation must be extended to choose (or place) it as part of the same change.** This is not polish to defer:
+
+1. **A parameter no generator sets does not exist in practice.** Since every room is created by generation, a parameter left out of it is one that every room in the game silently holds the default value of. However complete its editing UI is, the feature ships looking like it was never built — visible only to the few owners who go and change it by hand.
+2. **Room parameters are not independent of each other, or of the room's contents.** A palette's texture indices only mean anything within one specific texture pack; fog has to agree with the skybox; a prop's materials have to come from the room's own pack. Generation is the single place where those agreements are expressed. Adding a parameter anywhere else and leaving generation alone produces rooms whose settings contradict their own contents.
+3. **Generated rooms are what almost everyone sees.** Hubs and newly created rooms are the game's first impression, and most of them are never hand-edited at all. Content that generation cannot place is content most players never encounter.
+
+Concretely, introducing a room-level parameter means: add it to `Room` (so it is stored and sent to clients), make `RoomGenerationUtil` and `ProceduralRoomGenerationUtil` decide it, declare it on every `SinglePlayerModeConfig`, and — where the parameter has curated data behind it, as texture packs have palettes in `RoomGenerationPaletteMap` — extend that curation to cover every option a room can be generated with. Conceptual details live in `docs/geometry/room_generation.md`.
 
 ## Documentation Guidelines (`/docs`)
 Documents in `/docs` are meant to be **conceptual outlines** — the most concise description of how things work *now* — not exhaustive technical dumps. When writing or editing them, follow these rules:

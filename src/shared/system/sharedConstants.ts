@@ -169,7 +169,11 @@ export const ROOM_ALMOST_FULL_MARGIN = 4;
 
 export const PLAYER_HEIGHT = 2.5;
 export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
-export const MAX_WORLDSPACE_SELECT_DIST_SQR = 100; // = 10*10
+
+// How far the user may reach into the room to select something. This is the base reach, which is
+// what a first-person view gets; a camera taken further back than this to orbit a selection reaches
+// as far as it can see instead (see WorldSpaceSelectionUtil).
+export const MAX_WORLDSPACE_SELECT_DIST = 10;
 
 // Fixed spawn point used whenever a player enters a multiplayer room.
 // (For a singleplayer room, the player's spawn point will be determined by the corresponding

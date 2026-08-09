@@ -24,9 +24,13 @@ const DevOAuthUtil =
         const userName = `DevOAuth-${unique}`;
         const email = `${userName.toLowerCase()}@dev.local`;
 
-        // Resolve the current guest from the JWT cookie, mirroring the real callback.
+        // Resolve the current guest from the JWT cookie, mirroring the real callback — including
+        // its refusal to treat a signed-in member as one, so that signing in as another account
+        // locally mints a second account rather than overwriting the first.
         const currentToken = req.cookies[CookieUtil.getAuthTokenName()];
-        const guestId = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
+        const currentUserID = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
+        const currentUser = currentUserID ? await DBUserUtil.findUserById(currentUserID) : null;
+        const guestId = currentUser?.userType == UserTypeEnumMap.Guest ? currentUserID : undefined;
 
         let memberUserID = "";
         if (guestId)

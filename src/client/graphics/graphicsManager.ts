@@ -48,6 +48,18 @@ const contextRecoveryReloadCooldown = 5 * MINUTE_IN_MS;
 let contextLost = false;
 let contextRestoreCheckScheduled = false;
 
+// The point light rides with the camera and is what actually lights the room for the user — the
+// ambient light only keeps the unlit side of things from being black. These are its settings for a
+// view from the player's own eye, where whatever he is looking at is a few paces off.
+const basePointLightIntensity = 4.0;
+const basePointLightDistance = 16;
+const pointLightDecay = 0.5;
+
+// How far past whatever the camera is looking at the light has to carry. Above 1 so that the target
+// is lit among its surroundings rather than picked out of the dark, and fixed so that the target
+// always sits at the same fraction of the light's range however far back the camera has been taken.
+const pointLightRangePerViewDistance = 2;
+
 const GraphicsManager =
 {
     getGameCanvas: (): HTMLCanvasElement =>
@@ -74,6 +86,29 @@ const GraphicsManager =
     getCamera: (): THREE.PerspectiveCamera =>
     {
         return camera;
+    },
+    // Sets how far the light the camera carries has to reach, from how far off whatever the camera
+    // is looking at is (zero for a view with nothing in particular in front of it, which leaves the
+    // light as it is tuned for the player's eye).
+    //
+    // A light sized for the eye goes out the moment the camera is taken further back than its
+    // range: past that range a point light contributes nothing at all, and the target would be left
+    // to the ambient light alone. Widening the range on its own would only spread the same light
+    // more thinly, since what a point light delivers falls off over distance — so the intensity
+    // follows the range by exactly the falloff the light decays by, which leaves whatever is being
+    // looked at as bright as it was from up close.
+    setPointLightReach: (viewDistance: number) =>
+    {
+        const range = Math.max(basePointLightDistance, pointLightRangePerViewDistance * viewDistance);
+
+        // Called every frame, and most frames have nothing to say: any view held closer than half
+        // the base range asks for that same base range, which is every first-person frame there is.
+        if (range === pointLight.distance)
+            return;
+
+        pointLight.distance = range;
+        pointLight.intensity = basePointLightIntensity *
+            Math.pow(range / basePointLightDistance, pointLightDecay);
     },
     update: (currFPS: number) =>
     {
@@ -121,7 +156,8 @@ const GraphicsManager =
 
             // The point light is parented to the camera (so it follows the player's view) and, like the
             // camera, is created once and reused for the app's whole lifetime — never re-created per room.
-            pointLight = new THREE.PointLight(0xffffff, 4.0, 16, 0.5);
+            pointLight = new THREE.PointLight(0xffffff, basePointLightIntensity,
+                basePointLightDistance, pointLightDecay);
             pointLight.position.set(0, 1, 0);
             camera.add(pointLight);
 

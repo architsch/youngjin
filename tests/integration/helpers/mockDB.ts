@@ -5,8 +5,8 @@
  */
 import { vi } from "vitest";
 import Room from "../../../src/shared/room/types/room";
-import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import { createTestRoom } from "./roomContent";
 import DBRoomEditor from "../../../src/server/db/types/row/dbRoomEditor";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 
@@ -78,14 +78,13 @@ export function seedRoom(
     if (existing) return existing.room;
 
     const roomName = roomType === RoomTypeEnumMap.SinglePlayer ? "tutorial" : "";
-    const { voxelGrid, objectGroup } = RoomGenerationUtil.generateRoom(roomName, roomType);
-    const room = new Room(roomID, roomName, roomType, "", "", "", voxelGrid, objectGroup);
+    const room = createTestRoom(roomID, roomName, roomType);
     roomStore[roomID] = {
         id: roomID,
         roomType,
         ownerUserID: "",
         ownerUserName: "",
-        texturePackPath: "",
+        texturePackPath: room.texturePackPath,
         editors: [],
         room,
     };

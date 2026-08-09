@@ -2,8 +2,6 @@ import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import DBRoomUtil from "../../db/util/dbRoomUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 
-const DEFAULT_TEXTURE_PACK_PATH = "default";
-
 const OwnedRoomUtil =
 {
     // Opens the one room that belongs to this user and records it on their account, returning the
@@ -13,7 +11,7 @@ const OwnedRoomUtil =
     createOwnedRoom: async (userID: string, ownerUserName: string): Promise<string> =>
     {
         const createResult = await DBRoomUtil.createRoom("", RoomTypeEnumMap.Regular,
-            userID, ownerUserName, DEFAULT_TEXTURE_PACK_PATH);
+            userID, ownerUserName);
         if (!createResult.success || createResult.data.length == 0)
         {
             console.error(`OwnedRoomUtil.createOwnedRoom :: Failed to create a room (userID = ${userID}).`);

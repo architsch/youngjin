@@ -26,13 +26,11 @@ const ClientObjectUtil =
     // ClientObjectManager consume room.voxelGrid / room.objectById.
     buildSinglePlayerRoomContent: (room: Room): void =>
     {
-        const {voxelGrid, objectGroup} = RoomGenerationUtil.generateRoom(room.roomName, RoomTypeEnumMap.SinglePlayer);
+        RoomGenerationUtil.generateRoomContent(room);
         // buildRoom hard-codes each object's roomID to "" (server-loaded rooms get it stamped by
         // ObjectGroup.decodeWithParams, which never runs for client-generated content). Backfill it.
-        for (const obj of Object.values(objectGroup.objectById))
+        for (const obj of Object.values(room.objectById))
             obj.roomID = room.id;
-        room.voxelGrid = voxelGrid;
-        room.objectGroup = objectGroup;
     },
 
     // Spawn Actions

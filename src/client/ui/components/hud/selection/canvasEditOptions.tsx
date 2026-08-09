@@ -77,6 +77,8 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
             initialChoicePath={initialImagePath}
             onChoose={path => {
                 trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
+            }}
+            onClick={() => {
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasImage);
             }}
         />
@@ -89,6 +91,8 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
             initialChoicePath={initialFrameCoords}
             onChoose={coords => {
                 trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.CanvasFrameCoords, coords);
+            }}
+            onClick={() => {
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasFrame);
             }}
         />

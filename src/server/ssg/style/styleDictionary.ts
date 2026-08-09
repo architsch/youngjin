@@ -642,6 +642,10 @@ a:active {
 .dim {
 	${dim_color_frame}
 }
+.highlight {
+	${s_bold_font}
+	${mediumYellow_color_frame}
+}
 .noTextDeco {
 	text-decoration: none;
 }

@@ -13,5 +13,14 @@ export default function ImageChooser(imageChooserProps: ImageChooserProps)
         });
     }, [imageChooserProps]);
 
-    return <IconButton id={imageChooserProps.id} icon={imageChooserProps.icon ?? <EditIcon/>} size="md" onClick={openPopup}/>;
+    return <IconButton
+        id={imageChooserProps.id}
+        icon={imageChooserProps.icon ?? <EditIcon/>}
+        size="md"
+        onClick={() => {
+            if (imageChooserProps.onClick)
+                imageChooserProps.onClick();
+            openPopup();
+        }}
+    />;
 }

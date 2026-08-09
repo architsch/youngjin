@@ -4,6 +4,10 @@ export const LibraryData: {
     entriesByCategory: { [category: string]: PostEntry[] }
 } = {
     entriesByCategory : {
+        // One list per year, newest added as the years pass.
+        "Development History": [
+            { dirName: "devlog-2026", title: "Dev Log - 2026"},
+        ],
         "Nonfiction": [
             { dirName: "metaphysics", title: "형이상학 (2013 - 2014)"},
             { dirName: "game-analysis", title: "게임분석 (2019)"},

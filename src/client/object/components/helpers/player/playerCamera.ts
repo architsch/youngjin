@@ -29,6 +29,13 @@ export default class PlayerCamera
     // What the orbit is framing right now, or undefined while the orbit mode is not active.
     private orbitTarget: AABB3 | undefined;
 
+    // How far the light the camera carries is currently being asked to reach. Eased alongside the
+    // camera rather than taken straight from the pose, because the pose is where the camera is
+    // headed, not where it is: a wheel notch moves it at once while the camera spends the next
+    // moment gliding there, and a light that answered the pose would light the target as if from
+    // the new distance while still standing at the old one — a flare on every notch.
+    private pointLightViewDistance: number = 0;
+
     onSpawn(controller: PlayerController, pointerInput: PlayerPointerInput): void
     {
         this.pointerInput = pointerInput;
@@ -42,6 +49,11 @@ export default class PlayerCamera
     onDespawn(controller: PlayerController): void
     {
         this.occlusionHider.revealAll();
+
+        // Nobody is looking through the camera any more, so the light it carries goes back to what
+        // it is tuned for rather than staying stretched over the last orbit's distance.
+        this.pointLightViewDistance = 0;
+        GraphicsManager.setPointLightReach(0);
     }
 
     update(deltaTime: number, controller: PlayerController): void
@@ -53,12 +65,21 @@ export default class PlayerCamera
             // at something else, so that the camera pulls back from wherever it was looking.
             if (this.orbitTarget !== mode.target)
             {
+                const orbitBegins = (this.orbitTarget == undefined);
                 this.orbitPose.reframe(mode.target, mode.minDistance ?? 0,
                     this.camera!, controller.gameObject.obj);
+
+                // An orbit begins from where the user was already standing when he pointed the
+                // camera at something, and carries on from wherever he has zoomed to since; how
+                // close he wants to look survives the orbit being re-pointed, but not the mode
+                // being left and entered again (see OrbitCameraPose).
+                if (orbitBegins)
+                    this.orbitPose.matchZoomToCurrentDistance();
             }
             this.orbitTarget = mode.target;
-            this.orbitPose.updatePose(this.pointerInput!.dragDelta, mode.target,
-                controller.gameObject.obj, this.positionInterpTarget, this.quaternionInterpTarget);
+            this.orbitPose.updatePose(this.pointerInput!.dragDelta, this.pointerInput!.viewScale,
+                mode.target, controller.gameObject.obj,
+                this.positionInterpTarget, this.quaternionInterpTarget);
         }
         else
         {
@@ -76,6 +97,15 @@ export default class PlayerCamera
         const t = Math.min(1, 4 * deltaTime);
         this.camera!.position.lerp(this.positionInterpTarget, t);
         this.camera!.quaternion.slerp(this.quaternionInterpTarget, t);
+
+        // The camera carries the room's light with it, so how far that light has to reach is a
+        // question only the active mode can answer: an orbit may hold the camera much further from
+        // what the user is looking at than his own eye ever does (see GraphicsManager). Eased on
+        // the same terms as the camera itself, so that the light travels with the camera instead of
+        // arriving before it (see pointLightViewDistance).
+        const viewDistance = (mode.type === "orbit") ? this.orbitPose.getOrbitDistance() : 0;
+        this.pointLightViewDistance += (viewDistance - this.pointLightViewDistance) * t;
+        GraphicsManager.setPointLightReach(this.pointLightViewDistance);
 
         // The camera the sweep must see past is the eased one, so this follows the easing above.
         if (mode.type === "orbit")

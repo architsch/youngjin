@@ -72,7 +72,7 @@ export default function ModeExitBar({ canModifyRoom, isCustomizingPlayer }: Prop
     if (exit == undefined)
         return null;
 
-    return <div className={barClassName}>
+    return <div className="absolute top-(--yj-headline-height,0px) left-0 w-full flex justify-end p-2 pointer-events-auto">
         <Button id="modeExitButton" name={exit.name} size="md" color="green" onClick={exit.onClick}/>
     </div>;
 }
@@ -92,15 +92,6 @@ function selectionCanBeDropped(): boolean
     return ObjectSelection.isSelected() &&
         !clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange);
 }
-
-// Hangs from the lower edge of the headline, via the height the headline publishes for exactly this
-// purpose, and falls back to the top of the screen for the ordinary case of no headline being up.
-// Nothing here is drawn or pressable but the button itself: the bar spans the full width only so
-// that the button can be held against the right edge, and being invisible it must let a press
-// landing beside the button reach the 3D scene underneath rather than swallow it. No stacking order
-// is claimed, which leaves the bar behind both the things sharing the top of the screen with it:
-// the headline, which raises itself above everything, and the debugger, which is drawn after it.
-const barClassName = "absolute top-[var(--yj-headline-height,0px)] left-0 w-full flex justify-end p-2 pointer-events-none";
 
 interface Props
 {

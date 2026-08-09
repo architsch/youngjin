@@ -1,7 +1,7 @@
 import Voxel from "./voxel";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import RoomGenerationHelperUtil from "../../room/util/roomGenerationHelperUtil";
@@ -18,6 +18,22 @@ export default class VoxelGrid extends EncodableData
         super();
         this.voxels = voxels;
         this.quadsMem = quadsMem;
+    }
+
+    // The blank slate every room generation routine starts from: a full grid of voxels with
+    // nothing built in any of them yet.
+    static createEmpty(): VoxelGrid
+    {
+        const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
+        const quadsMem = new VoxelQuadsRuntimeMemory();
+        for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+        {
+            for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+            {
+                voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, 0b00000000);
+            }
+        }
+        return new VoxelGrid(voxels, quadsMem);
     }
 
     encode(bufferState: BufferState)
@@ -59,8 +75,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
         RoomGenerationHelperUtil.addWall(voxels, NUM_VOXEL_ROWS-1, 0, quadTextureIndicesWithinLayer);
         RoomGenerationHelperUtil.addWall(voxels, NUM_VOXEL_ROWS-1, NUM_VOXEL_COLS-1, quadTextureIndicesWithinLayer);
 
-        // Make the player's entrance point (i.e. behind the entrance door) hollow, so as to prevent the player from experiencing collision on entrance.
-        RoomGenerationHelperUtil.removeWall(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL, 0, 4);
+        RoomGenerationHelperUtil.carveMultiplayerEntrance(voxels);
 
         return voxelGrid;
     },

@@ -70,9 +70,19 @@ const UserAuthGoogleUtil =
                 return;
             }
 
-            // Get current guest's document ID from JWT cookie
+            // The account this browser already holds a token for, if any, and only if that account
+            // is a guest. A guest is a placeholder for the account its user is about to have, so it
+            // is the one thing this sign-in may consume: upgraded in place where the email is new,
+            // discarded where it turns out to belong to somebody who already has an account.
+            //
+            // A member arriving here is signing in as somebody else, which says nothing whatsoever
+            // about the account they are leaving — so that account is not touched. Treating one as
+            // a guest would overwrite a real person's identity with the incoming one, or delete it
+            // outright, purely because they did not sign out first.
             const currentToken = req.cookies[CookieUtil.getAuthTokenName()];
-            const guestId = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
+            const currentUserID = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
+            const currentUser = currentUserID ? await DBUserUtil.findUserById(currentUserID) : null;
+            const guestId = currentUser?.userType == UserTypeEnumMap.Guest ? currentUserID : undefined;
 
             // Where the browser is sent once the sign-in is settled. A brand-new member is sent
             // into the room created for them below; everyone else lands on the plain page, which
@@ -159,9 +169,12 @@ const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const redirectURL = `${AddressUtil.getEnvDynamicURL()}/${USER_API_ROUTE_PATH}/login_google_callback`;
 const userInfoURL = `https://www.googleapis.com/oauth2/v3/userinfo?alt=json`;
 
+// The account chooser is asked for explicitly, so that a user who came here to sign in as somebody
+// else is actually given the choice. Without it, a browser holding a single provider session is
+// sent straight back in as that same account, with no say in the matter.
 function generateOAuthURL(): string
 {
-    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=code&redirect_uri=${redirectURL}&scope=openid%20profile%20email&access_type=offline&state=${crypto.randomUUID()}&prompt=consent`;
+    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=code&redirect_uri=${redirectURL}&scope=openid%20profile%20email&access_type=offline&state=${crypto.randomUUID()}&prompt=select_account%20consent`;
 }
 
 function generateTokenURL(code: string): string

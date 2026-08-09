@@ -1,66 +1,42 @@
 import * as THREE from "three";
-import PlayerController from "../../playerController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import MeshFactory from "../../../../graphics/factories/meshFactory";
-import ClientObjectManager from "../../../clientObjectManager";
-import InstancedMeshBinding from "../../../../graphics/types/mesh/instancedMeshBinding";
-import { MOUSE_DRAG_THRESHOLD_PX, TOUCH_DRAG_THRESHOLD_PX } from "../../../../system/clientConstants";
-
-const vec2Temp: THREE.Vector2 = new THREE.Vector2();
-const canvasSizeTemp: THREE.Vector2 = new THREE.Vector2();
-const dragOffsetTemp: THREE.Vector2 = new THREE.Vector2();
-
-// How far the pointer travels, as a physical distance, for a drag to read as one full unit of
-// steering input. CSS pixels stand in for physical distance here: the page is served at
-// "width=device-width, initial-scale=1", which makes one CSS pixel a density-independent unit
-// rather than a hardware pixel, so this length is roughly constant across handheld screens.
-//
-// Measuring the drag against a fixed length, rather than against the canvas, is what keeps the
-// control feeling the same whichever way the device is held. A canvas-relative measure makes the
-// longer edge of the canvas the least responsive axis, and in portrait that axis is the one the
-// player walks along.
-const dragReferenceLengthPx = 120;
-
-// Steering produced per reference length of pointer travel, per axis. Independent knobs: turning
-// and walking are clamped to different ranges by PlayerController, so matching gains here do not
-// imply the two axes reach full deflection at the same drag distance.
-const dragSensitivityX = 0.85;
-const dragSensitivityY = 1.25;
-
-// A mouse is dragged from the wrist across a desk rather than with a thumb across a screen being
-// held, so the same physical travel can warrant a different gain than a touch drag gets. Left
-// neutral because the fixed-length measure already leaves a mouse drag more responsive than a
-// canvas-relative one did on a large window; this is the knob to turn if that proves wrong.
-// Applies to the steering reading only: the orbit reading is grab-style, and a control that follows
-// the pointer is expected to follow it identically whatever is doing the pointing.
-const mouseDragMultiplier = 0.6;
+import PlayerController from "../../playerController";
+import PointerClickRaycaster from "./pointer/pointerClickRaycaster";
+import PointerDragInput from "./pointer/pointerDragInput";
+import PointerZoomInput from "./pointer/pointerZoomInput";
 
 //------------------------------------------------------------------------
-// Captures raw pointer input on the game canvas, independently of the camera
-// mode. It exposes the ongoing drag in two readings: a joystick-style offset
-// from the press point (fed into the controller's steering), and a grab-style
-// per-frame delta (dragDelta) for consumers that follow the pointer 1:1, such
-// as the orbit camera. It also raycasts clicks into the scene to notify
-// the clicked game object.
+// Watches the game canvas for pointer activity, independently of the camera
+// mode, and hands each event to the module that reads that kind of gesture:
+// PointerDragInput (one pointer moving while held down), PointerZoomInput
+// (two fingers pinching, or the mouse wheel), PointerClickRaycaster (a press
+// and release that stayed in one place).
+//
+// Listening in one place is what lets those gestures be told apart, since
+// they are not distinguishable event by event: a drag and a pinch are the
+// same events until a second finger arrives, and a click is only a click by
+// virtue of the drag that did not happen. This class holds the arbitration
+// between them, and exposes each reading for whoever acts on it.
 //------------------------------------------------------------------------
 
 export default class PlayerPointerInput
 {
+    private dragInput: PointerDragInput = new PointerDragInput();
+    private zoomInput: PointerZoomInput = new PointerZoomInput();
+    private clickRaycaster: PointerClickRaycaster = new PointerClickRaycaster();
+
     // The pointer's movement since the previous frame while a drag is ongoing (in CSS pixels).
-    dragDelta: THREE.Vector2 = new THREE.Vector2();
+    get dragDelta(): THREE.Vector2
+    {
+        return this.dragInput.dragDelta;
+    }
 
-    private pointerIsDown: boolean = false;
-
-    // Which kind of pointer started the ongoing drag, taken from the press rather than assumed from
-    // the device: a touchscreen laptop and a tablet with a mouse attached both make the device a
-    // poor proxy for how the drag is actually being performed.
-    private pointerIsMouse: boolean = false;
-
-    private pointerDownPos: THREE.Vector2 = new THREE.Vector2();
-    private pointerDragPos: THREE.Vector2 = new THREE.Vector2();
-    private pointerLastDragPos: THREE.Vector2 = new THREE.Vector2();
-    private pointerPos: THREE.Vector2 = new THREE.Vector2();
-    private raycaster: THREE.Raycaster = new THREE.Raycaster();
+    // How much the user asked the view to grow over the previous frame, as a multiple of its
+    // current apparent size (1 = unchanged).
+    get viewScale(): number
+    {
+        return this.zoomInput.viewScale;
+    }
 
     onSpawn(controller: PlayerController): void
     {
@@ -70,6 +46,7 @@ export default class PlayerPointerInput
         this.onFocusOut = this.onFocusOut.bind(this);
         this.onBlur = this.onBlur.bind(this);
         this.onPointerMove = this.onPointerMove.bind(this);
+        this.onWheel = this.onWheel.bind(this);
         this.onClick = this.onClick.bind(this);
 
         canvas.addEventListener("pointerdown", this.onPointerPress);
@@ -80,6 +57,10 @@ export default class PlayerPointerInput
         canvas.addEventListener("focusout", this.onFocusOut);
         canvas.addEventListener("blur", this.onBlur);
         canvas.addEventListener("pointermove", this.onPointerMove);
+
+        // Not passive, since the wheel gesture is the browser's own to scroll or zoom the page with
+        // unless it is told otherwise (see PointerZoomInput).
+        canvas.addEventListener("wheel", this.onWheel, {passive: false});
         canvas.addEventListener("click", this.onClick);
     }
 
@@ -92,148 +73,86 @@ export default class PlayerPointerInput
         canvas.removeEventListener("pointerleave", this.onPointerRelease);
         canvas.removeEventListener("pointerout", this.onPointerRelease);
         canvas.removeEventListener("focusout", this.onFocusOut);
+        canvas.removeEventListener("blur", this.onBlur);
         canvas.removeEventListener("pointermove", this.onPointerMove);
+        canvas.removeEventListener("wheel", this.onWheel);
         canvas.removeEventListener("click", this.onClick);
+
+        this.abortGestures();
     }
 
     update(deltaTime: number, controller: PlayerController): void
     {
-        if (this.pointerIsDown)
-        {
-            this.getPixelOffset(this.pointerLastDragPos, this.pointerDragPos, this.dragDelta);
-            this.pointerLastDragPos.copy(this.pointerDragPos);
-
-            this.getPixelOffset(this.pointerDownPos, this.pointerDragPos, dragOffsetTemp);
-
-            const mouseInputX = dragOffsetTemp.x / dragReferenceLengthPx;
-            const mouseInputY = dragOffsetTemp.y / dragReferenceLengthPx;
-            const deviceMultiplier = this.pointerIsMouse ? mouseDragMultiplier : 1;
-
-            controller.dx += mouseInputX * dragSensitivityX * deviceMultiplier;
-            controller.dy += mouseInputY * dragSensitivityY * deviceMultiplier;
-        }
-        else
-            this.dragDelta.set(0, 0);
-    }
-
-    // Pointer positions are captured in NDC, where each axis is normalized by its own edge of the
-    // canvas — so on a canvas that is not square, the same NDC distance means different amounts of
-    // travel on the two axes. Scaling by half the canvas size (half, because NDC spans -1..1 across
-    // a full edge) recovers CSS pixels, the unit every drag measurement in this class works in.
-    private getPixelOffset(fromPos: THREE.Vector2, toPos: THREE.Vector2, outVec: THREE.Vector2): THREE.Vector2
-    {
-        GraphicsManager.getGameRenderer().getSize(canvasSizeTemp);
-        return outVec.subVectors(toPos, fromPos).multiply(canvasSizeTemp).multiplyScalar(0.5);
+        this.dragInput.update(controller);
+        this.zoomInput.update();
     }
 
     private onPointerPress(ev: PointerEvent): void
     {
-        //console.log("onPointerPress");
-        this.pointerIsDown = true;
-        this.pointerIsMouse = (ev.pointerType === "mouse");
-
-        // Capture the pointer so drag continues even when the cursor passes
+        // Capture the pointer so the gesture continues even when the cursor passes
         // over CSS2D overlays (e.g. WorldSpaceArrow click targets).
         const canvas = GraphicsManager.getGameCanvas();
         canvas.setPointerCapture(ev.pointerId);
 
-        getNDC(ev, this.pointerDownPos);
-        getNDC(ev, this.pointerDragPos);
-        this.pointerLastDragPos.copy(this.pointerDragPos);
-    }
+        this.zoomInput.onPointerPress(ev);
 
-    private onPointerRelease(ev: PointerEvent): void
-    {
-        //console.log("onPointerRelease");
-        this.pointerIsDown = false;
+        // A second finger settles what the gesture is: what would have been read as one finger
+        // dragging the view around is the user pinching it, and taking it for both at once would
+        // spin the view while it is being zoomed.
+        if (this.zoomInput.isPinching())
+            this.dragInput.cancel();
+        else
+            this.dragInput.onPointerPress(ev);
     }
 
     private onPointerMove(ev: PointerEvent): void
     {
-        //console.log("onPointerMove");
-        getNDC(ev, this.pointerPos);
-        if (this.pointerIsDown)
-        {
-            getNDC(ev, this.pointerDragPos);
-        }
+        this.zoomInput.onPointerMove(ev);
+        if (!this.zoomInput.isPinching())
+            this.dragInput.onPointerMove(ev);
+    }
+
+    private onPointerRelease(ev: PointerEvent): void
+    {
+        this.zoomInput.onPointerRelease(ev);
+
+        // Any finger leaving ends the drag, rather than the drag carrying on with whichever finger
+        // is left: the one left behind is nowhere near where the drag it would inherit began, and
+        // the view would jump the difference on the next frame. Pressing again starts a new one.
+        this.dragInput.onPointerRelease();
     }
 
     private onFocusOut(ev: FocusEvent): void
     {
-        //console.log("onFocusOut");
-        this.pointerIsDown = false;
+        this.abortGestures();
     }
 
     private onBlur(ev: FocusEvent): void
     {
-        //console.log("onBlur");
-        this.pointerIsDown = false;
+        this.abortGestures();
+    }
+
+    private onWheel(ev: WheelEvent): void
+    {
+        this.zoomInput.onWheel(ev);
     }
 
     private onClick(ev: PointerEvent): void
     {
         ev.preventDefault();
-        this.clickRaycast(ev);
+
+        // Only a gesture that stayed in one place is a click on what lies under it. One that
+        // travelled was the user steering, orbiting, or pinching the view, and clicking whatever
+        // the pointer happened to come to rest on would be a surprise every time.
+        if (this.dragInput.gestureIsTap())
+            this.clickRaycaster.raycast(ev);
     }
 
-    private clickRaycast(ev: PointerEvent): void
+    // Whatever gestures were in progress are given up on, for when their ends will never be seen:
+    // the canvas has lost the user's attention, or the player is going away.
+    private abortGestures(): void
     {
-        // Measured against the press that produced this click, not against the device: a touchscreen
-        // laptop and a tablet with a mouse attached both make the device a poor proxy for how
-        // steadily the pointer can be held.
-        const thresholdPx = this.pointerIsMouse ? MOUSE_DRAG_THRESHOLD_PX : TOUCH_DRAG_THRESHOLD_PX;
-
-        if (this.getPixelOffset(this.pointerDownPos, this.pointerDragPos, dragOffsetTemp).lengthSq()
-            > thresholdPx * thresholdPx)
-            return;
-
-        getNDC(ev, vec2Temp);
-
-        this.raycaster.setFromCamera(vec2Temp, GraphicsManager.getCamera());
-        const intersections = this.raycaster.intersectObjects(MeshFactory.getMeshes());
-
-        if (intersections.length > 0)
-        {
-            const intersection = intersections[0];
-            const instanceId = intersection.instanceId;
-
-            if (instanceId != undefined) // Raycast target is an instanced mesh.
-            {
-                const gameObject = InstancedMeshBinding.findGameObject(intersection.object, instanceId);
-                if (gameObject != undefined)
-                {
-                    const instancedMeshGraphics = gameObject.components.instancedMeshGraphics;
-                    if (instancedMeshGraphics)
-                        gameObject.onClick(instanceId, intersection.point);
-                    else
-                        console.error(`InstancedMeshGraphics component not found (params = ${JSON.stringify(gameObject.params)}, instanceId = ${instanceId})`);
-                }
-                else
-                    console.error(`GameObject not found in InstancedMeshGraphics (instanceId = ${instanceId})`);
-            }
-            else // Raycast target is a regular mesh.
-            {
-                const objectId = intersection.object.name; // For regular (non-instanced) meshes, (intersection.object.name == meshId == objectId).
-                const gameObject = ClientObjectManager.getObjectById(objectId);
-                if (gameObject != undefined)
-                {
-                    const meshGraphics = gameObject.components.meshGraphics;
-                    if (meshGraphics)
-                        gameObject.onClick(-1, intersection.point);
-                    else
-                        console.error(`MeshGraphics component not found (${JSON.stringify(gameObject.params)})`);
-                }
-                else
-                    console.error(`GameObject not found from mesh (objectId = ${objectId})`);
-            }
-        }
+        this.dragInput.cancel();
+        this.zoomInput.reset();
     }
-}
-
-// NDC = Normalized Device Coordinates (with respect to gameCanvas)
-function getNDC(ev: PointerEvent, outVec: THREE.Vector2): void
-{
-    const rect = (ev.target as HTMLElement).getBoundingClientRect();
-    outVec.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
-    outVec.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
 }

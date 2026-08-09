@@ -5,8 +5,9 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import ClientObjectManager from "../clientObjectManager";
-import { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH, CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID, MAX_CANVASES_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR } from "../../../shared/system/sharedConstants";
+import { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH, CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID, MAX_CANVASES_PER_ROOM } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
+import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
@@ -109,8 +110,7 @@ export default class CanvasGameObject extends GameObject
         }
 
         GraphicsManager.getCamera().getWorldPosition(vector3Temp);
-        const distSqr = hitPoint.distanceToSquared(vector3Temp);
-        if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
+        if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
             return;
 
         ObjectSelection.trySelect(this);

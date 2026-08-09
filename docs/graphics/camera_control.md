@@ -1,6 +1,6 @@
 # Camera Control
 
-Reference: @src/client/object/components/playerController.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts
+Reference: @src/client/object/components/playerController.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts , @src/client/object/components/helpers/player/pointer/pointerDragInput.ts , @src/client/object/components/helpers/player/pointer/pointerZoomInput.ts , @src/client/object/components/helpers/player/pointer/pointerClickRaycaster.ts
 
 ## Overview
 
@@ -8,11 +8,21 @@ Reference: @src/client/object/components/playerController.ts , @src/client/objec
 
 The user's own player object carries the `PlayerController` component (only the user's own player is allowed to have it). It gathers the user's inputs, steers the player's movement, and drives the player camera through a set of helper modules:
 
-- `PlayerPointerInput` — captures pointer activity on the game canvas, independently of the camera mode. It exposes the ongoing drag in two readings: a joystick-style offset from the press point (used for steering) and a grab-style per-frame delta (used by the orbit). It also raycasts clicks into the scene to notify the clicked game object.
+- `PlayerPointerInput` — watches the game canvas for pointer activity, independently of the camera mode, and hands each event to the module that reads that kind of gesture (see below).
 - `FirstPersonKeyInput` — turns the movement keys into smoothed steering input, accelerating toward the pressed direction, and ignoring keystrokes while a UI input element is focused.
 - `PlayerCamera` — owns the camera itself (see below).
 
 Each frame, the controller updates the input helpers before the camera, so the camera reacts to the same frame's drag.
+
+### Pointer Gestures
+
+The gestures a pointer can make on the canvas are not distinguishable event by event — a drag and a pinch are the same events until a second finger arrives, and a click is only a click by virtue of the drag that did not happen — so `PlayerPointerInput` listens in one place and holds the arbitration between them, while a module per gesture holds the reading of it:
+
+- `PointerDragInput` — one pointer moving while held down. It exposes the drag in two readings, since the two things it drives want different ones: a joystick-style offset from the press point (used for steering), and a grab-style per-frame delta that follows the pointer 1:1 (used by the orbit). It also answers whether the gesture that has just ended stayed still enough to count as a tap rather than a drag, measured against the kind of pointer that made it — a finger is a far coarser pointer than a mouse, and holding it to a mouse's precision would make an ordinary tap read as a drag.
+- `PointerZoomInput` — two fingers pinching, or the mouse wheel. Both are reported as one reading, since they mean the same thing. That reading is a *scale of what the user sees* rather than a change of camera distance: a pinch grabs the view and a view that is grabbed is expected to follow the fingers, and being a multiple also keeps a wheel notch meaning the same thing at every distance, where a fixed length added or subtracted would be a leap up close and imperceptible from far away.
+- `PointerClickRaycaster` — a press and release that stayed in one place, raycast into the scene to notify the game object drawn under it.
+
+A second finger settles what a gesture is: the drag is given up on, since reading the same fingers as both a drag and a pinch would spin the view while it is being zoomed. Likewise, any finger leaving ends the drag rather than letting it carry on with whichever finger is left, which is nowhere near where the drag it would inherit began.
 
 ## Steering
 
@@ -36,6 +46,10 @@ The user's own body — and the speech bubble hanging over it — is in view onl
 
 Circling a selection is an editing convenience, and it costs the user the run of the room while it lasts. So it is offered only to a user who may actually edit the room (`RoomValidationUtil`): for anyone else, selecting something leaves the camera in the first-person view, which pitches toward the selection as it always has.
 
+### How far the user can reach to select
+
+A click only selects what it lands on if that is close enough to the camera, so that a click cannot pick out something across the room that the user can barely make out. Ordinarily this reach is an arm's length into the room, a fixed distance. But an orbit around a selection is the user's to move: he may take the camera right back to see what he is editing among its surroundings, and everything he has thereby brought into view is something he expects to be able to click. So while the camera orbits a selection, the reach follows the distance the camera has been taken to, and whatever he can see he can select. `WorldSpaceSelectionUtil` decides this, and every object that can be selected asks it rather than measuring for itself.
+
 Both volumes are taken from the physics side, which is where the volume that every other system means by "this block" or "this object" is already defined.
 
 ## PlayerCamera
@@ -53,11 +67,17 @@ The camera rests at the player's eye level, and its pitch is the only degree of 
 
 The camera orbits around the center of the mode's target and looks at it. Grab-style pointer drags rotate the orbit angles 1:1 with the pointer's movement (like Three.js's OrbitControls), with the polar angle clamped away from the poles so the camera never ends up directly above or below the target. How far back it sits follows the target's own size, which is what lets the same orbit frame a whole character and a single block without either filling the screen or being lost in it.
 
-Whoever points the camera may also ask for a minimum distance of its own, which is what a selection does. Sizing the framing to the target answers "how big does this look", and that is the wrong question for a block or a picture being edited in place: what it is *part of* — the wall it belongs to, the room it stands in — is what the edit is judged against, and none of it is in view from arm's length. Framing a character is the opposite case, and asks for nothing beyond its size.
+That framing distance is a reference rather than where the camera actually ends up. A pinch or a wheel scales the view around the target, within a range on either side of the framing distance, so the user can lean in on a detail or pull back for the room around it. The zoom is expressed as a multiple of that distance rather than as a distance in its own right, which is what lets it mean the same thing whatever is being framed.
+
+An orbit *begins* at the distance the camera already stands at, not at the framing distance. Where the user stood when he pointed the camera at something is a view he chose — he walked up to the wall he is editing, or stayed back to take it in whole — and pulling him to a fixed distance from it throws that choice away and leaves him zooming back to where he already was. (A camera standing within the target's own footprint has no distance of its own to keep, any more than it has a direction to keep, and starts from the framing distance instead; that is the character-customization case.) From there the zoom is the user's, and it survives the orbit being pointed at something else, since how close he wants to look is a preference he expressed rather than a property of what he was looking at. Leaving the mode drops it: the next orbit begins from wherever he is standing then. Whatever the zoom is asked for, the camera stays within the range above and outside the target itself, from within which there would be nothing left to inspect.
+
+Whoever points the camera may also ask for a minimum distance of its own, which is what a selection does. Sizing the framing to the target answers "how big does this look", and that is the wrong question for a block or a picture being edited in place: what it is *part of* — the wall it belongs to, the room it stands in — is what the edit is judged against, and none of it is in view from arm's length. Framing a character is the opposite case, and asks for nothing beyond its size. Since the framing distance is what the zoom range is measured against, asking for a larger one also gives the user a longer leash on either side of it.
+
+The light the room is lit by rides with the camera, so it follows the orbit out: its range grows with the distance the camera has been taken to, and its intensity grows with its range by exactly the falloff it decays by. It is eased on the same terms as the camera, since the pose is where the camera is *headed* — a light that answered the pose directly would light the target as if from the new distance while still standing at the old one, flaring on every notch of a zoom. A light sized for the player's own eye simply goes out past its range, which would leave a target the user has pulled back from lit by nothing but the ambient light; widening the range alone would only spread the same light more thinly. Between them, what is being framed stays as bright as it was from up close.
 
 The orbit is described in world space, while the camera hangs off the player object — which is what makes the first-person view follow the player's eye for free. The orbit pose is therefore converted into the player's frame, the frame both modes are eased in, rather than the camera being taken off the player for the duration of the mode: expressing one pose in another frame costs a pair of conversions, whereas re-parenting mid-glide would split the easing across two frames of reference.
 
-Each time the mode is entered, and each time it is pointed at something else, the camera keeps the direction it already views the new target from and simply pulls back to the framing distance. Swinging around to a fixed side of the target instead would, for a target inside a wall, mean jumping to the far side of that wall. A camera that stands within the target's own footprint has no such direction to keep — which is the case when the user orbits his own body — and gets a default framing instead: above, slightly off to the side, and out front of the player, looking back at it.
+Each time the mode is entered, and each time it is pointed at something else, the camera keeps the direction it already views the new target from. Swinging around to a fixed side of the target instead would, for a target inside a wall, mean jumping to the far side of that wall. A camera that stands within the target's own footprint has no such direction to keep — which is the case when the user orbits his own body — and gets a default framing instead: above, slightly off to the side, and out front of the player, looking back at it.
 
 ### Clearing the Line of Sight (`OrbitOcclusionHider`)
 

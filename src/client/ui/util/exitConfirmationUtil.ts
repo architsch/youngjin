@@ -10,9 +10,9 @@ export default class ExitConfirmationUtil
     // ends are kept together, since neither means anything without the other.
     private static answerableWindow: {from: number, until: number} | null = null;
 
-    // Called with a back gesture that found nothing left to close. Hands the page over to the
+    // Called with a back gesture that found nothing left to close. Hands the app over to the
     // given callback only once the user has asked for it twice.
-    static requestExit(leavePage: () => void)
+    static requestExit(exitApp: () => void)
     {
         const now = Date.now();
         if (this.answerableWindow != null && now >= this.answerableWindow.until)
@@ -26,7 +26,7 @@ export default class ExitConfirmationUtil
             if (now < this.answerableWindow.from)
                 return;
             this.answerableWindow = null;
-            leavePage();
+            exitApp();
             return;
         }
 

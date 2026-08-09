@@ -60,7 +60,7 @@ const HubRoomUtil =
 
 async function _createHub(): Promise<string>
 {
-    const result = await DBRoomUtil.createRoom("", RoomTypeEnumMap.Hub, "", "", "default");
+    const result = await DBRoomUtil.createRoom("", RoomTypeEnumMap.Hub, "", "");
     if (!result.success || !result.data[0] || !result.data[0].id)
     {
         console.error(`HubRoomUtil.createHub :: Failed to create a hub.`);

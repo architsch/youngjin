@@ -30,6 +30,21 @@ This document catalogs all integration test scenarios organized by category.
 | room unloads when last user leaves | An empty Regular room is removed from memory |
 | graceful shutdown saves all rooms and user metadata | Shutdown persists and unloads all rooms and users |
 
+## Room Generation (`room-generation.test.ts`) — 8 tests
+
+Every Hub/Regular room is laid out procedurally from a seed, so its shape is unknowable in advance. What is asserted is the set of properties every generated room must have whichever seed produced it. See [room_generation.md](../../geometry/room_generation.md) for the behavior under test.
+
+| Test | What it verifies |
+|------|-----------------|
+| leaves every part of the room reachable on foot from the entrance | A flood fill from the entrance reaches every walkable cell — no region is ever sealed off |
+| opens the entrance and keeps the floor in front of it clear | The doorway is carved, and the approach cells that room editing protects are free of generated content |
+| keeps the boundary wall solid apart from the entrance | The perimeter is intact everywhere except the entrance cell |
+| hangs paintings the live room would accept, within the room's canvas limit | Each generated `Canvas` passes `WallAttachedObjectUtil.canPlaceObject` against a live room, added one at a time, with valid image/frame paths |
+| builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomGenerationPaletteMap`, and the pack varies across seeds |
+| keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
+| rebuilds the same room from the same seed, and a different one from a different seed | Generation is deterministic per seed (layout, objects and texture pack alike), and seeds do not collapse onto one layout |
+| is what the room generator builds Hub and Regular rooms with | `RoomGenerationUtil.generateRoom` returns a procedurally generated room, texture pack included, for both multiplayer room types |
+
 ## Room Population (`room-population.test.ts`) — 34 tests
 
 See [room_population.md](../../networking/room_population.md) for the behavior under test.
@@ -142,7 +157,7 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step | Tutorial steps form a name-keyed map (not a positional array), include the `initial` entry step, and have at least one terminal step (a rule whose `nextStep` is `""`) |
 | every transition targets an existing step or the terminal, and all steps are reachable from 'initial' | Step-graph integrity: every transition `nextStep` names a defined step (or `""`), and walking from `initial` reaches every step (none orphaned) |
 
-## FTUE (`ftue.test.ts`) — 25 tests
+## FTUE (`ftue.test.ts`) — 26 tests
 
 See [ftue.md](../../networking/ftue.md) for the behavior under test.
 
@@ -151,6 +166,7 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | Test | What it verifies |
 |------|-----------------|
 | stores each element as its own letter | Every FTUE element code maps to a distinct `[A-Za-z]` character — the record is embedded verbatim in the boot page, and two features sharing a character would silence each other |
+| stores every element as the same character it has always been stored as | Pins the whole element-to-character mapping, including the reserved hole left by a retired element — renumbering would shift stored records onto the wrong features |
 | reports an element the user's stored record already carries | A record loaded from the server is read back per element (one experienced, one not) |
 | reports an element as added the moment it is added, without waiting for the server | The client's own copy is updated locally, and the user command is emitted once |
 | tells the server about an element once, no matter how often the feature is used again | Repeated use of the same feature emits a single command and stores a single character |
@@ -166,8 +182,8 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | keeps one mark per control, no matter how often the trigger fires | A repeated trigger for the same control adds no second mark |
 | takes a mark down the moment the user uses the feature it points at | Recording the element removes its mark from `screenCoachMarksObservable` |
 | leaves the other marks up when one feature is used | Only the used feature's mark is removed; the rest stay exactly as they were |
-| keeps a mark that records itself as it is shown | The sign-up mark survives its own record (made before the mark goes up) while the element is recorded and the command emitted |
-| does not show a self-recording mark twice | Once dismissed, the record it made on the way up suppresses any later attempt, with no second command |
+| leaves a mark up when its target goes off screen, and takes it down only when told to | A hidden mark clears the observable, and — the element still being unexperienced — the guidance is offered afresh on the next trigger rather than lost |
+| shows a mark without recording anything, so the control still has to be used | Showing a mark records no element and emits no command: guidance is an offer, and only the user's own click counts as the experience |
 
 ### Client and server agreement
 
@@ -409,6 +425,8 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | new user via Google OAuth: upgrades existing guest to member | Guest upgraded to member via `upgradeGuestToMember` |
 | new user via Google OAuth: creates member when no guest exists | New member created via `createUser` |
 | existing user via Google OAuth: signs in and cleans up orphaned guest | Existing account used; orphaned guest deleted |
+| signed-in member via Google OAuth: a new email leaves the member's own account untouched | A member session is not upgraded in place; the new identity gets its own account |
+| signed-in member via Google OAuth: an existing email does not delete the account being left | Only a guest counts as an orphan; the member left behind keeps their account |
 | Google OAuth fails gracefully when no auth code provided | 400 returned with "code not found" |
 | Google OAuth fails gracefully when token exchange fails | 500 returned with an "access token" error |
 

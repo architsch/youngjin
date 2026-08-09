@@ -402,7 +402,7 @@ async function loadCurrentEditors(roomID: string): Promise<DBRoomEditor[] | null
 function buildSinglePlayerRoomRuntimeMemory(mode: string): RoomRuntimeMemory
 {
     const room = new Room(mode /*id*/, mode /*roomName*/, RoomTypeEnumMap.SinglePlayer,
-        "", "", "default",
+        "", "", SinglePlayerModeConfigMap[mode].texturePackPath,
         new VoxelGrid([], new VoxelQuadsRuntimeMemory()),
         new ObjectGroup([]));
     return new RoomRuntimeMemory(room, {});

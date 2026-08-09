@@ -1,13 +1,18 @@
+import * as THREE from "three";
 import App from "../../app";
 import AABB3 from "../../../shared/math/types/aabb3";
+import GraphicsManager from "../graphicsManager";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { cameraModeObservable, objectSelectionObservable, userRoleObservable,
     voxelQuadSelectionObservable } from "../../system/clientObservables";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y,
+    MAX_WORLDSPACE_SELECT_DIST } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../types/gizmo/objectSelection";
 import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
+
+const cameraPosTemp = new THREE.Vector3();
 
 // What an object with no collider of its own is framed by, so that selecting one still gives the
 // camera something of a size to orbit around.
@@ -19,6 +24,12 @@ const defaultObjectHalfSize = {x: 0.5, y: 0.5, z: 0.5};
 // stands in are what the edit is judged against. On a screen held upright, where the narrow side of
 // the view governs, this is roughly the distance at which a few cells of the room fit across.
 const minSelectionOrbitDistance = 5;
+
+// How far the user may reach to select something while the camera orbits a selection, as a multiple
+// of how far the camera stands from that selection. The margin above 1 covers what lies around the
+// edges of the view rather than at its center, which is further from the camera than the selection
+// it is arranged around.
+const selectReachPerOrbitDistance = 1.6;
 
 export default class WorldSpaceSelectionUtil
 {
@@ -32,6 +43,37 @@ export default class WorldSpaceSelectionUtil
         VoxelQuadSelection.unselect();
         ObjectSelection.unselect();
     }
+
+    // How far into the room the user may reach to select something, measured from the camera to the
+    // point he clicked.
+    //
+    // Ordinarily this is an arm's reach into the room, a fixed distance that stops a click from
+    // picking out something across the room that the user can barely make out. But an orbit around
+    // a selection is the user's to move: he may pull the camera right back to see what he is
+    // editing among its surroundings, and everything he has thereby brought into view is something
+    // he expects to be able to click. So while the camera orbits a selection, the reach grows in
+    // step with how far back the camera has been taken, and whatever the user can see he can select.
+    static getMaxSelectDist(): number
+    {
+        return Math.max(MAX_WORLDSPACE_SELECT_DIST,
+            selectReachPerOrbitDistance * getSelectionOrbitDist());
+    }
+}
+
+// How far the camera currently stands from the selection it is orbiting, or zero whenever it is not
+// orbiting one — including when something else (the character customization form) has the camera
+// orbiting a target of its own, which says nothing about how far the user can reach.
+function getSelectionOrbitDist(): number
+{
+    const mode = cameraModeObservable.peek();
+    if (mode.type !== "orbit" || mode.target !== orbitTargetFromSelection)
+        return 0;
+
+    GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
+    return Math.hypot(
+        cameraPosTemp.x - mode.target.center.x,
+        cameraPosTemp.y - mode.target.center.y,
+        cameraPosTemp.z - mode.target.center.z);
 }
 
 // The orbit this module put the camera into, while it is still the one in effect. Kept so that a

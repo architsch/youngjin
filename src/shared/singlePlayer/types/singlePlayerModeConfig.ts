@@ -7,6 +7,7 @@ import SinglePlayerStep from "./singlePlayerStep";
 export default interface SinglePlayerModeConfig
 {
     loadMetadata: () => SinglePlayerModeConfigMetadata;
+    texturePackPath: string;
     buildRoom: (voxelGrid: VoxelGrid, objectGroup: ObjectGroup) => void;
     loadSteps: () => {[stepName: string]: SinglePlayerStep};
     // Actions to run when the mode ends — whether it was completed or skipped — to tear down

@@ -70,14 +70,14 @@ const DBRoomUtil =
         return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(room.id));
     },
     createRoom: async (roomName: string, roomType: RoomType,
-        ownerUserID: string, ownerUserName: string,
-        texturePackPath: string): Promise<DBQueryResponse<{id: string}>> =>
+        ownerUserID: string, ownerUserName: string): Promise<DBQueryResponse<{id: string}>> =>
     {
-        LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName, texturePackPath}, "low", "info");
-        const {voxelGrid, objectGroup} = RoomGenerationUtil.generateRoom(roomName, roomType);
+        LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName}, "low", "info");
 
-        const room = new Room(undefined, roomName, roomType,
-            ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectGroup);
+        // Generation decides the room's whole initial state — not just its voxels and objects,
+        // but the room-level parameters they were picked to suit (see RoomGenerationUtil).
+        const room = RoomGenerationUtil.generateRoom(roomName, roomType, ownerUserID, ownerUserName);
+
         const dbRoom: DBRoom = {
             id: room.id,
             version: DBRoomVersionMigration.length,

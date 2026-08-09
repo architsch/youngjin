@@ -9,10 +9,11 @@ import App from "../../app";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
-import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, MAX_WORLDSPACE_SELECT_DIST_SQR, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
+import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { texturePackURLObservable } from "../../system/clientObservables";
 import GraphicsManager from "../../graphics/graphicsManager";
+import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 
 let debugEnabled: boolean = false;
 const vector3Temp = new THREE.Vector3();
@@ -88,8 +89,7 @@ export default class VoxelGameObject extends GameObject
         }
 
         GraphicsManager.getCamera().getWorldPosition(vector3Temp);
-        const distSqr = hitPoint.distanceToSquared(vector3Temp);
-        if (distSqr > MAX_WORLDSPACE_SELECT_DIST_SQR)
+        if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
             return;
 
         const voxel = this.getVoxel();

@@ -37,19 +37,10 @@ const FTUEUtil =
     // already been through it. Coach marks are scheduled ahead of time (a while after the control
     // comes within reach), so the user may well have discovered the feature on their own in the
     // meantime — which is exactly when there is nothing left to say.
-    //
-    // "recordOnShow" is for a feature that has no follow-up click of its own to wait for, because
-    // using it takes the user out of this session entirely (signing up brings them back as a
-    // different user): being shown the mark once *is* the whole experience, so it is recorded right
-    // away. The record is made before the mark goes up, which is what keeps it from dismissing the
-    // very mark it is being made for.
-    tryShowCoachMark: (ftueElementCode: FTUEElementCode, targetElementId: string, text: string,
-        options?: {recordOnShow?: boolean}) =>
+    tryShowCoachMark: (ftueElementCode: FTUEElementCode, targetElementId: string, text: string) =>
     {
         if (FTUEUtil.hasFTUEElement(ftueElementCode))
             return;
-        if (options?.recordOnShow)
-            FTUEUtil.tryAddFTUEElement(ftueElementCode);
         // The new mark joins the ones already on screen instead of replacing them, since the marks
         // of unrelated features fall due independently of one another and a mark cut short by a
         // newcomer would be guidance the user never got to read. A feature that already carries a

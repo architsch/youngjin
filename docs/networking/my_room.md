@@ -20,7 +20,7 @@ Every Visit in the room list names a specific destination, so a room that cannot
 The client computes the room URL locally and copies it to the clipboard. No server request is made.
 
 ## Change Texture Pack
-The client sends the new texture pack to the server, which verifies the user owns a room and persists the change.
+A room already comes with a texture pack, drawn when it was generated along with the textures its contents are finished in (see [room_generation.md](../geometry/room_generation.md)). Changing it re-skins those contents: the client sends the new texture pack to the server, which verifies the user owns a room and persists the change.
 
 ## Add Editor
 1. The client sends the target username and the Editor role to the server.

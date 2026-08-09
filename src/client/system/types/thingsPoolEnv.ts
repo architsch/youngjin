@@ -5,6 +5,7 @@ export default interface ThingsPoolEnv
     userString: string,
     socket_server_url: string,
     rest_api_server_url: string,
+    static_server_url: string,
     assets_url: string,
     gitCommit: string,
     targetRoomID: string,

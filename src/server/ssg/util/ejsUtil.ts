@@ -62,7 +62,8 @@ const EJSUtil =
         {
             processedHTML = processedHTML
                 .replaceAll(URL_STATIC as string, AddressUtil.getEnvStaticURL())
-                .replaceAll(URL_DYNAMIC as string, AddressUtil.getEnvDynamicURL());
+                .replaceAll(URL_DYNAMIC as string, AddressUtil.getEnvDynamicURL())
+                .replaceAll("#what-is-thingspool", "/index.html#what-is-thingspool");
         }
 
         return processedHTML;

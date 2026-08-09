@@ -32,6 +32,7 @@ import ConsoleLogForm from "./components/form/consoleLogForm";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "./components/form/confirmForm";
+import ExitPromptForm from "./components/form/exitPromptForm";
 import RoomValidationUtil from "../../shared/room/util/roomValidationUtil";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
@@ -105,10 +106,17 @@ export default function UIRoot({ env, user }: UIRootProps)
         document.getElementById("bootLoadingIndicator")?.remove();
     }, []);
 
+    // Leaving the app, whether the user asked for it outright or by going back with nothing left on
+    // screen to close. The site's own home page is where they are taken: a tab has no reliable way
+    // back to wherever its user came from, and cannot close itself unless a script opened it, so a
+    // destination is the one ending that always works — and this one is the page that explains what
+    // they have just been in.
+    const exitApp = () => { window.location.href = env.static_server_url; };
+
     // Going back, in whatever way the user's device offers, closes the topmost thing that is open —
     // a popup first, then a world-space selection — instead of leaving the page. With nothing left
     // to close, only a second back gesture gives the page up.
-    useCloseGesture((kind, leavePage) => {
+    useCloseGesture((kind) => {
         // The Escape key is already answered by whichever input element currently holds the user's
         // attention: a focused text field gives up focus, an open color palette dismisses itself.
         // So whatever lies underneath keeps its place until that has been dealt with. Nothing
@@ -121,7 +129,7 @@ export default function UIRoot({ env, user }: UIRootProps)
             // Nothing on screen to close, so the gesture keeps the meaning it came with — except
             // that a back gesture only gives the page up once the user has asked for it twice.
             if (kind == "back")
-                ExitConfirmationUtil.requestExit(leavePage);
+                ExitConfirmationUtil.requestExit(exitApp);
             return;
         }
 
@@ -165,6 +173,7 @@ export default function UIRoot({ env, user }: UIRootProps)
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
+            onExitApp={exitApp}
         />}
         <ModeExitBar canModifyRoom={canModifyRoom} isCustomizingPlayer={isCustomizingPlayer}/>
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
@@ -186,6 +195,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                         onConfirm={state.params.onConfirm}
                         onCancel={state.params.onCancel}
                     />
+                </Popup>;
+                case "exitPrompt": return <Popup key={i} title="" showCloseButton={true}>
+                    <ExitPromptForm onExit={exitApp}/>
                 </Popup>;
                 case "roomList": return <Popup key={i} title="Rooms" showCloseButton={true}>
                     <RoomListForm user={user} currentRoomID={roomID ?? ""}/>
