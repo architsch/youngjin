@@ -5,6 +5,8 @@ import { DBRow } from "../types/row/dbRow";
 import runQueryVersionMigration from "./runQueryVersionMigration";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBCacheUtil from "../util/dbCacheUtil";
+import DBMigrationWriteBackUtil from "../util/dbMigrationWriteBackUtil";
+import MigratedDocRewrite from "../types/migratedDocRewrite";
 
 export default async function runQuerySelect<T extends DBRow>(
     dbQuery: DBQuery<T>,
@@ -40,12 +42,7 @@ export default async function runQuerySelect<T extends DBRow>(
             if (newDocData.version !== originalVersion)
             {
                 // Write back the updated data to the DB (Note: This is a fire-and-forget operation. Don't await, don't block the read)
-                docRef.firestore.runTransaction(async (tx: admin.firestore.Transaction) => {
-                    const freshDoc = await tx.get(docRef);
-                    if (freshDoc.exists && freshDoc.data()?.version === originalVersion)
-                        tx.set(docRef, newDocData, { merge: false });
-                    // If the version already changed, someone else must have migrated or updated it already. If that's the case, don't do anything.
-                }).catch(err => LogUtil.log("Migration write-back failed", { err }, "low", "error"));
+                DBMigrationWriteBackUtil.writeBack(docRef.firestore, [{ ref: docRef, originalVersion, newDocData }]);
             }
             data.push(newDocData as T);
         }
@@ -54,7 +51,7 @@ export default async function runQuerySelect<T extends DBRow>(
     {
         const querySnapshot = await collectionQuery.get();
         const docs = querySnapshot.docs;
-        const versionMigratedDocEntries: { ref: admin.firestore.DocumentReference, originalVersion: number, newDocData: admin.firestore.DocumentData }[] = [];
+        const versionMigratedDocRewrites: MigratedDocRewrite[] = [];
 
         const migrated = await Promise.all(docs.map(async (doc: admin.firestore.QueryDocumentSnapshot) => {
             if (!doc.exists)
@@ -75,24 +72,14 @@ export default async function runQuerySelect<T extends DBRow>(
         {
             if (!entry) continue;
             if (entry.newDocData.version !== entry.originalVersion)
-                versionMigratedDocEntries.push(entry);
+                versionMigratedDocRewrites.push(entry);
             data.push(entry.newDocData as T);
         }
 
-        if (versionMigratedDocEntries.length > 0)
+        if (versionMigratedDocRewrites.length > 0)
         {
-            // Note: Each Firestore transaction can process only upt o 500 reads/writes.
-            
             // Write back the updated data to the DB (Note: This is a fire-and-forget operation. Don't await, don't block the read)
-            collectionQuery.firestore.runTransaction(async (tx: admin.firestore.Transaction) => {
-                for (const entry of versionMigratedDocEntries)
-                {
-                    const freshDoc = await tx.get(entry.ref);
-                    if (freshDoc.exists && freshDoc.data()?.version === entry.originalVersion)
-                        tx.set(entry.ref, entry.newDocData, { merge: false });
-                    // If the version already changed, someone else must have migrated or updated it already. If that's the case, don't do anything.
-                }
-            }).catch(err => LogUtil.log("Migration write-back failed", { err }, "low", "error"));
+            DBMigrationWriteBackUtil.writeBack(collectionQuery.firestore, versionMigratedDocRewrites);
         }
     }
 

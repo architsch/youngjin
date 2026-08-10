@@ -6,6 +6,7 @@ import LogUtil from "../../../shared/system/util/logUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import DBCacheUtil from "../util/dbCacheUtil";
 import LatencySimUtil from "../../system/util/latencySimUtil";
+import { DB_MAX_WRITES_PER_COMMIT } from "../../system/serverConstants";
 
 export default async function runQueryBatch<T extends DBRow>(
     queries: DBQuery<T>[]
@@ -14,11 +15,10 @@ export default async function runQueryBatch<T extends DBRow>(
     try {
         await LatencySimUtil.simulateDBLatency();
         const db = await FirebaseUtil.getDB();
-        const batchSize = 500; // Firestore batch limit
-        for (let i = 0; i < queries.length; i += batchSize)
+        for (let i = 0; i < queries.length; i += DB_MAX_WRITES_PER_COMMIT)
         {
             const batch = db.batch();
-            const chunk = queries.slice(i, i + batchSize);
+            const chunk = queries.slice(i, i + DB_MAX_WRITES_PER_COMMIT);
             for (const query of chunk)
             {
                 if (!query.docId)

@@ -24,3 +24,5 @@ playwright-report/
 blob-report/
 playwright/.cache/
 tests/e2e/.auth/
+# Playtest scratch (plans, results, screenshots, baselines)
+temp/

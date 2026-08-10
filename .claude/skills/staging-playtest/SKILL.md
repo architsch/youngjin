@@ -1,0 +1,232 @@
+---
+name: staging-playtest
+description: Run an AI-driven playtest and server-health investigation against the deployed staging server — survey the existing error backlog, seed database states that ordinary play cannot produce (outdated row versions, downgraded room content, a large population of room owners), drive concurrent browser sessions against it, and correlate everything against the staging server's logs and process metrics. Use after deploying to staging, when asked to playtest staging, verify a deployment, hunt for server-side errors, or check whether a fix actually took effect on a real server.
+---
+
+# Staging Playtest
+
+Verifies a deployment the way local tests cannot: against the real server, the real Firestore,
+and the real network, with several clients connected at once.
+
+The point is **not** to re-test what a human can try in a minute. Walking around, placing a
+voxel, dragging an object — the user does that faster themselves. This exists for the states
+that are genuinely hard to produce by hand:
+
+- Rows sitting at an **outdated schema version**, which drive the migration and write-back path.
+  Nothing the app writes is ever outdated, so only direct seeding creates them.
+- **Room content blobs at an older binary version**, which drive the VoxelGrid decoder chain.
+- A **large population of room owners**, which drives room-list pagination, search and the
+  denormalized owner name. Staging runs in production mode, so the dev OAuth bypass is off and
+  a browser session can only ever become a guest — twenty owners means twenty Google accounts,
+  or one seeding command.
+- **Concurrency** — several real clients in one room at once.
+
+## Roles
+
+Run these as parallel subagents when the user asks for multiple agents; otherwise do them in
+sequence yourself. Either way the division of labour is the same:
+
+| Role | Does | Tool |
+|---|---|---|
+| **Admin** | Seeds and cleans DB/storage state; verifies migration landed | `dev/scripts/playtest/stagingAdmin.js` |
+| **Playtester** (1–3) | Drives real browser sessions, checks room list/search/navigation | `dev/scripts/playtest/runPlan.js` |
+| **Monitor** | Surveys the log backlog, baselines, diffs, watches process metrics | `dev/scripts/playtest/serverMonitor.js` |
+
+All three print JSON on stdout.
+
+## Step 1 — Survey what is already broken
+
+Always first, before seeding or driving anything. A public server's error log is full of
+weather — vulnerability scanners, deprecation notices, sockets replaced on refresh — and an
+agent reading it cold will "find errors" every time and report them as regressions.
+
+```
+node dev/scripts/playtest/serverMonitor.js history --app staging --top 20
+```
+
+Read `needsAttention` and treat it as the **pre-existing backlog**. Anything appearing there is
+not a finding of this playtest; it is the baseline to compare against. Report it separately, and
+say how long it has been happening (`perFile` gives per-day line counts).
+
+Also confirm what is actually deployed before drawing conclusions about a fix:
+
+```
+node dev/scripts/playtest/serverMonitor.js metrics
+git -C . rev-parse --short HEAD
+```
+
+The running build's commit is in `window.thingspool_env.gitCommit` (a `start` action reports
+it). If it does not match the local HEAD, the fix under test is **not on the server** — say so
+and stop rather than reporting a fix as verified or as failed.
+
+## Step 2 — Baseline
+
+```
+node dev/scripts/playtest/serverMonitor.js baseline --app staging
+```
+
+Records per-file log byte offsets plus pm2 restart counts and memory. Every later `diff` reports
+only what was appended after this point. Re-baseline between phases when you want to attribute
+errors to one specific phase.
+
+## Step 3 — Seed the states worth testing
+
+```
+# Rows the migration path has to handle. Single-use — see below.
+node dev/scripts/playtest/stagingAdmin.js seed-users  --version 0 --count 3 --run <runID>
+node dev/scripts/playtest/stagingAdmin.js seed-rooms  --version 0 --count 4 --run <runID> --owner <userID> --with-content
+
+# A population of room owners, for room-list pagination and search.
+node dev/scripts/playtest/stagingAdmin.js seed-population --version 3 --count 14 --run <runID> --with-content --persist
+
+# An older binary content version, for the VoxelGrid decoder chain.
+node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> --to 0
+```
+
+Every command takes `--target staging` (the default) or `--target local`, and prints the target
+it addressed. There is no live target — see Safety.
+
+Three things to get right:
+
+- **`--with-content` matters.** A seeded room with no content blob is listed but cannot be
+  entered: the server logs a load failure and falls back to a hub. That fallback is correct
+  behaviour, but the room is decorative, and the recurring error pollutes later baselines.
+- **Seeded content comes from `RoomGenerationUtil`, and that is the point.** Each room is
+  generated from its own seed by the same code path that runs when a user creates a room, so a
+  seeded population comes out as varied as an organic one — different layouts, different texture
+  packs, a different number of hung canvases. It also means the row carries the parameters
+  generation actually decided rather than a default the seeder picked; a room whose row names
+  one texture pack while its voxels index another pack's atlas is a room the game could never
+  have produced, and testing against it is testing against an unreachable state.
+- **Seeding several stale rooms that share one owner is the interesting case.** Each room's
+  v0→v1 migration looks the owner up, so N stale rooms fire N concurrent reads of one user
+  document — the contention that a single-document test never reproduces.
+
+### What persists and what does not
+
+| Seed | Reusable? | Why |
+|---|---|---|
+| `seed-population` at the current version | **Yes** — use `--persist` | Reading it does not change it. A stable population makes pagination deterministic between runs. |
+| `seed-users` / `seed-rooms` at an outdated version | **No** | Single-use by nature: the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. Re-seed every run. |
+| Seeded guests (`userType` 2) | **No** | The server's own hourly stale-guest sweep deletes them regardless of intent. |
+| `downgrade-content` | **No** | The next room save re-encodes at the current version. Always `restore-content` afterwards. |
+
+## Step 4 — Drive the clients
+
+Write a plan, run it, read the result, write the next plan informed by what happened. Do not try
+to drive the browser one click at a time.
+
+```json
+{
+  "agent": "explorer-1",
+  "actions": [
+    { "type": "start" },
+    { "type": "waitForRoom" },
+    { "type": "skipTutorial" },
+    { "type": "listRooms", "page": 0 },
+    { "type": "listRooms", "page": 1 },
+    { "type": "searchRooms", "query": "Playtest" },
+    { "type": "gotoRoom", "roomID": "<seeded room>" },
+    { "type": "waitForRoom" },
+    { "type": "screenshot", "name": "seeded-room" },
+    { "type": "end" }
+  ]
+}
+```
+
+```
+node dev/scripts/playtest/runPlan.js <plan.json> --out <result.json>
+```
+
+Non-obvious things that will otherwise waste a run:
+
+- **`skipTutorial` is mandatory before anything multiplayer.** A newly created guest starts in
+  the single-player tutorial. Until it leaves, `gotoRoom` appears to succeed while the client
+  stays in the tutorial, so every room-list and room-entry check silently tests nothing.
+- **`end` is mandatory.** Closing without it leaves a ghost player in the room until the stale
+  socket sweep notices, which the next run reads as a bug.
+- **Give each agent a distinct `userAgent`.** Guest creation is capped per IP *and* User-Agent
+  together, so agents sharing a string share one small quota.
+- Assertions about data go through the page's own authenticated request context — same session,
+  same cookies, no clicking. The room-list *popup* is opened in-game by interacting with a door
+  object whose position varies per generated room, so it is not scripted; screenshots cover
+  whether the client rendered, and the request-context checks cover whether the data is right.
+
+### Rate limits shape the whole run
+
+Staging runs in production mode. **20 requests per minute per IP** for both pages and API, and
+every agent on this machine shares one IP. Guest creation is capped at **10 per IP per hour** and
+**3 per IP+User-Agent per hour**.
+
+So: 2–3 agents, not a swarm. Reuse sessions instead of creating guests. `runPlan.js` paces its
+own API calls and reports `rateLimitHits` separately — a non-zero count is self-inflicted, not a
+server fault, and must be reported that way.
+
+## Step 5 — Correlate
+
+```
+node dev/scripts/playtest/serverMonitor.js diff --app staging
+node dev/scripts/playtest/stagingAdmin.js verify-migration
+```
+
+`diff` separates the two streams deliberately: `needsAttention` comes from stderr (what LogUtil
+logged as a warning or error), while `activity` comes from stdout (every DB query, every room
+save) and is context, not findings. `restartsDuringWindow` is the loudest possible signal — a
+process that restarted mid-run either crashed or hit its memory ceiling.
+
+`verify-migration` is the assertion that seeding exists to make: a seeded row should have
+advanced to the current version **in storage**, not merely in the reply the client received. A
+row still at its seeded version after the server has read it means the write-back silently
+failed — the data is correct for the caller and permanently wrong on disk, so every subsequent
+read re-migrates it forever.
+
+## Step 6 — Clean up, then report
+
+```
+node dev/scripts/playtest/stagingAdmin.js restore-content
+node dev/scripts/playtest/stagingAdmin.js cleanup --run <runID>       # keeps --persist seeds
+node dev/scripts/playtest/stagingAdmin.js cleanup --all               # removes them too
+```
+
+Report in this order, and keep the categories apart — collapsing them is the main way this kind
+of report misleads:
+
+1. **New** — in the diff, absent from the Step 1 backlog. The actual findings.
+2. **Pre-existing** — in the backlog too. Note the rate; a jump in rate is itself a finding.
+3. **Self-inflicted** — rate limiting, guest-cap refusals, errors caused by seeded state that is
+   deliberately invalid. Name them so they are not mistaken for defects.
+4. **Verified** — what demonstrably worked, with the evidence (migration versions advanced,
+   pagination totals, zero fallbacks, screenshots).
+
+State plainly what was *not* covered. Small in-world interactions are out of scope by design.
+
+## Safety
+
+**Direct database writes are confined to staging and the local emulator. There is no live write
+path, and none is to be added.** Live and staging share one Firebase project and one storage
+bucket, separated only by a collection-name prefix, so which database is being addressed comes
+down to a string comparison — and that is guarded in three places:
+
+1. **`dev/scripts/playtest/lib/dbGuard.js`** is the only place a playtest script obtains a
+   Firestore or Storage handle. It resolves `--target staging|local` (`live`, `prod` and
+   `production` are refused by name, and no third target exists), and returns handles that check
+   every collection name and every storage path against that target's prefix before it reaches
+   the SDK. `local` demands the emulator environment variables, because an unprefixed namespace
+   with no emulator is not local — it is live.
+   **A playtest script must never construct its own `admin.firestore()`.**
+2. **`.claude/settings.json`** denies the gcloud and firebase CLI subcommands that could reach
+   live data without going through Node at all. These are denials for the assistant only; the
+   developer runs them in a terminal as before.
+3. **`serverMonitor.js --app live` is read-only** — it tails PM2's logs over SSH and does not
+   write. It exists because comparing live's backlog against staging's is useful.
+
+Beyond the target boundary:
+
+- `cleanup` deletes only documents carrying the marker field the seeder stamps on its own seeds.
+  It cannot delete organic data.
+- `downgrade-content` copies the original blob aside before touching it, and never overwrites an
+  existing backup; `restore-content` puts it back and is also run by `cleanup`.
+- Every command reports the target it addressed, so which namespace was touched is never
+  something the reader of a playtest report has to infer. Quote it in the report.
+- Staging's writes draw on the same Firebase quota as production traffic. Prefer `--persist`
+  over reseeding a large population each run.

@@ -405,9 +405,7 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
     },
     onModeEnd: () =>
     {
-        // The tutorial is the only thing that turns feature flags on, and none of the
-        // restrictions it imposes should outlive it — so when it ends (completed or skipped),
-        // disable every feature flag rather than tracking which ones happen to still be on.
+        // When the tutorial ends (completed or skipped), disable every feature flag.
         const actions: SinglePlayerAction[] = [];
         for (const flag of Object.values(FeatureFlag))
         {

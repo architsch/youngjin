@@ -26,9 +26,11 @@
 		"test:e2e:report": "npx playwright show-report",
 		"test:e2e:debug": "npx playwright test --debug",
 		"test:e2e:local": "E2E_BASE_URL=http://127.0.0.1:3000 npx playwright test",
-		"test:integration": "npx vitest run",
+		"test:integration": "node ./dev/scripts/runIntegrationTests.js",
+		"test:integration:nodb": "npx vitest run",
 		"test:integration:watch": "npx vitest",
-		"test:integration:ui": "npx vitest --ui"
+		"test:integration:ui": "npx vitest --ui",
+		"test:integration:db": "firebase emulators:exec --only firestore \"npx vitest run tests/integration/scenarios/db.test.ts\""
 	},
 	"dependencies": {
 		"@google-cloud/secret-manager": "^6.1.1",

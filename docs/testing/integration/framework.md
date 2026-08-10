@@ -4,6 +4,8 @@
 
 The integration test framework exercises real server-side game logic (room management, object management, voxel operations, physics, signal routing) against a mocked database layer. No actual Firestore or network I/O occurs.
 
+The one exception is the DB suite, which is about the database layer itself and therefore cannot use the mock — see [The DB Suite](#the-db-suite) below.
+
 ```
                      +------------------+
                      |  Scenario Tests  |  (declarative test specs)
@@ -49,6 +51,19 @@ The harness is the foundation. It:
 The server generates every Hub/Regular room from a seed drawn at creation time — its layout, its contents and its texture pack alike — which makes a real room a poor fixture: a scenario that builds and edits blocks at chosen coordinates needs to know what is already there, and needs the same answer on every run. So `createTestRoom()` gives scenarios the bare shell instead — one open floor inside the boundary wall, with the entrance carved, a fixed texture pack, and nothing else — and both `mockDB.seedRoom()` and `selectionHarness.createRoom()` go through it. Single-player rooms keep their real template, since that template *is* what those scenarios are about.
 
 The generator itself is covered separately by `room-generation.test.ts`.
+
+### The DB Suite (`scenarios/db.test.ts`, `helpers/emulatorDB.ts`)
+
+Mocking the DB layer leaves the query runners — the code deciding what Firestore is actually asked to do — with nothing exercising them. A mock cannot fill that gap, because what these tests are about is what a real Firestore does: which operations it accepts inside a transaction, how many writes it takes in one commit, what it stores when a write is malformed, and what it does when two writers reach the same document. So this suite runs the real runners against the Firestore emulator, and covers every query type (insert, select, update, delete, batch) along with the read-through cache, the query rate monitor, row version migration, and the migration write-back.
+
+`emulatorDB.ts` gives it what the harness gives gameplay tests: a way to seed stored state directly (including states the query layer would never produce, such as a row left at an outdated version), a way to read a document exactly as stored — with no migration, caching or id-injection in the way — a wait for fire-and-forget writes to land, and a capture of what the DB layer logged.
+
+Two properties of this suite are worth knowing when adding to it:
+
+- **The emulator is more permissive than Firestore.** It accepts oversized commits that a real project rejects. So a test about splitting a write across commits asserts on the number of commits issued, not merely on the write succeeding.
+- **The write-back is fire-and-forget by design.** Assertions about it wait for the document to change rather than assuming it already has.
+
+The suite is part of the ordinary `test:integration` run, and therefore of the `pre-commit` hook: an emulator is started for the run when none is already up. See [workflow.md](workflow.md#the-db-suite-and-the-firestore-emulator).
 
 ### Scenario Runner (`helpers/scenarioRunner.ts`)
 

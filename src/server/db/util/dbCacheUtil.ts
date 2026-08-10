@@ -52,6 +52,13 @@ const DBCacheUtil =
     {
         delete cache[getCacheKey(tableId, docId)];
     },
+    // Drops every entry at once, for when the documents behind the whole cache have gone out from
+    // under it rather than any one of them having been written.
+    invalidateAll: (): void =>
+    {
+        for (const key of Object.keys(cache))
+            delete cache[key];
+    },
 };
 
 export default DBCacheUtil;

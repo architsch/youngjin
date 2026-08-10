@@ -64,6 +64,14 @@ const SinglePlayerManager =
         const mode = singlePlayerObservable.peek().mode;
         if (mode == "")
             return;
+        // A step transition may still be waiting out its delay. Cancel it, or it would fire after
+        // the mode has ended and start that step (UI, gizmos, feature flags) on top of whichever
+        // room the user moved on to.
+        if (pendingTimeout !== undefined)
+        {
+            clearTimeout(pendingTimeout);
+            pendingTimeout = undefined;
+        }
         // Tear down any state the mode left behind (e.g. disable every feature flag it enabled).
         // Doing it here means it runs for both natural completion and skipping.
         runActions(SinglePlayerModeConfigMap[mode].onModeEnd());
@@ -73,15 +81,24 @@ const SinglePlayerManager =
     },
     skipSinglePlayerMode: () =>
     {
-        if (singlePlayerObservable.peek().mode == "")
+        const mode = singlePlayerObservable.peek().mode;
+        if (mode == "")
+        {
+            console.warn("skipSinglePlayerMode :: SinglePlayerMode is already finished.");
             return;
+        }
+        // Clear the step instead of finishing the mode directly, so that skipping takes exactly
+        // the same path as natural completion: the listener below ends the current step first,
+        // and only then finishes the mode. Calling finish directly would invert that order, and
+        // a step whose actionsOnEnd re-enables a feature flag would silently undo onModeEnd's
+        // teardown — leaving the flag set for the rest of the session.
+        singlePlayerObservable.set({mode, step: ""});
         if (tryStartClientProcess("roomChange", 1, 1))
         {
             // Since roomID is not specified (i.e. left as ""), the server will
             // pick the most appropriate destination for the user.
             SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("", true));
         }
-        SinglePlayerManager.finishSinglePlayerMode();
     },
 }
 

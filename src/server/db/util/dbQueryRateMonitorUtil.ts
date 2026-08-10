@@ -46,6 +46,15 @@ const DBQueryRateMonitorUtil =
 
         return true;
     },
+    /**
+     * Starts a fresh rolling window. The window otherwise only resets with the passage of time,
+     * which leaves the monitor carrying state across unrelated stretches of work.
+     */
+    resetWindow(): void
+    {
+        queryCount = 0;
+        windowStart = Date.now();
+    },
 }
 
 export default DBQueryRateMonitorUtil;

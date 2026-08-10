@@ -5,6 +5,7 @@ import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBCacheUtil from "../util/dbCacheUtil";
+import { DB_MAX_WRITES_PER_COMMIT } from "../../system/serverConstants";
 
 export default async function runQueryDelete<T extends DBRow>(
     dbQuery: DBQuery<T>,
@@ -18,7 +19,7 @@ export default async function runQueryDelete<T extends DBRow>(
         if (!dbQuery._skipCacheInvalidation)
             DBCacheUtil.invalidate(dbQuery.tableId, docRef.id);
 
-        await docRef.delete(dbQuery.columnValues);
+        await docRef.delete();
         numDocsAffected = 1;
     }
     else
@@ -35,11 +36,15 @@ export default async function runQueryDelete<T extends DBRow>(
         if (querySnapshot.docs.length > 1)
         {
             const db = await FirebaseUtil.getDB();
-            const batch = db.batch();
-            querySnapshot.docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
+            // A query can match any number of documents, so the deletions are split into commits
+            // small enough for Firestore to accept.
+            for (let i = 0; i < querySnapshot.docs.length; i += DB_MAX_WRITES_PER_COMMIT)
+            {
+                const batch = db.batch();
+                for (const doc of querySnapshot.docs.slice(i, i + DB_MAX_WRITES_PER_COMMIT))
+                    batch.delete(doc.ref);
+                await batch.commit();
+            }
         }
         else if (querySnapshot.docs.length == 1)
         {

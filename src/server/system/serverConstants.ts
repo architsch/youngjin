@@ -15,6 +15,10 @@ export const COLLECTION_USERS = `${DB_PREFIX}users`;
 // stale browser cookies left over from a previous DevRunner runtime (see DevRuntimeUtil).
 export const COLLECTION_DEV_RUNTIME = `${DB_PREFIX}_dev_runtime`;
 
+// Firestore commits at most this many writes in a single batch or transaction, so any write
+// spanning an unbounded number of documents has to be split into commits of at most this size.
+export const DB_MAX_WRITES_PER_COMMIT = 500;
+
 // Hard cap on the number of editors a room owner can register. Anti-abuse: without
 // a bound, an owner could inflate DB read/write cost by stuffing the editors list.
 export const MAX_ROOM_EDITORS = 32;

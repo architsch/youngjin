@@ -416,7 +416,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | user without a room cannot change textures | 403 returned |
 | request without texturePackPath is rejected | 400 returned for the missing field |
 
-## Authentication Lifecycle (`auth-lifecycle.test.ts`) — 20 tests
+## Authentication Lifecycle (`auth-lifecycle.test.ts`) — 22 tests
 
 ### Google OAuth (Scenario 10)
 
@@ -467,17 +467,125 @@ with the production caps in force, rather than the relaxed dev ones.
 | does not let one visitor exhaust the cap for others sharing a User-Agent | A visitor at their limit does not block unrelated visitors on the same browser version |
 | does not spend IP budget on attempts the per-client cap rejects | Requests refused by one cap are not charged against the other |
 
+## DB Query Layer (`db.test.ts`) — 55 tests
+
+The only suite that runs against a real (emulated) Firestore rather than the DB mock — see
+[framework.md](framework.md#the-db-suite) for why, and [workflow.md](workflow.md#the-db-suite-and-the-firestore-emulator)
+for how to run it. It skips itself when no emulator is available.
+
+### Insert (4 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| stores the given values under a generated document id | An insert without an id returns the one Firestore generated |
+| stores the given values under a caller-chosen document id | An insert with an id writes to exactly that document |
+| writes over a document that already occupies the chosen id | The stored document is replaced wholesale, not merged into |
+| stamps rows written through the DB utils with the current schema version | A newly created row is never one a later read has to migrate |
+
+### Select (12 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| reads a document by id and attaches the document's own id to the row | A row read by id carries the id callers identify it by |
+| takes the row's id from the document, never from a stored "id" field | A row's identity comes from the document, even when an "id" field was stored inside it |
+| succeeds with no rows when the document does not exist | A missing document is an empty result, not a failure |
+| succeeds with no rows when the collection is empty | An empty collection is an empty result, not a failure |
+| filters on a single equality condition | An equality condition selects only matching documents |
+| ANDs multiple conditions | Several conditions on one query all have to hold |
+| ORs condition groups | Condition groups separated by `or()` each admit their own matches |
+| does not match documents that lack the field being filtered on | A row that never reached the version introducing a field is invisible to queries on it |
+| orders rows ascending and descending | `orderBy` sorts in the requested direction |
+| pages through rows with limit and offset | `limit`/`offset` return the requested page, and nothing past the end |
+| reports failure instead of throwing when the collection has no migration defined | An unknown collection fails the query and is logged, rather than escaping the runner |
+| reports failure instead of throwing when a row's version is not a number | An unreadable version fails the query and is logged |
+
+### Update (8 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| writes only the named fields and leaves the rest of the row alone | An update is a field-level write, not a row replacement |
+| reports failure when the document does not exist | Updating a missing document is reported as a failure |
+| applies a single-match query update to the one document it matched | A query update touches only what it matched |
+| has already written a single-match query update by the time it reports success | The write is awaited, so a caller reading afterwards sees it |
+| applies a multi-match query update to every matching document | Every match is updated, and nothing else |
+| splits a query update spanning more documents than one commit allows | The write is issued as several commits, each within Firestore's limit |
+| applies field transforms such as increment | Transform values reach Firestore as transforms |
+| migrates an outdated row and applies the update in the same write | Migration and update land together, leaving no half-migrated row |
+
+### Delete (5 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| deletes a document by id | The named document goes, others stay |
+| succeeds when the document does not exist | Deleting nothing is not a failure |
+| deletes the single document a query matches | A query deletion touches only what it matched |
+| deletes every document a query matches | Every match is deleted, and nothing else |
+| splits a query deletion spanning more documents than one commit allows | The deletion is issued as several commits, each within Firestore's limit |
+
+### Batch (5 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| applies updates and deletions together | A batch mixes both kinds of write in one commit |
+| succeeds without touching the DB when given no queries | An empty batch is a no-op |
+| rejects the whole batch, writing nothing, when a query names no document | A batch that cannot be built applies none of its writes |
+| rejects query types it cannot batch | Only updates and deletions are accepted |
+| splits a batch spanning more queries than one commit allows | The batch is issued as several commits, each within Firestore's limit |
+
+### Read-through cache (5 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| serves a repeated read by id without going back to the DB | A second read within the entry's lifetime is served from memory |
+| does not serve a cached row once an update has invalidated it | A write drops the cached row |
+| keeps the cached row when an update opts out of invalidation | `noInvalidate()` leaves the cached row in place while still writing |
+| does not serve a cached row once a delete has invalidated it | A deletion drops the cached row |
+| caches every row a multi-document read returns | A query result populates the cache for each row it returned |
+
+### Query rate monitor (2 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| rejects writes once the window is saturated, and keeps serving reads | Past the critical rate, writes are refused and reads still answered |
+| accepts writes again once the window is reset | A fresh window restores normal service |
+
+### Version migration (4 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| brings a row written by the oldest schema all the way up to the current one | Every step of the chain runs, in order, adding and dropping fields as declared |
+| runs migration steps that themselves read the DB | A step that has to look something up completes before the row is returned |
+| leaves the owner's name blank when the owner is gone | A lookup that finds nothing does not fail the migration |
+| leaves a row that is already current entirely untouched | A current row is neither migrated nor rewritten |
+
+### Migration write-back (10 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| persists every outdated document a multi-document read returned | A read returning several outdated rows migrates all of them in the DB, not just the first |
+| persists the one outdated document a multi-document read returned | The single-match case persists too |
+| persists an outdated document read by id | A read by id persists its migration |
+| leaves nothing to migrate for the next read of the same documents | The next read finds the rows current and rewrites nothing |
+| does not store the row's id inside the document | The synthetic row id is not written into the document |
+| persists outdated documents spanning more than one commit's worth | The write-back is issued as several transactions, each within Firestore's limit |
+| leaves a document alone when someone else has already changed its version | A write-back computed from a stale read does not overwrite a newer row |
+| skips a document that has been deleted since it was read | A write-back does not resurrect a deleted document |
+| reports a failed write-back with a usable description of the failure | The log carries the error's description, not an empty object |
+| never lets a failing write-back fail the read that triggered it | The read still succeeds, with fully migrated rows, when the write-back cannot run |
+
 ## Test Count Summary
 
 | Category | Tests |
 |----------|-------|
 | Connection | 9 |
 | Room | 9 |
+| Room Generation | 8 |
 | Room Population | 34 |
 | Object | 8 |
 | Voxel | 9 |
+| Voxel Quad Reselection | 32 |
 | Single-Player | 10 |
-| FTUE | 25 |
+| FTUE | 26 |
 | Player Mesh Composition | 16 |
 | Signals | 6 |
 | Permissions | 5 |
@@ -487,6 +595,7 @@ with the production caps in force, rather than the relaxed dev ones.
 | Property-Based | 17 |
 | Room Ownership | 7 |
 | Room API | 12 |
-| Authentication Lifecycle | 20 |
+| Authentication Lifecycle | 22 |
 | Guest Creation Limits | 4 |
-| **Total** | **242** |
+| DB Query Layer | 55 |
+| **Total** | **340** |

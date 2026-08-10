@@ -1,0 +1,32 @@
+{
+    "$comment": [
+        "Project-wide guard rails, checked in so they apply to every agent and every session.",
+        "",
+        "The playtest tooling writes directly to a database, and live and staging share one",
+        "Firebase project and one storage bucket. dev/scripts/playtest/lib/dbGuard.js makes that",
+        "tooling structurally incapable of naming a live collection. These rules close the way",
+        "around it: the CLIs that can reach the live data without going through Node at all.",
+        "",
+        "These are denials for the assistant, not for the developer. Any of them remains",
+        "available by running it yourself in a terminal, which is the point — an irreversible",
+        "operation on production data should be a deliberate human act."
+    ],
+    "permissions": {
+        "deny": [
+            "Bash(gcloud firestore:*)",
+            "Bash(gcloud alpha firestore:*)",
+            "Bash(gcloud beta firestore:*)",
+            "Bash(firebase firestore:*)",
+            "Bash(firebase database:*)",
+            "Bash(firebase deploy:*)",
+            "Bash(gcloud storage rm:*)",
+            "Bash(gcloud storage cp:*)",
+            "Bash(gcloud storage mv:*)",
+            "Bash(gcloud storage rsync:*)",
+            "Bash(gsutil rm:*)",
+            "Bash(gsutil cp:*)",
+            "Bash(gsutil mv:*)",
+            "Bash(gsutil rsync:*)"
+        ]
+    }
+}

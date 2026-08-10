@@ -66,3 +66,5 @@ ThingsPool is an open source project, built with a modern real-time web stack: T
         - [Workflow](docs/testing/integration/workflow.md)
         - [Framework](docs/testing/integration/framework.md)
         - [Scenarios](docs/testing/integration/scenarios.md)
+    - Staging Playtest
+        - [Workflow](docs/testing/playtest/workflow.md)

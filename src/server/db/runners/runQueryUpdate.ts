@@ -6,6 +6,7 @@ import { DBRow } from "../types/row/dbRow";
 import runQueryVersionMigration from "./runQueryVersionMigration";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBCacheUtil from "../util/dbCacheUtil";
+import { DB_MAX_WRITES_PER_COMMIT } from "../../system/serverConstants";
 
 export default async function runQueryUpdate<T extends DBRow>(
     dbQuery: DBQuery<T>,
@@ -61,26 +62,31 @@ export default async function runQueryUpdate<T extends DBRow>(
         if (querySnapshot.docs.length > 1)
         {
             const db = await FirebaseUtil.getDB();
-            const batch = db.batch();
             const migrated = await Promise.all(querySnapshot.docs.map(async (doc: admin.firestore.QueryDocumentSnapshot) => {
                 const docData = doc.data();
                 const originalVersion = docData.version;
                 const newDocData = await runQueryVersionMigration(dbQuery, docData);
                 return { ref: doc.ref, originalVersion, newDocData };
             }));
-            for (const { ref, originalVersion, newDocData } of migrated)
+            // A query can match any number of documents, so the writes are split into commits
+            // small enough for Firestore to accept.
+            for (let i = 0; i < migrated.length; i += DB_MAX_WRITES_PER_COMMIT)
             {
-                if (newDocData.version != originalVersion)
+                const batch = db.batch();
+                for (const { ref, originalVersion, newDocData } of migrated.slice(i, i + DB_MAX_WRITES_PER_COMMIT))
                 {
-                    Object.assign(newDocData, dbQuery.columnValues);
-                    batch.set(ref, newDocData, {merge: false});
+                    if (newDocData.version != originalVersion)
+                    {
+                        Object.assign(newDocData, dbQuery.columnValues);
+                        batch.set(ref, newDocData, {merge: false});
+                    }
+                    else
+                    {
+                        batch.update(ref, dbQuery.columnValues);
+                    }
                 }
-                else
-                {
-                    batch.update(ref, dbQuery.columnValues);
-                }
+                await batch.commit();
             }
-            await batch.commit();
         }
         else if (querySnapshot.docs.length == 1)
         {
@@ -91,7 +97,7 @@ export default async function runQueryUpdate<T extends DBRow>(
             if (newDocData.version != originalVersion)
             {
                 Object.assign(newDocData, dbQuery.columnValues);
-                doc.ref.set(newDocData, {merge: false});
+                await doc.ref.set(newDocData, {merge: false});
             }
             else
             {
