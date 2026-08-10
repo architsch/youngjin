@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import MigratedDocRewrite from "../types/migratedDocRewrite";
+import DBRowIdentityUtil from "./dbRowIdentityUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { DB_MAX_WRITES_PER_COMMIT } from "../../system/serverConstants";
@@ -27,7 +28,7 @@ const DBMigrationWriteBackUtil =
                         // If the version already changed, someone else must have migrated or updated
                         // it already. If that's the case, don't do anything.
                         if (freshDoc.exists && freshDoc.data()?.version === rewrite.originalVersion)
-                            tx.set(rewrite.ref, withoutRowID(rewrite.newDocData), { merge: false });
+                            tx.set(rewrite.ref, DBRowIdentityUtil.forStorage(rewrite.newDocData), { merge: false });
                     }
                 });
             }
@@ -37,15 +38,6 @@ const DBMigrationWriteBackUtil =
             }
         }
     },
-}
-
-// A row carries an "id" so that callers can tell which document it came from, but that identity
-// belongs to the document itself, not to its contents — writing it back would store a second,
-// redundant copy of it inside the document.
-function withoutRowID(docData: admin.firestore.DocumentData): admin.firestore.DocumentData
-{
-    const { id, ...rest } = docData;
-    return rest;
 }
 
 export default DBMigrationWriteBackUtil;

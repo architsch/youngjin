@@ -467,13 +467,13 @@ with the production caps in force, rather than the relaxed dev ones.
 | does not let one visitor exhaust the cap for others sharing a User-Agent | A visitor at their limit does not block unrelated visitors on the same browser version |
 | does not spend IP budget on attempts the per-client cap rejects | Requests refused by one cap are not charged against the other |
 
-## DB Query Layer (`db.test.ts`) — 55 tests
+## DB Query Layer (`db.test.ts`) — 61 tests
 
 The only suite that runs against a real (emulated) Firestore rather than the DB mock — see
 [framework.md](framework.md#the-db-suite) for why, and [workflow.md](workflow.md#the-db-suite-and-the-firestore-emulator)
 for how to run it. It skips itself when no emulator is available.
 
-### Insert (4 tests)
+### Insert (6 tests)
 
 | Test | What it verifies |
 |------|-----------------|
@@ -481,6 +481,8 @@ for how to run it. It skips itself when no emulator is available.
 | stores the given values under a caller-chosen document id | An insert with an id writes to exactly that document |
 | writes over a document that already occupies the chosen id | The stored document is replaced wholesale, not merged into |
 | stamps rows written through the DB utils with the current schema version | A newly created row is never one a later read has to migrate |
+| does not store an id field, even when the caller supplies one | A row's identity stays the document's key; on this path a supplied id could not be right anyway, since the document has none until the insert creates it |
+| does not store an id field under a caller-chosen document id either | Even an id agreeing with the key is a second copy of it, free to drift |
 
 ### Select (12 tests)
 
@@ -499,7 +501,7 @@ for how to run it. It skips itself when no emulator is available.
 | reports failure instead of throwing when the collection has no migration defined | An unknown collection fails the query and is logged, rather than escaping the runner |
 | reports failure instead of throwing when a row's version is not a number | An unreadable version fails the query and is logged |
 
-### Update (8 tests)
+### Update (9 tests)
 
 | Test | What it verifies |
 |------|-----------------|
@@ -511,6 +513,7 @@ for how to run it. It skips itself when no emulator is available.
 | splits a query update spanning more documents than one commit allows | The write is issued as several commits, each within Firestore's limit |
 | applies field transforms such as increment | Transform values reach Firestore as transforms |
 | migrates an outdated row and applies the update in the same write | Migration and update land together, leaving no half-migrated row |
+| does not store the row's id when a migration rewrites the document | The rewrite an update performs replaces the document wholesale, so it is the other place a stored id could appear from |
 
 ### Delete (5 tests)
 
@@ -549,12 +552,15 @@ for how to run it. It skips itself when no emulator is available.
 | rejects writes once the window is saturated, and keeps serving reads | Past the critical rate, writes are refused and reads still answered |
 | accepts writes again once the window is reset | A fresh window restores normal service |
 
-### Version migration (4 tests)
+### Version migration (7 tests)
 
 | Test | What it verifies |
 |------|-----------------|
 | brings a row written by the oldest schema all the way up to the current one | Every step of the chain runs, in order, adding and dropping fields as declared |
 | runs migration steps that themselves read the DB | A step that has to look something up completes before the row is returned |
+| hands a migration step the document's own id, whichever query triggered it | One migration step runs under every runner, so each has to hand it the same row shape |
+| drops the id field that rooms written before the rule still carry | The v3 → v4 step changes nothing itself; the version bump is what makes the row be rewritten, without its stored identity |
+| drops the id field that migrated user accounts still carry | Accounts brought up through an earlier schema change were stored with the reader's copy of their own key; accounts created since were not |
 | leaves the owner's name blank when the owner is gone | A lookup that finds nothing does not fail the migration |
 | leaves a row that is already current entirely untouched | A current row is neither migrated nor rewritten |
 
@@ -597,5 +603,5 @@ for how to run it. It skips itself when no emulator is available.
 | Room API | 12 |
 | Authentication Lifecycle | 22 |
 | Guest Creation Limits | 4 |
-| DB Query Layer | 55 |
-| **Total** | **340** |
+| DB Query Layer | 61 |
+| **Total** | **346** |

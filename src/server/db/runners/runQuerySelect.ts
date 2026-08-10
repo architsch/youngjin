@@ -6,6 +6,7 @@ import runQueryVersionMigration from "./runQueryVersionMigration";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBCacheUtil from "../util/dbCacheUtil";
 import DBMigrationWriteBackUtil from "../util/dbMigrationWriteBackUtil";
+import DBRowIdentityUtil from "../util/dbRowIdentityUtil";
 import MigratedDocRewrite from "../types/migratedDocRewrite";
 
 export default async function runQuerySelect<T extends DBRow>(
@@ -35,7 +36,7 @@ export default async function runQuerySelect<T extends DBRow>(
                 LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
                 return { success: false, data: [] };
             }
-            docData.id = doc.id;
+            DBRowIdentityUtil.fromDocument(docData, doc.id);
 
             const originalVersion = docData.version;
             const newDocData = await runQueryVersionMigration(dbQuery, docData);
@@ -62,7 +63,7 @@ export default async function runQuerySelect<T extends DBRow>(
                 LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
                 return null;
             }
-            docData.id = doc.id;
+            DBRowIdentityUtil.fromDocument(docData, doc.id);
             const originalVersion = docData.version;
             const newDocData = await runQueryVersionMigration(dbQuery, docData);
             return { ref: doc.ref, originalVersion, newDocData };

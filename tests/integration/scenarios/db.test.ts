@@ -183,6 +183,30 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             const stored = await EmulatorDB.readStored(COLLECTION_USERS, result.data[0].id);
             expect(stored?.version).toBe(USER_VERSION);
         });
+
+        it("does not store an id field, even when the caller supplies one", async () => {
+            // A caller inserting a row it has been holding will usually still have an "id" on it,
+            // and on this path that id cannot be right anyway — the document has none until the
+            // write below creates it.
+            const result = await new DBQuery<DBRow>()
+                .insertInto(COLLECTION_ROOMS)
+                .values(currentRoom({ id: "stale-id" } as Partial<DBRoom>))
+                .run();
+
+            const docId = result.data[0].id as string;
+            expect(docId).not.toBe("stale-id");
+            expect((await EmulatorDB.readStored(COLLECTION_ROOMS, docId))?.id).toBeUndefined();
+        });
+
+        it("does not store an id field under a caller-chosen document id either", async () => {
+            await new DBQuery<DBRow>()
+                .insertIntoWithId(COLLECTION_ROOMS, "chosen")
+                .values(currentRoom({ id: "chosen" } as Partial<DBRoom>))
+                .run();
+
+            // Even an id that agrees with the key is a second copy of it, free to drift later.
+            expect((await EmulatorDB.readStored(COLLECTION_ROOMS, "chosen"))?.id).toBeUndefined();
+        });
     });
 
     // ─── Select ──────────────────────────────────────────────────────────────
@@ -469,6 +493,27 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(stored?.playerMetadata).toEqual({});
             expect(stored?.totalPlaytimeMs).toBeUndefined();
         });
+
+        it("does not store the row's id when a migration rewrites the document", async () => {
+            // The rewrite here replaces the document wholesale, exactly as the write-back does,
+            // so it is the other place a stored "id" could appear from.
+            await EmulatorDB.seed(COLLECTION_ROOMS, {
+                r1: { version: 1, roomType: RoomTypeEnumMap.Hub, ownerUserID: "", ownerUserName: "",
+                      texturePackPath: "pack" } as DBRow,
+                r2: { version: 1, roomType: RoomTypeEnumMap.Hub, ownerUserID: "", ownerUserName: "",
+                      texturePackPath: "pack" } as DBRow,
+            });
+
+            await new DBQuery<DBRow>()
+                .update(COLLECTION_ROOMS)
+                .set({ texturePackPath: "repainted" })
+                .where("roomType", "==", RoomTypeEnumMap.Hub)
+                .run();
+
+            const stored = await EmulatorDB.readStoredAll(COLLECTION_ROOMS);
+            expect(Object.values(stored).every(row => row.version === ROOM_VERSION)).toBe(true);
+            expect(Object.values(stored).every(row => row.id === undefined)).toBe(true);
+        });
     });
 
     // ─── Delete ──────────────────────────────────────────────────────────────
@@ -743,6 +788,72 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(result.data[0].ownerUserName).toBe("landlord");
             expect(result.data[0].editors).toEqual([]);
             expect(result.data[0].roomName).toBe("");
+        });
+
+        it("drops the id field that rooms written before the rule still carry", async () => {
+            // The v3 -> v4 step exists for exactly this: it changes nothing itself, and the
+            // version bump is what makes the read rewrite the row without its stored identity.
+            await EmulatorDB.seed(COLLECTION_ROOMS, {
+                r1: { ...currentRoom(), version: 3, id: "r1" } as DBRow,
+                r2: { ...currentRoom(), version: 3, id: "" } as DBRow,   // What createRoom used to store
+            });
+
+            const result = await selectRooms().where("roomType", "==", RoomTypeEnumMap.Regular).run();
+
+            // The caller still gets the identity, taken from the document rather than the field.
+            expect(result.data.map(row => row.id).sort()).toEqual(["r1", "r2"]);
+
+            await EmulatorDB.waitFor(
+                async () => Object.values(await EmulatorDB.readStoredAll(COLLECTION_ROOMS))
+                    .every(row => row.version === ROOM_VERSION && row.id === undefined),
+                "both rooms rewritten without a stored id");
+        });
+
+        it("drops the id field that migrated user accounts still carry", async () => {
+            // A user was never created with an "id", but one that was *migrated* was stored with
+            // the reader's copy of its key — so accounts old enough to have come up through a
+            // schema change have one, and accounts created since do not.
+            await EmulatorDB.seed(COLLECTION_USERS, { u1: { ...currentUser(), version: 3, id: "u1" } as DBRow });
+
+            const result = await selectUsers().where("id", "==", "u1").run();
+            expect(result.data[0].id).toBe("u1");
+
+            await EmulatorDB.waitFor(async () => {
+                const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
+                return stored?.version === USER_VERSION && stored?.id === undefined;
+            }, "the account rewritten without a stored id");
+        });
+
+        it("hands a migration step the document's own id, whichever query triggered it", async () => {
+            // A migration step is one function running under every runner, so it has to be handed
+            // the same row shape by all of them. That drifted once: only the select runner attached
+            // the document's id, so a step that read row.id would have seen it under a read and not
+            // under a write — and the write is the path that then stores what the step returned.
+            const idSeenByTrigger: {[trigger: string]: unknown} = {};
+            const originalStep = DBRoomVersionMigration[0];
+            DBRoomVersionMigration[0] = async (row: any) => {
+                idSeenByTrigger[row.texturePackPath] = row.id;
+                return originalStep(row);
+            };
+
+            try {
+                await EmulatorDB.seed(COLLECTION_ROOMS, {
+                    viaSelect: { version: 0, roomType: RoomTypeEnumMap.Hub, ownerUserID: "",
+                                 texturePackPath: "select" } as DBRow,
+                    viaUpdate: { version: 0, roomType: RoomTypeEnumMap.Hub, ownerUserID: "",
+                                 texturePackPath: "update" } as DBRow,
+                });
+
+                await selectRooms().where("id", "==", "viaSelect").run();
+                await new DBQuery<DBRow>()
+                    .update(COLLECTION_ROOMS)
+                    .set({ roomName: "touched" })
+                    .where("id", "==", "viaUpdate")
+                    .run();
+            }
+            finally { DBRoomVersionMigration[0] = originalStep; }
+
+            expect(idSeenByTrigger).toEqual({ select: "viaSelect", update: "viaUpdate" });
         });
 
         it("leaves the owner's name blank when the owner is gone", async () => {

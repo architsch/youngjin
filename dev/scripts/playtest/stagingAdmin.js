@@ -20,7 +20,7 @@
 //   node dev/scripts/playtest/stagingAdmin.js inspect
 //   node dev/scripts/playtest/stagingAdmin.js seed-users --version 0 --count 3
 //   node dev/scripts/playtest/stagingAdmin.js seed-rooms --version 1 --count 2 [--owner <userID>] [--with-content]
-//   node dev/scripts/playtest/stagingAdmin.js seed-population --version 3 --count 25 [--with-content] [--persist]
+//   node dev/scripts/playtest/stagingAdmin.js seed-population --version 4 --count 25 [--with-content] [--persist]
 //   node dev/scripts/playtest/stagingAdmin.js verify-migration
 //   node dev/scripts/playtest/stagingAdmin.js inspect-content
 //   node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> [--to 0]
@@ -53,7 +53,7 @@ function backupRoot() { return `${PREFIX}playtest_backup`; }
 // Current versions, mirrored from the migration arrays (their length is the current version).
 // Kept as literals rather than imported because those modules are TypeScript; `inspect`
 // reports what it finds so a drift between the two shows up rather than passing silently.
-const CURRENT_VERSION = { users: 3, rooms: 3 };
+const CURRENT_VERSION = { users: 4, rooms: 4 };
 
 const ROOM_TYPE_REGULAR = 1;
 
@@ -92,10 +92,11 @@ function buildUser(version, runID, index)
     return row;
 }
 
-function buildRoom(version, runID, index, docID, ownerUserID)
+// No "id" field: the server stores a row's identity as the document's key and never as a field,
+// so a seed that carried one would not be shaped like anything the game writes.
+function buildRoom(version, runID, index, ownerUserID)
 {
     const row = {
-        id: docID,
         version,
         roomType: ROOM_TYPE_REGULAR,
         ownerUserID: ownerUserID || "",
@@ -206,12 +207,18 @@ async function seedPopulation(db, bucket, version, count, runID, options)
     const created = [];
     const blobs = [];
 
+    // Users and rooms do not share a schema version, so one --version cannot mean the same thing
+    // to both. It is read as "no newer than this": a version past a collection's current one would
+    // seed a row from the future, which no migration knows how to bring back.
+    const userVersion = Math.min(version, CURRENT_VERSION.users);
+    const roomVersion = Math.min(version, CURRENT_VERSION.rooms);
+
     for (let i = 0; i < count; i++)
     {
         const userRef = db.collection(collection("users")).doc();
         const roomRef = db.collection(collection("rooms")).doc();
 
-        const user = buildUser(version, runID, i);
+        const user = buildUser(userVersion, runID, i);
         user.userType = 1;                                  // Member — guests cannot own a room.
         user.userName = `Playtest-${runID}-${i}`;
         user.email = `${runID}-${i}@playtest.local`;
@@ -219,11 +226,11 @@ async function seedPopulation(db, bucket, version, count, runID, options)
         if (options.persist) user.__playtestPersist = true;
         batch.set(userRef, user);
 
-        const room = buildRoom(version, runID, i, roomRef.id, userRef.id);
+        const room = buildRoom(roomVersion, runID, i, userRef.id);
         // The denormalized owner name is what the list renders, so at versions that have the
         // field it must agree with the user document — a mismatch would look like a UI bug
         // rather than the seeding artifact it is.
-        if (version >= 1) room.ownerUserName = user.userName;
+        if (roomVersion >= 1) room.ownerUserName = user.userName;
         if (options.persist) room.__playtestPersist = true;
 
         const entry = { userID: userRef.id, roomID: roomRef.id, userName: user.userName };
@@ -256,7 +263,7 @@ async function seedPopulation(db, bucket, version, count, runID, options)
 
     return {
         collection: `${collection("users")} + ${collection("rooms")}`,
-        version, count, runID,
+        userVersion, roomVersion, count, runID,
         withContent: Boolean(options.withContent),
         contentSource: options.withContent ? "procedural generation (RoomGenerationUtil)" : "none",
         persist: Boolean(options.persist),
@@ -273,8 +280,7 @@ async function seedRooms(db, bucket, version, count, runID, ownerUserID, options
     for (let i = 0; i < count; i++)
     {
         const ref = db.collection(collection("rooms")).doc();
-        // The room's `id` field is what queries match on, and it mirrors the document ID.
-        const room = buildRoom(version, runID, i, ref.id, ownerUserID);
+        const room = buildRoom(version, runID, i, ownerUserID);
         const entry = { roomID: ref.id };
 
         if (options.withContent)

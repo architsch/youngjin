@@ -28,6 +28,18 @@ const DBRoomVersionMigration: DBVersionMigration = [
         row.roomName = "";
         return row;
     },
+    // v3 -> v4: drop the stored "id" field.
+    //
+    // A room's identity is the document's key, and rooms written before that was enforced also
+    // carry a copy of it as a field — sometimes correct, sometimes the empty string the room had
+    // before the DB assigned it one. Nothing reads that copy, but leaving it means rooms come in
+    // two shapes, and the next person to write a query has to know which.
+    //
+    // The step itself changes nothing: it is the version bump that matters, because that is what
+    // makes a read rewrite the row, and every write already drops the field (DBRowIdentityUtil).
+    // Removing "id" here instead would strip it from the row on its way to the caller, who needs
+    // it.
+    async (row: any) => row,
 ];
 
 export default DBRoomVersionMigration;

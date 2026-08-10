@@ -77,7 +77,9 @@ node dev/scripts/playtest/stagingAdmin.js seed-users  --version 0 --count 3 --ru
 node dev/scripts/playtest/stagingAdmin.js seed-rooms  --version 0 --count 4 --run <runID> --owner <userID> --with-content
 
 # A population of room owners, for room-list pagination and search.
-node dev/scripts/playtest/stagingAdmin.js seed-population --version 3 --count 14 --run <runID> --with-content --persist
+# Users and rooms carry separate schema versions; --version is read as "no newer than this",
+# so a number at or above both collections' current version seeds a current population.
+node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 14 --run <runID> --with-content --persist
 
 # An older binary content version, for the VoxelGrid decoder chain.
 node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> --to 0
@@ -106,7 +108,7 @@ Three things to get right:
 
 | Seed | Reusable? | Why |
 |---|---|---|
-| `seed-population` at the current version | **Yes** — use `--persist` | Reading it does not change it. A stable population makes pagination deterministic between runs. |
+| `seed-population` at the current version | **Yes** — use `--persist` | Reading it does not change it. A stable population makes pagination deterministic between runs. Check `inspect` reports it as `outdated: 0`; if not, the schema moved and the fixture is now single-use. |
 | `seed-users` / `seed-rooms` at an outdated version | **No** | Single-use by nature: the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. Re-seed every run. |
 | Seeded guests (`userType` 2) | **No** | The server's own hourly stale-guest sweep deletes them regardless of intent. |
 | `downgrade-content` | **No** | The next room save re-encodes at the current version. Always `restore-content` afterwards. |

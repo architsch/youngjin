@@ -56,7 +56,7 @@ crashed or hit its memory ceiling.
 node dev/scripts/playtest/stagingAdmin.js inspect
 node dev/scripts/playtest/stagingAdmin.js seed-users      --version 0 --count 3 --run <runID>
 node dev/scripts/playtest/stagingAdmin.js seed-rooms      --version 0 --count 4 --run <runID> [--owner <userID>] [--with-content]
-node dev/scripts/playtest/stagingAdmin.js seed-population --version 3 --count 14 --run <runID> [--with-content] [--persist]
+node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 14 --run <runID> [--with-content] [--persist]
 node dev/scripts/playtest/stagingAdmin.js verify-migration
 node dev/scripts/playtest/stagingAdmin.js inspect-content
 node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> [--to 0]
@@ -68,6 +68,10 @@ Every command takes `--target staging` (the default) or `--target local`, and pr
 it addressed alongside its result. Staging authenticates with the local `gcloud`
 application-default credentials; `local` requires the Firebase emulators. There is no live
 target — see Safety.
+
+Users and rooms carry separate schema versions, so `--version` is read as "no newer than this" and
+clamped per collection — a number at or above both current versions seeds a current population,
+and a row from the future, which no migration could bring back, cannot be written at all.
 
 There are two independent versioning schemes and both can be seeded. Firestore rows carry a
 `version` field migrated by the `DBVersionMigration` arrays. Room content blobs carry a leading

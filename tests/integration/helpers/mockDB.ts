@@ -9,6 +9,7 @@ import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomTy
 import { createTestRoom } from "./roomContent";
 import DBRoomEditor from "../../../src/server/db/types/row/dbRoomEditor";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
+import DBRoomVersionMigration from "../../../src/server/db/types/versionMigration/dbRoomVersionMigration";
 
 // ─── In-memory stores ────────────────────────────────────────────────────────
 
@@ -105,7 +106,9 @@ export const mockDBRoomUtil = {
         if (!stored) return null;
         return {
             id: stored.id,
-            version: 3,
+            // What the real util returns is a row the query layer has already brought up to date,
+            // so this tracks the current version rather than naming one.
+            version: DBRoomVersionMigration.length,
             roomName: stored.room.roomName,
             roomType: stored.roomType,
             ownerUserID: stored.ownerUserID,

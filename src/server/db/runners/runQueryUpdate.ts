@@ -6,6 +6,7 @@ import { DBRow } from "../types/row/dbRow";
 import runQueryVersionMigration from "./runQueryVersionMigration";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBCacheUtil from "../util/dbCacheUtil";
+import DBRowIdentityUtil from "../util/dbRowIdentityUtil";
 import { DB_MAX_WRITES_PER_COMMIT } from "../../system/serverConstants";
 
 export default async function runQueryUpdate<T extends DBRow>(
@@ -29,12 +30,13 @@ export default async function runQueryUpdate<T extends DBRow>(
                 LogUtil.log(`DB Query Failed - doc.data() not found (docId = ${doc.id})`, dbQuery.getStateAsObject(), "high", "error");
                 return { success: false, data: [] };
             }
+            DBRowIdentityUtil.fromDocument(docData, doc.id);
             const originalVersion = docData.version;
             const newDocData = await runQueryVersionMigration(dbQuery, docData);
             if (newDocData.version != originalVersion)
             {
                 Object.assign(newDocData, dbQuery.columnValues);
-                await docRef.set(newDocData, {merge: false});
+                await docRef.set(DBRowIdentityUtil.forStorage(newDocData), {merge: false});
             }
             else
             {
@@ -63,7 +65,7 @@ export default async function runQueryUpdate<T extends DBRow>(
         {
             const db = await FirebaseUtil.getDB();
             const migrated = await Promise.all(querySnapshot.docs.map(async (doc: admin.firestore.QueryDocumentSnapshot) => {
-                const docData = doc.data();
+                const docData = DBRowIdentityUtil.fromDocument(doc.data(), doc.id);
                 const originalVersion = docData.version;
                 const newDocData = await runQueryVersionMigration(dbQuery, docData);
                 return { ref: doc.ref, originalVersion, newDocData };
@@ -78,7 +80,7 @@ export default async function runQueryUpdate<T extends DBRow>(
                     if (newDocData.version != originalVersion)
                     {
                         Object.assign(newDocData, dbQuery.columnValues);
-                        batch.set(ref, newDocData, {merge: false});
+                        batch.set(ref, DBRowIdentityUtil.forStorage(newDocData), {merge: false});
                     }
                     else
                     {
@@ -91,13 +93,13 @@ export default async function runQueryUpdate<T extends DBRow>(
         else if (querySnapshot.docs.length == 1)
         {
             const doc = querySnapshot.docs[0];
-            const docData = doc.data();
+            const docData = DBRowIdentityUtil.fromDocument(doc.data(), doc.id);
             const originalVersion = docData.version;
             const newDocData = await runQueryVersionMigration(dbQuery, docData);
             if (newDocData.version != originalVersion)
             {
                 Object.assign(newDocData, dbQuery.columnValues);
-                await doc.ref.set(newDocData, {merge: false});
+                await doc.ref.set(DBRowIdentityUtil.forStorage(newDocData), {merge: false});
             }
             else
             {

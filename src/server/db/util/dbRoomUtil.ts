@@ -78,8 +78,9 @@ const DBRoomUtil =
         // but the room-level parameters they were picked to suit (see RoomGenerationUtil).
         const room = RoomGenerationUtil.generateRoom(roomName, roomType, ownerUserID, ownerUserName);
 
-        const dbRoom: DBRoom = {
-            id: room.id,
+        // No "id": the room has none to give until the insert below assigns one, and the document
+        // holds its identity as its own key rather than as a field (see DBRowIdentityUtil).
+        const dbRoom: Omit<DBRoom, "id"> = {
             version: DBRoomVersionMigration.length,
             roomName: room.roomName,
             roomType: room.roomType,

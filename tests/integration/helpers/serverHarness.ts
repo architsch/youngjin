@@ -16,6 +16,7 @@
 
 import { vi } from "vitest";
 import { resetStores, seedRoom, roomStore } from "./mockDB";
+import DBRoomVersionMigration from "../../../src/server/db/types/versionMigration/dbRoomVersionMigration";
 
 import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
@@ -67,7 +68,8 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             if (!entry) return null;
             return {
                 id: roomID,
-                version: 3,
+                // As in mockDB: the real util hands back an already-migrated row.
+                version: DBRoomVersionMigration.length,
                 roomName: entry.room?.roomName ?? "",
                 roomType: entry.roomType,
                 ownerUserID: entry.ownerUserID,

@@ -20,6 +20,13 @@ const DBUserVersionMigration: DBVersionMigration = [
         row.ftue = "";
         return row;
     },
+    // v3 -> v4: drop the stored "id" field, for the same reason the rooms do (see
+    // DBRoomVersionMigration). A user was never written with one, but a user *migrated* was:
+    // the write-back used to store the row exactly as the reader had it, identity included, so
+    // every account old enough to have been brought up through a schema change carries a copy of
+    // its own key. Nothing changes here — the version bump is what makes the row be rewritten,
+    // and every write already drops the field (DBRowIdentityUtil).
+    async (row: any) => row,
 ];
 
 export default DBUserVersionMigration;
