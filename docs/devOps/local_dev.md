@@ -32,6 +32,24 @@ Being global ties them to the Node.js version that was active when you installed
 
 4. If you want to terminate the local instance, press `Ctrl+C` to exit the inner console and then run `npm stop` to terminate the PM2 process.
 
+### If the Emulator Ports Stay Open
+
+`Ctrl+C` is the part of that which ends the run, and it ends all of it: the signal reaches the whole process group at once — the Firebase CLI, which takes its two Java emulators down with it, and the PM2 process supervising the server. `npm stop` afterwards clears the stopped app out of PM2.
+
+`npm stop` on its own is not a substitute, so a run with no terminal to press `Ctrl+C` in — started detached, in a background job, or from a terminal that has since been closed — has to be ended by hand. Its `pm2 stop all` does end the server and free port `3000`, but the `pm2 start --no-daemon` process supervising it stays up with nothing left to supervise, so `concurrently -k` never sees either half exit and never kills the other: the emulators keep `8080` (Firestore), `9199` (Storage), `4400` (emulator hub), `4500` (reserved), `9150` (Firestore websocket) and `4000` (emulator UI), and the next `npm run dev` cannot start them.
+
+To find such a run and end it as `Ctrl+C` would:
+
+```
+lsof -nP -iTCP -sTCP:LISTEN | grep -E ':(3000|4000|4400|4500|8080|9150|9199)\b'
+ps -o pgid= -p <pid of the concurrently process>
+kill -INT -<that process group id>
+```
+
+Signalling the group rather than any single process is what makes this equivalent to `Ctrl+C`. Send `SIGINT` or `SIGTERM`, never `SIGKILL`: the Firebase CLI takes its two Java processes down with it when asked to stop, and orphans them when killed outright.
+
+E2E runs handle this themselves — Playwright boots the stack through `dev/scripts/e2eDevServer.js`, which frees these ports before starting and sweeps them again on teardown.
+
 ## Dev User Accounts
 
 When `npm run dev` starts, the server automatically seeds 3 **Member** user accounts in the local Firestore emulator. These accounts bypass Google OAuth and let you quickly test member-only features (creating rooms, changing texture packs, registering editors, etc.).

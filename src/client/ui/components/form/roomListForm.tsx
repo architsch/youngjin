@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../input/button";
 import IconButton from "../input/iconButton";
-import SearchIcon from "../../svg/icons/searchIcon";
+import MagnifierIcon from "../../svg/icons/magnifierIcon";
 import TextInput from "../input/textInput";
 import List from "../basic/list";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
@@ -193,7 +193,7 @@ export default function RoomListForm({ user, currentRoomID }: Props)
         <div className="flex flex-row items-center gap-1">
             <TextInput size="sm" placeholder="Search by user name"
                 currValue={searchInput} setTextInput={setSearchInput}/>
-            <IconButton icon={<SearchIcon/>} size="sm" onClick={submitSearch}/>
+            <IconButton icon={<MagnifierIcon/>} size="sm" onClick={submitSearch}/>
         </div>
     </Form>;
 }

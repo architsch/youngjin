@@ -3,6 +3,7 @@ import NumUtil from "../../../../../shared/math/util/numUtil";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 import { NEAR_EPSILON } from "../../../../../shared/system/sharedConstants";
+import { orbitCameraZoomObservable } from "../../../../system/clientObservables";
 
 // How far the pointer travels, in CSS pixels, to carry the camera one full turn around the target.
 // A physical distance rather than a share of the canvas, so the orbit answers a given movement of
@@ -31,6 +32,11 @@ const minOrbitDistance = 3;
 const minZoomDistanceFactor = 0.5;
 const maxZoomDistanceFactor = 2;
 
+// The whole span of that range, as the ratio between its two ends. Zoom is multiplicative — a wheel
+// notch and a pinch each report a multiple of what the user currently sees — so this, rather than
+// the difference between the ends, is what a step of the zoom is measured against.
+const zoomDistanceFactorSpan = maxZoomDistanceFactor / minZoomDistanceFactor;
+
 // However hard the zoom is pushed, the camera stays outside the sphere that holds the target: from
 // within the thing being inspected there is nothing left to inspect.
 const minZoomDistancePerTargetReach = 1.2;
@@ -52,7 +58,8 @@ const lookMat4Temp = new THREE.Matrix4();
 // mode's target volume — which may be anywhere in the room, and need not be on the player — and
 // looks at it, driven by grab-style pointer drags (the orbit angle follows the pointer's movement,
 // like Three.js's OrbitControls), so the user can inspect the target from any angle — and from as
-// close or as far as he pinches or wheels the view to.
+// close or as far as he asks to see it from, whether by pinching, wheeling, or moving the on-screen
+// zoom control, all of which meet in orbitCameraZoomObservable.
 //
 // The orbit is described in world space, while the camera hangs off the player object (which is
 // what makes the first-person view follow the player's eye for free). The pose is therefore handed
@@ -66,11 +73,11 @@ export default class OrbitCameraPose
     private spherical = new THREE.Spherical();
 
     // How far back the target's own size (and the caller's own floor, if any) asks the camera to
-    // sit, and how much closer or further the user has since asked to be. Kept apart so that
-    // pointing the orbit at something else re-frames it without undoing the zoom: how close the
-    // user wants to look is a preference he expressed, not a property of what he was looking at.
+    // sit. Kept apart from how much closer or further the user has since asked to be (the zoom,
+    // which lives in orbitCameraZoomObservable), so that pointing the orbit at something else
+    // re-frames it without undoing the zoom: how close the user wants to look is a preference he
+    // expressed, not a property of what he was looking at.
     private framingDistance: number = 0;
-    private zoomDistanceFactor: number = 1;
 
     // How far the camera stood from the target when it was last framed, or zero if it stood
     // nowhere in particular (see reframe). Kept for the orbit that is about to begin, which starts
@@ -134,10 +141,11 @@ export default class OrbitCameraPose
         // A camera standing within the target's own footprint (the user orbiting his own body) has
         // no distance of its own to keep, any more than it has a direction, and gets the framing
         // distance instead.
-        this.zoomDistanceFactor = (this.distanceAtReframe > 0)
+        const zoomDistanceFactor = (this.distanceAtReframe > 0)
             ? NumUtil.clampInRange(this.distanceAtReframe / this.framingDistance,
                 minZoomDistanceFactor, maxZoomDistanceFactor)
             : 1;
+        orbitCameraZoomObservable.set(getZoomAmount(zoomDistanceFactor));
     }
 
     // "viewScale" is how much the user asked the view to grow since the previous frame, as a
@@ -149,10 +157,18 @@ export default class OrbitCameraPose
         this.spherical.phi = NumUtil.clampInRange(
             this.spherical.phi + orbitSensitivity * dragDelta.y, minPolarAngle, maxPolarAngle);
 
-        // Apparent size is the reciprocal of distance, so growing the view is closing in on it.
-        this.zoomDistanceFactor = NumUtil.clampInRange(this.zoomDistanceFactor / viewScale,
-            minZoomDistanceFactor, maxZoomDistanceFactor);
-        this.spherical.radius = Math.max(this.framingDistance * this.zoomDistanceFactor,
+        // Apparent size is the reciprocal of distance, so growing the view is closing in on it. The
+        // gesture is stepped in the terms the zoom is published in rather than in distances of its
+        // own, which is what keeps a frame the user asked nothing of from moving the zoom at all —
+        // and so from telling the slider that shows it to twitch sixty times a second.
+        const zoomAmount = orbitCameraZoomObservable.peek();
+        const newZoomAmount = NumUtil.clampInRange(
+            zoomAmount + Math.log(viewScale) / Math.log(zoomDistanceFactorSpan), 0, 1);
+        if (newZoomAmount !== zoomAmount)
+            orbitCameraZoomObservable.set(newZoomAmount);
+
+        this.spherical.radius = Math.max(
+            this.framingDistance * getZoomDistanceFactor(newZoomAmount),
             minZoomDistancePerTargetReach * getTargetReach(target));
 
         pivotTemp.set(target.center.x, target.center.y, target.center.z);
@@ -167,6 +183,28 @@ export default class OrbitCameraPose
         outPos.copy(playerObj.worldToLocal(worldPosTemp));
         outQuat.copy(parentQuatTemp.invert()).multiply(worldQuatTemp);
     }
+}
+
+//------------------------------------------------------------------------
+// The zoom is published (see orbitCameraZoomObservable) as a position within its range — 0 at the
+// far end, 1 at the near one — rather than as the distance factor it stands for. That is what lets
+// a control show it and move it without knowing anything about how far back the camera is or what
+// it is looking at, both of which are this module's business alone.
+//
+// The two are related logarithmically, since zoom is multiplicative: equal steps along the range
+// are equal multiples of distance. So one step of a slider does exactly what one notch of the wheel
+// does, wherever along the range it is taken — and the middle of the range is the framing distance,
+// the far and near ends being reciprocal multiples of it.
+//------------------------------------------------------------------------
+
+function getZoomDistanceFactor(zoomAmount: number): number
+{
+    return maxZoomDistanceFactor * Math.pow(1 / zoomDistanceFactorSpan, zoomAmount);
+}
+
+function getZoomAmount(zoomDistanceFactor: number): number
+{
+    return Math.log(maxZoomDistanceFactor / zoomDistanceFactor) / Math.log(zoomDistanceFactorSpan);
 }
 
 // How far the target reaches from its own center: the radius of the sphere that holds it, which is

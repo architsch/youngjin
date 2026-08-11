@@ -11,6 +11,7 @@ export default function FormRangeInput({ label, currValue, setValue, min, max, s
             min={min}
             max={max}
             step={step}
+            additionalClassNames="w-32 shrink-0"
         />
     </div>
 }

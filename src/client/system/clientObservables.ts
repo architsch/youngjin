@@ -119,6 +119,17 @@ export const popupStateObservable = new Observable<PopupState>({ popupType: "non
 // both follow it.
 export const cameraModeObservable = new Observable<CameraMode>({type: "firstPerson"});
 
+// How far the orbit mode's zoom is currently pushed: 0 is as far back as the mode allows, and 1 is
+// as close in as it allows. Every way the user has of zooming works through this one value — the
+// wheel and the pinch write it as they are read, and the on-screen slider both shows it and sets it
+// — so the slider tells the truth about the view however the view was last changed.
+// What distance it amounts to is OrbitCameraPose's to answer, and deliberately not published here:
+// the zoom is a position within a range measured against how far back the target has to be seen
+// from, so the same value means a different distance for a character than for a wall block.
+// Starts in the middle, which is the distance the mode would frame a target at unasked; an orbit
+// beginning overwrites it with the view the user already had of what he pointed the camera at.
+export const orbitCameraZoomObservable = new Observable<number>(0.5);
+
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");
 

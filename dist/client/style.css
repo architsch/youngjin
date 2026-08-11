@@ -399,6 +399,10 @@
     width: calc(var(--spacing) * 6.5);
     height: calc(var(--spacing) * 6.5);
   }
+  .size-7 {
+    width: calc(var(--spacing) * 7);
+    height: calc(var(--spacing) * 7);
+  }
   .size-7\.5 {
     width: calc(var(--spacing) * 7.5);
     height: calc(var(--spacing) * 7.5);
@@ -671,6 +675,9 @@
   }
   .gap-1 {
     gap: calc(var(--spacing) * 1);
+  }
+  .gap-1\.5 {
+    gap: calc(var(--spacing) * 1.5);
   }
   .gap-2 {
     gap: calc(var(--spacing) * 2);
@@ -1048,6 +1055,9 @@
   }
   .text-white {
     color: var(--color-white);
+  }
+  .accent-green-600 {
+    accent-color: var(--color-green-600);
   }
   .opacity-50 {
     opacity: 50%;
