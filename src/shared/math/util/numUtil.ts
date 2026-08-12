@@ -17,6 +17,14 @@ const NumUtil =
             console.warn(`'n' is out of its expected range (n = ${n}, min = ${min}, max = ${max})`);
         return Math.max(min, Math.min(max, n));
     },
+    // How far apart two angles (in radians) are, by the shorter way around: something turned all the
+    // way round has come back to where it started, and must not be reported as having gone the long
+    // way there.
+    getAngleDifference: (a: number, b: number): number =>
+    {
+        const diff = Math.abs(a - b) % (2 * Math.PI);
+        return Math.min(diff, 2 * Math.PI - diff);
+    },
 }
 
 export default NumUtil;

@@ -3,7 +3,7 @@ import NumUtil from "../../../../../shared/math/util/numUtil";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 import { NEAR_EPSILON } from "../../../../../shared/system/sharedConstants";
-import { orbitCameraZoomObservable } from "../../../../system/clientObservables";
+import { orbitCameraAnglesObservable, orbitCameraZoomObservable } from "../../../../system/clientObservables";
 
 // How far the pointer travels, in CSS pixels, to carry the camera one full turn around the target.
 // A physical distance rather than a share of the canvas, so the orbit answers a given movement of
@@ -59,7 +59,9 @@ const lookMat4Temp = new THREE.Matrix4();
 // looks at it, driven by grab-style pointer drags (the orbit angle follows the pointer's movement,
 // like Three.js's OrbitControls), so the user can inspect the target from any angle — and from as
 // close or as far as he asks to see it from, whether by pinching, wheeling, or moving the on-screen
-// zoom control, all of which meet in orbitCameraZoomObservable.
+// zoom control, all of which meet in orbitCameraZoomObservable. Which way the target is viewed from
+// is published on the same terms (orbitCameraAnglesObservable), so that a view can also be set from
+// outside — by a scripted step arranging the one it wants the user to begin from.
 //
 // The orbit is described in world space, while the camera hangs off the player object (which is
 // what makes the first-person view follow the player's eye for free). The pose is therefore handed
@@ -116,6 +118,7 @@ export default class OrbitCameraPose
 
         this.spherical.setFromVector3(orbitOffsetTemp);
         this.spherical.phi = NumUtil.clampInRange(this.spherical.phi, minPolarAngle, maxPolarAngle);
+        this.publishAngles();
         this.framingDistance = Math.max(minOrbitDistance, minDistance, orbitDistancePerTargetReach *
             getTargetReach(target));
 
@@ -153,9 +156,15 @@ export default class OrbitCameraPose
     updatePose(dragDelta: THREE.Vector2, viewScale: number, target: AABB3, playerObj: THREE.Object3D,
         outPos: THREE.Vector3, outQuat: THREE.Quaternion): void
     {
-        this.spherical.theta -= orbitSensitivity * dragDelta.x;
+        // The angles are taken back out of what they were published as, rather than carried on from
+        // here, so that whoever else set them meanwhile is answered — the drag then moves the view
+        // on from wherever it has been pointed (see orbitCameraAnglesObservable), exactly as the
+        // zoom below carries on from whatever the slider or a wheel notch last made of it.
+        const angles = orbitCameraAnglesObservable.peek();
+        this.spherical.theta = angles.azimuth - orbitSensitivity * dragDelta.x;
         this.spherical.phi = NumUtil.clampInRange(
-            this.spherical.phi + orbitSensitivity * dragDelta.y, minPolarAngle, maxPolarAngle);
+            angles.polar + orbitSensitivity * dragDelta.y, minPolarAngle, maxPolarAngle);
+        this.publishAngles();
 
         // Apparent size is the reciprocal of distance, so growing the view is closing in on it. The
         // gesture is stepped in the terms the zoom is published in rather than in distances of its
@@ -182,6 +191,16 @@ export default class OrbitCameraPose
         playerObj.getWorldQuaternion(parentQuatTemp);
         outPos.copy(playerObj.worldToLocal(worldPosTemp));
         outQuat.copy(parentQuatTemp.invert()).multiply(worldQuatTemp);
+    }
+
+    // Publishes where the orbit now views its target from, but only once it has actually moved: a
+    // frame the user asked nothing of must not tell everything listening that the view has changed.
+    private publishAngles(): void
+    {
+        const angles = orbitCameraAnglesObservable.peek();
+        if (angles.azimuth === this.spherical.theta && angles.polar === this.spherical.phi)
+            return;
+        orbitCameraAnglesObservable.set({azimuth: this.spherical.theta, polar: this.spherical.phi});
     }
 }
 

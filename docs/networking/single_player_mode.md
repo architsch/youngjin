@@ -65,20 +65,22 @@ Each single-player experience is described declaratively by a `SinglePlayerModeC
 
 `SinglePlayerManager`, ticked from the main update loop, evaluates the current step's transition rules each frame and advances when one is met. A single observable holds the current mode-and-step pair; changing it automatically runs the previous step's end actions and the next step's start actions.
 
-A `SinglePlayerAction` is a small tagged command and a `SinglePlayerCondition` a small tagged predicate, each dispatched through a client-side map keyed by its tag. Actions cover showing or clearing tutorial UI, placing world-space gizmos, toggling feature flags, editing the local world, setting object metadata, playing a brief cosmetic animation on a world object (e.g. nudging an NPC so it appears to nod when it replies), and finishing the mode. Conditions observe local game state — player proximity, which voxel-quad is selected and what texture it carries, whether a block exists, whether the chat input or an object's metadata passes a test, or whether the room has been exited. Adding a new tutorial capability is therefore a matter of adding one action or condition variant plus its handler, with no per-step code.
+A `SinglePlayerAction` is a small tagged command and a `SinglePlayerCondition` a small tagged predicate, each dispatched through a client-side map keyed by its tag. Actions cover showing or clearing tutorial UI, placing world-space gizmos, toggling feature flags, pointing the orbit camera at a chosen view, editing the local world, setting object metadata, playing a brief cosmetic animation on a world object (e.g. nudging an NPC so it appears to nod when it replies), and finishing the mode. Conditions observe local game state — player proximity, whether the user is in edit mode, which voxel-quad is selected and what texture it carries, whether a block exists, whether the user has yet made an edit of a given kind, how far the camera has been moved from a view the step set up, whether the chat input or an object's metadata passes a test, or whether the room has been exited. Adding a new tutorial capability is therefore a matter of adding one action or condition variant plus its handler, with no per-step code.
+
+Two of those deserve a word, since they are what lets a step teach an act rather than an outcome. A step that asks the user to change something lets him choose *what* to change, so waiting for one particular cell of the world to end up a particular way would not do; the client keeps a running tally of the edits the user makes by hand — a block added, a block removed, a texture changed, a body part changed — and the step waits on that tally instead. And a step that asks the user to move the camera first sets the view it wants him to start from, so that "has he moved it" is a question about the here and now (see [camera_control.md](../graphics/camera_control.md)).
 
 ### Tutorial UI and gizmos
 
 Start and end actions drive a thin, purely local presentation layer, all of it observable-backed:
 
-- **On-screen UI** — a top-of-screen headline banner, a 2D arrow that points at a target UI element, a 2D outline that frames one, and a centered gesture diagram (an animated drawing with a short caption) that demonstrates an input such as how to move. The arrow and outline follow their target element live, and none of these intercept pointer input, so the user can still operate the control being highlighted or perform the demonstrated gesture "through" the diagram.
+- **On-screen UI** — a top-of-screen headline banner, a 2D arrow that points at a target UI element, a 2D outline that frames one, and a gesture diagram (an animated drawing with a short caption) that demonstrates an input such as how to move. The arrow hangs above its target, or below it for a target too near the top of the screen to have room above it; the diagram takes the middle of the screen, or steps aside to its edge, drawn small, when the point of the gesture is to watch what it does to something else. The arrow and outline follow their target element live, and none of these intercept pointer input, so the user can still operate the control being highlighted or perform the demonstrated gesture "through" the diagram.
 - **World-space gizmos** — a flat, ground-parallel navigation arrow that floats ahead of the player and points toward a destination, a downward arrow that hovers over a point of interest, and a softly glowing outline that highlights a voxel-quad. These are drawn always-on-top so they stay visible through walls and objects.
 
 A single "clear" action tears the whole layer down, which every step's end actions use.
 
 ### Feature flags
 
-`FeatureFlag` is a set of global UI/interaction switches (for example, hiding the chat input, disabling manual voxel editing, or changing what the door does). They are tracked in an observable set that notifies listeners as flags are toggled; consumers either query the set on demand or subscribe to changes. These flags let a tutorial step constrain what the user can do at a given moment.
+`FeatureFlag` is a set of global UI/interaction switches (for example, hiding the chat input, disabling manual voxel editing, holding a selection in place, keeping a control off screen until the step that teaches it, or changing what the door does). They are tracked in an observable set that notifies listeners as flags are toggled; consumers either query the set on demand or subscribe to changes. These flags let a tutorial step constrain what the user can do at a given moment — and, just as importantly, hand him one thing at a time: the way into edit mode and the way back out of it are each kept off screen until the step that asks for them, and the labels naming who the user is stay away for the whole tutorial, while the button that leaves the app never does.
 
 ### Door behavior
 
@@ -102,6 +104,7 @@ The shared editability check (used by both client and server) grants edit permis
 
 ## Related docs
 
+- [Game Mode](../gameplay/game_mode.md) — the play/edit modes the tutorial walks the user through.
 - [First-Time User Experience](ftue.md) — the guidance that takes over once the tutorial is done.
 - [User State Management Flows](user_state_management.md) — room-join resolution and where user state lives.
 - [Room Entrance](../geometry/room_entrance.md) — entrance geometry for multi-player vs. single-player rooms.

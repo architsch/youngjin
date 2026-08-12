@@ -24,12 +24,13 @@ import ConfigureMyRoomForm from "./components/form/configureMyRoomForm";
 import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
 import CustomizePlayerForm from "./components/form/customizePlayerForm";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
-import { clientFeatureFlagsObservable, numActiveInputElementsObservable, objectSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, objectSelectionObservable, playerSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ImageListChooserForm from "./components/form/imageListChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
+import PlayerSelection from "../graphics/types/gizmo/playerSelection";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "./components/form/confirmForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
@@ -40,6 +41,8 @@ import useCloseGesture from "./util/closeGesture";
 import PopupUtil from "./util/popupUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
 import WorldSpaceSelectionUtil from "../graphics/util/worldSpaceSelectionUtil";
+import GameMode from "../system/types/gameMode";
+import GameModeUtil from "../system/util/gameModeUtil";
 import FTUEUtil from "./util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
 import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
@@ -51,6 +54,8 @@ export default function UIRoot({ env, user }: UIRootProps)
     const [userRole, setUserRole] = useState<UserRole>(UserRoleEnumMap.Visitor);
     const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
     const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
+    const [playerSelection, setPlayerSelection] = useState<PlayerSelection | null>(null);
+    const [inEditMode, setInEditMode] = useState<boolean>(false);
     const [forceHideChat, setForceHideChat] = useState<boolean>(false);
 
     useEffect(() => {
@@ -80,6 +85,12 @@ export default function UIRoot({ env, user }: UIRootProps)
         voxelQuadSelectionObservable.addListener("ui_root", (selection: VoxelQuadSelection | null) => {
             setVoxelQuadSelection(selection);
         });
+        playerSelectionObservable.addListener("ui_root", (selection: PlayerSelection | null) => {
+            setPlayerSelection(selection);
+        });
+        gameModeObservable.addListener("ui_root", (mode: GameMode) => {
+            setInEditMode(mode == "edit");
+        });
         popupStateObservable.addListener("ui_root", (state: PopupState) => {
             if (state.popupType != "none")
                 setPopupStack(prev => [...prev, state]); // Open up a new popup
@@ -92,6 +103,8 @@ export default function UIRoot({ env, user }: UIRootProps)
             userRoleObservable.removeListener("ui_root");
             objectSelectionObservable.removeListener("ui_root");
             voxelQuadSelectionObservable.removeListener("ui_root");
+            playerSelectionObservable.removeListener("ui_root");
+            gameModeObservable.removeListener("ui_root");
             popupStateObservable.removeListener("ui_root");
         };
     }, []);
@@ -114,8 +127,8 @@ export default function UIRoot({ env, user }: UIRootProps)
     const exitApp = () => { window.location.href = env.static_server_url; };
 
     // Going back, in whatever way the user's device offers, closes the topmost thing that is open —
-    // a popup first, then a world-space selection — instead of leaving the page. With nothing left
-    // to close, only a second back gesture gives the page up.
+    // a popup first, then edit mode or whatever is selected — instead of leaving the page. With
+    // nothing left to close, only a second back gesture gives the page up.
     useCloseGesture((kind) => {
         // The Escape key is already answered by whichever input element currently holds the user's
         // attention: a focused text field gives up focus, an open color palette dismisses itself.
@@ -124,7 +137,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         if (kind == "escape" && numActiveInputElementsObservable.peek() > 0)
             return;
 
-        if (popupStack.length == 0 && !WorldSpaceSelectionUtil.isAnythingSelected())
+        if (popupStack.length == 0 && !inEditMode && !WorldSpaceSelectionUtil.isAnythingSelected())
         {
             // Nothing on screen to close, so the gesture keeps the meaning it came with — except
             // that a back gesture only gives the page up once the user has asked for it twice.
@@ -139,6 +152,10 @@ export default function UIRoot({ env, user }: UIRootProps)
 
         if (popupStack.length > 0)
             PopupUtil.closePopup();
+        else if (inEditMode) // Going back out of edit mode leaves the mode itself, not merely the
+                             // selection standing in it, which would leave the user in a mode with
+                             // nothing selected and no sign of how he got there.
+            GameModeUtil.exitEditMode();
         else // Nothing comes of this while a single-player step is holding the selection in place,
              // and that is the point: the gesture is spent on the selection either way, and never
              // reaches the page underneath.
@@ -153,33 +170,36 @@ export default function UIRoot({ env, user }: UIRootProps)
         ? RoomValidationUtil.canUserEditRoom(userRole, roomRuntimeMemory?.room)
         : false;
 
-    const isCustomizingPlayer = popupStack.some(state => state.popupType == "customizePlayer");
-
-    const anythingSelected = objectSelection != null || voxelQuadSelection != null;
-    // A selection and the player-customization form amount to the same thing as far as the top edge
-    // of the screen is concerned: a mode that has suspended normal play and taken the top bar for
-    // its own way out. Whichever of the two is up, the controls that normally live there stand down.
-    const inExclusiveMode = anythingSelected || isCustomizingPlayer;
-    const selectionEditUIShown = canModifyRoom && anythingSelected;
-    const chatHidden = forceHideChat || !isRoomLoaded || selectionEditUIShown;
-    const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || selectionEditUIShown;
+    const anythingSelected = objectSelection != null || voxelQuadSelection != null ||
+        playerSelection != null;
+    // Edit mode, or a selection made outside it, has taken the top bar for its own way out, so the
+    // controls that normally live there stand down for as long as it is up. The mode counts in its
+    // own right, since it outlasts any one selection made inside it.
+    const inExclusiveMode = inEditMode || anythingSelected;
+    const chatHidden = forceHideChat || !isRoomLoaded || inEditMode;
+    const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || inEditMode;
 
     return <>
-        {/* A mode takes the top bar for itself, so the identity and room controls that normally
-            hold it step aside for as long as one is up. The debugger is the exception: it is a
-            development tool, and it is wanted most in the states that hide everything else — hence
-            its place after the bar here, which keeps it drawn on top of it. */}
-        {isMultiplayerRoomLoaded && !inExclusiveMode && <UserRoomIdentity
+        {/* A selection takes the top bar for itself, so the identity and room controls that
+            normally hold it step aside for as long as one is up. The debugger is the exception: it
+            is a development tool, and it is wanted most in the states that hide everything else —
+            hence its place after the bar here, which keeps it drawn on top of it. */}
+        {isRoomLoaded && !inExclusiveMode && <UserRoomIdentity
             user={user}
             userRole={userRole}
             currentRoomID={roomID ?? ""}
+            canModifyRoom={canModifyRoom}
             onExitApp={exitApp}
         />}
-        <ModeExitBar canModifyRoom={canModifyRoom} isCustomizingPlayer={isCustomizingPlayer}/>
+        <ModeExitBar/>
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
+        {/* The tools for changing what is selected belong to edit mode alone. In play mode a
+            selection is a way of looking at something and reading about it, which is why the
+            canvas's description below stands outside that condition. */}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
-            <ObjectSelectionMenu canModifyRoom={canModifyRoom}/>
-            {canModifyRoom && <VoxelQuadSelectionMenu/>}
+            <ObjectSelectionMenu inEditMode={inEditMode}/>
+            {inEditMode && <VoxelQuadSelectionMenu/>}
+            {playerSelection != null && <CustomizePlayerForm/>}
             <Chat hide={chatHidden}/>
             <SkipTutorialButton hide={hideSkipTutorialButton}/>
         </div>
@@ -211,7 +231,6 @@ export default function UIRoot({ env, user }: UIRootProps)
                 case "hubRoomWelcome": return <Popup key={i} title="" showCloseButton={true}>
                     <HubRoomWelcomeForm/>
                 </Popup>;
-                case "customizePlayer": return <CustomizePlayerForm key={i}/>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>
                     {state.params.viewType === "list"
                         ? <ImageListChooserForm

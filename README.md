@@ -35,6 +35,9 @@ ThingsPool is an open source project, built with a modern real-time web stack: T
         - [Deployment](docs/devOps/vps/deployment.md)
         - [Maintenance](docs/devOps/vps/maintenance.md)
 
+- **Gameplay**
+    - [Game Mode](docs/gameplay/game_mode.md)
+
 - **Networking**
     - [Authentication Flows](docs/networking/authentication.md)
     - [User State Management Flows](docs/networking/user_state_management.md)

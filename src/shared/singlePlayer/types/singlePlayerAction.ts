@@ -5,8 +5,10 @@ import { FeatureFlag } from "../../system/types/featureFlag";
 type SinglePlayerAction =
     | {type: "clear_all_ui_and_gizmo"}
     | {type: "ui_headline", text: string}
-    | {type: "ui_diagram", diagram: "drag_up", text: string}
-    | {type: "ui_arrow", targetElementId: string, arrowBias: "center" | "left" | "right"}
+    | {type: "ui_diagram", diagram: "drag_up" | "drag_sideways", text: string,
+        placement?: "center" | "side"}
+    | {type: "ui_arrow", targetElementId: string, arrowBias: "center" | "left" | "right",
+        arrowSide?: "above" | "below"}
     | {type: "ui_outline_rect", targetElementId: string}
     | {type: "gizmo_navigation_arrow", targetX: number, targetZ: number}
     | {type: "gizmo_downward_arrow", targetX: number, targetY: number, targetZ: number}
@@ -14,6 +16,7 @@ type SinglePlayerAction =
         collisionLayer: number, facingAxis: "x" | "y" | "z", orientation: "-" | "+"}
     | {type: "feature_flag", flag: FeatureFlag, enable: boolean}
     | {type: "force_unselect_voxel"}
+    | {type: "orbit_camera_pose", zoomAmount: number, azimuthDeg: number, polarDeg: number}
     | {type: "remove_voxel_blocks", rowStart: number, colStart: number,
         numRows: number, numCols: number, collisionLayerMin: number, collisionLayerMax: number}
     | {type: "set_object_metadata", objectId: string,

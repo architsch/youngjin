@@ -237,7 +237,7 @@ describe("FTUE element records (client)", () => {
         }
 
         expect(storedChars).toEqual({
-            CustomizePlayer: "A",
+            CustomizePlayer: "A", // retired element: the slot stays reserved, never reused
             _NOT_USED_: "B", // retired element: the slot stays reserved, never reused
             EnterMyRoom: "C",
             MyRoomSettings: "D",

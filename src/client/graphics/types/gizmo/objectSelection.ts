@@ -1,10 +1,10 @@
 import * as THREE from "three";
 import GameObject from "../../../object/types/gameObject";
 import { clientFeatureFlagsObservable, objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable } from "../../../system/clientObservables";
-import VoxelQuadSelection from "./voxelQuadSelection";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
+import GameModeUtil from "../../../system/util/gameModeUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 
@@ -38,8 +38,13 @@ export default class ObjectSelection
         }
         else
         {
-            if (existingSelection.gameObject === gameObject) // Selected the same object twice -> should deselect it.
+            if (existingSelection.gameObject === gameObject) // Selected the same object twice.
             {
+                // Clicking the same object again lets it go in play mode, but not in edit mode,
+                // which always has something selected and is left by the button that says so
+                // (see VoxelQuadSelection.trySelect).
+                if (GameModeUtil.isInEditMode())
+                    return true;
                 objectSelectionObservable.set(null);
                 return false;
             }
@@ -82,9 +87,7 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
         // If an object is selected, the player's viewTarget should be that object's position.
         playerViewTargetPosObservable.set(new THREE.Vector3(go.position.x, go.position.y, go.position.z));
 
-        // Also unselect any voxel quad selection (only if one is actually selected, to avoid circular triggering).
-        if (VoxelQuadSelection.isSelected())
-            VoxelQuadSelection.unselect();
+        WorldSpaceSelectionUtil.unselectOthers("object");
     }
     else
     {

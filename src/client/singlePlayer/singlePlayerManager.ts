@@ -15,7 +15,10 @@ const SinglePlayerManager =
     update: (deltaTime: number) =>
     {
         const {mode, step} = singlePlayerObservable.peek();
-        if (mode != "" && step != "")
+        // A step that has not begun yet cannot be over: while its start actions are waiting out
+        // their delay, the world is still arranged the way the previous step left it, and a rule
+        // read against that arrangement would answer for a step that has not happened.
+        if (mode != "" && step != "" && stepStarted)
         {
             // Check transition rules
             for (const rule of stepByName[step].transitionRules)
@@ -104,6 +107,8 @@ const SinglePlayerManager =
 
 let pendingTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 let prevStep: string = "";
+// Whether the current step's start actions have run (see update).
+let stepStarted: boolean = false;
 let stepByName: {[stepName: string]: SinglePlayerStep};
 
 singlePlayerObservable.addListener("singlePlayer", (v: {mode: string, step: string}) => {
@@ -123,14 +128,28 @@ singlePlayerObservable.addListener("singlePlayer", (v: {mode: string, step: stri
         prevStep = "";
     }
 
+    stepStarted = false;
+
     if (v.step != "") // If the new step exists, start it.
     {
         // Start new step
         const stepObj = stepByName[v.step];
         if (stepObj.startDelay > 0)
-            setTimeout(() => runActions(stepObj.actionsOnStart), stepObj.startDelay);
+        {
+            setTimeout(() => {
+                // The step may have been left behind meanwhile (the mode was skipped, or the room
+                // changed), in which case its actions belong to nothing and must not run.
+                if (singlePlayerObservable.peek().step != v.step)
+                    return;
+                runActions(stepObj.actionsOnStart);
+                stepStarted = true;
+            }, stepObj.startDelay);
+        }
         else
+        {
             runActions(stepObj.actionsOnStart);
+            stepStarted = true;
+        }
         prevStep = v.step;
     }
 

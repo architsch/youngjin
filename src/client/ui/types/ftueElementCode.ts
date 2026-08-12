@@ -5,7 +5,7 @@ export type FTUEElementCode = number;
 // rather than closing it up: reusing the number would hand one feature's stored record to another.
 export const FTUEElementCodeEnumMap: Record<string, number> =
 {
-    CustomizePlayer: 0,
+    CustomizePlayer: 0, // retired: the button it stood for gave way to the one that starts edit mode
     _NOT_USED_: 1,
     EnterMyRoom: 2,
     MyRoomSettings: 3,

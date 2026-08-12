@@ -1,28 +1,32 @@
 import { useEffect, useReducer } from "react";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
+import PlayerSelection from "../../../../graphics/types/gizmo/playerSelection";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
-import { cameraModeObservable, clientFeatureFlagsObservable, objectSelectionObservable,
+import GameModeUtil from "../../../../system/util/gameModeUtil";
+import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
+    objectSelectionObservable, playerSelectionObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import Button from "../../input/button";
 import CameraZoomSlider from "./cameraZoomSlider";
-import PopupUtil from "../../../util/popupUtil";
 
-// Feature flags whose toggling changes whether the current selection can be dropped at all.
-const selectionFeatureFlags = [
+// Feature flags whose toggling changes whether the way out is offered at all.
+const exitFeatureFlags = [
     FeatureFlag.DisableAllSelectionChange,
     FeatureFlag.DisableVoxelQuadSelectionChange,
     FeatureFlag.DisableObjectSelectionChange,
+    FeatureFlag.DisablePlayerSelectionChange,
+    FeatureFlag.HideModeExitButton,
 ];
 
 //------------------------------------------------------------------------
-// A few of the things the user can do are not panels but modes: the screen is given over to them,
-// and the user stays inside one until he/she leaves it. A world-space selection is one — the camera
-// goes into an orbit around what was selected and the player stops answering — and customizing the
-// player is another, which does the same in order to hold the character in frame. What they have in
-// common is the thing that matters here: normal play is suspended, and there has to be a way back
-// to it that no one can miss.
+// A couple of the things the user can do are not panels but modes: the screen is given over to
+// them, and the user stays inside one until he/she leaves it. Edit mode is one — the camera goes
+// into an orbit around whatever is selected and the player stops answering — and a selection made
+// during play mode is a lesser one, which takes the camera's attention if not its place. What they
+// have in common is the thing that matters here: ordinary play is suspended, and there has to be a
+// way back to it that no one can miss.
 //
 // This bar is that way back. For as long as a mode is up it holds the top edge of the screen in
 // place of the identity and room controls that normally live there, and it puts the button that
@@ -39,41 +43,40 @@ const selectionFeatureFlags = [
 // out of the mode at once.
 //------------------------------------------------------------------------
 
-export default function ModeExitBar({ canModifyRoom, isCustomizingPlayer }: Props)
+export default function ModeExitBar()
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
 
     useEffect(() => {
         voxelQuadSelectionObservable.addListener("ui.modeExitBar", forceRefresh);
         objectSelectionObservable.addListener("ui.modeExitBar", forceRefresh);
+        playerSelectionObservable.addListener("ui.modeExitBar", forceRefresh);
+        gameModeObservable.addListener("ui.modeExitBar", forceRefresh);
         cameraModeObservable.addListener("ui.modeExitBar", forceRefresh);
-        for (const flag of selectionFeatureFlags)
+        for (const flag of exitFeatureFlags)
             clientFeatureFlagsObservable.addElementListener("ui.modeExitBar", flag, forceRefresh);
         return () => {
             voxelQuadSelectionObservable.removeListener("ui.modeExitBar");
             objectSelectionObservable.removeListener("ui.modeExitBar");
+            playerSelectionObservable.removeListener("ui.modeExitBar");
+            gameModeObservable.removeListener("ui.modeExitBar");
             cameraModeObservable.removeListener("ui.modeExitBar");
-            for (const flag of selectionFeatureFlags)
+            for (const flag of exitFeatureFlags)
                 clientFeatureFlagsObservable.removeElementListener("ui.modeExitBar", flag);
         };
     }, []);
 
-    // Player customization is asked about first, since it drops every selection on the way in and
-    // holds selection-making down for as long as it is open — so by the time it is up, there is
-    // never a selection left for the branch below to find.
-    //
-    // "Editing" is what a selection means to a user who may edit the room, so the way out is named
-    // for the mode being left rather than for the selection standing behind it. To everyone else it
-    // is only a selection. Customization ends with neither: nothing is being left behind, only
-    // finished with.
-    const exit = isCustomizingPlayer
-        ? { name: "Done", onClick: PopupUtil.closePopup }
-        : selectionCanBeDropped()
-            ? {
-                name: canModifyRoom ? "Exit Edit-Mode" : "Exit Selection",
-                onClick: () => WorldSpaceSelectionUtil.unselectAll(),
-            }
-            : undefined;
+    // The way out is named for what is being left: a mode the user deliberately entered, or merely
+    // the selection he made in passing during play mode.
+    const inEditMode = GameModeUtil.isInEditMode();
+    const exit = exitIsOffered()
+        ? {
+            name: inEditMode ? "Exit Edit Mode" : "Exit Selection",
+            onClick: inEditMode
+                ? () => GameModeUtil.exitEditMode()
+                : () => WorldSpaceSelectionUtil.unselectAll(),
+        }
+        : undefined;
 
     // Either control on its own is reason enough for the bar to be up, and each decides for itself
     // whether it has anything to offer: a single-player step that holds a selection in place leaves
@@ -98,25 +101,26 @@ export default function ModeExitBar({ canModifyRoom, isCustomizingPlayer }: Prop
     </div>;
 }
 
-// Whether there is a selection to drop and the user is free to drop it. A single-player step may be
-// holding a selection in place on purpose, and a button that would do nothing when pressed is worse
-// than no button at all.
-function selectionCanBeDropped(): boolean
+// Whether there is something to leave and the user is free to leave it. A single-player step may be
+// holding a selection in place on purpose, or keeping the way out to itself until the moment it
+// means to teach it, and a button that would do nothing when pressed is worse than no button at all.
+function exitIsOffered(): boolean
 {
-    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange))
+    if (clientFeatureFlagsObservable.has(FeatureFlag.HideModeExitButton) ||
+        clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange))
+    {
         return false;
+    }
     if (VoxelQuadSelection.isSelected() &&
         !clientFeatureFlagsObservable.has(FeatureFlag.DisableVoxelQuadSelectionChange))
     {
         return true;
     }
-    return ObjectSelection.isSelected() &&
-        !clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange);
-}
-
-interface Props
-{
-    canModifyRoom: boolean;
-    // Whether the player-customization form is the mode currently holding the screen.
-    isCustomizingPlayer: boolean;
+    if (ObjectSelection.isSelected() &&
+        !clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange))
+    {
+        return true;
+    }
+    return PlayerSelection.isSelected() &&
+        !clientFeatureFlagsObservable.has(FeatureFlag.DisablePlayerSelectionChange);
 }

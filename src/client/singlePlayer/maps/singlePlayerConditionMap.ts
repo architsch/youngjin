@@ -1,10 +1,15 @@
+import * as THREE from "three";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import SinglePlayerCondition from "../../../shared/singlePlayer/types/singlePlayerCondition";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import App from "../../app";
+import GameModeUtil from "../../system/util/gameModeUtil";
+import NumUtil from "../../../shared/math/util/numUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
 import ClientObjectUtil from "../../object/util/clientObjectUtil";
-import { chatTextInputObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import { chatTextInputObservable, orbitCameraAnglesObservable,
+    voxelQuadSelectionObservable } from "../../system/clientObservables";
+import ManualEditCountUtil from "../../system/util/manualEditCountUtil";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
 
 const SinglePlayerConditionMap: {
@@ -19,19 +24,18 @@ const SinglePlayerConditionMap: {
     },
     "voxel_quad_selected": (condition) =>
     {
-        let result = false;
+        // Whatever the condition left unsaid, it does not care about: a step may ask for one
+        // particular quad, or merely for the user having picked one out at all.
         const selection = voxelQuadSelectionObservable.peek();
-        if (selection && selection.voxel.row == condition.row && selection.voxel.col == condition.col)
-        {
-            const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(selection.quadIndex);
-            const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(selection.quadIndex);
-            const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex);
-            if (orientation == condition.orientation && facingAxis == condition.facingAxis &&
-                collisionLayer == condition.collisionLayer)
-            {
-                result = true;
-            }
-        }
+        const result = selection != null &&
+            (condition.row == undefined || selection.voxel.row == condition.row) &&
+            (condition.col == undefined || selection.voxel.col == condition.col) &&
+            (condition.orientation == undefined || condition.orientation ==
+                VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(selection.quadIndex)) &&
+            (condition.facingAxis == undefined || condition.facingAxis ==
+                VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(selection.quadIndex)) &&
+            (condition.collisionLayer == undefined || condition.collisionLayer ==
+                VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
         return condition.negate ? !result : result;
     },
     "voxel_quad_texture_equals": (condition) =>
@@ -57,6 +61,32 @@ const SinglePlayerConditionMap: {
             result = voxel != undefined &&
                 VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, condition.collisionLayer);
         }
+        return condition.negate ? !result : result;
+    },
+    "edit_mode_active": (condition) =>
+    {
+        const result = GameModeUtil.isInEditMode();
+        return condition.negate ? !result : result;
+    },
+    "manual_edits_made": (condition) =>
+    {
+        // What the user has changed with his own hands, rather than how the world has ended up:
+        // a step that teaches an edit lets the user pick what to edit, so the act is the lesson.
+        const result = ManualEditCountUtil.getCount(condition.editKind) >= condition.minCount;
+        return condition.negate ? !result : result;
+    },
+    "orbit_camera_angle_differs": (condition) =>
+    {
+        // Measured against the view a step set up for itself (see the "orbit_camera_pose" action),
+        // which is what makes "the user has moved the camera" a question about the here and now
+        // rather than about everything he has done since.
+        const angles = orbitCameraAnglesObservable.peek();
+        const azimuthDiff = NumUtil.getAngleDifference(angles.azimuth,
+            THREE.MathUtils.degToRad(condition.azimuthDeg));
+        const polarDiff = NumUtil.getAngleDifference(angles.polar,
+            THREE.MathUtils.degToRad(condition.polarDeg));
+        const result = Math.max(azimuthDiff, polarDiff) >=
+            THREE.MathUtils.degToRad(condition.minDifferenceDeg);
         return condition.negate ? !result : result;
     },
     "always_true": (condition) =>

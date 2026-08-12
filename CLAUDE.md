@@ -60,6 +60,7 @@
 
 ### `/docs` - Documents explaining technical details
 - **`/devOps`** - Local Development, VPS
+- **`/gameplay`** - Game modes (play mode, edit mode)
 - **`/geometry`** - Voxel grid, physics, room generation/entrance, wall-attached objects, textures, player customization
 - **`/graphics`** - Camera control, instanced mesh composition, image map
 - **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode

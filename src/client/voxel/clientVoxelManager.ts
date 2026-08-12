@@ -17,6 +17,7 @@ import VoxelGameObject from "../object/types/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
 import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
+import ManualEditCountUtil from "../system/util/manualEditCountUtil";
 import MeshDataUtil from "../../shared/graphics/mesh/util/meshDataUtil";
 
 const ClientVoxelManager =
@@ -50,12 +51,22 @@ const ClientVoxelManager =
     {
         voxelQuadChangeObservable.removeListener("clientVoxelManager");
     },
+    // --- Edits to the current room's voxel grid ---
+    //
+    // "validate" says whether the edit has to be checked against what the user is allowed to do,
+    // and so also says who asked for it: an edit the user made himself is checked, while one
+    // arriving from the server or from a scripted step is not. That is why the tally of the user's
+    // own doing (see ManualEditCountUtil) is kept under the same flag.
+
     addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer?: number[],
         validate: boolean = true): boolean =>
     {
         const userRole = userRoleObservable.peek();
-        return VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
+        const success = VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
+        if (success && validate)
+            ManualEditCountUtil.count("voxelBlockAdded");
+        return success;
     },
     addVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
         numRows: number, numCols: number, collisionLayerMin: number, collisionLayerMax: number,
@@ -80,8 +91,11 @@ const ClientVoxelManager =
         validate: boolean = true): boolean =>
     {
         const userRole = userRoleObservable.peek();
-        return VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
+        const success = VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, validate ? room : undefined);
+        if (success && validate)
+            ManualEditCountUtil.count("voxelBlockRemoved");
+        return success;
     },
     removeVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
         numRows: number, numCols: number, collisionLayerMin: number, collisionLayerMax: number,
@@ -114,8 +128,11 @@ const ClientVoxelManager =
         validate: boolean = true): boolean =>
     {
         const userRole = userRoleObservable.peek();
-        return VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels,
+        const success = VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels,
             quadIndex, textureIndex, validate ? room : undefined);
+        if (success && validate)
+            ManualEditCountUtil.count("voxelQuadTextureChanged");
+        return success;
     },
 
     // --- Signal reception handlers (for signals from other clients via server) ---

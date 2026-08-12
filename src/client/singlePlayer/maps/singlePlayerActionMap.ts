@@ -4,7 +4,7 @@ import App from "../../app";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import ClientObjectManager from "../../object/clientObjectManager";
 import EasingMotion from "../../object/components/easingMotion";
-import { clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import { clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, orbitCameraAnglesObservable, orbitCameraZoomObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 
@@ -26,13 +26,15 @@ const SinglePlayerActionMap: {
     {
         headlineMessageObservable.set(action.text);
     },
-    "ui_diagram": (action) => // A React-based diagram (drawn by vector-graphics) which is contained inside a partially transparent background. The background itself is a large rectangle (with rounded corners) which is centered on the screen, both horizontally and vertically. Right below the diagram, there may also be a short text describing what it means.
+    "ui_diagram": (action) => // A React-based diagram (drawn by vector-graphics) which is contained inside a partially transparent background, with a short text describing what it means right below it. It is centered on the screen by default; a "side" placement moves it aside, drawn small, so that it does not cover whatever the demonstrated gesture is meant to act upon.
     {
-        screenDiagramObservable.set({diagram: action.diagram, text: action.text});
+        screenDiagramObservable.set({diagram: action.diagram, text: action.text,
+            placement: action.placement ?? "center"});
     },
-    "ui_arrow": (action) => // A React-based 2D downward arrow which points at the target, while pulsating up and down to grab the user's attention.
+    "ui_arrow": (action) => // A React-based 2D arrow which points at the target, while pulsating to grab the user's attention. It hangs above the target by default, and below it (pointing up) for a target too near the top of the screen to have room above it.
     {
-        screenArrowTargetObservable.set({targetElementId: action.targetElementId, arrowBias: action.arrowBias});
+        screenArrowTargetObservable.set({targetElementId: action.targetElementId,
+            arrowBias: action.arrowBias, arrowSide: action.arrowSide ?? "above"});
     },
     "ui_outline_rect": (action) => // A React-based 2D rectangular outline which surrounds the target UI element for the purpose of highlighting.
     {
@@ -75,6 +77,14 @@ const SinglePlayerActionMap: {
     {
         if (voxelQuadSelectionObservable.peek())
             VoxelQuadSelection.unselect(true);
+    },
+    "orbit_camera_pose": (action) => // Points the orbit camera at its target from a chosen direction and distance, which the camera then glides to as it would to any other view (see OrbitCameraPose). Lets a step set up the view it wants the user to begin from — and, since the angles are given, lets a later condition tell whether the user has since moved the camera himself.
+    {
+        orbitCameraZoomObservable.set(action.zoomAmount);
+        orbitCameraAnglesObservable.set({
+            azimuth: THREE.MathUtils.degToRad(action.azimuthDeg),
+            polar: THREE.MathUtils.degToRad(action.polarDeg),
+        });
     },
     "remove_voxel_blocks": (action) =>
     {

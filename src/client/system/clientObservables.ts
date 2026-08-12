@@ -5,7 +5,10 @@ import ObservableMap from "../../shared/system/types/observableMap";
 import ObservableSet from "../../shared/system/types/observableSet";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
+import PlayerSelection from "../graphics/types/gizmo/playerSelection";
+import ManualEditKind from "../../shared/system/types/manualEditKind";
 import ClientProcess from "./types/clientProcess";
+import GameMode from "./types/gameMode";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import PopupState from "../ui/types/popupState";
 import CoachMark from "../ui/types/coachMark";
@@ -61,6 +64,20 @@ export const graphicsContextRestoredObservable = new Observable<number>(0);
 // This observable notifies its listeners whenever the user selects or unselects an object.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
+// This observable notifies its listeners whenever the user selects or unselects his/her own player
+// character. Selecting it is how the user asks to work on his/her own look, so this is also what
+// puts the player-customization form on screen and takes it away again.
+export const playerSelectionObservable = new Observable<PlayerSelection | null>(null);
+
+// Which mode the user is currently playing in (see GameMode). Modes are entered and left
+// deliberately, by GameModeUtil, and everything that differs between them — the camera, the player's
+// freedom to move, which controls are on screen — follows from this one value.
+// It is held here rather than read back out of the camera, because the two are not the same
+// statement: the camera says where it is looking from, which a selection being swapped for another
+// may leave momentarily unanswered, while this says what the user is doing — and that does not
+// waver in between.
+export const gameModeObservable = new Observable<GameMode>("play");
+
 // This observable notifies its listeners whenever an input element (UI)
 // either gets focused or unfocused.
 // If the number of active inputs goes down to 0, it will imply that the user is
@@ -81,8 +98,12 @@ export const notificationMessageObservable = new Observable<string | null>(null)
 // should be displayed to the user (e.g. tutorial instructions).
 export const headlineMessageObservable = new Observable<string | null>(null);
 
-// The DOM element id that the 2D on-screen arrow should point down at, or null to hide it.
-export const screenArrowTargetObservable = new Observable<{targetElementId: string, arrowBias: "center" | "left" | "right"} | null>(null);
+// The DOM element id that the 2D on-screen arrow should point at, or null to hide it.
+// "arrowSide" is which side of the target the arrow sits on (and therefore which way it points):
+// above it pointing down by default, or below it pointing up — which is what a target at the very
+// top of the screen needs, there being no room above it for an arrow.
+export const screenArrowTargetObservable = new Observable<{targetElementId: string,
+    arrowBias: "center" | "left" | "right", arrowSide: "above" | "below"} | null>(null);
 
 // The DOM element id that the 2D on-screen rectangular outline should surround, or null to hide it.
 export const screenOutlineRectTargetObservable = new Observable<string | null>(null);
@@ -95,9 +116,12 @@ export const screenOutlineRectTargetObservable = new Observable<string | null>(n
 // is gone or beyond use.
 export const screenCoachMarksObservable = new Observable<CoachMark[]>([]);
 
-// The vector-graphics diagram (with its caption) to show centered on screen, or null to hide it.
-// "diagram" selects which built-in drawing the ScreenDiagram component renders.
-export const screenDiagramObservable = new Observable<{ diagram: "drag_up", text: string } | null>(null);
+// The vector-graphics diagram (with its caption) to show on screen, or null to hide it.
+// "diagram" selects which built-in drawing the ScreenDiagram component renders, and "placement"
+// says whether it takes the middle of the screen or steps aside to its edge, drawn small, for a
+// gesture the user is meant to perform while watching something else.
+export const screenDiagramObservable = new Observable<
+    { diagram: "drag_up" | "drag_sideways", text: string, placement: "center" | "side" } | null>(null);
 
 // The world-space XZ location the navigation arrow should guide the player toward, or null to hide it.
 export const navigationArrowTargetObservable = new Observable<{ x: number, z: number } | null>(null);
@@ -130,8 +154,26 @@ export const cameraModeObservable = new Observable<CameraMode>({type: "firstPers
 // beginning overwrites it with the view the user already had of what he pointed the camera at.
 export const orbitCameraZoomObservable = new Observable<number>(0.5);
 
+// Which way the orbit mode currently views its target from, in world space: "azimuth" is the angle
+// around the vertical axis and "polar" the angle away from straight up, both in radians. Read and
+// written by OrbitCameraPose exactly as the zoom above is, so that pointing the camera somewhere is
+// the same kind of act whoever performs it — the user's drag, or a scripted step setting up a view
+// it wants the user to start from.
+export const orbitCameraAnglesObservable = new Observable<{azimuth: number, polar: number}>(
+    {azimuth: 0, polar: 0.5 * Math.PI});
+
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");
+
+// How many edits of each kind the user has made by hand since entering the current room. Only the
+// user's own doing is counted here — never an edit arriving from the server — so that whoever asks
+// is asking about the user rather than about the room (see ManualEditKind).
+export const manualEditCountsObservable = new Observable<{[kind in ManualEditKind]: number}>({
+    voxelBlockAdded: 0,
+    voxelBlockRemoved: 0,
+    voxelQuadTextureChanged: 0,
+    playerPartChanged: 0,
+});
 
 //--------------------------------------------------------------------------------
 // User State Observables

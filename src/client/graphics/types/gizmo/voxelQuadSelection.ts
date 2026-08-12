@@ -1,11 +1,12 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { clientFeatureFlagsObservable, objectSelectionObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
+import GameModeUtil from "../../../system/util/gameModeUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 import VoxelQuadTransformDimensions from "../../../../shared/voxel/types/voxelQuadTransformDimensions";
@@ -156,8 +157,16 @@ export default class VoxelQuadSelection
         }
         else
         {
-            if (existingSelection.voxel == voxel && existingSelection.quadIndex == quadIndex) // Selected the same quad twice -> should deselect it.
+            if (existingSelection.voxel == voxel && existingSelection.quadIndex == quadIndex) // Selected the same quad twice.
             {
+                // In play mode, clicking the same quad again is how the selection is let go of. In
+                // edit mode it is not: that mode always has something selected, and while the user
+                // works on a quad he clicks it over and over — dragging the camera around it,
+                // reaching past the menu that covers half the screen — so a click that emptied the
+                // mode out from under him would be a trap rather than a shortcut. The way out of
+                // the mode is the button that says so.
+                if (GameModeUtil.isInEditMode())
+                    return true;
                 voxelQuadSelectionObservable.set(null);
                 return false;
             }
@@ -205,8 +214,7 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         // If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
         playerViewTargetPosObservable.set(new THREE.Vector3(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ));
 
-        // Also unselect any object selection.
-        objectSelectionObservable.set(null);
+        WorldSpaceSelectionUtil.unselectOthers("voxelQuad");
     }
     else
     {

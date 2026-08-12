@@ -3,6 +3,7 @@ export enum FeatureFlag
     DisableAllSelectionChange,
     DisableVoxelQuadSelectionChange,
     DisableObjectSelectionChange,
+    DisablePlayerSelectionChange,
     DisableManualVoxelBlockAddition,
     DisableManualVoxelBlockRemoval,
     DisableManualObjectAddition,
@@ -11,4 +12,7 @@ export enum FeatureFlag
     HideChatInput,
     DisableChatSend,
     UseFallbackChatMessage,
+    HideEditModeButton,
+    HideModeExitButton,
+    HideUserIdentityLabels,
 }

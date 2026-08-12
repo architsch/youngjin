@@ -4,7 +4,7 @@ Reference: @src/shared/graphics/mesh/composition/types/compositionCodec/playerCo
 
 ## Overview
 
-Each user is able to customize the visual appearance of his/her own player character, by adjusting a list of parameters in the in-game UI (see `customizePlayerForm.tsx`). During the in-game customization process, the camera temporarily moves slightly away from its usual location and looks back at the player character, so as to let the user watch his/her character that is being customized.
+Each user is able to customize the visual appearance of his/her own player character, by adjusting a list of parameters in the in-game UI (see `customizePlayerForm.tsx`). That form is what the character being *selected* looks like: it is on screen for exactly as long as the user has his own character picked out, which is where edit mode begins (see [game_mode.md](../gameplay/game_mode.md)) and what the user returns to by clicking his own body. The camera orbits the character throughout, so the user can watch from any side what he is changing.
 
 ## Underlying Logic
 

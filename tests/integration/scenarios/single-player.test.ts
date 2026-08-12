@@ -37,7 +37,7 @@ import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory"
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import SinglePlayerModeConfigMap from "../../../src/shared/singlePlayer/maps/singlePlayerModeConfigMap";
-import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -173,16 +173,23 @@ describe("single-player room generation", () => {
         const { voxelGrid } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].loadMetadata();
 
-        // The table's top block (collision layer 1) — the quad the tutorial asks the player to
-        // select and re-texture.
+        // The table's top block (collision layer 1).
         const tableVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, m.hotspots.table.row, m.hotspots.table.col);
         expect(tableVoxel).toBeDefined();
         expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(tableVoxel!, 1)).toBe(true);
 
-        // The obstacle block (collision layer 2) the tutorial asks the player to remove.
-        const obstacleVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, m.hotspots.obstacle.row, m.hotspots.obstacle.col);
-        expect(obstacleVoxel).toBeDefined();
-        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(obstacleVoxel!, 2)).toBe(true);
+        // The patch of floor the tutorial asks the player to select and build on: bare, so that the
+        // block he is then told to add has somewhere to go.
+        const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, m.hotspots.floor.row, m.hotspots.floor.col);
+        expect(floorVoxel).toBeDefined();
+        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(floorVoxel!, COLLISION_LAYER_MIN)).toBe(false);
+
+        // The way through the wall dividing the second region from the third: carved clear, since
+        // the tutorial no longer stops the player here.
+        const passageVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, m.hotspots.passage.row, m.hotspots.passage.col);
+        expect(passageVoxel).toBeDefined();
+        for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
+            expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(passageVoxel!, collisionLayer)).toBe(false);
     });
 
     it("emits per-quad change events during generation (why the client listens only after voxels spawn)", () => {

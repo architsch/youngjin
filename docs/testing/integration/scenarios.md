@@ -142,6 +142,25 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
 
+## Game Mode (`game-mode.test.ts`) — 12 tests
+
+Clicking something in the room means one thing in play mode and another in edit mode. See [game_mode.md](../../gameplay/game_mode.md) for the behavior under test.
+
+| Test | What it verifies |
+|------|-----------------|
+| leaves the camera alone when the user selects a block | A selection made in play mode neither starts edit mode nor takes the camera out of the first-person view |
+| drops the selection when the user clicks the same block again | In play mode, clicking the current selection again is still how it is let go of |
+| selects the user's own character and orbits it | Entering edit mode picks out the character and frames it by its own size alone (no minimum distance asked for) |
+| is refused to a user who may not edit the room | A visitor to someone else's room gets neither the mode nor a selection, and keeps the first-person view |
+| carries the selection over to a block the user picks next | Picking a block inside the mode drops the character, keeps the mode, and re-frames the camera — this time with a minimum distance, so the block is seen among its surroundings |
+| holds on to a block the user clicks twice | Inside edit mode, clicking the current selection again does not drop it |
+| keeps the orbit through the gap left by a selection being replaced | A selection dropped on the way to another one (what an edit does as it moves the selection onto what it just built) does not read as the mode having ended |
+| drops the selection and hands the camera back | Leaving the mode clears every selection and returns the camera to the first-person view |
+| is left behind when the user's standing in the room is taken away | A role change that revokes editing ends the mode, drops the selection, and returns the camera |
+| stays put while a scripted step is holding the selection in place | A step that has pinned the selection also holds the mode open: the way out does nothing until it lets go |
+| replaces the character with a block, and the block with the character again | Only one of the three selections is ever active |
+| replaces the character even while a step holds the character's own selection down | Pinning a selection stops the user from dropping it, not from picking something else instead |
+
 ## Single-Player Mode (`single-player.test.ts`) — 10 tests
 
 | Test | What it verifies |
@@ -152,7 +171,7 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | rejects a single-player user's edit signals — there is no server-side room to mutate | Defense-in-depth: firing all eight room-mutating signals (object add/remove/transform/metadata, voxel add/remove/move/setTexture) as a single-player user leaves the user unbound and creates no server-side room — every handler bails at its no-room guard |
 | omits content for a single-player room and reconstructs it empty | The wire format sends a single-player room as a content-less descriptor: `RoomRuntimeMemory.encode/decode` preserves the room's identity but omits its voxels/objects, reconstructing them empty |
 | still round-trips full content for a multiplayer room | A Hub room's voxel grid and object group survive the encode/decode round-trip intact |
-| generates the tutorial room with its hotspot blocks | `RoomGenerationUtil` (the same shared generator the client uses) builds the tutorial room with the table (collision layer 1) and obstacle (collision layer 2) hotspot blocks at their metadata coordinates |
+| generates the tutorial room with its hotspot blocks | `RoomGenerationUtil` (the same shared generator the client uses) builds the tutorial room with the table block (collision layer 1) at its metadata coordinates, the patch of floor the tutorial has the user build on left bare, and the way through the dividing wall carved clear |
 | emits per-quad change events during generation (why the client listens only after voxels spawn) | Generation fires `voxelQuadChangeObservable` events per quad — guarding the ordering assumption that the client registers its quad-change listener only after the room's voxel objects exist |
 | loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step | Tutorial steps form a name-keyed map (not a positional array), include the `initial` entry step, and have at least one terminal step (a rule whose `nextStep` is `""`) |
 | every transition targets an existing step or the terminal, and all steps are reachable from 'initial' | Step-graph integrity: every transition `nextStep` names a defined step (or `""`), and walking from `initial` reaches every step (none orphaned) |
@@ -590,6 +609,7 @@ for how to run it. It skips itself when no emulator is available.
 | Object | 8 |
 | Voxel | 9 |
 | Voxel Quad Reselection | 32 |
+| Game Mode | 12 |
 | Single-Player | 10 |
 | FTUE | 26 |
 | Player Mesh Composition | 16 |
@@ -604,4 +624,4 @@ for how to run it. It skips itself when no emulator is available.
 | Authentication Lifecycle | 22 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **346** |
+| **Total** | **358** |

@@ -1,15 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Text from "../basic/text";
 import ClientObjectManager from "../../../object/clientObjectManager";
 import useMouseDragScroll from "../../util/mouseDragScroll";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
 import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
-import { cameraModeObservable, clientFeatureFlagsObservable } from "../../../system/clientObservables";
 import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
-import PhysicsColliderStateUtil from "../../../../shared/physics/util/physicsColliderStateUtil";
-import WorldSpaceSelectionUtil from "../../../graphics/util/worldSpaceSelectionUtil";
-import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import ManualEditCountUtil from "../../../system/util/manualEditCountUtil";
 import StepperInput from "../input/stepperInput";
 import Base94ColorInput from "../input/base94ColorInput";
 import PartShapeIcon from "../../svg/icons/partShapeIcon";
@@ -39,33 +36,6 @@ export default function CustomizePlayerForm()
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const [editCount, setEditCount] = useState(0);
 
-    useEffect(() => {
-        // The selections are dropped first: a selection of its own takes the camera into an orbit
-        // around whatever was selected, and letting one go afterwards would send the camera back to
-        // the first-person view a moment after this form had asked it to frame the character.
-        WorldSpaceSelectionUtil.unselectAll();
-        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableAllSelectionChange);
-
-        // The camera frames the body, taking its extent from the physics side so that the framing
-        // follows the character's actual size.
-        const myPlayer = ClientObjectManager.getMyPlayer();
-        const bodyCollider = myPlayer ? PhysicsColliderStateUtil.getObjectColliderState(
-            myPlayer.params.objectTypeIndex, myPlayer.position, myPlayer.direction) : undefined;
-        if (myPlayer && bodyCollider)
-        {
-            cameraModeObservable.set({type: "orbit", target: {
-                // The center is the player's own position vector rather than a copy of it, so the
-                // orbit keeps the character in frame even if something nudges it meanwhile.
-                center: myPlayer.position,
-                halfSize: bodyCollider.hitbox.halfSize,
-            }});
-        }
-        return () => {
-            cameraModeObservable.set({type: "firstPerson"});
-            clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableAllSelectionChange);
-        };
-    }, []);
-
     // Re-read 'params' whenever 'editCount' changes.
     const params = useMemo(() => getMyPlayerParams(), [editCount]);
     if (params == undefined)
@@ -75,37 +45,37 @@ export default function CustomizePlayerForm()
         trySave();
         mutateParams();
         rebuildMyPlayerParts();
+        ManualEditCountUtil.count("playerPartChanged");
         setEditCount(prev => prev + 1);
     };
 
-    return <div className="absolute bottom-0 left-0 w-full z-40 flex flex-col pointer-events-none">
-        {/* No close control of its own: this form is a mode, and while it is up the top bar carries
-            the single button that ends it (see ModeExitBar). */}
-        <div className="m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex">
-            <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
-                {partSlots.map((slot, slotIndex) =>
-                    <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
-                        <div className="flex flex-col items-center gap-1 shrink-0">
-                            <div className="flex flex-row items-center gap-1 shrink-0">
-                                <Text content={slot.title} size="sm"/>
-                                <Base94ColorInput
-                                    currValue={ColorUtil.rgbToBase94Index(params.colors[slot.key])}
-                                    setColorIndex={(index: number) => applyEdit(() => params.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
-                                />
-                            </div>
-                            <StepperInput
-                                currValue={params.types[slot.key]}
-                                numValues={PlayerCompositionConstants.numTypes[slot.key]}
-                                setValue={(value: number) => applyEdit(() => params.types[slot.key] = value)}
-                                preview={<PartShapeIcon params={params}
-                                    builderType={`${slot.builderName}_${params.types[slot.key]}`}/>}
+    // This form is what the user's own character being selected looks like, so it neither moves the
+    // camera nor carries a close control of its own: the selection frames the character (see
+    // WorldSpaceSelectionUtil), and the top bar carries the button that ends edit mode.
+    return <div id="customizePlayerOptions" className="m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex">
+        <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
+            {partSlots.map((slot, slotIndex) =>
+                <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                        <div className="flex flex-row items-center gap-1 shrink-0">
+                            <Text content={slot.title} size="sm"/>
+                            <Base94ColorInput
+                                currValue={ColorUtil.rgbToBase94Index(params.colors[slot.key])}
+                                setColorIndex={(index: number) => applyEdit(() => params.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
                             />
                         </div>
-                        {slotIndex < partSlots.length - 1 &&
-                            <div className="w-px self-stretch bg-gray-500"/>}
+                        <StepperInput
+                            currValue={params.types[slot.key]}
+                            numValues={PlayerCompositionConstants.numTypes[slot.key]}
+                            setValue={(value: number) => applyEdit(() => params.types[slot.key] = value)}
+                            preview={<PartShapeIcon params={params}
+                                builderType={`${slot.builderName}_${params.types[slot.key]}`}/>}
+                        />
                     </div>
-                )}
-            </div>
+                    {slotIndex < partSlots.length - 1 &&
+                        <div className="w-px self-stretch bg-gray-500"/>}
+                </div>
+            )}
         </div>
     </div>;
 }
