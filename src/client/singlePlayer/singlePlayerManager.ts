@@ -1,7 +1,4 @@
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
-import SinglePlayerModeConfigMap from "../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
-import SinglePlayerAction from "../../shared/singlePlayer/types/singlePlayerAction";
-import SinglePlayerStep from "../../shared/singlePlayer/types/singlePlayerStep";
 import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import App from "../app";
 import SocketsClient from "../networking/client/socketsClient";
@@ -9,6 +6,9 @@ import { singlePlayerObservable } from "../system/clientObservables";
 import { tryStartClientProcess } from "../system/types/clientProcess";
 import SinglePlayerActionMap from "./maps/singlePlayerActionMap";
 import SinglePlayerConditionMap from "./maps/singlePlayerConditionMap";
+import SinglePlayerModeClientConfigMap from "./maps/singlePlayerModeClientConfigMap";
+import SinglePlayerAction from "./types/singlePlayerAction";
+import SinglePlayerStep from "./types/singlePlayerStep";
 
 const SinglePlayerManager =
 {
@@ -77,7 +77,11 @@ const SinglePlayerManager =
         }
         // Tear down any state the mode left behind (e.g. disable every feature flag it enabled).
         // Doing it here means it runs for both natural completion and skipping.
-        runActions(SinglePlayerModeConfigMap[mode].onModeEnd());
+        runActions(SinglePlayerModeClientConfigMap[mode].onModeEnd());
+        // Whatever the mode's steps worked out for each other belonged to that run of it, and to
+        // the room it was played in. Nothing of it survives into the next.
+        for (const name of Object.keys(variables))
+            delete variables[name];
         SocketsClient.emitUserCommandSignal(new UserCommandSignal("finishSinglePlayerMode"));
         App.getUser().singlePlayerMode = "";
         singlePlayerObservable.set({mode: "", step: ""});
@@ -103,7 +107,24 @@ const SinglePlayerManager =
             SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("", true));
         }
     },
+    // Sets a value aside under a name, for the rest of the current mode to build its parameters
+    // from (see the "set_variable" action).
+    setVariable: (name: string, value: any) =>
+    {
+        variables[name] = value;
+    },
+    // What was set aside under the given name, or undefined if nothing was.
+    getVariable: (name: string): any =>
+    {
+        return variables[name];
+    },
 }
+
+// What the steps of the current mode have worked out for each other. A step is written long before
+// it is played, so much of what it wants to point at — which patch of floor, which view the user
+// started from — can only be settled while it is being played; this is where one step leaves such a
+// finding for the steps that follow it, and it is emptied when the mode ends.
+const variables: {[name: string]: any} = {};
 
 let pendingTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 let prevStep: string = "";
@@ -113,11 +134,8 @@ let stepByName: {[stepName: string]: SinglePlayerStep};
 
 singlePlayerObservable.addListener("singlePlayer", (v: {mode: string, step: string}) => {
     if (v.mode != "") // If the mode has started, ensure that its steps are loaded.
-    {
-        const config = SinglePlayerModeConfigMap[v.mode];
-        stepByName = config.loadSteps();
-    }
-    
+        stepByName = SinglePlayerModeClientConfigMap[v.mode].loadSteps();
+
     // If the previous step was the final step, finish the singleplayer mode.
     const shouldFinishMode = prevStep != "" && v.step == "";
 

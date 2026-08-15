@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
-import { objectSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable } from "../../../system/clientObservables";
+import { gameModeObservable, objectSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable } from "../../../system/clientObservables";
+import GameModeUtil from "../../../system/util/gameModeUtil";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "./generic/worldSpaceArrow";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
@@ -60,16 +61,46 @@ function hideAll()
         arrow.setVisible(false);
 }
 
-async function updateGizmos(selection: ObjectSelection)
+// The canvas the arrows are currently to be put up around, if any. Moving a canvas is an edit, so
+// the arrows belong to edit mode alone: a click on a canvas during play mode is a way of looking at
+// it and nothing more, and the tools for changing what was clicked stay away (see GameModeUtil).
+function getGizmoTarget(): ObjectSelection | null
 {
-    const go = selection.gameObject;
-    if (go.params.objectTypeIndex !== canvasTypeIndex)
+    if (!GameModeUtil.isInEditMode())
+        return null;
+
+    const selection = objectSelectionObservable.peek();
+    if (!selection || selection.gameObject.params.objectTypeIndex !== canvasTypeIndex)
+        return null;
+
+    return selection;
+}
+
+async function refreshGizmos()
+{
+    if (!getGizmoTarget())
     {
         hideAll();
         return;
     }
 
     await ensureInitialized();
+
+    // Creating the arrows is awaited, and what they were to be put up around may be gone by the time
+    // that returns — the selection dropped, or edit mode left.
+    const selection = getGizmoTarget();
+    if (!selection)
+    {
+        hideAll();
+        return;
+    }
+
+    updateGizmos(selection);
+}
+
+function updateGizmos(selection: ObjectSelection)
+{
+    const go = selection.gameObject;
 
     const room = App.getCurrentRoom();
     if (!room)
@@ -166,12 +197,12 @@ function tryMoveCanvas(selection: ObjectSelection,
 
 // --- Observable listeners ---
 
-objectSelectionObservable.addListener("canvasWorldSpaceGizmos", async (selection: ObjectSelection | null) => {
-    if (selection)
-        await updateGizmos(selection);
-    else
-        hideAll();
-});
+objectSelectionObservable.addListener("canvasWorldSpaceGizmos", refreshGizmos);
+
+// The mode decides whether a selected canvas is something being changed or merely something being
+// looked at, so a change of mode puts the arrows up or takes them down even when the canvas under
+// them stayed exactly as it was.
+gameModeObservable.addListener("canvasWorldSpaceGizmos", refreshGizmos);
 
 roomChangedObservable.addListener("canvasWorldSpaceGizmos", (_roomRuntimeMemory: RoomRuntimeMemory) => {
     hideAll();

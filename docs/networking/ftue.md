@@ -28,7 +28,7 @@ Several marks may be on screen at once. Because each is triggered by whatever UI
 
 Guidance is scheduled by the UI that owns the control, and the triggers come in two shapes:
 
-- **Dwell** — the control has been within reach, unused, for a stretch of uninterrupted time in the room. This is how the own-room settings button (in the user's own room only) is advertised.
+- **Dwell** — the control has been within reach, unused, for a stretch of uninterrupted time. This is how the room-settings button is advertised, which is on offer to a user editing his own room (see [game_mode.md](../gameplay/game_mode.md)).
 - **Context** — the user has just selected something and the menu for it has opened. The mark follows a short beat later, so it does not race the menu's own appearance. This is how adding a picture to a wall, and then changing that picture's image and frame, are advertised.
 
 Because guidance is scheduled ahead of time, the user may well discover the feature on their own before the mark is due — so `FTUEUtil` re-checks at that moment and stays quiet if there is nothing left to say.

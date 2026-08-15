@@ -142,7 +142,7 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
 
-## Game Mode (`game-mode.test.ts`) — 12 tests
+## Game Mode (`game-mode.test.ts`) — 23 tests
 
 Clicking something in the room means one thing in play mode and another in edit mode. See [game_mode.md](../../gameplay/game_mode.md) for the behavior under test.
 
@@ -151,28 +151,42 @@ Clicking something in the room means one thing in play mode and another in edit 
 | leaves the camera alone when the user selects a block | A selection made in play mode neither starts edit mode nor takes the camera out of the first-person view |
 | drops the selection when the user clicks the same block again | In play mode, clicking the current selection again is still how it is let go of |
 | selects the user's own character and orbits it | Entering edit mode picks out the character and frames it by its own size alone (no minimum distance asked for) |
-| is refused to a user who may not edit the room | A visitor to someone else's room gets neither the mode nor a selection, and keeps the first-person view |
+| opens for a user who may not edit the room, on his own character | A visitor to someone else's room still gets the mode and his own character in it: the character is his wherever he is standing |
+| turns away that user's click on the room itself, and says why | A click on a block in a room he may not edit selects nothing and raises a notification, while leaving him the mode and the character he came into it for |
+| lets an editor's click on the room through | The same click by a user who may edit the room selects the block and raises nothing |
 | carries the selection over to a block the user picks next | Picking a block inside the mode drops the character, keeps the mode, and re-frames the camera — this time with a minimum distance, so the block is seen among its surroundings |
-| holds on to a block the user clicks twice | Inside edit mode, clicking the current selection again does not drop it |
+| is left by a second click on the block being edited | Clicking the current selection again lets it go, and the mode goes with it: nothing is selected and the camera is back at the player's eye |
+| is not left by a second click on the user's own character | The character is the exception, since opening the mode goes through the same call: it stays picked out and the mode stands |
 | keeps the orbit through the gap left by a selection being replaced | A selection dropped on the way to another one (what an edit does as it moves the selection onto what it just built) does not read as the mode having ended |
 | drops the selection and hands the camera back | Leaving the mode clears every selection and returns the camera to the first-person view |
-| is left behind when the user's standing in the room is taken away | A role change that revokes editing ends the mode, drops the selection, and returns the camera |
-| stays put while a scripted step is holding the selection in place | A step that has pinned the selection also holds the mode open: the way out does nothing until it lets go |
+| is left behind when the user's standing in the room is taken away | A role change that revokes editing drops what he had picked out of the room, ends the mode, and returns the camera |
+| is left behind even while a scripted step is holding that selection in place | The step's hold is on the user giving a selection up, not on it being taken from him: the selection goes and the mode with it |
+| takes a selection a scripted step had pinned along with it | A pinned selection is pinned for the sake of what is taught inside the mode, so leaving the mode drops it too rather than being blocked by it |
+| keeps the way out shut | A step holding the user in his mode refuses the crossing itself — what the exit button and the back gesture both come down to — leaving mode, selection, and orbit as they were |
+| keeps the way in shut | The same hold refuses the crossing the other way: edit mode does not open, and nothing is picked out |
+| turns away a second click on the block being edited, selection and all | The third way out is refused whole, since dropping the selection alone would leave the user in a mode with nothing under it |
+| lets the way out through again once it lets go | The step that teaches the way out opens it for itself, and the selection it had pinned meanwhile is no obstacle |
+| holds the camera on its own place while the user's selection stands | A step that points the camera somewhere frames that place, and picks nothing out for the user — his own selection is untouched |
+| outranks what the user selects meanwhile, and gives the camera back when it ends | The step's place wins over a selection made under it, and clearing the override re-frames the camera onto that selection |
+| leaves the camera where it is in play mode | Pointing the camera is an edit-mode affair: in play mode the first-person view stands |
 | replaces the character with a block, and the block with the character again | Only one of the three selections is ever active |
 | replaces the character even while a step holds the character's own selection down | Pinning a selection stops the user from dropping it, not from picking something else instead |
 
-## Single-Player Mode (`single-player.test.ts`) — 10 tests
+## Single-Player Mode (`single-player.test.ts`) — 13 tests
 
 | Test | What it verifies |
 |------|-----------------|
 | joining a single-player room does not load a server-side room or register a participant | No server-side room is loaded (the client generates it), the user is bound to no room, and the socket context is flagged `isInSinglePlayerRoom` |
 | does not persist lastRoomID when joining a single-player room | `lastRoomID` stays empty — single-player rooms are re-entered via `user.singlePlayerMode` |
 | joining a multiplayer room still registers the user as a participant | A Hub join registers the user (participant count 1) and leaves `isInSinglePlayerRoom` false |
-| rejects a single-player user's edit signals — there is no server-side room to mutate | Defense-in-depth: firing all eight room-mutating signals (object add/remove/transform/metadata, voxel add/remove/move/setTexture) as a single-player user leaves the user unbound and creates no server-side room — every handler bails at its no-room guard |
+| rejects a single-player user's edit signals — there is no server-side room to mutate | Defense-in-depth: firing all eight room-mutating signals (object add/remove/transform/metadata, voxel add/remove/move/setTexture) as a single-player user, at a real quad of the tutorial room's dividing wall, leaves the user unbound and creates no server-side room — every handler bails at its no-room guard |
 | omits content for a single-player room and reconstructs it empty | The wire format sends a single-player room as a content-less descriptor: `RoomRuntimeMemory.encode/decode` preserves the room's identity but omits its voxels/objects, reconstructing them empty |
 | still round-trips full content for a multiplayer room | A Hub room's voxel grid and object group survive the encode/decode round-trip intact |
-| generates the tutorial room with its hotspot blocks | `RoomGenerationUtil` (the same shared generator the client uses) builds the tutorial room with the table block (collision layer 1) at its metadata coordinates, the patch of floor the tutorial has the user build on left bare, and the way through the dividing wall carved clear |
+| generates the tutorial room with the walls its steps take down | `RoomGenerationUtil` (the same shared generator the client uses) builds both walls the tutorial later opens — the one between the user and the receptionist, and the one across the way out — leaves the fallback patch of floor bare, and places the receptionist and the door the steps address by name |
 | emits per-quad change events during generation (why the client listens only after voxels spawn) | Generation fires `voxelQuadChangeObservable` events per quad — guarding the ordering assumption that the client registers its quad-change listener only after the room's voxel objects exist |
+| picks a bare patch of floor between the player and the camera | The patch the tutorial asks the user to select is settled while the step runs: it lies toward the camera, is never the one the user is standing on, and carries no block — so its outline is visible and the block he is asked to build has somewhere to go |
+| keeps the whole block-building passage on the one patch it asked for | Every step of the passage reads back the one patch `select_floor` settled: the step advances only on that patch (row/col/layer/face all named) and turns the camera on it, and `add_block` and `remove_block` each end by putting the selection where the passage needs it next — on the block just built, then back on the floor it stood on |
+| falls back to the room's own patch when the floor gives out at once | With a wall in the way of the search, the fallback patch written into the room's layout stands |
 | loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step | Tutorial steps form a name-keyed map (not a positional array), include the `initial` entry step, and have at least one terminal step (a rule whose `nextStep` is `""`) |
 | every transition targets an existing step or the terminal, and all steps are reachable from 'initial' | Step-graph integrity: every transition `nextStep` names a defined step (or `""`), and walking from `initial` reaches every step (none orphaned) |
 
@@ -609,8 +623,8 @@ for how to run it. It skips itself when no emulator is available.
 | Object | 8 |
 | Voxel | 9 |
 | Voxel Quad Reselection | 32 |
-| Game Mode | 12 |
-| Single-Player | 10 |
+| Game Mode | 23 |
+| Single-Player | 13 |
 | FTUE | 26 |
 | Player Mesh Composition | 16 |
 | Signals | 6 |
@@ -624,4 +638,4 @@ for how to run it. It skips itself when no emulator is available.
 | Authentication Lifecycle | 22 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **358** |
+| **Total** | **372** |

@@ -1,6 +1,6 @@
 # Game Mode
 
-Reference: @src/client/system/types/gameMode.ts , @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/types/gizmo/playerSelection.ts , @src/client/ui/components/hud/mode/modeExitBar.tsx , @src/client/ui/components/hud/user/userRoomIdentity.tsx , @src/shared/room/util/roomValidationUtil.ts
+Reference: @src/client/system/types/gameMode.ts , @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/types/gizmo/playerSelection.ts , @src/client/ui/components/hud/mode/gameModeMenu.tsx , @src/client/ui/components/hud/user/userRoomIdentity.tsx , @src/shared/room/util/roomValidationUtil.ts
 
 ## What a game mode is
 
@@ -17,12 +17,15 @@ The mode is held in its own right rather than read back out of the camera, becau
 
 The way in is the edit-mode button in the top bar. It opens the mode on the user's own character: the one thing in the room that is his wherever he is standing, and the one he is most likely to want to change first. The character is therefore the mode's first selection, and the customization form appears with it.
 
-The way out is the button that says so, in the same top bar (see `ModeExitBar`), or the platform's back gesture. Leaving drops the selection and hands the camera back to the first-person view.
+The way out is the button that says so, the platform's back gesture, or a second click on the very thing being edited. Leaving drops the selection and hands the camera back to the first-person view.
 
-Two things can keep the mode from opening or closing:
+The mode itself is open to everyone, because the character it opens on is the user's own in whatever room he is standing in. What the *room* is made of is another matter: a click meant to pick a block or a picture out of a room the user may not edit (`RoomValidationUtil`) is turned away where it lands, and tells him why rather than doing nothing. A role taken back from him mid-room drops whatever of that room he had picked out, on the same grounds, and the mode goes with it: what was taken from him is not his to hold on to, so a scripted step's hold on that selection has no say either.
 
-- **Permission.** Edit mode is only ever open to a user who may actually edit the room he is in (`RoomValidationUtil`) — for anyone else the price of it, the camera and the player both given over to the selection, would buy nothing. The button is not offered to them at all, and a role taken away mid-room takes the mode with it.
-- **A scripted step.** A single-player tutorial step may be holding a selection in place, or holding the way out off screen until the moment it means to teach it (see [single_player_mode.md](../networking/single_player_mode.md)). A selection the user is not free to give up holds the mode open along with it.
+That button belongs to the **game-mode menu** (`GameModeMenu`), which takes the top edge of the screen for as long as a mode is up and holds what belongs to the mode rather than to anything selected inside it: the way out and the camera's zoom. Below them, for a user editing his own room, is the way into that room's settings — what the room *is*, as against what is in it — which is why it keeps to edit mode and does not by itself raise the menu. The identity and room controls that normally hold that corner step aside meanwhile. Both sit below whatever height the tutorial's headline currently reaches, so an instruction and the control it names can be on screen at once.
+
+One thing can keep the mode from opening or closing: **a scripted step**. A single-player tutorial step may hold the user in the mode he is in — walking him through what is inside it, or keeping the way out to itself until the moment it means to teach it (see [single_player_mode.md](../networking/single_player_mode.md)). What such a step holds is the crossing itself, asked at `GameModeUtil` by every way across, rather than the button that offers one: two of the three ways out go through no button at all, so a mode whose exit button was merely hidden would still be a mode the user could leave by pressing Escape. The controls read that same answer back, and are on screen exactly when there is a crossing to make.
+
+Leaving the mode takes the selection standing in it along, whether or not that selection was itself pinned by a step: the step pinned it for the sake of what was being taught *inside* the mode, and the mode is what is being left. A mode that cannot pick out even the character it opens on is likewise given up again rather than left standing empty.
 
 ## Selection inside and outside the mode
 
@@ -33,9 +36,9 @@ Only one thing is ever selected — a voxel-quad, an object, or the user's own c
 | Camera | stays at the player's eye, pitching toward the selection | orbits the selection (see [camera_control.md](../graphics/camera_control.md)) |
 | Player | free to walk | stands still |
 | On screen | what the selection *is* (e.g. a canvas's description) | the tools for changing it |
-| Clicking the current selection again | drops it | keeps it |
+| Clicking the current selection again | drops it | drops it, and the mode with it |
 
-That last row is the one rule that reads oddly out of context. In edit mode the user clicks the thing he is working on over and over — dragging the camera around it, reaching past the menu that covers half the screen — so a click that emptied the mode out from under him would be a trap rather than a shortcut. The mode always has something selected, and is left by the button that says so.
+Clicking what is already picked out is how it is let go of, in either mode. Inside edit mode the mode goes with it, because the mode *is* that selection — the camera orbiting it, the player standing still for it — and there is nothing left for that arrangement to be kept up for once the selection is gone. That also makes the click a way out of the mode, so a step holding the user in the mode turns the whole click away rather than half of it: dropping the selection alone would leave exactly the empty mode just described. The user's own character is the exception: opening the mode is itself a selection of the character, so a click on it always leaves it picked out.
 
 ## Related docs
 

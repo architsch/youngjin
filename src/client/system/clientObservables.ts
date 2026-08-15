@@ -7,6 +7,7 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import PlayerSelection from "../graphics/types/gizmo/playerSelection";
 import ManualEditKind from "../../shared/system/types/manualEditKind";
+import Vec3 from "../../shared/math/types/vec3";
 import ClientProcess from "./types/clientProcess";
 import GameMode from "./types/gameMode";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
@@ -143,6 +144,14 @@ export const popupStateObservable = new Observable<PopupState>({ popupType: "non
 // both follow it.
 export const cameraModeObservable = new Observable<CameraMode>({type: "firstPerson"});
 
+// A point the orbit camera should be held on, whatever the user currently has selected, or null to
+// leave the camera to the selection as usual. This is how a scripted step shows the user the thing
+// it is asking him to pick out, rather than describing where to look for it: the camera is turned
+// on that thing while the step lasts, and given back when it ends.
+// A point rather than a volume, since what a step points out is a place; it is framed the way a
+// selected block is, from far enough back to show what lies around it (see WorldSpaceSelectionUtil).
+export const orbitCameraTargetOverrideObservable = new Observable<Vec3 | null>(null);
+
 // How far the orbit mode's zoom is currently pushed: 0 is as far back as the mode allows, and 1 is
 // as close in as it allows. Every way the user has of zooming works through this one value — the
 // wheel and the pinch write it as they are read, and the on-screen slider both shows it and sets it
@@ -155,12 +164,21 @@ export const cameraModeObservable = new Observable<CameraMode>({type: "firstPers
 export const orbitCameraZoomObservable = new Observable<number>(0.5);
 
 // Which way the orbit mode currently views its target from, in world space: "azimuth" is the angle
-// around the vertical axis and "polar" the angle away from straight up, both in radians. Read and
-// written by OrbitCameraPose exactly as the zoom above is, so that pointing the camera somewhere is
-// the same kind of act whoever performs it — the user's drag, or a scripted step setting up a view
-// it wants the user to start from.
+// around the vertical axis and "polar" the angle away from straight up, both in radians. Written by
+// OrbitCameraPose as the view moves, and read by whoever wants to know where the user is looking
+// from — a step waiting for him to turn the camera, for instance.
 export const orbitCameraAnglesObservable = new Observable<{azimuth: number, polar: number}>(
     {azimuth: 0, polar: 0.5 * Math.PI});
+
+// A view the orbit camera is asked to take up — the two angles above, in radians, together with a
+// zoom on the terms above — or null once it has. This is how a view is set from outside, by a
+// scripted step arranging the one it wants the user to begin from.
+// It is a request rather than the angles being written directly, because pointing the camera at
+// something frames it afresh from wherever the camera already stood (see OrbitCameraPose), which
+// would overwrite angles set in the same breath. The request is taken up by PlayerCamera after that
+// framing, and so survives being made in the same moment as the thing to be looked at is chosen.
+export const orbitCameraViewRequestObservable =
+    new Observable<{azimuth: number, polar: number, zoomAmount: number} | null>(null);
 
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");

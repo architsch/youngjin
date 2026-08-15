@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import PlayerController from "../../playerController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { cameraModeObservable } from "../../../../system/clientObservables";
+import { cameraModeObservable, orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import FirstPersonCameraPose from "./firstPersonCameraPose";
 import OrbitCameraPose from "./orbitCameraPose";
@@ -59,6 +59,15 @@ export default class PlayerCamera
     update(deltaTime: number, controller: PlayerController): void
     {
         const mode = cameraModeObservable.peek();
+
+        // A view asked for from outside is taken up here and nowhere else, so that it lands after
+        // the framing below rather than being overwritten by it. Taken off the request either way:
+        // outside an orbit there is no view to take up, and a request left standing would be
+        // answered by whichever orbit happened to begin next.
+        const viewRequest = orbitCameraViewRequestObservable.peek();
+        if (viewRequest != null)
+            orbitCameraViewRequestObservable.set(null);
+
         if (mode.type === "orbit")
         {
             // Frame the target afresh each time the mode is entered, and each time it is pointed
@@ -76,6 +85,8 @@ export default class PlayerCamera
                 if (orbitBegins)
                     this.orbitPose.matchZoomToCurrentDistance();
             }
+            if (viewRequest != null)
+                this.orbitPose.setView(viewRequest);
             this.orbitTarget = mode.target;
             this.orbitPose.updatePose(this.pointerInput!.dragDelta, this.pointerInput!.viewScale,
                 mode.target, controller.gameObject.obj,

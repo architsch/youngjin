@@ -41,10 +41,20 @@ const zoomDistanceFactorSpan = maxZoomDistanceFactor / minZoomDistanceFactor;
 // within the thing being inspected there is nothing left to inspect.
 const minZoomDistancePerTargetReach = 1.2;
 
-// Where the camera goes when it has no direction of its own to keep (see reframe): above, slightly
-// off to the side, and out front of the player, looking back — the framing that shows the user's
-// own character. Expressed in the player's frame, where -z is the direction the player looks in.
-const defaultOrbitDirection = new THREE.Vector3(0.5, 0.7, -1).normalize();
+// Where in the target the orbit aims, measured up from its center as a share of the target's own
+// half-height. A little above the middle rather than dead center, because what is worth looking at
+// in something that stands upright — a character's face, the upper half of a door — is above its
+// middle, and aiming at the middle leaves that near the top edge of the view with empty floor under
+// it. Taken as a share of the target's own height rather than as a distance, so that the aim stays
+// square on a block or a floor tile, which have next to no height to be off-center within.
+const orbitPivotHeightPerTargetHalfHeight = 0.2;
+
+// Where the camera goes when it has no direction of its own to keep (see reframe): behind the
+// player and above him, looking the way he is facing — the over-the-shoulder framing that shows the
+// user's own character without turning the room around behind it, so that what he sees when the
+// orbit opens is still the view he was walking in. Expressed in the player's frame, where -z is the
+// direction the player looks in.
+const defaultOrbitDirection = new THREE.Vector3(0, 0.5, 1).normalize();
 
 const pivotTemp = new THREE.Vector3();
 const orbitOffsetTemp = new THREE.Vector3();
@@ -54,14 +64,15 @@ const parentQuatTemp = new THREE.Quaternion();
 const lookMat4Temp = new THREE.Matrix4();
 
 //------------------------------------------------------------------------
-// Computes the camera pose for the "orbit" camera mode: the camera orbits around the center of the
-// mode's target volume — which may be anywhere in the room, and need not be on the player — and
-// looks at it, driven by grab-style pointer drags (the orbit angle follows the pointer's movement,
+// Computes the camera pose for the "orbit" camera mode: the camera orbits around a point within the
+// mode's target volume — which may be anywhere in the room, and need not be on the player (see
+// setPivot for where in it) — and looks at that point, driven by grab-style pointer drags (the orbit
+// angle follows the pointer's movement,
 // like Three.js's OrbitControls), so the user can inspect the target from any angle — and from as
 // close or as far as he asks to see it from, whether by pinching, wheeling, or moving the on-screen
 // zoom control, all of which meet in orbitCameraZoomObservable. Which way the target is viewed from
-// is published on the same terms (orbitCameraAnglesObservable), so that a view can also be set from
-// outside — by a scripted step arranging the one it wants the user to begin from.
+// is published on the same terms (orbitCameraAnglesObservable), and can also be asked for from
+// outside — by a scripted step arranging the view it wants the user to begin from (see setView).
 //
 // The orbit is described in world space, while the camera hangs off the player object (which is
 // what makes the first-person view follow the player's eye for free). The pose is therefore handed
@@ -97,10 +108,7 @@ export default class OrbitCameraPose
     reframe(target: AABB3, minDistance: number, camera: THREE.Camera, playerObj: THREE.Object3D): void
     {
         camera.getWorldPosition(worldPosTemp);
-        orbitOffsetTemp.set(
-            worldPosTemp.x - target.center.x,
-            worldPosTemp.y - target.center.y,
-            worldPosTemp.z - target.center.z);
+        orbitOffsetTemp.subVectors(worldPosTemp, setPivot(target, pivotTemp));
 
         // Standing clear of the target on either horizontal axis is enough to be viewing it from
         // somewhere. The test is the target's own footprint, rather than a circle drawn around it,
@@ -125,6 +133,19 @@ export default class OrbitCameraPose
         // The default direction was substituted above and carries no distance of its own, so there
         // is nothing for the orbit to begin from in that case.
         this.distanceAtReframe = cameraHasItsOwnView ? this.spherical.radius : 0;
+    }
+
+    // Takes up a view chosen from outside (see orbitCameraViewRequestObservable), in place of the
+    // one the camera would otherwise have kept. Called after the framing above, which is what lets
+    // a step point the camera at something and say how it wants that something looked at in the
+    // same breath: what a patch of floor is, and that it is to be seen from above rather than
+    // edge-on, are one instruction.
+    setView(view: {azimuth: number, polar: number, zoomAmount: number}): void
+    {
+        this.spherical.theta = view.azimuth;
+        this.spherical.phi = NumUtil.clampInRange(view.polar, minPolarAngle, maxPolarAngle);
+        this.publishAngles();
+        orbitCameraZoomObservable.set(NumUtil.clampInRange(view.zoomAmount, 0, 1));
     }
 
     // How far the camera is currently being held from the target.
@@ -180,7 +201,7 @@ export default class OrbitCameraPose
             this.framingDistance * getZoomDistanceFactor(newZoomAmount),
             minZoomDistancePerTargetReach * getTargetReach(target));
 
-        pivotTemp.set(target.center.x, target.center.y, target.center.z);
+        setPivot(target, pivotTemp);
         orbitOffsetTemp.setFromSpherical(this.spherical);
         worldPosTemp.addVectors(pivotTemp, orbitOffsetTemp);
         lookMat4Temp.lookAt(worldPosTemp, pivotTemp, DIRECTION_VECTORS["+y"]);
@@ -224,6 +245,15 @@ function getZoomDistanceFactor(zoomAmount: number): number
 function getZoomAmount(zoomDistanceFactor: number): number
 {
     return Math.log(maxZoomDistanceFactor / zoomDistanceFactor) / Math.log(zoomDistanceFactorSpan);
+}
+
+// The point within the target that the camera orbits around and looks at (see the share above).
+function setPivot(target: AABB3, out: THREE.Vector3): THREE.Vector3
+{
+    return out.set(
+        target.center.x,
+        target.center.y + orbitPivotHeightPerTargetHalfHeight * target.halfSize.y,
+        target.center.z);
 }
 
 // How far the target reaches from its own center: the radius of the sphere that holds it, which is

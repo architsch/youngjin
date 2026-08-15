@@ -11,9 +11,10 @@ import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import { texturePackURLObservable } from "../../system/clientObservables";
+import { gameModeObservable, notificationMessageObservable, texturePackURLObservable, userRoleObservable } from "../../system/clientObservables";
 import GraphicsManager from "../../graphics/graphicsManager";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
+import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 
 let debugEnabled: boolean = false;
 const vector3Temp = new THREE.Vector3();
@@ -91,6 +92,21 @@ export default class VoxelGameObject extends GameObject
         GraphicsManager.getCamera().getWorldPosition(vector3Temp);
         if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
             return;
+
+        if (gameModeObservable.peek() == "edit")
+        {
+            const room = App.getCurrentRoom();
+            if (room == undefined)
+            {
+                console.error("Current room not found.");
+                return;
+            }
+            if (!RoomValidationUtil.canUserEditRoom(userRoleObservable.peek(), room))
+            {
+                notificationMessageObservable.set("You don't have permission to edit this room.");
+                return;
+            }
+        }
 
         const voxel = this.getVoxel();
         VoxelQuadSelection.trySelect(voxel, instanceId);

@@ -40,11 +40,16 @@ export default class ObjectSelection
         {
             if (existingSelection.gameObject === gameObject) // Selected the same object twice.
             {
-                // Clicking the same object again lets it go in play mode, but not in edit mode,
-                // which always has something selected and is left by the button that says so
+                // Clicking what is already picked out lets it go, and lets the mode go with it —
+                // so a step holding the user in that mode turns the click away whole
                 // (see VoxelQuadSelection.trySelect).
                 if (GameModeUtil.isInEditMode())
-                    return true;
+                {
+                    if (!GameModeUtil.canChangeGameMode())
+                        return true;
+                    GameModeUtil.exitEditMode();
+                    return false;
+                }
                 objectSelectionObservable.set(null);
                 return false;
             }

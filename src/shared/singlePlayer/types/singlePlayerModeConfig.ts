@@ -1,16 +1,15 @@
 import ObjectGroup from "../../object/types/objectGroup";
 import VoxelGrid from "../../voxel/types/voxelGrid";
-import SinglePlayerAction from "./singlePlayerAction";
 import SinglePlayerModeConfigMetadata from "./singlePlayerModeConfigMetadata";
-import SinglePlayerStep from "./singlePlayerStep";
 
+// What a single-player mode's room is: its measurements, the texture pack it is dressed in, and how
+// it is built. Shared, because the server generates the same room the client does.
+//
+// What the mode *does* to the user once he is inside that room — the steps he is walked through — is
+// the client's alone, and lives in SinglePlayerModeClientConfig.
 export default interface SinglePlayerModeConfig
 {
     loadMetadata: () => SinglePlayerModeConfigMetadata;
     texturePackPath: string;
     buildRoom: (voxelGrid: VoxelGrid, objectGroup: ObjectGroup) => void;
-    loadSteps: () => {[stepName: string]: SinglePlayerStep};
-    // Actions to run when the mode ends — whether it was completed or skipped — to tear down
-    // any lingering state (e.g. disabling every feature flag the mode may have enabled).
-    onModeEnd: () => SinglePlayerAction[];
 }

@@ -312,7 +312,11 @@ function updateVoxelBlockSide(voxels: Voxel[], voxel: Voxel, collisionLayer: num
     }
 
     const myBlockOccupied = VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
-    const adjBlockOccupied = (adjBlockVoxel != undefined) &&
+    // A neighbour outside the grid counts as solid, so the room's outer shell is never drawn: the
+    // orbit camera pulls back past the boundary walls, and a shell drawn from out there would hide
+    // the very room the user is looking into. Only x/z faces can point out of the grid — the y ones
+    // stay within their own voxel — so the floor and ceiling tiles are untouched by this.
+    const adjBlockOccupied = (adjBlockVoxel == undefined) ||
         VoxelQueryUtil.isVoxelCollisionLayerOccupied(adjBlockVoxel, adjBlockCollisionLayer);
 
     const showMyQuad = myBlockOccupied && !adjBlockOccupied;

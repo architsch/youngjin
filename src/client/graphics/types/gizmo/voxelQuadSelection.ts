@@ -159,14 +159,21 @@ export default class VoxelQuadSelection
         {
             if (existingSelection.voxel == voxel && existingSelection.quadIndex == quadIndex) // Selected the same quad twice.
             {
-                // In play mode, clicking the same quad again is how the selection is let go of. In
-                // edit mode it is not: that mode always has something selected, and while the user
-                // works on a quad he clicks it over and over — dragging the camera around it,
-                // reaching past the menu that covers half the screen — so a click that emptied the
-                // mode out from under him would be a trap rather than a shortcut. The way out of
-                // the mode is the button that says so.
+                // Clicking what is already picked out is how the selection is let go of. In edit
+                // mode the mode goes with it: that mode is the selection — the camera orbiting it,
+                // the player standing still for it — so a mode left with nothing under it would be
+                // an arrangement kept up for the sake of something that is no longer there.
                 if (GameModeUtil.isInEditMode())
-                    return true;
+                {
+                    // Which makes this click a way out of the mode, and a scripted step holding the
+                    // user in that mode holds it too. The two cannot be told apart here — dropping
+                    // the selection alone would leave the very empty mode described above — so the
+                    // click is turned away whole, leaving the quad picked out as it was.
+                    if (!GameModeUtil.canChangeGameMode())
+                        return true;
+                    GameModeUtil.exitEditMode(); // Which drops this selection along with the mode.
+                    return false;
+                }
                 voxelQuadSelectionObservable.set(null);
                 return false;
             }

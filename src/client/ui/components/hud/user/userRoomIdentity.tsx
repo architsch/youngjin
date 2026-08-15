@@ -1,5 +1,4 @@
 import IconButton from "../../input/iconButton";
-import GearIcon from "../../../svg/icons/gearIcon";
 import PaletteIcon from "../../../svg/icons/paletteIcon";
 import PowerIcon from "../../../svg/icons/powerIcon";
 import User from "../../../../../shared/user/types/user";
@@ -7,33 +6,23 @@ import { UserRole, UserRoleEnumMap } from "../../../../../shared/user/types/user
 import { UserTypeEnumMap } from "../../../../../shared/user/types/userType";
 import PopupUtil from "../../../util/popupUtil";
 import { useEffect, useState } from "react";
-import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
 import { clientFeatureFlagsObservable } from "../../../../system/clientObservables";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import GameModeUtil from "../../../../system/util/gameModeUtil";
 import ClientObjectManager from "../../../../object/clientObjectManager";
-import FTUEUtil from "../../../util/ftueUtil";
-import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 
 export default function UserRoomIdentity({
     user,
     userRole,
-    currentRoomID,
-    canModifyRoom,
     onExitApp,
 }: Props)
 {
-    const [hideEditModeButton, setHideEditModeButton] = useState<boolean>(
-        clientFeatureFlagsObservable.has(FeatureFlag.HideEditModeButton));
+    const [canChangeGameMode, setCanChangeGameMode] = useState<boolean>(
+        GameModeUtil.canChangeGameMode());
     const [hideIdentityLabels, setHideIdentityLabels] = useState<boolean>(
         clientFeatureFlagsObservable.has(FeatureFlag.HideUserIdentityLabels));
 
     const isGuest = user.userType === UserTypeEnumMap.Guest;
-    const isInOwnRoom = user.ownedRoomID.length > 0 && user.ownedRoomID === currentRoomID;
-    const showConfigureButton = !isGuest && isInOwnRoom;
-    // Editing is the one thing here that is not the user's to do everywhere: in a room he is only
-    // visiting there is nothing for the mode to offer, so the way into it is not held out to him.
-    const showEditModeButton = canModifyRoom && !hideEditModeButton;
 
     const roleName = userRole === UserRoleEnumMap.Owner ? "Owner"
         : userRole === UserRoleEnumMap.Editor ? "Editor"
@@ -41,52 +30,32 @@ export default function UserRoomIdentity({
 
     // Each part of this bar can be taken away on its own, since the scripted single-player steps
     // hand the user one thing at a time: who he is and what he may do here is noise during a
-    // tutorial, while the button that leaves the app must never be out of reach.
+    // tutorial, while the button that leaves the app must never be out of reach. The way into edit
+    // mode is not taken away on its own terms, though — it stands or falls with whether that mode
+    // may be entered at all (see GameModeUtil), so that a button on offer is always one that works.
     useEffect(() => {
         clientFeatureFlagsObservable.addElementListener("ui.userRoomIdentity",
-            FeatureFlag.HideEditModeButton, (action) => setHideEditModeButton(action == "add"));
+            FeatureFlag.DisableGameModeTransition, (action) => setCanChangeGameMode(action != "add"));
         clientFeatureFlagsObservable.addElementListener("ui.userRoomIdentity",
             FeatureFlag.HideUserIdentityLabels, (action) => setHideIdentityLabels(action == "add"));
         return () => {
             clientFeatureFlagsObservable.removeElementListener("ui.userRoomIdentity",
-                FeatureFlag.HideEditModeButton);
+                FeatureFlag.DisableGameModeTransition);
             clientFeatureFlagsObservable.removeElementListener("ui.userRoomIdentity",
                 FeatureFlag.HideUserIdentityLabels);
         };
     }, []);
 
-    // The mark below keeps to the button it points at: it is scheduled while that button is on
-    // offer, and taken back down once it is not. A mark is not taken off the list merely by its
-    // target leaving the screen, so one left behind by a button that has gone would return the
-    // moment the button did — skipping the wait that is supposed to earn it — which is why the
-    // condition that puts it up is also the one that clears it away.
-    useEffect(() => {
-        if (!showConfigureButton || FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings))
-            return;
-
-        // For any member-type user who stays in his/her own room for 2 minutes straight,
-        // we will show a coach mark for the "Configure" button if the user hasn't clicked it before.
-        const timeout = setTimeout(() => {
-            FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings,
-                "configureMyRoomButton", "View your room's settings here.");
-        }, 2 * MINUTE_IN_MS);
-
-        return () => {
-            clearTimeout(timeout);
-            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.MyRoomSettings);
-        };
-    }, [showConfigureButton]);
-
-    return <div className="flex flex-row absolute right-0 top-0 p-2 text-right rounded-bl-lg items-center justify-end gap-2 pointer-events-auto">
+    // Hung below the headline rather than at the very top, on the same terms as the game-mode menu
+    // that replaces this bar while a mode is up: the headline carries the single-player tutorial's
+    // instructions and takes the full width whenever it has something to say, so a bar in the top
+    // row would be covered by the instruction that is telling the user to use it.
+    return <div className="flex flex-row absolute right-0 top-(--yj-headline-height,0px) p-2 text-right rounded-bl-lg items-center justify-end gap-2 pointer-events-auto">
         {!hideIdentityLabels && <div className="flex flex-col items-end leading-tight px-1">
             <div className="text-sm yj-text-outline text-amber-300">{user.userName}</div>
             <div className="text-xs yj-text-outline text-gray-400">({roleName})</div>
         </div>}
-        {showConfigureButton && <IconButton id="configureMyRoomButton" icon={<GearIcon/>} size="sm" onClick={() => {
-            PopupUtil.openPopup({popupType: "configureMyRoom"});
-            FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings);
-        }}/>}
-        {showEditModeButton && <IconButton id="editModeButton" icon={<PaletteIcon/>} size="sm" onClick={() => {
+        {canChangeGameMode && <IconButton id="editModeButton" icon={<PaletteIcon/>} size="sm" onClick={() => {
             // The mode opens on the user's own character, so there is no mode to open without one.
             const myPlayer = ClientObjectManager.getMyPlayer();
             if (!myPlayer)
@@ -120,8 +89,5 @@ interface Props
 {
     user: User;
     userRole: UserRole;
-    currentRoomID: string;
-    // Whether the user may edit the room he is currently in, which is what edit mode is for.
-    canModifyRoom: boolean;
     onExitApp: () => void;
 }

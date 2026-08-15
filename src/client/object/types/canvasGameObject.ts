@@ -14,8 +14,9 @@ import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
-import { graphicsContextRestoredObservable } from "../../system/clientObservables";
+import { gameModeObservable, graphicsContextRestoredObservable, notificationMessageObservable, userRoleObservable } from "../../system/clientObservables";
 import GraphicsManager from "../../graphics/graphicsManager";
+import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 
 const vector3Temp = new THREE.Vector3();
 
@@ -112,6 +113,21 @@ export default class CanvasGameObject extends GameObject
         GraphicsManager.getCamera().getWorldPosition(vector3Temp);
         if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
             return;
+
+        if (gameModeObservable.peek() == "edit")
+        {
+            const room = App.getCurrentRoom();
+            if (room == undefined)
+            {
+                console.error("Current room not found.");
+                return;
+            }
+            if (!RoomValidationUtil.canUserEditRoom(userRoleObservable.peek(), room))
+            {
+                notificationMessageObservable.set("You don't have permission to edit this room.");
+                return;
+            }
+        }
 
         ObjectSelection.trySelect(this);
     }

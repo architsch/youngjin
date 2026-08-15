@@ -47,6 +47,9 @@ export default class RoomGenerationVoxelGrid
                 }
             }
         }
+        // The out-facing quads of the boundary voxels need no erasing here: a face pointing out of
+        // the grid is never made visible in the first place (see VoxelUpdateUtil), and it keeps its
+        // wall texture for the day an edit brings it inside the room and exposes it.
     }
 
     createWalls(rowStart: number, colStart: number, numRows: number, numCols: number)

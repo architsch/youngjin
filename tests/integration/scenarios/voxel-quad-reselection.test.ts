@@ -250,7 +250,8 @@ describe("reselection after removing any wall block in the room", () => {
     // The boundary walls are where losing the selection went unnoticed: the neighbour a removal
     // reaches for lies outside the grid along the room's whole outer ring, and the ring is most of
     // what a user ever clicks on. Sampling a few faces is not enough to know that the fallback
-    // holds, so every visible, removable quad of all four walls is walked here.
+    // holds, so every visible, removable quad of all four walls is walked here — which is the walls
+    // as the user sees them, their room-facing side, the outer shell being drawn from neither side.
     it("never leaves the user with nothing selected, on any of the four walls", () => {
         const lost: string[] = [];
         const hidden: string[] = [];
@@ -305,7 +306,7 @@ describe("reselection after removing any wall block in the room", () => {
                 }
             }
         }
-        expect(checked).toBeGreaterThan(1900);
+        expect(checked).toBeGreaterThan(900);
         expect(lost).toEqual([]);
         expect(hidden).toEqual([]);
         expect(Array.from(room.voxelQuads)).toEqual(Array.from(pristineQuads));
@@ -506,7 +507,8 @@ describe("interruptions that are meant to leave nothing selected", () => {
 //
 // The tutorial pins the selection in place with these flags while it points the user at it, and the
 // freeze covers auto-reselection too: an edit made during a frozen step leaves the outline on a quad
-// that has since been buried or destroyed, until the step's own force-unselect clears it.
+// that has since been buried or destroyed, until the step itself moves the selection (which it does
+// through its own "select_voxel_quad" action, being the party that put the freeze there).
 
 describe("interruptions while selection changes are disabled", () => {
     it("holds the selection in place when the user's own edit destroys the quad", () => {

@@ -4,7 +4,7 @@ import Chat from "./components/hud/chat/chat";
 import DebugStats from "./components/hud/debug/debugStats";
 import VoxelQuadSelectionMenu from "./components/hud/selection/voxelQuadSelectionMenu";
 import ObjectSelectionMenu from "./components/hud/selection/objectSelectionMenu";
-import ModeExitBar from "./components/hud/mode/modeExitBar";
+import GameModeMenu from "./components/hud/mode/gameModeMenu";
 import UserRoomIdentity from "./components/hud/user/userRoomIdentity";
 import Loading from "./components/overlay/loading";
 import Notification from "./components/overlay/notification";
@@ -34,7 +34,6 @@ import PlayerSelection from "../graphics/types/gizmo/playerSelection";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "./components/form/confirmForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
-import RoomValidationUtil from "../../shared/room/util/roomValidationUtil";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import useCloseGesture from "./util/closeGesture";
@@ -124,7 +123,11 @@ export default function UIRoot({ env, user }: UIRootProps)
     // back to wherever its user came from, and cannot close itself unless a script opened it, so a
     // destination is the one ending that always works — and this one is the page that explains what
     // they have just been in.
-    const exitApp = () => { window.location.href = env.static_server_url; };
+    const exitApp = () => {
+        window.location.href = env.mode == "dev"
+            ? `${env.static_server_url}/index.html#other-works`
+            : `${env.static_server_url}#other-works`;
+    };
 
     // Going back, in whatever way the user's device offers, closes the topmost thing that is open —
     // a popup first, then edit mode or whatever is selected — instead of leaving the page. With
@@ -154,7 +157,10 @@ export default function UIRoot({ env, user }: UIRootProps)
             PopupUtil.closePopup();
         else if (inEditMode) // Going back out of edit mode leaves the mode itself, not merely the
                              // selection standing in it, which would leave the user in a mode with
-                             // nothing selected and no sign of how he got there.
+                             // nothing selected and no sign of how he got there. Nothing comes of
+                             // it while a single-player step is holding the user in that mode, and
+                             // the gesture is spent on it all the same rather than reaching the
+                             // page underneath: the mode is still what is on screen.
             GameModeUtil.exitEditMode();
         else // Nothing comes of this while a single-player step is holding the selection in place,
              // and that is the point: the gesture is spent on the selection either way, and never
@@ -166,9 +172,6 @@ export default function UIRoot({ env, user }: UIRootProps)
     const isRoomLoaded = roomRuntimeMemory != undefined;
     const isMultiplayerRoomLoaded = isRoomLoaded &&
         roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
-    const canModifyRoom = roomRuntimeMemory
-        ? RoomValidationUtil.canUserEditRoom(userRole, roomRuntimeMemory?.room)
-        : false;
 
     const anythingSelected = objectSelection != null || voxelQuadSelection != null ||
         playerSelection != null;
@@ -187,11 +190,9 @@ export default function UIRoot({ env, user }: UIRootProps)
         {isRoomLoaded && !inExclusiveMode && <UserRoomIdentity
             user={user}
             userRole={userRole}
-            currentRoomID={roomID ?? ""}
-            canModifyRoom={canModifyRoom}
             onExitApp={exitApp}
         />}
-        <ModeExitBar/>
+        <GameModeMenu user={user} currentRoomID={roomID ?? ""}/>
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         {/* The tools for changing what is selected belong to edit mode alone. In play mode a
             selection is a way of looking at something and reading about it, which is why the

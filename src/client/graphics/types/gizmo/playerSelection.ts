@@ -10,7 +10,7 @@ import { PLAYER_HEIGHT } from "../../../../shared/system/sharedConstants";
 import WorldSpaceOutlineArrow from "./generic/worldSpaceOutlineArrow";
 
 // How high above the character's head the indicator's tip floats, and how large the arrow is drawn.
-const INDICATOR_GAP = 0.35;
+const INDICATOR_GAP = 0.275;
 const INDICATOR_SCALE = 0.6;
 
 const cameraPosTemp = new THREE.Vector3();
@@ -41,8 +41,12 @@ export default class PlayerSelection
         }
 
         const existingSelection = playerSelectionObservable.peek();
+        // Clicking the character again is not a way to drop it, as clicking a block or an object
+        // again is (see VoxelQuadSelection.trySelect). The character is what edit mode opens on, so
+        // this same call is what that opening goes through — and it must report the character
+        // picked out whether or not it already was.
         if (existingSelection != null && existingSelection.gameObject === gameObject)
-            return true; // Already selected: selecting it again is not a way to drop it (see below).
+            return true;
 
         playerSelectionObservable.set(new PlayerSelection(gameObject));
         return true;

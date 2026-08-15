@@ -5,7 +5,8 @@ import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsCollid
 import SelectionKind from "../types/gizmo/selectionKind";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { cameraModeObservable, gameModeObservable, objectSelectionObservable,
-    playerSelectionObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+    orbitCameraTargetOverrideObservable, playerSelectionObservable,
+    voxelQuadSelectionObservable } from "../../system/clientObservables";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y,
     MAX_WORLDSPACE_SELECT_DIST } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../types/gizmo/objectSelection";
@@ -17,6 +18,10 @@ const cameraPosTemp = new THREE.Vector3();
 // What an object with no collider of its own is framed by, so that selecting one still gives the
 // camera something of a size to orbit around.
 const defaultObjectHalfSize = {x: 0.5, y: 0.5, z: 0.5};
+
+// A bare place in the room, which has no extent to be framed by and is left to the minimum distance
+// below to decide how much of its surroundings comes into view.
+const pointTargetHalfSize = {x: 0, y: 0, z: 0};
 
 // How far back the camera sits from a selection, at the least. A block or a picture is small, and
 // framing one by its own size alone leaves it filling the screen with nothing around it — which is
@@ -142,6 +147,17 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
     if (gameModeObservable.peek() != "edit")
         return null;
 
+    // A scripted step may hold the camera on a place of its own choosing for as long as it lasts
+    // (see orbitCameraTargetOverrideObservable), which outranks the selection: the step is showing
+    // the user something he has not picked out yet, and would have no way of picking out if he
+    // could not see it. Framed like a place, with no size of its own to be framed by.
+    const targetOverride = orbitCameraTargetOverrideObservable.peek();
+    if (targetOverride)
+    {
+        return {target: {center: targetOverride, halfSize: pointTargetHalfSize},
+            minDistance: minSelectionOrbitDistance};
+    }
+
     const playerSelection = playerSelectionObservable.peek();
     if (playerSelection)
     {
@@ -205,5 +221,7 @@ objectSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeW
 playerSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
 
 // The mode the user is in decides what a selection is worth to the camera, so a change of mode is a
-// change of framing even when the selection under it stayed exactly as it was.
+// change of framing even when the selection under it stayed exactly as it was. The same goes for a
+// step taking the camera for itself, and for giving it back.
 gameModeObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
+orbitCameraTargetOverrideObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);

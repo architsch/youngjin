@@ -48,17 +48,25 @@ export default class InstancedMeshComposition
         }
     }
 
+    // Both the params and the parts are emptied and refilled in place rather than replaced, so that
+    // whoever is already holding on to either of them goes on holding the live composition. A form
+    // editing the params directly (see CustomizePlayerForm) is what this is for: a composition is
+    // reloaded here whenever it is saved, since the save writes it to the object's metadata and
+    // comes straight back as a metadata change, and swapping the object out from under such a form
+    // would leave its next edit written to a copy nothing reads any more.
     loadFromMetadata(gameObject: GameObject)
     {
-        this.params = {};
+        for (const key in this.params)
+            delete this.params[key];
         this.parts.length = 0;
         const metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
         if (!metadata || !this.canDecode(metadata.str))
         {
             const config = gameObject.components.instancedMeshComposer.componentConfig;
             const {params, parts} = config.generateDefaultParts(gameObject.params.sourceUserID);
-            this.params = params;
-            this.parts = parts;
+            Object.assign(this.params, params);
+            for (let i = 0; i < parts.length; ++i)
+                this.parts.push(parts[i]);
             return;
         }
         InstancedMeshCompositionCodecMap[this.codecType].decode(metadata.str, this.params, this.parts);

@@ -41,9 +41,17 @@ export default function CustomizePlayerForm()
     if (params == undefined)
         return null;
 
-    const applyEdit = (mutateParams: () => void) => {
+    // The edit is written to the params the player is composed of at this moment, rather than to
+    // the ones this render read. Nothing re-renders this form when the composition is reloaded from
+    // the object's metadata, so the two are only the same object for as long as nobody has swapped
+    // it (see InstancedMeshComposition), and an edit written to a params object the player is no
+    // longer composed of is an edit the user never made.
+    const applyEdit = (mutateParams: (liveParams: PlayerCompositionParams) => void) => {
+        const liveParams = getMyPlayerParams();
+        if (liveParams == undefined)
+            return;
         trySave();
-        mutateParams();
+        mutateParams(liveParams);
         rebuildMyPlayerParts();
         ManualEditCountUtil.count("playerPartChanged");
         setEditCount(prev => prev + 1);
@@ -61,13 +69,14 @@ export default function CustomizePlayerForm()
                             <Text content={slot.title} size="sm"/>
                             <Base94ColorInput
                                 currValue={ColorUtil.rgbToBase94Index(params.colors[slot.key])}
-                                setColorIndex={(index: number) => applyEdit(() => params.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
+                                setColorIndex={(index: number) => applyEdit(
+                                    (p) => p.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
                             />
                         </div>
                         <StepperInput
                             currValue={params.types[slot.key]}
                             numValues={PlayerCompositionConstants.numTypes[slot.key]}
-                            setValue={(value: number) => applyEdit(() => params.types[slot.key] = value)}
+                            setValue={(value: number) => applyEdit((p) => p.types[slot.key] = value)}
                             preview={<PartShapeIcon params={params}
                                 builderType={`${slot.builderName}_${params.types[slot.key]}`}/>}
                         />
