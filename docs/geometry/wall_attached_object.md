@@ -61,3 +61,7 @@ A wall-attached object may only be placed where (1) its back is fully supported 
 4. **Collision check.** Finally, verify the new position does not overlap any existing wall-attached object.
 
 Implemented in @src/shared/object/util/wallAttachedObjectUtil.ts .
+
+## Removing the Wall Behind an Attachment
+
+The support a placement requires can also be taken away afterwards, by removing the voxel block the object hangs on. So a block is asked what it is holding up before it may go: the attachments standing against it count, while ones merely overlapping it from the far side hang on some other block and do not. Removing such a block by itself is refused, since it would leave an attachment with no wall behind it. Removing it together with everything hanging on it is a request of its own — the editing UI warns that the attachments will be destroyed, and on the user's confirmation takes those down first and the block after them.

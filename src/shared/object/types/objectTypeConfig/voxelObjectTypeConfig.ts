@@ -28,6 +28,7 @@ const VoxelObjectTypeConfig: ObjectTypeConfig =
         spawnedByAny: {
             // Collider is not needed here because the physics system handles voxels under a separate logic.
             instancedMeshGraphics: {},
+            orbitOccluder: {}, // The room's own walls, floor, and ceiling are the main thing the orbit camera has to see past.
         },
     },
 }

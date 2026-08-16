@@ -5,7 +5,7 @@ import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelect
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../../../system/util/gameModeUtil";
 import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
-    objectSelectionObservable, playerSelectionObservable,
+    objectSelectionObservable, playerSelectionObservable, userRoleObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
@@ -38,9 +38,15 @@ const exitFeatureFlags = [
 // it. For as long as a mode is up it takes the top edge of the screen in place of the identity and
 // room controls that normally live there, and it puts the button that ends the mode at the
 // right-hand end of that edge, where those controls sit and where the eye already goes looking for
-// them. Beside it, on its left, sits the zoom control — about the mode itself rather than about
-// anything in it, and only ever wanted while one is up. Below both, for the user standing in his
-// own room, is the way into that room's settings: what the room is, as against what is in it.
+// them. It is drawn in red, as the one control here that undoes rather than does.
+//
+// Beside it, on its left, is whichever control the lesser of the two modes has left wanting. Under a
+// play-mode selection that is the way up into edit mode, which the identity bar would be offering
+// had it not stood down to make room for this menu — and what the user has just picked out is the
+// likeliest thing he means to change. Under edit mode itself it is the zoom control, about the mode
+// rather than about anything in it. The two never share the row: a zoom to speak of is a camera in
+// an orbit, and that orbit is edit mode. Below them, for the user standing in his own room, is the
+// way into that room's settings: what the room is, as against what is in it.
 //
 // It draws no band of its own behind them. The top edge is shared with the headline, which carries
 // the single-player tutorial's instructions and takes the full width whenever it has something to
@@ -60,6 +66,10 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
         playerSelectionObservable.addListener("ui.gameModeMenu", forceRefresh);
         gameModeObservable.addListener("ui.gameModeMenu", forceRefresh);
         cameraModeObservable.addListener("ui.gameModeMenu", forceRefresh);
+        // What the user may do in this room decides whether the way into edit mode is worth
+        // offering for what he has picked out, and his standing can change under him while he
+        // stands there — an owner may take an editor's rights back.
+        userRoleObservable.addListener("ui.gameModeMenu", forceRefresh);
         for (const flag of exitFeatureFlags)
             clientFeatureFlagsObservable.addElementListener("ui.gameModeMenu", flag, forceRefresh);
         return () => {
@@ -68,6 +78,7 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
             playerSelectionObservable.removeListener("ui.gameModeMenu");
             gameModeObservable.removeListener("ui.gameModeMenu");
             cameraModeObservable.removeListener("ui.gameModeMenu");
+            userRoleObservable.removeListener("ui.gameModeMenu");
             for (const flag of exitFeatureFlags)
                 clientFeatureFlagsObservable.removeElementListener("ui.gameModeMenu", flag);
         };
@@ -82,11 +93,17 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
     const inEditMode = GameModeUtil.isInEditMode();
     const exit = inEditMode
         ? (GameModeUtil.canChangeGameMode()
-            ? {name: "Exit Edit Mode", onClick: () => GameModeUtil.exitEditMode()}
+            ? {name: "Stop Editing", onClick: () => GameModeUtil.exitEditMode()}
             : undefined)
         : (selectionCanBeGivenUp()
-            ? {name: "Exit Selection", onClick: () => WorldSpaceSelectionUtil.unselectAll()}
+            ? {name: "Deselect", onClick: () => WorldSpaceSelectionUtil.unselectAll()}
             : undefined);
+
+    // The way up into edit mode, which belongs here for as long as the lesser mode holds the corner
+    // the identity bar's own way in would have been offered from. What is asked of it is asked in
+    // GameModeUtil, where the crossing is made, and for the usual reason: a button on offer is
+    // always one that works.
+    const canStartEditing = GameModeUtil.canEnterEditModeOnCurrentSelection();
 
     // A room's own settings are its owner's to change, and only while he is standing in it.
     const showRoomSettings = inEditMode && user.userType !== UserTypeEnumMap.Guest &&
@@ -114,13 +131,14 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
         };
     }, [showRoomSettings]);
 
-    // Either of the mode's own controls is reason enough for the menu to be up, and each decides
-    // for itself whether it has anything to offer: a single-player step that holds the user in his
-    // mode, or holds a selection in place, leaves nothing to exit — and the camera is orbiting that
-    // selection all the same, so the zoom stays. The room settings are not among those reasons: they belong to the room rather
-    // than to the mode, and a menu raised for them alone would stand on top of the identity bar
-    // that is still holding the same corner.
-    if (exit == undefined && cameraModeObservable.peek().type !== "orbit")
+    // Any of the mode's own controls is reason enough for the menu to be up, and each decides for
+    // itself whether it has anything to offer: a single-player step that holds the user in his mode,
+    // or holds a selection in place, leaves nothing to exit — and the camera is orbiting that
+    // selection all the same, so the zoom stays, while a selection the user may not drop is still one
+    // he may go on to edit. The room settings are not among those reasons: they belong to the room
+    // rather than to the mode, and a menu raised for them alone would stand on top of the identity
+    // bar that is still holding the same corner.
+    if (exit == undefined && !canStartEditing && cameraModeObservable.peek().type !== "orbit")
         return null;
 
     // Each control claims the pointer for itself, which leaves the empty width between and around
@@ -136,7 +154,10 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
     return <div className="absolute top-(--yj-headline-height,0px) left-0 w-full flex flex-col items-stretch gap-2 p-2 pointer-events-none">
         <div className="flex flex-row flex-nowrap items-center justify-end gap-2">
             <CameraZoomSlider/>
-            {exit != undefined && <Button id="modeExitButton" name={exit.name} size="md" color="green"
+            {canStartEditing && <Button id="startEditingButton" name="Start Editing" size="md"
+                onClick={() => GameModeUtil.enterEditModeOnCurrentSelection()}
+                additionalClassNames="shrink-0"/>}
+            {exit != undefined && <Button id="modeExitButton" name={exit.name} size="md" color="red"
                 onClick={exit.onClick} additionalClassNames="shrink-0"/>}
         </div>
         {showRoomSettings && <div className="flex flex-row justify-end">

@@ -21,8 +21,13 @@ export default function AtlasCellSprite(props: {
         if (props.highlight && props.autoScrollToHighlight)
         {
             const element = myRef.current;
+            // Kept to the strip this cell lives in. Naming only the axis the strip scrolls on
+            // leaves the other one at its default, which asks for the cell at the *top* of the
+            // view — and the browser answers that by scrolling every ancestor that can scroll,
+            // the full-screen UI layer included: it is `overflow: hidden`, which the user cannot
+            // scroll but code still can, so the whole HUD is dragged along with the cell.
             if (element)
-                element.scrollIntoView({ inline: "center" });
+                element.scrollIntoView({ inline: "center", block: "nearest" });
             else
                 console.error("AtlasCellSprite's ref is null.");
         }

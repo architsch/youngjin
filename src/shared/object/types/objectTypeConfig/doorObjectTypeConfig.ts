@@ -50,6 +50,7 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
                 localPosition: {x: 0, y: 1.84, z: 0.001},
                 scale: {x: 2.85, y: 3.719, z: 1}, // y = x * 1.3049
             },
+            orbitOccluder: {}, // Part of the wall it sits in, as far as the orbit camera is concerned.
         },
     },
 }

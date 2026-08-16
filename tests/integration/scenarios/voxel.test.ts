@@ -14,6 +14,14 @@ import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_REGULAR, EMPTY_HUB, userAtCenter, buildColumn, removeColumn } from "../helpers/scenarioPresets";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
+import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
+import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
+import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
+import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
+import ObjectTransform from "../../../src/shared/object/types/objectTransform";
+import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../src/shared/system/sharedConstants";
 
 describe("voxel scenarios", () => {
@@ -195,6 +203,46 @@ describe("voxel scenarios", () => {
                 const farWall = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(jamb, 0)).toBe(true);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(farWall, 0)).toBe(false);
+            },
+        });
+    });
+
+    it("a block holding a canvas can only be removed once the canvas goes first", async () => {
+        // A two-layer wall, with a canvas hung on the face that looks back towards the room.
+        const WALL_ROW = 8;
+        const WALL_COL = 8;
+        await runScenario({
+            name: "canvas on a wall block",
+            rooms: [{ ...EMPTY_HUB, voxels: [
+                { row: WALL_ROW, col: WALL_COL, layer: 0 },
+                { row: WALL_ROW, col: WALL_COL, layer: 1 },
+            ] }],
+            users: [userAtCenter("hub")],
+            assertions: ({ users }) => {
+                const user = users[0].user;
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const canvas = new AddObjectSignal(room.id, user.id, user.userName,
+                    ObjectTypeConfigMap.getIndexByType("Canvas"), "canvas-on-wall",
+                    new ObjectTransform({ x: WALL_COL + 0.5, y: 0.5, z: WALL_ROW }, { x: 0, y: 0, z: -1 }));
+                expect(ObjectUpdateUtil.addObject(user, UserRoleEnumMap.Owner, room, canvas)).toBe(true);
+
+                const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(WALL_ROW, WALL_COL, 0);
+
+                // The block is all that keeps the canvas on the wall, so it cannot go by itself...
+                expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
+                    .toEqual([canvas.objectId]);
+                expect(VoxelUpdateUtil.canRemoveVoxelBlock(UserRoleEnumMap.Owner, room, quadIndex)).toBe(false);
+                // ...but nothing about the block itself stands in the way of taking both down
+                // together, which is what the user is offered.
+                expect(VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(
+                    UserRoleEnumMap.Owner, room, quadIndex)).toBe(true);
+
+                // And with the canvas down first, the block is free to follow — the order the
+                // menu carries the two removals out in.
+                expect(ObjectUpdateUtil.removeObject(user, UserRoleEnumMap.Owner, room,
+                    new RemoveObjectSignal(room.id, canvas.objectId))).toBe(true);
+                expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex)).toEqual([]);
+                expect(VoxelUpdateUtil.canRemoveVoxelBlock(UserRoleEnumMap.Owner, room, quadIndex)).toBe(true);
             },
         });
     });

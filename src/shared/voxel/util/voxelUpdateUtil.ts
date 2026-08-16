@@ -4,10 +4,7 @@ import { UserRole } from "../../user/types/userRole";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
-import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
-import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
-import Vector3DUtil from "../../math/util/vector3DUtil";
-import Vec3 from "../../math/types/vec3";
+import WallAttachedObjectUtil from "../../object/util/wallAttachedObjectUtil";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
 const VoxelUpdateUtil =
@@ -64,6 +61,16 @@ const VoxelUpdateUtil =
 
     canRemoveVoxelBlock(userRole: UserRole, room: Room, quadIndex: number): boolean
     {
+        // A block with something hanging on it cannot go on its own: the attachment would be left
+        // with no wall behind it. Taking both down together is a request of its own, made through
+        // canRemoveVoxelBlockWithItsWallAttachments once the attachments have been removed.
+        return VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(userRole, room, quadIndex)
+            && WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex).length == 0;
+    },
+    // Everything canRemoveVoxelBlock asks of the block itself, minus the objects hanging on it —
+    // for a caller that removes those first, and so leaves nothing behind without its support.
+    canRemoveVoxelBlockWithItsWallAttachments(userRole: UserRole, room: Room, quadIndex: number): boolean
+    {
         if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
@@ -82,30 +89,6 @@ const VoxelUpdateUtil =
         if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             return false;
 
-        const voxelPos: Vec3 = {x: col+0.5, y: 0.25 + collisionLayer*0.5, z: row+0.5};
-
-        // Check if removing the voxel block will cause any wall-attached object to lose its wall support.
-        const voxelBlockColliderState = PhysicsColliderStateUtil.getVoxelBlockColliderState(row, col, collisionLayer);
-        const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
-        for (const collidingObject of Object.values(collidingObjects))
-        {
-            if (collidingObject.colliderState.colliderConfig.colliderType == "wallAttachment")
-            {
-                const object = room.objectById[collidingObject.objectId];
-                if (!object)
-                {
-                    console.error(`Colliding object not found (objectId = ${collidingObject.objectId})`);
-                    continue;
-                }
-                const objectDir = object.transform.dir;
-                const fromVoxelToObject = Vector3DUtil.subtract(object.transform.pos, voxelPos);
-                const objectIsFacingAwayFromVoxel =
-                    Vector3DUtil.dot(objectDir, fromVoxelToObject) > 0;
-
-                if (objectIsFacingAwayFromVoxel) // This means that the object's back side is attached to the voxel block (NOT its front side).
-                    return false;
-            }
-        }
         return true;
     },
     removeVoxelBlock(userRole: UserRole, voxels: Voxel[], quadIndex: number,

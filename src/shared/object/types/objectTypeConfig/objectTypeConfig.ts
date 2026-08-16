@@ -45,6 +45,7 @@ export default interface ObjectTypeConfig
                 maxDist: number,
                 maxLookAngle: number,
             },
+            orbitOccluder?: {},
         },
         spawnedByMe?: {
             playerController?: {},

@@ -12,6 +12,7 @@ import GameObject from "../types/gameObject";
 import Collider from "../components/collider";
 import EasingMotion from "../components/easingMotion";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
+import OrbitOccluder from "../components/orbitOccluder";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
     (parentObject: GameObject, componentConfig: {[key: string]: any}) => GameObjectComponent} =
@@ -40,4 +41,6 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new PlayerProximityDetector(parentObject, componentConfig),
     "easingMotion": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new EasingMotion(parentObject, componentConfig),
+    "orbitOccluder": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new OrbitOccluder(parentObject, componentConfig),
 }

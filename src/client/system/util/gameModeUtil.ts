@@ -18,8 +18,10 @@ import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 // it is what everyone gets, because a click on the scenery is not by itself a statement that the
 // user meant to start rearranging the room.
 //
-// **Edit mode** is entered deliberately, by the button that says so, and it begins on the user's own
-// character (see enterEditMode). While it lasts, the camera orbits whatever is currently selected,
+// **Edit mode** is entered deliberately, by a button that says so, and it begins on something picked
+// out: the user's own character where the mode is opened from a standing start (see enterEditMode),
+// and whatever he had already selected where it is opened from that selection instead (see
+// enterEditModeOnCurrentSelection). While it lasts, the camera orbits whatever is currently selected,
 // the player stands still, and the tools for changing that selection are on screen; clicking
 // something else moves the whole arrangement onto it, and clicking the very thing already picked out
 // is taken as being done with the mode, which then ends along with the selection.
@@ -76,6 +78,32 @@ const GameModeUtil =
         // with no selection under it.
         if (!PlayerSelection.trySelect(myPlayer))
             gameModeObservable.set("play");
+    },
+
+    // Whether the mode can be opened on what the user already has picked out. Two things beyond the
+    // crossing itself are wanted. There has to be a selection to open on, since this way in is the
+    // one that opens on nothing else, and a mode standing over nothing has no camera to speak of and
+    // no tools under it. And that selection has to be the user's to work on: what is picked out
+    // before the mode begins is always a part of the room — the character can only be picked out
+    // from inside the mode, the first-person view he plays in having no body on show to click — and
+    // a click on a block or a picture during play mode is a way of looking at it that says nothing
+    // about who may change it. So the way in asks what a click inside the mode is turned away by.
+    canEnterEditModeOnCurrentSelection: (): boolean =>
+    {
+        return !GameModeUtil.isInEditMode() && GameModeUtil.canChangeGameMode() &&
+            WorldSpaceSelectionUtil.isAnythingSelected() && canEditCurrentRoom();
+    },
+
+    // Enters edit mode on what the user already has picked out — the other way in, offered while a
+    // play-mode selection is up. He clicked a block or a picture, read what there was to read about
+    // it, and this is the way on to changing that very thing, so what he picked out is left standing
+    // rather than handed over to his character as the way in above does.
+    enterEditModeOnCurrentSelection: (): void =>
+    {
+        if (!GameModeUtil.canEnterEditModeOnCurrentSelection())
+            return;
+
+        gameModeObservable.set("edit");
     },
 
     // Leaves edit mode, giving the camera and the run of the room back to the user. The selection

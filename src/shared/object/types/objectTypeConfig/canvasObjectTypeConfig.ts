@@ -73,6 +73,7 @@ const CanvasObjectTypeConfig: ObjectTypeConfig =
                 maxClimbableHeight: 0,
             },
             instancedMeshGraphics: {},
+            orbitOccluder: {}, // A picture hanging on a wall stands in the orbit camera's way like the wall itself does.
         },
     },
 }

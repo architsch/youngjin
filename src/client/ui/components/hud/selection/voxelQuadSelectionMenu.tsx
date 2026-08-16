@@ -6,9 +6,15 @@ import VoxelQuadPlacementOptions from "./voxelQuadPlacementOptions";
 
 export default function VoxelQuadSelectionMenu()
 {
-    const [state, setState] = useState<VoxelQuadSelectionState>({
-        selection: null,
-    });
+    // These tools belong to edit mode and are put up only while it lasts, so this menu can come into
+    // being onto a quad that was picked out before the mode began — which is what entering the mode
+    // from a play-mode selection does. That selection announced itself back when it was made, long
+    // before there was a menu here to hear it, so what is selected is read on the way in rather than
+    // waited for: read in the first render rather than in an effect after it, so the menu arrives
+    // with its contents instead of appearing empty for a frame and filling in on the next.
+    const [state, setState] = useState<VoxelQuadSelectionState>(() => ({
+        selection: voxelQuadSelectionObservable.peek(),
+    }));
 
     useEffect(() => {
         voxelQuadSelectionObservable.addListener("ui.voxelQuadSelection", selection => setState({selection}));

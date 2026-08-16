@@ -109,6 +109,37 @@ const WallAttachedObjectUtil =
         }
         return true;
     },
+    // The wall-attached objects that the given voxel block is holding up: those whose back side
+    // rests against it. Nothing else keeps them on the wall, so taking the block away has to
+    // account for them — either by refusing, or by taking them down along with it.
+    getObjectIdsAttachedToVoxelBlock: (room: Room, quadIndex: number): string[] =>
+    {
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        const voxelPos: Vec3 = {x: col + 0.5, y: 0.25 + collisionLayer*0.5, z: row + 0.5};
+
+        const objectIds: string[] = [];
+        const voxelBlockColliderState = PhysicsColliderStateUtil.getVoxelBlockColliderState(row, col, collisionLayer);
+        const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
+        for (const collidingObject of Object.values(collidingObjects))
+        {
+            if (collidingObject.colliderState.colliderConfig.colliderType != "wallAttachment")
+                continue;
+            const object = room.objectById[collidingObject.objectId];
+            if (!object)
+            {
+                console.error(`Colliding object not found (objectId = ${collidingObject.objectId})`);
+                continue;
+            }
+            // An object hanging on this block stands in front of it, and so faces away from it. One
+            // that faces towards it is merely overlapping it from the far side, and hangs elsewhere.
+            const fromVoxelToObject = Vector3DUtil.subtract(object.transform.pos, voxelPos);
+            if (Vector3DUtil.dot(object.transform.dir, fromVoxelToObject) > 0)
+                objectIds.push(collidingObject.objectId);
+        }
+        return objectIds;
+    },
     getMoveResult(room: Room, obj: AddObjectSignal,
         dx: number, dy: number, dz: number): {newPos: Vec3, newDir: Vec3} | undefined
     {

@@ -23,8 +23,16 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MAX_ROO
 
 //------------------------------------------------------------------------
 // Keeps the orbit camera's view of what it frames clear: whatever stands between the camera and the
-// target volume (a wall the target sits behind, the ceiling the orbit rises above, a canvas,
-// another player) is hidden for as long as it stands there, and shown again once it no longer does.
+// target volume (a wall the target sits behind, the ceiling the orbit rises above, a canvas hanging
+// on that wall) is hidden for as long as it stands there, and shown again once it no longer does.
+//
+// Only what belongs to the room's fabric is hidden at all, and each type of object says whether it
+// does by carrying an OrbitOccluder component. That is what keeps characters standing where they
+// are while the room around them gives way: a wall taken out reads as the room being opened up,
+// where a body taken out reads as the person having left (see OrbitOccluder). Geometry belonging to
+// no object at all — a gizmo drawn over the room to point something out — declares nothing and is
+// left alone for the same reason: it is not part of the room to begin with, so removing it takes
+// away a piece of guidance instead of opening anything up.
 //
 // Standing in the way is a matter of degree, and taking something out of the room is a heavy-handed
 // thing to do to it: something clipping a corner of the target costs the user next to nothing, while
@@ -47,12 +55,13 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MAX_ROO
 //
 //   - The room's voxel quads are first thinned out by sweeping the target's box toward the camera
 //     through the voxel grid, which settles almost all of a room's tens of thousands of quads — far
-//     too many to raycast repeatedly — and only what survives is measured against the samples.
-//   - Everything else (canvases, doors, players) is found by raycasting the remaining meshes, which
-//     are few, along the samples themselves. What a ray strikes counts against the whole object it
-//     belongs to rather than the piece hit, since an object drawn out of many parts (a player)
-//     covers the target with all of them together, and hiding one part would leave the rest of it
-//     standing there in pieces.
+//     too many to raycast repeatedly — and only what survives is measured against the samples. Each
+//     quad belongs to the voxel column it was baked for, so the declaration above is read off that
+//     column's own object, once per column rather than once per quad.
+//   - Everything else (canvases, doors) is found by raycasting the remaining meshes, which are few,
+//     along the samples themselves. What a ray strikes counts against the whole object it belongs
+//     to rather than the piece hit, since an object drawn out of many parts covers the target with
+//     all of them together, and hiding one part would leave the rest of it standing there in pieces.
 //
 // Whatever the orbit is looking *at* is exempt from all of this, since hiding it is precisely what
 // would defeat the mode (see the protected region below).
@@ -274,8 +283,7 @@ export default class OrbitOcclusionHider
                 continue; // Barely in the way of anything: not worth emptying its place in the room.
 
             this.hideOccluder(candidate.mesh, candidate.instanceId);
-            if (candidate.gameObject)
-                this.hideRemainingPartsOf(candidate.gameObject);
+            this.hideRemainingPartsOf(candidate.gameObject);
         }
     }
 
@@ -298,10 +306,9 @@ export default class OrbitOcclusionHider
             const instanceId = (intersection.instanceId != undefined) ? intersection.instanceId : -1;
             const gameObject = findGameObject(mesh, instanceId);
 
-            // What the camera is looking at is never something in its way. This is what keeps the
-            // user's own body in view while the orbit frames the character himself; every other
-            // orbit has it out of sight before any ray goes looking for it (see PlayerGameObject).
-            if (objectIsProtected(gameObject))
+            // Nothing is hidden that has not declared itself part of the room (see above), and
+            // nothing is hidden that the camera is looking at, however much of the view it takes.
+            if (!objectIsOccluder(gameObject) || objectIsProtected(gameObject))
                 continue;
 
             this.creditBlockedSample(mesh, instanceId, gameObject, sampleIndex);
@@ -309,13 +316,13 @@ export default class OrbitOcclusionHider
     }
 
     // Puts one blocked sample on the account of the object the struck geometry belongs to. Keeping
-    // the account per object is what lets a player be measured by the whole of himself instead of
-    // by whichever limb a sample landed on, and what keeps a single sample passing through two of
-    // his parts worth the one sample it is.
+    // the account per object is what lets an object drawn out of several pieces be measured by the
+    // whole of itself instead of by whichever piece a sample landed on, and what keeps a single
+    // sample passing through two of its pieces worth the one sample it is.
     private creditBlockedSample(mesh: THREE.Mesh, instanceId: number,
-        gameObject: GameObject | undefined, sampleIndex: number): void
+        gameObject: GameObject, sampleIndex: number): void
     {
-        const candidateKey = gameObject ? gameObject.params.objectId : `${mesh.name}/${instanceId}`;
+        const candidateKey = gameObject.params.objectId;
         const candidate = this.candidateByKey[candidateKey];
         if (candidate == undefined)
         {
@@ -340,12 +347,12 @@ export default class OrbitOcclusionHider
         this.hiddenOccluderByKey[occluderKey] = occluder;
     }
 
-    // A ray reports the one piece of geometry it struck, but a player is not one piece: each of the
-    // parts he is composed of is an instance of its own, and hiding only the part a sample happened
-    // to land on would leave the rest of the body — a head with no torso under it — standing in
-    // front of what the camera is meant to see. So an object found in the way goes out of sight
-    // whole. (Objects drawn as a single piece have nothing further to hide, and say so by carrying
-    // no composer.)
+    // A ray reports the one piece of geometry it struck, but an object need not be one piece: a
+    // composed object draws each of its parts as an instance of its own, and hiding only the part a
+    // sample happened to land on would leave the rest of it standing in front of what the camera is
+    // meant to see. So an object found in the way goes out of sight whole. Objects drawn as a single
+    // piece have nothing further to hide, and say so by carrying no composer — which is the case for
+    // everything the room currently declares an occluder, a canvas and a door alike.
     private hideRemainingPartsOf(gameObject: GameObject): void
     {
         const composer = gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;
@@ -438,6 +445,22 @@ function findGameObject(mesh: THREE.Mesh, instanceId: number): GameObject | unde
         : ClientObjectManager.getObjectById(mesh.name);
 }
 
+// Whether the game object a piece of geometry belongs to is one the orbit may take out of the room,
+// which each type of object declares for itself (see OrbitOccluder). Geometry belonging to no object
+// declares nothing, and so is never hidden.
+function objectIsOccluder(gameObject: GameObject | undefined): gameObject is GameObject
+{
+    return gameObject != undefined && gameObject.components.orbitOccluder != undefined;
+}
+
+// The same question for one column of the room's own geometry, which the grid sweep reaches by the
+// column rather than by the quad: every quad of a column is drawn by the one object that owns it,
+// so the answer is the same for all of them.
+function voxelIsOccluder(voxel: Voxel): boolean
+{
+    return objectIsOccluder(ClientObjectManager.getObjectById(voxel.gameObjectId));
+}
+
 // Whether the game object a ray hit is one of those the orbit is looking at, i.e. one whose own
 // volume reaches into the protected region.
 function objectIsProtected(gameObject: GameObject | undefined): boolean
@@ -469,7 +492,7 @@ function collectQuadIndicesInTheWay(voxels: Voxel[]): void
         for (let col = Math.max(0, minCol); col <= Math.min(NUM_VOXEL_COLS - 1, maxCol); ++col)
         {
             const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-            if (voxel != undefined)
+            if (voxel != undefined && voxelIsOccluder(voxel))
                 collectQuadIndicesInTheWayOfVoxel(voxel, row, col);
         }
     }

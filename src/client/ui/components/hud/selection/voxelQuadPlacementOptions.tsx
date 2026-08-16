@@ -14,6 +14,8 @@ import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil
 import ObjectFactory from "../../../../object/factories/objectFactory";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import AddObjectSignal from "../../../../../shared/object/types/addObjectSignal";
+import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
+import WallAttachedObjectUtil from "../../../../../shared/object/util/wallAttachedObjectUtil";
 import ObjectTransform from "../../../../../shared/object/types/objectTransform";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../../../shared/math/types/vec3";
@@ -29,6 +31,7 @@ import { clientFeatureFlagsObservable, userRoleObservable, voxelQuadSelectionObs
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import FTUEUtil from "../../../util/ftueUtil";
+import PopupUtil from "../../../util/popupUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 
@@ -267,6 +270,9 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
     }
 }
 
+// Whatever hangs on the selected block is no reason to turn the button down: the user is warned
+// first, and what hangs there comes down together with the block. So only the block's own
+// conditions decide whether it can go.
 function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
 {
     if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelBlockRemoval))
@@ -275,7 +281,8 @@ function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
     const room = App.getCurrentRoom();
     if (!room)
         return false;
-    return VoxelUpdateUtil.canRemoveVoxelBlock(userRoleObservable.peek(), room, selection.quadIndex);
+    return VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(
+        userRoleObservable.peek(), room, selection.quadIndex);
 }
 
 function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
@@ -284,7 +291,47 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
         return;
 
     const room = App.getCurrentRoom()!;
+
+    // Taking a wall down destroys whatever is hanging on it, which is more than the button says it
+    // does — and unlike the wall, what hangs there was placed and decorated by hand. So that case,
+    // and only that case, is put to the user before it is carried out.
+    if (WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, selection.quadIndex).length > 0)
+    {
+        PopupUtil.openPopup({
+            popupType: "confirm",
+            params: {
+                message: "Something is attached to the wall. Removing the wall will destroy it, too. Want to proceed?",
+                onConfirm: () => {
+                    PopupUtil.closePopup();
+                    removeVoxelBlockWithItsWallAttachments(selection);
+                },
+                onCancel: PopupUtil.closePopup,
+            },
+        });
+        return;
+    }
+    removeVoxelBlockWithItsWallAttachments(selection);
+}
+
+async function removeVoxelBlockWithItsWallAttachments(selection: VoxelQuadSelection)
+{
+    // Re-checked rather than trusted from the caller: a confirmation popup stands between the
+    // click and this call, and the room may have moved on while it was up.
+    if (voxelQuadSelectionObservable.peek() != selection || !canRemoveVoxelBlock(selection))
+        return;
+
+    const room = App.getCurrentRoom()!;
     const quadIndex = selection.quadIndex;
+
+    // The attachments go first, since the block is only removable once nothing is left hanging on
+    // it. The server reads these signals in the order they were sent, so it sees the same sequence
+    // and reaches the same conclusion.
+    for (const objectId of WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
+    {
+        const removed = await ClientObjectManager.removeObject(objectId);
+        if (removed && room.roomType != RoomTypeEnumMap.SinglePlayer)
+            SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
+    }
 
     if (ClientVoxelManager.removeVoxelBlock(room, quadIndex))
     {
