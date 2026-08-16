@@ -10,11 +10,15 @@ Turns one finished feature into a published dev-log entry: a static page under
 enough to be pasted into a LinkedIn post as it stands.
 
 The user pastes the finished text onto LinkedIn, Facebook and elsewhere, and adds
-`Play Here: https://thingspool.net` underneath by hand. That is what the character budget is for —
+`Play Here: https://thingspool.net` underneath by hand. That is what the character budget is for,
 and it is also who the post is written for. These posts are read by the general public, most of
-whom have never played the game and do not write software. The post has to make them curious
-enough to open that link. A truthful record of the work is what it is made of; an invitation is
-what it has to be.
+whom have never played the game and do not write software.
+
+**The post is an advertisement.** Its job is to make that reader want to open the link. It does
+that by describing something real and interesting rather than by selling, so it is truthful
+throughout — but a truthful paragraph that makes nobody curious has still failed. The reader
+should finish the post able to picture one specific thing they would like to go and make in the
+game.
 
 ## Step 1 — Settle on the feature
 
@@ -30,7 +34,14 @@ be seen on screen and say in the final report what you left out.
 Read the actual code before writing a word about it. Work out:
 
 - What the feature does, and what was awkward or missing without it.
-- The idea behind how it works — the part worth telling someone who will never read the source.
+- **What a player can now make or do that they could not before.** This is what the post is
+  mostly about, so spend the most research effort here. Look at the actual choices the feature
+  puts in front of a player — the things in the menus, the range of what can be changed — because
+  those are what turn into concrete, picturable sentences.
+- **What it opens up.** One or two specific things somebody might build or try with it. Imaginative
+  is good; it just has to be honestly framed as a possibility rather than an existing feature.
+- The idea behind how it works — one short paragraph's worth at most, and only the part that would
+  interest someone who does not program.
 - What of it is **visible**, and what a player has to do to see it. This decides the screenshots.
 
 `git log`, the relevant `/docs` page and the source files themselves are the sources. Never
@@ -77,6 +88,19 @@ Full details in [reference/capture.md](reference/capture.md). In short:
 Two to four images per post. The first one in the post becomes its share-preview image, so lead
 with the one that reads best at a glance.
 
+**Compose each frame; do not merely capture it.** Most readers meet the post as a thumbnail on a
+phone, so a frame that technically contains the feature but reads as a grey room has failed. The
+three faults to shoot against, with the camera numbers that fix them, are in
+[reference/capture.md](reference/capture.md#composing-the-frame):
+
+- **Fill the frame with the subject** — roughly a third to a half of the frame's shorter side. A
+  subject lost in the middle of a wall is the commonest fault, and pulling the camera back to
+  *reach* something and then shooting from there is how it happens.
+- **Come round off the square-on view** — 30-60 degrees off the surface's normal, and above or
+  below its level, so the room recedes instead of standing flat like a backdrop.
+- **Balance the whole frame** — pick the vantage whose surroundings put something in every quarter,
+  rather than one with a blank wall over half of it and a band of empty floor along the bottom.
+
 ## Step 5 — Write the post
 
 Append a new block to `public/devlog-2026/source.txt` — never touch the posts already in it, and
@@ -87,6 +111,14 @@ example are in [reference/writing.md](reference/writing.md).
 
 The rules that do not bend:
 
+- **The title names the feature, literally.** "Game Modes Are Here", "Better Control With Game
+  Modes" — the words somebody would use to search for it, not a figurative phrase about the idea
+  behind it. A reader scrolling a feed has nothing to decode a clever title with.
+- **The first two sentences are the whole post in miniature.** Social platforms show about two
+  lines and hide the rest behind "see more", so those lines say what ThingsPool is (the reader has
+  never heard of it) and what is new, in that order: *"ThingsPool, an immersive 3D chat app that
+  runs in a browser tab, now has game modes."* Never open with a scene, a question, or a detail
+  that only makes sense once the reader already knows what the feature is.
 - **The link back.** Every post opens, on the line directly under its header, with the link to the
   site's landing page:
   ```
@@ -100,15 +132,35 @@ The rules that do not bend:
   ignores those lines, because a pasted social post carries the text only and the user attaches the
   JPEGs themselves.
 - **Length.** At most 2964 characters (LinkedIn's 3000-character limit, less the 36 the user's
-  own "Play Here" line needs). Verify, do not estimate:
+  own "Play Here" line needs). **This is a ceiling, not a target.** Say the whole thing in as few
+  words as it takes and stop; a 1200-character post is better than the same post stretched to
+  2900, and never add a sentence because there is budget left. Draft, then cut — writing.md lists
+  what comes out first. Verify the number, do not estimate:
   ```bash
   node dev/scripts/devlog/postLength.js
   ```
   It exits non-zero when the newest post is over budget. Fix and re-run until it passes.
-- **Tone.** Inviting, and serious about it: someone who built the thing showing it to a curious
-  stranger. Open with what a player would see or do, not with the machinery. Never a sales pitch,
-  never breathless, no exclamation marks, no rhetorical questions to the reader — and equally,
-  never a dry engineering record, which is the easier trap to fall into.
+- **Tone.** Clear, concise and logical, in the voice of the user's own books — a mathematics or
+  philosophy teacher explaining an idea to an intelligent adult who does not know the field.
+  Complete sentences, one idea each, plain words, the point stated before it is elaborated.
+  Read [reference/writing.md](reference/writing.md) before drafting; it names the two ways this
+  goes wrong. The one that keeps happening is the **poetic register** — fragments used as
+  rhetorical beats, metaphors standing in for plain statements, sentences that sound meaningful
+  without being restatable. The other is the dry engineering record. A little color is welcome
+  ("craft your dream space", "explore a room's hidden corners") as long as every sentence still
+  says one definite thing at a glance. No sales pitch, no rhetorical questions to the reader.
+- **Depth.** Almost all of the post is what a player can see, do and make. Never treat user
+  interface flow, performance, computational cost, algorithms, network bandwidth, architecture or
+  code structure in depth — at most one plain-language clause, and only where the story needs it.
+- **Concept, not manual.** Do not walk the reader through which button opens which panel and in
+  what order. Say what the feature is and what it lets somebody do, let one or two concrete
+  details stand in for the rest, and let the screenshots show the interface. The post should get
+  *less* detailed as it goes on, not more: the closing paragraphs are a short conceptual summary
+  of each part plus what it makes possible, never a walkthrough.
+- **Established terms.** Every noun has to be one the reader can define. "This is the first post of
+  ThingsPool's development log, a news feed for the project's major updates" lands; "this log
+  follows what gets finished, with pictures from the running game" does not, though nothing in it
+  is figurative. Reach for the word people already know, or define the term where it first appears.
 - **No emoji.**
 - **Hashtags.** About sixteen on the final line, each a `#` followed by a PascalCase term: six to
   eight broad ones drawn across the bank in [reference/hashtags.md](reference/hashtags.md), and the
@@ -117,7 +169,13 @@ The rules that do not bend:
   longer one reads as spam to the person scrolling past it.
 - **SEO.** Name the technologies and concepts plainly in the prose — search engines read the
   page, and the `:k:` line is only part of it.
-- **Truth.** Every claim traceable to code you read or a screenshot you looked at.
+- **Truth.** Every claim traceable to code you read or a screenshot you looked at. Ideas about what
+  the feature makes possible later are welcome, written as possibilities rather than as things
+  that already work.
+
+Then read the draft back once against the checklist at the end of
+[reference/writing.md](reference/writing.md) and fix what fails. Its first test is the one that
+catches the usual problem: every sentence must be restatable by the reader in their own words.
 
 ## Step 6 — Publish
 

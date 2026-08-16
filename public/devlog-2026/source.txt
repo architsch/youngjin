@@ -1,21 +1,51 @@
-:d:ThingsPool is a 3D world that opens in a browser tab, with rooms you can take apart and rebuild. This log follows how it gets made.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Indie Game, Metaverse, Virtual World, Voxel, Room Building, Level Editor, Camera Control, Open Source, Three.js
+:d:ThingsPool is an immersive 3D chat app that runs in a browser tab. You walk into a shared room as a character, and almost everything in that room is yours to change.
+:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Indie Game, Metaverse, Virtual World, Voxel, Room Building, Level Editor, Art Gallery, Open Source, Three.js
 :l:2026-08-08
 
-[Open a Link, and You Are Standing in a Room] August 8, 2026
+[Introducing ThingsPool, a 3D World You Can Rebuild] August 8, 2026
 
 @@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
 
-ThingsPool is a 3D world that lives in a browser tab. There is nothing to install and nothing to sign up for. You open it and you are already inside, walking around as a character, in a room that anyone else can walk into while you are there.
+ThingsPool is an immersive 3D chat app that runs in a browser tab, with no install and no account required. You walk into a shared room as a character, alongside anyone else who opened the same link, and almost everything in that room is yours to change.
 
-Everything you can see is made of blocks, and nearly all of it comes apart. Select a wall and it is yours to work on: change what it is made of, cut a doorway through it, hang a picture and pull the frame out to the size you want. The camera lifts off your shoulder and circles whatever you selected, so a ceiling is no harder to build than a floor.
+Rooms are built out of blocks. Swap a wall's material, cut a doorway through it, hang a painting on it and stretch the frame to whatever size you like — all of it from inside the room, while other people are walking around you.
 
 <devlog-intro-editing>
 
-No room starts empty, either. Rooms are generated — walls laid out, materials chosen, the first pictures already hung — so the place you arrive in has a character of its own before you have touched a block of it. What you do to the room after that is up to you, and the people who wander in will find it the way you left it.
+The paintings come from a gallery of Monet, Van Gogh, Hopper, Pissarro and about twenty other artists. Each one is labeled with its title and its painter, which anyone standing in the room can read.
 
-This log is where the making of that gets written down. Each entry takes one thing that has just been finished — the camera, the room generator, the way two players see each other move — says what it does and why it was worth the trouble, and shows it in pictures taken from the running game. The machinery underneath is Three.js, WebGL and Socket.IO on Node.js, and the entries go into it where it makes the story better, but they are written to be read by anyone who plays.
+No room starts as an empty box. Every one is generated before you arrive, with its walls laid out and its first paintings already hung, so you begin with a furnished room rather than a blank grid. Whatever you change is what the next visitor walks into.
 
-The quickest way to find out whether any of this is for you is to go and stand in one of the rooms.
+A room can become almost anything from there: a gallery of your favorite paintings, a maze to get lost in, or a house that you and a friend build together while standing inside it. Sign in and one room becomes permanently yours, to keep and to invite other people to build in.
+
+This is the very first post of ThingsPool's development log, which is basically a news feed whose job is to share the major updates happening in this project.
 
 #ThingsPool #Metaverse #VirtualWorld #Sandbox #OpenWorld #BrowserGame #MultiplayerGame #IndieGame #GameDev #WorldBuilding #OpenSource #FreeToPlay #VoxelEngine #LevelEditor #ThreeJS #WebGL
+
+:d:ThingsPool now has game modes. Enter play mode to explore a room and talk to whoever else is in it, or switch to edit mode to craft the space you actually want.
+:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Game Design, Level Editor, Character Customization, Art Gallery, Three.js, WebGL
+:l:2026-08-15
+
+[Game Modes Are Here] August 15, 2026
+
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+
+ThingsPool, an immersive 3D chat app that runs in a browser tab, now has game modes. Enter play mode to explore a room and talk to whoever else is in it, or switch to edit mode to craft the space you actually want.
+
+Until now the two were one and the same. Clicking a painting to read its title also swung the camera around it and brought up the editing tools, so there was no way to simply look at a room.
+
+Play mode is for exploring: a first-person adventure through rooms you have never seen, shared with whoever else walked in. Anything you click introduces itself — a painting gives you its title and its painter — and you keep walking.
+
+<game-mode-play>
+
+Edit mode is the opposite. Everything around you becomes yours to customize: your own avatar first — its shape and its colors, part by part, carried into every room you visit afterwards — and then the interior of the room itself.
+
+<game-mode-character>*
+
+Trade one painting for another, restyle its frame, stretch it across the wall, or take the wall out from behind it.
+
+<game-mode-editing>
+
+Separating the two modes also frees up the ordinary click. Picking an object up, eating it, repairing it, handing it to another player, swinging it at something — every one of those is a click on a thing, and none of them could exist while a click already meant "edit this".
+
+#ThingsPool #VirtualWorld #Sandbox #BrowserGame #MultiplayerGame #IndieGame #GameDev #InteractiveMedium #GameMechanics #GameplaySystems #LevelEditor #CameraControl #Avatar #ThreeJS #WebGL

@@ -9,9 +9,22 @@
         "",
         "These are denials for the assistant, not for the developer. Any of them remains",
         "available by running it yourself in a terminal, which is the point — an irreversible",
-        "operation on production data should be a deliberate human act."
+        "operation on production data should be a deliberate human act.",
+        "",
+        "The allowances below are the opposite case: this repository's own scripts, run against",
+        "the local machine alone. Writing a dev-log post means booting a local dev server and",
+        "taking dozens of screenshots against it, one capture run at a time, and every one of",
+        "those was a permission prompt for something that reaches nothing outside this checkout",
+        "and no database but the Firebase emulator. Note that they widen nothing the deny list",
+        "closes: a rule in \"deny\" always outranks one in \"allow\"."
     ],
     "permissions": {
+        "allow": [
+            "Bash(node dev/scripts/devlog/:*)",
+            "Bash(node dev/scripts/e2eDevServer.js:*)",
+            "Bash(MODE=ssg node dist/server/bundle.js)",
+            "Bash(npm run stop)"
+        ],
         "deny": [
             "Bash(gcloud firestore:*)",
             "Bash(gcloud alpha firestore:*)",
