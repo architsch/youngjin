@@ -16,15 +16,28 @@ const FirebaseUtil =
     },
 }
 
-let firebaseInitialized = false;
+// The initialization in flight, or the finished one. A boolean flag cannot stand in for this:
+// the startup below awaits a round-trip to Firestore before it could set one, and every caller
+// arriving inside that window would find the flag still false and call initializeApp() a second
+// time — which throws, and reaches the caller as a failed query rather than as a startup error.
+let firebaseInitialization: Promise<void> | undefined;
 let db: admin.firestore.Firestore;
 let storage: admin.storage.Storage;
 
-async function ensureFirebaseInitialized()
+function ensureFirebaseInitialized(): Promise<void>
 {
-    if (firebaseInitialized)
-        return;
+    if (!firebaseInitialization)
+    {
+        // Forgotten if it fails, so that a startup which never got as far as creating the app is
+        // retried by the next caller rather than being remembered as a permanent verdict.
+        firebaseInitialization = initializeFirebase()
+            .catch(err => { firebaseInitialization = undefined; throw err; });
+    }
+    return firebaseInitialization;
+}
 
+async function initializeFirebase()
+{
     const app = admin.initializeApp({
         storageBucket: "thingspool.firebasestorage.app",
     });
@@ -45,8 +58,6 @@ async function ensureFirebaseInitialized()
     } catch (err) {
         LogUtil.log("Firestore listCollections failed", { errorMessage: ErrorUtil.getErrorMessage(err) }, "high", "error");
     }
-
-    firebaseInitialized = true;
 }
 
 function getAppOptionsObj(options: admin.AppOptions): any

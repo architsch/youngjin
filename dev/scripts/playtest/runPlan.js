@@ -11,9 +11,11 @@
 //   - Assertions about *data* (room lists, search, pagination, ownership) go through the
 //     page's own authenticated request context. That is the same session and the same cookies
 //     as the UI, but it does not depend on clicking anything.
-//   - It does not open the room-list popup, which in-game is opened by interacting with a door
-//     object whose position varies per generated room. Screenshots cover whether the client
-//     rendered; the request-context checks cover whether the data behind it is right.
+//   - HUD controls that carry a stable element id are driven for real (edit mode, the mode's
+//     way out). Anything reached by aiming at the 3D scene — placing a voxel, dragging an
+//     object, the door that opens the room list — is not, because where it sits on screen
+//     depends on the room that was generated. Screenshots cover whether the client rendered;
+//     the request-context checks cover whether the data behind it is right.
 //
 // Usage:
 //   node dev/scripts/playtest/runPlan.js <plan.json> [--out <result.json>]
@@ -40,6 +42,7 @@ async function runPlan(plan)
     const results = [];
     const consoleErrors = [];
     const pageErrors = [];
+    const failedRequests = [];
     let rateLimitHits = 0;
     let lastRequestAt = 0;
 
@@ -55,12 +58,33 @@ async function runPlan(plan)
     const context = await browser.newContext({
         userAgent: plan.userAgent || `ThingspoolPlaytest-${agentName}/1.0`,
         ignoreHTTPSErrors: true,
-        viewport: { width: 1280, height: 800 },
+        // There is no GPU here, so WebGL runs on a software rasterizer and the frame rate is
+        // decided almost entirely by how many pixels there are to fill. That makes the viewport
+        // a lever rather than a detail: a narrow one both stands in for a phone and buys back
+        // enough frames per second for anything that moves to move at a believable speed.
+        viewport: plan.viewport || { width: 1280, height: 800 },
     });
 
     const page = await context.newPage();
     page.on("console", msg => { if (msg.type() === "error") consoleErrors.push(msg.text().substring(0, 500)); });
     page.on("pageerror", err => pageErrors.push(String(err).substring(0, 500)));
+
+    // A deployment can leave the server serving a bundle that asks for an asset the deployment
+    // did not carry — a renamed texture atlas, a new icon — and nothing else in this run would
+    // notice: the page still loads, the room still enters, and the missing thing is simply not
+    // drawn. So every request that failed outright, and every same-origin response that came
+    // back an error, is collected. Requests to other hosts are not this deployment's business.
+    page.on("requestfailed", req => {
+        if (!req.url().startsWith(baseURL)) return;
+        failedRequests.push({ url: req.url().substring(0, 200), reason: req.failure()?.errorText || "" });
+    });
+    page.on("response", res => {
+        const status = res.status();
+        if (status < 400 || !res.url().startsWith(baseURL)) return;
+        // 429 is the rate limiter, which is counted on its own and is usually self-inflicted.
+        if (status === 429) return;
+        failedRequests.push({ url: res.url().substring(0, 200), reason: `HTTP ${status}` });
+    });
 
     async function apiPost(route, body)
     {
@@ -139,6 +163,77 @@ async function runPlan(plan)
                     break;
                 }
 
+                case "dismissPopups":
+                {
+                    // Arriving somewhere now opens a popup of its own the first time: a welcome
+                    // for the hub, another for the user's own room. They are correct behaviour,
+                    // but they sit over the whole screen, so a screenshot taken behind one shows
+                    // the popup rather than the room, and every later click lands on its backdrop.
+                    // What was on screen is recorded before it goes, so the report can say which
+                    // popup appeared rather than merely how many did.
+                    const backdrop = page.locator("#uiRoot div.z-40");
+                    const dismissed = [];
+
+                    for (let attempt = 0; attempt < (action.max || 4); attempt++)
+                    {
+                        if (await backdrop.count() === 0) break;
+                        dismissed.push((await backdrop.first().innerText().catch(() => ""))
+                            .replace(/\s+/g, " ").trim().substring(0, 120));
+                        await page.keyboard.press("Escape");
+                        await sleep(400);
+                    }
+
+                    record.dismissed = dismissed;
+                    record.remaining = await backdrop.count();
+                    break;
+                }
+
+                case "enterEditMode":
+                {
+                    // Edit mode opens on the user's own character, so the character's own controls
+                    // coming up is the client-visible proof that the mode arrived with a selection
+                    // under it — a mode standing over nothing would still show its own way out.
+                    await page.locator("#editModeButton").click({ timeout: action.timeout || 15_000 });
+                    await page.locator("#customizePlayerOptions")
+                        .waitFor({ state: "visible", timeout: 15_000 });
+                    record.exitButtonShown = await page.locator("#modeExitButton").isVisible();
+                    break;
+                }
+
+                case "exitEditMode":
+                {
+                    await page.locator("#modeExitButton").click({ timeout: action.timeout || 15_000 });
+                    await page.locator("#customizePlayerOptions")
+                        .waitFor({ state: "hidden", timeout: 15_000 });
+                    // The mode gives the top bar back to the identity controls on its way out, so
+                    // the way back in returning is what says the mode really ended.
+                    record.editModeButtonShown = await page.locator("#editModeButton").isVisible();
+                    break;
+                }
+
+                case "click":
+                {
+                    // The escape hatch for UI this harness does not name. A plan is written after
+                    // reading the run before it, so a selector belongs in the plan rather than
+                    // baked in here, where it would go stale on the next markup change and take a
+                    // whole run down with it.
+                    const target = page.locator(action.selector).nth(action.nth || 0);
+                    await target.click({ timeout: action.timeout || 10_000 });
+                    if (action.settleMs) await sleep(action.settleMs);
+                    break;
+                }
+
+                case "expect":
+                {
+                    const target = page.locator(action.selector);
+                    const state = action.state || "visible";
+                    await target.first().waitFor({ state, timeout: action.timeout || 10_000 });
+                    record.selector = action.selector;
+                    record.state = state;
+                    record.count = await target.count();
+                    break;
+                }
+
                 case "gotoRoom":
                 {
                     const response = await page.goto(`${baseURL}/${action.roomID}`,
@@ -191,8 +286,14 @@ async function runPlan(plan)
                 case "screenshot":
                 {
                     const file = path.join(ARTIFACT_DIR, `${agentName}-${action.name || index}.png`);
-                    await page.screenshot({ path: file, fullPage: false });
+                    const buffer = await page.screenshot({ path: file, fullPage: false });
                     record.file = file;
+                    // A screenshot is only evidence if somebody looks at it, and the one failure
+                    // that does not need looking at is the blank one: a room that rendered nothing
+                    // compresses to almost nothing, while a room that rendered is a photograph of
+                    // a 3D scene and cannot. So the size is reported as a first reading, and the
+                    // image is still there to be read properly.
+                    record.bytes = buffer.length;
                     break;
                 }
 
@@ -247,6 +348,7 @@ async function runPlan(plan)
         rateLimitHits,
         consoleErrors,
         pageErrors,
+        failedRequests,
     };
 }
 

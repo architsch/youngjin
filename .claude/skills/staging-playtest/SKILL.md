@@ -20,6 +20,8 @@ that are genuinely hard to produce by hand:
   a browser session can only ever become a guest — twenty owners means twenty Google accounts,
   or one seeding command.
 - **Concurrency** — several real clients in one room at once.
+- **A whole client run, watched** — page errors, failed asset requests and what actually rendered,
+  across a room load and a mode change, which a human notices only if they happen to be looking.
 
 ## Roles
 
@@ -51,13 +53,21 @@ say how long it has been happening (`perFile` gives per-day line counts).
 Also confirm what is actually deployed before drawing conclusions about a fix:
 
 ```
-node dev/scripts/playtest/serverMonitor.js metrics
+curl -s https://staging.thingspool.net/health
 git -C . rev-parse --short HEAD
+node dev/scripts/playtest/serverMonitor.js metrics
 ```
 
-The running build's commit is in `window.thingspool_env.gitCommit` (a `start` action reports
-it). If it does not match the local HEAD, the fix under test is **not on the server** — say so
-and stop rather than reporting a fix as verified or as failed.
+The health endpoint names the build the process is running, in one request that costs no guest
+and no page load. If it does not match the local HEAD, the fix under test is **not on the
+server** — say so and stop rather than reporting a fix as verified or as failed. (The same
+commit reaches the client as `window.thingspool_env.gitCommit`, which a `start` action reports;
+a page whose commit has fallen behind the server's reloads itself, so a run started across a
+deployment can lose a session mid-plan.)
+
+`metrics` is worth reading for `uptimeMs` as well as health: a staging process that came up
+minutes ago is the deployment under test, while one that has been up for days means the deploy
+never landed.
 
 ## Step 2 — Baseline
 
@@ -103,6 +113,10 @@ Three things to get right:
 - **Seeding several stale rooms that share one owner is the interesting case.** Each room's
   v0→v1 migration looks the owner up, so N stale rooms fire N concurrent reads of one user
   document — the contention that a single-document test never reproduces.
+- **A seed below the current version carries a copy of its own key as a field**, because that is
+  what the last migration step on both collections exists to drop. Whether the row came back
+  current is only half the assertion; `verify-migration` also reports whether that copy survived
+  in storage, which is what a write-back storing the row as the reader had it would leave behind.
 
 ### What persists and what does not
 
@@ -125,11 +139,16 @@ to drive the browser one click at a time.
     { "type": "start" },
     { "type": "waitForRoom" },
     { "type": "skipTutorial" },
+    { "type": "dismissPopups" },
+    { "type": "screenshot", "name": "hub" },
+    { "type": "enterEditMode" },
+    { "type": "screenshot", "name": "edit-mode" },
+    { "type": "exitEditMode" },
     { "type": "listRooms", "page": 0 },
-    { "type": "listRooms", "page": 1 },
     { "type": "searchRooms", "query": "Playtest" },
     { "type": "gotoRoom", "roomID": "<seeded room>" },
     { "type": "waitForRoom" },
+    { "type": "dismissPopups" },
     { "type": "screenshot", "name": "seeded-room" },
     { "type": "end" }
   ]
@@ -145,14 +164,55 @@ Non-obvious things that will otherwise waste a run:
 - **`skipTutorial` is mandatory before anything multiplayer.** A newly created guest starts in
   the single-player tutorial. Until it leaves, `gotoRoom` appears to succeed while the client
   stays in the tutorial, so every room-list and room-entry check silently tests nothing.
+- **`dismissPopups` after every arrival.** Arriving somewhere opens a welcome popup the first
+  time — one for the hub, another for the user's own room. They cover the screen, so a
+  screenshot taken behind one photographs the popup instead of the room, and a click aimed at
+  the HUD lands on the backdrop. The action reports what it dismissed, so an unexpected popup
+  is itself a finding.
 - **`end` is mandatory.** Closing without it leaves a ghost player in the room until the stale
   socket sweep notices, which the next run reads as a bug.
 - **Give each agent a distinct `userAgent`.** Guest creation is capped per IP *and* User-Agent
   together, so agents sharing a string share one small quota.
 - Assertions about data go through the page's own authenticated request context — same session,
-  same cookies, no clicking. The room-list *popup* is opened in-game by interacting with a door
-  object whose position varies per generated room, so it is not scripted; screenshots cover
-  whether the client rendered, and the request-context checks cover whether the data is right.
+  same cookies, no clicking.
+
+### What can be driven, and what cannot
+
+HUD controls carry stable element ids, so they are driven for real: `enterEditMode` and
+`exitEditMode` press the mode's own buttons and check the mode arrived with the user's character
+selected under it, which is the whole game-mode crossing — orbit camera, player selection, the
+controls that come with it. `click` and `expect` take a selector straight from the plan, for UI
+this harness does not name; putting the selector in the plan rather than in the harness is
+deliberate, since a plan is written fresh each round and a baked-in selector goes stale silently.
+
+Anything reached by **aiming at the 3D scene** is not driven: placing or texturing a voxel,
+dragging an object, and the door that opens the room-list popup all sit wherever the generated
+room put them. That leaves the room *write* path — an edit dirtying a room until the save loop
+picks it up — outside what a plan can reach, and it is the largest gap. Say so in the report
+rather than letting a clean run imply it was covered.
+
+### Reading the client's side of the run
+
+Four things come back per agent and all four are findings, not decoration:
+
+- `pageErrors` / `consoleErrors` — an uncaught exception during a room load is a client bug the
+  server log will never show.
+- `failedRequests` — same-origin requests that failed or came back 4xx/5xx. This is how a
+  deployment that shipped a bundle asking for an asset it did not carry shows itself; nothing
+  else in the run notices, because the page still loads and the missing thing is simply not drawn.
+- `screenshot.bytes` — a rendered 3D scene is a photograph and cannot compress small. A few KB
+  means a blank or single-colour frame.
+- The screenshots themselves. **Read them.** They are the only check on whether the thing that
+  rendered was the right thing, and rendering is where most recent regressions live.
+
+**There is no GPU here.** The browser falls back to a software rasterizer, and the game runs at a
+couple of frames per second in it — the debugger's FPS reading is a fact about this machine, not
+about the build, and shrinking the viewport barely moves it, so it is not a fill-rate story
+either. Two consequences. Never report that frame rate as a performance finding. And treat
+anything whose appearance depends on *how long* something took — a push that should resolve in
+half a second, a transition, an animation caught mid-way — as unmeasurable here: at this frame
+rate a moment stretches into tens of seconds, and a screenshot of it is not evidence of a bug.
+Set `"viewport"` on the plan to test a phone-shaped screen, which is what it is genuinely for.
 
 ### Rate limits shape the whole run
 
@@ -200,7 +260,8 @@ of report misleads:
 4. **Verified** — what demonstrably worked, with the evidence (migration versions advanced,
    pagination totals, zero fallbacks, screenshots).
 
-State plainly what was *not* covered. Small in-world interactions are out of scope by design.
+State plainly what was *not* covered — at minimum the 3D-aimed interactions and the room write
+path they gate (see above), and anything the run had to skip.
 
 ## Safety
 
@@ -230,5 +291,8 @@ Beyond the target boundary:
   existing backup; `restore-content` puts it back and is also run by `cleanup`.
 - Every command reports the target it addressed, so which namespace was touched is never
   something the reader of a playtest report has to infer. Quote it in the report.
+- **A hub is editable by anybody standing in it**, guests included, so an edit made during a
+  playtest is a lasting change to a room every staging visitor arrives in. That is acceptable on
+  staging and nowhere else, and it is a change to report rather than one to make in passing.
 - Staging's writes draw on the same Firebase quota as production traffic. Prefer `--persist`
   over reseeding a large population each run.

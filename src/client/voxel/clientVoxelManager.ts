@@ -17,8 +17,10 @@ import VoxelGameObject from "../object/types/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
 import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
-import ManualEditCountUtil from "../system/util/manualEditCountUtil";
+import ClientEventHistoryUtil from "../system/util/clientEventHistoryUtil";
 import MeshDataUtil from "../../shared/graphics/mesh/util/meshDataUtil";
+import ClientEvent from "../system/types/clientEvent";
+import { ClientEventType } from "../system/types/clientEventType";
 
 const ClientVoxelManager =
 {
@@ -55,8 +57,7 @@ const ClientVoxelManager =
     //
     // "validate" says whether the edit has to be checked against what the user is allowed to do,
     // and so also says who asked for it: an edit the user made himself is checked, while one
-    // arriving from the server or from a scripted step is not. That is why the tally of the user's
-    // own doing (see ManualEditCountUtil) is kept under the same flag.
+    // arriving from the server or from a scripted step is not.
 
     addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer?: number[],
         validate: boolean = true): boolean =>
@@ -65,7 +66,7 @@ const ClientVoxelManager =
         const success = VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
         if (success && validate)
-            ManualEditCountUtil.count("voxelBlockAdded");
+            ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyAddedVoxelBlock));
         return success;
     },
     addVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
@@ -94,7 +95,7 @@ const ClientVoxelManager =
         const success = VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
             quadIndex, validate ? room : undefined);
         if (success && validate)
-            ManualEditCountUtil.count("voxelBlockRemoved");
+            ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyRemovedVoxelBlock));
         return success;
     },
     removeVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
@@ -131,7 +132,7 @@ const ClientVoxelManager =
         const success = VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels,
             quadIndex, textureIndex, validate ? room : undefined);
         if (success && validate)
-            ManualEditCountUtil.count("voxelQuadTextureChanged");
+            ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyChangedVoxelQuadTexture));
         return success;
     },
 

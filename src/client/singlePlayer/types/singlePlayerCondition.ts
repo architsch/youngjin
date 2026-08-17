@@ -1,5 +1,5 @@
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
-import ManualEditKind from "../../../shared/system/types/manualEditKind";
+import { ClientEventType } from "../../system/types/clientEventType";
 import SinglePlayerParam from "./singlePlayerParam";
 
 // A small tagged predicate a step waits on (see SinglePlayerConditionMap for what each one asks).
@@ -21,8 +21,8 @@ type SinglePlayerCondition =
     | {type: "voxel_block_exists", negate: boolean, row: SinglePlayerParam<number>,
         col: SinglePlayerParam<number>, collisionLayer: SinglePlayerParam<number>}
     | {type: "edit_mode_active", negate: boolean}
-    | {type: "manual_edits_made", negate: boolean, editKind: ManualEditKind,
-        minCount: SinglePlayerParam<number>}
+    | {type: "client_events_occurred_after_step_began", negate: boolean, eventType: ClientEventType,
+        minNumEvents: SinglePlayerParam<number>}
     | {type: "orbit_camera_angle_differs", negate: boolean,
         azimuthDeg: SinglePlayerParam<number>, polarDeg: SinglePlayerParam<number>,
         minDifferenceDeg: SinglePlayerParam<number>}

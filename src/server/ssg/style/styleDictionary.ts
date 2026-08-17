@@ -534,6 +534,21 @@ hr {
 	opacity: 0.25;
 	cursor: not-allowed;
 }
+.inlineButtonBig {
+	${flexible_col_area(landscape)}
+	${m_spacing(landscape)}
+	${m_bold_font}
+	${button_frame}
+	text-decoration: none;
+}
+.inlineButtonBig:hover {
+	border-color: ${lightYellowColor};
+	cursor: pointer;
+}
+.inlineButtonBig:disabled {
+	opacity: 0.25;
+	cursor: not-allowed;
+}
 .inlineTabButton {
 	${flexible_col_area(landscape)}
 	${s_spacing(landscape)}

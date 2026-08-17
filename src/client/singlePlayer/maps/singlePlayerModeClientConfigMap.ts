@@ -14,6 +14,7 @@ import SinglePlayerManager from "../singlePlayerManager";
 import SinglePlayerAction from "../types/singlePlayerAction";
 import SinglePlayerModeClientConfig from "../types/singlePlayerModeClientConfig";
 import SinglePlayerStep from "../types/singlePlayerStep";
+import { ClientEventType } from "../../system/types/clientEventType";
 
 const cachedStepsByMode: {[singlePlayerMode: string]: {[stepName: string]: SinglePlayerStep}} = {};
 
@@ -76,13 +77,6 @@ SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
-                    // The user stays in the mode the tutorial has put him in, and is let across the
-                    // line only by the step that teaches that crossing — which takes the way into
-                    // edit mode and the way back out of it off screen meanwhile, and shuts the ways
-                    // that go through no button at all (the back gesture, a second click on what is
-                    // being edited) along with them. Who the user is and what he may do here is
-                    // noise he has no use for while being led by the hand. What stays is the button
-                    // that leaves the app, which must never be out of reach.
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.HideUserIdentityLabels, enable: true},
                 ],
@@ -162,8 +156,8 @@ SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "ui_outline_rect", targetElementId: "customizePlayerOptions"},
                 ],
                 transitionRules: [{
-                    requirements: [{type: "manual_edits_made", negate: false,
-                        editKind: "playerPartChanged", minCount: () => 1}],
+                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
+                        eventType: ClientEventType.ManuallyChangedPlayerPart, minNumEvents: () => 1}],
                     nextStep: "before_select_floor",
                     nextStepDelay: 1000,
                 }],
@@ -249,8 +243,8 @@ SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "ui_outline_rect", targetElementId: "voxelQuadTextureOptions"},
                 ],
                 transitionRules: [{
-                    requirements: [{type: "manual_edits_made", negate: false,
-                        editKind: "voxelQuadTextureChanged", minCount: () => 1}],
+                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
+                        eventType: ClientEventType.ManuallyChangedVoxelQuadTexture, minNumEvents: () => 1}],
                     nextStep: "add_block",
                     nextStepDelay: 0,
                 }],
@@ -267,8 +261,8 @@ SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: false},
                 ],
                 transitionRules: [{
-                    requirements: [{type: "manual_edits_made", negate: false,
-                        editKind: "voxelBlockAdded", minCount: () => 1}],
+                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
+                        eventType: ClientEventType.ManuallyAddedVoxelBlock, minNumEvents: () => 1}],
                     nextStep: "remove_block",
                     nextStepDelay: 0,
                 }],
@@ -292,8 +286,8 @@ SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: false},
                 ],
                 transitionRules: [{
-                    requirements: [{type: "manual_edits_made", negate: false,
-                        editKind: "voxelBlockRemoved", minCount: () => 1}],
+                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
+                        eventType: ClientEventType.ManuallyRemovedVoxelBlock, minNumEvents: () => 1}],
                     nextStep: "exit_edit_mode",
                     nextStepDelay: 0,
                 }],

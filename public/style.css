@@ -563,6 +563,33 @@ hr {
 	opacity: 0.25;
 	cursor: not-allowed;
 }
+.inlineButtonBig {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 1.20% 2.00% 1.20% 2.00%;
+	margin: 1.20% 2.00% 1.20% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #101010;
+	color: #a0a0a0;
+	border-radius: 2vmin;
+	border-bottom: 0.5vmin #707070 solid;
+	border-right: 0.5vmin #707070 solid;
+	text-decoration: none;
+}
+.inlineButtonBig:hover {
+	border-color: #d0c090;
+	cursor: pointer;
+}
+.inlineButtonBig:disabled {
+	opacity: 0.25;
+	cursor: not-allowed;
+}
 .inlineTabButton {
 	position: relative;
 	display: inline-block;
@@ -1177,6 +1204,33 @@ hr {
 	cursor: pointer;
 }
 .inlineButton:disabled {
+	opacity: 0.25;
+	cursor: not-allowed;
+}
+.inlineButtonBig {
+	position: relative;
+	display: inline-block;
+	max-width: none;
+	width: fit-content;
+	block-size: fit-content;
+	padding: 2.00% 5.00% 2.00% 5.00%;
+	margin: 2.00% 5.00% 2.00% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #101010;
+	color: #a0a0a0;
+	border-radius: 2vmin;
+	border-bottom: 0.5vmin #707070 solid;
+	border-right: 0.5vmin #707070 solid;
+	text-decoration: none;
+}
+.inlineButtonBig:hover {
+	border-color: #d0c090;
+	cursor: pointer;
+}
+.inlineButtonBig:disabled {
 	opacity: 0.25;
 	cursor: not-allowed;
 }

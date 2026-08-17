@@ -6,7 +6,6 @@ import ObservableSet from "../../shared/system/types/observableSet";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import PlayerSelection from "../graphics/types/gizmo/playerSelection";
-import ManualEditKind from "../../shared/system/types/manualEditKind";
 import Vec3 from "../../shared/math/types/vec3";
 import ClientProcess from "./types/clientProcess";
 import GameMode from "./types/gameMode";
@@ -182,16 +181,6 @@ export const orbitCameraViewRequestObservable =
 
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");
-
-// How many edits of each kind the user has made by hand since entering the current room. Only the
-// user's own doing is counted here — never an edit arriving from the server — so that whoever asks
-// is asking about the user rather than about the room (see ManualEditKind).
-export const manualEditCountsObservable = new Observable<{[kind in ManualEditKind]: number}>({
-    voxelBlockAdded: 0,
-    voxelBlockRemoved: 0,
-    voxelQuadTextureChanged: 0,
-    playerPartChanged: 0,
-});
 
 //--------------------------------------------------------------------------------
 // User State Observables

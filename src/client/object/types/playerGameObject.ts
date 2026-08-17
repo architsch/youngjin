@@ -7,10 +7,12 @@ import { cameraModeObservable } from "../../system/clientObservables";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
 import SpeechBubble from "../components/speechBubble";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import FirstPersonCameraPose from "../components/helpers/player/firstPersonCameraPose";
+import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/system/sharedConstants";
+
+const playerHalfHeightWithMargin = 0.5 * PLAYER_HEIGHT + 0.5;
+const playerRadiusWithMargin = PLAYER_RADIUS_XZ + 0.5;
 
 const vector3Temp = new THREE.Vector3();
-const vector3Temp2 = new THREE.Vector3();
 
 export default class PlayerGameObject extends GameObject
 {
@@ -105,9 +107,11 @@ export default class PlayerGameObject extends GameObject
         // vector3Temp = Global position of the camera
         GraphicsManager.getCamera().getWorldPosition(vector3Temp);
 
-        // vector3Temp2 = Global position of the player's eyes
-        vector3Temp2.addVectors(this.position, FirstPersonCameraPose.restPosition);
-
-        return vector3Temp2.distanceTo(vector3Temp) < 0.75;
+        const xDiff = Math.abs(vector3Temp.x - this.position.x);
+        const yDiff = Math.abs(vector3Temp.y - this.position.y);
+        const zDiff = Math.abs(vector3Temp.z - this.position.z);
+        return yDiff <= playerHalfHeightWithMargin &&
+            xDiff <= playerRadiusWithMargin &&
+            zDiff <= playerRadiusWithMargin;
     }
 }

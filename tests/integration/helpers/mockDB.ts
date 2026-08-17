@@ -184,6 +184,11 @@ export const mockDBUserUtil = {
     {
         return userStore[userID] ?? null;
     }),
+    lookUpUserById: vi.fn(async (userID: string) =>
+    {
+        const user = userStore[userID];
+        return { success: true, data: user ? [user] : [] };
+    }),
     setLastRoomID: vi.fn(async (userID: string, roomID: string) =>
     {
         const u = userStore[userID];

@@ -32,6 +32,10 @@ const mockSyncUserRoleInMemory = vi.fn();
 vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
     default: {
         findUserById: (...args: any[]) => mockFindUserById(...args),
+        lookUpUserById: async (...args: any[]) => {
+            const user = await mockFindUserById(...args);
+            return { success: true, data: user ? [user] : [] };
+        },
         createUser: vi.fn(async () => ({ success: true, data: [{ id: "new-user" }] })),
         setOwnedRoomID: (...args: any[]) => mockSetOwnedRoomID(...args),
         setLastRoomID: vi.fn(async () => {}),

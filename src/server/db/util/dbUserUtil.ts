@@ -36,14 +36,25 @@ const DBUserUtil =
             .run();
         return result;
     },
-    findUserById: async (userID: string): Promise<DBUser | null> =>
+    // The lookup as the DB actually answers it: "the query failed" and "there is no such user"
+    // are different answers, and a caller that *acts* on absence — rather than merely reporting
+    // it — must not treat one as the other. Mistaking a failed lookup for a deleted account is
+    // how a signed-in user gets silently replaced by a brand-new guest.
+    lookUpUserById: async (userID: string): Promise<DBQueryResponse<DBUser>> =>
     {
-        LogUtil.log("DBUserUtil.findUserById", {userID}, "low", "info");
-        const result = await new DBQuery<DBUser>()
+        LogUtil.log("DBUserUtil.lookUpUserById", {userID}, "low", "info");
+        return await new DBQuery<DBUser>()
             .select()
             .from(COLLECTION_USERS)
             .where("id", "==", userID)
             .run();
+    },
+    // The same lookup for callers whose answer to both "failed" and "absent" is identical (a 404,
+    // a skipped enrichment step). They give up the distinction deliberately; anyone who needs it
+    // reaches for lookUpUserById instead.
+    findUserById: async (userID: string): Promise<DBUser | null> =>
+    {
+        const result = await DBUserUtil.lookUpUserById(userID);
         if (!result.success || result.data.length == 0)
             return null;
         return result.data[0];

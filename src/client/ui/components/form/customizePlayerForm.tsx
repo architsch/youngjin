@@ -6,10 +6,12 @@ import InstancedMeshComposer from "../../../object/components/instancedMeshCompo
 import ColorUtil from "../../../../shared/math/util/colorUtil";
 import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
 import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
-import ManualEditCountUtil from "../../../system/util/manualEditCountUtil";
 import StepperInput from "../input/stepperInput";
 import Base94ColorInput from "../input/base94ColorInput";
 import PartShapeIcon from "../../svg/icons/partShapeIcon";
+import ClientEventHistoryUtil from "../../../system/util/clientEventHistoryUtil";
+import ClientEvent from "../../../system/types/clientEvent";
+import { ClientEventType } from "../../../system/types/clientEventType";
 
 //------------------------------------------------------------------------
 // This form edits the player's composition by directly manipulating its
@@ -53,7 +55,7 @@ export default function CustomizePlayerForm()
         trySave();
         mutateParams(liveParams);
         rebuildMyPlayerParts();
-        ManualEditCountUtil.count("playerPartChanged");
+        ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyChangedPlayerPart));
         setEditCount(prev => prev + 1);
     };
 

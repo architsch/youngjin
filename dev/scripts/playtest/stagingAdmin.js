@@ -62,6 +62,19 @@ const ROOM_TYPE_REGULAR = 1;
 // migration adds are absent, and the fields a later migration drops are present. A seed that
 // merely set `version: 0` on a current-shaped row would migrate to a no-op and prove nothing.
 
+// Rows written before the identity rule was enforced carry a copy of their own key as a field, and
+// dropping that copy is the whole subject of the v3 -> v4 step on both collections. A seed without
+// one is therefore a seed that step has nothing to do to — the migration still bumps the version,
+// but the thing it exists for is never reproduced, and nothing checks that the write-back leaves it
+// gone. The value seeded is deliberately not the document's key: that is the shape the migration
+// describes, and it also proves the caller is handed the key rather than the field.
+function addLegacyStoredID(row, version, currentVersion, runID)
+{
+    if (version < currentVersion)
+        row.id = `stale-${runID}`;
+    return row;
+}
+
 function buildUser(version, runID, index)
 {
     const now = Date.now();
@@ -89,11 +102,9 @@ function buildUser(version, runID, index)
     // v2 -> v3 adds ftue.
     if (version >= 3) row.ftue = "";
 
-    return row;
+    return addLegacyStoredID(row, version, CURRENT_VERSION.users, runID);
 }
 
-// No "id" field: the server stores a row's identity as the document's key and never as a field,
-// so a seed that carried one would not be shaped like anything the game writes.
 function buildRoom(version, runID, index, ownerUserID)
 {
     const row = {
@@ -111,7 +122,7 @@ function buildRoom(version, runID, index, ownerUserID)
     if (version >= 2) row.editors = [];
     if (version >= 3) row.roomName = "";
 
-    return row;
+    return addLegacyStoredID(row, version, CURRENT_VERSION.rooms, runID);
 }
 
 // ─── Room content ───────────────────────────────────────────────────────
@@ -150,11 +161,16 @@ async function inspect(db)
         const snap = await db.collection(collection(name)).get();
         const byVersion = {};
         let seeded = 0;
+        let withStoredID = 0;
         snap.docs.forEach(doc => {
             const data = doc.data();
             const v = String(data.version);
             byVersion[v] = (byVersion[v] || 0) + 1;
             if (data[MARKER]) seeded++;
+            // A row still holding a copy of its own key is one no read has rewritten since the
+            // step that drops it. Counted here because it says how far that sweep has got through
+            // the organic data, which no single seeded row can.
+            if (data.id !== undefined) withStoredID++;
         });
         // Anything below the current version is a row the next read will migrate — which is
         // precisely the population that drives the write-back path.
@@ -167,6 +183,7 @@ async function inspect(db)
             currentVersion: CURRENT_VERSION[name],
             byVersion,
             outdated,
+            withStoredID,
             playtestSeeded: seeded,
         };
     }
@@ -329,12 +346,18 @@ async function verifyMigration(db)
                 runID: data[MARKER],
                 version: data.version,
                 migrated: data.version === CURRENT_VERSION[name],
+                // The version bump is only half of what the last step is for. A row that came out
+                // current but still carrying a copy of its own key means the write-back stored the
+                // row as the reader had it, identity included — the exact byproduct that step
+                // exists to clear, silently reintroduced.
+                storedIDRemains: data.id !== undefined,
             };
         });
         results[collection(name)] = {
             seeded: docs.length,
             migrated: docs.filter(d => d.migrated).length,
             stillOutdated: docs.filter(d => !d.migrated).length,
+            storedIDRemains: docs.filter(d => d.storedIDRemains).length,
             docs,
         };
     }

@@ -186,6 +186,6 @@ export const MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
 export const PAGE_NAME_MAP = {
     "index": "Home", // static
     "arcade": "Arcade", // static
-    "library": "Library", // static
+    "library": "Blog", // static
     "portfolio": "Portfolio", // static
 };

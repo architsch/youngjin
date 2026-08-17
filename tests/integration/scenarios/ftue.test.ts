@@ -29,6 +29,7 @@ const _mockDBUserUtil = vi.hoisted(() => ({
     setFTUE: vi.fn(async () => ({ success: true, data: [] })),
     setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
     findUserById: vi.fn(),
+    lookUpUserById: vi.fn(async () => ({ success: true, data: [] })),
     fromDBType: vi.fn((u: any) => u),
     createUser: vi.fn(),
     updateLastLogin: vi.fn(),

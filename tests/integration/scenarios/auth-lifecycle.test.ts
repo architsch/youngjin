@@ -14,6 +14,7 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 const _mockDBUserUtil = vi.hoisted(() => ({
     createUser: vi.fn(),
     findUserById: vi.fn(),
+    lookUpUserById: vi.fn(),
     upgradeGuestToMember: vi.fn(),
     deleteUser: vi.fn(),
     updateLastLogin: vi.fn(),
@@ -86,6 +87,9 @@ vi.mock("../../../src/server/networking/util/cookieUtil", () => ({
     default: {
         getAuthTokenName: () => "auth_token_dev",
         getAuthTokenCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
+        getTutorialFinishedCookieName: () => "tutorial_finished_dev",
+        getTutorialFinishedCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
+        toClearOptions: ({ maxAge, expires, ...rest }: any) => rest,
     },
 }));
 
@@ -403,10 +407,10 @@ describe("loginCount accuracy (Scenario 12)", () => {
 
     it("identifyAnyUser calls updateLastLogin with the user's stored lastLoginAt", async () => {
         const storedLastLoginAt = Date.now() - 5000;
-        _mockDBUserUtil.findUserById.mockResolvedValue({
+        _mockDBUserUtil.lookUpUserById.mockResolvedValue({ success: true, data: [{
             id: "user-1", userName: "testuser", userType: UserTypeEnumMap.Member, email: "test@test.com",
             lastLoginAt: storedLastLoginAt,
-        });
+        }] });
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-user-1" });
         let nextCalled = false;
@@ -418,9 +422,9 @@ describe("loginCount accuracy (Scenario 12)", () => {
     });
 
     it("identifyRegisteredUser does NOT call updateLastLogin", async () => {
-        _mockDBUserUtil.findUserById.mockResolvedValue({
+        _mockDBUserUtil.lookUpUserById.mockResolvedValue({ success: true, data: [{
             id: "user-1", userName: "testuser", userType: UserTypeEnumMap.Member, email: "test@test.com",
-        });
+        }] });
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-user-1" });
         let nextCalled = false;
@@ -431,9 +435,9 @@ describe("loginCount accuracy (Scenario 12)", () => {
     });
 
     it("identifyAdmin does NOT call updateLastLogin", async () => {
-        _mockDBUserUtil.findUserById.mockResolvedValue({
+        _mockDBUserUtil.lookUpUserById.mockResolvedValue({ success: true, data: [{
             id: "admin-1", userName: "admin", userType: UserTypeEnumMap.Admin, email: "admin@test.com",
-        });
+        }] });
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-admin-1" });
         let nextCalled = false;
@@ -444,9 +448,9 @@ describe("loginCount accuracy (Scenario 12)", () => {
     });
 
     it("multiple API calls via identifyRegisteredUser do not inflate loginCount", async () => {
-        _mockDBUserUtil.findUserById.mockResolvedValue({
+        _mockDBUserUtil.lookUpUserById.mockResolvedValue({ success: true, data: [{
             id: "user-1", userName: "testuser", userType: UserTypeEnumMap.Member, email: "test@test.com",
-        });
+        }] });
 
         // Simulate 5 API calls (e.g. create_room, change_room_texture, etc.)
         for (let i = 0; i < 5; i++)
@@ -456,6 +460,61 @@ describe("loginCount accuracy (Scenario 12)", () => {
         }
 
         expect(_mockDBUserUtil.updateLastLogin).not.toHaveBeenCalled();
+    });
+});
+
+// ─── Tests: a session is never replaced by a guest on a failed lookup ─────
+
+describe("session preservation during identification", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        _mockDBUserUtil.createUser.mockResolvedValue({ success: true, data: [{ id: "fresh-guest" }] });
+    });
+
+    it("a failed lookup does not replace the token's account with a new guest", async () => {
+        // The DB could not answer — which says nothing about whether this account exists.
+        _mockDBUserUtil.lookUpUserById.mockResolvedValue({ success: false, data: [] });
+
+        const { req, res } = createMockReqRes({ auth_token_dev: "valid-user-1" });
+        let nextCalled = false;
+        await UserIdentificationUtil.identifyAnyUser(req, res, () => { nextCalled = true; });
+
+        // No guest is minted, and above all no token is issued: overwriting the browser's only
+        // copy of this user's token is what would make the account unreachable forever.
+        expect(_mockDBUserUtil.createUser).not.toHaveBeenCalled();
+        expect(_mockUserTokenUtil.addTokenForUserId).not.toHaveBeenCalled();
+        expect(nextCalled).toBe(false);
+        expect(res.statusCode).toBe(401);
+    });
+
+    it("a token naming a genuinely deleted account still yields a guest on a public route", async () => {
+        // The lookup succeeded and the account is simply gone (e.g. a guest the stale-account
+        // cleanup removed). There is nobody to resume, so a guest is the right answer here.
+        _mockDBUserUtil.lookUpUserById.mockResolvedValue({ success: true, data: [] });
+
+        const { req, res } = createMockReqRes({ auth_token_dev: "valid-deleted-1" });
+        let nextCalled = false;
+        await UserIdentificationUtil.identifyAnyUser(req, res, () => { nextCalled = true; });
+
+        expect(_mockDBUserUtil.createUser).toHaveBeenCalledTimes(1);
+        expect(nextCalled).toBe(true);
+    });
+
+    it("a route reserved for members mints no guest for a visitor holding no token", async () => {
+        const { req, res } = createMockReqRes({});
+        let nextCalled = false;
+        await UserIdentificationUtil.identifyRegisteredUser(req, res, () => { nextCalled = true; });
+
+        // A member-only route is never somebody's first contact with the site, so the account it
+        // would create is one the pass-condition throws away in the same breath — after its token
+        // has already been handed to the browser.
+        expect(_mockDBUserUtil.createUser).not.toHaveBeenCalled();
+        expect(_mockUserTokenUtil.addTokenForUserId).not.toHaveBeenCalled();
+        expect(nextCalled).toBe(false);
+        expect(res.statusCode).toBe(401);
     });
 });
 

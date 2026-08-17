@@ -16,14 +16,62 @@
         "taking dozens of screenshots against it, one capture run at a time, and every one of",
         "those was a permission prompt for something that reaches nothing outside this checkout",
         "and no database but the Firebase emulator. Note that they widen nothing the deny list",
-        "closes: a rule in \"deny\" always outranks one in \"allow\"."
+        "closes: a rule in \"deny\" always outranks one in \"allow\".",
+        "",
+        "The release-train workflow adds three more groups, on the same principle — everything",
+        "that only observes is allowed, and everything that changes something outside this",
+        "checkout still asks:",
+        "",
+        "  - Reading the repository and CI (git status/log/diff/show/rev-parse, gh run/workflow",
+        "    view). `git add` is here too, since staging a file is undone by unstaging it.",
+        "    `git commit` and `git push` are deliberately absent: pushing to main deploys.",
+        "  - Building and testing locally. These are slow, not dangerous.",
+        "  - `dev/scripts/vps/maintenance.js audit` and the two --dry-run forms. The audit's",
+        "    command set is fixed and reads only; the dry runs report what they would change and",
+        "    change nothing. `reclaim --apply` and `upgrade --apply` are not here, and neither is",
+        "    a general `ssh` allowance — that VPS runs live as well as staging, so an unprompted",
+        "    root shell on it is an unprompted root shell on production. Anything the audit does",
+        "    not already answer is worth one prompt.",
+        "",
+        "The deny additions close the two levers that move production: the Promote to Live and",
+        "Rollback Live workflows. No automated run has any business dispatching those."
     ],
     "permissions": {
         "allow": [
             "Bash(node dev/scripts/devlog/:*)",
+            "Bash(node dev/scripts/playtest/:*)",
             "Bash(node dev/scripts/e2eDevServer.js:*)",
             "Bash(MODE=ssg node dist/server/bundle.js)",
-            "Bash(npm run stop)"
+            "Bash(npm run stop)",
+
+            "Bash(git status:*)",
+            "Bash(git log:*)",
+            "Bash(git diff:*)",
+            "Bash(git show:*)",
+            "Bash(git rev-parse:*)",
+            "Bash(git add:*)",
+
+            "Bash(gh run list:*)",
+            "Bash(gh run view:*)",
+            "Bash(gh run watch:*)",
+            "Bash(gh workflow list:*)",
+            "Bash(gh workflow view:*)",
+
+            "Bash(npm run build:*)",
+            "Bash(npm run beforeCommit:*)",
+            "Bash(npm run compileCSS:*)",
+            "Bash(npm run test:integration:*)",
+            "Bash(npm run test:e2e:local:*)",
+            "Bash(npx vitest:*)",
+            "Bash(npx playwright test:*)",
+            "Bash(npx tsc:*)",
+
+            "Bash(curl -s https://staging.thingspool.net/health)",
+            "Bash(curl -s https://app.thingspool.net/health)",
+
+            "Bash(node dev/scripts/vps/maintenance.js audit:*)",
+            "Bash(node dev/scripts/vps/maintenance.js reclaim --dry-run:*)",
+            "Bash(node dev/scripts/vps/maintenance.js upgrade --dry-run:*)"
         ],
         "deny": [
             "Bash(gcloud firestore:*)",
@@ -39,7 +87,12 @@
             "Bash(gsutil rm:*)",
             "Bash(gsutil cp:*)",
             "Bash(gsutil mv:*)",
-            "Bash(gsutil rsync:*)"
+            "Bash(gsutil rsync:*)",
+
+            "Bash(gh workflow run promote-live.yml:*)",
+            "Bash(gh workflow run rollback-live.yml:*)",
+            "Bash(gh workflow run \"Promote to Live\":*)",
+            "Bash(gh workflow run \"Rollback Live\":*)"
         ]
     }
 }

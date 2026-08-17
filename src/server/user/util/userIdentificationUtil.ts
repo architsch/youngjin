@@ -48,12 +48,18 @@ const UserIdentificationUtil =
     },
 }
 
+// `admitsAnonymousVisitors` says whether this route is one a visitor may arrive at without an
+// account yet. Both of the things that follow from that are its business: only such a route mints
+// a guest for a visitor who has none, and only such a route counts the arrival as a login. A route
+// reserved for admins or members is never a person's first contact with the site, so minting an
+// account there produces one that is thrown away in the same breath by the pass-condition below —
+// while still handing the browser the new account's token, over the top of whatever it was holding.
 async function identifyUserFromReq(req: Request, res: Response,
-    passCondition: (user: User) => Boolean, next: () => void, updateLoginStats: boolean): Promise<boolean>
+    passCondition: (user: User) => Boolean, next: () => void, admitsAnonymousVisitors: boolean): Promise<boolean>
 {
     try
     {
-        const user = await getUserFromReq(req, res, updateLoginStats);
+        const user = await getUserFromReq(req, res, admitsAnonymousVisitors);
         if (!user)
         {
             LogUtil.logRaw("Failed to identify the user", "high", "error");
@@ -88,7 +94,7 @@ async function identifyUserFromReq(req: Request, res: Response,
     }
 }
 
-async function getUserFromReq(req: Request, res: Response, updateLoginStats: boolean): Promise<User | undefined>
+async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisitors: boolean): Promise<User | undefined>
 {
     // Dev mode: drop auth cookies left over from a previous DevRunner runtime (whose emulated DB
     // has since been reset), so a freshly started runtime doesn't resurrect a now-nonexistent user
@@ -123,17 +129,36 @@ async function getUserFromReq(req: Request, res: Response, updateLoginStats: boo
         const userId = UserTokenUtil.getUserIdFromToken(token as string);
         if (userId)
         {
-            const dbUser = await DBUserUtil.findUserById(userId);
+            const lookUpResult = await DBUserUtil.lookUpUserById(userId);
+
+            // A lookup that *failed* says nothing about whether this account exists, so it must
+            // not be answered by minting a guest: doing so overwrites the browser's only copy of
+            // this user's token with the new guest's, and the account — with everything built
+            // under it — becomes unreachable forever. Failing the request instead leaves the
+            // cookie alone, so the next attempt finds the user exactly where it left them.
+            if (!lookUpResult.success)
+            {
+                LogUtil.log("User lookup failed for a valid token — refusing to replace the session",
+                    { userId }, "high", "error");
+                return undefined;
+            }
+
+            const dbUser = lookUpResult.data[0];
             if (dbUser)
             {
-                if (updateLoginStats)
+                if (admitsAnonymousVisitors)
                     DBUserUtil.updateLastLogin(userId, dbUser.lastLoginAt);
                 return DBUserUtil.fromDBType(dbUser);
             }
         }
     }
 
-    // No valid token or user not found in DB — create a new guest in Firestore
+    // The token is missing, unreadable, or names an account that is genuinely gone (a guest the
+    // stale-account cleanup has since removed). Whichever it is, there is nobody to resume, so a
+    // guest is minted — but only where an anonymous visitor is somebody this route serves.
+    if (!admitsAnonymousVisitors)
+        return undefined;
+
     const ip = req.ip || "unknown";
     const userAgent = req.headers["user-agent"] || "unknown";
     if (!GuestCreationLimitUtil.allowGuestCreation(ip, userAgent))

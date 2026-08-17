@@ -145,6 +145,11 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
             if (_latencyConfig.enabled) await _randomDelay();
             return _userStore[userID] ?? null;
         }),
+        lookUpUserById: vi.fn(async (userID: string) => {
+            if (_latencyConfig.enabled) await _randomDelay();
+            const user = _userStore[userID];
+            return { success: true, data: user ? [user] : [] };
+        }),
         setLastRoomID: vi.fn(async (userID: string, roomID: string) => {
             if (_latencyConfig.enabled) await _randomDelay();
             const u = _userStore[userID];

@@ -8,9 +8,10 @@ import ClientObjectManager from "../../object/clientObjectManager";
 import ClientObjectUtil from "../../object/util/clientObjectUtil";
 import { chatTextInputObservable, orbitCameraAnglesObservable,
     voxelQuadSelectionObservable } from "../../system/clientObservables";
-import ManualEditCountUtil from "../../system/util/manualEditCountUtil";
+import ClientEventHistoryUtil from "../../system/util/clientEventHistoryUtil";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
 import SinglePlayerCondition from "../types/singlePlayerCondition";
+import { ClientEventType } from "../../system/types/clientEventType";
 
 // Each condition is asked of the game as it stands at that moment, which it reaches for directly.
 // What it measures against comes from its own parameters, read here rather than written into the
@@ -73,11 +74,11 @@ const SinglePlayerConditionMap: {
         const result = GameModeUtil.isInEditMode();
         return condition.negate ? !result : result;
     },
-    "manual_edits_made": (condition) =>
+    "client_events_occurred_after_step_began": (condition) =>
     {
-        // What the user has changed with his own hands, rather than how the world has ended up:
-        // a step that teaches an edit lets the user pick what to edit, so the act is the lesson.
-        const result = ManualEditCountUtil.getCount(condition.editKind) >= condition.minCount();
+        const stepStartTime = ClientEventHistoryUtil.getLatestEventTime(ClientEventType.SinglePlayerStepChanged);
+        const numEvents = ClientEventHistoryUtil.getNumEventsAfterTime(condition.eventType, stepStartTime);
+        const result = numEvents >= condition.minNumEvents();
         return condition.negate ? !result : result;
     },
     "orbit_camera_angle_differs": (condition) =>

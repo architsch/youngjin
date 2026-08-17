@@ -34,7 +34,7 @@ const minSelectionOrbitDistance = 5;
 // of how far the camera stands from that selection. The margin above 1 covers what lies around the
 // edges of the view rather than at its center, which is further from the camera than the selection
 // it is arranged around.
-const selectReachPerOrbitDistance = 1.6;
+const selectReachPerOrbitDistance = 1.75;
 
 //------------------------------------------------------------------------
 // What the user currently has picked out in the room, and where the camera stands in answer to it.

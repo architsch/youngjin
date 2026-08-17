@@ -29,7 +29,7 @@ const minOrbitDistance = 3;
 // fit into when an orbit begins. A range rather than free rein, since the framing is what the mode
 // is for: past the far end the target is a speck among everything around it, and past the near end
 // there is more of it off screen than on it.
-const minZoomDistanceFactor = 0.5;
+const minZoomDistanceFactor = 0.4;
 const maxZoomDistanceFactor = 2;
 
 // The whole span of that range, as the ratio between its two ends. Zoom is multiplicative — a wheel

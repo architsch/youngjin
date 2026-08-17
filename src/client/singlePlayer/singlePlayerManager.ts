@@ -3,7 +3,10 @@ import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import App from "../app";
 import SocketsClient from "../networking/client/socketsClient";
 import { singlePlayerObservable } from "../system/clientObservables";
+import ClientEvent from "../system/types/clientEvent";
+import { ClientEventType } from "../system/types/clientEventType";
 import { tryStartClientProcess } from "../system/types/clientProcess";
+import ClientEventHistoryUtil from "../system/util/clientEventHistoryUtil";
 import SinglePlayerActionMap from "./maps/singlePlayerActionMap";
 import SinglePlayerConditionMap from "./maps/singlePlayerConditionMap";
 import SinglePlayerModeClientConfigMap from "./maps/singlePlayerModeClientConfigMap";
@@ -168,6 +171,7 @@ singlePlayerObservable.addListener("singlePlayer", (v: {mode: string, step: stri
             runActions(stepObj.actionsOnStart);
             stepStarted = true;
         }
+        ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.SinglePlayerStepChanged));
         prevStep = v.step;
     }
 

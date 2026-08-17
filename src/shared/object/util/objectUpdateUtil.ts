@@ -56,9 +56,11 @@ const ObjectUpdateUtil =
             markRoomAsDirtyIfPersistent(room, obj);
         }
 
-        // Add the object's corresponding PhysicsObject.
+        // Add the object's corresponding PhysicsObject, unless it already has one: the objects a room
+        // arrives with are registered in bulk when the physics room loads, and are then spawned through
+        // here as well, so a room load would otherwise re-add every one of them.
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
-        if (colliderState)
+        if (colliderState && !PhysicsManager.hasObject(room.id, obj.objectId))
             PhysicsManager.addObject(room.id, obj.objectId, obj.objectTypeIndex, colliderState);
         return true;
     },
