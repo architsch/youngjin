@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import PlayerController from "../../playerController";
-import PointerClickRaycaster from "./pointer/pointerClickRaycaster";
+import CameraUtil from "../../../../graphics/util/cameraUtil";
 import PointerDragInput from "./pointer/pointerDragInput";
 import PointerZoomInput from "./pointer/pointerZoomInput";
 
@@ -9,8 +9,10 @@ import PointerZoomInput from "./pointer/pointerZoomInput";
 // Watches the game canvas for pointer activity, independently of the camera
 // mode, and hands each event to the module that reads that kind of gesture:
 // PointerDragInput (one pointer moving while held down), PointerZoomInput
-// (two fingers pinching, or the mouse wheel), PointerClickRaycaster (a press
-// and release that stayed in one place).
+// (two fingers pinching, or the mouse wheel). A press and release that stayed
+// in one place is a click, which this class reads itself: there is no gesture
+// to accumulate, only the one cast into the scene that answers what was
+// clicked on (see CameraUtil).
 //
 // Listening in one place is what lets those gestures be told apart, since
 // they are not distinguishable event by event: a drag and a pinch are the
@@ -23,7 +25,6 @@ export default class PlayerPointerInput
 {
     private dragInput: PointerDragInput = new PointerDragInput();
     private zoomInput: PointerZoomInput = new PointerZoomInput();
-    private clickRaycaster: PointerClickRaycaster = new PointerClickRaycaster();
 
     // The pointer's movement since the previous frame while a drag is ongoing (in CSS pixels).
     get dragDelta(): THREE.Vector2
@@ -144,8 +145,18 @@ export default class PlayerPointerInput
         // Only a gesture that stayed in one place is a click on what lies under it. One that
         // travelled was the user steering, orbiting, or pinching the view, and clicking whatever
         // the pointer happened to come to rest on would be a surprise every time.
-        if (this.dragInput.gestureIsTap())
-            this.clickRaycaster.raycast(ev);
+        if (!this.dragInput.gestureIsTap())
+            return;
+
+        const intersection = CameraUtil.castFromPointer(ev);
+        if (intersection == undefined)
+            return; // The user pointed past everything drawn.
+
+        // Geometry belonging to no object is a gizmo drawn over the room, which has nothing of its
+        // own to be told about the click.
+        const gameObject = CameraUtil.getObjectFromIntersection(intersection);
+        if (gameObject != undefined)
+            gameObject.onClick(intersection.instanceId ?? -1, intersection.point);
     }
 
     // Whatever gestures were in progress are given up on, for when their ends will never be seen:

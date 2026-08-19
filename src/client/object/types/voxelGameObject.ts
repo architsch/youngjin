@@ -8,7 +8,7 @@ import VoxelQuadChange from "../../../shared/voxel/types/voxelQuadChange";
 import App from "../../app";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
+import ClientVoxelQueryUtil from "../../voxel/util/clientVoxelQueryUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { gameModeObservable, notificationMessageObservable, texturePackURLObservable, userRoleObservable } from "../../system/clientObservables";
@@ -23,7 +23,6 @@ export default class VoxelGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
     static materialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
-    static instancedMeshId: string; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of the string)
 
     private voxel: Voxel | undefined;
 
@@ -39,9 +38,10 @@ export default class VoxelGameObject extends GameObject
         if (VoxelGameObject.materialParams?.texturePath !== currentTexturePackURL)
         {
             VoxelGameObject.materialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
+            // Pinning the material's id keeps the mesh these quads are drawn from the same one
+            // across a change of texture pack, which is what lets the pack be swapped in place
+            // rather than rebuilding the room's mesh (see InstancedMeshBinding).
             VoxelGameObject.materialParams.customMaterialId = VOXEL_TEXTURE_PACK_MATERIAL_ID;
-            VoxelGameObject.instancedMeshId = MeshDataUtil.getInstancedMeshId(
-                VOXEL_QUAD_GEOMETRY_ID, VoxelGameObject.materialParams.getMaterialId());
         }
     }
 
@@ -60,7 +60,7 @@ export default class VoxelGameObject extends GameObject
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.reserveInstance(VoxelGameObject.instancedMeshId, quadIndex);
+            this.instancedMeshGraphics.reserveInstance(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex);
             this.updateVoxelQuadInstance(quadIndex);
         }
     }
@@ -74,7 +74,7 @@ export default class VoxelGameObject extends GameObject
         for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
         {
             // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.unreserveInstance(VoxelGameObject.instancedMeshId, quadIndex);
+            this.instancedMeshGraphics.unreserveInstance(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex);
         }
     }
 
@@ -166,7 +166,7 @@ export default class VoxelGameObject extends GameObject
             throw new Error(`Voxel hasn't been defined yet.`);
 
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxel, quadIndex);
-        this.instancedMeshGraphics.updateInstanceTransform(VoxelGameObject.instancedMeshId, quadIndex,
+        this.instancedMeshGraphics.updateInstanceTransform(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex, scaleX, scaleY);
     }
@@ -182,7 +182,7 @@ export default class VoxelGameObject extends GameObject
         const sampleScaleX = scaleX; // [0,1]
         const sampleScaleY = scaleY; // [0,1]
 
-        this.instancedMeshGraphics.updateInstanceTextureUV(VoxelGameObject.instancedMeshId, quadIndex,
+        this.instancedMeshGraphics.updateInstanceTextureUV(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex,
             quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }
 }

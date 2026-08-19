@@ -42,7 +42,8 @@ export const GRAVITY_SPEED = 3;
 export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
 
 export const NUM_COLLISION_LAYERS = 8; // Total number of collision layers which span the room's Y-axis
-export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * 0.5; // 4
+export const COLLISION_LAYER_HEIGHT = 0.5; // How tall one collision layer stands, in world units
+export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * COLLISION_LAYER_HEIGHT; // 4
 export const MID_ROOM_Y = 0.5 * MAX_ROOM_Y; // 2
 
 export const COLLISION_LAYER_00_TO_05 = 0; // y = [0.0, 0.5]
@@ -144,7 +145,7 @@ export const NUM_VOXEL_QUADS_PER_VOXEL =
 
 export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 51200
 
-export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.25, z: 0.5};
+export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.5 * COLLISION_LAYER_HEIGHT, z: 0.5};
 
 // Object Limits
 

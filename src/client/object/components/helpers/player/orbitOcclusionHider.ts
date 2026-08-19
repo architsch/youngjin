@@ -3,7 +3,7 @@ import App from "../../../../app";
 import GameObject from "../../../types/gameObject";
 import ClientObjectManager from "../../../clientObjectManager";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
-import InstancedMeshBinding from "../../../../graphics/types/mesh/instancedMeshBinding";
+import CameraUtil from "../../../../graphics/util/cameraUtil";
 import HiddenOccluder from "../../../../graphics/types/mesh/hiddenOccluder";
 import OccluderCandidate from "../../../../graphics/types/mesh/occluderCandidate";
 import InstancedMeshComposer from "../../instancedMeshComposer";
@@ -13,13 +13,12 @@ import Vec3 from "../../../../../shared/math/types/vec3";
 import Geometry3DUtil from "../../../../../shared/math/util/geometry3DUtil";
 import Voxel from "../../../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
-import MeshDataUtil from "../../../../../shared/graphics/mesh/util/meshDataUtil";
+import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
 import PhysicsColliderStateUtil from "../../../../../shared/physics/util/physicsColliderStateUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, MAX_ROOM_Y, NEAR_EPSILON,
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NEAR_EPSILON,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    VOXEL_BLOCK_HITBOX_HALFSIZE, VOXEL_QUAD_GEOMETRY_ID,
-    VOXEL_TEXTURE_PACK_MATERIAL_ID } from "../../../../../shared/system/sharedConstants";
+    VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../../../../shared/system/sharedConstants";
 
 //------------------------------------------------------------------------
 // Keeps the orbit camera's view of what it frames clear: whatever stands between the camera and the
@@ -106,17 +105,11 @@ const maxNumSamples = numSilhouetteColumns * numSilhouetteRows;
 // target is exposed at all. Enough to clear the face itself, and far short of a block.
 const exposureProbeDist = 0.02;
 
-const voxelInstancedMeshId = MeshDataUtil.getInstancedMeshId(
-    VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID);
-
-const blockHeight = 2 * VOXEL_BLOCK_HITBOX_HALFSIZE.y;
-
 const cameraPos = new THREE.Vector3();
 const targetCenterPos = new THREE.Vector3();
 const forwardTemp = new THREE.Vector3();
 const rightTemp = new THREE.Vector3();
 const upTemp = new THREE.Vector3();
-const rayDirTemp = new THREE.Vector3();
 const sampleRayTemp = new THREE.Vector3();
 const sampleDestTemp = new THREE.Vector3();
 
@@ -149,7 +142,7 @@ let targetSpan = 0;
 // touching that one — diagonals, and the layers above and below, included (see setProtectedRegion).
 const protectedNeighborhood: AABB3 = {
     center: {x: 0, y: 0, z: 0},
-    halfSize: {x: 1.5, y: 1.5 * blockHeight, z: 1.5},
+    halfSize: {x: 1.5, y: 1.5 * COLLISION_LAYER_HEIGHT, z: 1.5},
 };
 
 // Whatever the orbit is looking at, out of which nothing is hidden however much of the view it
@@ -161,12 +154,10 @@ const blockBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: VOXEL_BLOCK_H
 const tileBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0.5, y: 0, z: 0.5}};
 
 const quadIndicesTemp: number[] = [];
-const meshesTemp: THREE.Mesh[] = [];
 const intersectionsTemp: THREE.Intersection[] = [];
 
 export default class OrbitOcclusionHider
 {
-    private raycaster = new THREE.Raycaster();
     private lastSweepCameraPos = new THREE.Vector3();
     private timeSinceLastSweep = 0;
 
@@ -202,7 +193,7 @@ export default class OrbitOcclusionHider
     revealAll(): void
     {
         for (const quadIndex in this.sweepTagByHiddenQuadIndex)
-            InstancedMeshGraphics.setInstanceHidden(voxelInstancedMeshId, Number(quadIndex), false);
+            InstancedMeshGraphics.setInstanceHidden(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), Number(quadIndex), false);
         this.sweepTagByHiddenQuadIndex = {};
         this.revealHiddenMeshOccluders();
     }
@@ -246,14 +237,14 @@ export default class OrbitOcclusionHider
         {
             const quadIndex = quadIndicesTemp[i];
             if (this.sweepTagByHiddenQuadIndex[quadIndex] == undefined)
-                InstancedMeshGraphics.setInstanceHidden(voxelInstancedMeshId, quadIndex, true);
+                InstancedMeshGraphics.setInstanceHidden(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex, true);
             this.sweepTagByHiddenQuadIndex[quadIndex] = this.sweepCount;
         }
         for (const quadIndex in this.sweepTagByHiddenQuadIndex)
         {
             if (this.sweepTagByHiddenQuadIndex[quadIndex] !== this.sweepCount)
             {
-                InstancedMeshGraphics.setInstanceHidden(voxelInstancedMeshId, Number(quadIndex), false);
+                InstancedMeshGraphics.setInstanceHidden(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), Number(quadIndex), false);
                 delete this.sweepTagByHiddenQuadIndex[quadIndex];
             }
         }
@@ -271,7 +262,6 @@ export default class OrbitOcclusionHider
         // buffer is left alone above.
         this.revealHiddenMeshOccluders();
 
-        collectMeshesToRaycast();
         this.candidateByKey = {};
         for (let i = 0; i < numSamples; ++i)
             this.collectCandidatesInFrontOf(silhouetteSamples[i], i);
@@ -289,22 +279,15 @@ export default class OrbitOcclusionHider
 
     private collectCandidatesInFrontOf(sample: THREE.Vector3, sampleIndex: number): void
     {
-        rayDirTemp.subVectors(sample, cameraPos);
-        const distToSample = rayDirTemp.length();
-        if (distToSample < NEAR_EPSILON) // The camera sits on the sample: nothing fits in between.
-            return;
-        rayDirTemp.divideScalar(distToSample);
-
-        this.raycaster.set(cameraPos, rayDirTemp);
-        this.raycaster.far = distToSample; // Only what stands in front of the target can block it.
-        intersectionsTemp.length = 0;
-        this.raycaster.intersectObjects(meshesTemp, true, intersectionsTemp);
+        // Only what stands between the camera and this sample can block it, and the room's own voxel
+        // quads are left out — the grid sweep above has already settled those (see CameraUtil).
+        CameraUtil.castBetweenPoints(cameraPos, sample, intersectionsTemp);
 
         for (const intersection of intersectionsTemp)
         {
             const mesh = intersection.object as THREE.Mesh;
             const instanceId = (intersection.instanceId != undefined) ? intersection.instanceId : -1;
-            const gameObject = findGameObject(mesh, instanceId);
+            const gameObject = CameraUtil.getObjectFromIntersection(intersection);
 
             // Nothing is hidden that has not declared itself part of the room (see above), and
             // nothing is hidden that the camera is looking at, however much of the view it takes.
@@ -406,9 +389,9 @@ function setTargetBox(target: AABB3): void
 // buildSilhouetteSamples), which is a matter of the target's own surface rather than of distance.
 function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
 {
-    const col = Math.floor(target.center.x);
-    const row = Math.floor(target.center.z);
-    const collisionLayer = Math.floor(target.center.y / blockHeight);
+    const col = VoxelQueryUtil.getVoxelColFromWorldX(target.center.x);
+    const row = VoxelQueryUtil.getVoxelRowFromWorldZ(target.center.z);
+    const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(target.center.y);
     if (!blockIsSolid(voxels, row, col, collisionLayer))
     {
         protectedRegion = targetBox;
@@ -416,7 +399,7 @@ function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
     }
 
     protectedNeighborhood.center.x = col + 0.5;
-    protectedNeighborhood.center.y = (collisionLayer + 0.5) * blockHeight;
+    protectedNeighborhood.center.y = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
     protectedNeighborhood.center.z = row + 0.5;
     protectedRegion = protectedNeighborhood;
 }
@@ -428,21 +411,13 @@ function blockIsSolid(voxels: Voxel[] | undefined,
     row: number, col: number, collisionLayer: number): boolean
 {
     if (voxels == undefined ||
-        row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS ||
         collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
         return false;
 
+    // Out-of-grid rows and columns are what getVoxel answers "no voxel" to, so they need no check
+    // of their own here.
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
     return voxel != undefined && VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
-}
-
-// The game object a ray hit belongs to, if it belongs to one at all (a gizmo does not).
-function findGameObject(mesh: THREE.Mesh, instanceId: number): GameObject | undefined
-{
-    return (instanceId >= 0)
-        ? InstancedMeshBinding.findGameObject(mesh, instanceId)
-        // For regular (non-instanced) meshes, (mesh.name == meshId == objectId).
-        : ClientObjectManager.getObjectById(mesh.name);
 }
 
 // Whether the game object a piece of geometry belongs to is one the orbit may take out of the room,
@@ -508,7 +483,7 @@ function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: numbe
             continue;
 
         blockBoxTemp.center.x = col + 0.5;
-        blockBoxTemp.center.y = VOXEL_BLOCK_HITBOX_HALFSIZE.y * (2 * collisionLayer + 1);
+        blockBoxTemp.center.y = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
         blockBoxTemp.center.z = row + 0.5;
         // Part of what the orbit is looking at, rather than something in its way.
         if (Geometry3DUtil.AABBsOverlap(protectedRegion, blockBoxTemp))
@@ -527,11 +502,11 @@ function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: numbe
 
     tileBoxTemp.center.y = 0;
     if (boxIsInTheWay(tileBoxTemp))
-        quadIndicesTemp.push(VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", COLLISION_LAYER_NULL));
+        quadIndicesTemp.push(VoxelQueryUtil.getFloorVoxelQuadIndex(row, col));
 
     tileBoxTemp.center.y = MAX_ROOM_Y;
     if (boxIsInTheWay(tileBoxTemp))
-        quadIndicesTemp.push(VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "-", COLLISION_LAYER_NULL));
+        quadIndicesTemp.push(VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
 }
 
 // Whether the box covers enough of the target to be worth hiding.
@@ -673,14 +648,15 @@ function placeSampleOnTarget(sample: THREE.Vector3, voxels: Voxel[] | undefined)
 // wall to be cleared, which is to say with the mode doing nothing at all for him.
 function faceIsExposed(sample: THREE.Vector3, faceNormal: Vec3, voxels: Voxel[] | undefined): boolean
 {
-    const col = Math.floor(sample.x + faceNormal.x * exposureProbeDist);
-    const row = Math.floor(sample.z + faceNormal.z * exposureProbeDist);
-    const collisionLayer = Math.floor((sample.y + faceNormal.y * exposureProbeDist) / blockHeight);
+    const col = VoxelQueryUtil.getVoxelColFromWorldX(sample.x + faceNormal.x * exposureProbeDist);
+    const row = VoxelQueryUtil.getVoxelRowFromWorldZ(sample.z + faceNormal.z * exposureProbeDist);
+    const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(
+        sample.y + faceNormal.y * exposureProbeDist);
     if (!blockIsSolid(voxels, row, col, collisionLayer))
         return true;
 
     blockBoxTemp.center.x = col + 0.5;
-    blockBoxTemp.center.y = VOXEL_BLOCK_HITBOX_HALFSIZE.y * (2 * collisionLayer + 1);
+    blockBoxTemp.center.y = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
     blockBoxTemp.center.z = row + 0.5;
     return !Geometry3DUtil.AABBsOverlap(protectedRegion, blockBoxTemp);
 }
@@ -704,18 +680,6 @@ function silhouetteRadius(axis: THREE.Vector3): number
 function silhouetteOffset(sampleIndex: number, numSamples: number, radius: number): number
 {
     return radius * (2 * (sampleIndex + 0.5) / numSamples - 1);
-}
-
-// Every mesh except the room's voxel quads, which are handled by the grid sweep instead.
-function collectMeshesToRaycast(): void
-{
-    meshesTemp.length = 0;
-    const meshes = MeshFactory.getMeshes();
-    for (let i = 0; i < meshes.length; ++i)
-    {
-        if (meshes[i].name !== voxelInstancedMeshId)
-            meshesTemp.push(meshes[i]);
-    }
 }
 
 function setOccluderHidden(occluder: HiddenOccluder, hidden: boolean): void

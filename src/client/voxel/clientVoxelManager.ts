@@ -8,7 +8,7 @@ import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import { NUM_VOXEL_QUADS_PER_ROOM, VOXEL_QUAD_GEOMETRY_ID } from "../../shared/system/sharedConstants";
+import { NUM_VOXEL_QUADS_PER_ROOM } from "../../shared/system/sharedConstants";
 import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
@@ -18,7 +18,7 @@ import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
 import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
 import ClientEventHistoryUtil from "../system/util/clientEventHistoryUtil";
-import MeshDataUtil from "../../shared/graphics/mesh/util/meshDataUtil";
+import ClientVoxelQueryUtil from "./util/clientVoxelQueryUtil";
 import ClientEvent from "../system/types/clientEvent";
 import { ClientEventType } from "../system/types/clientEventType";
 
@@ -45,8 +45,7 @@ const ClientVoxelManager =
         // in place instead.
         if (VoxelGameObject.materialParams != undefined)
             await InstancedMeshGraphics.swapTexturePackTexture(
-                MeshDataUtil.getInstancedMeshId(VOXEL_QUAD_GEOMETRY_ID,
-                    VoxelGameObject.materialParams.getMaterialId()), texturePackURL);
+                ClientVoxelQueryUtil.getVoxelInstancedMeshId(), texturePackURL);
         texturePackURLObservable.set(texturePackURL);
     },
     unload: () =>

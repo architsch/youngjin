@@ -18,8 +18,16 @@ const sphereTemp = new THREE.Sphere();
 const HIDDEN_INSTANCE_Y = -9999;
 const hiddenInstanceMatrix = new THREE.Matrix4().makeTranslation(0, HIDDEN_INSTANCE_Y, 0);
 
-// instanceKey = `${instancedMeshId}/${instanceId}`
-const objMap: {[instanceKey: string]: GameObject } = {};
+// The GameObject each instance belongs to, held per mesh in an array indexed by instanceId. The
+// ids are dense and bounded by the mesh's capacity, so an array addresses them directly — where a
+// map under a composite `${instancedMeshId}/${instanceId}` key has to build that key on every
+// lookup, and keeps one such string alive for as long as the instance is reserved. A room's voxel
+// mesh holds one instance per quad of the whole room, which makes both costs worth avoiding.
+const ownersByInstancedMeshId: {[instancedMeshId: string]: (GameObject | undefined)[] } = {};
+
+// How many instances of one attribute may be marked for upload individually before the whole
+// buffer is sent instead (see markInstanceForUpload).
+const maxTrackedUpdateRanges = 256;
 
 export default class InstancedMeshBinding
 {
@@ -45,14 +53,15 @@ export default class InstancedMeshBinding
 
     static findGameObject(instancedMeshObj: THREE.Object3D, instanceId: number): GameObject | undefined
     {
-        const instanceKey = `${instancedMeshObj.name}/${instanceId}`;
-        const obj = objMap[instanceKey];
-        if (obj == undefined)
+        // A mesh is registered under its own name (see MeshFactory), so the object a caller found
+        // the instance on is enough to reach the owners of that mesh.
+        const owner = ownersByInstancedMeshId[instancedMeshObj.name]?.[instanceId];
+        if (owner == undefined)
         {
-            console.error(`instanceKey doesn't exist in objMap (instanceKey = ${instanceKey})`);
+            console.error(`No GameObject owns this instance (instancedMeshId = ${instancedMeshObj.name}, instanceId = ${instanceId})`);
             return undefined;
         }
-        return obj;
+        return owner;
     }
 
     async loadInstancedMesh(): Promise<void>
@@ -103,10 +112,10 @@ export default class InstancedMeshBinding
 
     reserveInstance(gameObject: GameObject, instanceId: number)
     {
-        const instanceKey = this.getInstanceKey(instanceId);
-        if (objMap[instanceKey])
-            console.error(`instanceKey is already registered (instanceKey = ${instanceKey})`);
-        objMap[instanceKey] = gameObject;
+        const owners = this.getOwners();
+        if (owners[instanceId] != undefined)
+            console.error(`Instance is already reserved (instancedMeshId = ${this.getInstancedMeshId()}, instanceId = ${instanceId})`);
+        owners[instanceId] = gameObject;
     }
     unreserveInstance(gameObject: GameObject, instanceId: number)
     {
@@ -114,12 +123,26 @@ export default class InstancedMeshBinding
         // transform, and a hidden instance withholds its owner's transform (see setInstanceHidden).
         this.setInstanceHidden(instanceId, false);
 
-        const instanceKey = this.getInstanceKey(instanceId);
-        if (!objMap[instanceKey])
-            console.error(`instanceKey is not registered (instanceKey = ${instanceKey})`);
-        delete objMap[instanceKey];
+        const owners = this.getOwners();
+        if (owners[instanceId] == undefined)
+            console.error(`Instance is not reserved (instancedMeshId = ${this.getInstancedMeshId()}, instanceId = ${instanceId})`);
+        owners[instanceId] = undefined;
 
         this.updateInstanceTransform(gameObject, instanceId, 0, HIDDEN_INSTANCE_Y, 0, 0, -1, 0);
+    }
+
+    // The owner of every instance of this binding's mesh, created on first use at the mesh's full
+    // capacity so that it stays one dense array rather than growing a hole at a time.
+    private getOwners(): (GameObject | undefined)[]
+    {
+        const instancedMeshId = this.getInstancedMeshId();
+        let owners = ownersByInstancedMeshId[instancedMeshId];
+        if (owners == undefined)
+        {
+            owners = new Array(this.maxNumInstances).fill(undefined);
+            ownersByInstancedMeshId[instancedMeshId] = owners;
+        }
+        return owners;
     }
 
     // Temporarily takes a single instance out of sight (or brings it back), leaving the instance's
@@ -163,6 +186,15 @@ export default class InstancedMeshBinding
             // owner is free to have moved it while it was hidden.
             this.expandBoundingSphereToInstance(ownerMatrix);
         }
+    }
+
+    // Whether this instance is one of those currently held out of sight (see setInstanceHidden).
+    // Lets a caller reason about what the room actually shows rather than about what it holds —
+    // e.g. a line-of-sight test, for which a block the orbit camera has taken out of the way is
+    // no obstacle, that being the whole point of taking it out.
+    instanceIsHidden(instanceId: number): boolean
+    {
+        return this.ownerMatrixByHiddenInstanceId?.has(instanceId) === true;
     }
 
     // Grows the cached bounding sphere to cover one instance's transform — the same union
@@ -256,7 +288,7 @@ export default class InstancedMeshBinding
     private writeInstanceMatrix(instanceId: number, matrix: THREE.Matrix4)
     {
         this.instancedMesh!.setMatrixAt(instanceId, matrix);
-        this.instancedMesh!.instanceMatrix.needsUpdate = true;
+        markInstanceForUpload(this.instancedMesh!.instanceMatrix, instanceId);
     }
 
     // Sample offsets and scales are normalized numbers in range [0,1], corresponding to the full range of pixels covered by the texture's sampling window.
@@ -278,7 +310,7 @@ export default class InstancedMeshBinding
         const textureGridCellWidthScale = cw / w;
         const textureGridCellHeightScale = ch / h;
 
-        const uvStartBufferAttrib = this.instancedMesh.geometry.getAttribute("uvStart");
+        const uvStartBufferAttrib = this.instancedMesh.geometry.getAttribute("uvStart") as THREE.InstancedBufferAttribute;
         // (0.5 / cw) = pixel-bleeding prevention shift
         const uStart = textureGridCellWidthScale
             * ((0.5 / cw) + textureIndex % (1 / textureGridCellWidthScale) + sampleOffsetX);
@@ -286,11 +318,11 @@ export default class InstancedMeshBinding
         const vStart = textureGridCellHeightScale
             * ((0.5 / ch) + Math.floor(textureIndex * textureGridCellWidthScale) + sampleOffsetY);
         uvStartBufferAttrib.setXY(instanceId, uStart, vStart);
-        uvStartBufferAttrib.needsUpdate = true;
+        markInstanceForUpload(uvStartBufferAttrib, instanceId);
 
-        const uvSampleSizeBufferAttrib = this.instancedMesh.geometry.getAttribute("uvSampleSize");
+        const uvSampleSizeBufferAttrib = this.instancedMesh.geometry.getAttribute("uvSampleSize") as THREE.InstancedBufferAttribute;
         uvSampleSizeBufferAttrib.setXY(instanceId, sampleScaleX, sampleScaleY);
-        uvSampleSizeBufferAttrib.needsUpdate = true;
+        markInstanceForUpload(uvSampleSizeBufferAttrib, instanceId);
     }
 
     updateInstanceColor(gameObject: GameObject, instanceId: number,
@@ -305,7 +337,7 @@ export default class InstancedMeshBinding
         // renderer's working color space, the same treatment three.js gives material colors.
         colorTemp.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
         this.instancedMesh.setColorAt(instanceId, colorTemp);
-        this.instancedMesh.instanceColor!.needsUpdate = true;
+        markInstanceForUpload(this.instancedMesh.instanceColor!, instanceId);
     }
 
     updateInstanceEyeColors(gameObject: GameObject, instanceId: number,
@@ -322,12 +354,12 @@ export default class InstancedMeshBinding
         const pupilColorAttrib = this.getOrCreateInstancedAttribute("pupilColor", 3);
         colorTemp.setRGB(r_pupil / 255, g_pupil / 255, b_pupil / 255, THREE.SRGBColorSpace);
         pupilColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
-        pupilColorAttrib.needsUpdate = true;
+        markInstanceForUpload(pupilColorAttrib, instanceId);
 
         const irisColorAttrib = this.getOrCreateInstancedAttribute("irisColor", 3);
         colorTemp.setRGB(r_iris / 255, g_iris / 255, b_iris / 255, THREE.SRGBColorSpace);
         irisColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
-        irisColorAttrib.needsUpdate = true;
+        markInstanceForUpload(irisColorAttrib, instanceId);
     }
 
     // Radii are fractions of the square's side length (0.5 = the circle touches the square's
@@ -343,7 +375,7 @@ export default class InstancedMeshBinding
         }
         const eyeRadiiSqrAttrib = this.getOrCreateInstancedAttribute("eyeRadiiSqr", 2);
         eyeRadiiSqrAttrib.setXY(instanceId, pupilRadius * pupilRadius, irisRadius * irisRadius);
-        eyeRadiiSqrAttrib.needsUpdate = true;
+        markInstanceForUpload(eyeRadiiSqrAttrib, instanceId);
     }
 
     // Per-instance attributes consumed by specialized instanced materials (e.g. "InstancedEye")
@@ -405,11 +437,40 @@ export default class InstancedMeshBinding
             throw new Error("MaterialParams hasn't been set yet.");
         return MeshDataUtil.getInstancedMeshId(this.geometryId, this.materialParams.getMaterialId());
     }
+}
 
-    getInstanceKey(instanceId: number): string
+// Marks the slice of a per-instance attribute that one instance owns as needing to reach the GPU,
+// so that a changed instance costs its own handful of numbers rather than the whole buffer — which
+// on a room's voxel mesh is megabytes, re-sent for as little as one quad changing texture or the
+// orbit camera taking one block out of the way.
+//
+// Every writer of a given attribute must go through here: three.js sends only the ranges an
+// attribute carries, so a write left unmarked among marked ones would never arrive.
+//
+// Ranges are worth carrying only while the changes are sparse. Once there are more of them than a
+// buffer is worth, they are replaced by a single range spanning everything — which subsequent
+// marks fall inside of, so the list stops growing and the upload becomes the whole-buffer one it
+// would have been anyway. That keeps a bulk rewrite (a room being built, or a voxel rebound to a
+// new room's grid) exactly as cheap as it was, and it is why the list is replaced rather than
+// emptied: an empty list would let the next mark start tracking again, and every write made before
+// it would then be left out of the upload.
+function markInstanceForUpload(attrib: THREE.BufferAttribute, instanceId: number)
+{
+    const updateRanges = attrib.updateRanges;
+    const wholeBuffer = attrib.array.length;
+    const alreadySendingWholeBuffer = (updateRanges.length === 1 && updateRanges[0].count === wholeBuffer);
+
+    if (!alreadySendingWholeBuffer)
     {
-        if (!this.instancedMesh)
-            throw new Error("InstancedMesh hasn't been loaded yet.");
-        return `${this.getInstancedMeshId()}/${instanceId}`;
+        if (updateRanges.length >= maxTrackedUpdateRanges)
+        {
+            attrib.clearUpdateRanges();
+            attrib.addUpdateRange(0, wholeBuffer);
+        }
+        else
+        {
+            attrib.addUpdateRange(instanceId * attrib.itemSize, attrib.itemSize);
+        }
     }
+    attrib.needsUpdate = true;
 }

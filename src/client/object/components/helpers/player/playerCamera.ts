@@ -101,7 +101,8 @@ export default class PlayerCamera
                 this.occlusionHider.revealAll();
                 this.orbitTarget = undefined;
             }
-            this.firstPersonPose.updatePose(controller, this.camera!, this.positionInterpTarget, this.quaternionInterpTarget);
+            this.firstPersonPose.updatePose(deltaTime, controller, this.camera!,
+                this.positionInterpTarget, this.quaternionInterpTarget);
         }
 
         // Ease toward the active mode's pose, so switching modes glides rather than snaps.

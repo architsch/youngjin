@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
 import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions";
 
@@ -13,6 +13,36 @@ const VoxelQueryUtil =
         if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
             return undefined;
         return voxels[row * NUM_VOXEL_COLS + col];
+    },
+
+    //-------------------------------------------------------------------------------------
+    // World coordinates
+    //
+    // Where the grid sits in the world: one cell per world unit along X and Z, one collision layer
+    // per layer-height along Y, with the grid's origin at the world's. Coordinates outside the room
+    // map to cells outside it (a negative row, a layer above the ceiling) rather than being clamped,
+    // so that a caller can tell it has left the room instead of being handed an edge cell that looks
+    // like a real one.
+    //-------------------------------------------------------------------------------------
+
+    getVoxelColFromWorldX(worldX: number): number
+    {
+        return Math.floor(worldX);
+    },
+
+    getVoxelRowFromWorldZ(worldZ: number): number
+    {
+        return Math.floor(worldZ);
+    },
+
+    getVoxelCollisionLayerFromWorldY(worldY: number): number
+    {
+        return Math.floor(worldY / COLLISION_LAYER_HEIGHT);
+    },
+
+    getWorldYAtVoxelCollisionLayerCenter(collisionLayer: number): number
+    {
+        return (collisionLayer + 0.5) * COLLISION_LAYER_HEIGHT;
     },
 
     //-------------------------------------------------------------------------------------
@@ -56,6 +86,19 @@ const VoxelQueryUtil =
             return -1; // invalid quad
         else
             return firstIndex + offset;
+    },
+
+    // The quad that draws the room's floor over one cell, and the one that draws its ceiling. Both
+    // sit outside the collision layers (see COLLISION_LAYER_NULL), and each faces into the room:
+    // the floor's upwards, the ceiling's downwards.
+    getFloorVoxelQuadIndex(row: number, col: number): number
+    {
+        return VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", COLLISION_LAYER_NULL);
+    },
+
+    getCeilingVoxelQuadIndex(row: number, col: number): number
+    {
+        return VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "-", COLLISION_LAYER_NULL);
     },
 
     getFirstVoxelQuadIndexInLayer(row: number, col: number, collisionLayer: number): number

@@ -503,7 +503,7 @@ function isBareFloor(voxels: Voxel[], row: number, col: number): boolean
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
     if (!voxel || VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, COLLISION_LAYER_MIN))
         return false;
-    const floorQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", COLLISION_LAYER_NULL);
+    const floorQuadIndex = VoxelQueryUtil.getFloorVoxelQuadIndex(row, col);
     return floorQuadIndex >= 0 && (voxel.quadsMem.quads[floorQuadIndex] & 0b10000000) != 0;
 }
 

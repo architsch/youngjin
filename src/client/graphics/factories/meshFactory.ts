@@ -19,6 +19,20 @@ const MeshFactory =
     {
         return Object.values(loadedMeshes);
     },
+    // Fills "out" with every loaded mesh but one, for the callers that raycast the scene without
+    // the room's voxel mesh: that mesh holds one instance per quad of a whole room, and three.js
+    // tests a ray against every instance a mesh holds. The array is the caller's own, so a test
+    // made every frame allocates nothing.
+    getMeshesExcept: (excludedMeshId: string, out: THREE.Mesh[]): THREE.Mesh[] =>
+    {
+        out.length = 0;
+        for (const meshId in loadedMeshes)
+        {
+            if (meshId !== excludedMeshId)
+                out.push(loadedMeshes[meshId]);
+        }
+        return out;
+    },
     // Undefined until the mesh has been loaded, which lets a caller holding an id alone (e.g. one of
     // an object's parts) reach the mesh that draws it.
     getMesh: (meshId: string): THREE.Mesh | undefined =>
@@ -188,6 +202,12 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
     const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
     newMesh.name = meshId;
     newMesh.frustumCulled = false;
+    // Instances are re-baked continuously (a voxel edit, a player moving, the orbit camera taking a
+    // block out of the way), and each such change now uploads only its own slice of the buffer
+    // rather than the whole of it — see InstancedMeshBinding's markInstanceForUpload.
+    newMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    uvStartBufferAttrib.setUsage(THREE.DynamicDrawUsage);
+    uvSampleSizeBufferAttrib.setUsage(THREE.DynamicDrawUsage);
     GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
     loadedMeshes[meshId] = newMesh;
 

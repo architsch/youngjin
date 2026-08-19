@@ -33,6 +33,14 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         bindingMap[instancedMeshId]?.setInstanceHidden(instanceId, hidden);
     }
 
+    // Whether an instance is one of those currently held out of sight by the method above. False
+    // if the binding hasn't been created yet, nothing drawn from a mesh that does not exist being
+    // hidden in the sense that matters here (see InstancedMeshBinding.instanceIsHidden).
+    static instanceIsHidden(instancedMeshId: string, instanceId: number): boolean
+    {
+        return bindingMap[instancedMeshId]?.instanceIsHidden(instanceId) === true;
+    }
+
     async loadInstancedMesh(geometryId: string, materialParams: MaterialParams,
         maxNumInstances: number, createInstanceIdPool: boolean)
     {

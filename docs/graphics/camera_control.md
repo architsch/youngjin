@@ -1,6 +1,6 @@
 # Camera Control
 
-Reference: @src/client/object/components/playerController.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts , @src/client/object/components/helpers/player/pointer/pointerDragInput.ts , @src/client/object/components/helpers/player/pointer/pointerZoomInput.ts , @src/client/object/components/helpers/player/pointer/pointerClickRaycaster.ts
+Reference: @src/client/object/components/playerController.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts , @src/client/object/components/helpers/player/pointer/pointerDragInput.ts , @src/client/object/components/helpers/player/pointer/pointerZoomInput.ts , @src/client/graphics/util/cameraUtil.ts
 
 ## Overview
 
@@ -16,11 +16,12 @@ Each frame, the controller updates the input helpers before the camera, so the c
 
 ### Pointer Gestures
 
-The gestures a pointer can make on the canvas are not distinguishable event by event — a drag and a pinch are the same events until a second finger arrives, and a click is only a click by virtue of the drag that did not happen — so `PlayerPointerInput` listens in one place and holds the arbitration between them, while a module per gesture holds the reading of it:
+The gestures a pointer can make on the canvas are not distinguishable event by event — a drag and a pinch are the same events until a second finger arrives, and a click is only a click by virtue of the drag that did not happen — so `PlayerPointerInput` listens in one place and holds the arbitration between them, while a module of its own holds the reading of each gesture that has something to accumulate over time:
 
 - `PointerDragInput` — one pointer moving while held down. It exposes the drag in two readings, since the two things it drives want different ones: a joystick-style offset from the press point (used for steering), and a grab-style per-frame delta that follows the pointer 1:1 (used by the orbit). It also answers whether the gesture that has just ended stayed still enough to count as a tap rather than a drag, measured against the kind of pointer that made it — a finger is a far coarser pointer than a mouse, and holding it to a mouse's precision would make an ordinary tap read as a drag.
 - `PointerZoomInput` — two fingers pinching, or the mouse wheel. Both are reported as one reading, since they mean the same thing. That reading is a *scale of what the user sees* rather than a change of camera distance: a pinch grabs the view and a view that is grabbed is expected to follow the fingers, and being a multiple also keeps a wheel notch meaning the same thing at every distance, where a fixed length added or subtracted would be a leap up close and imperceptible from far away.
-- `PointerClickRaycaster` — a press and release that stayed in one place, raycast into the scene to notify the game object drawn under it.
+
+A press and release that stayed in one place is a click, which needs no module of its own: there is no gesture to accumulate, only a single cast into the scene (see `CameraUtil`) that answers which game object was drawn under the pointer, so that object can be told it was clicked.
 
 A second finger settles what a gesture is: the drag is given up on, since reading the same fingers as both a drag and a pinch would spin the view while it is being zoomed. Likewise, any finger leaving ends the drag rather than letting it carry on with whichever finger is left, which is nowhere near where the drag it would inherit began.
 
@@ -66,7 +67,9 @@ Every volume the camera orbits is taken from the physics side, which is where th
 The camera rests at the player's eye level, and its pitch is the only degree of freedom, chosen automatically:
 
 - **View target.** When the player has an active view target (published through `playerViewTargetPosObservable`, e.g. the position of a selected voxel-quad or object), the camera pitches up or down toward it, within a clamped range, so the target stays in focus. If the target remains outside the camera's view frustum for a short duration, the selection is automatically cleared so that the camera can recover its neutral pitch.
-- **Altitude.** With no view target, the pitch follows the player's altitude: the higher the player stands above the floor, the more the camera tilts downward, giving an overview of the room; at ground level it looks straight ahead.
+- **Surroundings.** With no view target, the pitch follows the room the player is standing in: the further below his eye the open space he can see into lies, the further down the camera tilts, so that a player who has climbed above the floor is shown what is down there rather than the empty air ahead of him. `ClientVoxelQueryUtil` answers where that space lies (see [voxel_grid.md](../geometry/voxel_grid.md)); the camera only decides how far to pitch for it, and eases its way there, since what lies ahead can change entirely in a single step. Only the downward half of the answer is acted on: open space *above* the eye is what standing in any room with headroom to spare amounts to, not a reason to tilt.
+
+  Reading the room rather than the player's own altitude is what keeps this sensible in a room of more than one storey. A player who has walked upstairs stands far above the room's floor while the storey he is on lies flat around him, and has no more reason to look down than he had downstairs; how high he stands cannot tell those two cases apart, but what he can see into can.
 
 ### Orbit Pose (`OrbitCameraPose`)
 
