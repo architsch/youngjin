@@ -2,13 +2,25 @@ import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../object/types/addObjectSignal";
 import ObjectGroup from "../../object/types/objectGroup";
 import ObjectTransform from "../../object/types/objectTransform";
-import RoomGenerationVoxelGrid from "../../room/types/roomGeneration/roomGenerationVoxelGrid";
+import RoomGenerationPalette from "../../room/types/roomGeneration/roomGenerationPalette";
+import RoomGenerationVolume from "../../room/types/roomGeneration/roomGenerationVolume";
+import RoomGenerationSpaceUtil from "../../room/util/roomGenerationSpaceUtil";
+import RoomGenerationVolumeUtil from "../../room/util/roomGenerationVolumeUtil";
 import { PLAYER_HEIGHT, TUTORIAL_SINGLE_PLAYER_MODE } from "../../system/sharedConstants";
 import VoxelGrid from "../../voxel/types/voxelGrid";
 import SinglePlayerModeConfig from "../types/singlePlayerModeConfig";
 import SinglePlayerModeConfigMetadata from "../types/singlePlayerModeConfigMetadata";
 
 const cachedMetadataByMode: {[singlePlayerMode: string]: SinglePlayerModeConfigMetadata} = {};
+
+// The tutorial room's spaces are each finished in a palette of their own, so that a player being
+// walked from one to the next can see that he has moved from one room into another. Nothing stands
+// free inside them, so what the accent texture would decorate never comes up.
+const TUTORIAL_PALETTES: {[name: string]: RoomGenerationPalette} = {
+    arrival: {floorTextureIndex: 16, ceilingTextureIndex: 51, wallTextureIndex: 41, propTextureIndex: 41},
+    passage: {floorTextureIndex: 6, ceilingTextureIndex: 51, wallTextureIndex: 43, propTextureIndex: 43},
+    reception: {floorTextureIndex: 31, ceilingTextureIndex: 51, wallTextureIndex: 46, propTextureIndex: 46},
+};
 
 const SinglePlayerModeConfigMap: {[singlePlayerMode: string]: SinglePlayerModeConfig} = {};
 
@@ -40,15 +52,27 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
             npc: {row: z0 + Z1 + 0.5*(Z2 - 1), col: x0 + X - 1},
             door: {row: z0, col: x0 + X - 1 - 0.5*(X3 - 1)},
         };
-        const rects = {
-            floor1: {rowStart: z0 + Z1, colStart: x0, numRows: Z2 + Z3, numCols: X1},
-            floor2: {rowStart: z0 + Z1, colStart: x0 + X1, numRows: Z2, numCols: X2},
-            floor3: {rowStart: z0, colStart: x0 + X1 + X2, numRows: Z1 + Z2, numCols: X3},
-            wall1: {rowStart: z0 + Z1, colStart: x0 + X1, numRows: Z2, numCols: 1},
-            wall2: {rowStart: z0 + Z1 - 1, colStart: x0 + X1 + X2, numRows: 1, numCols: X3},
+
+        // The tutorial declares a ground storey and nothing above it, which is what makes it a
+        // single-storey room (see buildRoom below).
+        const storey = RoomGenerationVolumeUtil.GROUND_STOREY;
+        const volume = (rowStart: number, colStart: number, numRows: number,
+            numCols: number): RoomGenerationVolume => ({...storey, rowStart, colStart, numRows, numCols});
+
+        const volumes = {
+            // The four rooms the tutorial is walked through, from the one the player arrives in to
+            // the one he leaves by.
+            room1: volume(z0 + Z1, x0, Z2 + Z3, X1),
+            room2: volume(z0 + Z1, x0 + X1 + 1, Z2, X2 - 1),
+            room3: volume(z0 + Z1, x0 + X1 + X2, Z2, X3),
+            room4: volume(z0, x0 + X1 + X2, Z1 - 1, X3),
+            // The two stretches of wall between them, which the tutorial opens up as the player is
+            // sent on. Until it does, these are mass like the rest of the room around it.
+            wall1: volume(z0 + Z1, x0 + X1, Z2, 1),
+            wall2: volume(z0 + Z1 - 1, x0 + X1 + X2, 1, X3),
         };
 
-        const metadata: SinglePlayerModeConfigMetadata = {entranceVoxelCol, entranceVoxelRow, hotspots, rects};
+        const metadata: SinglePlayerModeConfigMetadata = {entranceVoxelCol, entranceVoxelRow, hotspots, volumes};
         cachedMetadataByMode[TUTORIAL_SINGLE_PLAYER_MODE] = metadata;
         return metadata;
     },
@@ -61,14 +85,17 @@ SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
         const config = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
         const c = config.loadMetadata();
 
-        // Add the floors and walls.
-        const grid = new RoomGenerationVoxelGrid();
-        grid.createRegion(c.rects.floor1.rowStart, c.rects.floor1.colStart, c.rects.floor1.numRows, c.rects.floor1.numCols, 16, 51, 41);
-        grid.createRegion(c.rects.floor2.rowStart, c.rects.floor2.colStart, c.rects.floor2.numRows, c.rects.floor2.numCols, 6, 51, 43);
-        grid.createRegion(c.rects.floor3.rowStart, c.rects.floor3.colStart, c.rects.floor3.numRows, c.rects.floor3.numCols, 31, 51, 46);
-        grid.createWalls(c.rects.wall1.rowStart, c.rects.wall1.colStart, c.rects.wall1.numRows, c.rects.wall1.numCols);
-        grid.createWalls(c.rects.wall2.rowStart, c.rects.wall2.colStart, c.rects.wall2.numRows, c.rects.wall2.numCols);
-        grid.generate(voxelGrid);
+        // The room, as the four spaces standing open in it. Every one of them is on the ground
+        // storey and none on the storey above, so the room is built no higher than the slab that
+        // caps it: that slab is the ceiling the player is walked around under rather than anybody's
+        // floor, and nothing stands in the empty height over it for a camera looking down into the
+        // room to have to see past.
+        RoomGenerationSpaceUtil.build(voxelGrid, [
+            {volume: c.volumes.room1, palette: TUTORIAL_PALETTES.arrival},
+            {volume: c.volumes.room2, palette: TUTORIAL_PALETTES.passage},
+            {volume: c.volumes.room3, palette: TUTORIAL_PALETTES.reception},
+            {volume: c.volumes.room4, palette: TUTORIAL_PALETTES.reception},
+        ]);
 
         // Add the NPC.
         objectGroup.objectById["npc"] = new AddObjectSignal("", "@npc", "Receptionist",

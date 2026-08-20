@@ -77,6 +77,7 @@ import { PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
 import Room from "../../../src/shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { createRoom, floorQuadIndexOf, voxelAt } from "../helpers/selectionHarness";
+import VoxelQuadInstanceUtil from "../../../src/client/voxel/util/voxelQuadInstanceUtil";
 
 const ROOM_ID = "game-mode-room";
 
@@ -106,9 +107,21 @@ function selectQuad(row: number, col: number, quadIndex: number): boolean
 function clickVoxel(row: number, col: number, quadIndex: number): void
 {
     const voxel = voxelAt(room, row, col);
-    VoxelGameObject.prototype.onClick.call(
-        { getVoxel: () => voxel } as unknown as VoxelGameObject,
-        quadIndex, new THREE.Vector3(col + 0.5, 0, row + 0.5));
+    // A click arrives naming the mesh instance it landed on, and the room lends its instances to
+    // whichever quads are on show (see VoxelQuadInstanceUtil) — so a quad has to be holding one
+    // before there is anything there to click.
+    const instanceId = 0;
+    VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
+    try
+    {
+        VoxelGameObject.prototype.onClick.call(
+            { getVoxel: () => voxel } as unknown as VoxelGameObject,
+            instanceId, new THREE.Vector3(col + 0.5, 0, row + 0.5));
+    }
+    finally
+    {
+        VoxelQuadInstanceUtil.unbind(quadIndex, instanceId);
+    }
 }
 
 beforeEach(() => {

@@ -1,5 +1,5 @@
 import Room from "../../room/types/room";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import PhysicsObject from "./physicsObject";
 import PhysicsVoxel from "./physicsVoxel";
 import { ColliderState } from "./colliderState";
@@ -59,14 +59,19 @@ const wall_lowerZ = makeCubeCollider(
 const wall_upperZ = makeCubeCollider(
     NUM_VOXEL_COLS*0.5, MID_ROOM_Y, NUM_VOXEL_ROWS + cubeColliderSizeHalf);
 
+// Only as tall as the doorway it plugs. Standing it through the room's whole height would put an
+// invisible wall across the storey above the entrance, where nobody can block the doorway anyway.
+const multiplayerEntranceHeight = MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS * COLLISION_LAYER_HEIGHT;
+
 const multiplayerEntrance: ColliderState = {
     hitbox: {
-        center: {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: MID_ROOM_Y, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW},
-        halfSize: {x: 0.5, y: 0.5*MAX_ROOM_Y, z: 1},
+        center: {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5*multiplayerEntranceHeight,
+            z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW},
+        halfSize: {x: 0.5, y: 0.5*multiplayerEntranceHeight, z: 1},
     },
     colliderConfig: {
             colliderType: "standalone",
-        hitboxSize: {sizeX: 1, sizeY: MAX_ROOM_Y, sizeZ: 2},
+        hitboxSize: {sizeX: 1, sizeY: multiplayerEntranceHeight, sizeZ: 2},
         applyHardCollisionToOthers: true,
         outgoingSoftCollisionForceMultiplier: 0,
         incomingSoftCollisionForceMultiplier: 0,

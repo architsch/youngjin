@@ -9,7 +9,8 @@ import App from "../../app";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import ClientVoxelQueryUtil from "../../voxel/util/clientVoxelQueryUtil";
-import { NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
+import VoxelQuadInstanceUtil from "../../voxel/util/voxelQuadInstanceUtil";
+import { NUM_VOXEL_QUADS_PER_VOXEL, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { gameModeObservable, notificationMessageObservable, texturePackURLObservable, userRoleObservable } from "../../system/clientObservables";
 import GraphicsManager from "../../graphics/graphicsManager";
@@ -46,23 +47,20 @@ export default class VoxelGameObject extends GameObject
     }
 
     async onSpawn(): Promise<void>
-    {        
+    {
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
         if (VoxelGameObject.materialParams == undefined)
             throw new Error(`Voxel material hasn't been defined yet.`);
         await super.onSpawn();
 
+        // The mesh is sized for the quads a room can have on show at once rather than for every
+        // quad the grid addresses, and its instances are borrowed from a pool for as long as a quad
+        // is drawn (see VoxelQuadInstanceUtil).
         await this.instancedMeshGraphics.loadInstancedMesh(VOXEL_QUAD_GEOMETRY_ID,
-            VoxelGameObject.materialParams, NUM_VOXEL_QUADS_PER_ROOM, false);
+            VoxelGameObject.materialParams, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, true);
 
-        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
-        for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
-        {
-            // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.reserveInstance(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex);
-            this.updateVoxelQuadInstance(quadIndex);
-        }
+        this.refreshAllQuads();
     }
 
     async onDespawn(): Promise<void>
@@ -70,16 +68,13 @@ export default class VoxelGameObject extends GameObject
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
 
-        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
-        for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
-        {
-            // Each voxel uses mesh instances at predefined indices instead of dynamically borrowing them from a pool.
-            this.instancedMeshGraphics.unreserveInstance(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex);
-        }
+        this.forEachQuadIndex(quadIndex => this.releaseVoxelQuadInstance(quadIndex));
     }
 
     // "instanceId" is the ID of the voxelQuad's mesh instance that was
-    // hit by the user's pointer input.
+    // hit by the user's pointer input. Which quad that instance is drawing has to be looked up,
+    // since an instance is lent to whichever quad is on show rather than belonging to one
+    // (see VoxelQuadInstanceUtil).
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
         const player = ClientObjectManager.getMyPlayer();
@@ -108,8 +103,11 @@ export default class VoxelGameObject extends GameObject
             }
         }
 
-        const voxel = this.getVoxel();
-        VoxelQuadSelection.trySelect(voxel, instanceId);
+        const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
+        if (quadIndex < 0)
+            return; // The instance has been handed back since the ray was cast, so it draws nothing.
+
+        VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
     }
 
     getVoxel(): Voxel
@@ -155,26 +153,63 @@ export default class VoxelGameObject extends GameObject
     {
         if (this.voxel == undefined)
             return;
-        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel.row, this.voxel.col);
-        for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
-            this.updateVoxelQuadInstance(quadIndex);
+        this.forEachQuadIndex(quadIndex => this.updateVoxelQuadInstance(quadIndex));
     }
 
+    // Brings one quad's instance into line with what the voxel now holds: a quad that has come into
+    // view takes an instance out of the mesh's pool, one that has gone out of view hands its
+    // instance back, and one that was already on show keeps the instance it had.
     updateVoxelQuadInstance(quadIndex: number)
     {
         if (this.voxel == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
 
+        const quad = this.voxel.quadsMem.quads[quadIndex];
+        if ((quad & 0b10000000) == 0) // The quad is not drawn, so it holds nothing to draw it with.
+        {
+            this.releaseVoxelQuadInstance(quadIndex);
+            return;
+        }
+
+        const instancedMeshId = ClientVoxelQueryUtil.getVoxelInstancedMeshId();
+        let instanceId = VoxelQuadInstanceUtil.getInstanceId(quadIndex);
+        if (instanceId < 0)
+        {
+            const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(instancedMeshId);
+            if (rentedInstanceId == undefined)
+                return; // The mesh is full, so this quad goes undrawn until one is handed back.
+            instanceId = rentedInstanceId;
+            VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
+        }
+
         const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxel, quadIndex);
-        this.instancedMeshGraphics.updateInstanceTransform(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex,
+        this.instancedMeshGraphics.updateInstanceTransform(instancedMeshId, instanceId,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
-        this.updateTextureUV(quadIndex, scaleX, scaleY);
+        this.updateTextureUV(quadIndex, instanceId, quad, scaleX, scaleY);
     }
 
-    private updateTextureUV(quadIndex: number, scaleX: number, scaleY: number)
+    private releaseVoxelQuadInstance(quadIndex: number)
+    {
+        const instanceId = VoxelQuadInstanceUtil.getInstanceId(quadIndex);
+        if (instanceId < 0)
+            return;
+        VoxelQuadInstanceUtil.unbind(quadIndex, instanceId);
+        this.instancedMeshGraphics.returnInstanceToPool(
+            ClientVoxelQueryUtil.getVoxelInstancedMeshId(), instanceId);
+    }
+
+    // The quads this voxel owns, which are a contiguous run of the grid's quad indices.
+    private forEachQuadIndex(handle: (quadIndex: number) => void)
+    {
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.voxel!.row, this.voxel!.col);
+        for (let quadIndex = startIndex; quadIndex < startIndex + NUM_VOXEL_QUADS_PER_VOXEL; ++quadIndex)
+            handle(quadIndex);
+    }
+
+    private updateTextureUV(quadIndex: number, instanceId: number, quad: number,
+        scaleX: number, scaleY: number)
     {
         const v = this.voxel!;
-        const quad = App.getVoxelQuads()[quadIndex];
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
         const sampleOffsetX = (scaleX < 1) ? (((v.row + v.col) % 2) * scaleX) : 0; // [0,1]
@@ -182,7 +217,7 @@ export default class VoxelGameObject extends GameObject
         const sampleScaleX = scaleX; // [0,1]
         const sampleScaleY = scaleY; // [0,1]
 
-        this.instancedMeshGraphics.updateInstanceTextureUV(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex,
+        this.instancedMeshGraphics.updateInstanceTextureUV(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), instanceId,
             quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }
 }

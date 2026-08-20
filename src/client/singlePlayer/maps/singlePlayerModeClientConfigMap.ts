@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import RoomGenerationVolumeUtil from "../../../shared/room/util/roomGenerationVolumeUtil";
 import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NEAR_EPSILON,
+import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NEAR_EPSILON,
     TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import Voxel from "../../../shared/voxel/types/voxel";
@@ -336,12 +337,16 @@ SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "gizmo_navigation_arrow",
                         targetX: () => m.hotspots.npc.col+0.5, targetZ: () => m.hotspots.npc.row+0.5},
                     {type: "remove_voxel_blocks",
-                        rowStart: () => m.rects.wall1.rowStart,
-                        colStart: () => m.rects.wall1.colStart,
-                        numRows: () => m.rects.wall1.numRows,
-                        numCols: () => m.rects.wall1.numCols,
-                        collisionLayerMin: () => COLLISION_LAYER_MIN,
-                        collisionLayerMax: () => COLLISION_LAYER_MAX},
+                        rowStart: () => m.volumes.wall1.rowStart,
+                        colStart: () => m.volumes.wall1.colStart,
+                        numRows: () => m.volumes.wall1.numRows,
+                        numCols: () => m.volumes.wall1.numCols,
+                        // The wall's own height, which stops at the slab that caps the room: that
+                        // slab is the ceiling the player is standing under, and has to stay where
+                        // it is.
+                        collisionLayerMin: () => m.volumes.wall1.collisionLayerStart,
+                        collisionLayerMax: () =>
+                            RoomGenerationVolumeUtil.getCollisionLayerMax(m.volumes.wall1)},
                 ],
                 transitionRules: [{
                     requirements: [{type: "player_is_nearby", negate: false,
@@ -419,12 +424,14 @@ SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE] = {
                     {type: "gizmo_navigation_arrow",
                         targetX: () => m.hotspots.door.col+0.5, targetZ: () => m.hotspots.door.row-5},
                     {type: "remove_voxel_blocks",
-                        rowStart: () => m.rects.wall2.rowStart,
-                        colStart: () => m.rects.wall2.colStart,
-                        numRows: () => m.rects.wall2.numRows,
-                        numCols: () => m.rects.wall2.numCols,
-                        collisionLayerMin: () => COLLISION_LAYER_MIN,
-                        collisionLayerMax: () => COLLISION_LAYER_MAX},
+                        rowStart: () => m.volumes.wall2.rowStart,
+                        colStart: () => m.volumes.wall2.colStart,
+                        numRows: () => m.volumes.wall2.numRows,
+                        numCols: () => m.volumes.wall2.numCols,
+                        // As above: the wall comes down only as far as the slab that caps the room.
+                        collisionLayerMin: () => m.volumes.wall2.collisionLayerStart,
+                        collisionLayerMax: () =>
+                            RoomGenerationVolumeUtil.getCollisionLayerMax(m.volumes.wall2)},
                 ],
                 transitionRules: [{
                     requirements: [{type: "room_exited"}],

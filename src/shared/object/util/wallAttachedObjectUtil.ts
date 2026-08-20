@@ -5,6 +5,7 @@ import { ColliderState } from "../../physics/types/colliderState";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
+import RoomGenerationVolume from "../../room/types/roomGeneration/roomGenerationVolume";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
@@ -68,8 +69,11 @@ const WallAttachedObjectUtil =
             const rightCol = Math.floor(pos.x + halfHorizontal - 0.01);
             for (let col = leftCol; col <= rightCol; ++col)
             {
-                if (RoomValidationUtil.additionIsBlockedAtCoords(room, col, backRow))
+                if (RoomValidationUtil.additionIsBlocked(room,
+                    getBackingVolume(backRow, col, objBottomY, objTopY)))
+                {
                     return false;
+                }
                 const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, backRow, col);
                 const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, frontRow, col);
                 if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
@@ -86,8 +90,11 @@ const WallAttachedObjectUtil =
             const rightRow = Math.floor(pos.z + halfHorizontal - 0.01);
             for (let row = leftRow; row <= rightRow; ++row)
             {
-                if (RoomValidationUtil.additionIsBlockedAtCoords(room, backCol, row))
+                if (RoomValidationUtil.additionIsBlocked(room,
+                    getBackingVolume(row, backCol, objBottomY, objTopY)))
+                {
                     return false;
+                }
                 const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, backCol);
                 const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, frontCol);
                 if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
@@ -246,10 +253,31 @@ function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
 }
 
 // Checks whether the voxel's occupied collision layers fully cover the given Y range.
+// The stretch of the room one wall attachment hangs on: the cell of wall behind it, over the layers
+// its own height covers. Asking about that rather than about the whole column is what lets an
+// attachment go up on an upper storey over somewhere the room protects on the ground.
+function getBackingVolume(row: number, col: number, bottomY: number,
+    topY: number): RoomGenerationVolume
+{
+    const {minLayer, maxLayer} = getCollisionLayerRange(bottomY, topY);
+    return {rowStart: row, colStart: col, numRows: 1, numCols: 1,
+        collisionLayerStart: minLayer, numCollisionLayers: maxLayer - minLayer + 1};
+}
+
+// The layers a wall attachment of the given height stands among, clamped to the room.
+function getCollisionLayerRange(bottomY: number, topY: number): {minLayer: number, maxLayer: number}
+{
+    return {
+        minLayer: Math.max(COLLISION_LAYER_MIN,
+            VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(bottomY)),
+        maxLayer: Math.min(COLLISION_LAYER_MAX,
+            VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(topY - 0.001)),
+    };
+}
+
 function voxelCoversYRange(collisionLayerMask: number, bottomY: number, topY: number): boolean
 {
-    const minLayer = Math.max(COLLISION_LAYER_MIN, Math.floor(bottomY * 2));
-    const maxLayer = Math.min(COLLISION_LAYER_MAX, Math.floor((topY - 0.001) * 2));
+    const {minLayer, maxLayer} = getCollisionLayerRange(bottomY, topY);
     for (let layer = minLayer; layer <= maxLayer; ++layer)
     {
         if ((collisionLayerMask & (1 << layer)) === 0)

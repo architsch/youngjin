@@ -107,18 +107,9 @@ const RoomGenerationPaletteMap =
     // exactly the same room.
     pickTexturePack: (rand: RandomNumberGenerator): {texturePackPath: string, palettes: RoomGenerationPalette[]} =>
     {
-        const texturePackPaths = Object.keys(palettesByTexturePackPath);
-        const texturePackPath = texturePackPaths[rand.randomInt(0, texturePackPaths.length)];
-
-        const palettes = palettesByTexturePackPath[texturePackPath].slice();
-        for (let i = palettes.length - 1; i > 0; --i)
-        {
-            const j = rand.randomInt(0, i + 1);
-            const temp = palettes[i];
-            palettes[i] = palettes[j];
-            palettes[j] = temp;
-        }
-        return {texturePackPath, palettes};
+        const texturePackPath = rand.pick(Object.keys(palettesByTexturePackPath));
+        return {texturePackPath,
+            palettes: rand.shuffle(palettesByTexturePackPath[texturePackPath].slice())};
     },
 }
 

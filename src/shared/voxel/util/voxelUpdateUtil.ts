@@ -5,6 +5,7 @@ import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
 import WallAttachedObjectUtil from "../../object/util/wallAttachedObjectUtil";
+import RoomGenerationVolumeUtil from "../../room/util/roomGenerationVolumeUtil";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
 const VoxelUpdateUtil =
@@ -20,12 +21,15 @@ const VoxelUpdateUtil =
 
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
             return false;
-        if (RoomValidationUtil.additionIsBlockedAtCoords(room, col, row))
-            return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
         if (!voxel)
             return false;
+        if (RoomValidationUtil.additionIsBlocked(room,
+            RoomGenerationVolumeUtil.getBlockVolume(row, col, collisionLayer)))
+        {
+            return false;
+        }
         if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             return false;
 
@@ -80,12 +84,15 @@ const VoxelUpdateUtil =
 
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
             return false;
-        if (RoomValidationUtil.removalIsBlockedAtCoords(room, col, row))
-            return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
         if (!voxel)
             return false;
+        if (RoomValidationUtil.removalIsBlocked(room,
+            RoomGenerationVolumeUtil.getBlockVolume(row, col, collisionLayer)))
+        {
+            return false;
+        }
         if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             return false;
 

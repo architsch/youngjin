@@ -174,8 +174,9 @@ export default class OrbitCameraPose
 
     // "viewScale" is how much the user asked the view to grow since the previous frame, as a
     // multiple of its current apparent size (see PointerZoomInput).
+    // Returns the desired camera interpolation rate.
     updatePose(dragDelta: THREE.Vector2, viewScale: number, target: AABB3, playerObj: THREE.Object3D,
-        outPos: THREE.Vector3, outQuat: THREE.Quaternion): void
+        outPos: THREE.Vector3, outQuat: THREE.Quaternion): number
     {
         // The angles are taken back out of what they were published as, rather than carried on from
         // here, so that whoever else set them meanwhile is answered — the drag then moves the view
@@ -212,6 +213,8 @@ export default class OrbitCameraPose
         playerObj.getWorldQuaternion(parentQuatTemp);
         outPos.copy(playerObj.worldToLocal(worldPosTemp));
         outQuat.copy(parentQuatTemp.invert()).multiply(worldQuatTemp);
+
+        return 4;
     }
 
     // Publishes where the orbit now views its target from, but only once it has actually moved: a

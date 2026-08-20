@@ -68,6 +68,8 @@ export default class PlayerCamera
         if (viewRequest != null)
             orbitCameraViewRequestObservable.set(null);
 
+        let interpRate: number;
+
         if (mode.type === "orbit")
         {
             // Frame the target afresh each time the mode is entered, and each time it is pointed
@@ -88,7 +90,7 @@ export default class PlayerCamera
             if (viewRequest != null)
                 this.orbitPose.setView(viewRequest);
             this.orbitTarget = mode.target;
-            this.orbitPose.updatePose(this.pointerInput!.dragDelta, this.pointerInput!.viewScale,
+            interpRate = this.orbitPose.updatePose(this.pointerInput!.dragDelta, this.pointerInput!.viewScale,
                 mode.target, controller.gameObject.obj,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
@@ -101,12 +103,12 @@ export default class PlayerCamera
                 this.occlusionHider.revealAll();
                 this.orbitTarget = undefined;
             }
-            this.firstPersonPose.updatePose(deltaTime, controller, this.camera!,
+            interpRate = this.firstPersonPose.updatePose(controller, this.camera!,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
 
         // Ease toward the active mode's pose, so switching modes glides rather than snaps.
-        const t = Math.min(1, 4 * deltaTime);
+        const t = Math.min(1, interpRate * deltaTime);
         this.camera!.position.lerp(this.positionInterpTarget, t);
         this.camera!.quaternion.slerp(this.quaternionInterpTarget, t);
 

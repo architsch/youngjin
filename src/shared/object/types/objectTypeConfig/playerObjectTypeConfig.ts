@@ -75,6 +75,8 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             playerProximityDetector: { // This is to prevent the mesh of any nearby player from clipping through the camera's view.
                 maxDist: 0.45,
                 maxLookAngle: -1,
+                maxFaceAngle: -1,
+                checkLineOfSight: false, // A body this close to the camera is in the way whether it is in view or not.
             },
         },
         spawnedByMe: {

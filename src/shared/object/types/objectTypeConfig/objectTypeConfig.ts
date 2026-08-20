@@ -43,7 +43,14 @@ export default interface ObjectTypeConfig
             },
             playerProximityDetector?: {
                 maxDist: number,
+                // How far from straight ahead the player may be looking and still count as looking
+                // at the object, and how far round the side it faces he may stand and still count
+                // as standing in front of it. Either left at or below zero is a question not asked.
                 maxLookAngle: number,
+                maxFaceAngle: number,
+                // Whether the object also has to be in plain view, which costs a cast through the
+                // room and is worth asking only where something can come between the two.
+                checkLineOfSight: boolean,
             },
             orbitOccluder?: {},
         },

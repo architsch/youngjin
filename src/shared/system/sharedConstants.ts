@@ -41,10 +41,10 @@ export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 export const GRAVITY_SPEED = 3;
 export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
 
-export const NUM_COLLISION_LAYERS = 8; // Total number of collision layers which span the room's Y-axis
+export const NUM_COLLISION_LAYERS = 16; // Total number of collision layers which span the room's Y-axis
 export const COLLISION_LAYER_HEIGHT = 0.5; // How tall one collision layer stands, in world units
-export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * COLLISION_LAYER_HEIGHT; // 4
-export const MID_ROOM_Y = 0.5 * MAX_ROOM_Y; // 2
+export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * COLLISION_LAYER_HEIGHT; // 8
+export const MID_ROOM_Y = 0.5 * MAX_ROOM_Y; // 4
 
 export const COLLISION_LAYER_00_TO_05 = 0; // y = [0.0, 0.5]
 export const COLLISION_LAYER_05_TO_10 = 1; // y = [0.5, 1.0]
@@ -54,10 +54,27 @@ export const COLLISION_LAYER_20_TO_25 = 4; // y = [2.0, 2.5]
 export const COLLISION_LAYER_25_TO_30 = 5; // y = [2.5, 3.0]
 export const COLLISION_LAYER_30_TO_35 = 6; // y = [3.0, 3.5]
 export const COLLISION_LAYER_35_TO_40 = 7; // y = [3.5, 4.0]
-export const COLLISION_LAYER_NULL = 8;
+export const COLLISION_LAYER_40_TO_45 = 8; // y = [4.0, 4.5]
+export const COLLISION_LAYER_45_TO_50 = 9; // y = [4.5, 5.0]
+export const COLLISION_LAYER_50_TO_55 = 10; // y = [5.0, 5.5]
+export const COLLISION_LAYER_55_TO_60 = 11; // y = [5.5, 6.0]
+export const COLLISION_LAYER_60_TO_65 = 12; // y = [6.0, 6.5]
+export const COLLISION_LAYER_65_TO_70 = 13; // y = [6.5, 7.0]
+export const COLLISION_LAYER_70_TO_75 = 14; // y = [7.0, 7.5]
+export const COLLISION_LAYER_75_TO_80 = 15; // y = [7.5, 8.0]
+export const COLLISION_LAYER_NULL = 16;
 
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
-export const COLLISION_LAYER_MAX = COLLISION_LAYER_35_TO_40;
+export const COLLISION_LAYER_MAX = COLLISION_LAYER_75_TO_80;
+
+// The collision layer mask of a voxel that is solid from the room's floor to its ceiling, which is
+// also the largest value such a mask can take.
+export const FULL_COLLISION_LAYER_MASK = (1 << NUM_COLLISION_LAYERS) - 1;
+
+// The layer a room's upper storey rests on: a slab laid here divides the room's height in two,
+// leaving one storey's worth of headroom below it and another above. A single-storey room lays the
+// same slab and simply stops there, so that slab is its ceiling rather than anyone's floor.
+export const STOREY_FLOOR_COLLISION_LAYER = NUM_COLLISION_LAYERS / 2; // 8
 
 export const DIR_VEC_BY_NAME: {[key: string]: Vec3} = {
     "+x": {x: 1, y: 0, z: 0},
@@ -143,7 +160,30 @@ export const NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6; // corresponding to 6 side
 export const NUM_VOXEL_QUADS_PER_VOXEL =
     (NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS) + 2; // 2 is for the floor and ceiling quads, which sit outside of the collision layers (They belong to "COLLISION_LAYER_NULL").
 
-export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 51200
+export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 100352
+
+// The largest a room's voxel grid can come out once encoded: every cell writing its floor and
+// ceiling quads, its collision layer mask, and the six faces of every one of its collision layers —
+// which is what a room built solid from its floor to its ceiling amounts to. Only the occupied
+// layers of a cell are written, so an ordinary room costs a small fraction of this; it is here so
+// that the buffer a room is encoded into can be sized for the room nobody has built yet
+// (see EncodingUtil).
+export const MAX_ENCODED_VOXEL_GRID_BYTES = 1 /* format version */ +
+    NUM_VOXEL_ROWS * NUM_VOXEL_COLS *
+        (2 /* floor and ceiling quads */ + 2 /* collision layer mask */ +
+            NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS);
+
+// How many of a room's quads can be on show at once, which is what the room's instanced mesh is
+// sized for rather than the far larger number of quads the grid addresses (see
+// VoxelQuadInstanceUtil). A quad is drawn only where something solid meets something open, so the
+// bound is the number of such boundaries the grid holds: one per pair of vertically stacked blocks
+// (the room's own floor and ceiling being the outermost two), and one per pair of side-by-side
+// blocks along each horizontal axis. A boundary between two solid blocks, or between two open ones,
+// draws nothing at all, so no arrangement of a room can exceed this.
+export const MAX_VISIBLE_VOXEL_QUADS_PER_ROOM =
+    (NUM_COLLISION_LAYERS + 1) * NUM_VOXEL_ROWS * NUM_VOXEL_COLS +
+    (NUM_VOXEL_COLS - 1) * NUM_VOXEL_ROWS * NUM_COLLISION_LAYERS +
+    (NUM_VOXEL_ROWS - 1) * NUM_VOXEL_COLS * NUM_COLLISION_LAYERS; // 49152
 
 export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.5 * COLLISION_LAYER_HEIGHT, z: 0.5};
 
@@ -181,6 +221,13 @@ export const MAX_WORLDSPACE_SELECT_DIST = 10;
 // SinglePlayerModeConfig's entrance voxel coordinates.)
 export const MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
 export const MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
+
+// How tall the doorway carved through the boundary wall for that entrance stands, in collision
+// layers: enough for a player to walk through, and no more. What is above it is boundary wall like
+// any other, which matters now that a room stands taller than one storey — the doorway, and the
+// invisible collider that keeps it from being blocked, both belong to the storey it opens onto
+// rather than to the room's whole height.
+export const MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS = 5;
 
 // UI
 

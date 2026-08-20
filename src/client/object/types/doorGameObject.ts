@@ -9,7 +9,6 @@ import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import { tryStartClientProcess } from "../../system/types/clientProcess";
 import SocketsClient from "../../networking/client/socketsClient";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
-import App from "../../app";
 
 export default class DoorGameObject extends GameObject
 {

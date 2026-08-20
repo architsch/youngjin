@@ -14,6 +14,7 @@ import Geometry3DUtil from "../../../../../shared/math/util/geometry3DUtil";
 import Voxel from "../../../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
+import VoxelQuadInstanceUtil from "../../../../voxel/util/voxelQuadInstanceUtil";
 import PhysicsColliderStateUtil from "../../../../../shared/physics/util/physicsColliderStateUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NEAR_EPSILON,
@@ -193,7 +194,7 @@ export default class OrbitOcclusionHider
     revealAll(): void
     {
         for (const quadIndex in this.sweepTagByHiddenQuadIndex)
-            InstancedMeshGraphics.setInstanceHidden(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), Number(quadIndex), false);
+            setVoxelQuadHidden(Number(quadIndex), false);
         this.sweepTagByHiddenQuadIndex = {};
         this.revealHiddenMeshOccluders();
     }
@@ -237,14 +238,14 @@ export default class OrbitOcclusionHider
         {
             const quadIndex = quadIndicesTemp[i];
             if (this.sweepTagByHiddenQuadIndex[quadIndex] == undefined)
-                InstancedMeshGraphics.setInstanceHidden(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), quadIndex, true);
+                setVoxelQuadHidden(quadIndex, true);
             this.sweepTagByHiddenQuadIndex[quadIndex] = this.sweepCount;
         }
         for (const quadIndex in this.sweepTagByHiddenQuadIndex)
         {
             if (this.sweepTagByHiddenQuadIndex[quadIndex] !== this.sweepCount)
             {
-                InstancedMeshGraphics.setInstanceHidden(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), Number(quadIndex), false);
+                setVoxelQuadHidden(Number(quadIndex), false);
                 delete this.sweepTagByHiddenQuadIndex[quadIndex];
             }
         }
@@ -493,7 +494,7 @@ function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: numbe
 
         const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
         for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-            quadIndicesTemp.push(firstQuadIndex + i);
+            collectQuadIndexIfDrawn(firstQuadIndex + i);
     }
 
     // The room's floor and ceiling, which the orbit reaches under and over respectively.
@@ -502,11 +503,19 @@ function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: numbe
 
     tileBoxTemp.center.y = 0;
     if (boxIsInTheWay(tileBoxTemp))
-        quadIndicesTemp.push(VoxelQueryUtil.getFloorVoxelQuadIndex(row, col));
+        collectQuadIndexIfDrawn(VoxelQueryUtil.getFloorVoxelQuadIndex(row, col));
 
     tileBoxTemp.center.y = MAX_ROOM_Y;
     if (boxIsInTheWay(tileBoxTemp))
-        quadIndicesTemp.push(VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
+        collectQuadIndexIfDrawn(VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
+}
+
+// A face buried against another block is drawn by nothing, so there is nothing about it to take out
+// of the way — and a block in the way brings only the faces it actually shows.
+function collectQuadIndexIfDrawn(quadIndex: number): void
+{
+    if (VoxelQuadInstanceUtil.getInstanceId(quadIndex) >= 0)
+        quadIndicesTemp.push(quadIndex);
 }
 
 // Whether the box covers enough of the target to be worth hiding.
@@ -680,6 +689,18 @@ function silhouetteRadius(axis: THREE.Vector3): number
 function silhouetteOffset(sampleIndex: number, numSamples: number, radius: number): number
 {
     return radius * (2 * (sampleIndex + 0.5) / numSamples - 1);
+}
+
+// Takes one of the room's own quads out of sight, or brings it back. Which instance of the room's
+// mesh is drawing that quad has to be looked up, and a quad that is not on show at all is drawn by
+// none of them — there being nothing there to take out of the way (see VoxelQuadInstanceUtil).
+function setVoxelQuadHidden(quadIndex: number, hidden: boolean): void
+{
+    const instanceId = VoxelQuadInstanceUtil.getInstanceId(quadIndex);
+    if (instanceId < 0)
+        return;
+    InstancedMeshGraphics.setInstanceHidden(
+        ClientVoxelQueryUtil.getVoxelInstancedMeshId(), instanceId, hidden);
 }
 
 function setOccluderHidden(occluder: HiddenOccluder, hidden: boolean): void

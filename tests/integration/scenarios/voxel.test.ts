@@ -22,7 +22,14 @@ import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, FULL_COLLISION_LAYER_MASK,
+    MAX_ENCODED_VOXEL_GRID_BYTES, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
+import BufferState from "../../../src/shared/networking/types/bufferState";
+import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
+import RoomGenerationHelperUtil from "../../../src/shared/room/util/roomGenerationHelperUtil";
 
 describe("voxel scenarios", () => {
     beforeEach(() => {
@@ -186,6 +193,37 @@ describe("voxel scenarios", () => {
         });
     });
 
+    it("leaves the storey above the entrance free to build on and to take apart", async () => {
+        // The entrance's protected zones exist for the doorway, the wall framing it and the floor a
+        // player spawns on — all of them on the storey the doorway opens onto. The room above that
+        // storey is ordinary room, which nobody can even reach the doorway from, so an owner is as
+        // free to build there as anywhere else.
+        const upperLayer = STOREY_FLOOR_COLLISION_LAYER + 1;
+        await runScenario({
+            name: "entrance zones stop at the ground storey",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            actions: [
+                // Directly over the cell in front of the entrance, which is closed to building on
+                // the ground.
+                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: upperLayer },
+                // Directly over a jamb of the doorway, which is closed to removal on the ground.
+                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1, layer: upperLayer },
+            ],
+            assertions: () => {
+                const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
+                const added = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
+                const removed = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(added, upperLayer)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(removed, upperLayer)).toBe(false);
+
+                // ...and the ground storey underneath both of them is untouched by any of that.
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(added, COLLISION_LAYER_MIN)).toBe(false);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(removed, COLLISION_LAYER_MIN)).toBe(true);
+            },
+        });
+    });
+
     it("cannot remove the wall blocks framing the entrance", async () => {
         await runScenario({
             name: "entrance no-remove row",
@@ -245,5 +283,65 @@ describe("voxel scenarios", () => {
                 expect(VoxelUpdateUtil.canRemoveVoxelBlock(UserRoleEnumMap.Owner, room, quadIndex)).toBe(true);
             },
         });
+    });
+});
+
+/**
+ * A room is encoded into one reusable buffer, and writing past the end of a typed array is silently
+ * ignored rather than throwing — so a buffer sized by guesswork would turn an unusually full room
+ * into a quietly truncated one, saved short and read back missing everything past the cut.
+ *
+ * The room that tests this is the one nobody has built: every cell of it solid from the room's floor
+ * to its ceiling, which is the most a room can ever cost to write down.
+ */
+describe("the encoded voxel grid", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    function buildRoomFilledSolid(): VoxelGrid
+    {
+        const voxelGrid = VoxelGrid.createEmpty();
+        const textures = [1, 2, 3, 4, 5, 6];
+        for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+        {
+            for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+            {
+                RoomGenerationHelperUtil.addWall(voxelGrid.voxels, row, col, textures,
+                    COLLISION_LAYER_MIN, COLLISION_LAYER_MAX);
+            }
+        }
+        return voxelGrid;
+    }
+
+    it("survives being written and read back when the room is filled solid", () => {
+        const voxelGrid = buildRoomFilledSolid();
+        for (const voxel of voxelGrid.voxels)
+            expect(voxel.collisionLayerMask).toBe(FULL_COLLISION_LAYER_MASK);
+
+        const bufferState = EncodingUtil.startEncoding();
+        voxelGrid.encode(bufferState);
+        const bytes = new Uint8Array(EncodingUtil.endEncoding(bufferState));
+
+        // Nothing was dropped on the way out...
+        expect(bytes.length).toBeLessThanOrEqual(MAX_ENCODED_VOXEL_GRID_BYTES);
+
+        // ...and the room that comes back is the room that went in.
+        const reloaded = VoxelGrid.decode(new BufferState(bytes)) as VoxelGrid;
+        expect(reloaded.voxels.length).toBe(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
+        expect(reloaded.voxels.map(v => v.collisionLayerMask))
+            .toEqual(voxelGrid.voxels.map(v => v.collisionLayerMask));
+        expect(Array.from(reloaded.quadsMem.quads)).toEqual(Array.from(voxelGrid.quadsMem.quads));
+    });
+
+    it("refuses an encoding that overflowed the buffer rather than handing back a short one", () => {
+        // What would otherwise be saved over a real room, or sent to a client as the whole of one.
+        const bufferState = EncodingUtil.startEncoding();
+        bufferState.byteIndex = bufferState.view.length + 1;
+        expect(() => EncodingUtil.endEncoding(bufferState)).toThrow(/overflowed/);
+
+        // And the buffer is left free, so one overflow does not wedge every encoding after it.
+        const next = EncodingUtil.startEncoding();
+        expect(EncodingUtil.endEncoding(next).byteLength).toBe(0);
     });
 });

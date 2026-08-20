@@ -17,6 +17,26 @@ export default class RandomNumberGenerator
         return min + this.generate() * (max - min);
     }
 
+    // One of the items, drawn at random.
+    pick<T>(items: T[]): T
+    {
+        return items[this.randomInt(0, items.length)];
+    }
+
+    // Rearranges the items into a random order, in place, and hands the same array back. Callers
+    // that must not disturb the array they were given pass a copy of it.
+    shuffle<T>(items: T[]): T[]
+    {
+        for (let i = items.length - 1; i > 0; --i)
+        {
+            const j = this.randomInt(0, i + 1);
+            const temp = items[i];
+            items[i] = items[j];
+            items[j] = temp;
+        }
+        return items;
+    }
+
     private generate()
     {
         // Use Mulberry32 algorithm for random number generation

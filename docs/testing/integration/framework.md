@@ -48,7 +48,7 @@ The harness is the foundation. It:
 
 ### Room Fixtures (`helpers/roomContent.ts`)
 
-The server generates every Hub/Regular room from a seed drawn at creation time — its layout, its contents and its texture pack alike — which makes a real room a poor fixture: a scenario that builds and edits blocks at chosen coordinates needs to know what is already there, and needs the same answer on every run. So `createTestRoom()` gives scenarios the bare shell instead — one open floor inside the boundary wall, with the entrance carved, a fixed texture pack, and nothing else — and both `mockDB.seedRoom()` and `selectionHarness.createRoom()` go through it. Single-player rooms keep their real template, since that template *is* what those scenarios are about.
+The server generates every Hub/Regular room from a seed drawn at creation time — its layout, its contents and its texture pack alike — which makes a real room a poor fixture: a scenario that builds and edits blocks at chosen coordinates needs to know what is already there, and needs the same answer on every run. So `createTestRoom()` gives scenarios the bare shell instead — one open single storey inside the boundary wall, capped by the storey floor as its ceiling, with the entrance carved, a fixed texture pack, and nothing else — and both `mockDB.seedRoom()` and `selectionHarness.createRoom()` go through it. Single-player rooms keep their real template, since that template *is* what those scenarios are about.
 
 The generator itself is covered separately by `room-generation.test.ts`.
 

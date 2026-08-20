@@ -38,6 +38,15 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
             playerProximityDetector: {
                 maxDist: 3.5,
                 maxLookAngle: 0.25*Math.PI,
+                // The door is a panel filling a doorway, and prompts only those standing in front
+                // of its face. That rules out two positions a player really does end up in: behind
+                // it, which is where he spawns on arriving in the room, looking straight through it
+                // on his way out into the room; and flat against the wall beside it, where the
+                // panel is edge-on and there is nothing of it left to see. Wide enough to keep the
+                // whole approach to a door of this width, up to standing at the edge of the panel a
+                // pace out from the wall.
+                maxFaceAngle: Math.PI/3,
+                checkLineOfSight: true, // A door across the room can stand behind anything built since.
             },
             speechBubble: {
                 yOffset: 2,

@@ -10,29 +10,34 @@
  */
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import Room from "../../../src/shared/room/types/room";
-import RoomGenerationVoxelGrid from "../../../src/shared/room/types/roomGeneration/roomGenerationVoxelGrid";
+import RoomGenerationVolume from "../../../src/shared/room/types/roomGeneration/roomGenerationVolume";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import RoomGenerationHelperUtil from "../../../src/shared/room/util/roomGenerationHelperUtil";
+import RoomGenerationSpaceUtil from "../../../src/shared/room/util/roomGenerationSpaceUtil";
 import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
+import RoomGenerationVolumeUtil from "../../../src/shared/room/util/roomGenerationVolumeUtil";
 import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 
-const FLOOR_TEXTURE_INDEX = 0;
-const WALL_TEXTURE_INDEX = 1;
-const CEILING_TEXTURE_INDEX = 2;
+const PALETTE = {
+    floorTextureIndex: 0, wallTextureIndex: 1, ceilingTextureIndex: 2, propTextureIndex: 3,
+};
 
-/** Fills a room in as one open floor inside the boundary wall, and nothing else. */
+/** Fills a room in as one open floor per storey inside the boundary wall, and nothing else. */
 export function buildBareMultiplayerRoomContent(room: Room): void
 {
     room.voxelGrid = VoxelGrid.createEmpty();
     room.objectGroup = new ObjectGroup([]);
 
-    const grid = new RoomGenerationVoxelGrid();
-    grid.createRegion(1, 1, NUM_VOXEL_ROWS - 2, NUM_VOXEL_COLS - 2,
-        FLOOR_TEXTURE_INDEX, CEILING_TEXTURE_INDEX, WALL_TEXTURE_INDEX);
-    grid.generate(room.voxelGrid);
-    RoomGenerationHelperUtil.carveMultiplayerEntrance(room.voxelGrid.voxels);
+    const footprint: RoomGenerationVolume = {
+        ...RoomGenerationVolumeUtil.WHOLE_ROOM,
+        rowStart: 1, colStart: 1, numRows: NUM_VOXEL_ROWS - 2, numCols: NUM_VOXEL_COLS - 2,
+    };
+    RoomGenerationSpaceUtil.build(room.voxelGrid, [
+        ...[RoomGenerationVolumeUtil.GROUND_STOREY, RoomGenerationVolumeUtil.UPPER_STOREY].map(
+            storey => ({volume: RoomGenerationVolumeUtil.intersect(footprint, storey), palette: PALETTE})),
+        {volume: RoomGenerationVolumeUtil.MULTI_PLAYER_ENTRANCE, palette: PALETTE},
+    ]);
 }
 
 /** A fixture room of the given type. Single-player rooms keep their real template. */

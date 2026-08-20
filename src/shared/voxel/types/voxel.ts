@@ -1,6 +1,6 @@
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_VOXEL } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, FULL_COLLISION_LAYER_MASK, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_VOXEL } from "../../system/sharedConstants";
 import VoxelQueryUtil from "../util/voxelQueryUtil";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 
@@ -33,19 +33,20 @@ export default class Voxel extends EncodableData
 
     encode(bufferState: BufferState)
     {
-        if (this.collisionLayerMask < 0 || this.collisionLayerMask > 255)
-            throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [0:255])`);
+        if (this.collisionLayerMask < 0 || this.collisionLayerMask > FULL_COLLISION_LAYER_MASK)
+            throw new Error(`Voxel's collisionLayerMask is out of its range (value found = ${this.collisionLayerMask}, range = [0:${FULL_COLLISION_LAYER_MASK}])`);
 
         const quads = this.quadsMem.quads;
         const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(this.row, this.col);
-        
+
         bufferState.view[bufferState.byteIndex++] =
             quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 2]; // Ceiling Byte (= second last quad of the voxel)
         bufferState.view[bufferState.byteIndex++] =
             quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1]; // Floor Byte (= last quad of the voxel)
 
-        // CollisionLayerMask Byte
-        bufferState.view[bufferState.byteIndex++] = this.collisionLayerMask;
+        // 2-Byte CollisionLayerMask, least significant byte first
+        bufferState.view[bufferState.byteIndex++] = this.collisionLayerMask & 0b11111111;
+        bufferState.view[bufferState.byteIndex++] = (this.collisionLayerMask >> 8) & 0b11111111;
 
         // 6-Byte CollisionLayer Contents (NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6)
         let collisionLayer = COLLISION_LAYER_MIN;
@@ -79,16 +80,10 @@ export default class Voxel extends EncodableData
         quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL - 1] =
             bufferState.view[bufferState.byteIndex++]; // Floor Byte (= last quad of the voxel)
 
-        // CollisionLayerMask Byte
-        const collisionLayerMask = bufferState.view[bufferState.byteIndex++];
-
-        let numCollisionLayers = 0;
-        let collisionLayerMaskCopy = collisionLayerMask;
-        while (collisionLayerMaskCopy != 0) // Count the number of 1s in collisionLayerMask's binary representation.
-        {
-            numCollisionLayers++;
-            collisionLayerMaskCopy >>= 1;
-        }
+        // 2-Byte CollisionLayerMask, least significant byte first
+        const collisionLayerMaskLowByte = bufferState.view[bufferState.byteIndex++];
+        const collisionLayerMaskHighByte = bufferState.view[bufferState.byteIndex++];
+        const collisionLayerMask = collisionLayerMaskLowByte | (collisionLayerMaskHighByte << 8);
 
         // 6-Byte CollisionLayer Contents
         let collisionLayer = COLLISION_LAYER_MIN;
@@ -135,7 +130,7 @@ export default class Voxel extends EncodableData
 // Each Voxel's Binary-Encoded Format:
 //------------------------------------------------------------------------------
 //
-// Layout: [Ceiling Byte][Floor Byte][CollisionLayerMask Byte][6-Byte CollisionLayer Content][6-Byte CollisionLayer Content]...
+// Layout: [Ceiling Byte][Floor Byte][CollisionLayerMask Bytes][6-Byte CollisionLayer Content][6-Byte CollisionLayer Content]...
 //
 // [Ceiling Byte]:
 //     8 bits for the ceiling's (-y) facing quad
@@ -143,13 +138,13 @@ export default class Voxel extends EncodableData
 // [Floor Byte]:
 //     8 bits for the floor's (+y) facing quad
 //
-// [CollisionLayerMask Byte]:
-//     8 bits for the voxel's collisionLayerMask (e.g. Least significant bit represents whether the range y=[0,0.5] is occupied, second least significant bit represents whether the range y=[0.5,1] is occupied, and so on)
+// [CollisionLayerMask Bytes]:
+//     16 bits for the voxel's collisionLayerMask, least significant byte first (e.g. Least significant bit represents whether the range y=[0,0.5] is occupied, second least significant bit represents whether the range y=[0.5,1] is occupied, and so on)
 //     Subsequent 6-byte chunks will correspond to the consecutive "1"s in the collisionLayerMask.
-//     e.g. If the collisionLayerMask is 10000101:
+//     e.g. If the collisionLayerMask is 1000000000000101:
 //         (1) The 1st subsequent 6-byte chunk will correspond to the quads surrounding the volume in y=[0,0.5] (= 1st layer from y=0)
 //         (2) The 2nd subsequent 6-byte chunk will correspond to the quads surrounding the volume in y=[1,1.5] (= 3rd layer from y=0)
-//         (3) The 3rd subsequent 6-byte chunk will correspond to the quads surrounding the volume in y=[3.5,4] (= 8th layer from y=0)
+//         (3) The 3rd subsequent 6-byte chunk will correspond to the quads surrounding the volume in y=[7.5,8] (= 16th layer from y=0)
 //
 // [6-Byte CollisionLayer Content]:
 //     8 bits for the (-y) facing quad
@@ -159,7 +154,7 @@ export default class Voxel extends EncodableData
 //     8 bits for the (-z) facing quad
 //     8 bits for the (+z) facing quad
 //
-// Note: (Maximum memory size of a room's voxelGrid) = about 52KB
+// Note: (Maximum memory size of a room's voxelGrid) = about 100KB
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------

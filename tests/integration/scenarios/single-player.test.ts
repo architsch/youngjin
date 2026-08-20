@@ -81,7 +81,9 @@ import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import Vec3 from "../../../src/shared/math/types/vec3";
-import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS,
+    NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER,
+    TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -153,7 +155,7 @@ describe("single-player scenarios", () => {
                 // A quad of the dividing wall — a real part of the tutorial room, so that a handler
                 // that did touch a room would have something to touch.
                 const wallQuad = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
-                    m.rects.wall1.rowStart, m.rects.wall1.colStart, COLLISION_LAYER_MIN);
+                    m.volumes.wall1.rowStart, m.volumes.wall1.colStart, COLLISION_LAYER_MIN);
                 const transform = new ObjectTransform({ x: 1, y: 0, z: 1 }, { x: 0, y: 0, z: 1 });
 
                 // A single-player user is never bound to a server-side room, and none is loaded.
@@ -223,11 +225,11 @@ describe("single-player room generation", () => {
         // Both walls stand to begin with: the one between the user and the receptionist, which the
         // step that sends him there takes down, and the one across the way out, which the last step
         // takes down. A wall already gone is a step with nothing to open.
-        for (const rect of [m.rects.wall1, m.rects.wall2])
+        for (const volume of [m.volumes.wall1, m.volumes.wall2])
         {
-            for (let row = rect.rowStart; row < rect.rowStart + rect.numRows; ++row)
+            for (let row = volume.rowStart; row < volume.rowStart + volume.numRows; ++row)
             {
-                for (let col = rect.colStart; col < rect.colStart + rect.numCols; ++col)
+                for (let col = volume.colStart; col < volume.colStart + volume.numCols; ++col)
                 {
                     const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
                     expect(voxel).toBeDefined();
@@ -245,6 +247,54 @@ describe("single-player room generation", () => {
         // The two the tutorial addresses by name.
         expect(objectGroup.objectById["npc"]).toBeDefined();
         expect(objectGroup.objectById["door"]).toBeDefined();
+    });
+
+    it("builds the tutorial room as a single storey the camera can look down into", () => {
+        // The tutorial is played from above as much as from inside it, so the room is built with
+        // nothing standing in the empty height over it: its walls stop at the slab that caps it,
+        // and that slab is drawn only from below, so a camera drawn back far enough looks into the
+        // room rather than down onto a lid.
+        const { voxelGrid } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].loadMetadata();
+
+        for (const volume of [m.volumes.wall1, m.volumes.wall2])
+        {
+            for (let row = volume.rowStart; row < volume.rowStart + volume.numRows; ++row)
+            {
+                for (let col = volume.colStart; col < volume.colStart + volume.numCols; ++col)
+                {
+                    const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col)!;
+
+                    // Up to the slab, so that the wall meets the ceiling with no slot left over it.
+                    expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, STOREY_FLOOR_COLLISION_LAYER),
+                        `(${row},${col}) stops short of the ceiling`).toBe(true);
+                    // And no further: nothing of the room stands on the storey above.
+                    for (let layer = STOREY_FLOOR_COLLISION_LAYER + 1; layer <= COLLISION_LAYER_MAX; ++layer)
+                    {
+                        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer),
+                            `(${row},${col}) carries on past the ceiling at layer ${layer}`).toBe(false);
+                    }
+                }
+            }
+        }
+
+        // The roof: laid over the whole grid, and drawn nowhere on it. This is asked of every cell
+        // rather than of the room's own spaces, because the mass the room is set into caps off at
+        // the same height — and a lid over that reads from above exactly like a lid over the room.
+        for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+        {
+            for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+            {
+                const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, STOREY_FLOOR_COLLISION_LAYER),
+                    `(${row},${col}) has nothing over it`).toBe(true);
+
+                const topQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
+                    row, col, "y", "+", STOREY_FLOOR_COLLISION_LAYER);
+                expect(voxelGrid.quadsMem.quads[topQuadIndex] & 0b10000000,
+                    `(${row},${col}) draws the top of the room's roof`).toBe(0);
+            }
+        }
     });
 
     it("emits per-quad change events during generation (why the client listens only after voxels spawn)", () => {

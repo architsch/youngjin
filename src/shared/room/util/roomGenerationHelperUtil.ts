@@ -1,33 +1,28 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_QUADS_PER_VOXEL } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../system/sharedConstants";
 import { UserRoleEnumMap } from "../../user/types/userRole";
 import Voxel from "../../voxel/types/voxel";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
+import VoxelQuadUpdateUtil from "../../voxel/util/voxelQuadUpdateUtil";
 import VoxelUpdateUtil from "../../voxel/util/voxelUpdateUtil";
-import RoomGenerationRect from "../types/roomGeneration/roomGenerationRect";
 
+// Leaves a face carrying whatever it already carried, for a caller changing whether it is drawn
+// rather than what it is finished in.
+const KEEP_TEXTURE = -1;
+
+// The primitives every room generation routine writes voxels through: stacks of blocks raised and
+// taken back out of one cell, and the faces of a cell finished or left undrawn. Everything above
+// these works in volumes (see RoomGenerationVolumeUtil) and reaches the grid through here.
 const RoomGenerationHelperUtil =
 {
-    // Hollows out a multiplayer room's entrance cell up to the doorway's height, so that an
-    // arriving player does not spawn inside the boundary wall. Every routine that raises that
-    // wall has to call this afterwards, or the room ends up with no way in.
-    carveMultiplayerEntrance(voxels: Voxel[])
-    {
-        RoomGenerationHelperUtil.removeWall(voxels,
-            MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-            COLLISION_LAYER_MIN, 4);
-    },
+    // Fills a stack of collision layers of one cell with blocks, each face of each block carrying
+    // the texture it is given. Which of those faces end up drawn is not this caller's to say: a
+    // face is drawn where something solid meets something open, so adding one block settles it for
+    // the blocks around it as well.
     addWall(voxels: Voxel[], row: number, col: number,
         quadTextureIndicesWithinLayer?: number[],
         collisionLayerMin: number = COLLISION_LAYER_MIN,
         collisionLayerMax: number = COLLISION_LAYER_MAX)
     {
-        if (collisionLayerMin == COLLISION_LAYER_MIN &&
-            collisionLayerMax == COLLISION_LAYER_MAX &&
-            quadTextureIndicesWithinLayer)
-        {
-            RoomGenerationHelperUtil.paintFloorAndCeilingTexture(voxels[0].quadsMem.quads, row, col,
-                quadTextureIndicesWithinLayer[1], quadTextureIndicesWithinLayer[0]);
-        }
         for (let collisionLayer = collisionLayerMin; collisionLayer <= collisionLayerMax; ++collisionLayer)
         {
             VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxels,
@@ -45,38 +40,36 @@ const RoomGenerationHelperUtil =
                 VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer));
         }
     },
-    paintFloorAndCeilingTexture(quads: Uint8Array, row: number, col: number,
-        floorTextureIndex: number, ceilingTextureIndex: number)
+    // Finishes one face of one cell: what it carries, and whether it is drawn at all. This is how
+    // the surfaces enclosing an open space are settled — a face belongs to whatever encloses the
+    // space rather than to the space itself, so it is only ever drawn where there is something
+    // there to draw it on.
+    paintFace(voxels: Voxel[], row: number, col: number, facingAxis: "x" | "y" | "z",
+        orientation: "-" | "+", collisionLayer: number, textureIndex: number, visible: boolean)
     {
-        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(row, col);
-        quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL-2] = 0b10000000 | ceilingTextureIndex;
-        quads[startIndex + NUM_VOXEL_QUADS_PER_VOXEL-1] = 0b10000000 | floorTextureIndex;
-    },
-    paintFullWallTexture(quads: Uint8Array, row: number, col: number,
-        facingAxis: "x" | "z", orientation: "-" | "+", wallTextureIndex: number)
-    {
-        for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
+        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+        if (voxel != undefined)
         {
-            const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
-            const offset = VoxelQueryUtil.getVoxelQuadIndexOffsetInsideLayer(facingAxis, orientation);
-            quads[startIndex + offset] = 0b10000000 | wallTextureIndex;
+            VoxelQuadUpdateUtil.setVoxelQuadVisible(visible, voxel, facingAxis, orientation,
+                collisionLayer, textureIndex);
         }
     },
-    rectContains(rect: RoomGenerationRect, row: number, col: number): boolean
+    // Leaves the upward face of a block undrawn, for a block whose top nobody is meant to be shown
+    // however far above it the camera rises. The block itself stays exactly where it is: this takes
+    // away the face, not the thing.
+    hideUpwardFace(voxels: Voxel[], row: number, col: number, collisionLayer: number)
     {
-        return row >= rect.rowStart && row < rect.rowStart + rect.numRows &&
-            col >= rect.colStart && col < rect.colStart + rect.numCols;
+        RoomGenerationHelperUtil.paintFace(voxels, row, col, "y", "+", collisionLayer,
+            KEEP_TEXTURE, false);
     },
-    // Shrinks a rect inwards on all four sides. The result can come out empty (i.e. with a
-    // non-positive extent), which the caller is expected to treat as "nothing fits in here".
-    insetRect(rect: RoomGenerationRect, margin: number): RoomGenerationRect
+    // The six faces of a block, in the order addWall takes them: [-y, +y, -x, +x, -z, +z]. Every
+    // piece of block work a generator raises is described this way — a step's tread and risers, a
+    // plinth's top and sides — so the ordering is known here and nowhere else.
+    getBoxTextureIndices(undersideTextureIndex: number, topTextureIndex: number,
+        sideTextureIndex: number): number[]
     {
-        return {
-            rowStart: rect.rowStart + margin,
-            colStart: rect.colStart + margin,
-            numRows: rect.numRows - 2 * margin,
-            numCols: rect.numCols - 2 * margin,
-        };
+        return [undersideTextureIndex, topTextureIndex,
+            sideTextureIndex, sideTextureIndex, sideTextureIndex, sideTextureIndex];
     },
 }
 

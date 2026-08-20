@@ -30,7 +30,7 @@ This document catalogs all integration test scenarios organized by category.
 | room unloads when last user leaves | An empty Regular room is removed from memory |
 | graceful shutdown saves all rooms and user metadata | Shutdown persists and unloads all rooms and users |
 
-## Room Generation (`room-generation.test.ts`) — 8 tests
+## Room Generation (`room-generation.test.ts`) — 14 tests
 
 Every Hub/Regular room is laid out procedurally from a seed, so its shape is unknowable in advance. What is asserted is the set of properties every generated room must have whichever seed produced it. See [room_generation.md](../../geometry/room_generation.md) for the behavior under test.
 
@@ -39,11 +39,36 @@ Every Hub/Regular room is laid out procedurally from a seed, so its shape is unk
 | leaves every part of the room reachable on foot from the entrance | A flood fill from the entrance reaches every walkable cell — no region is ever sealed off |
 | opens the entrance and keeps the floor in front of it clear | The doorway is carved, and the approach cells that room editing protects are free of generated content |
 | keeps the boundary wall solid apart from the entrance | The perimeter is intact everywhere except the entrance cell |
+| gives every room an upper storey a player can climb to and walk around on | A walk from the entrance — stepping up at most one layer at a time, and needing headroom to stand — reaches the storey above, and reaches enough of it to be a floor rather than a ledge |
+| builds stairs the physics engine actually carries a player up | The shortest route upstairs is replayed through `PhysicsManager` with a real player collider, gravity and step-up, and his feet end up on the storey floor |
+| climbs to the upper storey by a flight wide enough to walk up | Wherever the route upstairs stands on block work rather than on the room's own floor, a second cell beside it at the same height is equally standable — i.e. the flight is more than one cell across, and nothing has been placed on the half of it the route did not take |
+| leaves nothing standing in mid-air | Every block of the room is held up: it rests on the room's floor, on a block below it, or against a block beside it at the same height. Anything left over after that has spread as far as it can — a prop stood on a storey the room was left without, say — is floating |
+| keeps the upper storey inside the room | The boundary wall is solid through the room's full height, so climbing the stairs is not a way out of it |
+| opens some of its rooms through both storeys, and floors over the rest | Across the seeds, some rooms come out with a space open from floor to ceiling — and every room, whichever way it went, still has a reachable upper storey |
 | hangs paintings the live room would accept, within the room's canvas limit | Each generated `Canvas` passes `WallAttachedObjectUtil.canPlaceObject` against a live room, added one at a time, with valid image/frame paths |
 | builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomGenerationPaletteMap`, and the pack varies across seeds |
 | keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
 | rebuilds the same room from the same seed, and a different one from a different seed | Generation is deterministic per seed (layout, objects and texture pack alike), and seeds do not collapse onto one layout |
 | is what the room generator builds Hub and Regular rooms with | `RoomGenerationUtil.generateRoom` returns a procedurally generated room, texture pack included, for both multiplayer room types |
+
+## Voxel Grid Migration (`voxel-grid-migration.test.ts`) — 57 tests
+
+A room's contents are stored as an opaque binary blob, so an old room is migrated by the decoder on load rather than by a pass over storage. The fixtures these run against were produced by the previous commit's own encoder, in a git worktree, so what is being read is what the shipped code actually wrote — see the fixtures' README. Run per fixture: the bare shell a multiplayer room used to be, four fully generated rooms, and one with block work of assorted heights. See [voxel_grid.md](../../geometry/voxel_grid.md#stored-format-and-its-versions) for the behavior under test.
+
+| Test | What it verifies |
+|------|-----------------|
+| is recognised as an older version than the one being written now | The blob declares the older version, and what comes out of it is written back in the current one |
+| keeps every layer the room already had, face for face | Every quad of every layer the old room had survives the migration byte for byte |
+| keeps every voxel standing where it stood, and adds the storey floor over it | Each cell keeps its collision layer mask, plus a slab at the height its ceiling used to hang at |
+| leaves the storey above the slab empty | Every layer above the slab is unoccupied and holds no quads |
+| leaves the room's floor exactly as it was | Every floor tile keeps its visibility and texture |
+| shows the old ceiling from below, as the underside of the new storey floor | The slab's underside carries the old ceiling's texture, and is on show under exactly the cells the ceiling tile was |
+| hangs the room's own ceiling over the empty storey instead | Every ceiling tile is on show over the empty storey, carrying the old ceiling texture |
+| comes out of a second decode identical to the first | Migration is a function of the blob alone, so two servers loading the same room agree |
+| survives a round trip through the current format unchanged | Re-encoding a migrated room and reading it back gives the same room, so a migrated room does not decay each time it is saved |
+| is carried through every version up to the current one | A version-0 blob runs the whole chain of converters, arriving with both the corner walls version 1 introduced and the storey floor version 2 introduced |
+| holds no quad outside the grid's own range | The migrated room addresses exactly the quads the current grid does |
+| leaves the entrance open | A migrated room is still one a player can get into |
 
 ## Room Population (`room-population.test.ts`) — 34 tests
 
@@ -128,7 +153,7 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | disconnect-with-save persists lastRoomID and flushes the latest metadata | Disconnect-with-save writes `lastRoomID` and the latest metadata |
 | chat messages are stored in player metadata | A chat message lands in the player object's metadata |
 
-## Voxel Operations (`voxel.test.ts`) — 9 tests
+## Voxel Operations (`voxel.test.ts`) — 13 tests
 
 | Test | What it verifies |
 |------|-----------------|
@@ -140,7 +165,16 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | removing a non-existent block is handled gracefully | No crash when removing an absent block |
 | duplicate add to occupied layer is rejected | A second add to an occupied layer is rejected |
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
+| leaves the storey above the entrance free to build on and to take apart | Both entrance zones stop at the storey the doorway opens onto: directly over a cell closed to building, and directly over a jamb closed to removal, the upper storey takes an add and a removal — while the ground storey under each of them is untouched |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
+| a block holding a canvas can only be removed once the canvas goes first | A block with something hanging on it refuses to come down until the attachment has been taken off it |
+
+A room is encoded into one reusable buffer, and writing past the end of a typed array is silently ignored rather than throwing — so these two cover the room nobody has built yet, which is the most a room can ever cost to write down.
+
+| Test | What it verifies |
+|------|-----------------|
+| survives being written and read back when the room is filled solid | A room solid from its floor to its ceiling in every cell encodes within the format's own maximum and decodes back quad for quad |
+| refuses an encoding that overflowed the buffer rather than handing back a short one | An encoding that ran past the buffer throws instead of returning a truncation, and leaves the buffer free for the next one |
 
 ## Game Mode (`game-mode.test.ts`) — 23 tests
 
@@ -172,7 +206,7 @@ Clicking something in the room means one thing in play mode and another in edit 
 | replaces the character with a block, and the block with the character again | Only one of the three selections is ever active |
 | replaces the character even while a step holds the character's own selection down | Pinning a selection stops the user from dropping it, not from picking something else instead |
 
-## Single-Player Mode (`single-player.test.ts`) — 13 tests
+## Single-Player Mode (`single-player.test.ts`) — 14 tests
 
 | Test | What it verifies |
 |------|-----------------|
@@ -183,6 +217,7 @@ Clicking something in the room means one thing in play mode and another in edit 
 | omits content for a single-player room and reconstructs it empty | The wire format sends a single-player room as a content-less descriptor: `RoomRuntimeMemory.encode/decode` preserves the room's identity but omits its voxels/objects, reconstructing them empty |
 | still round-trips full content for a multiplayer room | A Hub room's voxel grid and object group survive the encode/decode round-trip intact |
 | generates the tutorial room with the walls its steps take down | `RoomGenerationUtil` (the same shared generator the client uses) builds both walls the tutorial later opens — the one between the user and the receptionist, and the one across the way out — leaves the fallback patch of floor bare, and places the receptionist and the door the steps address by name |
+| builds the tutorial room as a single storey the camera can look down into | The tutorial's walls reach the slab that caps the room and stop there — nothing stands on the storey above — and no cell of the grid draws the upward face of that slab, so a camera drawn back above the room looks into it rather than down onto a lid |
 | emits per-quad change events during generation (why the client listens only after voxels spawn) | Generation fires `voxelQuadChangeObservable` events per quad — guarding the ordering assumption that the client registers its quad-change listener only after the room's voxel objects exist |
 | picks a bare patch of floor between the player and the camera | The patch the tutorial asks the user to select is settled while the step runs: it lies toward the camera, is never the one the user is standing on, and carries no block — so its outline is visible and the block he is asked to build has somewhere to go |
 | keeps the whole block-building passage on the one patch it asked for | Every step of the passage reads back the one patch `select_floor` settled: the step advances only on that patch (row/col/layer/face all named) and turns the camera on it, and `add_block` and `remove_block` each end by putting the selection where the passage needs it next — on the block just built, then back on the floor it stood on |
@@ -449,7 +484,7 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | user without a room cannot change textures | 403 returned |
 | request without texturePackPath is rejected | 400 returned for the missing field |
 
-## Authentication Lifecycle (`auth-lifecycle.test.ts`) — 22 tests
+## Authentication Lifecycle (`auth-lifecycle.test.ts`) — 25 tests
 
 ### Google OAuth (Scenario 10)
 
@@ -483,6 +518,9 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 | identifyRegisteredUser does NOT call updateLastLogin | API-level identification does not update login stats |
 | identifyAdmin does NOT call updateLastLogin | Admin-level identification does not update login stats |
 | multiple API calls via identifyRegisteredUser do not inflate loginCount | Repeated API identifications never call `updateLastLogin` |
+| a failed lookup does not replace the token's account with a new guest | A lookup that fails leaves the token's account alone rather than minting a guest over it |
+| a token naming a genuinely deleted account still yields a guest on a public route | A public route still admits the holder of a token whose account is really gone |
+| a route reserved for members mints no guest for a visitor holding no token | A members-only route turns a tokenless visitor away instead of creating an account for them |
 | minimum gap between distinct logins is one day | Pins `LOGIN_COUNT_MIN_GAP_MS` to `1 * DAY_IN_MS` |
 | requests within the gap belong to the same login | Same-visit requests do not count as new logins |
 | a request after the gap counts as a new distinct login | A return after the inactivity gap increments `loginCount` |
@@ -618,10 +656,11 @@ for how to run it. It skips itself when no emulator is available.
 |----------|-------|
 | Connection | 9 |
 | Room | 9 |
-| Room Generation | 8 |
+| Room Generation | 12 |
+| Voxel Grid Migration | 57 |
 | Room Population | 34 |
 | Object | 8 |
-| Voxel | 9 |
+| Voxel | 12 |
 | Voxel Quad Reselection | 32 |
 | Game Mode | 23 |
 | Single-Player | 13 |
@@ -635,7 +674,7 @@ for how to run it. It skips itself when no emulator is available.
 | Property-Based | 17 |
 | Room Ownership | 7 |
 | Room API | 12 |
-| Authentication Lifecycle | 22 |
+| Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **372** |
+| **Total** | **439** |

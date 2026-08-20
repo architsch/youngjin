@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
 import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions";
 
@@ -59,16 +59,12 @@ const VoxelQueryUtil =
     // Returns COLLISION_LAYER_NULL if no layer is occupied
     getHighestOccupiedVoxelCollisionLayer(voxel: Voxel): number
     {
-        let layer = COLLISION_LAYER_MAX;
-        let maskTemp = voxel.collisionLayerMask;
-        while ((maskTemp & 0b10000000) == 0)
+        for (let layer = COLLISION_LAYER_MAX; layer >= COLLISION_LAYER_MIN; --layer)
         {
-            maskTemp <<= 1;
-            if (maskTemp == 0)
-                return COLLISION_LAYER_NULL;
-            layer--;
+            if ((voxel.collisionLayerMask & (1 << layer)) != 0)
+                return layer;
         }
-        return layer;
+        return COLLISION_LAYER_NULL;
     },
 
     //-------------------------------------------------------------------------------------
@@ -146,7 +142,7 @@ const VoxelQueryUtil =
 
     getVoxelQuadCollisionLayerFromQuadIndex(quadIndex: number): number
     {
-        return Math.floor((quadIndex % NUM_VOXEL_QUADS_PER_VOXEL) / 6);
+        return Math.floor((quadIndex % NUM_VOXEL_QUADS_PER_VOXEL) / NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
     },
 
     getVoxelQuadCollisionLayerAfterOffset(quadIndex: number, collisionLayerOffset: number): number
@@ -184,21 +180,24 @@ const VoxelQueryUtil =
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
         let offsetX = 0, offsetY = 0, offsetZ = 0,
-            dirX = 0, dirY = 0, dirZ = 0, scaleX = 1, scaleY = 0.5, scaleZ = 1;
+            dirX = 0, dirY = 0, dirZ = 0, scaleX = 1, scaleY = COLLISION_LAYER_HEIGHT, scaleZ = 1;
 
         if (facingAxis == "y")
             scaleY = 1;
 
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
         {
-            offsetY = (orientation == "+") ? 0 : 4; // floor or ceiling
+            offsetY = (orientation == "+") ? 0 : MAX_ROOM_Y; // floor or ceiling
         }
         else
         {
             if (facingAxis == "y")
-                offsetY = ((orientation == "-") ? 0 : 0.5) + 0.5 * collisionLayer;
+            {
+                offsetY = ((orientation == "-") ? 0 : COLLISION_LAYER_HEIGHT) +
+                    COLLISION_LAYER_HEIGHT * collisionLayer;
+            }
             else
-                offsetY = 0.25 + 0.5 * collisionLayer;
+                offsetY = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
         }
 
         switch (facingAxis)
