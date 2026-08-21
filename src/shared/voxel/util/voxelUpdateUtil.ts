@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM } from "../../system/sharedConstants";
 import Room from "../../room/types/room";
 import { UserRole } from "../../user/types/userRole";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
@@ -8,10 +8,41 @@ import WallAttachedObjectUtil from "../../object/util/wallAttachedObjectUtil";
 import RoomGenerationVolumeUtil from "../../room/util/roomGenerationVolumeUtil";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
+// Every entry point here takes a quadIndex, and a quadIndex arrives from outside: decoded off a
+// voxel edit signal, or computed by a caller from a selection. The arithmetic that turns one back
+// into a row, a column and a collision layer answers for any number at all — it divides and takes
+// remainders, and neither objects — so an index from outside the room comes back as the coordinates
+// of some quad rather than as an error.
+//
+// As the room is currently shaped, an index past the end happens to divide out to a row past the
+// end too, which getVoxel already refuses. That is arithmetic rather than a guarantee, and it is
+// not what the checks further in are for, so it is not what this relies on:
+//
+//   - It names the fault. Without it the log says "Voxel not found", which sent a reader looking
+//     for a missing voxel the last time an index field turned out to be too narrow.
+//   - It covers the width of the field itself. A deployment leaves browser sessions running the
+//     previous bundle, whose narrower quadIndex runs into the bytes behind it and decodes as an
+//     enormous number; refusing that is what keeps the changeover from writing somewhere else.
+//   - It rejects an index that is not a whole number, which no check further in does.
+//
+// The check is repeated in the mutating methods rather than left to the can* predicates alone,
+// because a mutator called without a room skips its predicate entirely — that is how a brand-new
+// room is generated, and how a client applies an update the server has already accepted.
+function quadIndexIsInRange(methodName: string, quadIndex: number): boolean
+{
+    if (VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
+        return true;
+    console.error(`VoxelUpdateUtil::${methodName} :: quadIndex is out of range ` +
+        `(quadIndex=${quadIndex}, valid range = [0, ${NUM_VOXEL_QUADS_PER_ROOM}))`);
+    return false;
+}
+
 const VoxelUpdateUtil =
 {
     canAddVoxelBlock(userRole: UserRole, room: Room, quadIndex: number): boolean
     {
+        if (!quadIndexIsInRange("canAddVoxelBlock", quadIndex))
+            return false;
         if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
@@ -39,6 +70,8 @@ const VoxelUpdateUtil =
         quadTextureIndicesWithinLayer?: number[],
         room?: Room): boolean // Won't validate if the room is not defined (e.g. when generating a brand new room, or force-modifying a room's voxelGrid).
     {
+        if (!quadIndexIsInRange("addVoxelBlock", quadIndex))
+            return false;
         if (room && !VoxelUpdateUtil.canAddVoxelBlock(userRole, room, quadIndex))
         {
             console.error(`VoxelUpdateUtil::addVoxelBlock :: Failed (quadIndex=${quadIndex})`);
@@ -75,6 +108,8 @@ const VoxelUpdateUtil =
     // for a caller that removes those first, and so leaves nothing behind without its support.
     canRemoveVoxelBlockWithItsWallAttachments(userRole: UserRole, room: Room, quadIndex: number): boolean
     {
+        if (!quadIndexIsInRange("canRemoveVoxelBlockWithItsWallAttachments", quadIndex))
+            return false;
         if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
@@ -101,6 +136,8 @@ const VoxelUpdateUtil =
     removeVoxelBlock(userRole: UserRole, voxels: Voxel[], quadIndex: number,
         room?: Room): boolean // Won't validate if the room is not defined (e.g. when generating a brand new room, or force-modifying a room's voxelGrid).
     {
+        if (!quadIndexIsInRange("removeVoxelBlock", quadIndex))
+            return false;
         if (room && !VoxelUpdateUtil.canRemoveVoxelBlock(userRole, room, quadIndex))
         {
             console.error(`VoxelUpdateUtil::removeVoxelBlock :: Failed (quadIndex=${quadIndex})`);
@@ -128,6 +165,8 @@ const VoxelUpdateUtil =
     canMoveVoxelBlock(userRole: UserRole, room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
     {
+        if (!quadIndexIsInRange("canMoveVoxelBlock", quadIndex))
+            return false;
         if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
@@ -159,6 +198,8 @@ const VoxelUpdateUtil =
         rowOffset: number, colOffset: number, collisionLayerOffset: number,
         room?: Room): boolean // Won't validate if the room is not defined (e.g. when generating a brand new room, or force-modifying a room's voxelGrid).
     {
+        if (!quadIndexIsInRange("moveVoxelBlock", quadIndex))
+            return false;
         if (room && !VoxelUpdateUtil.canMoveVoxelBlock(userRole, room, quadIndex, rowOffset, colOffset, collisionLayerOffset))
         {
             console.error(`VoxelUpdateUtil::moveVoxelBlock :: Failed (quadIndex=${quadIndex})`);
@@ -174,6 +215,12 @@ const VoxelUpdateUtil =
 
         const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
             row + rowOffset, col + colOffset, "y", "-", newCollisionLayer);
+
+        // The offsets arrive from outside alongside the quadIndex, so the destination they point at
+        // is no more trusted than the source: an offset carrying the block past the edge of the grid
+        // is reported here as an invalid index rather than resolved to a cell on the far side.
+        if (!quadIndexIsInRange("moveVoxelBlock (destination)", targetQuadIndex))
+            return false;
 
         const quadTextureIndicesWithinLayer: number[] = [];
         const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
@@ -207,6 +254,8 @@ const VoxelUpdateUtil =
 
     canSetVoxelQuadTexture(userRole: UserRole, room: Room, quadIndex: number): boolean
     {
+        if (!quadIndexIsInRange("canSetVoxelQuadTexture", quadIndex))
+            return false;
         if (!RoomValidationUtil.canUserEditRoom(userRole, room))
             return false;
 
@@ -226,6 +275,8 @@ const VoxelUpdateUtil =
     setVoxelQuadTexture(userRole: UserRole, voxels: Voxel[], quadIndex: number, textureIndex: number,
         room?: Room): boolean // Won't validate if the room is not defined (e.g. when generating a brand new room, or force-modifying a room's voxelGrid).
     {
+        if (!quadIndexIsInRange("setVoxelQuadTexture", quadIndex))
+            return false;
         if (room && !VoxelUpdateUtil.canSetVoxelQuadTexture(userRole, room, quadIndex))
         {
             console.error(`VoxelUpdateUtil::setVoxelQuadTexture :: Failed (quadIndex=${quadIndex})`);

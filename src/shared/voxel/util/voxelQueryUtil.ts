@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
 import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions";
 
@@ -126,6 +126,16 @@ const VoxelQueryUtil =
     //-------------------------------------------------------------------------------------
     // Get properties from quadIndex
     //-------------------------------------------------------------------------------------
+
+    // Whether a quadIndex names a quad of this room at all. Every "get X from quadIndex" below
+    // answers for any number it is handed — the arithmetic divides and takes remainders, and neither
+    // objects to an index from outside the room — so an out-of-range index is not returned as an
+    // error but as the coordinates of some other quad. That makes this the check that has to be made
+    // before an index coming from anywhere but this module's own arithmetic is acted on.
+    isValidVoxelQuadIndex(quadIndex: number): boolean
+    {
+        return Number.isInteger(quadIndex) && quadIndex >= 0 && quadIndex < NUM_VOXEL_QUADS_PER_ROOM;
+    },
 
     getVoxelQuadFacingAxisFromQuadIndex(quadIndex: number): "x" | "y" | "z"
     {

@@ -208,11 +208,16 @@ apt-get clean
 
 PM2's own logs need attention in two places. Files belonging to apps that no longer exist are never
 touched by rotation and simply sit there, so delete those by name after confirming against
-`pm2 status`. Already-rotated files can be compressed, which typically reclaims well over ninety
-percent of their size:
+`pm2 status`. Rotated files are compressed by `pm2-logrotate` itself, so the command below usually
+finds nothing left to do — it covers a log rotated in the window before the compression worker ran,
+and a machine where that setting has been turned off:
 ```
 gzip -f /root/.pm2/logs/*__*.log
 ```
+
+Because rotated logs are compressed, anything that reads the log history has to read `.log.gz` as
+well as `.log` — a pattern matching only `.log` sees the file currently being written and no
+history at all, and reports that as the whole record rather than as an error.
 
 Superseded kernels are removed automatically once
 `Unattended-Upgrade::Remove-Unused-Kernel-Packages` is enabled. Packages left in the `rc` state —

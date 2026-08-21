@@ -8,7 +8,6 @@ import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import { NUM_VOXEL_QUADS_PER_ROOM } from "../../shared/system/sharedConstants";
 import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
@@ -183,7 +182,7 @@ function refreshSelection()
         const quadIndex = existingSelection.quadIndex;
 
         // If the quadIndex doesn't even make sense, just unselect.
-        if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
+        if (!VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
         {
             VoxelQuadSelection.unselect();
             return;

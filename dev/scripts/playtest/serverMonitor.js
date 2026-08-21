@@ -25,14 +25,30 @@ const LOG_DIR = "/root/.pm2/logs";
 const STATE_DIR = path.join(__dirname, "../../../temp/playtest");
 const HEALTH_URL = { staging: "https://staging.thingspool.net/health", live: "https://app.thingspool.net/health" };
 
-// PM2 names the current log `<app>-error-<id>.log` and rotated ones
-// `<app>-error-<id>__<date>.log`. The id differs per app, so both are matched by glob.
-function logGlob(app, stream, rotatedOnly)
+// PM2 names the current log `<app>-<stream>-<id>.log` and rotated ones
+// `<app>-<stream>-<id>__<date>.log`. The id differs per app, so both are matched by glob.
+//
+// pm2-logrotate runs here with compression on, so a log ends in `.log` only while it is the one
+// being written to — every rotated log is `.log.gz` within a day of being rotated. A pattern
+// matching `.log` alone therefore sees the current file and nothing else, and it does not fail
+// when it does: the survey simply comes back short, and a long-standing error that lives only in
+// the compressed backlog reads as something a playtest just caused.
+function retainedLogGlob(app, stream)
 {
-    return rotatedOnly
-        ? `${LOG_DIR}/${app}-${stream}-*__*.log`
-        : `${LOG_DIR}/${app}-${stream}-*.log`;
+    return `${LOG_DIR}/${app}-${stream}-*.log ${LOG_DIR}/${app}-${stream}-*.log.gz`;
 }
+
+// Only the logs that can still be appended to. A rotated log is finished, and once compressed a
+// byte offset into it means nothing anyway — so the baseline and the diff, which work by byte
+// offset, stay on the uncompressed files.
+function growingLogGlob(app, stream)
+{
+    return `${LOG_DIR}/${app}-${stream}-*.log`;
+}
+
+// A glob that matches nothing is passed through by the shell as its own literal text, which would
+// then be read as a filename. Every loop over one of these globs skips what is not a real file.
+const SKIP_UNMATCHED = `[ -f "$f" ] || continue;`;
 
 function ssh(command)
 {
@@ -123,19 +139,22 @@ function summarize(text, topN)
 // seeding or playtesting so that every later finding can be checked against it.
 function history(app, topN)
 {
-    const raw = ssh(`cat ${logGlob(app, "error", false)} 2>/dev/null || true`);
+    // `zcat -f` reads the compressed backlog and the current log through the same command, since
+    // with -f it passes an uncompressed file straight through.
+    const raw = ssh(`zcat -f ${retainedLogGlob(app, "error")} 2>/dev/null || true`);
     const summary = summarize(raw, topN);
 
     // Per-day counts for the recurring offenders make a regression visible as a change in
     // rate, which a single total cannot show.
-    const perFile = ssh(`for f in ${logGlob(app, "error", false)}; do ` +
-        `echo "$(basename $f)|$(wc -l < $f)"; done 2>/dev/null || true`)
+    const perFile = ssh(`for f in ${retainedLogGlob(app, "error")}; do ` +
+        `${SKIP_UNMATCHED} echo "$(basename $f)|$(zcat -f "$f" | wc -l)"; done 2>/dev/null || true`)
         .split("\n").filter(Boolean).map(l => {
             const [file, lines] = l.split("|");
             return { file, lines: parseInt(lines, 10) };
-        });
+        })
+        .sort((a, b) => a.file.localeCompare(b.file));
 
-    return { app, scope: "all retained error logs", perFile, ...summary };
+    return { app, scope: "all retained error logs, compressed ones included", perFile, ...summary };
 }
 
 function statePath(app) { return path.join(STATE_DIR, `${app}-baseline.json`); }
@@ -146,8 +165,8 @@ function baseline(app)
 
     // Sizes are captured per file. A single combined offset would be wrong the moment pm2
     // rotates a log mid-run, which for a long playtest is a real possibility.
-    const sizes = ssh(`for f in ${logGlob(app, "error", false)} ${logGlob(app, "out", false)}; do ` +
-        `echo "$f|$(stat -c %s $f)"; done 2>/dev/null || true`)
+    const sizes = ssh(`for f in ${growingLogGlob(app, "error")} ${growingLogGlob(app, "out")}; do ` +
+        `${SKIP_UNMATCHED} echo "$f|$(stat -c %s "$f")"; done 2>/dev/null || true`)
         .split("\n").filter(Boolean).reduce((acc, l) => {
             const [file, size] = l.split("|");
             acc[file] = parseInt(size, 10);

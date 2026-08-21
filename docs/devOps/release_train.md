@@ -66,11 +66,11 @@ ordering matters.
 
 ## Ordering constraint worth knowing
 
-Phase 5's disk reclamation compresses already-rotated PM2 log files, and the log survey phase 6
-depends on locates those files by name. Running the reclamation first would leave the playtest with
-a much shorter view of the server's error history, and long-standing noise would read as new
-findings. The orchestrator therefore snapshots the log backlog before phase 5 and hands the snapshot
-to phase 6.
+Phase 6 reports the errors a release introduced, which it can only do against a record of the
+errors the server was already producing. That record has to be taken before anything in the run
+touches the machine, and phase 5 is the first phase that does. The orchestrator therefore snapshots
+the log backlog before phase 5 and hands the snapshot to phase 6; without it, long-standing noise
+reads as new findings.
 
 ## Related
 

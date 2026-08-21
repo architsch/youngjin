@@ -1,7 +1,7 @@
 import BufferState from "../../../networking/types/bufferState";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import EncodableData from "../../../networking/types/encodableData";
-import EncodableRaw2ByteNumber from "../../../networking/types/encodableRaw2ByteNumber";
+import EncodableRaw4ByteNumber from "../../../networking/types/encodableRaw4ByteNumber";
 import EncodableRawSignedByteNumber from "../../../networking/types/encodableRawSignedByteNumber";
 
 export default class MoveVoxelBlockSignal extends EncodableData
@@ -26,7 +26,7 @@ export default class MoveVoxelBlockSignal extends EncodableData
     encode(bufferState: BufferState)
     {
         new EncodableByteString(this.roomID).encode(bufferState);
-        new EncodableRaw2ByteNumber(this.quadIndex).encode(bufferState);
+        new EncodableRaw4ByteNumber(this.quadIndex).encode(bufferState);
         new EncodableRawSignedByteNumber(this.rowOffset).encode(bufferState);
         new EncodableRawSignedByteNumber(this.colOffset).encode(bufferState);
         new EncodableRawSignedByteNumber(this.collisionLayerOffset).encode(bufferState);
@@ -35,7 +35,7 @@ export default class MoveVoxelBlockSignal extends EncodableData
     static decode(bufferState: BufferState): EncodableData
     {
         const roomID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        const quadIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
+        const quadIndex = (EncodableRaw4ByteNumber.decode(bufferState) as EncodableRaw4ByteNumber).n;
         const rowOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
         const colOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;
         const collisionLayerOffset = (EncodableRawSignedByteNumber.decode(bufferState) as EncodableRawSignedByteNumber).n;

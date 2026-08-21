@@ -169,11 +169,14 @@ One command, on the main thread, and it must happen **before** phase 5:
 node dev/scripts/playtest/serverMonitor.js history --app staging --top 20 > temp/release-train/backlog-<runID>.json
 ```
 
-The reason is a real interaction between the two remaining phases. Phase 5's `reclaim --apply`
-compresses already-rotated PM2 logs, and the log survey that phase 6 depends on reads those rotated
-files by glob — after compression they no longer match, so the playtest would see a much shorter
-backlog and read long-standing noise as new findings. Taking the snapshot first makes the order
-safe. Hand the file's path to phase 6.
+The snapshot is phase 6's ground truth: what this server was already complaining about before the
+run touched it. Without one, every long-standing entry in the log reads as something the release
+caused, and the playtest reports a backlog of old noise as new findings.
+
+It goes before phase 5 because phase 5 is the first thing in the run that touches the machine at
+all. Anything that happens from there on — housekeeping, a restart the user approved, a log
+rotation — moves the boundary the playtest measures against, so the boundary is fixed first. Hand
+the file's path to phase 6.
 
 ## Phase 5 — VPS maintenance
 

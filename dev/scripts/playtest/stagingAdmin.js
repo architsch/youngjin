@@ -435,12 +435,24 @@ async function cleanup(db, bucket, runID, includePersistent)
 // ObjectGroup's would mean decoding the entire voxel grid first — so that is the one these
 // commands address, and it is the one with a live migration path today.
 //
-// Rewriting byte 0 downward is a legitimate way to manufacture an old blob rather than a
-// corrupt one: VoxelGrid's decoder for version 0 is the same function as the current
-// decoder, so the body layout is identical and only the 0 -> 1 converter's effect
-// (re-adding the corner walls) distinguishes the two.
-
+// Rewriting byte 0 downward manufactures an old blob rather than a corrupt one only when the two
+// versions are read by the same decoder. Then the body layout is identical and the version byte is
+// genuinely all that separates them, so what comes back is a real old room and the converter chain
+// has real work to do on it.
+//
+// Across a change of decoder it manufactures corruption instead. The header would claim a layout
+// the body is not written in, and the decoder would read a room's worth of bytes as the wrong
+// fields — which is not an old room, and tests nothing that migrating one exercises. So the
+// downgrade is refused there rather than written, and the versions each decoder covers are listed
+// below so that adding a decoder means extending this rather than discovering it afterwards.
+//
+// Cross-decoder migration is covered instead by tests/integration/scenarios/voxel-grid-migration.test.ts,
+// against fixtures produced by the old encoder itself — see that fixture directory's README.
 const CONTENT_FILE = "content.bin";
+
+// voxel-grid format version -> the decoder that reads it. Versions sharing a decoder share a body
+// layout; versions that do not, do not.
+const VOXEL_GRID_DECODER_BY_VERSION = { 0: "decoder_1", 1: "decoder_1", 2: "decoder_2" };
 
 function contentPath(roomID) { return `${collection("rooms")}/${roomID}/${CONTENT_FILE}`; }
 function backupPath(roomID) { return `${backupRoot()}/${roomID}/${CONTENT_FILE}`; }
@@ -481,6 +493,24 @@ async function downgradeContent(bucket, roomID, toVersion)
     const originalVersion = buffer[0];
     if (toVersion >= originalVersion)
         throw new Error(`--to ${toVersion} is not below the current version (${originalVersion}); nothing to downgrade.`);
+
+    const fromDecoder = VOXEL_GRID_DECODER_BY_VERSION[originalVersion];
+    const toDecoder = VOXEL_GRID_DECODER_BY_VERSION[toVersion];
+    if (fromDecoder === undefined || toDecoder === undefined)
+    {
+        throw new Error(`No decoder is recorded for voxel-grid version ` +
+            `${fromDecoder === undefined ? originalVersion : toVersion}. ` +
+            `Add it to VOXEL_GRID_DECODER_BY_VERSION before downgrading across it.`);
+    }
+    if (fromDecoder !== toDecoder)
+    {
+        throw new Error(
+            `Refusing to downgrade version ${originalVersion} to ${toVersion}: they are read by ` +
+            `different decoders (${fromDecoder} vs ${toDecoder}), so rewriting the version byte ` +
+            `would leave the header claiming a layout the body is not written in. That is a corrupt ` +
+            `blob, not an old room. Cross-decoder migration is covered by ` +
+            `tests/integration/scenarios/voxel-grid-migration.test.ts against real old-encoder fixtures.`);
+    }
 
     // Back the original up before touching it, and never overwrite an existing backup —
     // a second downgrade of the same room must not replace the pristine copy with a

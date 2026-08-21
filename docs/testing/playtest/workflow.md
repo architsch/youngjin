@@ -77,7 +77,11 @@ There are two independent versioning schemes and both can be seeded. Firestore r
 `version` field migrated by the `DBVersionMigration` arrays. Room content blobs carry a leading
 version byte migrated by the decoder and converter chains on `VoxelGrid` and `ObjectGroup` —
 `downgrade-content` rewrites that byte, which manufactures a genuinely old blob rather than a
-corrupt one, because the old decoder and the current one share a body layout.
+corrupt one **only between versions the same decoder reads**, since only those share a body layout.
+Asked to cross from one decoder to another, it refuses: the rewritten header would claim a layout
+the body is not written in, giving a corrupt blob rather than an old room. Migration across that
+boundary is covered offline instead, by `tests/integration/scenarios/voxel-grid-migration.test.ts`
+against fixtures the old encoder itself produced.
 
 `seed-population` creates a Member account paired with the room it owns. This is the only
 practical way to fill the room list: staging runs in production mode, where the dev OAuth bypass
@@ -137,7 +141,7 @@ Screenshots and failure screenshots are written under `temp/playtest/artifacts/`
 | `seed-population` at the current version, with `--persist` | Yes | Reading it does not change it, so a stable population keeps pagination deterministic between runs. |
 | `seed-users` / `seed-rooms` at an outdated version | No | Single-use by nature — the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. |
 | Seeded guests | No | The server's own stale-guest sweep deletes them on its schedule regardless. |
-| `downgrade-content` | No | The next room save re-encodes the blob at the current version. Always restore afterwards. |
+| `downgrade-content` | No | Allowed only within one decoder's versions. The next room save re-encodes the blob at the current version. Always restore afterwards. |
 
 `cleanup` keeps `--persist` seeds; `cleanup --all` removes them too.
 

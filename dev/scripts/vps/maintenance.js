@@ -64,8 +64,17 @@ function auditCommands(refresh)
         ["autoupg",   `cat /etc/apt/apt.conf.d/20auto-upgrades 2>/dev/null || echo MISSING`],
         ["disk",      `df -BM --output=target,size,used,avail,pcent / /boot 2>/dev/null | tail -n +2`],
         ["journal",   `journalctl --disk-usage 2>/dev/null`],
-        ["pm2logs",   `du -sm /root/.pm2/logs 2>/dev/null | cut -f1; ls /root/.pm2/logs/*__*.log 2>/dev/null | wc -l`],
-        ["aptcache",  `du -sm /var/cache/apt 2>/dev/null | cut -f1`],
+        // Rotated logs are counted in both forms. pm2-logrotate runs with compression on, so a
+        // rotated log spends almost all of its life as `.log.gz`, and counting only `.log` reports
+        // a machine with a full backlog as having none.
+        ["pm2logs",   `du -sm /root/.pm2/logs 2>/dev/null | cut -f1; ` +
+                      `ls /root/.pm2/logs/*__*.log /root/.pm2/logs/*__*.log.gz 2>/dev/null | wc -l; ` +
+                      `ls /root/.pm2/logs/*__*.log 2>/dev/null | wc -l`],
+        // Only `archives` — the downloaded .deb files — is what `apt-get clean` frees. The rest of
+        // /var/cache/apt is pkgcache.bin and srcpkgcache.bin, which apt rebuilds immediately and
+        // clean does not touch; counting those reports a permanent ~144MB as reclaimable, and the
+        // same figure comes back unchanged after every reclaim.
+        ["aptcache",  `du -sm /var/cache/apt/archives 2>/dev/null | cut -f1`],
         ["rcpkgs",    `dpkg -l 2>/dev/null | awk '/^rc/ {print $2}'`],
         ["kernels",   `dpkg -l 2>/dev/null | awk '/^ii +linux-image-[0-9]/ {print $2}'`],
         ["dpkgaudit", `dpkg --audit 2>&1 | head -20`],
@@ -321,12 +330,21 @@ function buildFindings(state)
             "docs/devOps/vps/maintenance.md#verifying-that-automatic-updates-actually-run");
     }
 
-    if (state.os.aptIndexAgeHours > LIMITS.aptIndexAgeHours)
+    // An index that is merely hours old is old enough to hide a security update entirely: the
+    // upgradable list is a reading of the index, not of what the archives currently hold, so an
+    // audit that did not refresh reports whatever was true when the index was last written — a
+    // shorter list and a lower security count, with nothing to say it is short. Only a refreshed
+    // index makes "0 upgradable" mean anything, so an unrefreshed run says so every time rather
+    // than at a threshold.
+    if (!state.refreshedIndex)
     {
-        add("info", "os",
-            `The apt package index was last refreshed ${state.os.aptIndexAgeHours}h ago.`,
-            "The upgradable list above is that stale, and a stale index is itself a sign the daily timer is not firing.",
-            "Re-run with --refresh to update the index before reading the list.");
+        const stale = state.os.aptIndexAgeHours > LIMITS.aptIndexAgeHours;
+        add(stale ? "warn" : "info", "os",
+            `The upgradable list was read from an index last refreshed ${state.os.aptIndexAgeHours}h ago.`,
+            stale
+                ? "That is stale enough to be a sign the daily timer is not firing, and the list and its security count are both understated by however much has been published since."
+                : "The list and its security count are as old as the index, so packages published since are missing from both — an audit that did not refresh cannot be read as an all-clear.",
+            "Re-run with --refresh before treating the list as current.");
     }
 
     if (state.os.dpkgAudit)
@@ -537,7 +555,10 @@ function audit(options)
     const upgradable = sections.upgradable.split("\n").map((l) => l.trim()).filter(Boolean);
     const rcPackages = sections.rcpkgs.split("\n").map((l) => l.trim()).filter(Boolean);
     const kernels = sections.kernels.split("\n").map((l) => l.trim()).filter(Boolean);
-    const [pm2LogsMB, rotatedLogCount] = sections.pm2logs.split("\n").map((n) => parseInt(n, 10) || 0);
+    // Rotated logs, and the subset of them still uncompressed — which is all `reclaim` can act on,
+    // since pm2-logrotate has already compressed the rest.
+    const [pm2LogsMB, rotatedLogCount, uncompressedRotatedLogCount] =
+        sections.pm2logs.split("\n").map((n) => parseInt(n, 10) || 0);
     const aptCacheMB = parseInt(sections.aptcache, 10) || 0;
     const journalMB = Math.round(parseFloat((sections.journal.match(/([\d.]+)([MG])/) || [])[1] || 0)
         * ((sections.journal.match(/[\d.]+([MG])/) || [])[1] === "G" ? 1024 : 1));
@@ -552,7 +573,7 @@ function audit(options)
     let totalMB = 0;
     if (journalMB > LIMITS.journalMB) { detail.push(`journal ${journalMB - 200}MB over its ceiling`); totalMB += journalMB - 200; }
     if (aptCacheMB > 50) { detail.push(`apt cache ${aptCacheMB}MB`); totalMB += aptCacheMB; }
-    if (rotatedLogCount > 0 && pm2LogsMB > 20) { detail.push(`${rotatedLogCount} rotated pm2 logs, ~${Math.round(pm2LogsMB * 0.9)}MB compressible`); totalMB += Math.round(pm2LogsMB * 0.9); }
+    if (uncompressedRotatedLogCount > 0 && pm2LogsMB > 20) { detail.push(`${uncompressedRotatedLogCount} uncompressed rotated pm2 logs, ~${Math.round(pm2LogsMB * 0.9)}MB compressible`); totalMB += Math.round(pm2LogsMB * 0.9); }
     if (rcPackages.length > 0) { detail.push(`${rcPackages.length} packages in rc state`); }
 
     const state = {
@@ -575,7 +596,8 @@ function audit(options)
             dpkgAudit: sections.dpkgaudit || null,
             installedKernels: kernels,
         },
-        disk: { ...parseDisk(sections.disk), journalMB, pm2LogsMB, rotatedLogCount, aptCacheMB, rcPackages },
+        disk: { ...parseDisk(sections.disk), journalMB, pm2LogsMB, rotatedLogCount,
+            uncompressedRotatedLogCount, aptCacheMB, rcPackages },
         reclaimable: { totalMB, detail },
         certs: parseCerts(sections.certs),
         certTimer: sections.certTimer === "NONE" ? "NONE" : sections.certTimer.trim(),
@@ -625,7 +647,11 @@ function reclaim(apply)
         { name: "aptCache", why: "drop the downloaded package cache, which refills on the next upgrade",
           dry: `du -sh /var/cache/apt 2>/dev/null`,
           run: `apt-get clean && echo cleaned` },
-        { name: "pm2Logs", why: "compress already-rotated PM2 logs",
+        // pm2-logrotate compresses as it rotates, so this normally finds nothing to do. It stays
+        // because that setting can be turned off, and because a log rotated in the window before
+        // the compression worker runs is still uncompressed. Already-compressed logs are not
+        // counted here — they are not work this step can do.
+        { name: "pm2Logs", why: "compress rotated PM2 logs that pm2-logrotate has not compressed",
           dry: `ls /root/.pm2/logs/*__*.log 2>/dev/null | wc -l`,
           run: `if ls /root/.pm2/logs/*__*.log >/dev/null 2>&1; then gzip -f /root/.pm2/logs/*__*.log && echo compressed; else echo none; fi` },
         { name: "rcPackages", why: "purge config files left behind by already-removed packages",

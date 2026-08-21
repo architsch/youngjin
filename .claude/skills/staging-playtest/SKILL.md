@@ -119,15 +119,18 @@ Four things to get right:
   current is only half the assertion; `verify-migration` also reports whether that copy survived
   in storage, which is what a write-back storing the row as the reader had it would leave behind.
 
-### The VoxelGrid decoder chain is no longer seedable — read it, do not manufacture it
+### The VoxelGrid decoder chain is no longer seedable at the current version — read it, do not manufacture it
 
-`downgrade-content` rewrites byte 0 of a room's content blob and nothing else. That was a
-legitimate way to manufacture an old room while every version of the format shared one body layout,
-and it is **no longer true**: the current version encodes each voxel differently from the versions
-before it, so a blob whose header has been flipped down describes itself with one layout and is
-written in another. The server does not read that as an old room; it reads it as a corrupt one, and
-anything it then logs is a fact about a corrupt blob rather than about the migration path. Do not
-use it to test the decoder chain, and do not report what it produces as a migration finding.
+`downgrade-content` rewrites byte 0 of a room's content blob and nothing else. That is a legitimate
+way to manufacture an old room only between versions that share a body layout, and the current
+version does **not** share one with the versions before it — it encodes each voxel differently. A
+blob whose header was flipped across that boundary describes itself with one layout and is written
+in another. The server does not read that as an old room; it reads it as a corrupt one, and anything
+it then logs is a fact about a corrupt blob rather than about the migration path.
+
+The tool now refuses that case rather than writing it: a downgrade across a change of decoder exits
+with an error naming both decoders, and only a downgrade within one is carried out. So you cannot
+manufacture the current version's migration path, and you no longer have to remember not to.
 
 What replaces it costs nothing, because staging supplies it for free. **A room that has not been
 saved since the format changed is still stored at the old version**, which makes it a genuine
@@ -152,7 +155,7 @@ fixture that no seeding could produce. So:
 | `seed-population` at the current version | **Yes** — use `--persist` | Reading it does not change it. A stable population makes pagination deterministic between runs. Check `inspect` reports it as `outdated: 0`; if not, the schema moved and the fixture is now single-use. |
 | `seed-users` / `seed-rooms` at an outdated version | **No** | Single-use by nature: the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. Re-seed every run. |
 | Seeded guests (`userType` 2) | **No** | The server's own hourly stale-guest sweep deletes them regardless of intent. |
-| `downgrade-content` | **Do not use** | Its byte-0 rewrite no longer produces a decodable old blob (see above). If it has already been run, `restore-content` immediately. |
+| `downgrade-content` | **No** — and only within one decoder | Refused outright across a change of decoder (see above). Where it is allowed, the next room save re-encodes the blob at the current version, so it is single-use. Always `restore-content` afterwards. |
 | A room already stored below the current version | **No** | Single-use, and not seeded at all — it is left over from before the format changed. The first save after it is entered spends it. |
 
 ## Step 4 — Drive the clients

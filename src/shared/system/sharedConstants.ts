@@ -160,6 +160,12 @@ export const NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6; // corresponding to 6 side
 export const NUM_VOXEL_QUADS_PER_VOXEL =
     (NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS) + 2; // 2 is for the floor and ceiling quads, which sit outside of the collision layers (They belong to "COLLISION_LAYER_NULL").
 
+// How many quads a room addresses, and so the range every quadIndex is drawn from. Growing the room
+// in any direction — more rows, more columns, more collision layers — grows this, and a quadIndex is
+// carried in the voxel edit signals, so the field it is sent in has to stay wide enough to hold the
+// largest one. A field that is too narrow does not fail loudly: the index is clamped down to a value
+// that still names a real quad, and the edit lands on the wrong part of the room. The tests assert
+// this range against the width of that field, so a room that outgrows it fails there instead.
 export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 100352
 
 // The largest a room's voxel grid can come out once encoded: every cell writing its floor and
