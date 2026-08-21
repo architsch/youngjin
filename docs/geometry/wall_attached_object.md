@@ -57,6 +57,7 @@ A wall-attached object may only be placed where (1) its back is fully supported 
 3. **Iterate across the object's width.** For each cell the object spans:
    - **Back check** — the cell's collision layer mask must fully cover the object's vertical range; otherwise the object would not be supported, and placement is rejected.
    - **Front check** — at least one front cell must *not* fully cover that vertical range, so some of the object is exposed. If every front cell is solid across the range, the object would be invisible inside the wall, and placement is rejected.
+   - **Protected-space check** — the stretch of wall the object would hang on must not reach into somewhere the room keeps clear of new block work, since hanging something there walls the space in exactly as a block would. What is asked about is that stretch alone — the one cell of wall, over the layers the object's own height covers — rather than the whole column of room behind it, so an attachment may go up on an upper storey standing over ground the room protects. See [room_entrance.md](room_entrance.md#editing-constraints-near-the-entrance).
 
 4. **Collision check.** Finally, verify the new position does not overlap any existing wall-attached object.
 

@@ -5,7 +5,9 @@ that list, one after another. `LibraryPostPageBuilder` reads it top to bottom an
 `page-N.html` per post: the oldest post in the file is `page-1.html`, the newest is the highest
 number, and the list page shows them newest first.
 
-So a new post is **appended to the end of the file**. Posts already in it are never edited.
+So a new post is **appended to the end of the file**. Posts already in it are never edited — with
+one exception: a post being rewritten because its first version was rejected is replaced in place,
+since the block at the end of the file is that rejected version.
 
 ## The link to the landing page
 

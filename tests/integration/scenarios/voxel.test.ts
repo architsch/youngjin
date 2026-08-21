@@ -8,6 +8,8 @@
  * - Mixed add/remove sequences
  * - Collision layer operations
  * - Room dirty flag
+ * - What the entrance keeps clear, for blocks and for wall attachments alike, and the invisible
+ *   plug that seals the doorway — all of which now stop at the storey the doorway opens onto
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -22,10 +24,17 @@ import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, FULL_COLLISION_LAYER_MASK,
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
+    FULL_COLLISION_LAYER_MASK, GRAVITY_SPEED,
     MAX_ENCODED_VOXEL_GRID_BYTES, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
     STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+import RoomGenerationVolumeUtil from "../../../src/shared/room/util/roomGenerationVolumeUtil";
+import Room from "../../../src/shared/room/types/room";
+import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
+import PhysicsManager from "../../../src/shared/physics/physicsManager";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import Vec3 from "../../../src/shared/math/types/vec3";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
@@ -224,6 +233,54 @@ describe("voxel scenarios", () => {
         });
     });
 
+    it("hangs a wall attachment over the entrance zone, but not inside it", async () => {
+        // A wall attachment is asked about the stretch of wall it actually hangs on, rather than
+        // about the whole column of room behind it — so the entrance's no-addition zone refuses it
+        // on the storey the doorway opens onto and lets the identical one go up directly above.
+        const BACK_ROW = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1; // inside the Hub's no-addition footprint
+        const INSIDE_COL = MULTI_PLAYER_ENTRANCE_VOXEL_COL;
+        const OUTSIDE_COL = MULTI_PLAYER_ENTRANCE_VOXEL_COL + 4; // clear of the zone, as a control
+        // A standing player's eyeline on each storey, which is where a picture goes up.
+        const GROUND_Y = 1;
+        const UPPER_Y = GROUND_Y + STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
+
+        await runScenario({
+            name: "wall attachment above the entrance zone",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+
+                // Wall for each attachment to hang on, filling both storeys of both columns, so
+                // that the only thing left to tell the four cases apart is the entrance zone.
+                for (const col of [INSIDE_COL, OUTSIDE_COL])
+                {
+                    for (const storey of [RoomGenerationVolumeUtil.GROUND_STOREY,
+                        RoomGenerationVolumeUtil.UPPER_STOREY])
+                    {
+                        RoomGenerationHelperUtil.addWall(room.voxelGrid.voxels, BACK_ROW, col,
+                            undefined, storey.collisionLayerStart,
+                            RoomGenerationVolumeUtil.getCollisionLayerMax(storey));
+                    }
+                }
+
+                const canHang = (col: number, y: number) => WallAttachedObjectUtil.canPlaceObject(
+                    room, "attachment", canvasTypeIndex,
+                    { x: col + 0.5, y, z: BACK_ROW }, { x: 0, y: 0, z: -1 });
+
+                // On the ground storey the zone is what refuses it — the same wall one column over
+                // takes it without complaint.
+                expect(canHang(INSIDE_COL, GROUND_Y)).toBe(false);
+                expect(canHang(OUTSIDE_COL, GROUND_Y)).toBe(true);
+
+                // Directly above, the zone has run out and both columns take it.
+                expect(canHang(INSIDE_COL, UPPER_Y)).toBe(true);
+                expect(canHang(OUTSIDE_COL, UPPER_Y)).toBe(true);
+            },
+        });
+    });
+
     it("cannot remove the wall blocks framing the entrance", async () => {
         await runScenario({
             name: "entrance no-remove row",
@@ -281,6 +338,73 @@ describe("voxel scenarios", () => {
                     new RemoveObjectSignal(room.id, canvas.objectId))).toBe(true);
                 expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex)).toEqual([]);
                 expect(VoxelUpdateUtil.canRemoveVoxelBlock(UserRoleEnumMap.Owner, room, quadIndex)).toBe(true);
+            },
+        });
+    });
+});
+
+/**
+ * The invisible collider that plugs the doorway so a player cannot walk out of the room through it.
+ * It stands only as tall as the doorway, which matters now that a room is taller than the storey the
+ * entrance opens onto: carried up through the room's whole height it would put an invisible wall
+ * across the upper storey, over a floor nobody can reach the doorway from in the first place.
+ */
+describe("the entrance's invisible plug", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    /** Walks a real player collider straight along +Z through the real physics engine. */
+    function walkTowardsEntrance(room: Room, startZ: number, standingOnLayer: number): number
+    {
+        const objectId = "walker";
+        const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+        const dir: Vec3 = { x: 0, y: 0, z: 1 };
+
+        if (PhysicsManager.hasRoom(room.id))
+            PhysicsManager.unload(room.id);
+        PhysicsManager.load(new RoomRuntimeMemory(room, {}));
+
+        // Feet on top of whatever layer he stands on, with the whole of him above it.
+        const feetY = (standingOnLayer + 1) * COLLISION_LAYER_HEIGHT;
+        let pos: Vec3 = { x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: feetY + 0.5 * PLAYER_HEIGHT,
+            z: startZ };
+        PhysicsManager.addObject(room.id, objectId, playerTypeIndex,
+            PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex, pos, dir)!);
+
+        const deltaTime = 1 / 60;
+        for (let frame = 0; frame < 120; ++frame)
+        {
+            const desired: Vec3 = { x: 0, y: -GRAVITY_SPEED, z: 3 };
+            const adjusted = PhysicsManager.getAdjustedVelocity(room.id, objectId, desired);
+            const target: Vec3 = { x: pos.x + adjusted.x * deltaTime, y: pos.y + adjusted.y * deltaTime,
+                z: pos.z + adjusted.z * deltaTime };
+            pos = PhysicsManager.setObjectTransform(room.id, objectId, target, dir, false).transform.pos;
+        }
+        PhysicsManager.unload(room.id);
+        return pos.z;
+    }
+
+    it("stops a player walking out on the ground, and lets him past on the storey above", async () => {
+        await runScenario({
+            name: "entrance plug height",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const startZ = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2.5;
+
+                // On the ground the plug does its job: he is held short of the doorway cell rather
+                // than walking out of the room through the gap in the boundary wall.
+                const groundZ = walkTowardsEntrance(room, startZ, COLLISION_LAYER_MIN - 1);
+                expect(groundZ).toBeLessThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1);
+
+                // On the storey above, the same walk carries him right up to the boundary wall,
+                // which is what stops him there instead — the plug is nowhere near that height.
+                const upperZ = walkTowardsEntrance(room, startZ, STOREY_FLOOR_COLLISION_LAYER);
+                expect(upperZ).toBeGreaterThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1);
             },
         });
     });

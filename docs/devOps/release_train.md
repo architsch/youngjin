@@ -29,8 +29,14 @@ summarised at least once, and the file is what lets it be picked up afterwards r
 
 ## Where a human is required
 
-Two points, deliberately:
+Three points, deliberately:
 
+- **The dev-log post.** The pipeline asks which feature the post should cover, and then stops again
+  once the post exists, showing it in full and waiting for the user to approve it before anything is
+  committed. It is public writing published under the project's name, and no automated check can
+  tell a good one from a bad one. When the user asks for changes instead, the advice is written back
+  into the `devlog-post` skill as a standing rule before the post is regenerated, so that the same
+  correction does not have to be given again on the next release.
 - **The commit and the push.** These run on the main thread rather than in a subagent, so the
   approval prompt reaches the user with the diff that produced it in view. Pushing to `main`
   triggers deployment, which makes it the point of no return for staging.

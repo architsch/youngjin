@@ -8,7 +8,7 @@ description: Run the full release pipeline for a batch of changes — sync docs 
 Takes one batch of finished work from a dirty working tree to a verified deployment on staging, in
 six phases. Each phase has an owner, a definite output, and a point at which it hands over.
 
-You are the **orchestrator**. Your job is sequencing, the two approval gates, and the final report —
+You are the **orchestrator**. Your job is sequencing, the approval gates, and the final report —
 not doing the phases yourself. Delegate each phase to a subagent, because the six together are far
 more context than one agent can hold, and a phase that runs out of room mid-way produces confident
 half-work.
@@ -22,6 +22,9 @@ half-work.
 | 5 | VPS maintenance | subagent | `vps-maintenance` |
 | 6 | Staging playtest | subagent | `staging-playtest` |
 
+Between 3 and 4 the run stops at an approval gate: the dev-log post is the user's to approve, and
+nothing is committed until they have.
+
 Arguments narrow the run: `--from <n>` starts at a phase, `--only <n,m>` runs just those. With no
 arguments, run all six.
 
@@ -33,7 +36,12 @@ what the final report is assembled from. `temp/` is gitignored, so it never ente
 
 Record, per phase: status, what it changed (paths), what it found, and what it deliberately left.
 Also record the run's fixed facts at the top: the starting HEAD, the change set, the dev-log subject
-once chosen.
+once chosen, and whether the user has approved the dev-log post at checkpoint B.
+
+Write that approval down the moment it is given, and never assume one that is not written down. A
+run picked up after a summarisation cannot tell an approved post from an unapproved one by looking
+at the files — both are just a page under `public/devlog-2026/`. If the state file does not say the
+user approved, the post is not approved: ask again.
 
 ## Phase 0 — Survey
 
@@ -73,7 +81,8 @@ set as options, plus the option to skip the post entirely.
 This is a genuine judgement call — one post covers one feature, the post is an advertisement aimed
 at people who have never played the game, and the batch usually contains several candidates. Ask it
 here rather than at the start, so the options are drawn from a change set that has actually been
-read, and so the run has exactly one interruption before the commit gate.
+read. Together with checkpoint B, which judges the post that comes out of it, this is one of the two
+interruptions before the commit gate.
 
 ## Phase 3 — Dev-log post
 
@@ -84,6 +93,56 @@ Two things to check when it reports back, because both are silent failures: the 
 under `public/devlog-2026/` and contains the post's title, and every image the page references is
 actually a file in that directory. Also confirm the dev server it started was stopped, or phase 4's
 build competes with it for port 3000.
+
+## Checkpoint B — approve the dev-log post
+
+**The run stops here and waits for the user.** The post is the one output of this workflow that no
+automated check can judge. It is public writing published under the project's name, aimed at people
+who have never seen the game, and whether it reads well is a human call. Phase 4 commits it, so the
+approval has to happen before phase 4 begins, not after.
+
+Give the user everything they need to judge it without opening files themselves:
+
+- The post's title and page number, and the local preview URL
+  `http://127.0.0.1:3000/devlog-2026/page-<N>.html` — noting that a dev server has to be running for
+  it, since phase 3 stops the one it started.
+- The screenshot files by path, so they can be opened and looked at.
+- The **full post text as the user will paste it**, in a copyable block, with its character count.
+
+Then ask for approval, and stop. Do not run `npm run beforeCommit`, do not commit, do not push, do
+not start any later phase until the user has actually approved. A reply about something else is not
+approval, and neither is no reply at all.
+
+### When the user asks for changes instead
+
+Read the note as being about how dev-log posts are *made*, not only about this one — otherwise the
+same fault comes back on the next release, and the user gives the same note again. In order:
+
+1. **Fold the advice into the `devlog-post` skill**, on the main thread, before regenerating
+   anything. Put it where that subject already lives: `SKILL.md` for the rules of the post itself,
+   `reference/writing.md` for voice, structure and what to cut, `reference/capture.md` for the
+   screenshots, `reference/post-format.md` for the source format, `reference/hashtags.md` for the
+   tag bank. Write it as a standing rule, in the register of the rules already there — "the closing
+   paragraph never restates the opening", not "the user disliked the ending this time". If the note
+   really does apply only to this one post, fix the post and say plainly that no rule came out of
+   it, rather than inventing a general rule from a single case.
+2. **Delegate phase 3 again** with the same feature named, briefing it on the user's note and on
+   what the previous attempt left behind. The rerun **revises in place**: the newest block in
+   `public/devlog-2026/source.txt` is the previous attempt's, and it gets replaced rather than
+   appended after — otherwise the site grows a duplicate post. The page number stays the same,
+   re-shot screenshots keep their filenames, and any screenshot the revision drops is deleted from
+   `public/devlog-2026/` instead of being left orphaned.
+3. **Come back to this checkpoint** with the new version. The loop runs until the user approves.
+   There is no two-cycle bound here — a human answers every round, so no round is spent guessing —
+   but each one costs another dev-server boot, so gather the user's notes into one brief rather
+   than making a round per remark.
+
+The skill edits from step 1 are working-tree changes like any other: record them in the state file,
+let phase 4 commit them with the rest, and list them in the final report.
+
+The user may also decide to drop the post here. Then remove its block from `source.txt` along with
+the screenshots it added, regenerate the static site so no half-post page is left behind, and go on
+to phase 4 without a post.
 
 ## Phase 4 — Commit, push, watch
 
@@ -144,7 +203,8 @@ Assemble from the state file, in this order:
 2. **Findings that need the user** — CI failures left unfixed, VPS items requiring a human decision,
    new errors the playtest found. Each with its evidence. This section goes near the top because it
    is the reason to read the report.
-3. **Changed** — docs, tests, skills, the dev-log post (with its URL and the pasteable text).
+3. **Changed** — docs, tests, skills, the dev-log post (with its URL and the pasteable text), and
+   any rules checkpoint B's revisions wrote into the `devlog-post` skill.
 4. **Verified** — the suites that passed, the states the playtest confirmed, the machine checks that
    came back clean.
 5. **Not covered** — every phase that was skipped, bounded out, or blocked, and why.
@@ -157,6 +217,7 @@ report that will be trusted about the wrong things.
 - **Never push to production.** No `Promote to Live`, no `Rollback Live`, no direct writes to live
   data, no restarts of the `live` PM2 process.
 - **Never reboot or restart services on the VPS** as part of an automated run.
+- **Never commit a dev-log post the user has not approved.** Checkpoint B is a stop, not a notice.
 - **Two fix cycles, then stop.** This applies to CI failures and to anything else that starts
   looping. Repeatedly pushing while guessing is the failure mode with the highest cost here.
 - **Report failures as failures.** A red suite, a phase that could not complete, a finding that was

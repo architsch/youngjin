@@ -1,6 +1,6 @@
 ---
 name: staging-playtest
-description: Run an AI-driven playtest and server-health investigation against the deployed staging server — survey the existing error backlog, seed database states that ordinary play cannot produce (outdated row versions, downgraded room content, a large population of room owners), drive concurrent browser sessions against it, and correlate everything against the staging server's logs and process metrics. Use after deploying to staging, when asked to playtest staging, verify a deployment, hunt for server-side errors, or check whether a fix actually took effect on a real server.
+description: Run an AI-driven playtest and server-health investigation against the deployed staging server — survey the existing error backlog, seed database states that ordinary play cannot produce (outdated row versions, a large population of room owners), drive concurrent browser sessions against it, and correlate everything against the staging server's logs and process metrics. Use after deploying to staging, when asked to playtest staging, verify a deployment, hunt for server-side errors, or check whether a fix actually took effect on a real server.
 ---
 
 # Staging Playtest
@@ -15,6 +15,7 @@ that are genuinely hard to produce by hand:
 - Rows sitting at an **outdated schema version**, which drive the migration and write-back path.
   Nothing the app writes is ever outdated, so only direct seeding creates them.
 - **Room content blobs at an older binary version**, which drive the VoxelGrid decoder chain.
+  These are found rather than made — see Step 3.
 - A **large population of room owners**, which drives room-list pagination, search and the
   denormalized owner name. Staging runs in production mode, so the dev OAuth bypass is off and
   a browser session can only ever become a guest — twenty owners means twenty Google accounts,
@@ -91,14 +92,14 @@ node dev/scripts/playtest/stagingAdmin.js seed-rooms  --version 0 --count 4 --ru
 # so a number at or above both collections' current version seeds a current population.
 node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 14 --run <runID> --with-content --persist
 
-# An older binary content version, for the VoxelGrid decoder chain.
-node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> --to 0
+# What binary version each room's content blob is actually stored at.
+node dev/scripts/playtest/stagingAdmin.js inspect-content
 ```
 
 Every command takes `--target staging` (the default) or `--target local`, and prints the target
 it addressed. There is no live target — see Safety.
 
-Three things to get right:
+Four things to get right:
 
 - **`--with-content` matters.** A seeded room with no content blob is listed but cannot be
   entered: the server logs a load failure and falls back to a hub. That fallback is correct
@@ -118,6 +119,32 @@ Three things to get right:
   current is only half the assertion; `verify-migration` also reports whether that copy survived
   in storage, which is what a write-back storing the row as the reader had it would leave behind.
 
+### The VoxelGrid decoder chain is no longer seedable — read it, do not manufacture it
+
+`downgrade-content` rewrites byte 0 of a room's content blob and nothing else. That was a
+legitimate way to manufacture an old room while every version of the format shared one body layout,
+and it is **no longer true**: the current version encodes each voxel differently from the versions
+before it, so a blob whose header has been flipped down describes itself with one layout and is
+written in another. The server does not read that as an old room; it reads it as a corrupt one, and
+anything it then logs is a fact about a corrupt blob rather than about the migration path. Do not
+use it to test the decoder chain, and do not report what it produces as a migration finding.
+
+What replaces it costs nothing, because staging supplies it for free. **A room that has not been
+saved since the format changed is still stored at the old version**, which makes it a genuine
+fixture that no seeding could produce. So:
+
+- Run `inspect-content` early — before anything enters a room — and write down every room whose
+  `voxelGridVersion` is below the current one. That list only ever shrinks: the first save after a
+  room is entered re-encodes it at the current version, and the fixture is spent.
+- Entering one of those rooms **is** the migration test. Watch it in the log diff and in the
+  client's own screenshot: a room that decodes wrong renders wrong, and the screenshot is the
+  clearer evidence of the two.
+- Once `inspect-content` reports nothing below the current version, this path has no live coverage
+  on staging at all. Say so in the report rather than leaving it unmentioned. It is covered offline
+  instead, by `tests/integration/scenarios/voxel-grid-migration.test.ts` against the recorded
+  fixtures in `tests/integration/fixtures/legacyVoxelGrids/`, and that suite — not this one — is
+  where a regression in it would surface.
+
 ### What persists and what does not
 
 | Seed | Reusable? | Why |
@@ -125,7 +152,8 @@ Three things to get right:
 | `seed-population` at the current version | **Yes** — use `--persist` | Reading it does not change it. A stable population makes pagination deterministic between runs. Check `inspect` reports it as `outdated: 0`; if not, the schema moved and the fixture is now single-use. |
 | `seed-users` / `seed-rooms` at an outdated version | **No** | Single-use by nature: the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. Re-seed every run. |
 | Seeded guests (`userType` 2) | **No** | The server's own hourly stale-guest sweep deletes them regardless of intent. |
-| `downgrade-content` | **No** | The next room save re-encodes at the current version. Always `restore-content` afterwards. |
+| `downgrade-content` | **Do not use** | Its byte-0 rewrite no longer produces a decodable old blob (see above). If it has already been run, `restore-content` immediately. |
+| A room already stored below the current version | **No** | Single-use, and not seeded at all — it is left over from before the format changed. The first save after it is entered spends it. |
 
 ## Step 4 — Drive the clients
 

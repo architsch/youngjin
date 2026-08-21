@@ -18,7 +18,7 @@
   - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, and the action/condition maps those steps are carried out through)
   - `/system` - Client-side observables and state management
   - `/ui` - React UI components and styles
-  - `/voxel` - Voxel management (ClientVoxelManager)
+  - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
   
 - **`/server`** - Server-side code (Node.js/Express)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)

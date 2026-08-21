@@ -105,6 +105,13 @@ three faults to shoot against, with the camera numbers that fix them, are in
 
 Append a new block to `public/devlog-2026/source.txt` — never touch the posts already in it, and
 never insert anything above them.
+
+The exception is a **revision**: when you are asked to write the post again about a feature an
+earlier attempt already covered, the newest block in the file is that attempt's, and it gets
+replaced where it stands. Appending instead leaves the site with two posts about one feature. Its
+screenshots are revised the same way — re-shoot to the same filenames, and delete from
+`public/devlog-2026/` any image the new version no longer references.
+
 The file's syntax and the exact shape of a post block are in
 [reference/post-format.md](reference/post-format.md); the voice, structure and an annotated
 example are in [reference/writing.md](reference/writing.md).

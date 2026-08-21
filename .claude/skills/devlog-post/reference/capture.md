@@ -60,7 +60,7 @@ module.exports = {
 | `shot(label, opts?)` | Settles the frame, then writes `<slug>-<label>.jpg`. `opts.selector` shoots one element; `opts.settleMs` waits longer first |
 | `drag(from, to, opts?)` | A pointer drag across the world. Moves in many small steps, because the game reads a drag as a gesture, not a jump |
 | `clickAt(point, opts?)` | A tap on the world: selects a block, an object, a doorway |
-| `clickId(id)` / `clickText(text)` | The UI's buttons are styled `div`s, **not** `<button>` elements, so role-based locators find nothing. Reach them by id where they have one (`editModeButton`, `modeExitButton`, `configureMyRoomButton`, `customizePlayerButton`, `addVoxelBlockButton`, `removeVoxelBlockButton`, `addCanvasButton`, `changeCanvasImageButton`, `changeCanvasFrameButton`, `chatTextInput`, `chatSendButton`) and by their exact label otherwise |
+| `clickId(id)` / `clickText(text)` | The UI's buttons are styled `div`s, **not** `<button>` elements, so role-based locators find nothing. Reach them by id where they have one (`editModeButton`, `startEditingButton`, `modeExitButton`, `configureMyRoomButton`, `addVoxelBlockButton`, `removeVoxelBlockButton`, `addCanvasButton`, `changeCanvasImageButton`, `changeCanvasFrameButton`, `chatTextInput`, `chatSendButton`) and by their exact label otherwise. The texture palette is a scrolling strip rather than a button: its id is `voxelQuadTextureOptions`, which is what `shot(label, {selector})` wants when the palette itself is the picture |
 | `press(key)` / `hold(key, ms)` | A keystroke, or a key held down — how the player is walked somewhere |
 | `center()` | The middle of the viewport, the usual anchor for a drag |
 | `describeUI()` | Everything currently visible that can be clicked or read, with its position |
@@ -75,6 +75,13 @@ pointer is *held* at, not the distance it travelled, so a quick flick across the
 turns at all. A turn is a press, a move away from the press point, and then a wait — the ctx
 helper's `drag` releases too soon to be one, so hold the pointer yourself through `ctx.page.mouse`
 when the shot needs the view brought round.
+
+**Release the pointer away from where it was pressed.** A gesture that returns to its press point
+before letting go is not a small turn; it is a click, and the game acts on it as one — selecting
+whatever was under it, or walking the player through a doorway into another room entirely. A steering
+routine that recentres the pointer "to stop turning" therefore fires a click at the end of every
+burst. Stop the turn by releasing where the pointer already is, or by moving it back only part of
+the way.
 
 Inside edit mode, the same drag orbits the camera around whatever is selected, following the
 pointer 1:1, and the mouse wheel scales the view around it. That is the only way to see anything
@@ -91,6 +98,21 @@ subject is too far away — the script meant to walk up to a wall, walked a frac
 photographed the room from where it happened to stop. Where a walk *ends* is worth checking with a
 frame before any coordinate is written down against it.
 
+**A room stands two storeys tall, and half of it is over the player's head.** Generated rooms —
+hubs included — put a floor across the middle of their height, open some spaces through both
+storeys as galleries, and join the two with staircases. So a walk that only ever crosses the ground
+floor is photographing half the room, and a subject the probe reports as unreachable may simply be
+upstairs. Stairs are walked up the same way as flat ground, with the held walk key; the player
+climbs them by himself, there being no jump. The upper storey is the better vantage for a shot of
+the room as a whole, since a gallery edge is somewhere the first-person camera tilts down of its
+own accord.
+
+**Climbing looks exactly like being stuck.** Going up a flight, the player advances a fraction of
+the distance per second that he covers on the flat, because he is gaining height with every step. To
+anything watching his position that is indistinguishable from walking into a wall, so a script that
+detects a stall and turns aside to get around it will steer him off the side of the staircase every
+time. Any such detour logic has to be suspended for the length of a climb.
+
 A single click on the world raycasts into it: that is what selects a block, an object or a
 doorway. Which controls appear depends on what was hit — a wall face offers the block tools and
 the texture palette, a picture offers the canvas tools — so a script that assumes one and lands
@@ -101,14 +123,28 @@ on the other will fail looking for a button.
 A click on its own is not an edit any more (see `docs/gameplay/game_mode.md`). In play mode it
 selects the thing and says what it is — a picture's title and author, and nothing else — while the
 camera stays at the player's eye. The orbit, the editing controls and the character-customization
-strip all belong to **edit mode**, which a script enters by clicking `editModeButton`. Four
-consequences, each of which will otherwise cost a run:
+strip all belong to **edit mode**, which there are two ways into:
 
-- **The way in disappears while anything is selected.** `editModeButton` lives on the identity bar,
-  which steps aside for the mode menu the moment a selection is up. Give the selection up first
-  (`modeExitButton`) and the button comes back.
-- **Edit mode opens on the player's own character**, not on whatever the script wanted. Selecting
-  something else is a second click, after the mode is up.
+- `editModeButton`, on the identity bar, opens the mode **on the player's own character** — not on
+  whatever the script wanted. It is the only way in while nothing is selected.
+- `startEditingButton` ("Start Editing"), on the mode menu, opens the mode **on whatever is already
+  selected**. It appears once a play-mode click has picked something out, and only in a room the
+  user may edit — so it is absent in a room he is only visiting, where the identity bar's way in
+  still works because his own character is always his to change.
+
+So a shot of one particular thing is: click it in play mode, then `startEditingButton`. Prefer that
+to entering on the player and clicking the subject afterwards. It is the same two actions, but the
+orbit opens already framing the subject instead of swinging onto it from the player — which is one
+fewer view the script has to guess a click coordinate from. Four consequences of the mode, each of
+which will otherwise cost a run:
+
+- **The identity bar's way in disappears while anything is selected.** `editModeButton` lives on
+  that bar, which steps aside for the mode menu the moment a selection is up — that menu is where
+  `startEditingButton` then is. To get the identity bar back instead, give the selection up first
+  (`modeExitButton`, labelled "Deselect" in play mode and "Stop Editing" inside the mode).
+- **Clicking the thing already selected leaves the mode.** Inside edit mode a second click on the
+  current selection is read as being done with it, and the mode ends along with the selection. A
+  script that re-clicks a subject to "make sure" it is selected drops itself back into play mode.
 - **How far the user may reach into the room grows with how far the orbit has been pulled back.**
   Something across the room can be plainly visible and still out of reach at the mode's opening
   distance, and answer no click at all. Wheel the camera back before clicking anything distant —
@@ -156,9 +192,10 @@ so a script that clicks a distant thing ends up shooting from wherever the reach
 **Pulling back is a way of reaching something, never the view a shot is taken from** — wheel back in
 once the selection has landed, and take the shot from there.
 
-An orbit will not go closer than half its framing distance, and for a block or a picture that
-framing distance is deliberately set so the wall around it stays in view. Near the close end of that
-range is where a picture-sized subject reads properly; anywhere near the far end it is a speck.
+An orbit will not go closer than about two fifths of its framing distance, and for a block or a
+picture that framing distance is deliberately set so the wall around it stays in view. Near the
+close end of that range is where a picture-sized subject reads properly; anywhere near the far end
+it is a speck.
 
 ### 2. Face the subject from an oblique angle
 
@@ -167,9 +204,13 @@ recedes, and the room looks like a painted backdrop. **Come round 30-60 degrees 
 normal, and lift the camera above the subject's own level** (or drop it below). Then the wall runs
 away toward a vanishing point, the floor and ceiling lines converge, and the frame acquires depth.
 
-Two limits worth knowing before swinging. A canvas has a front and nothing else, so a view from too
-far around it is a view of a blank rectangle. And rooms are drawn without their ceilings for the
-camera, so past a certain height the frame fills with the black above them.
+Three limits worth knowing before swinging. A canvas has a front and nothing else, so a view from
+too far around it is a view of a blank rectangle. Rooms are drawn without their ceilings for the
+camera, so past a certain height the frame fills with the black above them. And anything else
+standing between the camera and what it is framing is taken out of the room for as long as it
+stands there — which, for a subject on the ground floor shot from above, is the storey floor over
+it. That is the mode working as intended, but it leaves a hole in the frame, so look at the
+resulting image before writing the swing down as the shot's vantage.
 
 ### 3. Balance the whole frame, not just the middle
 
@@ -191,9 +232,44 @@ has reached is bare, **hang a picture on it** rather than photographing somethin
 the nearest surface gives the largest subject, and hanging one is a feature the post is describing
 anyway.
 
-In play mode the camera is first-person and steering points it anywhere, so there the frame is free
-to be composed outright. Use it: put the subject on a third rather than dead center, and let a
-doorway or a receding wall carry the rest.
+In play mode the camera is first-person, and only half of it is the script's to aim. Turning the
+player swings the view left and right, so where the subject sits **across** the frame is a choice —
+put it on a third rather than dead center, and let a doorway or a receding wall carry the rest. How
+high or low the view points is not: the game decides the pitch itself, and dragging the pointer up
+or down walks the player forward and back rather than tilting the camera.
+
+What the game does with the pitch is worth knowing, because it is the only way to aim it:
+
+- **A selection pulls the camera onto it.** While something is picked out in play mode, the view
+  tilts toward it and holds there. A shot of something above or below eye level is taken by
+  selecting it, not by trying to look up at it. The hold is not indefinite — once the selection
+  leaves the frame it is dropped automatically, and the camera returns to its resting pitch.
+- **Otherwise the camera reads the ground ahead** and tilts down in proportion to how far it falls
+  away over the next few paces. On flat floor that is level; standing at a gallery edge or at the
+  top of a flight of stairs it looks down over the drop. So the way to shoot down into a room is to
+  walk to somewhere the floor actually falls away.
+
+### 4. Make the two storeys read apart
+
+A frame that contains both storeys only *shows* two storeys if the eye can tell them apart. When the
+floor below and the floor beyond are surfaced in the same blocks, in the same palette, under a light
+that falls off with distance, the drop between them flattens into one continuous surface — and a
+photograph of a two-storey room that reads as flat is a photograph that argues against the very thing
+it was taken for.
+
+So when a shot is meant to carry height, **check that the two levels differ in colour, and not only
+in brightness.** The one that reads best has a distinctly different material on each: a warm floor
+below and a cool one above, a patterned storey against a plain one, a dark ground floor under a pale
+gallery. Depth comes across as a change of colour long before it comes across as a change of shade,
+because shade alone is what distance and the camera's own light are already doing to the frame.
+
+Where a room does not offer that contrast on its own, it is worth making rather than working around:
+retexturing a stretch of one storey's floor takes a few clicks in edit mode, and it is a feature the
+post is describing anyway — the same reasoning as hanging a picture on a bare wall above. Choosing a
+different room is the other option, and the cheaper one when the room is being picked anyway.
+
+This applies to every shot with a floor above or below the camera in it, which for a post about
+vertical space is most of them.
 
 ### The controls, in numbers
 
@@ -204,10 +280,13 @@ doorway or a receding wall carry the rest.
 | `page.mouse.wheel(0, -100)` | One notch **closer**. Negative is closer, positive is further — the sign is easy to get backwards, and getting it backwards is what produces a tiny subject |
 | `page.mouse.wheel(0, +100)` | One notch further away |
 
-The whole zoom range is about ten notches wide, running from half the framing distance to twice it,
-so five notches from where an orbit opens reaches either end. The on-screen zoom slider shows where
-in that range the camera currently is: a handle sitting at the left of it, in a shot that was
-supposed to be close, is the sign that the wheel went the wrong way.
+The whole zoom range runs from about two fifths of the framing distance to twice it, which is
+roughly a dozen notches end to end, with the framing distance itself in the middle. **Do not count
+notches from a presumed middle**: edit mode opens at whatever distance the camera already stood
+from what it is now framing, so an orbit that begins on something across the room begins near the
+far end. Read the on-screen zoom slider instead — it shows where in the range the camera currently
+is, and a handle sitting at the left of it, in a shot that was supposed to be close, is the sign
+that the wheel went the wrong way.
 
 ## While you are iterating
 
@@ -232,3 +311,26 @@ supposed to be close, is the sign that the wheel went the wrong way.
   visible, is the selection reach: pull the orbit further back and try again.
 - Console errors from the run are printed at the end. A capture that looks wrong often explains
   itself there.
+
+## Read the room's plan instead of hunting for it
+
+Wandering a generated room to find where its staircase or its gallery stands is the most expensive
+way to answer the question, and the answer is written down. The room's saved grid sits in the
+storage emulator at `rooms/<roomID>/content.bin`, and it can simply be fetched:
+
+```
+curl -H "Authorization: Bearer owner" \
+  "http://127.0.0.1:9199/v0/b/thingspool.firebasestorage.app/o/rooms%2F<roomID>%2Fcontent.bin?alt=media"
+```
+
+Decoding the per-cell collision-layer mask out of it takes a few dozen lines — the format is in
+`@src/shared/voxel/types/voxelGrid.ts` — and it gives exact coordinates for every staircase, every
+space open through both storeys, and every solid wall. Write the route from those coordinates rather
+than steering by what the camera happens to show.
+
+**Do not navigate by timing.** The headless renderer's frame rate varies by more than tenfold
+between runs and within a single run, while the client clamps its own frame time, so the same held
+key covers a wildly different distance each time and a route tuned by stopwatch works once and never
+again. Drive in a closed loop instead: the client reports its own transform over the socket
+(`setObjectTransformSignal`), so a script can watch its actual position and heading and stop when it
+has arrived. `dev/scripts/devlog/shots/nav.js` already does this and is the thing to reuse.

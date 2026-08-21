@@ -6,7 +6,8 @@ export const LibraryData: {
     entriesByCategory : {
         // One list per year, newest added as the years pass.
         "Development History": [
-            { dirName: "devlog-2026", title: "Dev Log - 2026"},
+            // Dev-log posts are written by the AI assistant, so they are credited to it.
+            { dirName: "devlog-2026", title: "Dev Log - 2026", author: "Claude"},
         ],
         "Nonfiction": [
             { dirName: "metaphysics", title: "형이상학 (2013 - 2014)"},

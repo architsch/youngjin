@@ -30,7 +30,9 @@ export default class LibraryPostPageBuilder
         const paragraphLinesPending: string[] = [];
 
         const postInfoList: PostInfo[] = [];
-        
+
+        const author = entry.author ?? "Youngjin Kang";
+
         let contentLines: string[] = [];
 
         let desc = "A writing by ThingsPool.";
@@ -111,7 +113,7 @@ export default class LibraryPostPageBuilder
                 isFirstArticle = false;
 
                 contentLines.push(`<h1>${title}</h1>`);
-                contentLines.push(`<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: ${date}</p>`);
+                contentLines.push(`<p class="dim">Author: ${author}&nbsp;&nbsp;&nbsp;Date: ${date}</p>`);
             }
             else if (line.startsWith("<") && !snippetOn && !excerptOn) // image reference
             {

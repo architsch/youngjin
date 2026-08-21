@@ -153,7 +153,7 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | disconnect-with-save persists lastRoomID and flushes the latest metadata | Disconnect-with-save writes `lastRoomID` and the latest metadata |
 | chat messages are stored in player metadata | A chat message lands in the player object's metadata |
 
-## Voxel Operations (`voxel.test.ts`) — 13 tests
+## Voxel Operations (`voxel.test.ts`) — 15 tests
 
 | Test | What it verifies |
 |------|-----------------|
@@ -166,8 +166,15 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | duplicate add to occupied layer is rejected | A second add to an occupied layer is rejected |
 | cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
 | leaves the storey above the entrance free to build on and to take apart | Both entrance zones stop at the storey the doorway opens onto: directly over a cell closed to building, and directly over a jamb closed to removal, the upper storey takes an add and a removal — while the ground storey under each of them is untouched |
+| hangs a wall attachment over the entrance zone, but not inside it | A wall attachment is judged by the stretch of wall it hangs on rather than the whole column behind it: the same picture is refused on the ground floor inside the no-addition zone, accepted directly above it on the storey the zone does not reach, and accepted on both storeys of a column outside the zone |
 | cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
 | a block holding a canvas can only be removed once the canvas goes first | A block with something hanging on it refuses to come down until the attachment has been taken off it |
+
+The invisible collider that plugs the doorway stands only as tall as the doorway itself, now that a room is taller than the storey the entrance opens onto.
+
+| Test | What it verifies |
+|------|-----------------|
+| stops a player walking out on the ground, and lets him past on the storey above | A real player collider walked at the doorway through `PhysicsManager` is held short of it on the ground floor, while the same walk one storey up reaches the boundary wall — so the plug seals the way out without putting an invisible wall across the floor above it |
 
 A room is encoded into one reusable buffer, and writing past the end of a typed array is silently ignored rather than throwing — so these two cover the room nobody has built yet, which is the most a room can ever cost to write down.
 
@@ -656,14 +663,14 @@ for how to run it. It skips itself when no emulator is available.
 |----------|-------|
 | Connection | 9 |
 | Room | 9 |
-| Room Generation | 12 |
+| Room Generation | 14 |
 | Voxel Grid Migration | 57 |
 | Room Population | 34 |
 | Object | 8 |
-| Voxel | 12 |
+| Voxel | 15 |
 | Voxel Quad Reselection | 32 |
 | Game Mode | 23 |
-| Single-Player | 13 |
+| Single-Player | 14 |
 | FTUE | 26 |
 | Player Mesh Composition | 16 |
 | Signals | 6 |
@@ -677,4 +684,4 @@ for how to run it. It skips itself when no emulator is available.
 | Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **439** |
+| **Total** | **445** |

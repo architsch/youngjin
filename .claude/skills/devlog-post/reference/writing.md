@@ -214,13 +214,40 @@ They carry two things, in this order:
 1. **What ThingsPool is** — a short phrase, because the reader has never heard of it.
 2. **What is new** — named directly, in the same breath.
 
-Together: *"ThingsPool, an immersive 3D chat app that runs in a browser tab, now has game modes."*
-Somebody who arrived knowing nothing and stops right there still knows what the product is and what
-just happened, which is everything the free space was good for.
+Somebody who arrived knowing nothing and stops right there should still know what the product is and
+what just happened, which is everything the free space was good for.
 
 The rest of the post expands on that sentence. Never open with a scene, a question, or a detail
 that only makes sense once the reader already knows what the feature is — that spends the visible
 lines on setup.
+
+### Say it differently every time
+
+Those two jobs are fixed. **The sentence that does them is not, and reusing the previous post's
+construction is a fault.** The log is read as a series — by the same followers, in the same feed —
+and an opening that arrives in the same shape every week reads as a template with a new noun dropped
+into it, which is a worse advertisement than the feature deserves.
+
+The failure is specific and easy to fall into: lifting the frame of the last opener and swapping its
+tail, so that post after post runs *"ThingsPool, an immersive 3D chat app that runs in a browser tab,
+now ..."*. Each one is a fine sentence alone. Read one after another, they are the same sentence.
+
+So, before writing the opening, **read the openings already in `source.txt`** — all of them, not
+just the newest — and write one that does not share its construction with any of them. What must
+vary is the shape of the sentence, not merely the wording:
+
+- Which of the two jobs leads. The new thing can come first and the description second.
+- Whether they are one sentence or two.
+- How ThingsPool is described. "An immersive 3D chat app that runs in a browser tab" is one true
+  description of it, not its name — it is also a shared world you walk into as a character, a room
+  full of blocks anyone present can rebuild, a 3D space that opens from a link. Pick the description
+  that suits *this* post's feature, and let a post about building sound different from a post about
+  talking to people.
+- Whether the appositive clause ("ThingsPool, a ..., now ...") is used at all. It is one construction
+  among many, and it has had its turn.
+
+What may not vary: the reader still learns what ThingsPool is and what is new, inside the first two
+sentences. Variety is in the delivery, never at the cost of a newcomer understanding the post.
 
 ## Structure
 
@@ -314,14 +341,18 @@ Read the finished post once for each of these, and fix what fails:
    needs the post to explain it, rename it.
 5. **The first two sentences stand alone.** Cover everything from the third sentence down: what is
    left must still say what ThingsPool is and what is new in it.
-6. **Every noun could be defined by the reader,** in words, without guessing. Loose ones get
+6. **The opening does not repeat an earlier post's construction.** Put the new opening directly
+   beside the opening of every post already in `source.txt`. If two of them share a shape — the same
+   appositive, the same "ThingsPool ... now ..." frame, the same clause order — the new one is
+   rewritten, not reworded.
+7. **Every noun could be defined by the reader,** in words, without guessing. Loose ones get
    replaced by the established term.
-7. **No paragraph would interest only a programmer.** Count them; the answer should be zero.
-8. **No step-by-step instructions,** and the post gets *less* detailed as it goes, not more. If a
+8. **No paragraph would interest only a programmer.** Count them; the answer should be zero.
+9. **No step-by-step instructions,** and the post gets *less* detailed as it goes, not more. If a
    later paragraph traces a sequence of interactions, replace it with what that part of the feature
    lets somebody do.
-8. **The post names at least one specific thing the reader could go and make or try.**
-9. **Nothing can be cut without losing something.** Go sentence by sentence and ask what the post
-   would lose without it. "It rounds the paragraph off" means delete it.
-10. `node dev/scripts/devlog/postLength.js` passes — and remember its number is a ceiling. Being
+10. **The post names at least one specific thing the reader could go and make or try.**
+11. **Nothing can be cut without losing something.** Go sentence by sentence and ask what the post
+    would lose without it. "It rounds the paragraph off" means delete it.
+12. `node dev/scripts/devlog/postLength.js` passes — and remember its number is a ceiling. Being
     well under it is a good sign, not wasted room.
