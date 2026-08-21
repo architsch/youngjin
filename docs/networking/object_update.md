@@ -37,6 +37,24 @@ Some objects exist only on the client and must never enter the synced room state
     - **Physics-resolved (dynamic colliders):** the engine resolves the transform against collision, step-up, and gravity. If the result diverges from what the client requested, the server broadcasts the authoritative position to **all** clients (including the sender); otherwise it relays to everyone else.
     - **Physics-ignored (static / non-collider objects):** the object is placed directly at the requested position and relayed to everyone else.
 
+### How a position is stored
+
+`ObjectTransform` does not store a coordinate. It stores each component as a fraction of a fixed
+range and multiplies it back out on the way in, which is what lets a position travel in far fewer
+bytes than its precision would otherwise need.
+
+The consequence is that **those ranges are part of the stored format**, not a description of the
+room. A stored position means whatever the range says it means at the moment it is read, so widening
+a range moves every object already in storage — silently, with no byte of stored data changing and
+nothing failing. The ranges are therefore held apart from the room's own dimensions and left frozen:
+a room is free to change size, and when it grows past one of them the answer is a new `ObjectGroup`
+version with a converter, never a wider range.
+
+`ObjectGroup`'s version alone cannot always date what it holds, because a change of this kind alters
+what the bytes mean without altering how they are laid out — so a version can span both sides of it.
+A room's objects are stored in the same blob as its `VoxelGrid`, and that grid's version is what
+dates them.
+
 ## Set Object Metadata
 1. The client validates, applies the metadata change locally, and emits a `SetObjectMetadataSignal`.
 2. The server validates and applies it.

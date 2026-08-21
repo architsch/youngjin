@@ -23,12 +23,27 @@ export default class VoxelGrid extends EncodableData
     voxels: Voxel[];
     quadsMem: VoxelQuadsRuntimeMemory; // This field is NOT part of the encoded data.
 
-    constructor(voxels: Voxel[], quadsMem: VoxelQuadsRuntimeMemory)
+    // Which version of the format this grid was read from, or the current one for a grid that was
+    // generated rather than read. Not part of the encoded data — it describes where the grid came
+    // from, not what it holds.
+    //
+    // It is here because a room's voxel grid and its objects are written together, as one blob, so
+    // this is also the version *the objects alongside it* were written at. ObjectGroup carries no
+    // usable version of its own for that era (see the note on its converters), and this is the only
+    // record of it that survives.
+    sourceFormatVersion: number;
+
+    constructor(voxels: Voxel[], quadsMem: VoxelQuadsRuntimeMemory,
+        sourceFormatVersion: number = latestVersion)
     {
         super();
         this.voxels = voxels;
         this.quadsMem = quadsMem;
+        this.sourceFormatVersion = sourceFormatVersion;
     }
+
+    // The version a grid encoded right now is written at, which is what an unread grid reports.
+    static get latestFormatVersion(): number { return latestVersion; }
 
     // The blank slate every room generation routine starts from: a full grid of voxels with
     // nothing built in any of them yet.
@@ -62,9 +77,12 @@ export default class VoxelGrid extends EncodableData
             let data = olderVersionDecoders[versionFound](bufferState);
             for (let version = versionFound; version < latestVersion; ++version)
                 data = versionConverters[version](data);
+            (data as VoxelGrid).sourceFormatVersion = versionFound;
             return data;
         }
-        return decoder_2(bufferState);
+        const voxelGrid = decoder_2(bufferState) as VoxelGrid;
+        voxelGrid.sourceFormatVersion = versionFound;
+        return voxelGrid;
     }
 }
 

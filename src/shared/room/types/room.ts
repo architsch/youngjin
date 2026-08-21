@@ -95,7 +95,11 @@ export default class Room extends EncodableData
         if (roomType != RoomTypeEnumMap.SinglePlayer)
         {
             voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-            objectGroup = ObjectGroup.decodeWithParams(bufferState, id) as ObjectGroup;
+            // The grid's own version dates the objects written beside it, which is the only thing
+            // that can tell an object placed in a one-storey room from one placed in a two-storey
+            // room. See ObjectGroup's converters.
+            objectGroup = ObjectGroup.decodeWithParams(bufferState, id,
+                voxelGrid.sourceFormatVersion) as ObjectGroup;
         }
         else
         {

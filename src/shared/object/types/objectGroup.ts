@@ -10,8 +10,26 @@ import ObjectTransform from "./objectTransform";
 
 let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
+let temp_sourceVoxelGridVersion = 0;
 
-const latestVersion = 0;
+const latestVersion = 1;
+
+// The voxel-grid format that first stood a room two storeys tall. A room's objects are written in
+// the same blob as its voxel grid, so a grid older than this is also objects written while the room
+// was half its present height — which is the one thing this format's own version byte cannot say.
+//
+// It cannot say it because the byte never moved: the object layout did not change when the room's
+// height did, only the vertical range positions are measured against (see ObjectTransform), so
+// version 0 was written both before that change and after it. The grid beside them is the only
+// record of which. That is why the converter below takes the room's word for its age rather than
+// this format's own.
+const FIRST_TWO_STOREY_VOXEL_GRID_VERSION = 2;
+
+// What a group decoded on its own is dated at. Objects arriving without a grid beside them were
+// encoded by a running build rather than read out of storage, so they are current-era by
+// construction and need no rescaling. Named as its own thing rather than importing VoxelGrid's
+// latest version, which would make these two modules import each other.
+const CURRENT_ERA_VOXEL_GRID_VERSION = FIRST_TWO_STOREY_VOXEL_GRID_VERSION;
 
 export default class ObjectGroup extends EncodableData
 {
@@ -87,9 +105,15 @@ export default class ObjectGroup extends EncodableData
         }
     }
 
-    static decodeWithParams(bufferState: BufferState, roomID: string): EncodableData
+    // "sourceVoxelGridVersion" is the version of the voxel grid decoded from the same blob, just
+    // before this call. The converters need it to date the objects; see the note on
+    // FIRST_TWO_STOREY_VOXEL_GRID_VERSION. A caller with no grid beside these objects — a group
+    // encoded on its own, which is always written at the current version — can leave it out.
+    static decodeWithParams(bufferState: BufferState, roomID: string,
+        sourceVoxelGridVersion: number = CURRENT_ERA_VOXEL_GRID_VERSION): EncodableData
     {
         temp_roomID = roomID;
+        temp_sourceVoxelGridVersion = sourceVoxelGridVersion;
         if (!temp_roomID || temp_roomID.length == 0)
             throw new Error("ObjectGroup::decodeWithParams :: temp_roomID is empty.");
         return ObjectGroup.decode(bufferState);
@@ -106,48 +130,74 @@ export default class ObjectGroup extends EncodableData
             return data;
         }
 
-        const objects: AddObjectSignal[] = [];
-        const sourceUserIDs: string[] = [];
-        const sourceUserNames: string[] = [];
-
-        // Decode the number of unique source users.
-        const numSourceUsers = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        // Decode the sourceUserIDs and sourceUserNames.
-        for (let i = 0; i < numSourceUsers; ++i)
-        {
-            sourceUserIDs.push((EncodableByteString.decode(bufferState) as EncodableByteString).str);
-            sourceUserNames.push((EncodableByteString.decode(bufferState) as EncodableByteString).str);
-        }
-
-        // Decode the number of objects.
-        const numObjects = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
-
-        // Decode the objects.
-        for (let i = 0; i < numObjects; ++i)
-        {
-            const userIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
-            const sourceUserID = sourceUserIDs[userIndex];
-            const sourceUserName = sourceUserNames[userIndex];
-            const objectTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-            const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-            const transform = ObjectTransform.decode(bufferState) as ObjectTransform;
-            const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
-            
-            objects.push(new AddObjectSignal(temp_roomID, sourceUserID, sourceUserName, objectTypeIndex, objectId, transform, metadata));
-        }
-
-        return new ObjectGroup(objects);
+        return decodeBody(bufferState);
     }
 }
 
+// The object list itself. Every version so far has written it the same way — what changed between
+// them is what the numbers inside it mean — so one reader serves them all.
+function decodeBody(bufferState: BufferState): ObjectGroup
+{
+    const objects: AddObjectSignal[] = [];
+    const sourceUserIDs: string[] = [];
+    const sourceUserNames: string[] = [];
+
+    // Decode the number of unique source users.
+    const numSourceUsers = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+    // Decode the sourceUserIDs and sourceUserNames.
+    for (let i = 0; i < numSourceUsers; ++i)
+    {
+        sourceUserIDs.push((EncodableByteString.decode(bufferState) as EncodableByteString).str);
+        sourceUserNames.push((EncodableByteString.decode(bufferState) as EncodableByteString).str);
+    }
+
+    // Decode the number of objects.
+    const numObjects = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
+
+    // Decode the objects.
+    for (let i = 0; i < numObjects; ++i)
+    {
+        const userIndex = (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
+        const sourceUserID = sourceUserIDs[userIndex];
+        const sourceUserName = sourceUserNames[userIndex];
+        const objectTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+        const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        const transform = ObjectTransform.decode(bufferState) as ObjectTransform;
+        const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
+
+        objects.push(new AddObjectSignal(temp_roomID, sourceUserID, sourceUserName, objectTypeIndex, objectId, transform, metadata));
+    }
+
+    return new ObjectGroup(objects);
+}
+
 const olderVersionDecoders: ((bufferState: BufferState) => EncodableData)[] = [
-    (bufferState: BufferState) => { // version 0
-        return new ObjectGroup([]); // This is just a placeholder
-    },
+    // Version 0 is written byte for byte the way the current version is — the two differ only in
+    // what a position's vertical component is a fraction of — so it is read by the same reader and
+    // corrected afterwards.
+    decodeBody,
 ];
 
 const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] = [
     (olderVersionData: EncodableData) => { // version 0 -> 1
-        return new ObjectGroup([]); // This is just a placeholder
+        const objectGroup = olderVersionData as ObjectGroup;
+
+        // Version 0 spans both sides of the change this converts, because the object format's own
+        // version byte never moved when the room's height did. The blob's voxel grid is what dates
+        // it: a grid from before the room gained its second storey means these objects were placed
+        // against a room half as tall, and every height read out of them is twice what was meant.
+        //
+        // Objects written after that change are already right and must be left alone — halving them
+        // would drop every painting in a current room to half its height, which is the same fault
+        // over again in the other direction.
+        if (temp_sourceVoxelGridVersion >= FIRST_TWO_STOREY_VOXEL_GRID_VERSION)
+            return objectGroup;
+
+        for (const object of Object.values(objectGroup.objectById))
+        {
+            const {pos} = object.transform;
+            object.transform.pos = {x: pos.x, y: ObjectTransform.rescaleLegacyY(pos.y), z: pos.z};
+        }
+        return objectGroup;
     },
 ];

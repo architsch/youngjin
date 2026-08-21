@@ -150,7 +150,11 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
 
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-    const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "") as ObjectGroup;
+    // The grid's own version dates the objects stored alongside it, which is the only thing that can
+    // tell an object placed in a one-storey room from one placed in a two-storey room. See
+    // ObjectGroup's converters.
+    const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "",
+        voxelGrid.sourceFormatVersion) as ObjectGroup;
     return new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
         dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, voxelGrid, objectGroup);
 }
