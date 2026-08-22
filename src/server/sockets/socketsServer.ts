@@ -24,6 +24,7 @@ import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQ
 import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
+import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
 import UserCommandSignal from "../../shared/user/types/userCommandSignal";
 import UserCommandUtil from "../user/util/userCommandUtil";
@@ -122,12 +123,13 @@ const SocketsServer =
                 });
                 // Every signal below is somebody changing the world rather than moving through it,
                 // so each one marks this account as having built something. Only the first such
-                // signal reaches the database: once the milestone is recorded, ServerAnalyticsManager
-                // answers from an in-memory map and this costs a lookup and nothing else, which is
-                // what lets it sit on a path that fires once per block placed. It is deliberately
-                // not awaited — measurement must never delay the edit it is measuring — and it
-                // never rejects, because that module handles its own failures.
-                const recordEdit = () => ServerAnalyticsManager.recordMilestone(user.id, FunnelMilestoneEnumMap.Built);
+                // signal reaches the database: the session carries the milestones already recorded,
+                // so afterwards this costs a string check and nothing else, which is what lets it
+                // sit on a path that fires once per block placed. It is deliberately not awaited —
+                // measurement must never delay the edit it is measuring — and it never rejects,
+                // because ServerAnalyticsManager handles its own failures.
+                const recordEdit = () => ServerAnalyticsManager.recordMilestone(
+                    user.id, FunnelMilestoneEnumMap.Built, socketUserContext);
 
                 socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
@@ -169,7 +171,17 @@ const SocketsServer =
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
                     ServerObjectManager.onSetObjectMetadataSignalReceived(socketUserContext, signal);
-                    recordEdit();
+
+                    // Chat travels on this signal too: a message is written to the speaker's own
+                    // player object as metadata (SpeechBubble), so it arrives here indistinguishable
+                    // from an edit except by its key. Counting it as an edit would put every visitor
+                    // who says hello into the "built something" figure — the one column the funnel is
+                    // read for — so the two are separated here rather than conflated.
+                    if (signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage)
+                        ServerAnalyticsManager.recordMilestone(
+                            user.id, FunnelMilestoneEnumMap.Chatted, socketUserContext);
+                    else
+                        recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
@@ -303,7 +315,10 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
                 return;
             }
 
-            socket.handshake.auth = { ...socket.handshake.auth, user };
+            // Both are set after the spread, so whatever the client put in the handshake is
+            // replaced rather than trusted. The funnel travels separately from the user because it
+            // is server-side measurement state and is deliberately not part of User.
+            socket.handshake.auth = { ...socket.handshake.auth, user, funnel: dbUser.funnel ?? "" };
             next();
         }
         catch (err)

@@ -20,8 +20,15 @@ export const FunnelMilestoneEnumMap: Record<string, FunnelMilestone> =
     // counting them would mark every visitor as having reached this step on arrival.
     EnteredRoom: "r",
     // Changed the world: sent an edit to a voxel or an object. The clearest evidence that somebody
-    // did more than look around.
+    // did more than look around. A chat message is deliberately not one of these, even though it
+    // travels as an object-metadata edit — see Chatted.
     Built: "b",
+    // Said something to the room. A message travels as a change to the player object's metadata,
+    // so it arrives on the same signal as an edit and has to be told apart from one by its key. It
+    // is a different behaviour and a different question: talking to somebody is the one thing here
+    // that needs another person present, which makes it the sharpest read on whether a visitor
+    // found the place alive.
+    Chatted: "c",
     // Came to own a room.
     OwnedRoom: "o",
     // Converted from guest to member by signing up.
@@ -41,6 +48,7 @@ export const FUNNEL_MILESTONE_ORDER: FunnelMilestone[] =
     FunnelMilestoneEnumMap.TutorialDone,
     FunnelMilestoneEnumMap.EnteredRoom,
     FunnelMilestoneEnumMap.Built,
+    FunnelMilestoneEnumMap.Chatted,
     FunnelMilestoneEnumMap.OwnedRoom,
     FunnelMilestoneEnumMap.SignedUp,
     FunnelMilestoneEnumMap.Returned,

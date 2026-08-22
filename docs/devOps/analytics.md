@@ -46,6 +46,7 @@ defines them:
 | TutorialDone | The user leaves single-player mode, by finishing or skipping the tutorial |
 | EnteredRoom | The user enters a multiplayer room |
 | Built | The user sends any voxel or object edit |
+| Chatted | The user says something to the room |
 | OwnedRoom | The user comes to own a room |
 | SignedUp | A guest converts to a member |
 | Returned | The user comes back on a later day |
@@ -55,18 +56,28 @@ defines them:
 login the stale-guest tiers use, which requires a gap of a day. A page refresh or a second tab
 within one visit never counts.
 
+Chatting and building are separated even though they arrive on the same signal — a message is
+written to the speaker's own player object as metadata, so it reaches the server looking exactly
+like an edit apart from its key. They are different behaviours and answer different questions:
+building is what somebody does alone, while talking needs another person present, which makes it the
+sharpest read on whether a visitor found the place alive rather than empty.
+
 This is deliberately distinct from the FTUE flags, which record the same *kind* of thing — one
 letter per event, stored on the user's row — for a different purpose. FTUE is reset whenever its
 guidance should play again; the funnel is a measurement and is never reset.
 
 Recording is called on every occurrence rather than only the first, because the callers are ordinary
 gameplay paths that have no reason to know which is which — `Built` sits on the edit signals, and so
-fires once per block placed. What keeps that affordable is that a milestone, once recorded, can
-never become unrecorded: the server remembers in memory which milestones it has already written for
-an account, and every later call for that account is answered from memory without a database read.
-Remembering can only ever be wrong in the direction of doing the read anyway, so a restarted process
-or a second server behind the same database simply pays one read per account and still never counts
-anybody twice.
+fires once per block placed. What keeps that affordable is that the milestones already recorded for
+an account are carried on its live connection, read from its row when the socket authenticated. So
+only the first edit of a session reaches the database, and every one after it is answered in memory.
+
+The row, not the connection, still decides whether to count. A connection's copy is taken when it
+opens, and the request paths record milestones on the same row while it is open, so the connection is
+trusted to say "already recorded" — which can only become more true — and never to say "not yet". A
+connection that has fallen behind therefore costs one wasted read rather than a second count. The
+funnel is kept on `SocketUserContext` rather than on `User` because `User` is serialized into the
+page the browser is served, and a measurement has no business crossing to the client.
 
 ## Where the counts live
 

@@ -7,6 +7,15 @@ facts — step 3 of the skill re-fetches the venue's own rules page before the v
 Entries marked **Unverified** were written from general knowledge and have never been checked
 against the venue itself. Treat their mechanics as a lead to confirm, not as instructions to follow.
 
+> **Reddit's rules cannot be read by the assistant.** Verified 2026-08-22: `old.reddit.com` now
+> answers "accounts are required to access old Reddit", the modern rules page renders its rules only
+> after sign-in, and the `.json` endpoints return an app shell to non-browser clients. A headless
+> browser reaches the page and finds the rules table empty. Signing in would be Lane C, so **every
+> Reddit entry below is permanently unverifiable from here.** That does not rule the venues out — it
+> moves one step to the user. A Reddit kit must carry "read the subreddit's rules yourself before
+> posting" as a required action in the handover, not as a footnote, and must say which rules it is
+> guessing at.
+
 Three lanes, in the order they are worked:
 
 1. **Link-out** — accepts a plain link to `https://app.thingspool.net`. Preferred.
@@ -47,13 +56,21 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 
 ### Hacker News — Show HN
 - **Fit:** High, but for a different audience than the rest of this file. The draw is not "a game" —
-  it is an open-source, browser-based 3D multiplayer world with a custom voxel engine, custom
-  physics and no install step. That is a Show HN story.
-- **Mechanics:** One submission, titled `Show HN: <plain description>`, posted by the author.
-- **Rules and gotchas:** Read the current Show HN rules before posting. The title carries no
-  marketing language, the author is expected to be present in the comments for the first several
-  hours, and the submission is effectively one-shot. Time it for when the user can actually reply.
-- **Effort:** Low to prepare, high to attend. **Unverified** — rules page not yet fetched.
+  it is a browser-based 3D multiplayer world with a custom voxel engine, custom physics and no
+  install step, whose source is public. That is a Show HN story.
+- **Mechanics:** One submission: a URL plus a title beginning `Show HN:`. The explanation goes in a
+  comment the author leaves immediately afterwards, not in the submission.
+- **Rules and gotchas:** The work must be something people can **try right now**, with signup
+  barriers minimized — the guest-first account is exactly what this asks for. Articles and blog
+  posts are explicitly excluded, which is why this venue takes the app and not a dev-log post; a
+  post would be an ordinary submission instead. Titles must not editorialize, use uppercase or
+  exclamation points. The author is expected to be present in the comments for the first several
+  hours, which is the venue's real cost. Never solicit upvotes.
+- **Known objection to prepare for:** the repository is public but carries no license file, so
+  "open source" is not accurate and an HN thread will say so. Say "the source is public" instead, or
+  add a license before posting.
+- **Effort:** Low to prepare, high to attend. **Verified:** 2026-08-22 (showhn.html, newsguidelines.html).
+- **Kit prepared:** 2026-08-22, `temp/distribution/hn-show/`. Not posted.
 
 ### r/iogames
 - **Fit:** Good. Audience is specifically browser multiplayer.

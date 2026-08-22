@@ -103,15 +103,19 @@ import {
     COLLECTION_ACQUISITION, COLLECTION_USERS,
 } from "../../../src/server/system/serverConstants";
 
-// Mints its own account id rather than taking one. ServerAnalyticsManager remembers, for the life
-// of the process, which milestones it has already recorded — so an id reused across tests would
-// have the second test silently exercise that memory instead of the path it meant to test.
 let nextUserID = 0;
 function seedUser(fields: Record<string, unknown>): string
 {
     const userID = `u${++nextUserID}`;
     _docs.set(`${COLLECTION_USERS}/${userID}`, fields);
     return userID;
+}
+
+// Stands in for the live connection. Only the funnel string is touched by the analytics module, so
+// the real SocketUserContext — which needs a socket to construct — is not what these tests want.
+function fakeSession(funnel: string): any
+{
+    return { funnel };
 }
 
 function cohortDoc(source: string, day: string): any
@@ -180,45 +184,15 @@ describe("milestones are counted once per account", () => {
         expect(cohortDoc("reddit", "2026-08-20").counts).toHaveProperty(FunnelMilestoneEnumMap.Built);
     });
 
-    it("does not touch the database at all on a second call for the same milestone", async () => {
+    it("does not repeat the write when the milestone is already on the row", async () => {
         const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
 
         await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built);
         const writesAfterFirst = _writes.length;
-        const readsAfterFirst = _reads.length;
 
         await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built);
 
-        // Neither a write nor a read, and the read is the one that matters: this call sits on the
-        // edit path, where it fires once per block placed. A read per block is what it must not cost.
         expect(_writes.length).toBe(writesAfterFirst);
-        expect(_reads.length).toBe(readsAfterFirst);
-        expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("ab");
-    });
-
-    it("collapses a burst of simultaneous calls into a single count", async () => {
-        // A player placing blocks quickly produces exactly this. Were the milestone claimed only
-        // after the write, every call in the burst would read the row before any of them had
-        // written it, and the cohort would be credited once per block.
-        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
-
-        await Promise.all(Array.from({ length: 8 },
-            () => ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built)));
-
-        expect(_writes.filter(w => w.path.startsWith(COLLECTION_ACQUISITION))).toHaveLength(1);
-        expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("ab");
-    });
-
-    it("gives back its claim when the write fails, so a later call tries again", async () => {
-        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
-
-        _failNextUpdate.value = true;
-        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built);
-        expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("a");
-
-        // A failed attempt remembered as a success would lose the milestone for as long as the
-        // process lives, which on a server is indefinitely.
-        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built);
         expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("ab");
     });
 
@@ -284,16 +258,120 @@ describe("return visits", () => {
         expect(_writes).toHaveLength(0);
     });
 
-    it("stops reading the row once the account is known to be a repeat visitor", async () => {
+    it("writes nothing further however many more days they come back on", async () => {
         const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
 
         await ServerAnalyticsManager.recordReturnVisit(userID);
         await ServerAnalyticsManager.recordReturnVisit(userID);
-        const readsAfterRepeat = _reads.length;
+        const writesAfterRepeat = _writes.length;
 
-        // However many more days they come back on, there is nothing further to record.
         await ServerAnalyticsManager.recordReturnVisit(userID);
-        expect(_reads.length).toBe(readsAfterRepeat);
+        await ServerAnalyticsManager.recordReturnVisit(userID);
+
+        // These still cost a read each, and are meant to: a return visit is recognised at most once
+        // a day per account, on a request path that has no connection to answer from.
+        expect(_writes.length).toBe(writesAfterRepeat);
+    });
+});
+
+describe("a live session answers the repeat calls", () => {
+    // This is what lets recordMilestone sit on the edit path, where it fires once per block placed.
+    // The session carries the milestones already recorded, taken from the row when the socket
+    // authenticated, so only the first edit of a session reaches the database.
+    it("costs no read at all once the session already carries the milestone", async () => {
+        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
+        const session = fakeSession("a");
+
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, session);
+        const readsAfterFirst = _reads.length;
+        const writesAfterFirst = _writes.length;
+
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, session);
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, session);
+
+        expect(_reads.length).toBe(readsAfterFirst);
+        expect(_writes.length).toBe(writesAfterFirst);
+    });
+
+    it("brings the session into step with the row it wrote", async () => {
+        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
+        const session = fakeSession("a");
+
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, session);
+
+        expect(session.funnel).toBe("ab");
+    });
+
+    it("collapses a burst of simultaneous calls into a single count", async () => {
+        // A player placing blocks quickly produces exactly this. Were the milestone claimed only
+        // after the write, every call in the burst would read the row before any of them had
+        // written it, and the cohort would be credited once per block.
+        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
+        const session = fakeSession("a");
+
+        await Promise.all(Array.from({ length: 8 },
+            () => ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, session)));
+
+        expect(_writes.filter(w => w.path.startsWith(COLLECTION_ACQUISITION))).toHaveLength(1);
+        expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("ab");
+    });
+
+    it("gives back its claim when the write fails, so a later call tries again", async () => {
+        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
+        const session = fakeSession("a");
+
+        _failNextUpdate.value = true;
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, session);
+        expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("a");
+        expect(session.funnel).toBe("a");
+
+        // A failed attempt left claimed would lose the milestone for the whole connection.
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, session);
+        expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("ab");
+    });
+
+    it("trusts the session to say 'already done' but never to say 'not yet'", async () => {
+        // The session's copy is taken when the connection opens, and the HTTP paths record
+        // milestones on the same row while it is open. So the row decides, and a session that has
+        // fallen behind costs one wasted read rather than a second count.
+        const userID = seedUser({ funnel: "ab", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
+        const staleSession = fakeSession("a");
+
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built, staleSession);
+
+        expect(_docs.get(`${COLLECTION_USERS}/${userID}`).funnel).toBe("ab");
+        expect(_writes.filter(w => w.path.startsWith(COLLECTION_ACQUISITION))).toHaveLength(0);
+    });
+});
+
+describe("chatting and building are separate milestones", () => {
+    // Chat reaches the server as a change to the speaker's own player object's metadata, so it
+    // arrives on the same signal as an edit and differs only by its key. If the two were ever
+    // conflated again, every visitor who said hello would land in the "built something" figure,
+    // which is the column the funnel is actually read for.
+    it("gives chat and building different codes", () => {
+        expect(FunnelMilestoneEnumMap.Chatted).not.toBe(FunnelMilestoneEnumMap.Built);
+    });
+
+    it("records one without recording the other", async () => {
+        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
+
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Chatted);
+
+        const counts = cohortDoc("reddit", "2026-08-20").counts;
+        expect(counts).toHaveProperty(FunnelMilestoneEnumMap.Chatted);
+        expect(counts).not.toHaveProperty(FunnelMilestoneEnumMap.Built);
+    });
+
+    it("keeps both on the funnel when a player does both", async () => {
+        const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
+
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built);
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Chatted);
+
+        const funnel = _docs.get(`${COLLECTION_USERS}/${userID}`).funnel;
+        expect(funnel).toContain(FunnelMilestoneEnumMap.Built);
+        expect(funnel).toContain(FunnelMilestoneEnumMap.Chatted);
     });
 });
 

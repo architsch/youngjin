@@ -13,6 +13,17 @@ export default class SocketUserContext
     user: User;
     isInSinglePlayerRoom: boolean = false;
 
+    // The funnel milestones already recorded for this account, taken from the row the socket was
+    // authenticated against. ServerAnalyticsManager reads it here instead of fetching the row,
+    // which is what lets it sit on the edit path at all: an edit signal fires once per block
+    // placed, and asking the database each time whether this player has ever built anything would
+    // be a read per block for an answer that stopped changing after the first one.
+    //
+    // It is kept here rather than on User because User is serialized into the page the browser is
+    // served, and a measurement has no business crossing to the client and back. Kept in step by
+    // the analytics module, which updates it in the same breath as the row.
+    funnel: string;
+
     private pendingSignalsToUserByTypeIndex: Array<EncodableData[]>;
     private throttleTimestamps: {[signalType: string]: number} = {};
 
@@ -20,6 +31,7 @@ export default class SocketUserContext
     {
         this.socket = socket;
         this.user = socket.handshake.auth.user as User;
+        this.funnel = (socket.handshake.auth.funnel as string) ?? "";
         this.pendingSignalsToUserByTypeIndex = new Array<EncodableData[]>(SignalTypeConfigMap.getMaxIndex() + 1);
     }
 

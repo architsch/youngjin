@@ -3,6 +3,7 @@ import FirebaseUtil from "../networking/util/firebaseUtil";
 import DBCacheUtil from "../db/util/dbCacheUtil";
 import LogUtil from "../../shared/system/util/logUtil";
 import AcquisitionSourceUtil from "./util/acquisitionSourceUtil";
+import SocketUserContext from "../sockets/types/socketUserContext";
 import { FunnelMilestone, FunnelMilestoneEnumMap } from "./types/funnelMilestone";
 import { COLLECTION_ACQUISITION, COLLECTION_USERS } from "../system/serverConstants";
 
@@ -29,66 +30,6 @@ import { COLLECTION_ACQUISITION, COLLECTION_USERS } from "../system/serverConsta
 // Nothing here is allowed to interrupt what the player was doing. Every entry point swallows its
 // own errors: a lost count is a worse report, while a thrown error is a lost visitor.
 
-// ─── What this process already knows ─────────────────────────────────────
-// Maps an account to the milestone letters this process has confirmed are on its row, or is in the
-// middle of writing.
-//
-// This is what allows recordMilestone to sit on the edit path at all. Every voxel placed and every
-// object moved calls it, and without this each one would be a Firestore read of the player's row —
-// asking a question whose answer stopped changing after their first edit of the session.
-//
-// It is not a cache of the row: it holds no row data, only the knowledge that a write has already
-// happened. That knowledge cannot expire, because a milestone is recorded once and is never reset.
-// And it can only ever be wrong in the direction of doing the read anyway — a fresh process, or a
-// second server behind the same database, simply starts with an empty map and pays one read per
-// account per milestone. The read is still what decides, so a missing entry costs a lookup rather
-// than a wrong count.
-const recordedMilestones = new Map<string, string>();
-
-// Bounded, because this is an optimisation and not state: a process up for weeks would otherwise
-// hold an entry for every account that ever connected to it. Map iterates in insertion order, so
-// the oldest entry is the one dropped, and dropping one only means the next call for that account
-// does the read it would have done anyway. (An entry evicted while its own write was still in
-// flight could let a concurrent call count that milestone twice — the same hazard two server
-// processes already have, at a size where it would take twenty thousand accounts arriving between
-// one edit and its write.)
-const RECORDED_MILESTONES_MAX_ACCOUNTS = 20_000;
-
-function isKnownRecorded(userID: string, milestone: FunnelMilestone): boolean
-{
-    return (recordedMilestones.get(userID) ?? "").includes(milestone);
-}
-
-function markRecorded(userID: string, milestone: FunnelMilestone): void
-{
-    const known = recordedMilestones.get(userID);
-
-    if (known == undefined && recordedMilestones.size >= RECORDED_MILESTONES_MAX_ACCOUNTS)
-    {
-        const oldest = recordedMilestones.keys().next().value;
-        if (oldest != undefined)
-            recordedMilestones.delete(oldest);
-    }
-
-    if (!(known ?? "").includes(milestone))
-        recordedMilestones.set(userID, `${known ?? ""}${milestone}`);
-}
-
-// Gives back a claim that was made but not carried through, so that a later call retries instead of
-// the milestone being lost for as long as this process lives.
-function unmarkRecorded(userID: string, milestone: FunnelMilestone): void
-{
-    const known = recordedMilestones.get(userID);
-    if (known == undefined)
-        return;
-
-    const remaining = known.replace(milestone, "");
-    if (remaining.length > 0)
-        recordedMilestones.set(userID, remaining);
-    else
-        recordedMilestones.delete(userID);
-}
-
 const ServerAnalyticsManager =
 {
     // Called once, immediately after an account is minted. The row is written with its source and
@@ -107,11 +48,6 @@ const ServerAnalyticsManager =
     recordReturnVisit: async (userID: string): Promise<void> =>
     {
         if (!userID)
-            return;
-
-        // Somebody already counted as a repeat visitor has nothing further to record, however many
-        // more days they come back on, so their later visits need not be read at all.
-        if (isKnownRecorded(userID, FunnelMilestoneEnumMap.RetainedRepeat))
             return;
 
         try
@@ -135,44 +71,55 @@ const ServerAnalyticsManager =
     },
 
     // Called wherever a player does one of the things the funnel measures, on every occurrence
-    // rather than only the first — the caller is not expected to know which is which. Once this
-    // process has recorded the milestone for the account, further calls cost a map lookup and
-    // return without touching the database.
-    recordMilestone: async (userID: string, milestone: FunnelMilestone): Promise<void> =>
+    // rather than only the first — the caller is not expected to know which is which.
+    //
+    // `session` is what makes that affordable. A caller holding the live connection already has
+    // this account's recorded milestones, loaded from its row when the socket authenticated, so the
+    // repeat calls — which are nearly all of them on the edit path — are answered from memory and
+    // never reach the database. Callers without a connection omit it; the HTTP paths record at most
+    // a handful of milestones per account in its whole lifetime, so a read each costs nothing.
+    recordMilestone: async (userID: string, milestone: FunnelMilestone,
+        session?: SocketUserContext): Promise<void> =>
     {
         if (!userID)
             return;
 
-        if (isKnownRecorded(userID, milestone))
-            return;
+        if (session)
+        {
+            if (session.funnel.includes(milestone))
+                return;
 
-        // Claimed before the read rather than after the write. A player placing blocks quickly
-        // produces a burst of calls that would otherwise all read the row before any of them had
-        // written it — sending a burst of identical reads, and counting the same person more than
-        // once. The claim is given back below if the work does not complete.
-        markRecorded(userID, milestone);
+            // Claimed synchronously, before the first await. A player placing blocks quickly
+            // produces a burst of calls that would otherwise all get past this line and all read
+            // the row before any of them had written it. Given back below if the work does not
+            // complete, so a failed attempt is retried rather than lost for the whole session.
+            session.funnel += milestone;
+        }
 
         try
         {
             const db = await FirebaseUtil.getDB();
             const docRef = db.collection(COLLECTION_USERS).doc(userID);
 
-            // Read straight through rather than from DBCacheUtil. The cache is there to spare the
-            // request path repeated lookups and may be up to its TTL out of date; acting on a stale
-            // funnel string here would count the same milestone twice for the same person.
+            // The row, not the session, is what decides whether to count. The session's copy was
+            // taken when the connection opened and another path may have recorded something since,
+            // so it is trusted to say "already done" — which can only become more true — and never
+            // to say "not yet".
+            //
+            // Read straight through rather than from DBCacheUtil, for the same reason: the cache is
+            // there to spare the request path repeated lookups and may be up to its TTL out of
+            // date, and acting on a stale funnel string here would count the same milestone twice.
             const doc = await docRef.get();
             if (!doc.exists)
             {
-                // Usually an account that has since been deleted, but possibly one still being
-                // created, so the claim is released rather than standing for the process's life.
-                unmarkRecorded(userID, milestone);
+                releaseClaim(session, milestone);
                 return;
             }
 
             const data = doc.data() ?? {};
             const funnel: string = typeof data.funnel == "string" ? data.funnel : "";
             if (funnel.includes(milestone))
-                return; // Recorded before this process started. The claim is correct as it stands.
+                return; // Recorded elsewhere. The session's claim is correct as it stands.
 
             const source: string = typeof data.acquisitionSource == "string" && data.acquisitionSource.length > 0
                 ? data.acquisitionSource
@@ -182,17 +129,31 @@ const ServerAnalyticsManager =
             // The row is stamped before the total is incremented. If the process dies between the
             // two, the cohort undercounts by one — whereas the other order would let a retry count
             // the same person twice, and a total that drifts upward is the one that misleads.
-            await docRef.update({ funnel: `${funnel}${milestone}` });
+            const updatedFunnel = `${funnel}${milestone}`;
+            await docRef.update({ funnel: updatedFunnel });
             DBCacheUtil.invalidate(COLLECTION_USERS, userID);
+
+            // Brought fully into step with the row, which also picks up whatever another path
+            // recorded while this connection was open.
+            if (session)
+                session.funnel = updatedFunnel;
 
             await increment(source, AcquisitionSourceUtil.cohortDay(createdAt), milestone);
         }
         catch (err)
         {
-            unmarkRecorded(userID, milestone);
+            releaseClaim(session, milestone);
             LogUtil.log("ServerAnalyticsManager.recordMilestone failed", { userID, milestone, err }, "low", "error");
         }
     },
+}
+
+// Takes back a claim that was made on a session but not carried through, so that the next call
+// tries again instead of the milestone being lost for as long as the connection lives.
+function releaseClaim(session: SocketUserContext | undefined, milestone: FunnelMilestone): void
+{
+    if (session)
+        session.funnel = session.funnel.replace(milestone, "");
 }
 
 async function increment(source: string, cohortDay: string, milestone: FunnelMilestone): Promise<void>

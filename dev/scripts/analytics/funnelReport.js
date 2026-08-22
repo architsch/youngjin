@@ -34,6 +34,7 @@ const MILESTONES = [
     { code: "t", key: "tutorialDone",   label: "Finished or skipped the tutorial" },
     { code: "r", key: "enteredRoom",    label: "Entered a multiplayer room" },
     { code: "b", key: "built",          label: "Changed the world (built something)" },
+    { code: "c", key: "chatted",        label: "Said something to the room" },
     { code: "o", key: "ownedRoom",      label: "Came to own a room" },
     { code: "s", key: "signedUp",       label: "Signed up (guest to member)" },
     { code: "n", key: "returned",       label: "Came back on a later day" },

@@ -27,10 +27,9 @@ user confirms it went out — never promote a row on the assumption that they di
 
 ## Submissions
 
-*(none yet — this ledger starts empty, on 2026-08-22)*
-
 | Date | Venue | Destination | Ref tag | Post URL | Status | Result |
 |---|---|---|---|---|---|---|
+| 2026-08-22 | Hacker News — Show HN | app | `hn-show` | — | prepared | Kit at `temp/distribution/hn-show/`. Rules verified against showhn.html and newsguidelines.html the same day. Not sent: Show HN requires the author present in the comments for hours, so the hour is the user's to pick. |
 
 ## Prior history, outside this ledger
 
