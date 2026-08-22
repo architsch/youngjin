@@ -1,5 +1,25 @@
 {
 	"name": "youngjin",
+	"description": "A web-based 3D voxel sandbox multiplayer game that runs in a browser tab.",
+	"homepage": "https://thingspool.net",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/architsch/youngjin.git"
+	},
+	"license": "Apache-2.0",
+	"keywords": [
+		"multiplayer-game",
+		"voxel",
+		"sandbox-game",
+		"threejs",
+		"webgl",
+		"socket-io",
+		"browser-game",
+		"metaverse",
+		"game-engine",
+		"typescript"
+	],
+	"private": true,
 	"engines": {
 		"node": ">=24 <25"
 	},

@@ -1,6 +1,6 @@
 ---
 name: docs-and-tests-sync
-description: Bring the documentation and the test suites back in line with recent code changes — survey everything committed-but-unpushed plus everything uncommitted, work out which /docs pages, CLAUDE.md sections, README entries and integration/e2e tests the change has made wrong or incomplete, then fix them and verify the suites still pass. Use when asked whether the docs are up to date, when tests need to catch up with a feature, or to catch up a batch of work whose docs and tests were not kept in step as it was built.
+description: Bring the documentation, the license files and the test suites back in line with recent code changes — survey everything committed-but-unpushed plus everything uncommitted, work out which /docs pages, CLAUDE.md sections, README entries, LICENSE-CONTENT/THIRD-PARTY-NOTICES entries and integration/e2e tests the change has made wrong or incomplete, then fix them and verify the suites still pass. Use when asked whether the docs are up to date, when tests need to catch up with a feature, when a new dependency or external asset or public/ directory has been added, or to catch up a batch of work whose docs and tests were not kept in step as it was built.
 ---
 
 # Docs and Tests Sync
@@ -50,6 +50,44 @@ Three documents sit outside `/docs` and are checked separately:
 - **README.md** — its documentation index. **A new page under `/docs` that is not linked here does
   not exist**, so any page you add gets a line in the index in the same change.
 - **`.claude/skills/*/SKILL.md`** — out of scope here. The `skill-upkeep` skill owns those.
+
+### The license files are documentation too
+
+`LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md` describe *what ships and under whose terms*, and
+they go stale exactly the way a `/docs` page does — except that nothing fails when they do, and the
+consequence is legal rather than confusing. CLAUDE.md's **"The License Files Must Describe What
+Actually Ships"** section is the rule; this is where the pass enforces it.
+
+Four questions, answered from the Step 1 change set:
+
+1. **Did a dependency arrive or leave?** Diff `package.json`. Check the license of anything new:
+
+   ```bash
+   node -e 'const fs=require("fs"),p=require("path"),k=require("./package.json");for(const d of Object.keys({...k.dependencies,...k.devDependencies,...k.optionalDependencies})){try{const j=JSON.parse(fs.readFileSync(p.join("node_modules",d,"package.json"),"utf8"));const l=typeof j.license==="string"?j.license:(j.license||{}).type||"UNKNOWN";if(!/^(MIT|ISC|Apache-2\.0|BSD-[23]-Clause|0BSD|Unlicense|CC0-1\.0)$/.test(l))console.log(d,"->",l)}catch(e){console.log(d,"-> NOT INSTALLED")}}'
+   ```
+
+   Silence means every dependency is permissive. (`NOT INSTALLED` lines are noise from an optional
+   platform-specific package, not a licensing finding.)
+
+   Anything else it prints is a finding to **report, not to absorb**. A copyleft or source-available
+   dependency (GPL, AGPL, LGPL, MPL, SSPL, BUSL, PolyForm, "non-commercial") can force this
+   project's own terms to change, and that is the user's decision. A substantive new dependency also
+   earns a row in `THIRD-PARTY-NOTICES.md`.
+
+2. **Did an external asset arrive?** A texture pack, image, model, sound, icon or font came with
+   terms. Confirm its license file sits beside it and that `THIRD-PARTY-NOTICES.md` names the author
+   and the license. An asset with no discoverable terms is a finding, not something to document
+   around.
+
+3. **Is there a new directory under `public/`?** A library section, a dev-log year, an arcade entry —
+   that is content, all rights reserved, and it belongs in the illustrative list in
+   `LICENSE-CONTENT.md`.
+
+4. **Is there a new top-level code directory?** It belongs in the "What Apache-2.0 covers" table in
+   `LICENSE-CONTENT.md`, so the open-source half of the boundary stays complete.
+
+**Never edit `LICENSE`.** It is verbatim Apache-2.0. Every scope statement, exclusion and
+attribution goes in the other files.
 
 ### The rules that govern /docs
 
@@ -150,6 +188,10 @@ assertion to make it green, and do not describe a red run as "mostly working".
 - Behaviours identified, and for each: the doc that was updated (or why none needed to be) and the
   test that now covers it (or why none was added).
 - Docs edited, tests added or changed, with paths.
+- **Licensing**: dependencies or assets that arrived, their licenses, and whether the notice files
+  needed changing. Say "nothing shipped that changes the boundary" when that is the answer — it is a
+  check that was made, not a section to omit. Any non-permissive license goes here as a decision for
+  the user.
 - Suite results, quoted.
 - **Gaps you are deliberately leaving**, each with a reason — a behaviour that is genuinely
   untestable through these harnesses, a doc that needs a decision from the user, an architectural

@@ -19,7 +19,7 @@ ThingsPool doubles as a creative platform. Build your own virtual gallery, desig
 
 ## For Developers
 
-ThingsPool is an open source project, built with a modern real-time web stack: Three.js for 3D rendering, Socket.IO for multiplayer networking, and a custom physics and voxel engine for game mechanics. If you are building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase.
+The ThingsPool source code is open source under the Apache License 2.0. It is built with a modern real-time web stack: Three.js for 3D rendering, Socket.IO for multiplayer networking, and a custom physics and voxel engine for game mechanics. If you are building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase in `/src`.
 
 ## Documentation
 
@@ -73,3 +73,16 @@ ThingsPool is an open source project, built with a modern real-time web stack: T
         - [Scenarios](docs/testing/integration/scenarios.md)
     - Staging Playtest
         - [Workflow](docs/testing/playtest/workflow.md)
+
+## License
+
+This repository holds two different kinds of work, under two different sets of terms.
+
+- **The code is open source.** `src/`, `views/`, `dev/`, `tests/`, `docs/`, `.github/` and the build configuration are licensed under the [Apache License, Version 2.0](LICENSE). Fork it, modify it, self-host it, build a business on it.
+- **The writing and artwork are not.** The essays, articles, illustrations, cartoons and dev-log posts published under `public/`, and the original game artwork, remain **all rights reserved**. See [LICENSE-CONTENT.md](LICENSE-CONTENT.md) for exactly what this covers and why.
+
+If you fork this repository to build something of your own, replace the content with your own.
+
+Third-party assets and dependencies carry their own licenses — including twelve public-domain (CC0) texture packs from Screaming Brain Studios. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+The ThingsPool name and logo are not covered by any of the above; Apache-2.0 grants no trademark rights.

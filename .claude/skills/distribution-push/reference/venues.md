@@ -66,9 +66,10 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   post would be an ordinary submission instead. Titles must not editorialize, use uppercase or
   exclamation points. The author is expected to be present in the comments for the first several
   hours, which is the venue's real cost. Never solicit upvotes.
-- **Known objection to prepare for:** the repository is public but carries no license file, so
-  "open source" is not accurate and an HN thread will say so. Say "the source is public" instead, or
-  add a license before posting.
+- **Known objection to prepare for:** the licence split. Resolved 2026-08-22 — the code is
+  Apache-2.0, while the essays and artwork under `public/` stay all rights reserved
+  (`LICENSE-CONTENT.md`). "Open source" is accurate for the code and should be said that way, not
+  as a claim about the whole repository. Expect somebody to ask why the repo is not wholly open.
 - **Effort:** Low to prepare, high to attend. **Verified:** 2026-08-22 (showhn.html, newsguidelines.html).
 - **Kit prepared:** 2026-08-22, `temp/distribution/hn-show/`. Not posted.
 

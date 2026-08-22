@@ -75,6 +75,10 @@
 
 ## Important Files
 - `README.md` - General guide to the project and related documentation links
+- `LICENSE` - Apache License 2.0, covering the source code (verbatim; never edit)
+- `LICENSE-CONTENT.md` - Terms for the written and illustrated works, which are all rights reserved
+- `THIRD-PARTY-NOTICES.md` - Bundled third-party assets and dependency licenses
+- `NOTICE` - Apache-2.0 attribution notice, pointing at the two files above
 - `package.json` - NPM packages and custom scripts
 - `firebase.json` - Settings for Firestore, Firebase Storage, and Firebase Emulators
 - `src/client/client.ts` - Entrypoint of the client app
@@ -102,6 +106,43 @@ Every room in the game is born from `RoomGenerationUtil` — multiplayer rooms l
 3. **Generated rooms are what almost everyone sees.** Hubs and newly created rooms are the game's first impression, and most of them are never hand-edited at all. Content that generation cannot place is content most players never encounter.
 
 Concretely, introducing a room-level parameter means: add it to `Room` (so it is stored and sent to clients), make `RoomGenerationUtil` and `ProceduralRoomGenerationUtil` decide it, declare it on every `SinglePlayerModeConfig`, and — where the parameter has curated data behind it, as texture packs have palettes in `RoomGenerationPaletteMap` — extend that curation to cover every option a room can be generated with. Conceptual details live in `docs/geometry/room_generation.md`.
+
+## The License Files Must Describe What Actually Ships
+
+This repository is **dual-natured on purpose**: the code is open source under Apache-2.0, while the
+written and illustrated works under `public/` are all rights reserved, and some bundled assets belong
+to third parties under their own terms. That boundary exists only in `LICENSE-CONTENT.md` and
+`THIRD-PARTY-NOTICES.md`. Nothing enforces it, no test fails when it drifts, and a reader — or a
+court — has no other place to look.
+
+Drift is therefore not cosmetic. It fails in one of two directions, and both are public:
+
+- **Too wide**, and the repository appears to give away writing and artwork that were never meant to
+  be licensed. A permissive grant, once published, is not reliably retractable.
+- **Too narrow**, and the project claims rights over somebody else's asset, or ships one whose terms
+  it never checked.
+
+**So whenever the set of things that ship changes, the license files change in the same commit.**
+Concretely:
+
+1. **A new dependency** — check its license before adding it. MIT / Apache-2.0 / BSD / ISC are fine.
+   A copyleft or source-available license (GPL, AGPL, LGPL, MPL, SSPL, BUSL, PolyForm, "non-commercial")
+   is a **decision for the user, not a default to accept**: it can force this project's own terms to
+   change. Report it and stop. If the dependency is a substantive one, add it to the table in
+   `THIRD-PARTY-NOTICES.md`.
+2. **A new external asset** — a texture pack, image, model, sound, icon or font arrives with terms
+   attached. Keep the license file it came with beside the asset, and add a row to
+   `THIRD-PARTY-NOTICES.md` naming the author and the license. **Never add an asset whose terms are
+   unknown**; "found on the internet" is not a license.
+3. **A new `public/` directory** — a library section, a dev-log year, an arcade entry — is *content*.
+   It is all rights reserved, and it belongs in the illustrative list in `LICENSE-CONTENT.md`.
+4. **A new top-level code directory** belongs in the "What Apache-2.0 covers" table in
+   `LICENSE-CONTENT.md`, so the open-source half of the boundary stays complete too.
+5. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Scope statements, exclusions and
+   attributions go in the other three files. Editing the license text produces a licence that is no
+   longer Apache-2.0 and that nobody can evaluate.
+6. **Web fonts**: `THIRD-PARTY-NOTICES.md` currently states that none are used. Adding one makes
+   that statement false, and it must be updated.
 
 ## Documentation Guidelines (`/docs`)
 Documents in `/docs` are meant to be **conceptual outlines** — the most concise description of how things work *now* — not exhaustive technical dumps. When writing or editing them, follow these rules:
