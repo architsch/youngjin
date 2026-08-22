@@ -232,6 +232,29 @@ async function runPlan(plan)
                     break;
                 }
 
+                case "say":
+                {
+                    // Chat is the one player-to-player action that is reachable without aiming at
+                    // the 3D scene, so unlike building it can be driven for real. It is also the
+                    // only way to exercise the chat path end to end — a message travels as a
+                    // change to the speaker's own player object, so nothing offline proves that a
+                    // real one leaves the browser.
+                    //
+                    // An empty message is ignored by the client in a multiplayer room, so the text
+                    // is required rather than defaulted.
+                    const message = String(action.message || "");
+                    if (message.length === 0)
+                        throw new Error("'say' needs a non-empty message");
+
+                    // Both controls carry stable element ids, so they are addressed by id rather
+                    // than by their visible text, which is localized.
+                    await page.locator("#chatTextInput").fill(message, { timeout: action.timeout || 10_000 });
+                    await page.locator("#chatSendButton").click({ timeout: action.timeout || 10_000 });
+                    record.message = message;
+                    if (action.settleMs) await sleep(action.settleMs);
+                    break;
+                }
+
                 case "expect":
                 {
                     const target = page.locator(action.selector);

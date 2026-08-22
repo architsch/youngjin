@@ -123,7 +123,13 @@ player. Assertions about data go through the page's own authenticated request co
 same session and cookies as the UI, without depending on clicking anything.
 
 Actions: `start`, `waitForRoom`, `skipTutorial`, `gotoRoom`, `listRooms`, `searchRooms`,
-`hubEntries`, `myRoomEntry`, `screenshot`, `wait`, `end`.
+`hubEntries`, `myRoomEntry`, `say`, `screenshot`, `wait`, `end`.
+
+`say` sends a chat message through the HUD's own input and send button. It is the one
+player-to-player action reachable without aiming at the 3D scene, and therefore the only one a plan
+can drive. It is also the only way to exercise the chat path at all: a message travels as a change
+to the speaker's own player object's metadata, so nothing offline proves a real one leaves the
+browser. An empty message is ignored by the client in a multiplayer room, so the text is required.
 
 `start` takes an optional `ref`, which is appended to the address as the query tag the server reads
 to attribute a visitor to a traffic source. See the acquisition-analytics check below.

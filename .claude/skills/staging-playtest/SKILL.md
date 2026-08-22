@@ -219,11 +219,17 @@ controls that come with it. `click` and `expect` take a selector straight from t
 this harness does not name; putting the selector in the plan rather than in the harness is
 deliberate, since a plan is written fresh each round and a baked-in selector goes stale silently.
 
+`say` sends a chat message through the HUD's input and send button. It is worth knowing that this
+is the *only* player-to-player action a plan can drive, and the only way to exercise the chat path
+at all — a message travels as a change to the speaker's own player object, so nothing offline proves
+a real one leaves the browser.
+
 Anything reached by **aiming at the 3D scene** is not driven: placing or texturing a voxel,
 dragging an object, and the door that opens the room-list popup all sit wherever the generated
 room put them. That leaves the room *write* path — an edit dirtying a room until the save loop
 picks it up — outside what a plan can reach, and it is the largest gap. Say so in the report
-rather than letting a clean run imply it was covered.
+rather than letting a clean run imply it was covered. It also means the funnel's `built` milestone
+cannot be reached by a plan, while `chatted` can.
 
 ### Reading the client's side of the run
 
