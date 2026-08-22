@@ -4,25 +4,42 @@ An AI-orchestrated pipeline that takes one batch of finished work from a dirty w
 verified deployment on staging. It is driven by the `release-train` skill in `.claude/skills/`, and
 each of its phases is a skill that also stands on its own.
 
-The reason it exists is that the work surrounding a release — documentation that has fallen behind,
-tests that never caught up, a dev-log post, watching CI, checking on the machine — is individually
-small, collectively large, and the first thing dropped when the interesting part is finished. None
-of it is hard; all of it is easy to skip.
+The reason it exists is that the work surrounding a release — a skills audit, a dev-log post,
+watching CI, checking on the machine, playtesting what was deployed — is individually small,
+collectively large, and the first thing dropped when the interesting part is finished. None of it is
+hard; all of it is easy to skip.
 
 ## The phases
 
 | # | Phase | Skill | Runs as |
 |---|---|---|---|
-| 1 | Documentation and tests catch up with the code | `docs-and-tests-sync` | subagent |
-| 2 | The project's own skills are audited against the code they drive | `skill-upkeep` | subagent |
-| 3 | A dev-log post is written and published | `devlog-post` | subagent |
-| 4 | Commit, push, watch GitHub Actions, fix failures | — | main thread |
-| 5 | VPS maintenance | `vps-maintenance` | subagent |
-| 6 | Staging playtest | `staging-playtest` | subagent |
+| 1 | The project's own skills are audited against the code they drive | `skill-upkeep` | subagent |
+| 2 | A dev-log post is written and published | `devlog-post` | subagent |
+| 3 | Commit, push, watch GitHub Actions, fix failures | — | main thread |
+| 4 | VPS maintenance | `vps-maintenance` | subagent |
+| 5 | Staging playtest | `staging-playtest` | subagent |
 
-Phases 1 and 2 run in parallel — they own disjoint files (`tests/`, `docs/`, `CLAUDE.md`,
-`README.md` for the first; `.claude/skills/` for the second) and neither may touch `src/`. The rest
-are sequential, because each depends on the one before it having landed.
+Phases 1 and 2 run in parallel — they own disjoint files (`.claude/skills/` for the first, the
+dev-log directory and its screenshots for the second) and neither may touch `src/`, `docs/` or
+`tests/`. The rest are sequential, because each depends on the one before it having landed.
+
+Documentation and tests are not a phase. They are kept in step with the code as each feature is
+built, so re-auditing them at release time mostly re-reads the batch to confirm what is already
+true. `docs-and-tests-sync` stands on its own for the case where a batch did get ahead of them.
+
+## Why the phases are delegated
+
+Everything except the commit runs in a subagent, and that is the pipeline's central structural
+choice rather than a detail of how it happens to be written. The five phases together are far more
+context than one agent can hold, and an agent that runs out of room mid-phase does not stop — it
+produces confident half-work. Delegating gives each phase a fresh context and returns only its
+conclusions, which is also what keeps the orchestrator alive long enough to reach the approval gates
+and the final report, the two things only it can produce.
+
+The same reasoning shapes the orchestrator's own habits: it surveys the batch by diff statistics
+rather than contents, trusts each phase's report instead of re-reading the files behind it, reviews
+the pre-commit diff by exception against what the phases said they touched, and redirects verbose
+build and CI output to files it greps rather than reads.
 
 The orchestrator keeps a run-state file under `temp/release-train/`. A run of this length is
 summarised at least once, and the file is what lets it be picked up afterwards rather than restarted.
@@ -66,16 +83,16 @@ ordering matters.
 
 ## Ordering constraint worth knowing
 
-Phase 6 reports the errors a release introduced, which it can only do against a record of the
+Phase 5 reports the errors a release introduced, which it can only do against a record of the
 errors the server was already producing. That record has to be taken before anything in the run
-touches the machine, and phase 5 is the first phase that does. The orchestrator therefore snapshots
-the log backlog before phase 5 and hands the snapshot to phase 6; without it, long-standing noise
+touches the machine, and phase 4 is the first phase that does. The orchestrator therefore snapshots
+the log backlog before phase 4 and hands the snapshot to phase 5; without it, long-standing noise
 reads as new findings.
 
 ## Related
 
-- [VPS Maintenance](vps/maintenance.md) — the manual procedures phase 5 reports against rather than
+- [VPS Maintenance](vps/maintenance.md) — the manual procedures phase 4 reports against rather than
   performing
 - [Deployment](vps/deployment.md) — what the staging and live deployments actually do
-- [Staging Playtest Workflow](../testing/playtest/workflow.md) — the tooling behind phase 6
+- [Staging Playtest Workflow](../testing/playtest/workflow.md) — the tooling behind phase 5
 - [E2E Test Workflow](../testing/e2e/workflow.md) — the suite that gates a deployment

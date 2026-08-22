@@ -10,6 +10,7 @@ import LogUtil from "../../../shared/system/util/logUtil";
 import DevUserSeedUtil from "./devUserSeedUtil";
 import DevRuntimeUtil from "../../system/util/devRuntimeUtil";
 import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+import AcquisitionSourceUtil from "../../analytics/util/acquisitionSourceUtil";
 
 let cyclicCounter = 0;
 
@@ -176,7 +177,14 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
     const tutorialFinished = !!req.cookies[CookieUtil.getTutorialFinishedCookieName()];
     const initialSinglePlayerMode = tutorialFinished ? "" : TUTORIAL_SINGLE_PLAYER_MODE;
 
-    const result = await DBUserUtil.createUser(guestName, UserTypeEnumMap.Guest, "", initialSinglePlayerMode);
+    // Where this visitor came from, read off the address they arrived at. It is captured here and
+    // nowhere else, which is what makes attribution first-touch: this branch is reached only when
+    // there is no account to resume, so somebody returning through a differently tagged link keeps
+    // the source that originally brought them rather than being re-credited to the latest one.
+    const acquisitionSource = AcquisitionSourceUtil.fromQuery(req.query as Record<string, unknown>);
+
+    const result = await DBUserUtil.createUser(guestName, UserTypeEnumMap.Guest, "", initialSinglePlayerMode,
+        acquisitionSource);
     if (!result.success || result.data.length == 0)
     {
         LogUtil.logRaw("Failed to create guest user in Firestore", "high", "error");

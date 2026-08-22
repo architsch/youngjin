@@ -58,6 +58,7 @@ node dev/scripts/playtest/stagingAdmin.js seed-users      --version 0 --count 3 
 node dev/scripts/playtest/stagingAdmin.js seed-rooms      --version 0 --count 4 --run <runID> [--owner <userID>] [--with-content]
 node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 14 --run <runID> [--with-content] [--persist]
 node dev/scripts/playtest/stagingAdmin.js verify-migration
+node dev/scripts/playtest/stagingAdmin.js verify-funnel     [--run <runID>]
 node dev/scripts/playtest/stagingAdmin.js inspect-content
 node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> [--to 0]
 node dev/scripts/playtest/stagingAdmin.js restore-content   [--room <roomID>]
@@ -124,6 +125,9 @@ same session and cookies as the UI, without depending on clicking anything.
 Actions: `start`, `waitForRoom`, `skipTutorial`, `gotoRoom`, `listRooms`, `searchRooms`,
 `hubEntries`, `myRoomEntry`, `screenshot`, `wait`, `end`.
 
+`start` takes an optional `ref`, which is appended to the address as the query tag the server reads
+to attribute a visitor to a traffic source. See the acquisition-analytics check below.
+
 Two are easy to omit and expensive to omit:
 
 - **`skipTutorial` before anything multiplayer.** A newly created guest starts in the
@@ -133,6 +137,46 @@ Two are easy to omit and expensive to omit:
   in the room until the stale-socket sweep notices, which the next run reads as a bug.
 
 Screenshots and failure screenshots are written under `temp/playtest/artifacts/`.
+
+## The acquisition-analytics check
+
+A playtest drives real guests through the real page, so it moves the funnel the server records —
+arriving, leaving the tutorial, entering a room. That makes a playtest the only place the analytics
+path runs end to end: a browser, the server, and the database it writes through. Nothing offline
+covers that seam, because the ref tag is read off a real request. See
+[Acquisition Analytics](../../devOps/analytics.md) for what is being recorded and why.
+
+Tag the run's `start` action so its visitors form a cohort of their own rather than mixing with
+staging's ordinary traffic:
+
+```json
+{ "type": "start", "ref": "playtest-<runID>" }
+```
+
+Then read it back once the plan has finished:
+
+```
+node dev/scripts/playtest/stagingAdmin.js verify-funnel --run <runID>
+```
+
+Three things decide whether this works:
+
+- **The `playtest-` prefix is required, not cosmetic.** `cleanup` deletes cohort documents on that
+  prefix alone, so a tag without it is indistinguishable from real traffic and will be left behind
+  in the counters permanently.
+- **The tag must be written in `a-z`, `0-9`, `-`, `_`.** The server rebuilds a ref tag rather than
+  trimming it, so anything else is silently dropped and the cohort ends up under a different name
+  than the one the plan sent — or under `direct`, if nothing survives.
+- **A `ref` only counts on the visit that mints the account.** Attribution is first-touch, so a
+  session reused from an earlier run keeps whatever source it originally arrived with, and tagging
+  a later navigation records nothing.
+
+`verify-funnel` reports which milestones the cohort reached and which it did not. It deliberately
+does not pass or fail: which milestones *should* be there depends on what the plan did, and a plan
+that never left the tutorial is not a broken funnel. Compare it against the actions the plan ran.
+
+The milestones it names come from `dev/scripts/analytics/funnelReport.js`, which is the same table
+the reporting tool uses, so there is one list in the tooling rather than two that can disagree.
 
 ## What persists between runs
 
@@ -189,9 +233,20 @@ production data should be a deliberate human act.
 **`serverMonitor.js --app live` is read-only.** It tails PM2's logs over SSH and writes nothing.
 Comparing live's backlog against staging's is genuinely useful, so that path stays.
 
+One read-only exception exists and is confined to one collection. The question of which traffic
+sources bring people who stay can only be answered where the audience is, which is live, so
+`dbGuard.js` also offers a read-only path that accepts `live` as a target. What it returns exposes
+reads and hands back plain data — no document reference, no batch, no route back to the SDK — and
+it may name only the aggregate acquisition counters, which hold counts per traffic source and
+nothing belonging to any one person. The users collection is not readable through it, and the write
+path above still refuses `live` by name.
+
 Beyond the target boundary: `cleanup` deletes only documents carrying the marker field the seeder
 stamps on its own seeds, so organic data cannot be removed by it, and `downgrade-content` copies
-the original blob aside before touching it and never overwrites an existing backup.
+the original blob aside before touching it and never overwrites an existing backup. Acquisition
+cohort documents are the one thing `cleanup` selects differently — they carry no marker, since the
+server rather than the seeder writes them — and there it deletes only documents whose traffic
+source begins with the reserved `playtest-` prefix.
 
 Every command prints the target it addressed, so which namespace was touched is never something
 the reader of a report has to infer. Staging's writes draw on the same Firebase quota as

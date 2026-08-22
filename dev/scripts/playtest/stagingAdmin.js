@@ -22,6 +22,7 @@
 //   node dev/scripts/playtest/stagingAdmin.js seed-rooms --version 1 --count 2 [--owner <userID>] [--with-content]
 //   node dev/scripts/playtest/stagingAdmin.js seed-population --version 4 --count 25 [--with-content] [--persist]
 //   node dev/scripts/playtest/stagingAdmin.js verify-migration
+//   node dev/scripts/playtest/stagingAdmin.js verify-funnel [--run <runID>]
 //   node dev/scripts/playtest/stagingAdmin.js inspect-content
 //   node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> [--to 0]
 //   node dev/scripts/playtest/stagingAdmin.js restore-content [--room <roomID>]
@@ -33,6 +34,7 @@
 
 const DBGuard = require("./lib/dbGuard");
 const { generateRoomContent } = require("./generateRoomContent");
+const { MILESTONES } = require("../analytics/funnelReport");
 
 // Stamped on every document this tool writes. `cleanup` deletes on this field alone, so a
 // document that was not seeded here can never be removed by it. Version migrations copy
@@ -53,7 +55,7 @@ function backupRoot() { return `${PREFIX}playtest_backup`; }
 // Current versions, mirrored from the migration arrays (their length is the current version).
 // Kept as literals rather than imported because those modules are TypeScript; `inspect`
 // reports what it finds so a drift between the two shows up rather than passing silently.
-const CURRENT_VERSION = { users: 4, rooms: 4 };
+const CURRENT_VERSION = { users: 5, rooms: 4 };
 
 const ROOM_TYPE_REGULAR = 1;
 
@@ -428,6 +430,78 @@ async function cleanup(db, bucket, runID, includePersistent)
     return results;
 }
 
+// ─── Acquisition analytics ──────────────────────────────────────────────
+//
+// A playtest drives real guests through the real page, so it moves the funnel that
+// ServerAnalyticsManager records: arriving, leaving the tutorial, entering a room. That makes a
+// playtest the only place the analytics path is exercised end to end — a browser, the server, and
+// the database it writes through — and checking it costs one read.
+//
+// A run's own visitors are told apart from staging's by the ref tag the plan's `start` action
+// carries. The tag has to be one no organic visitor could arrive with, so it is composed from a
+// reserved prefix, and cleanup deletes on that prefix alone: a cohort document without it is
+// somebody's real traffic and is never touched.
+const PLAYTEST_REF_PREFIX = "playtest-";
+
+// The server rebuilds a ref tag rather than trimming it — anything outside a-z0-9_- is dropped and
+// the result is capped at 32 characters — so a tag that is not written in that alphabet is not the
+// tag the cohort ends up under. Composing it through the same rule here is what keeps the tag the
+// plan sends and the tag this reads back the same string.
+function playtestRef(runID)
+{
+    const cleaned = String(runID || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    return `${PLAYTEST_REF_PREFIX}${cleaned}`.slice(0, 32);
+}
+
+// The assertion a tagged playtest exists to make: the run's visitors reached the milestones the
+// plan drove them through, and they are filed under the run's own source rather than under direct.
+//
+// Reports what it found rather than deciding a verdict. Which milestones *should* be there depends
+// on what the plan did — a plan that never left the tutorial is not a broken funnel — and only the
+// agent that wrote the plan knows that.
+async function verifyFunnel(db, runID)
+{
+    const refTag = runID ? playtestRef(runID) : null;
+    const snap = await db.collection(collection("acquisition")).get();
+
+    const all = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const cohorts = (refTag ? all.filter(c => c.source === refTag) : all)
+        .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
+    const totals = {};
+    for (const cohort of cohorts)
+    {
+        for (const [code, value] of Object.entries(cohort.counts || {}))
+            totals[code] = (totals[code] || 0) + (typeof value === "number" ? value : 0);
+    }
+
+    return {
+        refTag: refTag || "(all sources)",
+        cohortDocuments: cohorts.length,
+        cohorts: cohorts.map(c => ({ id: c.id, source: c.source, cohortDay: c.cohortDay, counts: c.counts || {} })),
+        // Named through the report tool's own table, so there is one list of milestone letters in
+        // the tooling rather than two that can disagree.
+        reached: MILESTONES
+            .filter(m => totals[m.code] > 0)
+            .map(m => ({ code: m.code, key: m.key, label: m.label, count: totals[m.code] })),
+        notReached: MILESTONES.filter(m => !totals[m.code]).map(m => m.key),
+    };
+}
+
+// Deletes only cohort documents whose source carries the reserved prefix. Organic traffic — which
+// on staging is whoever happened to open the site — cannot be named by this.
+async function cleanupAcquisition(db)
+{
+    const snap = await db.collection(collection("acquisition")).get();
+    const targets = snap.docs.filter(doc => String(doc.data().source || "").startsWith(PLAYTEST_REF_PREFIX));
+
+    const batch = db.batch();
+    targets.forEach(doc => batch.delete(doc.ref));
+    if (targets.length > 0) await batch.commit();
+
+    return { deleted: targets.length, docIDs: targets.map(d => d.id) };
+}
+
 // ─── Room content versioning (Cloud Storage binary) ─────────────────────
 //
 // A content blob is VoxelGrid's encoding followed by ObjectGroup's, and each begins with its
@@ -590,6 +664,7 @@ async function main()
             });
             break;
         case "verify-migration":   output = await verifyMigration(db); break;
+        case "verify-funnel":      output = await verifyFunnel(db, flag("run", "")); break;
         case "inspect-content":    output = await inspectContent(bucket); break;
         case "downgrade-content":  output = await downgradeContent(bucket, flag("room", ""), parseInt(flag("to", "0"), 10)); break;
         case "restore-content":    output = await restoreContent(bucket, flag("room", "")); break;
@@ -600,12 +675,17 @@ async function main()
             output = {
                 content: await restoreContent(bucket, ""),
                 rows: await cleanup(db, bucket, flag("run", ""), process.argv.includes("--all")),
+                // Unlike the seeded rows, these are not addressed by run: a cohort document holds
+                // counts from every playtest that shared its arrival day, so it belongs to none of
+                // them individually and the reserved prefix is the whole selector.
+                acquisition: await cleanupAcquisition(db),
             };
             break;
         default:
             console.error(`Unknown command: ${command || "(none)"}\n` +
                 `Commands: inspect | seed-users | seed-rooms | seed-population | verify-migration |\n` +
-                `          inspect-content | downgrade-content | restore-content | list | cleanup\n` +
+                `          verify-funnel | inspect-content | downgrade-content | restore-content |\n` +
+                `          list | cleanup\n` +
                 `Targets:  --target staging (default) | --target local`);
             process.exit(2);
     }

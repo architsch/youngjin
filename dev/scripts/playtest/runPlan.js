@@ -115,9 +115,18 @@ async function runPlan(plan)
                 case "start":
                 {
                     // Visiting the root creates a guest and serves the game page in one step.
-                    const response = await page.goto(`${baseURL}/`, { waitUntil: "networkidle", timeout: 60_000 });
+                    //
+                    // An optional `ref` arrives as the query tag the server reads to decide which
+                    // traffic source this visitor came from, which is what puts the run's own
+                    // guests in a cohort of their own instead of among staging's ordinary
+                    // visitors. Attribution is first-touch, so it is only read here, on the visit
+                    // that mints the account — a `ref` on any later navigation is ignored.
+                    const query = action.ref ? `?ref=${encodeURIComponent(action.ref)}` : "";
+                    const response = await page.goto(`${baseURL}/${query}`,
+                        { waitUntil: "networkidle", timeout: 60_000 });
                     record.status = response?.status() ?? 0;
                     if (record.status === 429) rateLimitHits++;
+                    if (action.ref) record.ref = action.ref;
                     record.env = await page.evaluate(() => window.thingspool_env ?? null).catch(() => null);
                     break;
                 }

@@ -7,15 +7,19 @@ import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryResponse from "../types/dbQueryResponse";
 import { DBRow } from "../types/row/dbRow";
 import { FieldValue } from "firebase-admin/firestore";
-import { COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_COUNT_MIN_GAP_MS } from "../../system/serverConstants";
+import { ACQUISITION_SOURCE_DIRECT, COLLECTION_USERS, GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_COUNT_MIN_GAP_MS } from "../../system/serverConstants";
 import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+import ServerAnalyticsManager from "../../analytics/serverAnalyticsManager";
+import { FunnelMilestoneEnumMap } from "../../analytics/types/funnelMilestone";
 
 const DBUserUtil =
 {
     createUser: async (userName: string, userType: UserType,
-        email: string, singlePlayerMode: string = TUTORIAL_SINGLE_PLAYER_MODE): Promise<DBQueryResponse<{id: string}>> =>
+        email: string, singlePlayerMode: string = TUTORIAL_SINGLE_PLAYER_MODE,
+        acquisitionSource: string = ACQUISITION_SOURCE_DIRECT): Promise<DBQueryResponse<{id: string}>> =>
     {
-        LogUtil.log("DBUserUtil.createUser", {userName, userType, email, singlePlayerMode}, "low", "info");
+        LogUtil.log("DBUserUtil.createUser", {userName, userType, email, singlePlayerMode, acquisitionSource}, "low", "info");
+        const createdAt = Date.now();
         const user: DBUser = {
             version: DBUserVersionMigration.length,
             userName,
@@ -23,17 +27,26 @@ const DBUserUtil =
             email,
             singlePlayerMode,
             lastRoomID: "",
-            lastLoginAt: Date.now(),
-            createdAt: Date.now(),
+            lastLoginAt: createdAt,
+            createdAt,
             loginCount: 0,
             ownedRoomID: "",
             ftue: "",
+            acquisitionSource,
+            // The arrival milestone is stamped here rather than recorded afterwards, so that the
+            // row is never briefly present with an empty funnel — which a milestone arriving in the
+            // same moment would then append to, losing the arrival.
+            funnel: FunnelMilestoneEnumMap.Arrived,
             playerMetadata: {},
         };
         const result = await new DBQuery<{id: string}>()
             .insertInto(COLLECTION_USERS)
             .values(user)
             .run();
+
+        if (result.success)
+            await ServerAnalyticsManager.recordArrival(acquisitionSource, createdAt);
+
         return result;
     },
     // The lookup as the DB actually answers it: "the query failed" and "there is no such user"
@@ -67,6 +80,12 @@ const DBUserUtil =
             .set({"singlePlayerMode": singlePlayerMode})
             .where("id", "==", userID)
             .run();
+
+        // Leaving single-player mode is how the tutorial ends, whether it was worked through or
+        // skipped. Entering one is not a milestone, so only the empty mode counts.
+        if (result.success && singlePlayerMode == "")
+            await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.TutorialDone);
+
         return result;
     },
     setFTUE: async (userID: string, ftue: string): Promise<DBQueryResponse<DBRow>> =>
@@ -87,6 +106,12 @@ const DBUserUtil =
             .set({ lastRoomID: roomID })
             .where("id", "==", userID)
             .run();
+
+        // Only multiplayer rooms reach here — a single-player room is deliberately never stored as
+        // the room to come back to (see ServerRoomManager). That is what makes this the point at
+        // which somebody has genuinely left the tutorial behind and gone into the shared world,
+        // rather than merely having been placed somewhere on arrival.
+        await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.EnteredRoom);
     },
     savePlayerMetadata: async (userID: string, playerMetadata: {[key: string]: string}): Promise<void> =>
     {
@@ -124,6 +149,10 @@ const DBUserUtil =
             })
             .where("id", "==", userID)
             .run();
+
+        if (result.success)
+            await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.SignedUp);
+
         return result;
     },
     updateLastLogin: async (userID: string, prevLastLoginAt: number): Promise<void> =>
@@ -141,6 +170,12 @@ const DBUserUtil =
                 : { lastLoginAt: Date.now() })
             .where("id", "==", userID)
             .run();
+
+        // Retention, measured on the same definition of a distinct login that the engagement tiers
+        // use: the gap is a day, so this fires for somebody who came back, never for a page
+        // refresh or a second tab within one visit.
+        if (isDistinctLogin)
+            await ServerAnalyticsManager.recordReturnVisit(userID);
     },
     deleteStaleGuestsByTier: async (phase: number): Promise<number> =>
     {
@@ -210,6 +245,10 @@ const DBUserUtil =
             .set({ ownedRoomID: roomID })
             .where("id", "==", userID)
             .run();
+
+        if (result.success && roomID != "")
+            await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.OwnedRoom);
+
         return result;
     },
     fromDBType(dbUser: DBUser): User

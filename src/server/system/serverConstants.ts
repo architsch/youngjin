@@ -14,6 +14,20 @@ export const COLLECTION_USERS = `${DB_PREFIX}users`;
 // Dev-only: holds a single marker doc whose lifetime tracks the emulated DB, used to invalidate
 // stale browser cookies left over from a previous DevRunner runtime (see DevRuntimeUtil).
 export const COLLECTION_DEV_RUNTIME = `${DB_PREFIX}_dev_runtime`;
+// Per-cohort acquisition counters (ServerAnalyticsManager). One document per (source, arrival day),
+// holding only counts — never a reference to an individual account. It is deliberately separate
+// from the users collection because the accounts it counts do not survive: a visitor who arrives
+// and leaves is a guest, and stale guests are deleted. Counting them on their own rows alone would
+// mean the bounce rate of a traffic source erased itself a few days after the source was tried,
+// which is exactly the number worth keeping.
+export const COLLECTION_ACQUISITION = `${DB_PREFIX}acquisition`;
+
+// The cohort a visitor is filed under when they arrive without a usable "ref" tag. Direct traffic
+// is a cohort in its own right, and the one every tagged source is worth comparing against.
+export const ACQUISITION_SOURCE_DIRECT = "direct";
+// Longest ref tag kept. The value comes from whoever wrote the link, so it is capped before it
+// reaches a document ID.
+export const ACQUISITION_SOURCE_MAX_LENGTH = 32;
 
 // Firestore commits at most this many writes in a single batch or transaction, so any write
 // spanning an unbounded number of documents has to be split into commits of at most this size.

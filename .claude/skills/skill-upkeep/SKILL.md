@@ -1,6 +1,6 @@
 ---
 name: skill-upkeep
-description: Audit and repair this project's own Claude skills under .claude/skills — verify every command, path, script flag, selector and factual claim a SKILL.md makes still holds against the current codebase, fix what has drifted, and tighten instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, or as the second phase of the release-train workflow.
+description: Audit and repair this project's own Claude skills under .claude/skills — verify every command, path, script flag, selector and factual claim a SKILL.md makes still holds against the current codebase, fix what has drifted, and tighten instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, or as the first phase of the release-train workflow.
 ---
 
 # Skill Upkeep

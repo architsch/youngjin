@@ -21,6 +21,7 @@
   - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
   
 - **`/server`** - Server-side code (Node.js/Express)
+  - `/analytics` - Acquisition analytics (ServerAnalyticsManager — which traffic source a visitor came from, and how far through the funnel they got)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
   - `/object` - Server-side object management (ServerObjectManager)

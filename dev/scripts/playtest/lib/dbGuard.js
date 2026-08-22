@@ -177,4 +177,108 @@ function connect(argv)
     };
 }
 
-module.exports = { connect, resolveTarget, assertInNamespace, PROJECT_ID, STORAGE_BUCKET };
+// ─── Read-only access, including live ───────────────────────────────────
+//
+// Everything above exists because the playtest tooling writes, and a write aimed at the wrong
+// namespace is unrecoverable. Reading is a different act with a different worst case, and one
+// question genuinely cannot be answered anywhere else: which traffic sources bring people who stay.
+// That happens on the live server, so a tool that may only read staging would be measuring an
+// audience nobody was sent to.
+//
+// So live is a target here and nowhere else, and three things keep it narrow:
+//
+//   - What comes back cannot write. The facade exposes reads and returns plain data; there is no
+//     document reference, no batch, and no path back to the SDK through it.
+//   - It can only name collections on READABLE_COLLECTIONS. That list holds aggregate counters —
+//     documents whose contents are counts per traffic source, with nothing in them that belongs to
+//     any one person. The users collection is deliberately absent.
+//   - The target is still resolved by resolveTarget's rules, so the emulator checks that stop
+//     "local" from silently meaning "live" apply here exactly as they do above.
+//
+// The unprefixed names below are the live ones by definition. That is the whole reason the write
+// path refuses to accept them, and it is why this list is short and stated literally.
+const READABLE_COLLECTIONS = ["acquisition"];
+
+function resolveReadTarget(name)
+{
+    const requested = String(name || "staging").toLowerCase();
+
+    if (requested === "live" || requested === "prod" || requested === "production")
+    {
+        if (process.env.FIRESTORE_EMULATOR_HOST)
+            throw new Error(
+                `Target "live" addresses the deployed server, but FIRESTORE_EMULATOR_HOST is set to ` +
+                `"${process.env.FIRESTORE_EMULATOR_HOST}", so every read would go to the emulator ` +
+                `instead and quietly report zeroes. Unset it.`);
+        return { name: "live", prefix: LIVE_PREFIX, emulator: false };
+    }
+
+    return resolveTarget(requested);
+}
+
+function assertReadable(target, name)
+{
+    if (!READABLE_COLLECTIONS.includes(name))
+        throw new Error(
+            `Refusing to read collection "${name}". This path may only read: ` +
+            `${READABLE_COLLECTIONS.join(", ")}.`);
+
+    return `${target.prefix}${name}`;
+}
+
+// Reads are returned as plain objects, keyed by document id. Handing back snapshots would hand back
+// their references, and a reference is a write.
+function toPlainDocs(snapshot)
+{
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+function readOnlyFirestore(db, target)
+{
+    return {
+        target: target.name,
+        prefix: target.prefix,
+
+        // `name` is the bare collection name without a prefix — the prefix belongs to the target
+        // and is applied here, so a caller cannot address another namespace by naming one.
+        async readAll(name)
+        {
+            return toPlainDocs(await db.collection(assertReadable(target, name)).get());
+        },
+
+        async readWhere(name, field, op, value)
+        {
+            return toPlainDocs(await db.collection(assertReadable(target, name)).where(field, op, value).get());
+        },
+    };
+}
+
+// The read-only counterpart of connect(). Accepts --app (matching serverMonitor.js, which is the
+// other tool that reads live) as well as --target.
+function connectReadOnly(argv)
+{
+    const appIndex = argv.indexOf("--app");
+    const targetIndex = argv.indexOf("--target");
+    const index = appIndex >= 0 ? appIndex : targetIndex;
+    const requested = index >= 0 && argv[index + 1] !== undefined ? argv[index + 1] : "staging";
+    const target = resolveReadTarget(requested);
+
+    if (admin.apps.length === 0)
+        admin.initializeApp({ projectId: PROJECT_ID, storageBucket: STORAGE_BUCKET });
+
+    return {
+        target,
+        db: readOnlyFirestore(admin.firestore(), target),
+        describe: () => ({
+            target: target.name,
+            collectionPrefix: target.prefix || (target.name === "live" ? "(none — live)" : "(none — emulator)"),
+            firestore: target.emulator ? process.env.FIRESTORE_EMULATOR_HOST : `${PROJECT_ID} (cloud)`,
+            access: "read-only",
+        }),
+    };
+}
+
+module.exports = {
+    connect, connectReadOnly, resolveTarget, assertInNamespace,
+    PROJECT_ID, STORAGE_BUCKET, READABLE_COLLECTIONS,
+};

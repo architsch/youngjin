@@ -16,6 +16,8 @@ import ServerVoxelManager from "../voxel/serverVoxelManager";
 import SocketUserContext from "./types/socketUserContext";
 import BufferState from "../../shared/networking/types/bufferState";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
+import ServerAnalyticsManager from "../analytics/serverAnalyticsManager";
+import { FunnelMilestoneEnumMap } from "../analytics/types/funnelMilestone";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
@@ -118,40 +120,56 @@ const SocketsServer =
                     const signal = UserCommandSignal.decode(bufferState) as UserCommandSignal;
                     await UserCommandUtil.onUserCommandSignalReceived(user, signal);
                 });
+                // Every signal below is somebody changing the world rather than moving through it,
+                // so each one marks this account as having built something. Only the first such
+                // signal reaches the database: once the milestone is recorded, ServerAnalyticsManager
+                // answers from an in-memory map and this costs a lookup and nothing else, which is
+                // what lets it sit on a path that fires once per block placed. It is deliberately
+                // not awaited — measurement must never delay the edit it is measuring — and it
+                // never rejects, because that module handles its own failures.
+                const recordEdit = () => ServerAnalyticsManager.recordMilestone(user.id, FunnelMilestoneEnumMap.Built);
+
                 socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
                     ServerVoxelManager.onAddVoxelBlockSignalReceived(socketUserContext, signal);
+                    recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("moveVoxelBlockSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
                     ServerVoxelManager.onMoveVoxelBlockSignalReceived(socketUserContext, signal);
+                    recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("removeVoxelBlockSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
                     ServerVoxelManager.onRemoveVoxelBlockSignalReceived(socketUserContext, signal);
+                    recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
                     ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(socketUserContext, signal);
+                    recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = AddObjectSignal.decode(bufferState) as AddObjectSignal;
                     ServerObjectManager.onAddObjectSignalReceived(socketUserContext, signal);
+                    recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("removeObjectSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
                     ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, signal);
+                    recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("setObjectMetadataSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
                     ServerObjectManager.onSetObjectMetadataSignalReceived(socketUserContext, signal);
+                    recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));

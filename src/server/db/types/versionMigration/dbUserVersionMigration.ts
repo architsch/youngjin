@@ -27,6 +27,19 @@ const DBUserVersionMigration: DBVersionMigration = [
     // its own key. Nothing changes here — the version bump is what makes the row be rewritten,
     // and every write already drops the field (DBRowIdentityUtil).
     async (row: any) => row,
+    // v4 -> v5: add "acquisitionSource" and "funnel" (ServerAnalyticsManager).
+    //
+    // Both are defaulted rather than assigned, which is the difference that matters here. Analytics
+    // writes "funnel" straight to the document, outside the DBQuery path that runs these
+    // migrations, so a row can already carry a value before it is ever migrated — and an
+    // unconditional assignment would erase the very measurement this step exists to make room for.
+    // Accounts that predate the change keep an empty source, meaning they are attributed to nothing
+    // rather than being counted as direct traffic they were never observed to be.
+    async (row: any) => {
+        row.acquisitionSource = row.acquisitionSource ?? "";
+        row.funnel = row.funnel ?? "";
+        return row;
+    },
 ];
 
 export default DBUserVersionMigration;

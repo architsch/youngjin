@@ -1,6 +1,6 @@
 ---
 name: docs-and-tests-sync
-description: Bring the documentation and the test suites back in line with recent code changes — survey everything committed-but-unpushed plus everything uncommitted, work out which /docs pages, CLAUDE.md sections, README entries and integration/e2e tests the change has made wrong or incomplete, then fix them and verify the suites still pass. Use before a release, when asked whether the docs are up to date, when tests need to catch up with a feature, or as the first phase of the release-train workflow.
+description: Bring the documentation and the test suites back in line with recent code changes — survey everything committed-but-unpushed plus everything uncommitted, work out which /docs pages, CLAUDE.md sections, README entries and integration/e2e tests the change has made wrong or incomplete, then fix them and verify the suites still pass. Use when asked whether the docs are up to date, when tests need to catch up with a feature, or to catch up a batch of work whose docs and tests were not kept in step as it was built.
 ---
 
 # Docs and Tests Sync

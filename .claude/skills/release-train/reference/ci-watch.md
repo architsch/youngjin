@@ -1,9 +1,13 @@
 # Committing, pushing, and watching CI
 
-Reference for phase 4 of the release train. Everything here happens on the **main thread**, never
+Reference for phase 3 of the release train. Everything here happens on the **main thread**, never
 in a subagent: the commit and the push are the two points where the user's approval is required,
 and an approval prompt raised inside a subagent is one the user is answering without the context
 that led to it.
+
+Because it is the main thread, it is also the phase whose output lands in the orchestrator's context
+in full. Every command below is written to keep that small — redirect the verbose ones, read their
+tails, and never print a whole build log or a whole workflow log.
 
 ## Before the commit
 
@@ -19,8 +23,12 @@ So the bundles have to be rebuilt before committing, or the hook rejects a chang
 otherwise fine:
 
 ```bash
-npm run beforeCommit     # build (CSS + server + client bundles), then run the SSG
+mkdir -p temp/release-train
+npm run beforeCommit > temp/release-train/build.log 2>&1 || tail -n 40 temp/release-train/build.log
 ```
+
+A successful build says nothing worth reading, and it says it in hundreds of lines. Redirect it, and
+look at the tail only when it fails.
 
 This matters more than it looks. `dist/` is committed, the deployment builds from source but the
 committed bundles are what a rollback and the local dev flow rely on, and the SSG step is what turns
@@ -32,16 +40,22 @@ hook runs in whatever environment the editor captured at launch — see
 [docs/devOps/vps/maintenance.md](../../../../docs/devOps/vps/maintenance.md#switching-your-own-machine-over).
 That is a user-side fix, not one to work around.
 
-Then review what is about to be committed, in full:
+Then review what is about to be committed — by exception, not in full:
 
 ```bash
 git status --short
-git diff HEAD --stat
+git diff HEAD --stat -- . ':!dist'
 ```
 
-Read the non-`dist/` diff before proposing a commit. Anything unexpected in it — a debug print, a
-scratch file, a change nobody asked for — is a reason to stop and ask, not to commit and mention it
-afterwards.
+Set that stat against phase 0's survey and the paths the phases reported changing. What matches is
+accounted for. Read the full text only of what does not: a file no phase claimed, anything under
+`src/` in a batch whose phases were all told to stay out of it, a line count that does not fit the
+change described. Generated output — `dist/`, the pages the SSG just wrote under
+`public/devlog-2026/` — is checked by its stat alone, since reading a generated bundle proves nothing
+the build did not.
+
+Anything unexpected that does surface — a debug print, a scratch file, a change nobody asked for —
+is a reason to stop and ask, not to commit and mention it afterwards.
 
 ## The commit
 
@@ -72,7 +86,6 @@ move production, and they are not part of this workflow at any point.
 ```bash
 gh run list --branch main --limit 10
 gh run watch <run-id> --exit-status
-gh run view <run-id> --log-failed
 ```
 
 Start by listing, because a single push produces two independent runs and the interesting one is
@@ -86,8 +99,20 @@ non-zero on failure, which is both cheaper and more accurate than repeated listi
 
 ## When something fails
 
-Read the failing step's log before forming a theory. The failures divide cleanly, and the division
-decides whether fixing it is in scope:
+Read the failing step's log before forming a theory — but never print it. A failed workflow log runs
+to thousands of lines, and pasting one into the main thread costs more context than the rest of the
+phase put together. Pull it to a file and search it:
+
+```bash
+gh run view <run-id> --log-failed > temp/release-train/ci-<run-id>.log
+grep -nE "Error|FAIL|✕|✘|error TS|AssertionError" temp/release-train/ci-<run-id>.log | head -n 30
+```
+
+Then read a window around the hits that matter. If the log genuinely does not explain itself, hand
+the file's path to a subagent and ask for the failing test, the file and line, and a proposed fix in
+under 15 lines — the diagnosis is worth delegating, the transcript is not.
+
+The failures divide cleanly, and the division decides whether fixing it is in scope:
 
 **In scope — fix, rebuild, recommit, push again:**
 
@@ -113,8 +138,8 @@ guessing is the specific failure mode this bound exists to prevent.
 
 ## Proceeding
 
-Phase 5 begins only when *Deploy to Staging* has succeeded. The e2e suite is allowed to be still
-running at that point — the VPS audit does not depend on it — but phase 6's playtest must not start
+Phase 4 begins only when *Deploy to Staging* has succeeded. The e2e suite is allowed to be still
+running at that point — the VPS audit does not depend on it — but phase 5's playtest must not start
 until the deployment is confirmed on the server itself:
 
 ```bash

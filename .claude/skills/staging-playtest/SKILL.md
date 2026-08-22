@@ -31,7 +31,7 @@ sequence yourself. Either way the division of labour is the same:
 
 | Role | Does | Tool |
 |---|---|---|
-| **Admin** | Seeds and cleans DB/storage state; verifies migration landed | `dev/scripts/playtest/stagingAdmin.js` |
+| **Admin** | Seeds and cleans DB/storage state; verifies migration and the acquisition funnel landed | `dev/scripts/playtest/stagingAdmin.js` |
 | **Playtester** (1–3) | Drives real browser sessions, checks room list/search/navigation | `dev/scripts/playtest/runPlan.js` |
 | **Monitor** | Surveys the log backlog, baselines, diffs, watches process metrics | `dev/scripts/playtest/serverMonitor.js` |
 
@@ -167,7 +167,7 @@ to drive the browser one click at a time.
 {
   "agent": "explorer-1",
   "actions": [
-    { "type": "start" },
+    { "type": "start", "ref": "playtest-<runID>" },
     { "type": "waitForRoom" },
     { "type": "skipTutorial" },
     { "type": "dismissPopups" },
@@ -204,6 +204,9 @@ Non-obvious things that will otherwise waste a run:
   socket sweep notices, which the next run reads as a bug.
 - **Give each agent a distinct `userAgent`.** Guest creation is capped per IP *and* User-Agent
   together, so agents sharing a string share one small quota.
+- **`ref` on `start` puts this run's guests in their own acquisition cohort**, which is what makes
+  Step 5's funnel check readable. It must begin with `playtest-` and be written in `a-z0-9-_`; see
+  that step.
 - Assertions about data go through the page's own authenticated request context — same session,
   same cookies, no clicking.
 
@@ -260,6 +263,7 @@ server fault, and must be reported that way.
 ```
 node dev/scripts/playtest/serverMonitor.js diff --app staging
 node dev/scripts/playtest/stagingAdmin.js verify-migration
+node dev/scripts/playtest/stagingAdmin.js verify-funnel --run <runID>
 ```
 
 `diff` separates the two streams deliberately: `needsAttention` comes from stderr (what LogUtil
@@ -272,6 +276,20 @@ advanced to the current version **in storage**, not merely in the reply the clie
 row still at its seeded version after the server has read it means the write-back silently
 failed — the data is correct for the caller and permanently wrong on disk, so every subsequent
 read re-migrates it forever.
+
+`verify-funnel` covers the one path nothing offline can. The server records where each visitor came
+from and how far they got, and the source is read off a real request — so a browser, the server and
+the database it writes through are all needed at once, which is only true here. It reports which
+milestones the run's cohort reached and which it did not, and deliberately does not pass or fail:
+which ones *should* be there depends on what the plan did, and a plan that never left the tutorial
+is not a broken funnel. Read it against the actions that ran — a plan with `start`, `skipTutorial`
+and `gotoRoom` should show arrived, tutorialDone and enteredRoom.
+
+An empty cohort when the plan ran fine is worth chasing rather than shrugging at, and there are only
+three causes: the tag was not written in `a-z0-9-_` and the server rebuilt it into something else,
+the session was reused from an earlier run so first-touch attribution kept the original source, or
+the deployed build predates the analytics and is not recording at all. `curl -s
+https://staging.thingspool.net/health` settles the third.
 
 ## Step 6 — Clean up, then report
 
@@ -317,7 +335,11 @@ down to a string comparison — and that is guarded in three places:
 Beyond the target boundary:
 
 - `cleanup` deletes only documents carrying the marker field the seeder stamps on its own seeds.
-  It cannot delete organic data.
+  It cannot delete organic data. Acquisition cohort documents are the exception to *how* rather
+  than to whether: the server writes them, so they carry no marker, and `cleanup` selects them by
+  the reserved `playtest-` prefix on their traffic source instead. That is the whole reason the
+  prefix is mandatory — a run tagged without it leaves counts behind that cannot be told from real
+  visitors and so are never removed.
 - `downgrade-content` copies the original blob aside before touching it, and never overwrites an
   existing backup; `restore-content` puts it back and is also run by `cleanup`.
 - Every command reports the target it addressed, so which namespace was touched is never
