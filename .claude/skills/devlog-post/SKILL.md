@@ -38,8 +38,9 @@ Read the actual code before writing a word about it. Work out:
   mostly about, so spend the most research effort here. Look at the actual choices the feature
   puts in front of a player — the things in the menus, the range of what can be changed — because
   those are what turn into concrete, picturable sentences.
-- **What it opens up.** One or two specific things somebody might build or try with it. Imaginative
-  is good; it just has to be honestly framed as a possibility rather than an existing feature.
+- **What it makes possible.** One specific thing somebody might build or try with it. Imaginative
+  is good; it just has to be honestly framed as a possibility rather than an existing feature. Find
+  several during research, then put the best one in the post and drop the rest.
 - The idea behind how it works — one short paragraph's worth at most, and only the part that would
   interest someone who does not program.
 - What of it is **visible**, and what a player has to do to see it. This decides the screenshots.
@@ -112,9 +113,15 @@ replaced where it stands. Appending instead leaves the site with two posts about
 screenshots are revised the same way — re-shoot to the same filenames, and delete from
 `public/devlog-2026/` any image the new version no longer references.
 
-The file's syntax and the exact shape of a post block are in
-[reference/post-format.md](reference/post-format.md); the voice, structure and an annotated
-example are in [reference/writing.md](reference/writing.md).
+Three documents govern the writing, and all three are read before drafting:
+
+- [`../../writing-style.md`](../../writing-style.md) — the house style, shared with every other
+  piece of public copy this project publishes. Voice, sentence rules, how much detail is allowed,
+  what to cut. It is the authority on *how* to write.
+- [reference/writing.md](reference/writing.md) — what a dev-log post specifically must be: what it
+  is for, what goes in it, how it opens, an annotated example, and the checks.
+- [reference/post-format.md](reference/post-format.md) — the file's syntax and the exact shape of a
+  post block.
 
 The rules that do not bend:
 
@@ -123,9 +130,10 @@ The rules that do not bend:
   behind it. A reader scrolling a feed has nothing to decode a clever title with.
 - **The first two sentences are the whole post in miniature.** Social platforms show about two
   lines and hide the rest behind "see more", so those lines say what ThingsPool is (the reader has
-  never heard of it) and what is new, in that order: *"ThingsPool, an immersive 3D chat app that
-  runs in a browser tab, now has game modes."* Never open with a scene, a question, or a detail
-  that only makes sense once the reader already knows what the feature is.
+  never heard of it) and what is new, in that order: *"ThingsPool is a 3D chat app in a browser
+  tab. The app now has game modes."* They are also the shortest sentences in the post — two short
+  sentences beat one long one here. Never open with a scene, a question, or a detail that only
+  makes sense once the reader already knows what the feature is.
 - **The link back.** Every post opens, on the line directly under its header, with the link to the
   site's landing page:
   ```
@@ -141,33 +149,33 @@ The rules that do not bend:
 - **Length.** At most 2964 characters (LinkedIn's 3000-character limit, less the 36 the user's
   own "Play Here" line needs). **This is a ceiling, not a target.** Say the whole thing in as few
   words as it takes and stop; a 1200-character post is better than the same post stretched to
-  2900, and never add a sentence because there is budget left. Draft, then cut — writing.md lists
-  what comes out first. Verify the number, do not estimate:
+  2900, and never add a sentence because there is budget left. Draft, then cut — the house style's
+  "Cut" section lists what comes out first. Verify the number, do not estimate:
   ```bash
   node dev/scripts/devlog/postLength.js
   ```
   It exits non-zero when the newest post is over budget. Fix and re-run until it passes.
-- **Tone.** Clear, concise and logical, in the voice of the user's own books — a mathematics or
-  philosophy teacher explaining an idea to an intelligent adult who does not know the field.
-  Complete sentences, one idea each, plain words, the point stated before it is elaborated.
-  Read [reference/writing.md](reference/writing.md) before drafting; it names the two ways this
-  goes wrong. The one that keeps happening is the **poetic register** — fragments used as
-  rhetorical beats, metaphors standing in for plain statements, sentences that sound meaningful
-  without being restatable. The other is the dry engineering record. A little color is welcome
-  ("craft your dream space", "explore a room's hidden corners") as long as every sentence still
-  says one definite thing at a glance. No sales pitch, no rhetorical questions to the reader.
-- **Depth.** Almost all of the post is what a player can see, do and make. Never treat user
-  interface flow, performance, computational cost, algorithms, network bandwidth, architecture or
-  code structure in depth — at most one plain-language clause, and only where the story needs it.
+- **Style.** [`../../writing-style.md`](../../writing-style.md) is the authority, and reading it is
+  not optional. What it holds the post to: short sentences carrying one idea each; active verbs;
+  few relative pronouns; plain single-word verbs rather than idiomatic phrasal ones ("removes", not
+  "takes out"); pronouns only where the noun they stand for is unmistakable; no metaphor the reader
+  has to unpack; every noun one the reader can define; no account of how the feature works, where
+  it sits on screen, or what one player did with it in one room; one subject and one idea at a
+  time, never a list; and a draft cut until nothing more can come out. The register is the user's
+  own books — a mathematics or philosophy teacher explaining an idea to an intelligent adult who
+  does not know the field. No sales pitch, no rhetorical questions to the reader.
+- **Earlier posts are not the style guide.** Read `public/devlog-2026/source.txt` for two things
+  only: every opening, so the new one repeats nobody's construction, and the facts, so the new post
+  contradicts nothing. Those posts were written under earlier versions of these rules and several
+  of them break the current ones, so copying a construction because it is already published is how
+  the writing stops improving. Each post should come out better than the last one, which cannot
+  happen while the last one is the model. Published posts are dated records and are never edited to
+  match a newer rule.
 - **Concept, not manual.** Do not walk the reader through which button opens which panel and in
-  what order. Say what the feature is and what it lets somebody do, let one or two concrete
-  details stand in for the rest, and let the screenshots show the interface. The post should get
-  *less* detailed as it goes on, not more: the closing paragraphs are a short conceptual summary
-  of each part plus what it makes possible, never a walkthrough.
-- **Established terms.** Every noun has to be one the reader can define. "This is the first post of
-  ThingsPool's development log, a news feed for the project's major updates" lands; "this log
-  follows what gets finished, with pictures from the running game" does not, though nothing in it
-  is figurative. Reach for the word people already know, or define the term where it first appears.
+  what order. Say what the feature is and what it lets somebody do, let one concrete detail stand
+  in for the rest, and let the screenshots show the interface. The post should get *less* detailed
+  as it goes on, not more: the closing paragraphs are a short conceptual summary of each part plus
+  what it makes possible, never a walkthrough.
 - **No emoji.**
 - **Hashtags.** About sixteen on the final line, each a `#` followed by a PascalCase term: six to
   eight broad ones drawn across the bank in [reference/hashtags.md](reference/hashtags.md), and the
@@ -180,9 +188,12 @@ The rules that do not bend:
   the feature makes possible later are welcome, written as possibilities rather than as things
   that already work.
 
-Then read the draft back once against the checklist at the end of
-[reference/writing.md](reference/writing.md) and fix what fails. Its first test is the one that
-catches the usual problem: every sentence must be restatable by the reader in their own words.
+Then read the draft back against two checklists and fix what fails: "The checks" at the end of
+[`../../writing-style.md`](../../writing-style.md), and then the post-specific one at the end of
+[reference/writing.md](reference/writing.md). Run them as written — one pass per test, on the
+finished text — because the tests that catch the usual problems are mechanical: every sentence
+restatable by the reader in their own words, every sentence short and active, every pronoun
+pointing at one obvious noun.
 
 ## Step 6 — Publish
 

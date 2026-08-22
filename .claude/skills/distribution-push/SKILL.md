@@ -16,6 +16,11 @@ throughout: **`devlog-post` makes the material, `distribution-push` places it.**
 post that does not exist yet, say so and let the user invoke that skill; do not write a second,
 divergent description of the same feature here.
 
+What this skill does write is the copy each venue asks for — a title, a one-liner, a body at that
+venue's length. That copy obeys the same house style as everything else published in the user's
+name: [`../../writing-style.md`](../../writing-style.md), read before drafting. One style guide
+serves both skills, so neither invents its own register.
+
 Those posts are not only a source of copy. **A published dev-log page is itself something worth
 linking to**, and for a good number of venues it is the better thing to link to — see below.
 
@@ -178,8 +183,13 @@ One kit per venue, under `temp/distribution/<venue-slug>/`. Full specification i
 [reference/submission-kit.md](reference/submission-kit.md). In short, each kit holds the copy at
 exactly the lengths that venue asks for, the screenshots it needs, and the tagged link.
 
-Two rules that do not bend:
+Three rules that do not bend:
 
+- **Style.** Every line of every kit follows [`../../writing-style.md`](../../writing-style.md) —
+  short active sentences carrying one idea, plain verbs, no metaphor the reader has to unpack, one
+  subject at a time, and no lists of features. `reference/submission-kit.md` names the venue
+  adjustments, including the one venue allowed more technical depth. Earlier submissions in
+  `ledger.md` show what was sent before; they are not a model for how to write.
 - **The tagged link.** Every venue gets its own, appended to whichever destination was chosen:
   `https://app.thingspool.net/?ref=<venue-slug>` or
   `https://thingspool.net/devlog-2026/page-<N>.html?ref=<venue-slug>`.
@@ -193,9 +203,9 @@ Two rules that do not bend:
   Curl the exact URL before handing it over; a link that 404s is the one mistake a venue will not
   forgive. The full mechanism is in [`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md).
 - **Truth.** Every claim traceable to code or to a screenshot you looked at. Possibilities are
-  written as possibilities. This is the same standard `devlog-post` holds, and for the same reason —
-  a promotional claim that the game does not deliver is discovered within thirty seconds of the
-  click.
+  written as possibilities. This is the standard the house style sets for every piece of public
+  copy, and for the same reason — a promotional claim that the game does not deliver is discovered
+  within thirty seconds of the click.
 
 ## Step 6 — Execute, in three lanes
 

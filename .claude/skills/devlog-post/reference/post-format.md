@@ -57,6 +57,10 @@ pairs them up — not a stylistic choice).
 | `:k:` | `<meta name="keywords">` — lower-cased by the builder, so write it however reads best |
 | `:l:` | The last-modified date in the sitemap and the feed. `YYYY-MM-DD`. Use the day the post is written |
 
+The `:d:` line is read by people, in a search result and in a share preview, so it obeys the same
+sentence rules as the post itself — see [writing.md](writing.md). Short, active, one idea each. It
+usually says what the post's opening says, in one or two sentences.
+
 The `:k:` line is the same reach the hashtags are after, written for a crawler instead of a feed:
 much the same terms — see [hashtags.md](hashtags.md) — in ordinary words rather than PascalCase
 (`Virtual World`, `Free to Play`). Keep it to a dozen or so, as the rest of the Library's lists do.

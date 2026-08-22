@@ -125,17 +125,17 @@ it, this is one of the two interruptions before the commit gate.
 
 Delegate both at once, with the change set from phase 0 and the report contract in each brief.
 
-- **Phase 1 (`skill-upkeep`) owns** `.claude/skills/`.
+- **Phase 1 (`skill-upkeep`) owns** `.claude/skills/` and `.claude/writing-style.md`.
 - **Phase 2 (`devlog-post`) owns** `public/devlog-2026/` and the screenshots it captures.
 
 Neither may touch `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md`. If either concludes a change
 there is needed, it reports that as a finding and does not make it — a skills audit that quietly
 edits application code is an audit whose diff nobody will read carefully.
 
-Phase 1 may edit `.claude/skills/devlog-post/` while phase 2 is running. That is safe: phase 2 loaded
-its instructions when it started, so an edit lands for the next run rather than mid-flight. What must
-wait is the reverse — checkpoint B's edits to that same skill happen only after phase 1 has reported,
-so the two never overwrite each other.
+Phase 1 may edit `.claude/skills/devlog-post/` and `.claude/writing-style.md` while phase 2 is
+running. That is safe: phase 2 loaded its instructions when it started, so an edit lands for the next
+run rather than mid-flight. What must wait is the reverse — checkpoint B's edits to those same files
+happen only after phase 1 has reported, so the two never overwrite each other.
 
 Phase 2 boots a local dev server, captures screenshots against the running game, writes the post, and
 regenerates the static site. Two things to check when it reports back, because both are silent
@@ -178,11 +178,18 @@ approval, and neither is no reply at all.
 Read the note as being about how dev-log posts are *made*, not only about this one — otherwise the
 same fault comes back on the next release, and the user gives the same note again. In order:
 
-1. **Fold the advice into the `devlog-post` skill**, on the main thread, before regenerating
-   anything. Put it where that subject already lives: `SKILL.md` for the rules of the post itself,
-   `reference/writing.md` for voice, structure and what to cut, `reference/capture.md` for the
-   screenshots, `reference/post-format.md` for the source format, `reference/hashtags.md` for the
-   tag bank. Write it as a standing rule, in the register of the rules already there — "the closing
+1. **Fold the advice into the skill files**, on the main thread, before regenerating anything. Put
+   it where that subject already lives:
+   - `.claude/writing-style.md` — how to write, in any public copy: voice, sentences, how much
+     detail, what to cut. Most notes about wording land here, and landing here is what makes them
+     apply to `distribution-push` too.
+   - `devlog-post/SKILL.md` — the rules of the post itself.
+   - `devlog-post/reference/writing.md` — what a dev-log post must be and contain: its opening, its
+     structure, its checks.
+   - `devlog-post/reference/capture.md` for the screenshots, `reference/post-format.md` for the
+     source format, `reference/hashtags.md` for the tag bank.
+
+   Write it as a standing rule, in the register of the rules already there — "the closing
    paragraph never restates the opening", not "the user disliked the ending this time". If the note
    really does apply only to this one post, fix the post and say plainly that no rule came out of
    it, rather than inventing a general rule from a single case.
@@ -276,7 +283,7 @@ Assemble from the state file, in this order:
    new errors the playtest found. Each with its evidence. This section goes near the top because it
    is the reason to read the report.
 3. **Changed** — skills, the dev-log post (with its URL and the pasteable text), and any rules
-   checkpoint B's revisions wrote into the `devlog-post` skill.
+   checkpoint B's revisions wrote into the `devlog-post` skill or the shared writing style.
 4. **Verified** — the suites that passed, the states the playtest confirmed, the machine checks that
    came back clean.
 5. **Not covered** — every phase that was skipped, bounded out, or blocked, and why.

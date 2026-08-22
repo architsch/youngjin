@@ -31,11 +31,17 @@ that drives it needs checking against the new behaviour.
 Then enumerate the skills themselves:
 
 ```bash
-ls .claude/skills/*/SKILL.md .claude/skills/*/reference/*.md
+ls .claude/skills/*/SKILL.md .claude/skills/*/reference/*.md .claude/writing-style.md
 ```
 
 Every one gets checked, not only the ones the diff touched — drift accumulates from changes made
 long before this batch.
+
+`.claude/writing-style.md` sits outside the skills tree because two skills share it: `devlog-post`
+and `distribution-push` both write public copy against it. Audit it like any other file here, and
+treat a style rule that has migrated into one of those skills as drift to reverse — rules about
+*how* to write belong in the shared file, rules about what a particular piece must contain belong
+in the skill that owns it.
 
 ## Step 2 — Verify every checkable claim
 

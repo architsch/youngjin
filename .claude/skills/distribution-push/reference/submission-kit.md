@@ -51,17 +51,32 @@ either; a duplicate of the page defeats the point of linking to it.
 
 ## Voice
 
-Inherit it. The register is already settled in
-[`../../devlog-post/reference/writing.md`](../../devlog-post/reference/writing.md) — clear,
-concrete, complete sentences, one idea each, no sales pitch and no rhetorical questions. Read it
-before drafting rather than reinventing a second house style here.
+**The house style is in [`../../../writing-style.md`](../../../writing-style.md), and it governs
+every line of copy this skill writes.** Read it before drafting. It is shared with `devlog-post` on
+purpose: the same reader meets both, and a second house style invented here would diverge from the
+first within a few revisions.
 
-Two adjustments for this skill's venues:
+The rules that catch this skill's copy most often are the sentence-level ones — short sentences
+carrying one idea, active verbs, plain single-word verbs rather than idiomatic phrasal ones,
+pronouns only where the noun is unmistakable — and the rule against enumerating. Marketing copy
+drifts toward lists of features and toward phrases picked for their sound; both fail here.
+
+Three adjustments for this skill's venues:
 
 - **No hashtags**, except where a venue has an actual tag field. The hashtag block that ends a
   dev-log post belongs to social feeds and reads as spam on Reddit or Hacker News.
 - **Say who is posting.** On community venues the developer saying "I built this" outperforms
   third-person copy, and is the only honest framing available.
+- **Show HN, and only Show HN, may go one level deeper technically.** That audience came for the
+  engineering, so naming what the thing is built on and one genuine constraint is welcome. This
+  raises the house style's ceiling on detail for that one venue. It does not relax a single
+  sentence-level rule, and it is never an invitation to describe architecture.
+
+**Earlier copy is not the style guide.** The ledger's past submissions and the published dev-log
+posts are a record of what was sent, useful for checking what a venue has already seen and what
+facts were committed to. They were written under earlier versions of these rules, and several break
+the current ones. Take the style from the house style file, and let each kit come out better than
+the last.
 
 ## Images
 
