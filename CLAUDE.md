@@ -97,15 +97,17 @@
 
 ## Room Generation Defines What a Room Is
 
-Every room in the game is born from `RoomGenerationUtil` — multiplayer rooms laid out procedurally by `ProceduralRoomGenerationUtil`, single-player rooms built from their `SinglePlayerModeConfig` — and nothing else ever produces one. That makes room generation the *definition* of a complete room: not only the voxels and objects inside it, but every room-level parameter those contents were chosen to suit.
+Every room in the game is born from `RoomGenerationUtil` — multiplayer rooms laid out procedurally by `HubRoomBuilder` and `RegularRoomBuilder` on top of `ProceduralRoomBuilder`, single-player rooms built from their `SinglePlayerModeConfig` — and nothing else ever produces one. That makes room generation the *definition* of a complete room: not only the voxels and objects inside it, but every room-level parameter those contents were chosen to suit.
 
-**Whenever a new room-level parameter or a new kind of placeable content is introduced, room generation must be extended to choose (or place) it as part of the same change.** This is not polish to defer:
+**Whenever a new room-level parameter is introduced, room generation must be extended to choose it as part of the same change.** This is not polish to defer:
 
 1. **A parameter no generator sets does not exist in practice.** Since every room is created by generation, a parameter left out of it is one that every room in the game silently holds the default value of. However complete its editing UI is, the feature ships looking like it was never built — visible only to the few owners who go and change it by hand.
 2. **Room parameters are not independent of each other, or of the room's contents.** A palette's texture indices only mean anything within one specific texture pack; fog has to agree with the skybox; a prop's materials have to come from the room's own pack. Generation is the single place where those agreements are expressed. Adding a parameter anywhere else and leaving generation alone produces rooms whose settings contradict their own contents.
-3. **Generated rooms are what almost everyone sees.** Hubs and newly created rooms are the game's first impression, and most of them are never hand-edited at all. Content that generation cannot place is content most players never encounter.
+3. **Generated rooms are what almost everyone sees.** Hubs and newly created rooms are the game's first impression, and most of them are never hand-edited at all. A parameter generation does not decide is one whose effect most players never encounter.
 
-Concretely, introducing a room-level parameter means: add it to `Room` (so it is stored and sent to clients), make `RoomGenerationUtil` and `ProceduralRoomGenerationUtil` decide it, declare it on every `SinglePlayerModeConfig`, and — where the parameter has curated data behind it, as texture packs have palettes in `RoomGenerationPaletteMap` — extend that curation to cover every option a room can be generated with. Conceptual details live in `docs/geometry/room_generation.md`.
+**Contents are a narrower obligation than parameters.** Procedural generation lays out a multiplayer room's voxel grid — its areas, the walls and passages between them, the ways up to the storey above, and the voxel block work standing in them — and deliberately places **no objects at all**. A Hub or Regular room is meant to be furnished by the people who use it, so what generation owes them is somewhere to build rather than a full house. A new kind of placeable object therefore needs nothing from generation; a new kind of *voxel* content does.
+
+Concretely, introducing a room-level parameter means: add it to `Room` (so it is stored and sent to clients), make `RoomGenerationUtil` and the procedural `RoomBuilder`s decide it, declare it on every `SinglePlayerModeConfig` (which carries its parameters as `RoomBuilderParams`), and — where the parameter has curated data behind it, as texture packs have palettes in `RoomPaletteMap` — extend that curation to cover every option a room can be generated with. Conceptual details live in `docs/geometry/room_generation.md`.
 
 ## The License Files Must Describe What Actually Ships
 

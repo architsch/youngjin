@@ -71,10 +71,10 @@ export const COLLISION_LAYER_MAX = COLLISION_LAYER_75_TO_80;
 // also the largest value such a mask can take.
 export const FULL_COLLISION_LAYER_MASK = (1 << NUM_COLLISION_LAYERS) - 1;
 
-// The layer a room's upper storey rests on: a slab laid here divides the room's height in two,
-// leaving one storey's worth of headroom below it and another above. A single-storey room lays the
-// same slab and simply stops there, so that slab is its ceiling rather than anyone's floor.
-export const STOREY_FLOOR_COLLISION_LAYER = NUM_COLLISION_LAYERS / 2; // 8
+export const NUM_COLLISION_LAYERS_PER_STOREY = 7;
+
+// This is the layer between the first and second storeys (assuming that the room is divided into two storeys).
+export const STOREY_FLOOR_COLLISION_LAYER = NUM_COLLISION_LAYERS_PER_STOREY;
 
 export const DIR_VEC_BY_NAME: {[key: string]: Vec3} = {
     "+x": {x: 1, y: 0, z: 0},

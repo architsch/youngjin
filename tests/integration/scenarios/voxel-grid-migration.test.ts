@@ -28,13 +28,16 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
-    NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+    NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const FIXTURE_NAMES = ["bare", "procedural_1", "procedural_7", "procedural_12345",
     "procedural_999999", "mixed"];
 
-// The height a room stood at in the format these fixtures were written in.
+// The height a room stood at in the format these fixtures were written in. It is also where
+// migration lays the slab that replaces such a room's ceiling: that height belongs to the old
+// format, not to wherever a room built today happens to put its storey floor, and the two are no
+// longer the same number.
 const LEGACY_NUM_COLLISION_LAYERS = 8;
 const LEGACY_COLLISION_LAYER_MAX = LEGACY_NUM_COLLISION_LAYERS - 1;
 
@@ -121,7 +124,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
         {
             // The room's old contents, plus a slab at the height its ceiling used to hang at.
             expect(grid.voxels[i].collisionLayerMask).toBe(
-                expected.masks[i] | (1 << STOREY_FLOOR_COLLISION_LAYER));
+                expected.masks[i] | (1 << LEGACY_NUM_COLLISION_LAYERS));
         }
     });
 
@@ -129,7 +132,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
         const grid = decode(bytes);
         for (const voxel of grid.voxels)
         {
-            for (let layer = STOREY_FLOOR_COLLISION_LAYER + 1; layer <= COLLISION_LAYER_MAX; ++layer)
+            for (let layer = LEGACY_NUM_COLLISION_LAYERS + 1; layer <= COLLISION_LAYER_MAX; ++layer)
             {
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer)).toBe(false);
 
@@ -156,7 +159,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
         {
             const voxel = grid.voxels[i];
             const slabQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
-                voxel.row, voxel.col, "y", "-", STOREY_FLOOR_COLLISION_LAYER);
+                voxel.row, voxel.col, "y", "-", LEGACY_NUM_COLLISION_LAYERS);
             const slabQuad = grid.quadsMem.quads[slabQuadIndex];
 
             // It carries what the ceiling tile it replaces carried...
@@ -222,7 +225,7 @@ describe("migrating a version-0 room", () => {
 
         for (const voxel of grid.voxels)
         {
-            expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, STOREY_FLOOR_COLLISION_LAYER))
+            expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, LEGACY_NUM_COLLISION_LAYERS))
                 .toBe(true);
         }
 

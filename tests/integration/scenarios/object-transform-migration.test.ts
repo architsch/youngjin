@@ -25,7 +25,7 @@ import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    STOREY_FLOOR_COLLISION_LAYER, COLLISION_LAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
+    COLLISION_LAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const ROOM_ID = "object-migration-room";
@@ -162,7 +162,9 @@ describe("object transform ranges and migration", () => {
         // The symptom this whole path exists for. A painting hung at the middle of a one-storey
         // wall read back at exactly the height the storey floor is laid at, so it was left standing
         // inside the new floor.
-        const storeyFloorY = STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
+        // The slab replaces the ceiling of the room being migrated, so it is laid at that room's
+        // own full height rather than at the storey floor of a room built today.
+        const storeyFloorY = LEGACY_MAX_ROOM_Y;
         const midWallOfOneStoreyRoom = LEGACY_MAX_ROOM_Y / 2;
         expect(midWallOfOneStoreyRoom * 2).toBeCloseTo(storeyFloorY, 6); // what used to happen
 
@@ -219,6 +221,6 @@ function encodeCurrentVoxelGrid(): Uint8Array
 {
     const view = new Uint8Array(SCRATCH_BUFFER_BYTES);
     const writeState = new BufferState(view);
-    VoxelGrid.createEmpty().encode(writeState);
+    VoxelGrid.createBaseGrid().encode(writeState);
     return view.slice(0, writeState.byteIndex);
 }

@@ -62,7 +62,7 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { voxelQuadChangeObservable } from "../../../src/shared/system/sharedObservables";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
@@ -151,11 +151,11 @@ describe("single-player scenarios", () => {
             assertions: ({ users }) => {
                 const ctx = users[0].socketUserContext;
                 const userID = users[0].user.id;
-                const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].loadMetadata();
+                const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
                 // A quad of the dividing wall — a real part of the tutorial room, so that a handler
                 // that did touch a room would have something to touch.
                 const wallQuad = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
-                    m.volumes.wall1.rowStart, m.volumes.wall1.colStart, COLLISION_LAYER_MIN);
+                    m.volumes.wall1.rowMin, m.volumes.wall1.colMin, COLLISION_LAYER_MIN);
                 const transform = new ObjectTransform({ x: 1, y: 0, z: 1 }, { x: 0, y: 0, z: 1 });
 
                 // A single-player user is never bound to a server-side room, and none is loaded.
@@ -220,16 +220,16 @@ describe("single-player room generation", () => {
     // client uses must build what the tutorial's steps then work on and take apart.
     it("generates the tutorial room with the walls its steps take down", () => {
         const { voxelGrid, objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
-        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].loadMetadata();
+        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
 
         // Both walls stand to begin with: the one between the user and the receptionist, which the
         // step that sends him there takes down, and the one across the way out, which the last step
         // takes down. A wall already gone is a step with nothing to open.
         for (const volume of [m.volumes.wall1, m.volumes.wall2])
         {
-            for (let row = volume.rowStart; row < volume.rowStart + volume.numRows; ++row)
+            for (let row = volume.rowMin; row <= volume.rowMax; ++row)
             {
-                for (let col = volume.colStart; col < volume.colStart + volume.numCols; ++col)
+                for (let col = volume.colMin; col <= volume.colMax; ++col)
                 {
                     const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
                     expect(voxel).toBeDefined();
@@ -240,7 +240,8 @@ describe("single-player room generation", () => {
 
         // The patch of floor the tutorial falls back on when it can find none of its own (see the
         // hotspot tests below): bare, so that the block the user is told to add has somewhere to go.
-        const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, m.hotspots.floor.row, m.hotspots.floor.col);
+        const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels,
+            Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x));
         expect(floorVoxel).toBeDefined();
         expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(floorVoxel!, COLLISION_LAYER_MIN)).toBe(false);
 
@@ -250,37 +251,25 @@ describe("single-player room generation", () => {
     });
 
     it("builds the tutorial room as a single storey the camera can look down into", () => {
-        // The tutorial is played from above as much as from inside it, so the room is built with
-        // nothing standing in the empty height over it: its walls stop at the slab that caps it,
-        // and that slab is drawn only from below, so a camera drawn back far enough looks into the
-        // room rather than down onto a lid.
+        // The tutorial is played from above as much as from inside it, so the room is built as one
+        // storey with the slab that caps it left whole: the space the player is walked around in
+        // stops there, and everything over it is the mass the room was carved out of.
         const { voxelGrid } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
-        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].loadMetadata();
+        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
 
-        for (const volume of [m.volumes.wall1, m.volumes.wall2])
+        // Every space the tutorial opens is on the first storey and none on the storey above.
+        for (const volume of Object.values(m.volumes))
         {
-            for (let row = volume.rowStart; row < volume.rowStart + volume.numRows; ++row)
-            {
-                for (let col = volume.colStart; col < volume.colStart + volume.numCols; ++col)
-                {
-                    const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col)!;
-
-                    // Up to the slab, so that the wall meets the ceiling with no slot left over it.
-                    expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, STOREY_FLOOR_COLLISION_LAYER),
-                        `(${row},${col}) stops short of the ceiling`).toBe(true);
-                    // And no further: nothing of the room stands on the storey above.
-                    for (let layer = STOREY_FLOOR_COLLISION_LAYER + 1; layer <= COLLISION_LAYER_MAX; ++layer)
-                    {
-                        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer),
-                            `(${row},${col}) carries on past the ceiling at layer ${layer}`).toBe(false);
-                    }
-                }
-            }
+            expect(volume.collisionLayerMax,
+                "a tutorial space reaches past the slab that caps the room").toBeLessThan(
+                STOREY_FLOOR_COLLISION_LAYER);
         }
 
-        // The roof: laid over the whole grid, and drawn nowhere on it. This is asked of every cell
-        // rather than of the room's own spaces, because the mass the room is set into caps off at
-        // the same height — and a lid over that reads from above exactly like a lid over the room.
+        // The roof: laid over the whole grid, and drawn nowhere on it. That it is never drawn is
+        // what lets a camera drawn back far enough look into the room rather than down onto a lid —
+        // and it is asked of every cell rather than of the room's own spaces, because the mass the
+        // room is set into stands at that height too, and a lid over that reads from above exactly
+        // like a lid over the room.
         for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
         {
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
@@ -289,10 +278,12 @@ describe("single-player room generation", () => {
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, STOREY_FLOOR_COLLISION_LAYER),
                     `(${row},${col}) has nothing over it`).toBe(true);
 
-                const topQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
-                    row, col, "y", "+", STOREY_FLOOR_COLLISION_LAYER);
-                expect(voxelGrid.quadsMem.quads[topQuadIndex] & 0b10000000,
-                    `(${row},${col}) draws the top of the room's roof`).toBe(0);
+                for (let layer = STOREY_FLOOR_COLLISION_LAYER; layer <= COLLISION_LAYER_MAX; ++layer)
+                {
+                    const topQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", layer);
+                    expect(voxelGrid.quadsMem.quads[topQuadIndex] & 0b10000000,
+                        `(${row},${col}) draws a lid over the room at layer ${layer}`).toBe(0);
+                }
             }
         }
     });
@@ -408,12 +399,14 @@ describe("tutorial floor hotspot", () => {
     it("falls back to the room's own patch when the floor gives out at once", () => {
         // Camera on the far side of the entrance wall, so the first step out of the player's cell
         // lands in solid wall.
-        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].loadMetadata();
+        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
         const hotspot = pickHotspot(
             { x: m.entranceVoxelCol + 0.5, y: 0, z: m.entranceVoxelRow + 0.5 },
             { x: m.entranceVoxelCol + 0.5, y: 3, z: m.entranceVoxelRow + 10.5 });
 
-        expect(hotspot).toEqual(m.hotspots.floor);
+        // The room's own patch is declared as a world position; the step works in cells.
+        expect(hotspot).toEqual(
+            { row: Math.floor(m.hotspots.floor.z), col: Math.floor(m.hotspots.floor.x) });
     });
 });
 

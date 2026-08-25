@@ -9,35 +9,45 @@
  * by the tests written for it (see room-generation.test.ts).
  */
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
+import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
+import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
+import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
+import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
 import Room from "../../../src/shared/room/types/room";
-import RoomGenerationVolume from "../../../src/shared/room/types/roomGeneration/roomGenerationVolume";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import RoomGenerationSpaceUtil from "../../../src/shared/room/util/roomGenerationSpaceUtil";
-import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
-import RoomGenerationVolumeUtil from "../../../src/shared/room/util/roomGenerationVolumeUtil";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 
-const PALETTE = {
-    floorTextureIndex: 0, wallTextureIndex: 1, ceilingTextureIndex: 2, propTextureIndex: 3,
-};
+const PALETTE = new RoomPalette(0, 2, 1, 3); // (floor, ceiling, wall, prop)
 
 /** Fills a room in as one open floor per storey inside the boundary wall, and nothing else. */
 export function buildBareMultiplayerRoomContent(room: Room): void
 {
-    room.voxelGrid = VoxelGrid.createEmpty();
+    // A room starts as solid mass and is carved out of, so a fixture describes the space it wants
+    // open rather than the walls around it — the boundary wall is simply the mass the carving is
+    // kept away from.
+    room.voxelGrid = VoxelGrid.createBaseGrid();
     room.objectGroup = new ObjectGroup([]);
 
-    const footprint: RoomGenerationVolume = {
-        ...RoomGenerationVolumeUtil.WHOLE_ROOM,
-        rowStart: 1, colStart: 1, numRows: NUM_VOXEL_ROWS - 2, numCols: NUM_VOXEL_COLS - 2,
-    };
-    RoomGenerationSpaceUtil.build(room.voxelGrid, [
-        ...[RoomGenerationVolumeUtil.GROUND_STOREY, RoomGenerationVolumeUtil.UPPER_STOREY].map(
-            storey => ({volume: RoomGenerationVolumeUtil.intersect(footprint, storey), palette: PALETTE})),
-        {volume: RoomGenerationVolumeUtil.MULTI_PLAYER_ENTRANCE, palette: PALETTE},
-    ]);
+    const voxels = room.voxelGrid.voxels;
+
+    // Two open storeys with the dividing slab left standing between them. The upper one is carried
+    // all the way to the room's own ceiling rather than stopping under a cap the way a generated
+    // room does: this is a bare shell to test against, and a scenario about the room's own ceiling
+    // tile needs that tile to be the thing overhead.
+    RoomVolumeUtil.carveOutVolume(voxels, RoomVolumeConstructorMap["FirstStorey"](
+        1, NUM_VOXEL_ROWS - 2, 1, NUM_VOXEL_COLS - 2, PALETTE));
+    RoomVolumeUtil.carveOutVolume(voxels, new RoomVolume(
+        1, NUM_VOXEL_ROWS - 2, 1, NUM_VOXEL_COLS - 2,
+        STOREY_FLOOR_COLLISION_LAYER + 1, COLLISION_LAYER_MAX, PALETTE));
+
+    // The way in, which is a cavity cut through the boundary wall — without it the room has none.
+    const entrance = RoomVolumeConstructorMap["MultiplayerEntrance"]();
+    entrance.palette = PALETTE;
+    RoomVolumeUtil.carveOutVolume(voxels, entrance);
 }
 
 /** A fixture room of the given type. Single-player rooms keep their real template. */

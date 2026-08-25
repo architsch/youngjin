@@ -26,10 +26,11 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FULL_COLLISION_LAYER_MASK, GRAVITY_SPEED,
-    MAX_ENCODED_VOXEL_GRID_BYTES, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
+    MAX_ENCODED_VOXEL_GRID_BYTES, MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
+    MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+    NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
     STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
-import RoomGenerationVolumeUtil from "../../../src/shared/room/util/roomGenerationVolumeUtil";
+import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
@@ -38,7 +39,19 @@ import Vec3 from "../../../src/shared/math/types/vec3";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
-import RoomGenerationHelperUtil from "../../../src/shared/room/util/roomGenerationHelperUtil";
+
+// Raises a stack of blocks in one cell, which the fixtures below use to stand a wall somewhere the
+// room did not already have one. No room is passed, so nothing is validated: these are fixtures
+// being built rather than a user editing a room.
+function fillColumn(voxelGrid: VoxelGrid, row: number, col: number,
+    collisionLayerMin: number, collisionLayerMax: number, textures?: number[]): void
+{
+    for (let layer = collisionLayerMin; layer <= collisionLayerMax; ++layer)
+    {
+        VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxelGrid.voxels,
+            VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer), textures);
+    }
+}
 
 describe("voxel scenarios", () => {
     beforeEach(() => {
@@ -202,6 +215,32 @@ describe("voxel scenarios", () => {
         });
     });
 
+    it("protects the wall above the doorway, not just the doorway itself", async () => {
+        // The zones stand as high as the storey the entrance opens onto, rather than only as high
+        // as the doorway. The boundary wall directly over the opening is what frames it, and a
+        // zone that stopped at the doorway's own height would leave that stretch of wall free to
+        // be taken out — leaving a gap in the room's boundary right above the way in.
+        const aboveDoorway = MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS; // the first layer of wall over it
+        expect(aboveDoorway, "the doorway already reaches the top of its storey")
+            .toBeLessThan(NUM_COLLISION_LAYERS_PER_STOREY);
+
+        await runScenario({
+            name: "the wall above the doorway is protected",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            actions: [
+                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: aboveDoorway },
+            ],
+            assertions: () => {
+                const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
+                const overDoorway = VoxelQueryUtil.getVoxel(voxels,
+                    MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(overDoorway, aboveDoorway),
+                    "the wall above the doorway was taken out").toBe(true);
+            },
+        });
+    });
+
     it("leaves the storey above the entrance free to build on and to take apart", async () => {
         // The entrance's protected zones exist for the doorway, the wall framing it and the floor a
         // player spawns on — all of them on the storey the doorway opens onto. The room above that
@@ -256,12 +295,12 @@ describe("voxel scenarios", () => {
                 // that the only thing left to tell the four cases apart is the entrance zone.
                 for (const col of [INSIDE_COL, OUTSIDE_COL])
                 {
-                    for (const storey of [RoomGenerationVolumeUtil.GROUND_STOREY,
-                        RoomGenerationVolumeUtil.UPPER_STOREY])
+                    for (const storeyName of ["FirstStorey", "SecondStorey"])
                     {
-                        RoomGenerationHelperUtil.addWall(room.voxelGrid.voxels, BACK_ROW, col,
-                            undefined, storey.collisionLayerStart,
-                            RoomGenerationVolumeUtil.getCollisionLayerMax(storey));
+                        const storey = RoomVolumeConstructorMap[storeyName](
+                            BACK_ROW, BACK_ROW, col, col, undefined);
+                        fillColumn(room.voxelGrid, BACK_ROW, col,
+                            storey.collisionLayerMin, storey.collisionLayerMax);
                     }
                 }
 
@@ -425,15 +464,12 @@ describe("the encoded voxel grid", () => {
 
     function buildRoomFilledSolid(): VoxelGrid
     {
-        const voxelGrid = VoxelGrid.createEmpty();
+        const voxelGrid = VoxelGrid.createBaseGrid();
         const textures = [1, 2, 3, 4, 5, 6];
         for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
         {
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-            {
-                RoomGenerationHelperUtil.addWall(voxelGrid.voxels, row, col, textures,
-                    COLLISION_LAYER_MIN, COLLISION_LAYER_MAX);
-            }
+                fillColumn(voxelGrid, row, col, COLLISION_LAYER_MIN, COLLISION_LAYER_MAX, textures);
         }
         return voxelGrid;
     }

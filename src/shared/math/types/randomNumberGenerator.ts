@@ -2,8 +2,10 @@ export default class RandomNumberGenerator
 {
     private seed: number;
 
-    constructor(seed: number)
+    constructor(seed?: number)
     {
+        if (seed === undefined)
+            seed = Math.floor(Math.random() * 0x7FFFFFFF);
         this.seed = seed;
     }
 

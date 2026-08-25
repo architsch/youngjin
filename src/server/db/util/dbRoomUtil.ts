@@ -1,8 +1,8 @@
 import Room from "../../../shared/room/types/room";
-import RoomGenerationUtil from "../../../shared/room/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
 import DBRoom from "../types/row/dbRoom";
 import DBRoomEditor from "../types/row/dbRoomEditor";
-import { RoomType, RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+import { RoomType } from "../../../shared/room/types/roomType";
 import DBQuery from "../types/dbQuery";
 import { DBRow } from "../types/row/dbRow";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";

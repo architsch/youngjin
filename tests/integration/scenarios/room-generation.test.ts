@@ -11,15 +11,13 @@
  * - the upper storey is real, and can be climbed to on foot from the entrance
  * - the stairs up to it are wide enough to walk rather than balance along
  * - nothing it is built out of hangs in mid-air
- * - the paintings it is generated with are legal placements the room would accept at runtime
+ * - it is generated empty of objects, for the people who use it to furnish themselves
  * - it is built in one of the texture packs its textures were picked against
  * - a seed reproduces its room exactly, and different seeds give different rooms
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import ProceduralRoomGenerationUtil from "../../../src/shared/room/util/proceduralRoomGenerationUtil";
-import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
-import RoomGenerationPaletteMap from "../../../src/shared/room/maps/roomGenerationPaletteMap";
-import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
+import RoomPaletteMap from "../../../src/shared/room/generation/maps/roomPaletteMap";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
@@ -27,27 +25,18 @@ import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
-import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
-import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
-import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
-import User from "../../../src/shared/user/types/user";
-import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import {
     COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GRAVITY_SPEED,
-    MAX_CANVASES_PER_ROOM, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+    MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER,
 } from "../../../src/shared/system/sharedConstants";
 
 // A handful of unrelated seeds, so that a property asserted below is not one that happens to
 // hold for a single layout.
 const SEEDS = [1, 2, 3, 91, 4242, 104729, 999983, 1234567];
-
-const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
 // The collision layers a standing player occupies. A cell is walkable when all of them are free.
 const PLAYER_LAYER_MASK = 0b00011111;
@@ -220,6 +209,37 @@ function getRouteToUpperStorey(voxelGrid: VoxelGrid): {row: number, col: number,
     return route;
 }
 
+/**
+ * The treads of every flight of steps along the route: the cells belonging to a run that climbs a
+ * layer at a time, more than once over. One step up on its own is a piece of block work the walk
+ * happened to go over rather than a flight, and is left out.
+ */
+function getFlightTreads(route: {row: number, col: number, supportLayer: number}[]):
+    {row: number, col: number, supportLayer: number}[]
+{
+    const treads: {row: number, col: number, supportLayer: number}[] = [];
+    let runStart = 0;
+    for (let i = 1; i <= route.length; ++i)
+    {
+        const climbs = i < route.length &&
+            route[i].supportLayer == route[i - 1].supportLayer + 1;
+        if (climbs)
+            continue;
+        // The run ran from runStart to i-1. Two rises or more make it a flight, and every cell of
+        // it above the room's own floor is one of its treads.
+        if (i - 1 - runStart >= 2)
+        {
+            for (let j = runStart; j < i; ++j)
+            {
+                if (route[j].supportLayer >= COLLISION_LAYER_MIN)
+                    treads.push(route[j]);
+            }
+        }
+        runStart = i;
+    }
+    return treads;
+}
+
 function countReachedOnUpperStorey(reached: Map<string, string | undefined>): number
 {
     let count = 0;
@@ -350,7 +370,11 @@ function findFloatingBlocks(voxelGrid: VoxelGrid): string[]
     return floating;
 }
 
-/** Cells standing open from the room's floor to its ceiling, i.e. the tall spaces in it. */
+/**
+ * Cells standing open from the room's floor right up past the storey above, i.e. the tall spaces in
+ * it. The topmost layer is not asked about: a room is capped there whatever else it does, so that
+ * both of its storeys come out the same height as each other.
+ */
 function countCellsOpenThroughBothStoreys(voxelGrid: VoxelGrid): number
 {
     let count = 0;
@@ -358,8 +382,10 @@ function countCellsOpenThroughBothStoreys(voxelGrid: VoxelGrid): number
     {
         for (let col = 0; col < NUM_VOXEL_COLS; ++col)
         {
-            const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
-            if (voxel && voxel.collisionLayerMask == 0)
+            let open = true;
+            for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MAX && open; ++layer)
+                open = !layerIsSolid(voxelGrid, row, col, layer);
+            if (open)
                 ++count;
         }
     }
@@ -376,9 +402,8 @@ function encodeVoxelGrid(voxelGrid: VoxelGrid): string
 /** A room generated from one specific seed, so that a property can be asserted over many of them. */
 function generateFromSeed(seed: number): Room
 {
-    const room = new Room(`generated-${seed}`, "", RoomTypeEnumMap.Hub, "", "", "",
-        VoxelGrid.createEmpty(), new ObjectGroup([]));
-    ProceduralRoomGenerationUtil.generateMultiplayerRoom(room, seed);
+    const room = RoomGenerationUtil.generateRoom("", RoomTypeEnumMap.Hub, "", "", seed);
+    room.id = `generated-${seed}`; // the physics engine keys its worlds by room id
     return room;
 }
 
@@ -479,24 +504,26 @@ describe("procedural multiplayer room generation", () => {
 
     it("climbs to the upper storey by a flight wide enough to walk up", () => {
         // A flight one cell across is a ledge the player has to line himself up on before every
-        // stride. So wherever the route up stands on block work rather than on the room's own
-        // floor, there has to be a second cell beside it at exactly the same height — the other
-        // half of the same tread — that he could equally well have been walking on.
+        // stride, and slips off the side of whenever he does not. So every tread of the flight has
+        // to have a second cell beside it at exactly the same height — the other half of the same
+        // tread — that he could equally well have been walking on.
+        //
+        // What counts as a flight is a run of the route that climbs a layer at a time, more than
+        // once over. A single step up on its own is not one: a generated room has waist-high block
+        // work standing about in it, and stepping onto a piece of furniture and down off it again
+        // is not something that has to be walkable two abreast.
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed);
             const route = getRouteToUpperStorey(voxelGrid);
             expect(route.length, `seed ${seed} :: no route upstairs`).toBeGreaterThan(1);
 
-            for (const {row, col, supportLayer} of route)
+            for (const tread of getFlightTreads(route))
             {
-                if (supportLayer < COLLISION_LAYER_MIN)
-                    continue; // standing on the room's own floor, which is as wide as the room
-
                 const abreast = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([rowStep, colStep]) =>
-                    canStandOn(voxelGrid, row + rowStep, col + colStep, supportLayer));
+                    canStandOn(voxelGrid, tread.row + rowStep, tread.col + colStep, tread.supportLayer));
                 expect(abreast,
-                    `seed ${seed} :: (${row},${col}) at layer ${supportLayer} is a single-cell stride`)
+                    `seed ${seed} :: (${tread.row},${tread.col}) at layer ${tread.supportLayer} is a single-cell stride`)
                     .toBe(true);
             }
         }
@@ -562,43 +589,13 @@ describe("procedural multiplayer room generation", () => {
             "no generated room came out with a space open through both storeys").toBeGreaterThan(0);
     });
 
-    it("hangs paintings the live room would accept, within the room's canvas limit", () => {
+    it("leaves a multiplayer room empty of objects, for its users to furnish", () => {
+        // Generation lays out the voxel grid and nothing else. A Hub or Regular room is meant to be
+        // furnished by the people who use it, so what it owes them is somewhere to build rather
+        // than a full house — and an object generation placed is one somebody has to clear away
+        // before he can put his own there.
         for (const seed of SEEDS)
-        {
-            const room = generateFromSeed(seed);
-            const roomID = room.id;
-            const canvases = Object.values(room.objectById);
-
-            expect(canvases.length, `seed ${seed}`).toBeGreaterThan(0);
-            expect(canvases.length, `seed ${seed}`).toBeLessThanOrEqual(MAX_CANVASES_PER_ROOM);
-
-            // Start the room empty and add the paintings back one at a time through the same
-            // path a live room uses, so that each is validated against the ones already up.
-            room.objectGroup.objectById = {};
-            if (PhysicsManager.hasRoom(roomID))
-                PhysicsManager.unload(roomID);
-            PhysicsManager.load(new RoomRuntimeMemory(room, {}));
-
-            const user = new User("user", "User", UserTypeEnumMap.Member, "", "");
-            for (const canvas of canvases)
-            {
-                expect(canvas.objectTypeIndex, `seed ${seed}`).toBe(canvasTypeIndex);
-
-                const imagePath = canvas.metadata[ObjectMetadataKeyEnumMap.ImagePath];
-                const frameCoords = canvas.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
-                expect(ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(imagePath.str)).toBe(true);
-                expect(ImageMapUtil.getImageMap("CanvasFrameImageMap").hasImagePath(frameCoords.str)).toBe(true);
-
-                const placeable = WallAttachedObjectUtil.canPlaceObject(room, canvas.objectId,
-                    canvas.objectTypeIndex, canvas.transform.pos, canvas.transform.dir);
-                expect(placeable,
-                    `seed ${seed} :: ${canvas.objectId} is not a placeable wall attachment`).toBe(true);
-
-                canvas.roomID = roomID;
-                ObjectUpdateUtil.addObject(user, UserRoleEnumMap.Owner, room, canvas, false);
-            }
-            PhysicsManager.unload(roomID);
-        }
+            expect(Object.keys(generateFromSeed(seed).objectById).length, `seed ${seed}`).toBe(0);
     });
 
     it("builds the room in a texture pack whose palettes it drew from", () => {
@@ -608,7 +605,7 @@ describe("procedural multiplayer room generation", () => {
         for (const seed of SEEDS)
         {
             const room = generateFromSeed(seed);
-            expect(RoomGenerationPaletteMap.getPalettes(room.texturePackPath).length,
+            expect(RoomPaletteMap.getPalettes(room.texturePackPath).length,
                 `seed ${seed} :: generated in "${room.texturePackPath}", which has no palettes`)
                 .toBeGreaterThan(0);
             packsUsed.add(room.texturePackPath);
@@ -621,9 +618,9 @@ describe("procedural multiplayer room generation", () => {
         // The voxel texture pack atlas is a square grid of cells, and a quad's texture is an index
         // into it — so a palette naming a cell past the end of the grid renders as nothing.
         const NUM_TEXTURES_PER_PACK = 64;
-        for (const texturePackPath of RoomGenerationPaletteMap.getTexturePackPaths())
+        for (const texturePackPath of RoomPaletteMap.getTexturePackPaths())
         {
-            const palettes = RoomGenerationPaletteMap.getPalettes(texturePackPath);
+            const palettes = RoomPaletteMap.getPalettes(texturePackPath);
             expect(palettes.length, texturePackPath).toBeGreaterThan(0);
             for (const palette of palettes)
             {
@@ -644,7 +641,6 @@ describe("procedural multiplayer room generation", () => {
         const other = generateFromSeed(SEEDS[1]);
 
         expect(encodeVoxelGrid(again.voxelGrid)).toBe(encodeVoxelGrid(first.voxelGrid));
-        expect(Object.keys(again.objectById)).toEqual(Object.keys(first.objectById));
         expect(again.texturePackPath).toBe(first.texturePackPath);
         expect(encodeVoxelGrid(other.voxelGrid)).not.toBe(encodeVoxelGrid(first.voxelGrid));
     });
@@ -654,14 +650,15 @@ describe("procedural multiplayer room generation", () => {
         {
             const room = RoomGenerationUtil.generateRoom("", roomType);
 
-            // A bare room would have neither interior walls nor paintings in it.
-            expect(Object.keys(room.objectById).length).toBeGreaterThan(0);
+            // A room that came out of nothing but the base grid would be solid throughout; one
+            // that was merely hollowed out would have no interior walls standing in it at all.
+            expect(countWalkableCells(room.voxelGrid)).toBeGreaterThan(0);
             expect(countWalkableCells(room.voxelGrid)).toBeLessThan((NUM_VOXEL_ROWS - 2) * (NUM_VOXEL_COLS - 2));
             expect(floodFillFromEntrance(room.voxelGrid).size).toBe(countWalkableCells(room.voxelGrid));
 
             // The room carries the texture pack its contents were picked against, so that the
             // room it is saved as looks like the room that was generated.
-            expect(RoomGenerationPaletteMap.getPalettes(room.texturePackPath).length).toBeGreaterThan(0);
+            expect(RoomPaletteMap.getPalettes(room.texturePackPath).length).toBeGreaterThan(0);
         }
     });
 });

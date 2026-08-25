@@ -41,14 +41,14 @@ Every Hub/Regular room is laid out procedurally from a seed, so its shape is unk
 | keeps the boundary wall solid apart from the entrance | The perimeter is intact everywhere except the entrance cell |
 | gives every room an upper storey a player can climb to and walk around on | A walk from the entrance — stepping up at most one layer at a time, and needing headroom to stand — reaches the storey above, and reaches enough of it to be a floor rather than a ledge |
 | builds stairs the physics engine actually carries a player up | The shortest route upstairs is replayed through `PhysicsManager` with a real player collider, gravity and step-up, and his feet end up on the storey floor |
-| climbs to the upper storey by a flight wide enough to walk up | Wherever the route upstairs stands on block work rather than on the room's own floor, a second cell beside it at the same height is equally standable — i.e. the flight is more than one cell across, and nothing has been placed on the half of it the route did not take |
+| climbs to the upper storey by a flight wide enough to walk up | Every tread of a flight along the route upstairs — a run that climbs a layer at a time, more than once over, as opposed to a single step onto a piece of block work — has a second cell beside it at the same height that is equally standable, i.e. the flight is more than one cell across |
 | leaves nothing standing in mid-air | Every block of the room is held up: it rests on the room's floor, on a block below it, or against a block beside it at the same height. Anything left over after that has spread as far as it can — a prop stood on a storey the room was left without, say — is floating |
 | keeps the upper storey inside the room | The boundary wall is solid through the room's full height, so climbing the stairs is not a way out of it |
 | opens some of its rooms through both storeys, and floors over the rest | Across the seeds, some rooms come out with a space open from floor to ceiling — and every room, whichever way it went, still has a reachable upper storey |
-| hangs paintings the live room would accept, within the room's canvas limit | Each generated `Canvas` passes `WallAttachedObjectUtil.canPlaceObject` against a live room, added one at a time, with valid image/frame paths |
-| builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomGenerationPaletteMap`, and the pack varies across seeds |
+| leaves a multiplayer room empty of objects, for its users to furnish | Generation lays out the voxel grid and nothing else: a generated Hub carries no objects at all |
+| builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomPaletteMap`, and the pack varies across seeds |
 | keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
-| rebuilds the same room from the same seed, and a different one from a different seed | Generation is deterministic per seed (layout, objects and texture pack alike), and seeds do not collapse onto one layout |
+| rebuilds the same room from the same seed, and a different one from a different seed | Generation is deterministic per seed (layout and texture pack alike), and seeds do not collapse onto one layout |
 | is what the room generator builds Hub and Regular rooms with | `RoomGenerationUtil.generateRoom` returns a procedurally generated room, texture pack included, for both multiplayer room types |
 
 ## Voxel Grid Migration (`voxel-grid-migration.test.ts`) — 57 tests
@@ -224,7 +224,7 @@ Clicking something in the room means one thing in play mode and another in edit 
 | omits content for a single-player room and reconstructs it empty | The wire format sends a single-player room as a content-less descriptor: `RoomRuntimeMemory.encode/decode` preserves the room's identity but omits its voxels/objects, reconstructing them empty |
 | still round-trips full content for a multiplayer room | A Hub room's voxel grid and object group survive the encode/decode round-trip intact |
 | generates the tutorial room with the walls its steps take down | `RoomGenerationUtil` (the same shared generator the client uses) builds both walls the tutorial later opens — the one between the user and the receptionist, and the one across the way out — leaves the fallback patch of floor bare, and places the receptionist and the door the steps address by name |
-| builds the tutorial room as a single storey the camera can look down into | The tutorial's walls reach the slab that caps the room and stop there — nothing stands on the storey above — and no cell of the grid draws the upward face of that slab, so a camera drawn back above the room looks into it rather than down onto a lid |
+| builds the tutorial room as a single storey the camera can look down into | Every space the tutorial opens is below the slab that caps the room, and no cell of the grid draws an upward face at or above that slab — so a camera drawn back above the room looks into it rather than down onto a lid |
 | emits per-quad change events during generation (why the client listens only after voxels spawn) | Generation fires `voxelQuadChangeObservable` events per quad — guarding the ordering assumption that the client registers its quad-change listener only after the room's voxel objects exist |
 | picks a bare patch of floor between the player and the camera | The patch the tutorial asks the user to select is settled while the step runs: it lies toward the camera, is never the one the user is standing on, and carries no block — so its outline is visible and the block he is asked to build has somewhere to go |
 | keeps the whole block-building passage on the one patch it asked for | Every step of the passage reads back the one patch `select_floor` settled: the step advances only on that patch (row/col/layer/face all named) and turns the camera on it, and `add_block` and `remove_block` each end by putting the selection where the passage needs it next — on the block just built, then back on the floor it stood on |
@@ -412,7 +412,7 @@ Parameterized over 4 voxel operations (addVoxel, removeVoxel, moveVoxel, setVoxe
 - Fallback to `DBUser` when nothing is cached
 - Two rapid reconnects: only the latest chat is kept
 
-## Property-Based Tests (`property-based.test.ts`) — 17 tests
+## Property-Based Tests (`property-based.test.ts`) — 24 tests
 
 ### No-Latency Profiles (9 tests)
 
@@ -437,6 +437,27 @@ Same profiles as above (except reconnect-heavy) with reduced parameters:
 
 ### Gameplay State Persistence (1 test)
 - Saved gameplay state matches the last known in-room state after random action sequences
+
+### Room Volume Geometry (5 tests)
+
+The arithmetic room generation is built on. Every area a room is made of, every wall between two of
+them and every opening cut through one is worked out with these, so a fault here is a fault in every
+room in the game.
+
+| Test | What it verifies |
+|------|-----------------|
+| expands a volume by the same amount on all six sides | `RoomVolumeUtil.getExpandedVolume` moves every bound outward by the given amount and returns a copy, leaving the volume it was asked about untouched |
+| tells volumes that touch apart from volumes with a wall between them | The two separation questions generation asks: expanding one volume finds the pairs that would touch (which growth refuses), expanding both finds the pairs a single block of wall stands between (which a passage joins) |
+| cuts a passage that reaches both volumes and stands between them | A passage fills exactly the gap between two volumes, stays within the stretch they share so it opens into both, and comes out no wider than allowed and never empty — including at a one-cell overlap |
+| refuses a passage between volumes that already meet | Two volumes that intersect get no passage |
+| carves the same room whatever order the volumes are carved in | Carving a set of overlapping and abutting volumes in any order leaves the same masks and the same quads — the property that keeps a passage from leaving faces drawn in mid-air |
+
+### Integer Range Arithmetic (2 tests)
+
+| Test | What it verifies |
+|------|-----------------|
+| intersects ranges to exactly the values both hold | `NumUtil.getRangeIntersection` holds exactly the integers in both ranges, and is null when there are none |
+| finds the whole numbers standing between two ranges, and nothing else | `NumUtil.getGapBetweenIntegerRanges` holds exactly the integers strictly between the two ranges, and is null whenever they touch or overlap |
 
 ## Room Ownership (`room-ownership.test.ts`) — 7 tests
 

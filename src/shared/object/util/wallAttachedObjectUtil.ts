@@ -5,7 +5,7 @@ import { ColliderState } from "../../physics/types/colliderState";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
-import RoomGenerationVolume from "../../room/types/roomGeneration/roomGenerationVolume";
+import RoomVolume from "../../room/generation/types/roomVolume";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
@@ -257,11 +257,10 @@ function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
 // its own height covers. Asking about that rather than about the whole column is what lets an
 // attachment go up on an upper storey over somewhere the room protects on the ground.
 function getBackingVolume(row: number, col: number, bottomY: number,
-    topY: number): RoomGenerationVolume
+    topY: number): RoomVolume
 {
     const {minLayer, maxLayer} = getCollisionLayerRange(bottomY, topY);
-    return {rowStart: row, colStart: col, numRows: 1, numCols: 1,
-        collisionLayerStart: minLayer, numCollisionLayers: maxLayer - minLayer + 1};
+    return new RoomVolume(row, row, col, col, minLayer, maxLayer);
 }
 
 // The layers a wall attachment of the given height stands among, clamped to the room.

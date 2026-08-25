@@ -17,6 +17,11 @@ import { checkStructuralInvariants, checkObjectTransformConsistency, checkCleanS
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
+import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
+import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
+import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
+import NumUtil from "../../../src/shared/math/util/numUtil";
+import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 
 // ─── Weight Profiles ────────────────────────────────────────────────────────
 
@@ -297,5 +302,170 @@ describe("property-based: gameplay state persistence", () => {
             ),
             { numRuns: 20, verbose: 1 }
         );
+    });
+});
+
+// ─── Room volume geometry ───────────────────────────────────────────────────
+//
+// The arithmetic room generation is built on. Every area a room is made of, every wall between two
+// of them and every opening cut through one is worked out with these, so a fault here is a fault in
+// every room in the game — and each of them is a small pure function with clean boundaries, which
+// is exactly what a property test can pin down and an example cannot.
+
+const layerRange = fc.tuple(fc.integer({min: 0, max: 15}), fc.integer({min: 0, max: 15}))
+    .map(([a, b]) => [Math.min(a, b), Math.max(a, b)] as [number, number]);
+
+const anyVolume = fc.record({
+    rowMin: fc.integer({min: 1, max: 28}),
+    rowSpan: fc.integer({min: 1, max: 4}),
+    colMin: fc.integer({min: 1, max: 28}),
+    colSpan: fc.integer({min: 1, max: 4}),
+    layers: layerRange,
+}).map(({rowMin, rowSpan, colMin, colSpan, layers}) => new RoomVolume(
+    rowMin, rowMin + rowSpan - 1, colMin, colMin + colSpan - 1, layers[0], layers[1]));
+
+describe("room volume geometry", () => {
+    it("expands a volume by the same amount on all six sides", () => {
+        fc.assert(fc.property(anyVolume, fc.integer({min: -2, max: 4}), (volume, amount) => {
+            const before = {...volume};
+            const grown = RoomVolumeUtil.getExpandedVolume(volume, amount);
+
+            expect(grown.rowMin).toBe(volume.rowMin - amount);
+            expect(grown.rowMax).toBe(volume.rowMax + amount);
+            expect(grown.colMin).toBe(volume.colMin - amount);
+            expect(grown.colMax).toBe(volume.colMax + amount);
+            expect(grown.collisionLayerMin).toBe(volume.collisionLayerMin - amount);
+            expect(grown.collisionLayerMax).toBe(volume.collisionLayerMax + amount);
+
+            // A copy, not the volume itself: growth asks this of an area over and over while
+            // deciding whether it may grow, and must not move the area by asking.
+            expect(grown).not.toBe(volume);
+            expect({...volume}).toEqual(before);
+        }));
+    });
+
+    it("tells volumes that touch apart from volumes with a wall between them", () => {
+        // The two separation questions room generation asks, and the whole reason growth stops
+        // where it does: expanding one volume finds the pairs that would touch, expanding both
+        // finds the pairs a single block of wall stands between.
+        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 3}), (volume, gap) => {
+            // A second volume placed a known number of blocks to one side of the first, sharing its
+            // rows and layers exactly, so the gap between them is the only thing that varies.
+            const other = new RoomVolume(
+                volume.rowMin, volume.rowMax,
+                volume.colMax + 1 + gap, volume.colMax + 1 + gap,
+                volume.collisionLayerMin, volume.collisionLayerMax);
+
+            const touching = RoomVolumeUtil.volumesIntersect(
+                RoomVolumeUtil.getExpandedVolume(volume, 1), other);
+            const withinOneBlock = RoomVolumeUtil.volumesIntersect(
+                RoomVolumeUtil.getExpandedVolume(volume, 1),
+                RoomVolumeUtil.getExpandedVolume(other, 1));
+
+            expect(touching).toBe(gap == 0);
+            expect(withinOneBlock).toBe(gap <= 1);
+            // Never overlapping, whatever the gap: the second volume starts past the first.
+            expect(RoomVolumeUtil.volumesIntersect(volume, other)).toBe(false);
+        }));
+    });
+
+    it("cuts a passage that reaches both volumes and stands between them", () => {
+        fc.assert(fc.property(anyVolume, fc.integer({min: 1, max: 4}),
+            fc.integer({min: 1, max: 4}), (volume, gap, maxWidth) => {
+            const other = new RoomVolume(
+                volume.rowMin, volume.rowMax,
+                volume.colMax + 1 + gap, volume.colMax + gap + (volume.colMax - volume.colMin + 1),
+                volume.collisionLayerMin, volume.collisionLayerMax);
+
+            const passage = RoomVolumeUtil.makePassageBetweenVolumes(volume, other, maxWidth, 16);
+            expect(passage).not.toBeNull();
+
+            // It fills exactly the gap, so it meets both volumes and opens neither into anything
+            // else on the way.
+            expect(passage!.colMin).toBe(volume.colMax + 1);
+            expect(passage!.colMax).toBe(other.colMin - 1);
+
+            // It is a real passage rather than an inverted, empty one — the case a one-cell overlap
+            // used to produce — and no wider than it was allowed to be.
+            const numRows = passage!.rowMax - passage!.rowMin + 1;
+            expect(numRows).toBeGreaterThan(0);
+            expect(numRows).toBeLessThanOrEqual(maxWidth);
+            expect(numRows).toBeLessThanOrEqual(volume.rowMax - volume.rowMin + 1);
+
+            // And it stays within the stretch the two volumes share, so it opens into both.
+            expect(passage!.rowMin).toBeGreaterThanOrEqual(volume.rowMin);
+            expect(passage!.rowMax).toBeLessThanOrEqual(volume.rowMax);
+        }));
+    });
+
+    it("refuses a passage between volumes that already meet", () => {
+        fc.assert(fc.property(anyVolume, (volume) => {
+            expect(RoomVolumeUtil.makePassageBetweenVolumes(volume, volume, 3, 16)).toBeNull();
+        }));
+    });
+
+    it("carves the same room whatever order the volumes are carved in", () => {
+        // Passages are carved flush against the areas they join, so carving is asked to be
+        // order-independent by construction. A face finished while its neighbour was still solid,
+        // and never revisited, is what leaves quads hanging in mid-air.
+        const palette = new RoomPalette(1, 2, 3, 4);
+        const volumeSet = fc.array(anyVolume, {minLength: 2, maxLength: 5});
+
+        fc.assert(fc.property(volumeSet, fc.integer({min: 0, max: 1000}), (volumes, shuffleSeed) => {
+            const painted = volumes.map(v => new RoomVolume(v.rowMin, v.rowMax, v.colMin, v.colMax,
+                v.collisionLayerMin, v.collisionLayerMax, palette));
+
+            const carve = (order: RoomVolume[]) => {
+                const grid = VoxelGrid.createBaseGrid();
+                for (const volume of order)
+                    RoomVolumeUtil.carveOutVolume(grid.voxels, volume);
+                return {
+                    masks: grid.voxels.map(v => v.collisionLayerMask).join(","),
+                    quads: Array.from(grid.quadsMem.quads).join(","),
+                };
+            };
+
+            const reversed = painted.slice().reverse();
+            const rotated = painted.slice(shuffleSeed % painted.length)
+                .concat(painted.slice(0, shuffleSeed % painted.length));
+
+            const first = carve(painted);
+            expect(carve(reversed)).toEqual(first);
+            expect(carve(rotated)).toEqual(first);
+        }), {numRuns: 20});
+    });
+});
+
+// ─── Integer range arithmetic ───────────────────────────────────────────────
+
+describe("integer range arithmetic", () => {
+    const range = fc.tuple(fc.integer({min: -20, max: 20}), fc.integer({min: 0, max: 10}))
+        .map(([min, span]) => [min, min + span] as [number, number]);
+
+    it("intersects ranges to exactly the values both hold", () => {
+        fc.assert(fc.property(range, range, (a, b) => {
+            const intersection = NumUtil.getRangeIntersection(a, b);
+            for (let n = -30; n <= 30; ++n)
+            {
+                const inBoth = n >= a[0] && n <= a[1] && n >= b[0] && n <= b[1];
+                const inIntersection = intersection != null && n >= intersection[0] && n <= intersection[1];
+                expect(inIntersection).toBe(inBoth);
+            }
+        }));
+    });
+
+    it("finds the whole numbers standing between two ranges, and nothing else", () => {
+        fc.assert(fc.property(range, range, (a, b) => {
+            const gap = NumUtil.getGapBetweenIntegerRanges(a, b);
+            for (let n = -30; n <= 30; ++n)
+            {
+                const between = (n > a[1] && n < b[0]) || (n > b[1] && n < a[0]);
+                const inGap = gap != null && n >= gap[0] && n <= gap[1];
+                expect(inGap).toBe(between);
+            }
+            // Ranges that touch or overlap have no gap at all.
+            if (NumUtil.getRangeIntersection(a, b) != null)
+                expect(gap).toBeNull();
+        }));
     });
 });

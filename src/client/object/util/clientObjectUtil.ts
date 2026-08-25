@@ -2,10 +2,9 @@ import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import Room from "../../../shared/room/types/room";
-import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import RoomGenerationUtil from "../../../shared/room/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
 import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
 import ObjectFactory from "../factories/objectFactory";
 import GameObject from "../types/gameObject";
@@ -85,8 +84,12 @@ const ClientObjectUtil =
     getSingleModePlayerPosition: (room: Room): Vec3 =>
     {
         const config = SinglePlayerModeConfigMap[room.roomName];
-        const metadata = config.loadMetadata();
-        return {x: metadata.entranceVoxelCol + 0.5, y: 0.5 * PLAYER_HEIGHT, z: metadata.entranceVoxelRow + 0.5};
+        const p = config.getRoomBuilderParams();
+        return {
+            x: p.entranceVoxelCol + 0.5,
+            y: 0.5 * PLAYER_HEIGHT + (p.entranceVoxelCollisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT,
+            z: p.entranceVoxelRow + 0.5
+        };
     },
 
     // Conditions

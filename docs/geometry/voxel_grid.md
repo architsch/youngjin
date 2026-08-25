@@ -9,13 +9,17 @@ The room stands tall enough to hold two storeys of comfortable headroom, so what
 
 ## Storeys
 
-Nothing in the grid divides the room into floors — the layers are simply a stack, and a room is whatever is built in them. A **storey** is therefore a thing rooms are *given* rather than a thing they have: a slab of blocks laid across the room at mid-height, dividing the height into a space below it and a space above.
+Nothing in the grid divides the room into floors — the layers are simply a stack, and a room is whatever is built in them. A **storey** is therefore a thing rooms are *given* rather than a thing they have: a slab of blocks laid across the room, dividing the height into a space below it and a space above.
+
+The slab does not sit at the room's mid-height. It sits one layer below it, so that the space under it and the space over it come out the same height as each other, and the topmost layer of the room is left over as padding above the upper storey. Both floors therefore give a player the same headroom, which is what lets a room be built either way round without one of its storeys feeling like an attic.
 
 That one slab is all a second floor consists of, which is what makes the arrangement flexible:
 
 - **Two storeys.** The slab covers the room, the walls carry on past it, and the space above is a floor in its own right — reached by stairs, walled and doorwayed exactly as the floor below it is, since a wall drawn through the whole room divides both alike.
 - **One tall space.** Leaving the slab out of a stretch of the room opens the two storeys into one, for a space with a ceiling far out of reach. Rooms are commonly built both ways at once, with a gallery on the upper floor looking down into an open hall.
-- **A single storey.** A room may lay the slab everywhere and stop there, nothing of it rising higher, in which case that slab is its roof rather than anybody's floor. This is what a room that predates the room's greater height becomes, and what the tutorial room is built as. The *top* faces of such a roof are left undrawn: nothing stands above them to be looking at them from, so drawing them would only put a lid over the room for a camera that has risen above it to look in.
+- **A single storey.** A room may lay the slab everywhere and stop there, nothing being opened up higher, in which case that slab is its roof rather than anybody's floor. This is what a room that predates the room's greater height becomes, and what the tutorial room is built as.
+
+Whichever way a room is built, nothing is drawn on the top of what caps it: a face is drawn only where something solid meets something open, and what stands above a room's cap is the matter the room was carved out of (see [room_generation.md](room_generation.md)). So a camera that has risen above a room to look down into it is shown the room rather than a lid over it.
 
 The room's own floor and ceiling are not layers at all (see below), which lets every storey be described the same way whether it is closed off by a slab of blocks or by the room itself.
 
@@ -24,7 +28,9 @@ Each voxel cell is described by a set of textured **quads**:
 - **Wall quads** — one per face (±x, ±z) of every collision layer.
 - **Floor/ceiling quads** (±y) — encoded separately from the per-layer wall quads.
 
-Each quad is packed compactly, carrying a **visibility flag** (whether the face is drawn) and a **texture index** (which texture it uses). A cell writes out its collision layer mask and then only the layers that mask says are occupied, so a room costs what is built in it rather than what could be. This keeps a full room cheap to store and transmit.
+Each quad is packed compactly, carrying a **visibility flag** (whether the face is drawn) and a **texture index** (which texture it uses). A cell writes out its collision layer mask and then only the layers that mask says are occupied, so a room costs what stands in it rather than what its grid could address.
+
+What stands in a room is most of it, though: a room is matter with its spaces carved out of it (see [room_generation.md](room_generation.md)), so the solid part is the bulk of the room and the encoding is sized for that. The buffer a room is written into is sized for a room built solid from floor to ceiling, because that is the room the format has to be able to hold.
 
 ## Stored Format and Its Versions
 

@@ -1,13 +1,14 @@
 import Voxel from "./voxel";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { COLLISION_LAYER_NULL, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../system/sharedConstants";
+import { COLLISION_LAYER_NULL, FULL_COLLISION_LAYER_MASK, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
-import RoomGenerationHelperUtil from "../../room/util/roomGenerationHelperUtil";
-import RoomGenerationVolumeUtil from "../../room/util/roomGenerationVolumeUtil";
 import VoxelQueryUtil from "../util/voxelQueryUtil";
 import VoxelQuadUpdateUtil from "../util/voxelQuadUpdateUtil";
+import { RoomVolumeConstructorMap } from "../../room/generation/maps/roomVolumeConstructorMap";
+import VoxelUpdateUtil from "../util/voxelUpdateUtil";
+import { UserRoleEnumMap } from "../../user/types/userRole";
 
 const latestVersion = 2;
 
@@ -45,9 +46,7 @@ export default class VoxelGrid extends EncodableData
     // The version a grid encoded right now is written at, which is what an unread grid reports.
     static get latestFormatVersion(): number { return latestVersion; }
 
-    // The blank slate every room generation routine starts from: a full grid of voxels with
-    // nothing built in any of them yet.
-    static createEmpty(): VoxelGrid
+    static createBaseGrid(): VoxelGrid
     {
         const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
         const quadsMem = new VoxelQuadsRuntimeMemory();
@@ -55,7 +54,9 @@ export default class VoxelGrid extends EncodableData
         {
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
             {
-                voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, 0);
+                // All collisionLayers are initially occupied (i.e. all voxel blocks are initially full of solid matter).
+                // They will then be "carved out" by the room generation algorithm.
+                voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, FULL_COLLISION_LAYER_MASK);
             }
         }
         return new VoxelGrid(voxels, quadsMem);
@@ -108,10 +109,18 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
         // Hollow out the entrance cell to the doorway's height, so that an arriving player does not
         // spawn inside the boundary wall. A room being converted is already built, so this takes
         // the blocks back out rather than declaring the space they were never put in.
-        const entrance = RoomGenerationVolumeUtil.MULTI_PLAYER_ENTRANCE;
-        RoomGenerationHelperUtil.removeWall(voxels, entrance.rowStart, entrance.colStart,
-            entrance.collisionLayerStart, RoomGenerationVolumeUtil.getCollisionLayerMax(entrance));
-
+        const entrance = RoomVolumeConstructorMap["MultiplayerEntrance"]();
+        for (let row = entrance.rowMin; row <= entrance.rowMax; ++row)
+        {
+            for (let col = entrance.colMin; col <= entrance.colMax; ++col)
+            {
+                for (let collisionLayer = entrance.collisionLayerMin; collisionLayer <= entrance.collisionLayerMax; ++collisionLayer)
+                {
+                    VoxelUpdateUtil.removeVoxelBlock(UserRoleEnumMap.Owner, voxels,
+                        VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer));
+                }
+            }
+        }
         return voxelGrid;
     },
     (olderVersionData: EncodableData) => { // version 1 -> 2
@@ -132,9 +141,16 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
             // it did. Every face of the slab carries the old ceiling texture — its sides never come
             // into view (the slab is unbroken across the room, so it only ever meets itself), and
             // neither does its top until an owner opens up the storey above.
-            RoomGenerationHelperUtil.addWall(voxelGrid.voxels, voxel.row, voxel.col,
-                new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(ceilingTextureIndex),
-                STOREY_FLOOR_COLLISION_LAYER, STOREY_FLOOR_COLLISION_LAYER);
+            //
+            // The height that tile hung at is a fact about the format being migrated from, so it is
+            // taken from the old format's own height rather than from where a room built today
+            // happens to put its storey floor. Those two were once the same number, and a migration
+            // written against the second would quietly start laying this slab through the top of
+            // every legacy room the day that number moved.
+            VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxelGrid.voxels,
+                VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col,
+                    LEGACY_NUM_COLLISION_LAYERS),
+                new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(ceilingTextureIndex));
 
             // The room's own ceiling now hangs over the empty storey left above that slab, where
             // nothing stands against it, so every cell of it is on show — including the cells that
@@ -149,8 +165,12 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
 function addLegacyCornerWall(voxels: Voxel[], row: number, col: number,
     quadTextureIndicesWithinLayer: number[]): void
 {
-    RoomGenerationHelperUtil.addWall(voxels, row, col, quadTextureIndicesWithinLayer,
-        0, LEGACY_COLLISION_LAYER_MAX);
+    for (let collisionLayer = 0; collisionLayer <= LEGACY_COLLISION_LAYER_MAX; ++collisionLayer)
+    {
+        VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxels,
+            VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer),
+            quadTextureIndicesWithinLayer);
+    }
 }
 
 // The current format: every voxel reads itself off the buffer.
