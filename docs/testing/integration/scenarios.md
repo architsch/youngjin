@@ -30,7 +30,7 @@ This document catalogs all integration test scenarios organized by category.
 | room unloads when last user leaves | An empty Regular room is removed from memory |
 | graceful shutdown saves all rooms and user metadata | Shutdown persists and unloads all rooms and users |
 
-## Room Generation (`room-generation.test.ts`) — 14 tests
+## Room Generation (`room-generation.test.ts`) — 15 tests
 
 Every Hub/Regular room is laid out procedurally from a seed, so its shape is unknowable in advance. What is asserted is the set of properties every generated room must have whichever seed produced it. See [room_generation.md](../../geometry/room_generation.md) for the behavior under test.
 
@@ -47,6 +47,7 @@ Every Hub/Regular room is laid out procedurally from a seed, so its shape is unk
 | opens some of its rooms through both storeys, and floors over the rest | Across the seeds, some rooms come out with a space open from floor to ceiling — and every room, whichever way it went, still has a reachable upper storey |
 | leaves a multiplayer room empty of objects, for its users to furnish | Generation lays out the voxel grid and nothing else: a generated Hub carries no objects at all |
 | builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomPaletteMap`, and the pack varies across seeds |
+| decorates a hub, and hands a regular room over plain | A Hub's visible quads carry several different textures; a Regular room's carry exactly one, i.e. each room type is finished with as much as its `RoomPaletteSelectionParams` offers and no more |
 | keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
 | rebuilds the same room from the same seed, and a different one from a different seed | Generation is deterministic per seed (layout and texture pack alike), and seeds do not collapse onto one layout |
 | is what the room generator builds Hub and Regular rooms with | `RoomGenerationUtil.generateRoom` returns a procedurally generated room, texture pack included, for both multiplayer room types |
@@ -684,7 +685,7 @@ for how to run it. It skips itself when no emulator is available.
 |----------|-------|
 | Connection | 9 |
 | Room | 9 |
-| Room Generation | 14 |
+| Room Generation | 15 |
 | Voxel Grid Migration | 57 |
 | Room Population | 34 |
 | Object | 8 |

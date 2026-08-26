@@ -1,4 +1,3 @@
-import RandomNumberGenerator from "../../../math/types/randomNumberGenerator";
 import RoomPalette from "../types/roomPalette";
 
 const palettesByTexturePackPath: {[texturePackPath: string]: RoomPalette[]} = {
@@ -85,12 +84,6 @@ const RoomPaletteMap =
     getPalettes: (texturePackPath: string): RoomPalette[] =>
     {
         return palettesByTexturePackPath[texturePackPath] ?? [];
-    },
-    pickRandomTexturePack: (rand: RandomNumberGenerator): {texturePackPath: string, palettes: RoomPalette[]} =>
-    {
-        const texturePackPath = rand.pick(Object.keys(palettesByTexturePackPath));
-        return {texturePackPath,
-            palettes: rand.shuffle(palettesByTexturePackPath[texturePackPath].slice())};
     },
 }
 

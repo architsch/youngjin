@@ -1,6 +1,6 @@
 # The post source format
 
-Every list in the Library — including `devlog-2026` — is one `source.txt` holding every post in
+Every list in the Library — including each dev-log year — is one `source.txt` holding every post in
 that list, one after another. `LibraryPostPageBuilder` reads it top to bottom and emits one
 `page-N.html` per post: the oldest post in the file is `page-1.html`, the newest is the highest
 number, and the list page shows them newest first.
@@ -57,9 +57,10 @@ pairs them up — not a stylistic choice).
 | `:k:` | `<meta name="keywords">` — lower-cased by the builder, so write it however reads best |
 | `:l:` | The last-modified date in the sitemap and the feed. `YYYY-MM-DD`. Use the day the post is written |
 
-The `:d:` line is read by people, in a search result and in a share preview, so it obeys the same
-sentence rules as the post itself — see [writing.md](writing.md). Short, active, one idea each. It
-usually says what the post's opening says, in one or two sentences.
+The `:d:` line is read by people, in a search result and in a share preview. **One short sentence**
+is the house form, as the model posts show: *"ThingsPool now supports distinct game modes."* /
+*"ThingsPool now supports two-story rooms."* / *"ThingsPool is a 3D chat app which runs in a browser
+tab."* It names the product and what is new, and stops there — the post itself does the selling.
 
 The `:k:` line is the same reach the hashtags are after, written for a crawler instead of a feed:
 much the same terms — see [hashtags.md](hashtags.md) — in ordinary words rather than PascalCase
@@ -87,9 +88,9 @@ an absolute URL is right even while previewing locally.
 
 ### Images
 
-A line of the form `<name>` on its own becomes `public/devlog-2026/name.jpg`, so the name is the
+A line of the form `<name>` on its own becomes `public/devlog-<year>/name.jpg`, so the name is the
 screenshot's filename without the extension — `<orbit-camera-overview>` for
-`public/devlog-2026/orbit-camera-overview.jpg`.
+`public/devlog-<year>/orbit-camera-overview.jpg`.
 
 The **first** image in a post becomes its share-preview image. Appending `*` to the line
 (`<orbit-camera-detail>*`) hands that job to a different one instead.

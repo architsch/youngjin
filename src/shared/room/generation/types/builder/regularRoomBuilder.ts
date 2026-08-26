@@ -14,6 +14,10 @@ const MAX_PROP_STACK_HEIGHT = 2;
 // relatively small, cosy home-like environment that is only one storey tall. The rest of the room
 // is left as fully occupied blocks, which the user is then able to manually remove block-by-block
 // if he wants - just like how mining works in Minecraft.
+//
+// It is also handed over plain, in one texture throughout, since it is the owner's room to decorate
+// rather than the game's. That is settled by the palette selection it is generated with rather than
+// by anything here (see @src/shared/room/generation/util/roomGenerationUtil.ts).
 export default class RegularRoomBuilder extends MultiplayerRoomBuilder
 {
     override run(): RoomBuilder

@@ -1,12 +1,10 @@
 import RoomVolumeUtil from "../../util/roomVolumeUtil";
 import Room from "../../../types/room";
 import RoomBuilderParams from "../params/roomBuilderParams";
-import RoomPalette from "../roomPalette";
 import RoomVolume from "../roomVolume";
 import { RoomVolumeType, RoomVolumeTypeEnumMap } from "../roomVolumeType";
 import RoomAreaAllocator from "./helpers/roomAreaAllocator";
 import RoomAreaConnector from "./helpers/roomAreaConnector";
-import RoomPaletteSelector from "./helpers/roomPaletteSelector";
 import RoomPropPlacer from "./helpers/roomPropPlacer";
 import RoomStaircasePlanner from "./helpers/roomStaircasePlanner";
 import RoomBuilder from "./roomBuilder";
@@ -67,7 +65,6 @@ export default abstract class ProceduralRoomBuilder extends RoomBuilder
     // areas have stopped growing, and a flight of steps only once there is a storey to climb to.
     protected volumesByType: {[roomVolumeType: RoomVolumeType]: RoomVolume[]} = {};
 
-    protected palettes = new RoomPaletteSelector();
     private areas: RoomAreaAllocator;
     private connector: RoomAreaConnector;
     private staircases: RoomStaircasePlanner;
@@ -84,22 +81,6 @@ export default abstract class ProceduralRoomBuilder extends RoomBuilder
         this.connector = new RoomAreaConnector(this.volumesByType);
         this.staircases = new RoomStaircasePlanner(params.rand, this.volumesByType, this.areas);
         this.props = new RoomPropPlacer(params.rand, this.volumesByType);
-    }
-
-    // The room's texture pack, drawn together with the palettes picked against it. This comes
-    // before anything else a procedural room does, since every volume it goes on to plan is
-    // finished in one of those palettes.
-    protected initPalettes(): this
-    {
-        const texturePackPath = this.palettes.pickTexturePack(this.params.rand);
-        this.room.texturePackPath = texturePackPath;
-        this.params.texturePackPath = texturePackPath;
-        return this;
-    }
-
-    protected nextPalette(): RoomPalette
-    {
-        return this.palettes.next();
     }
 
     // Records a volume the builder has shaped itself: the way into the room, a stretch of it to be

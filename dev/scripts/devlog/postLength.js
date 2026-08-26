@@ -12,13 +12,16 @@
  * Usage:
  *   node dev/scripts/devlog/postLength.js                 (the newest post)
  *   node dev/scripts/devlog/postLength.js --all           (every post in the file)
- *   node dev/scripts/devlog/postLength.js --source=public/devlog-2027/source.txt
+ *   node dev/scripts/devlog/postLength.js --source=public/devlog-2031/source.txt
+ *
+ * With no --source it reads the current dev-log year's file; see devlogDir.js for which year that
+ * is and why it can still be last year's.
  */
 const fs = require("fs");
 const path = require("path");
+const { resolveDevlogDir } = require("./devlogDir");
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
-const DEFAULT_SOURCE = "public/devlog-2026/source.txt";
 
 // Hashtags are how a post reaches anyone who was not already looking for it, but each one is spent
 // from the budget below, and a long line reads as spam to the person scrolling past it. The bank
@@ -31,12 +34,28 @@ const LINKEDIN_LIMIT = 3000;
 const RESERVED_FOR_PLAY_LINE = 36;
 const BUDGET = LINKEDIN_LIMIT - RESERVED_FOR_PLAY_LINE;
 
+// What a post should actually come out at, as against what it is allowed to reach. The three posts
+// the user wrote by hand run 620, 550 and 510 characters of body text — title and hashtags aside —
+// and they are the house length. The budget above is a platform limit, and a post anywhere near it
+// has stopped being an advertisement and become a report. The band is deliberately wide: it is
+// there to catch a draft that has drifted into essay length, not to police a good post by ten
+// characters.
+const PROSE_TARGET = 600;
+const PROSE_MAX = 1000;
+const PROSE_MIN = 250;
+
 function main()
 {
     const args = process.argv.slice(2);
     const all = args.includes("--all");
     const sourceArg = args.find(a => a.startsWith("--source="));
-    const sourcePath = path.resolve(REPO_ROOT, sourceArg ? sourceArg.slice("--source=".length) : DEFAULT_SOURCE);
+    const devlog = resolveDevlogDir();
+    const sourcePath = path.resolve(REPO_ROOT,
+        sourceArg ? sourceArg.slice("--source=".length) : devlog.source);
+
+    // Worth saying out loud rather than silently measuring the wrong year's posts.
+    if (!sourceArg && !devlog.isCurrentYear)
+        console.log(`Note: ${devlog.currentYear} has no dev-log directory yet, so this is ${devlog.year}'s.\n`);
 
     if (!fs.existsSync(sourcePath))
     {
@@ -67,6 +86,9 @@ function main()
         const tagLine = hashtagLine(post);
         if (tagLine.length > 0)
             console.log(`      ${hashtagsIn(tagLine).length} hashtags, ${tagLine.length} of those characters`);
+
+        // The number that actually says whether the post is the right size.
+        console.log(`      ${proseLength(post)} characters of prose (house length is about ${PROSE_TARGET})`);
 
         for (const warning of lint(post))
             console.log(`      ! ${warning}`);
@@ -140,6 +162,21 @@ function renderSocialText(post)
     return `${post.title}\n\n${body.join("\n")}`;
 }
 
+/**
+ * The body text alone: what renderSocialText counts, less the title and the trailing hashtag line.
+ * This is the number the house length is stated in, since the title and the tags are fixed costs
+ * that say nothing about whether the post itself is the right size.
+ */
+function proseLength(post)
+{
+    const withoutTitle = renderSocialText(post).slice(`${post.title}\n\n`.length);
+    const tagLine = hashtagLine(post);
+    const prose = tagLine.length > 0
+        ? withoutTitle.slice(0, withoutTitle.lastIndexOf(tagLine))
+        : withoutTitle;
+    return prose.trim().length;
+}
+
 /** Notes on anything the post format would quietly turn into something other than prose. */
 function lint(post)
 {
@@ -160,6 +197,12 @@ function lint(post)
         warnings.push(`${hashtags.length} hashtags — past ${MAX_HASHTAGS} the line is eating the prose's characters and reads as spam rather than as reach.`);
     if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(text))
         warnings.push("Contains emoji, which these posts do without.");
+
+    const prose = proseLength(post);
+    if (prose > PROSE_MAX)
+        warnings.push(`${prose} characters of prose — the house length is about ${PROSE_TARGET}. The ceiling above is a platform limit, not a target; cut this back rather than filling the budget.`);
+    else if (prose < PROSE_MIN && prose > 0)
+        warnings.push(`Only ${prose} characters of prose — too thin to say what the feature is and invite anyone in.`);
 
     if (!post.lines.some(raw => isIntroLink(raw.trim())))
         warnings.push(`No link to the landing page — every post opens with:  ${INTRO_LINK_LINE}`);

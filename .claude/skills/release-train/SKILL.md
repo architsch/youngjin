@@ -89,7 +89,7 @@ chosen, and whether the user has approved the dev-log post at checkpoint B.
 
 Write that approval down the moment it is given, and never assume one that is not written down. A
 run picked up after a summarisation cannot tell an approved post from an unapproved one by looking
-at the files — both are just a page under `public/devlog-2026/`. If the state file does not say the
+at the files — both are just a page under `public/devlog-<year>/`. If the state file does not say the
 user approved, the post is not approved: ask again.
 
 ## Phase 0 — Survey
@@ -126,7 +126,7 @@ it, this is one of the two interruptions before the commit gate.
 Delegate both at once, with the change set from phase 0 and the report contract in each brief.
 
 - **Phase 1 (`skill-upkeep`) owns** `.claude/skills/` and `.claude/writing-style.md`.
-- **Phase 2 (`devlog-post`) owns** `public/devlog-2026/` and the screenshots it captures.
+- **Phase 2 (`devlog-post`) owns** `public/devlog-<year>/` and the screenshots it captures.
 
 Neither may touch `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md`. If either concludes a change
 there is needed, it reports that as a finding and does not make it — a skills audit that quietly
@@ -142,8 +142,9 @@ regenerates the static site. Two things to check when it reports back, because b
 failures, and both are one shell command rather than a read:
 
 ```bash
-ls public/devlog-2026/
-grep -c "<the post's title>" public/devlog-2026/page-<N>.html
+DEVLOG=$(node -e "console.log(require('./dev/scripts/devlog/devlogDir').resolveDevlogDir().dir)")
+ls "$DEVLOG"/
+grep -c "<the post's title>" "$DEVLOG"/page-<N>.html
 ```
 
 The page exists and contains the title, and every image it references is a file in that directory.
@@ -160,7 +161,7 @@ approval has to happen before phase 3 begins, not after.
 Give the user everything they need to judge it without opening files themselves:
 
 - The post's title and page number, and the local preview URL
-  `http://127.0.0.1:3000/devlog-2026/page-<N>.html` — noting that a dev server has to be running for
+  `http://127.0.0.1:3000/devlog-<year>/page-<N>.html` — noting that a dev server has to be running for
   it, since phase 2 stops the one it started.
 - The screenshot files by path, so they can be opened and looked at.
 - The **full post text as the user will paste it**, in a copyable block, with its character count.
@@ -195,10 +196,10 @@ same fault comes back on the next release, and the user gives the same note agai
    it, rather than inventing a general rule from a single case.
 2. **Delegate phase 2 again** with the same feature named, briefing it on the user's note and on
    what the previous attempt left behind. The rerun **revises in place**: the newest block in
-   `public/devlog-2026/source.txt` is the previous attempt's, and it gets replaced rather than
+   `public/devlog-<year>/source.txt` is the previous attempt's, and it gets replaced rather than
    appended after — otherwise the site grows a duplicate post. The page number stays the same,
    re-shot screenshots keep their filenames, and any screenshot the revision drops is deleted from
-   `public/devlog-2026/` instead of being left orphaned.
+   `public/devlog-<year>/` instead of being left orphaned.
 3. **Come back to this checkpoint** with the new version. The loop runs until the user approves.
    There is no two-cycle bound here — a human answers every round, so no round is spent guessing —
    but each one costs another dev-server boot and another agent's worth of context, so gather the
@@ -226,7 +227,7 @@ review it by exception. Take `git diff HEAD --stat -- . ':!dist'` and set it aga
 survey and the paths the phases reported. Everything that matches is accounted for; read the full
 text only of what does not — a file no phase claimed, a source file in a batch whose phases were all
 supposed to stay out of `src/`, a suspicious line count. Generated output (`dist/`, the pages under
-`public/devlog-2026/`) is checked by its stat alone; reading a generated bundle proves nothing that
+`public/devlog-<year>/`) is checked by its stat alone; reading a generated bundle proves nothing that
 the build did not already.
 
 Fixing CI failures is bounded at **two** fix-and-push cycles, and several classes of failure are out

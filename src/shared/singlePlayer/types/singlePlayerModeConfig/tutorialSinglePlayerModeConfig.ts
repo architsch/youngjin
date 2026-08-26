@@ -82,7 +82,9 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
             entranceVoxelCol,
             entranceVoxelRow,
             entranceVoxelCollisionLayer,
-            texturePackPath: "default",
+            // The tutorial's rooms each carry the palette they are finished in, so there is nothing
+            // left for the room to draw - only the pack those palettes are positions within.
+            paletteSelection: {texturePackPaths: ["default"], palettes: []},
             hotspots,
             volumes,
             rand: new RandomNumberGenerator(TUTORIAL_SEED),

@@ -7,7 +7,7 @@ export const LibraryData: {
         // One list per year, newest added as the years pass.
         "Development History": [
             // Dev-log posts are written by the AI assistant, so they are credited to it.
-            { dirName: "devlog-2026", title: "Dev Log - 2026", author: "Claude"},
+            { dirName: "devlog-2026", title: "Dev Log - 2026", author: "Youngjin Kang & Claude"},
         ],
         "Nonfiction": [
             { dirName: "metaphysics", title: "형이상학 (2013 - 2014)"},

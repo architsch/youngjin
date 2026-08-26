@@ -14,7 +14,7 @@ taken again after the feature has moved on.
 # Boot and dump the screen — what is clickable, where it is. No shot script needed.
 node dev/scripts/devlog/captureRunner.js --probe
 
-# Run a shot script, writing into public/devlog-2026/
+# Run a shot script, writing into public/devlog-<year>/
 node dev/scripts/devlog/captureRunner.js dev/scripts/devlog/shots/<slug>.js
 
 # Same, but keep the output out of public/ while iterating

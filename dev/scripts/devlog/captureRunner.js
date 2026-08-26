@@ -17,15 +17,17 @@
  *
  * Environment:
  *   DEVLOG_BASE_URL   address of the dev server (default http://127.0.0.1:3000)
- *   DEVLOG_OUT_DIR    where the JPEGs go (default public/devlog-2026)
+ *   DEVLOG_OUT_DIR    where the JPEGs go (default: the current dev-log year's directory —
+ *                     see devlogDir.js for which year that is and why it can still be last year's)
  */
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("@playwright/test");
+const { resolveDevlogDir } = require("./devlogDir");
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const BASE_URL = (process.env.DEVLOG_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
-const DEFAULT_OUT_DIR = process.env.DEVLOG_OUT_DIR || "public/devlog-2026";
+const DEFAULT_OUT_DIR = process.env.DEVLOG_OUT_DIR || resolveDevlogDir().dir;
 const PROBE_OUT_DIR = "test-results/devlog-probe"; // git-ignored, so probe shots never reach a commit
 
 // Post images are shown at half a column's width on a wide screen, so a viewport-sized JPEG at

@@ -1,6 +1,7 @@
 import RandomNumberGenerator from "../../../../math/types/randomNumberGenerator";
 import Vec3 from "../../../../math/types/vec3";
 import RoomVolume from "../roomVolume";
+import RoomPaletteSelectionParams from "./roomPaletteSelectionParams";
 
 // Everything a RoomBuilder is told before it starts, and the only place a room-level parameter is
 // named for a room that is built from a template rather than drawn.
@@ -14,10 +15,11 @@ type RoomBuilderParams = {
     entranceVoxelRow: number,
     entranceVoxelCollisionLayer: number, // = where the player's bottom (feet) will be placed on the y-axis. If collisionLayer is 0, the player's bottom will be located at (y = 0).
 
-    // The pack the room's textures are positions within. A room built from a template declares it
-    // here; a procedurally generated room draws it instead, and ProceduralRoomBuilder writes what it
-    // drew back over this.
-    texturePackPath: string,
+    // What the room may be finished in: the packs its textures may be positions within, and the
+    // palettes its spaces may wear. Every room is finished by drawing from these, so how much
+    // decoration one comes out wearing is settled by how much it was offered — a room given a
+    // single pack and a single palette comes out plain throughout.
+    paletteSelection: RoomPaletteSelectionParams,
 
     // Places in the room a caller outside generation has to be able to name — where an NPC stands,
     // where the way out is — as world positions, so that nothing reading one has to know how a voxel

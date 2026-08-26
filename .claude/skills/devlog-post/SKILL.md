@@ -1,12 +1,12 @@
 ---
 name: devlog-post
-description: Write and publish a ThingsPool dev-log post about a feature the user names — research the feature in the codebase, capture in-game screenshots against the local dev server with Playwright, write an inviting description aimed at players that fits inside a single LinkedIn post, and publish it as a static page under public/devlog-2026 via the SSG. Use when asked for a dev log, devlog post, feature write-up, release note, or promotional/announcement post about something in this project.
+description: Write and publish a ThingsPool dev-log post about a feature the user names — research the feature in the codebase, capture in-game screenshots against the local dev server with Playwright, write an inviting description aimed at players that fits inside a single LinkedIn post, and publish it as a static page under public/devlog-<year> via the SSG. Use when asked for a dev log, devlog post, feature write-up, release note, or promotional/announcement post about something in this project.
 ---
 
 # Dev-Log Post
 
 Turns one finished feature into a published dev-log entry: a static page under
-`public/devlog-2026/`, carrying screenshots taken from the running game and a description short
+`public/devlog-<year>/`, carrying screenshots taken from the running game and a description short
 enough to be pasted into a LinkedIn post as it stands.
 
 The user pastes the finished text onto LinkedIn, Facebook and elsewhere, and adds
@@ -14,11 +14,11 @@ The user pastes the finished text onto LinkedIn, Facebook and elsewhere, and add
 and it is also who the post is written for. These posts are read by the general public, most of
 whom have never played the game and do not write software.
 
-**The post is an advertisement.** Its job is to make that reader want to open the link. It does
-that by describing something real and interesting rather than by selling, so it is truthful
-throughout — but a truthful paragraph that makes nobody curious has still failed. The reader
-should finish the post able to picture one specific thing they would like to go and make in the
-game.
+**The post is an advertisement**, and it is written like one: warm, enthusiastic, addressed to the
+reader as "you", and ending by inviting them in. Its job is to make that reader want to open the
+link. It stays truthful throughout, because a claim the game does not deliver is discovered within
+thirty seconds of the click — but a truthful paragraph that makes nobody curious has failed just as
+completely. **Dryness is the failure mode to watch for, not hype.**
 
 ## Step 1 — Settle on the feature
 
@@ -38,9 +38,11 @@ Read the actual code before writing a word about it. Work out:
   mostly about, so spend the most research effort here. Look at the actual choices the feature
   puts in front of a player — the things in the menus, the range of what can be changed — because
   those are what turn into concrete, picturable sentences.
-- **What it makes possible.** One specific thing somebody might build or try with it. Imaginative
-  is good; it just has to be honestly framed as a possibility rather than an existing feature. Find
-  several during research, then put the best one in the post and drop the rest.
+- **The concrete things the feature puts in the room** — enough of them to fill an open-ended list,
+  since that is the shape most paragraphs take. Each one has to be real; the tail that follows them
+  ("and a variety of other hidden corners") is what carries everything not yet built.
+- **What it feels like to use.** One vivid physical line per post comes out of this, so find
+  several during research and keep the best one.
 - The idea behind how it works — one short paragraph's worth at most, and only the part that would
   interest someone who does not program.
 - What of it is **visible**, and what a player has to do to see it. This decides the screenshots.
@@ -84,10 +86,10 @@ Full details in [reference/capture.md](reference/capture.md). In short:
    Re-shoot anything that shows a loading indicator, a half-arrived room, an open debugger, an
    empty canvas, or simply not the feature. This is the step that decides whether the post is
    worth publishing.
-5. Final run without `--out`, writing into `public/devlog-2026/`.
+5. Final run without `--out`, writing into `public/devlog-<year>/`.
 
-Two to four images per post. The first one in the post becomes its share-preview image, so lead
-with the one that reads best at a glance.
+One to four images per post, roughly one per paragraph. The first one in the post becomes its
+share-preview image, so lead with the one that reads best at a glance.
 
 **Compose each frame; do not merely capture it.** Most readers meet the post as a thumbnail on a
 phone, so a frame that technically contains the feature but reads as a grey room has failed. The
@@ -104,14 +106,31 @@ three faults to shoot against, with the camera numbers that fix them, are in
 
 ## Step 5 — Write the post
 
-Append a new block to `public/devlog-2026/source.txt` — never touch the posts already in it, and
+Posts are filed one year to a directory. Ask the tooling which one is current rather than assuming:
+
+```bash
+node -e "console.log(require('./dev/scripts/devlog/devlogDir').resolveDevlogDir())"
+```
+
+`isCurrentYear: false` means the calendar has rolled over and **this year's directory does not
+exist yet**. Opening one is two steps, and doing only the first produces a directory the SSG never
+builds:
+
+1. `mkdir public/devlog-<year>` and start a `source.txt` in it.
+2. Add a row to `"Development History"` in `src/server/ssg/data/libraryData.ts`:
+   `{ dirName: "devlog-<year>", title: "Dev Log - <year>", author: "Youngjin Kang & Claude" }`. The Library index
+   and the landing page's dev-log link are both built from that list, so the new year appears in
+   both once it is there. Because this touches `src/`, the publish step in Step 6 is the
+   bundle-rebuilding one.
+
+Then append a new block to that year's `source.txt` — never touch the posts already in it, and
 never insert anything above them.
 
 The exception is a **revision**: when you are asked to write the post again about a feature an
 earlier attempt already covered, the newest block in the file is that attempt's, and it gets
 replaced where it stands. Appending instead leaves the site with two posts about one feature. Its
-screenshots are revised the same way — re-shoot to the same filenames, and delete from
-`public/devlog-2026/` any image the new version no longer references.
+screenshots are revised the same way — re-shoot to the same filenames, and delete from the year's
+directory any image the new version no longer references.
 
 Three documents govern the writing, and all three are read before drafting:
 
@@ -125,15 +144,16 @@ Three documents govern the writing, and all three are read before drafting:
 
 The rules that do not bend:
 
-- **The title names the feature, literally.** "Game Modes Are Here", "Better Control With Game
-  Modes" — the words somebody would use to search for it, not a figurative phrase about the idea
-  behind it. A reader scrolling a feed has nothing to decode a clever title with.
+- **The title is the shortest noun phrase that names the feature.** "Game Modes". "Second Floor".
+  "Introducing ThingsPool". Two words is normal. Not a sentence, not a figurative phrase, and not
+  "X Is Here" — just the name of the thing, in the words somebody would use to search for it.
 - **The first two sentences are the whole post in miniature.** Social platforms show about two
-  lines and hide the rest behind "see more", so those lines say what ThingsPool is (the reader has
-  never heard of it) and what is new, in that order: *"ThingsPool is a 3D chat app in a browser
-  tab. The app now has game modes."* They are also the shortest sentences in the post — two short
-  sentences beat one long one here. Never open with a scene, a question, or a detail that only
-  makes sense once the reader already knows what the feature is.
+  lines and hide the rest behind "see more", so those lines carry what is new and what ThingsPool
+  is. **Either may lead.** The model posts do it both ways: *"You can now build two-story rooms in
+  ThingsPool!"* followed by a sentence saying what ThingsPool is, or the appositive that does both
+  at once — *"ThingsPool, an immersive browser-based metaverse app, now supports two distinct game
+  modes."* Never open with a scene, a question, or a detail that only makes sense once the reader
+  already knows what the feature is.
 - **The link back.** Every post opens, on the line directly under its header, with the link to the
   site's landing page:
   ```
@@ -141,41 +161,50 @@ The rules that do not bend:
   ```
   A reader who lands on a post about one camera behaviour has no idea what the game is, and that
   line is where they find out. `postLength.js` warns when a post is missing it.
-- **Images.** Every screenshot kept from step 4 is referenced in the post, on its own line, at the
-  point the prose has just described what it shows. A post about a visible feature that carries no
-  images has failed at its main job. They cost nothing against the character budget — the counter
-  ignores those lines, because a pasted social post carries the text only and the user attaches the
-  JPEGs themselves.
-- **Length.** At most 2964 characters (LinkedIn's 3000-character limit, less the 36 the user's
-  own "Play Here" line needs). **This is a ceiling, not a target.** Say the whole thing in as few
-  words as it takes and stop; a 1200-character post is better than the same post stretched to
-  2900, and never add a sentence because there is budget left. Draft, then cut — the house style's
-  "Cut" section lists what comes out first. Verify the number, do not estimate:
+- **Images.** Every screenshot kept from step 4 is referenced in the post, on its own line. They
+  break the text up at roughly even intervals, about one per paragraph — an image may sit *before*
+  the prose it illustrates, and a post may end on one. A post about a visible feature that carries
+  no images has failed at its main job. They cost nothing against the character budget — the
+  counter ignores those lines, because a pasted social post carries the text only and the user
+  attaches the JPEGs themselves.
+- **Length.** **Aim for about 600 characters of prose.** The three posts in `source.txt` run roughly
+  620, 550 and 510 characters of body text, and they are the target. 2964 is a hard ceiling
+  (LinkedIn's 3000-character limit less the 36 the "Play Here" line needs), not a goal — being at a
+  fifth of it is the correct outcome, and a post that reaches four figures needs cutting rather
+  than congratulating. Never add a sentence because there is budget left. Verify the number, do not
+  estimate:
   ```bash
   node dev/scripts/devlog/postLength.js
   ```
-  It exits non-zero when the newest post is over budget. Fix and re-run until it passes.
+  It exits non-zero when the newest post is over budget, and warns when it is far under the
+  600-character mark or well above it.
 - **Style.** [`../../writing-style.md`](../../writing-style.md) is the authority, and reading it is
-  not optional. What it holds the post to: short sentences carrying one idea each; active verbs;
-  few relative pronouns; plain single-word verbs rather than idiomatic phrasal ones ("removes", not
-  "takes out"); pronouns only where the noun they stand for is unmistakable; no metaphor the reader
-  has to unpack; every noun one the reader can define; no account of how the feature works, where
-  it sits on screen, or what one player did with it in one room; one subject and one idea at a
-  time, never a list; and a draft cut until nothing more can come out. The register is the user's
-  own books — a mathematics or philosophy teacher explaining an idea to an intelligent adult who
-  does not know the field. No sales pitch, no rhetorical questions to the reader.
-- **Earlier posts are not the style guide.** Read `public/devlog-2026/source.txt` for two things
-  only: every opening, so the new one repeats nobody's construction, and the facts, so the new post
-  contradicts nothing. Those posts were written under earlier versions of these rules and several
-  of them break the current ones, so copying a construction because it is already published is how
-  the writing stops improving. Each post should come out better than the last one, which cannot
-  happen while the last one is the model. Published posts are dated records and are never edited to
-  match a newer rule.
+  not optional. What it holds the post to: warm, enthusiastic advertising copy that addresses the
+  reader as "you" and speaks for the project as "we"; common words in ordinary, unfussy sentences;
+  open-ended lists that suggest there is more than the sentence names; one vivid physical image of
+  what the feature feels like; a closing invitation to come and play; and no account whatsoever of
+  how anything works or where it sits on screen. **Dryness is the failure mode to guard against.**
+  A draft that is accurate and boring gets rewritten, not polished.
+- **The previous posts are the model.** **When in doubt, refer to the previous devlog posts for
+  guidance on the style of writing. Use them as examples.** They live one year to a directory, as
+  `public/devlog-<year>/source.txt`; read the current year's before drafting, and the year before
+  it as well when the current file is new or short. Take from them the register, the length, the
+  rhythm and the shape. Read them for the facts too, so the new post contradicts nothing. A new
+  post should sit beside them without looking like it came from somewhere else.
+
+  Where a post and the written rules seem to disagree, the post usually wins — the rules are a
+  distillation of the posts and go stale first. If the difference looks like a real question rather
+  than a stale rule, ask the user rather than guessing.
+
+  The dev-log posts are the *only* writing on the site to take style from. The books and essay
+  collections in the Library belong to a different genre entirely, and that voice does not transfer
+  to a short promotional post. Do not read them for guidance here.
+
+  Published posts are dated records and are not edited to match a newer rule.
 - **Concept, not manual.** Do not walk the reader through which button opens which panel and in
-  what order. Say what the feature is and what it lets somebody do, let one concrete detail stand
-  in for the rest, and let the screenshots show the interface. The post should get *less* detailed
-  as it goes on, not more: the closing paragraphs are a short conceptual summary of each part plus
-  what it makes possible, never a walkthrough.
+  what order. Say what the feature is and what it lets somebody do, and let the screenshots show
+  the interface. The post gets *less* detailed as it goes, not more: it closes on an invitation,
+  never on a walkthrough.
 - **No emoji.**
 - **Hashtags.** About sixteen on the final line, each a `#` followed by a PascalCase term: six to
   eight broad ones drawn across the bank in [reference/hashtags.md](reference/hashtags.md), and the
@@ -184,33 +213,36 @@ The rules that do not bend:
   longer one reads as spam to the person scrolling past it.
 - **SEO.** Name the technologies and concepts plainly in the prose — search engines read the
   page, and the `:k:` line is only part of it.
-- **Truth.** Every claim traceable to code you read or a screenshot you looked at. Ideas about what
-  the feature makes possible later are welcome, written as possibilities rather than as things
-  that already work.
+- **Truth.** **Every item you name is read as shipped; an open tail is read as an invitation.** So
+  check each named item against the code, and let the tail carry the future — "stairs, vast halls
+  of high ceilings, and other architectural wonders" is fair, because stairs and tall halls exist
+  and the tail promises nothing specific. Naming a feature that does not exist yet is not fair,
+  however open the phrase after it.
 
 Then read the draft back against two checklists and fix what fails: "The checks" at the end of
 [`../../writing-style.md`](../../writing-style.md), and then the post-specific one at the end of
-[reference/writing.md](reference/writing.md). Run them as written — one pass per test, on the
-finished text — because the tests that catch the usual problems are mechanical: every sentence
-restatable by the reader in their own words, every sentence short and active, every pronoun
-pointing at one obvious noun.
+[reference/writing.md](reference/writing.md). Run them as written, one pass per test, on the
+finished text. The first check is the one that matters most and the easiest to skip: **would a
+stranger want to click after reading this?** If the honest answer is "it is accurate", the draft
+has failed and needs rewriting rather than polishing.
 
 ## Step 6 — Publish
 
 Regenerating the static site is what turns `source.txt` into pages. From the repo root:
 
-- Only `source.txt` and images changed, and `library.html` already lists "Dev Log - 2026":
+- Only `source.txt` and images changed, and `public/library.html` already lists this year's dev log:
   ```bash
   MODE=ssg node dist/server/bundle.js
   ```
   (Runs the SSG and exits — no secrets, no emulators, no server.)
-- Anything under `src/` changed, or `public/library.html` has no "Development History" section
-  yet (meaning the committed server bundle predates it): `npm run beforeCommit` instead, which
-  rebuilds the bundles first.
+- Anything under `src/` changed — which includes **opening a new dev-log year**, since that adds a
+  row to `libraryData.ts` — or `public/library.html` has no "Development History" section yet
+  (meaning the committed server bundle predates it): `npm run beforeCommit` instead, which rebuilds
+  the bundles first.
 
-Then confirm, don't assume: the new `public/devlog-2026/page-<N>.html` exists and contains the
+Then confirm, don't assume: the new `public/devlog-<year>/page-<N>.html` exists and contains the
 post's title, `public/library.html` lists the entry, and every `<img>` the page carries points at
-a file that is actually in `public/devlog-2026/` — a mistyped image reference produces a page that
+a file that is actually in `public/devlog-<year>/` — a mistyped image reference produces a page that
 builds cleanly and shows a broken image.
 
 ## Step 7 — Report
@@ -218,10 +250,11 @@ builds cleanly and shows a broken image.
 Tell the user:
 
 - The post's title and its page number.
-- Local preview: `http://127.0.0.1:3000/devlog-2026/page-<N>.html` (dev server serves `public/`).
-- Published address once committed: `https://thingspool.net/devlog-2026/page-<N>.html`.
+- Local preview: `http://127.0.0.1:3000/devlog-<year>/page-<N>.html` (dev server serves `public/`).
+- Published address once committed: `https://thingspool.net/devlog-<year>/page-<N>.html`.
 - The screenshot files, so they can attach them to the social post.
-- The **full post text as they will paste it**, in a copyable block, with its character count and
-  how much of the 2964 is left.
+- The **full post text as they will paste it**, in a copyable block, with its prose length against
+  the house length of about 600 characters. Report that number, not the distance to the ceiling —
+  the room left under a platform limit says nothing about whether the post is the right size.
 - That the page goes live after they commit and their static pages deploy — this skill does not
   commit anything.

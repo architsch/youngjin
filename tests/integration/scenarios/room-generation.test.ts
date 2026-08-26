@@ -13,6 +13,7 @@
  * - nothing it is built out of hangs in mid-air
  * - it is generated empty of objects, for the people who use it to furnish themselves
  * - it is built in one of the texture packs its textures were picked against
+ * - it is finished with as much decoration as its room type is offered, and no more
  * - a seed reproduces its room exactly, and different seeds give different rooms
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -70,6 +71,23 @@ function floodFillFromEntrance(voxelGrid: VoxelGrid): Set<number>
         }
     }
     return reached;
+}
+
+/**
+ * Every texture index the room is actually finished in. A quad byte carries its visibility in the
+ * top bit and its texture index in the rest, and a hidden quad's index is whatever it last held —
+ * so only the visible ones say anything about how the room looks.
+ */
+function texturesUsedIn(voxelGrid: VoxelGrid): Set<number>
+{
+    const used = new Set<number>();
+    const quads = voxelGrid.quadsMem.quads;
+    for (let i = 0; i < quads.length; ++i)
+    {
+        if ((quads[i] & 0b10000000) != 0)
+            used.add(quads[i] & 0b01111111);
+    }
+    return used;
 }
 
 function countWalkableCells(voxelGrid: VoxelGrid): number
@@ -612,6 +630,22 @@ describe("procedural multiplayer room generation", () => {
         }
         // ...and the pack is genuinely drawn, rather than every room landing on the same one.
         expect(packsUsed.size).toBeGreaterThan(1);
+    });
+
+    it("decorates a hub, and hands a regular room over plain", () => {
+        // How much decoration a room comes out wearing is settled entirely by how many texture
+        // packs and palettes its room type is offered to draw from — so this is a test that
+        // generation reads those parameters at all, rather than finishing every room alike.
+        // A hub is the room the game hands to everybody and is worth decorating; a regular room
+        // belongs to one person, and is a blank room for its owner to decorate himself.
+        for (const seed of SEEDS)
+        {
+            expect(texturesUsedIn(generateFromSeed(seed).voxelGrid).size,
+                `seed ${seed} :: hub`).toBeGreaterThan(1);
+
+            const regular = RoomGenerationUtil.generateRoom("", RoomTypeEnumMap.Regular, "", "", seed);
+            expect(texturesUsedIn(regular.voxelGrid).size, `seed ${seed} :: regular`).toBe(1);
+        }
     });
 
     it("keeps every palette within the reach of a texture pack atlas", () => {

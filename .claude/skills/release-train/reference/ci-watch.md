@@ -32,7 +32,7 @@ look at the tail only when it fails.
 
 This matters more than it looks. `dist/` is committed, the deployment builds from source but the
 committed bundles are what a rollback and the local dev flow rely on, and the SSG step is what turns
-`public/devlog-2026/source.txt` into the published pages. A devlog post written in phase 3 is not in
+`public/devlog-<year>/source.txt` into the published pages. A devlog post written in phase 3 is not in
 the changeset until this has run.
 
 If `checkBeforeCommit.js` reports a Node.js mismatch, stop. `nvm use` fixes it in a shell, but the
@@ -51,7 +51,7 @@ Set that stat against phase 0's survey and the paths the phases reported changin
 accounted for. Read the full text only of what does not: a file no phase claimed, anything under
 `src/` in a batch whose phases were all told to stay out of it, a line count that does not fit the
 change described. Generated output — `dist/`, the pages the SSG just wrote under
-`public/devlog-2026/` — is checked by its stat alone, since reading a generated bundle proves nothing
+`public/devlog-<year>/` — is checked by its stat alone, since reading a generated bundle proves nothing
 the build did not.
 
 Anything unexpected that does surface — a debug print, a scratch file, a change nobody asked for —

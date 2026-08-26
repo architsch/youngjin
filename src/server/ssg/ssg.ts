@@ -8,6 +8,7 @@ import TextFileBuilder from "./builder/textFileBuilder";
 import styleDictionary from "./style/styleDictionary";
 import ErrorPageBuilder from "./builder/page/errorPageBuilder";
 import { ArcadeData } from "./data/arcadeData";
+import { LibraryData } from "./data/libraryData";
 
 export default async function SSG(): Promise<void>
 {
@@ -25,8 +26,12 @@ export default async function SSG(): Promise<void>
     const atomFeedB = new AtomFeedBuilder();
 
     let tb = new TextFileBuilder();
+    // The landing page links to the newest year of the dev log. Taken from the same list the
+    // Library is built from, so that opening a new year is one edit rather than two.
+    const devlogEntries = LibraryData.entriesByCategory["Development History"];
     tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
         gameEntries: ArcadeData.gameEntries,
+        latestDevlogEntry: devlogEntries[devlogEntries.length - 1],
     }));
     await tb.build("index.html");
 

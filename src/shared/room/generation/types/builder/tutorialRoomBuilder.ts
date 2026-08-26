@@ -14,9 +14,9 @@ export default class TutorialRoomBuilder extends RoomBuilder
 {
     override run(): RoomBuilder
     {
-        const {params, room} = this;
-        room.texturePackPath = params.texturePackPath;
+        super.run();
 
+        const {params, room} = this;
         const voxels = room.voxelGrid.voxels;
         RoomVolumeUtil.carveOutVolume(voxels, params.volumes.room1);
         RoomVolumeUtil.carveOutVolume(voxels, params.volumes.room2);

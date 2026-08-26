@@ -1,6 +1,6 @@
 # Room Generation System
 
-Reference: @src/shared/room/generation/util/roomGenerationUtil.ts , @src/shared/room/generation/util/roomVolumeUtil.ts , @src/shared/room/generation/types/roomVolume.ts , @src/shared/room/generation/types/roomVolumeType.ts , @src/shared/room/generation/types/roomPalette.ts , @src/shared/room/generation/maps/roomVolumeConstructorMap.ts , @src/shared/room/generation/maps/roomPaletteMap.ts , @src/shared/room/generation/types/builder/roomBuilder.ts , @src/shared/room/generation/types/builder/proceduralRoomBuilder.ts , @src/shared/room/generation/types/builder/multiplayerRoomBuilder.ts , @src/shared/room/generation/types/builder/hubRoomBuilder.ts , @src/shared/room/generation/types/builder/regularRoomBuilder.ts , @src/shared/room/generation/types/builder/tutorialRoomBuilder.ts , @src/shared/room/generation/types/builder/helpers/ , @src/shared/singlePlayer/maps/singlePlayerModeConfigMap.ts
+Reference: @src/shared/room/generation/util/roomGenerationUtil.ts , @src/shared/room/generation/util/roomVolumeUtil.ts , @src/shared/room/generation/types/roomVolume.ts , @src/shared/room/generation/types/roomVolumeType.ts , @src/shared/room/generation/types/roomPalette.ts , @src/shared/room/generation/types/params/roomBuilderParams.ts , @src/shared/room/generation/types/params/roomPaletteSelectionParams.ts , @src/shared/room/generation/maps/roomVolumeConstructorMap.ts , @src/shared/room/generation/maps/roomPaletteMap.ts , @src/shared/room/generation/types/builder/roomBuilder.ts , @src/shared/room/generation/types/builder/proceduralRoomBuilder.ts , @src/shared/room/generation/types/builder/multiplayerRoomBuilder.ts , @src/shared/room/generation/types/builder/hubRoomBuilder.ts , @src/shared/room/generation/types/builder/regularRoomBuilder.ts , @src/shared/room/generation/types/builder/tutorialRoomBuilder.ts , @src/shared/room/generation/types/builder/helpers/ , @src/shared/singlePlayer/maps/singlePlayerModeConfigMap.ts
 
 ## Overview
 
@@ -54,7 +54,7 @@ The toolkit works in three passes, and the order is not incidental:
 
 The plan is held as volumes gathered under what each of them is *for*, which is the one thing about a volume that its bounds cannot say: a space the room is made of, an opening cut between two of them, the shaft a flight of steps climbs, the way into the room, a step, a stretch to be kept clear. `RoomVolumeType` names them, and applying the plan is a matter of reading those names — everything filed under one is taken out of the matter, everything under another is stood back up in it, and a reserved stretch is neither. So a new kind of volume is a new name there rather than a new list for every pass to remember.
 
-`ProceduralRoomBuilder` itself only owns that plan and the order the passes run in. Each piece of the work — drawing the palettes, scattering and growing the areas, joining them up, raising a storey and the flight up to it, standing the block work — belongs to a helper of its own, so that one aspect of how a room comes out can be reasoned about, or replaced, without reading the rest.
+`ProceduralRoomBuilder` itself only owns that plan and the order the passes run in. Each piece of the work — scattering and growing the areas, joining them up, raising a storey and the flight up to it, standing the block work — belongs to a helper of its own, so that one aspect of how a room comes out can be reasoned about, or replaced, without reading the rest. Settling what the room is finished in is a helper too, but it belongs to `RoomBuilder`: every room in the game has a look, whether it was laid out procedurally or built from a template, and every recipe reaches that step by calling up the chain before it does anything of its own.
 
 ### Seed volumes, and the walls between them
 
@@ -88,6 +88,14 @@ A voxel texture index is a cell position within the room's texture pack atlas ra
 `RoomPaletteMap` holds, per texture pack, a set of hand-picked `RoomPalette` combinations that read well together in that pack. Generation draws a pack together with its palettes, and from then on only ever assigns whole palettes, never individual textures. Drawing whole palettes is what makes each area look like a deliberately decorated space rather than a patchwork; drawing the pack is what stops every room in the game from opening on the same handful of materials.
 
 A pack with no palettes picked for it is one that no room is ever generated in — the room's owner can still re-skin their room with it afterwards. So shipping a new texture pack means curating palettes for it as well, or it stays invisible to everyone but the owners who go looking for it.
+
+**What a room is allowed to draw from is declared rather than decided**, as `RoomPaletteSelectionParams`: the packs it may be built in, and the palettes its spaces may wear. Every room settles its own look out of that, before it plans anything else — a room that shaped a space before it knew its palettes would have nothing to finish that space in.
+
+How much decoration a room ends up wearing is then simply how much it was offered. A room allowed the run of the game's packs comes out decorated space by space; a room allowed one pack and one palette comes out plain throughout, the same texture on every face of every block. That second case is not a separate mechanism — it is the same drawing with only one thing to draw from — which is what keeps everything downstream from having to know which kind of room it is working on.
+
+Which one a room is offered is a question about whose room it is. A **Hub** is the room the game hands to everybody and the first one most players ever stand in, so it is worth decorating. A **Regular** room belongs to one person, and comes out plain: what its owner starts from is a blank room to decorate, rather than one that arrived already decorated in somebody else's taste — which suits a room that is mostly solid mass to be mined out in the first place.
+
+Naming no palettes asks for whichever ones were hand-picked for the pack that was drawn, and that is the only way to ask for a pack at random: a palette is a set of positions within one specific atlas, so palettes written out in advance mean nothing until the pack is known.
 
 ### Furnishing
 

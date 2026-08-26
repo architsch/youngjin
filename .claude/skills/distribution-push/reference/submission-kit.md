@@ -56,31 +56,38 @@ every line of copy this skill writes.** Read it before drafting. It is shared wi
 purpose: the same reader meets both, and a second house style invented here would diverge from the
 first within a few revisions.
 
-The rules that catch this skill's copy most often are the sentence-level ones — short sentences
-carrying one idea, active verbs, plain single-word verbs rather than idiomatic phrasal ones,
-pronouns only where the noun is unmistakable — and the rule against enumerating. Marketing copy
-drifts toward lists of features and toward phrases picked for their sound; both fail here.
+The rules that catch this skill's copy most often are the ones about detail: no account of how a
+feature works, no interface walkthrough, and none of the trade vocabulary. The rule about naming
+things is the other one — **every item named in a list is read as shipped**, and a venue audience
+checks.
 
-Three adjustments for this skill's venues:
+Four adjustments for this skill's venues:
 
+- **Dial the enthusiasm to the room.** The house voice is warm advertising copy, written for a
+  LinkedIn feed where that is the native register. It is not native on Reddit or Hacker News, where
+  exclamation marks and "our everlasting journey" read as marketing and get the post buried. There,
+  keep the house plainness and the open-ended lists, drop the exclamation marks and the grand
+  nouns, and let the developer's own first-person voice carry it. A store page or a directory entry
+  takes the full house register; a community thread does not.
 - **No hashtags**, except where a venue has an actual tag field. The hashtag block that ends a
   dev-log post belongs to social feeds and reads as spam on Reddit or Hacker News.
 - **Say who is posting.** On community venues the developer saying "I built this" outperforms
   third-person copy, and is the only honest framing available.
 - **Show HN, and only Show HN, may go one level deeper technically.** That audience came for the
   engineering, so naming what the thing is built on and one genuine constraint is welcome. This
-  raises the house style's ceiling on detail for that one venue. It does not relax a single
-  sentence-level rule, and it is never an invitation to describe architecture.
+  raises the house style's ceiling on detail for that one venue. It is never an invitation to
+  describe architecture.
 
-**Earlier copy is not the style guide.** The ledger's past submissions and the published dev-log
-posts are a record of what was sent, useful for checking what a venue has already seen and what
-facts were committed to. They were written under earlier versions of these rules, and several break
-the current ones. Take the style from the house style file, and let each kit come out better than
-the last.
+**Take the register from the dev-log posts, not from the ledger.** They live one year to a
+directory, as `public/devlog-<year>/source.txt`, and they are the worked examples of the house
+style — read the current year's before drafting, and adjust from there for the venue. The ledger's
+past submissions are a record of what was sent, useful for checking what a venue has already seen
+and what facts were committed to, but they were written under earlier versions of these rules and
+several break the current ones.
 
 ## Images
 
-Look before capturing. `public/devlog-2026/` already holds screenshots taken from the running game
+Look before capturing. `public/devlog-<year>/` already holds screenshots taken from the running game
 for the dev-log posts, and for most venues one of those is the right image. Open the candidates with
 the Read tool and pick — do not choose by filename.
 

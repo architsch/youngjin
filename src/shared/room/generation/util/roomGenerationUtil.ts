@@ -8,6 +8,9 @@ import RegularRoomBuilder from "../types/builder/regularRoomBuilder";
 import RandomNumberGenerator from "../../../math/types/randomNumberGenerator";
 import VoxelQuadsRuntimeMemory from "../../../voxel/types/voxelQuadsRuntimeMemory";
 import RoomBuilderParams from "../types/params/roomBuilderParams";
+import RoomPaletteSelectionParams from "../types/params/roomPaletteSelectionParams";
+import RoomPalette from "../types/roomPalette";
+import RoomPaletteMap from "../maps/roomPaletteMap";
 import { COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../system/sharedConstants";
 
@@ -34,10 +37,12 @@ const RoomGenerationUtil =
         switch (room.roomType)
         {
             case RoomTypeEnumMap.Hub:
-                new HubRoomBuilder(makeMultiplayerRoomBuilderParams(seed), room).run();
+                new HubRoomBuilder(
+                    makeMultiplayerRoomBuilderParams(HUB_PALETTE_SELECTION, seed), room).run();
                 break;
             case RoomTypeEnumMap.Regular:
-                new RegularRoomBuilder(makeMultiplayerRoomBuilderParams(seed), room).run();
+                new RegularRoomBuilder(
+                    makeMultiplayerRoomBuilderParams(REGULAR_PALETTE_SELECTION, seed), room).run();
                 break;
             case RoomTypeEnumMap.SinglePlayer:
                 // (roomName == singlePlayerMode) if the room is a singleplayer room.
@@ -58,17 +63,43 @@ const RoomGenerationUtil =
     },
 }
 
+// A hub is the room the game hands to everybody, and the first one most players ever stand in, so
+// it is worth decorating: any of the packs the game ships, finished in whichever palettes were
+// hand-picked for the one it draws. Naming no palettes is what asks for those — and it is the only
+// way to ask for a pack at random, since a palette written out here would be a set of positions in
+// an atlas nobody yet knows.
+const HUB_PALETTE_SELECTION: RoomPaletteSelectionParams = {
+    texturePackPaths: RoomPaletteMap.getTexturePackPaths(),
+    palettes: [],
+};
+
+// A regular room belongs to one person, so it comes out plain: the one texture, on every face of
+// every block in it. What its owner starts from is then a blank room to decorate, rather than one
+// that arrived already decorated in somebody else's taste — which suits a room that is mostly solid
+// mass to be mined out block by block in the first place. A single candidate of each is all it
+// takes to say so, since a draw with one thing to draw from returns that thing every time.
+const PLAIN_TEXTURE_PACK_PATH = "default";
+const PLAIN_TEXTURE_INDEX = 0;
+const REGULAR_PALETTE_SELECTION: RoomPaletteSelectionParams = {
+    texturePackPaths: [PLAIN_TEXTURE_PACK_PATH],
+    palettes: [new RoomPalette(PLAIN_TEXTURE_INDEX, PLAIN_TEXTURE_INDEX, PLAIN_TEXTURE_INDEX,
+        PLAIN_TEXTURE_INDEX)],
+};
+
 // What a procedurally generated multiplayer room is built from. Its entrance is the one fixed cell
-// every multiplayer room shares, and everything else about the room is drawn rather than declared —
-// the texture pack included, which the builder writes back over texturePackPath once it has picked
-// one.
-function makeMultiplayerRoomBuilderParams(seed?: number): RoomBuilderParams
+// every multiplayer room shares, its look is whatever the room type allows it to be finished in,
+// and everything else about it is drawn rather than declared.
+//
+// This is the multiplayer counterpart of a SinglePlayerModeConfig: the one place a room-level
+// parameter is named for a Hub or Regular room, since neither has a config of its own.
+function makeMultiplayerRoomBuilderParams(paletteSelection: RoomPaletteSelectionParams,
+    seed?: number): RoomBuilderParams
 {
     return {
         entranceVoxelCol: MULTI_PLAYER_ENTRANCE_VOXEL_COL,
         entranceVoxelRow: MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
         entranceVoxelCollisionLayer: COLLISION_LAYER_MIN,
-        texturePackPath: "",
+        paletteSelection,
         hotspots: {},
         volumes: {},
         rand: new RandomNumberGenerator(seed),

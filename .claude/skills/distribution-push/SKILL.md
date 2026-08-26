@@ -72,7 +72,7 @@ venue.
 wherever the audience arrived looking for something to play: the browser-game communities, the
 portals, the game directories.
 
-**A dev-log post** — `https://thingspool.net/devlog-2026/page-<N>.html`. A written piece about one
+**A dev-log post** — `https://thingspool.net/devlog-<year>/page-<N>.html`. A written piece about one
 finished feature, with screenshots from the running game, which then leads the reader into the app
 through the "New here? Start with What is ThingsPool?" line every post opens with. Verified
 2026-08-22 that these pages serve tagged URLs normally and carry both the analytics tag and
@@ -95,7 +95,7 @@ Link to a post rather than to the app when:
 Link to the app directly when the audience is players, when the venue's whole purpose is games to
 click, or when the game itself is the news.
 
-`public/devlog-2026/list.html` is the index of what exists to link to. Read the actual posts before
+`public/devlog-<year>/list.html` is the index of what exists to link to. Read the actual posts before
 choosing between them; pick the one whose subject fits the venue, not simply the newest.
 
 ## Step 1 — Read the ledger before anything else
@@ -186,13 +186,14 @@ exactly the lengths that venue asks for, the screenshots it needs, and the tagge
 Three rules that do not bend:
 
 - **Style.** Every line of every kit follows [`../../writing-style.md`](../../writing-style.md) —
-  short active sentences carrying one idea, plain verbs, no metaphor the reader has to unpack, one
-  subject at a time, and no lists of features. `reference/submission-kit.md` names the venue
-  adjustments, including the one venue allowed more technical depth. Earlier submissions in
-  `ledger.md` show what was sent before; they are not a model for how to write.
+  common words, ordinary sentences, open-ended lists that suggest more than they name, and no
+  account of how anything works. `reference/submission-kit.md` names the venue adjustments,
+  including the one venue allowed more technical depth and the venues where the house
+  enthusiasm has to be dialed down. Earlier submissions in `ledger.md` show what was sent before;
+  they are not a model for how to write.
 - **The tagged link.** Every venue gets its own, appended to whichever destination was chosen:
   `https://app.thingspool.net/?ref=<venue-slug>` or
-  `https://thingspool.net/devlog-2026/page-<N>.html?ref=<venue-slug>`.
+  `https://thingspool.net/devlog-<year>/page-<N>.html?ref=<venue-slug>`.
 
   **The slug must be written in `a-z`, `0-9`, `-` and `_`, and be at most 32 characters.** This is
   not a style preference: the server rebuilds the tag rather than trimming it, dropping every other

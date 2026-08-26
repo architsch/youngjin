@@ -16,13 +16,17 @@ const ARRIVAL_AREA_DEPTH = 4;
 const ENTRANCE_KEEP_CLEAR_HALF_WIDTH = 2;
 const ENTRANCE_KEEP_CLEAR_HALF_DEPTH = 3;
 
-// What every multiplayer room has in common, whichever kind it is: a texture pack drawn for it, one
-// fixed way in, and an area behind that way in for a player to arrive into.
+// What every multiplayer room has in common, whichever kind it is: one fixed way in, and an area
+// behind that way in for a player to arrive into.
 export default abstract class MultiplayerRoomBuilder extends ProceduralRoomBuilder
 {
     override run(): RoomBuilder
     {
-        this.initPalettes();
+        super.run();
+
+        // The doorway and the room behind it wear one palette between them, since a doorway is a
+        // hole cut into one particular room rather than a room of its own. Drawing for each of them
+        // separately would finish the two differently and make the way in read as neither.
         const arrivalPalette = this.nextPalette();
 
         // The way in. A room's boundary is mass like any other wall, so the doorway is a cavity cut

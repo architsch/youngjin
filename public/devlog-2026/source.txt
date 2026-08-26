@@ -1,78 +1,74 @@
-:d:ThingsPool is an immersive 3D chat app that runs in a browser tab. You walk into a shared room as a character, and almost everything in that room is yours to change.
+:d:ThingsPool is a 3D chat app which runs in a browser tab.
 :k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Indie Game, Metaverse, Virtual World, Voxel, Room Building, Level Editor, Art Gallery, Open Source, Three.js
 :l:2026-08-08
 
-[Introducing ThingsPool, a 3D World You Can Rebuild] August 8, 2026
+[Introducing ThingsPool] August 8, 2026
 
 @@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
 
-ThingsPool is an immersive 3D chat app that runs in a browser tab, with no install and no account required. You walk into a shared room as a character, alongside anyone else who opened the same link, and almost everything in that room is yours to change.
-
-Rooms are built out of blocks. Swap a wall's material, cut a doorway through it, hang a painting on it and stretch the frame to whatever size you like — all of it from inside the room, while other people are walking around you.
+ThingsPool is a 3D chat app you can open up in a browser. You don't need to download anything; just click the link and you will be right inside our virtual universe!
 
 <devlog-intro-editing>
 
-The paintings come from a gallery of Monet, Van Gogh, Hopper, Pissarro and about twenty other artists. Each one is labeled with its title and its painter, which anyone standing in the room can read.
+ThingsPool is made up of virtual rooms, where you can chat with people, build your own personal space, and partake in unforeseen adventures. So jump in, and become part of our everlasting journey.
 
-No room starts as an empty box. Every one is generated before you arrive, with its walls laid out and its first paintings already hung, so you begin with a furnished room rather than a blank grid. Whatever you change is what the next visitor walks into.
+You can even have your own room and fill it with various treatures.
 
-A room can become almost anything from there: a gallery of your favorite paintings, a maze to get lost in, or a house that you and a friend build together while standing inside it. Sign in and one room becomes permanently yours, to keep and to invite other people to build in.
-
-This is the very first post of ThingsPool's development log, which is basically a news feed whose job is to share the major updates happening in this project.
+This is the first post of ThingsPool's development log, which is a news feed for the project's major updates. Whenever a new feature comes in, you will hear about it here. Stay tuned!
 
 #ThingsPool #Metaverse #VirtualWorld #Sandbox #OpenWorld #BrowserGame #MultiplayerGame #IndieGame #GameDev #WorldBuilding #OpenSource #FreeToPlay #VoxelEngine #LevelEditor #ThreeJS #WebGL
 
-:d:ThingsPool now has game modes. Enter play mode to explore a room and talk to whoever else is in it, or switch to edit mode to craft the space you actually want.
+
+
+
+
+:d:ThingsPool now supports distinct game modes.
 :k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Game Design, Level Editor, Character Customization, Art Gallery, Three.js, WebGL
 :l:2026-08-15
 
-[Game Modes Are Here] August 15, 2026
+[Game Modes] August 15, 2026
 
 @@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
 
-ThingsPool, an immersive 3D chat app that runs in a browser tab, now has game modes. Enter play mode to explore a room and talk to whoever else is in it, or switch to edit mode to craft the space you actually want.
-
-Until now the two were one and the same. Clicking a painting to read its title also swung the camera around it and brought up the editing tools, so there was no way to simply look at a room.
-
-Play mode is for exploring: a first-person adventure through rooms you have never seen, shared with whoever else walked in. Anything you click introduces itself — a painting gives you its title and its painter — and you keep walking.
+ThingsPool, an immersive browser-based metaverse app, now supports two distinct game modes - "Play Mode" and "Edit Mode".
 
 <game-mode-play>
 
-Edit mode is the opposite. Everything around you becomes yours to customize: your own avatar first — its shape and its colors, part by part, carried into every room you visit afterwards — and then the interior of the room itself.
+In Play Mode, you will be engaging in all sorts of rich gameplay experiences - such as inspecting, attacking, picking things up, eating, and so on.
 
 <game-mode-character>*
 
-Trade one painting for another, restyle its frame, stretch it across the wall, or take the wall out from behind it.
+In Edit Mode, on the other hand, you will be editing the room's walls, floors, ceilings, doors, staircases, furniture, and a variety of other hidden corners.
 
 <game-mode-editing>
 
-Separating the two modes also frees up the ordinary click. Picking an object up, eating it, repairing it, handing it to another player, swinging it at something — every one of those is a click on a thing, and none of them could exist while a click already meant "edit this".
+Enter the Edit Mode, and click anything you see; you will fly in mid air, chasing what you are editing in real time!
 
 #ThingsPool #VirtualWorld #Sandbox #BrowserGame #MultiplayerGame #IndieGame #GameDev #InteractiveMedium #GameMechanics #GameplaySystems #LevelEditor #CameraControl #Avatar #ThreeJS #WebGL
 
-:d:ThingsPool rooms are now two storeys tall. Walk up a staircase to the upper floor, step out to the edge of the balcony, and look down on the hall below.
+
+
+
+
+:d:ThingsPool now supports two-story rooms.
 :k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Voxel, Level Editor, Procedural Generation, World Building, Three.js, WebGL
 :l:2026-08-21
 
-[Every Room Now Has a Second Floor] August 21, 2026
+[Second Floor] August 21, 2026
 
 @@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
 
-ThingsPool has given every one of its rooms a second floor. It is a 3D world that opens from a link in a browser tab, where you appear as a character and can rebuild the room around you while other people are standing in it. Walk up a staircase to the upper floor, step out to the edge of the balcony, and look down on the hall below.
+You can now build two-story rooms in ThingsPool!
+
+ThingsPool is a 3D real-time chat application, in which you can build your own room, socialize with other people, and engage in many hidden adventures.
 
 <second-floor-stairs>
 
-Until now a room was a single floor under a ceiling that sat a little above your head. Everything anyone built ran along the ground, because there was nothing above it but that ceiling.
-
-A room is now twice as tall, with a floor laid across the middle of it. Staircases join the two levels, and each one is wide enough to walk straight up rather than balance along. Some halls are left open from the ground all the way to the ceiling, and the upper floor looks down into them over a balcony that runs around the edge.
+ThingsPool used to have only single-story rooms, which severely limited your creative freedom. It is no longer the case. Rooms are now two stories high, meaning you can build stairs, vast halls of high ceilings, and other architectural wonders!
 
 <second-floor-gallery>
 
-Stand at that edge, or at the top of a flight of stairs, and the view tilts down over the drop by itself, so the floor below is already in front of you.
-
-Every room decides all of this for itself before anyone walks in: where its staircases stand, which of its halls are left open through both floors, and where its paintings hang on each level.
-
-All of it is yours to change, on either floor. Open a hole in the floor above you and run a balcony around it, build a second staircase in the corner, or raise a tower through both storeys and paint the wall the whole way up. Everything is made of the same blocks as before, with twice the height to stack them in.
+Come join ThingsPool. The second floor's open air is inviting you.
 
 <second-floor-editing>
 

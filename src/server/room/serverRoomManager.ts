@@ -401,8 +401,11 @@ async function loadCurrentEditors(roomID: string): Promise<DBRoomEditor[] | null
 // id/name both equal the single-player mode). Content is omitted on the wire too (see Room.encode).
 function buildSinglePlayerRoomRuntimeMemory(mode: string): RoomRuntimeMemory
 {
+    // The texture pack is left empty along with the rest of the content. It is part of what the
+    // room is built out of rather than part of its identity, so the client settles it as it builds
+    // the room, before anything reads it — a value stamped here would only ever be overwritten.
     const room = new Room(mode /*id*/, mode /*roomName*/, RoomTypeEnumMap.SinglePlayer,
-        "", "", SinglePlayerModeConfigMap[mode].getRoomBuilderParams().texturePackPath,
+        "", "", "" /*texturePackPath*/,
         new VoxelGrid([], new VoxelQuadsRuntimeMemory()),
         new ObjectGroup([]));
     return new RoomRuntimeMemory(room, {});

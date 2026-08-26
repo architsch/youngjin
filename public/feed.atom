@@ -3075,25 +3075,25 @@
   <summary>철학적 단상.</summary>
 </entry>
 <entry>
-  <title>Every Room Now Has a Second Floor</title>
+  <title>Second Floor</title>
   <link href="https://thingspool.net/devlog-2026/page-3.html"/>
   <id>https://thingspool.net/devlog-2026/page-3.html</id>
   <updated>2026-08-21T00:00:00.000Z</updated>
-  <summary>ThingsPool rooms are now two storeys tall. Walk up a staircase to the upper floor, step out to the edge of the balcony, and look down on the hall below.</summary>
+  <summary>ThingsPool now supports two-story rooms.</summary>
 </entry>
 <entry>
-  <title>Game Modes Are Here</title>
+  <title>Game Modes</title>
   <link href="https://thingspool.net/devlog-2026/page-2.html"/>
   <id>https://thingspool.net/devlog-2026/page-2.html</id>
   <updated>2026-08-15T00:00:00.000Z</updated>
-  <summary>ThingsPool now has game modes. Enter play mode to explore a room and talk to whoever else is in it, or switch to edit mode to craft the space you actually want.</summary>
+  <summary>ThingsPool now supports distinct game modes.</summary>
 </entry>
 <entry>
-  <title>Introducing ThingsPool, a 3D World You Can Rebuild</title>
+  <title>Introducing ThingsPool</title>
   <link href="https://thingspool.net/devlog-2026/page-1.html"/>
   <id>https://thingspool.net/devlog-2026/page-1.html</id>
   <updated>2026-08-08T00:00:00.000Z</updated>
-  <summary>ThingsPool is an immersive 3D chat app that runs in a browser tab. You walk into a shared room as a character, and almost everything in that room is yours to change.</summary>
+  <summary>ThingsPool is a 3D chat app which runs in a browser tab.</summary>
 </entry>
 <entry>
   <title>SpaceTown</title>
