@@ -1,6 +1,7 @@
 import InstancedColorMaterialParams from "../graphics/material/types/instancedColorMaterialParams";
 import InstancedEyeMaterialParams from "../graphics/material/types/instancedEyeMaterialParams";
 import InstancedTinMaterialParams from "../graphics/material/types/instancedTinMaterialParams";
+import InstancedWoodMaterialParams from "../graphics/material/types/instancedWoodMaterialParams";
 import Vec3 from "../math/types/vec3";
 
 // Runtime Environment
@@ -119,23 +120,29 @@ export const GEOMETRY_CODE_BY_ID: {[geometryId: string]: number} = {
 export const INSTANCED_COLOR_MATERIAL_ID = new InstancedColorMaterialParams().getMaterialId();
 export const INSTANCED_EYE_MATERIAL_ID = new InstancedEyeMaterialParams().getMaterialId();
 export const INSTANCED_TIN_MATERIAL_ID = new InstancedTinMaterialParams().getMaterialId();
+export const INSTANCED_WOOD_MATERIAL_ID = new InstancedWoodMaterialParams().getMaterialId();
 
 export const MATERIAL_ID_BY_CODE: string[] = [
     INSTANCED_COLOR_MATERIAL_ID, // 0
     INSTANCED_EYE_MATERIAL_ID, // 1
     INSTANCED_TIN_MATERIAL_ID, // 2
+    INSTANCED_WOOD_MATERIAL_ID, // 3
 ];
 export const MATERIAL_CODE_BY_ID: {[materialId: string]: number} = {};
 MATERIAL_CODE_BY_ID[INSTANCED_COLOR_MATERIAL_ID] = 0;
 MATERIAL_CODE_BY_ID[INSTANCED_EYE_MATERIAL_ID] = 1;
 MATERIAL_CODE_BY_ID[INSTANCED_TIN_MATERIAL_ID] = 2;
+MATERIAL_CODE_BY_ID[INSTANCED_WOOD_MATERIAL_ID] = 3;
 
 // Materials that tint each instance through the instance color (InstancedMesh.setColorAt), and
 // hence need a composition part's color both encoded and pushed to the GPU. Anything driven by
 // specialized per-instance attributes instead (e.g. the eye colors) is deliberately excluded.
+// A material may appear here and still read attributes of its own: the wood surface takes its
+// background color this way and its moulding color from a buffer attribute alongside it.
 export const INSTANCE_COLORED_MATERIAL_IDS: string[] = [
     INSTANCED_COLOR_MATERIAL_ID,
     INSTANCED_TIN_MATERIAL_ID,
+    INSTANCED_WOOD_MATERIAL_ID,
 ];
 
 export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
@@ -150,6 +157,25 @@ export const MAX_MESH_INSTANCES_PER_PLAYER = 32;
 export const UNIT_PLAYER_PART_LENGTH = 0.125;
 export const SAFE_PLAYER_PART_CIRCLE_DIAMETER_IN_UNITS = 2 * Math.sqrt(5);
 export const SAFE_PLAYER_PART_CIRCLE_STICK_OUT_LENGTH_IN_UNITS = Math.sqrt(5) - 2;
+
+// Door
+
+export const DOOR_GEOMETRY_ID = "Square";
+
+// How much wall a door lays claim to, and how much of that claim it actually fills. The footprint is
+// what other wall attachments are kept out of; the panel is what is drawn, centered across the
+// footprint and flush with its bottom. The difference is deliberate margin: room to stand two doors
+// side by side without their frames touching, and a gap under the ceiling above.
+//
+// The footprint stands exactly one storey tall, so a door reaches from the floor it is mounted on to
+// just under the slab over it, and the panel keeps a door's real proportions within that.
+export const DOOR_FOOTPRINT_WIDTH = 1.5;
+export const DOOR_FOOTPRINT_HEIGHT = NUM_COLLISION_LAYERS_PER_STOREY * COLLISION_LAYER_HEIGHT; // 3.5
+export const DOOR_PANEL_WIDTH = 1.375;
+export const DOOR_PANEL_HEIGHT = 3.25;
+
+export const MAX_DOORS_PER_ROOM = 16;
+export const MAX_MESH_INSTANCES_PER_DOOR = 8;
 
 // Voxel Grid
 

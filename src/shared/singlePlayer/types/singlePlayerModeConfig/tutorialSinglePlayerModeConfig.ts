@@ -4,7 +4,7 @@ import RoomBuilderParams from "../../../room/generation/types/params/roomBuilder
 import RoomPalette from "../../../room/generation/types/roomPalette";
 import RoomVolume from "../../../room/generation/types/roomVolume";
 import Room from "../../../room/types/room";
-import { COLLISION_LAYER_MIN, PLAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
+import { COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, PLAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
 import SinglePlayerModeConfig from "./singlePlayerModeConfig";
 
 let cachedParams: RoomBuilderParams | undefined;
@@ -52,7 +52,9 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
             // for it, and falls back to this one when that search comes up empty.
             floor: {x: entranceVoxelCol + 0.5, y: 0, z: entranceVoxelRow - 3 + 0.5},
             npc: {x: x0 + X - 1 + 0.5, y: 0.5 * PLAYER_HEIGHT, z: z0 + Z1 + 0.5*(Z2 - 1) + 0.5},
-            door: {x: x0 + X - 1 - 0.5*(X3 - 1) + 0.5, y: 0, z: z0 + 0.001}, // added 0.001 to prevent z-fighting
+            // A door's collider is centered on its position while the door itself stands on the
+            // floor, so its origin sits half a footprint up (see DoorObjectTypeConfig).
+            door: {x: x0 + X - 1 - 0.5*(X3 - 1) + 0.5, y: 0.5 * DOOR_FOOTPRINT_HEIGHT, z: z0},
         };
 
         // Every one of the tutorial's spaces is on the first storey and none on the storey above,

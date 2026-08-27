@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_EYE_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_EYE_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
 import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import GameObject from "../types/gameObject";
@@ -14,6 +14,7 @@ import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 const INSTANCE_COLORED_SUFFIXES = INSTANCE_COLORED_MATERIAL_IDS.map(
     (materialId) => MeshDataUtil.getInstancedMeshId("", materialId));
 const INSTANCED_EYE_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_EYE_MATERIAL_ID);
+const INSTANCED_WOOD_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_WOOD_MATERIAL_ID);
 
 function usesInstanceColor(instancedMeshId: string): boolean
 {
@@ -248,6 +249,17 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 this.instancedMeshGraphics.updateInstanceColor(
                     instancedMeshId, instanceId,
                     part.color!.x, part.color!.y, part.color!.z);
+            }
+
+            // Checked separately from the instance color above rather than as an alternative to it:
+            // a moulded wooden part takes its surface color through the instance color like any
+            // other, and carries the moulding around its border on top of that.
+            if (instancedMeshId.endsWith(INSTANCED_WOOD_SUFFIX))
+            {
+                this.instancedMeshGraphics.updateInstanceMouldingParams(
+                    instancedMeshId, instanceId,
+                    part.mouldingColor!.x, part.mouldingColor!.y, part.mouldingColor!.z,
+                    part.mouldingThickness!, part.mouldingIsConvex!);
             }
             else if (instancedMeshId.endsWith(INSTANCED_EYE_SUFFIX))
             {

@@ -21,8 +21,14 @@ import { regularRoom, namedUser, usersInRoom } from "../helpers/scenarioPresets"
 import {
     encodePlayerComposition, decodePlayerComposition, playerCodecPrefix,
     PLAYER_CODEC_TYPE, PLAYER_CODEC_VERSION,
+    encodeDoorComposition, decodeDoorComposition, doorCodecPrefix, DOOR_CODEC_TYPE,
+    generateDefaultDoorComposition,
 } from "../helpers/composition";
 import { PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
+import { DoorCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/doorCompositionCodec";
+import DoorCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
+import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import { InstancedMeshCompositionBuilderMap } from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCompositionBuilderMap";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
@@ -303,3 +309,155 @@ describe("player mesh composition", () => {
         expect(PLAYER_CODEC_VERSION).toBeGreaterThanOrEqual(0);
     });
 });
+
+/**
+ * A door's appearance is carried the same way a player's is — an encoded string in the object's
+ * InstancedMeshComposition metadata — but is decided for the door rather than chosen by anyone, and
+ * has to come out the same for every player standing in the room and the same again next session.
+ */
+describe("door mesh composition", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    // ─── Codec: round-trip & determinism ───────────────────────────────
+
+    it("a composition survives an encode/decode round-trip", () => {
+        const {params, parts} = DoorCompositionCodec.getRandomComposition(12345);
+        const encoded = doorCodecPrefix() + DoorCompositionCodec.encode(params, parts);
+
+        const decoded = decodeDoorComposition(encoded);
+
+        expect(decoded.params.colors).toEqual(params.colors);
+        expect(decoded.parts.length).toBe(parts.length);
+    });
+
+    it("the same seed always yields the same door", () => {
+        const a = DoorCompositionCodec.getRandomComposition(777);
+        const b = DoorCompositionCodec.getRandomComposition(777);
+
+        expect(DoorCompositionCodec.encode(a.params, a.parts))
+            .toBe(DoorCompositionCodec.encode(b.params, b.parts));
+    });
+
+    it("decoding is idempotent — re-encoding a decoded door reproduces the string", () => {
+        fc.assert(fc.property(fc.integer(), (seed) => {
+            const encoded = encodeDoorComposition(seed);
+            const decoded = decodeDoorComposition(encoded);
+            const reEncoded = doorCodecPrefix()
+                + DoorCompositionCodec.encode(decoded.params, decoded.parts);
+            expect(reEncoded).toBe(encoded);
+        }), {numRuns: 100});
+    });
+
+    it("every authored color scheme survives the palette the codec quantizes to", () => {
+        // A scheme is written as hex and encoded as a palette index, so a color that does not land
+        // on a palette entry would come back as a different one and the finish would not be what was
+        // authored. Asserted here rather than trusted, since the palette is shared and may change.
+        for (const scheme of DoorCompositionConstants.colorSchemes)
+        {
+            for (const color of Object.values(scheme))
+            {
+                expect(ColorUtil.base94IndexToRGB(ColorUtil.rgbToBase94Index(color))).toEqual(color);
+            }
+        }
+    });
+
+    // ─── Codec: robustness against untrusted input ─────────────────────
+
+    it("decoding an arbitrary string never throws and still yields a drawable door", () => {
+        fc.assert(fc.property(fc.string(), (garbage) => {
+            const decoded = decodeDoorComposition(doorCodecPrefix() + garbage);
+            expectRenderableBody(decoded.params, decoded.parts);
+            expectMouldedParts(decoded.parts);
+        }), {numRuns: 500});
+    });
+
+    it("a truncated composition decodes to a drawable door", () => {
+        for (let length = 0; length < 6; ++length)
+        {
+            const partial = encodeDoorComposition(42).substring(0, 2 + length);
+            const decoded = decodeDoorComposition(partial);
+            expectRenderableBody(decoded.params, decoded.parts);
+            expectMouldedParts(decoded.parts);
+        }
+    });
+
+    // ─── The appearance a door falls back on ───────────────────────────
+
+    it("a door's default appearance depends on where it stands, not on who is looking at it", () => {
+        // A client-spawned object carries the viewing user's id, so anything derived from the user
+        // would give each player in a room a different door. Two rooms should differ; the same room
+        // must not.
+        const a = generateDefaultDoorComposition("room-a", "#entrance_door");
+        const b = generateDefaultDoorComposition("room-a", "#entrance_door");
+        expect(b.params.colors).toEqual(a.params.colors);
+
+        // Across a spread of rooms, the doors must not all come out the same.
+        const finishes = new Set<string>();
+        for (let i = 0; i < 40; ++i)
+        {
+            const {params, parts} = generateDefaultDoorComposition(`room-${i}`, "#entrance_door");
+            finishes.add(DoorCompositionCodec.encode(params, parts));
+        }
+        expect(finishes.size).toBeGreaterThan(1);
+    });
+
+    it("a door's default appearance is one of the authored schemes", () => {
+        for (let i = 0; i < 40; ++i)
+        {
+            const {params} = generateDefaultDoorComposition(`room-${i}`, "#entrance_door");
+            expect(DoorCompositionConstants.colorSchemes).toContainEqual(params.colors);
+        }
+    });
+
+    // ─── Permissions ───────────────────────────────────────────────────
+
+    it("nobody may re-skin a door", () => {
+        // Doors are decided for the room, not chosen. The codec is nonetheless a plain set of
+        // colors, so opening this up later needs no change to the wire format.
+        const user = {id: "u"} as any;
+        expect(DoorObjectTypeConfig.canUserSetObjectMetadata(
+            user, "owner" as any, {} as any, {} as any,
+            {metadataKey: COMPOSITION_KEY, metadataValue: encodeDoorComposition(1)} as any)).toBe(false);
+    });
+
+    // ─── Config coherence ──────────────────────────────────────────────
+
+    it("the door object is configured with the codec these tests encode against", () => {
+        const encoded = encodeDoorComposition(0);
+        expect(encoded.startsWith(doorCodecPrefix())).toBe(true);
+        // A door and a player must not claim the same codec, or one would decode the other's string.
+        expect(DOOR_CODEC_TYPE).not.toBe(PLAYER_CODEC_TYPE);
+    });
+
+    it("every part of a door is drawn by a mesh the composition itself declares", () => {
+        const {params, parts} = DoorCompositionCodec.getRandomComposition(1);
+        // A door is laid down back to front, each region in front of what it is let into, so that
+        // quads sharing a plane never z-fight (see DoorCompositionConstants).
+        expectRenderableBody(params, parts);
+        expectMouldedParts(parts);
+        const reliefs = parts.map((part) => Math.abs(part.offset.z));
+        expect(Math.min(...reliefs)).toBeGreaterThan(0);
+        expect(new Set(reliefs).size).toBeGreaterThan(1);
+    });
+});
+
+// Asserts that every part carries the per-instance moulding inputs the wood material reads. A part
+// missing them would be drawn with a zero-width band and no trim color at all.
+function expectMouldedParts(parts: InstancedMeshCompositionPart[]): void
+{
+    for (const part of parts)
+    {
+        expect(part.mouldingThickness).toBeGreaterThan(0);
+        expect(typeof part.mouldingIsConvex).toBe("boolean");
+        for (const channel of [part.mouldingColor.x, part.mouldingColor.y, part.mouldingColor.z])
+        {
+            expect(Number.isFinite(channel)).toBe(true);
+            expect(channel).toBeGreaterThanOrEqual(0);
+            expect(channel).toBeLessThanOrEqual(255);
+        }
+    }
+}

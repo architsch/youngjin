@@ -309,6 +309,22 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | a restored composition survives a room switch | A composition restored from stored player metadata follows the player through a room change |
 | the player object is configured with the codec these tests encode against | Guard: the player object's composer config uses the codec type/version the tests encode with |
 
+## Door Mesh Composition (`composition.test.ts`) — 11 tests
+
+| Test | What it verifies |
+|------|-----------------|
+| a composition survives an encode/decode round-trip | Encoding a random door and decoding it reproduces the same colors and part count |
+| the same seed always yields the same door | `DoorCompositionCodec.getRandomComposition` is deterministic per seed |
+| decoding is idempotent — re-encoding a decoded door reproduces the string | Decode → re-encode is stable for any seed (property-based) |
+| every authored color scheme survives the palette the codec quantizes to | Each scheme's colors land exactly on palette entries, so a finish is decoded as it was authored |
+| decoding an arbitrary string never throws and still yields a drawable door | Property-based: any garbage string decodes without throwing into a door with valid moulding inputs on every part |
+| a truncated composition decodes to a drawable door | Every truncation length of a valid string still decodes safely |
+| a door's default appearance depends on where it stands, not on who is looking at it | The fallback composition is seeded from room + object id, so it is stable per room and varies across rooms |
+| a door's default appearance is one of the authored schemes | The fallback never invents a color combination outside the curated set |
+| nobody may re-skin a door | `DoorObjectTypeConfig` refuses composition metadata writes from any user |
+| the door object is configured with the codec these tests encode against | Guard: the door's composer config uses the codec type/version the tests encode with, and does not collide with the player's |
+| every part of a door is drawn by a mesh the composition itself declares | Every part names a declared mesh, carries moulding inputs, and stands at a non-zero relief with more than one distinct depth |
+
 ## Signal Emission (`signals.test.ts`) — 6 tests
 
 | Test | What it verifies |
@@ -695,6 +711,7 @@ for how to run it. It skips itself when no emulator is available.
 | Single-Player | 14 |
 | FTUE | 26 |
 | Player Mesh Composition | 16 |
+| Door Mesh Composition | 11 |
 | Signals | 6 |
 | Permissions | 5 |
 | Extended Permissions | 16 |
@@ -706,4 +723,4 @@ for how to run it. It skips itself when no emulator is available.
 | Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **445** |
+| **Total** | **456** |

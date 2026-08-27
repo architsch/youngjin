@@ -58,6 +58,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
     - [Room Entrance Structure](docs/geometry/room_entrance.md)
     - [Room Generation System](docs/geometry/room_generation.md)
     - [Player Customization System](docs/geometry/player_customization.md)
+    - [Door Design](docs/geometry/door_design.md)
 
 - **Graphics**
     - [Camera Control](docs/graphics/camera_control.md)

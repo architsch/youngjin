@@ -53,8 +53,8 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
                 maxNumInstancesPerMesh: MAX_PLAYERS_PER_ROOM * MAX_MESH_INSTANCES_PER_PLAYER,
                 codecType: InstancedMeshCompositionCodecTypeEnumMap.Player,
                 codecVersion: 0,
-                generateDefaultParts: (sourceUserID: string) => {
-                    const hashCode = StringUtil.getHashCode(sourceUserID);
+                generateDefaultParts: (obj: AddObjectSignal) => {
+                    const hashCode = StringUtil.getHashCode(obj.sourceUserID);
                     return PlayerCompositionCodec.getRandomComposition(hashCode);
                 },
             },

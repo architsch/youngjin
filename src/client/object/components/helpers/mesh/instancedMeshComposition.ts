@@ -63,7 +63,7 @@ export default class InstancedMeshComposition
         if (!metadata || !this.canDecode(metadata.str))
         {
             const config = gameObject.components.instancedMeshComposer.componentConfig;
-            const {params, parts} = config.generateDefaultParts(gameObject.params.sourceUserID);
+            const {params, parts} = config.generateDefaultParts(gameObject.params);
             Object.assign(this.params, params);
             for (let i = 0; i < parts.length; ++i)
                 this.parts.push(parts[i]);

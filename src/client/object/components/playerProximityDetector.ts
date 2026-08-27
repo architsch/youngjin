@@ -118,9 +118,11 @@ export default class PlayerProximityDetector extends GameObjectComponent
     // Whether the object stands where the camera can actually see it, rather than behind whatever
     // else the room has put in the way.
     //
-    // What is looked for is the drawn mesh's own centre wherever there is one, rather than the
-    // object's origin: an origin sits on the floor the object stands on rather than anywhere on the
-    // object itself, which makes for a probe point that grazes that floor from every angle.
+    // What is looked for is a point on the object itself. An object drawn from a mesh hung off its
+    // origin is asked for that mesh's centre, since such an origin need not sit anywhere on the
+    // object — one left down on the floor would give a probe point that grazes the floor from every
+    // angle. Everything else is asked for its own position, which for an object whose collider is
+    // centred on it (a door, say) is already the middle of the thing.
     private objectIsInSight(): boolean
     {
         if (!this.checkLineOfSight)

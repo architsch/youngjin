@@ -362,6 +362,31 @@ export default class InstancedMeshBinding
         markInstanceForUpload(irisColorAttrib, instanceId);
     }
 
+    // The moulding running around one "InstancedWood" instance's border: its color, how wide the
+    // band is in world units (not in the quad's own coordinates, which is what keeps a moulding the
+    // same width whatever it frames), and whether its profile stands proud of the surface or is
+    // sunk into it.
+    updateInstanceMouldingParams(gameObject: GameObject, instanceId: number,
+        r: number, g: number, b: number,
+        thickness: number, convex: boolean)
+    {
+        if (!this.instancedMesh)
+        {
+            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
+            return;
+        }
+        // Colors arrive as sRGB values in range [0,255] (see ColorUtil); convert them into the
+        // renderer's working color space, the same treatment three.js gives material colors.
+        const mouldingColorAttrib = this.getOrCreateInstancedAttribute("mouldingColor", 3);
+        colorTemp.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
+        mouldingColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
+        markInstanceForUpload(mouldingColorAttrib, instanceId);
+
+        const mouldingParamsAttrib = this.getOrCreateInstancedAttribute("mouldingParams", 2);
+        mouldingParamsAttrib.setXY(instanceId, thickness, convex ? 1 : -1);
+        markInstanceForUpload(mouldingParamsAttrib, instanceId);
+    }
+
     // Radii are fractions of the square's side length (0.5 = the circle touches the square's
     // edges). They are squared here so the "InstancedEye" fragment shader can compare them
     // directly against the squared UV-space distance from the square's center.

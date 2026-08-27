@@ -1,6 +1,8 @@
 # Geometry of Wall-Attached Objects
 
-A wall-attached object is a game object mounted on the surface of a voxel wall (e.g. a painting, shelf, or wall lamp). Its position snaps to a regular sub-cell grid, and its facing direction is always axis-aligned, pointing outward from the wall it is attached to.
+A wall-attached object is a game object mounted on the surface of a voxel wall (e.g. a painting, or a [door](door_design.md)). Its position snaps to a regular sub-cell grid, and its facing direction is always axis-aligned, pointing outward from the wall it is attached to.
+
+An attachment's collider is centred on its position, so one that stands on a floor rather than hanging at eye level has its origin half its own height above that floor. A door is the case that matters.
 
 ## Position & Direction Quantization
 Wall-attached object transforms are quantized before use: positions snap to the nearest sub-cell grid point, facing directions round to the nearest axis-aligned unit vector, and the collider's footprint is sized to whole grid steps. This keeps these objects flush with the wall and aligned with the voxel structure behind them.

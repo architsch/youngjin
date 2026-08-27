@@ -26,7 +26,12 @@ export default interface ObjectTypeConfig
                 maxNumInstancesPerMesh: number,
                 codecType: InstancedMeshCompositionCodecType,
                 codecVersion: number,
-                generateDefaultParts: (sourceUserID: string) =>
+                // What an object looks like before anything has been chosen for it. Handed the whole
+                // object rather than one field of it, because different kinds of object are
+                // recognized by different things: a player by who he belongs to, a door by the room
+                // it stands in. Whatever is picked has to come out the same on every client and in
+                // every session, so this must be derived from the object rather than drawn freshly.
+                generateDefaultParts: (obj: AddObjectSignal) =>
                     {params: InstancedMeshCompositionParams,
                         parts: InstancedMeshCompositionPart[]},
             },

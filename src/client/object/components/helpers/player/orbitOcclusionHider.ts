@@ -334,9 +334,9 @@ export default class OrbitOcclusionHider
     // A ray reports the one piece of geometry it struck, but an object need not be one piece: a
     // composed object draws each of its parts as an instance of its own, and hiding only the part a
     // sample happened to land on would leave the rest of it standing in front of what the camera is
-    // meant to see. So an object found in the way goes out of sight whole. Objects drawn as a single
-    // piece have nothing further to hide, and say so by carrying no composer — which is the case for
-    // everything the room currently declares an occluder, a canvas and a door alike.
+    // meant to see. So an object found in the way goes out of sight whole — a door, whose slab,
+    // panels, plate and knob are each an instance of their own, most of all. Objects drawn as a
+    // single piece have nothing further to hide, and say so by carrying no composer.
     private hideRemainingPartsOf(gameObject: GameObject): void
     {
         const composer = gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;

@@ -104,6 +104,14 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             this.gameObject, instanceId, r, g, b);
     }
 
+    updateInstanceMouldingParams(instancedMeshId: string, instanceId: number,
+        r: number, g: number, b: number,
+        thickness: number, convex: boolean)
+    {
+        bindingMap[instancedMeshId].updateInstanceMouldingParams(
+            this.gameObject, instanceId, r, g, b, thickness, convex);
+    }
+
     updateInstanceEyeColors(instancedMeshId: string, instanceId: number,
         r_pupil: number, g_pupil: number, b_pupil: number,
         r_iris: number, g_iris: number, b_iris: number)

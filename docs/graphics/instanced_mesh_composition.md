@@ -26,4 +26,5 @@ An instance may additionally be hidden *temporarily*, by something other than it
 ## Related docs
 
 - [Player Customization](../geometry/player_customization.md) — primary use case of the instanced mesh composition system
+- [Door Design](../geometry/door_design.md) — a door is composed the same way, out of moulded quads
 - [Camera Control](camera_control.md) — hides instances that stand between the orbit camera and what it frames
