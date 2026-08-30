@@ -128,26 +128,80 @@ async function tap(page, x, y)
 
 // A tap on the room, made where the point of it is to change what is picked out.
 //
+// Two things happen to such a tap that look identical from outside, and telling them apart is the
+// whole job here.
+//
 // A control hanging off the current selection — the character's own options, a color palette — puts
 // itself away when the room behind it is tapped, and *spends* the tap doing so, so that the user who
 // meant to close the control does not lose the selection along with it. That tap never reaches the
-// canvas. It is correct behaviour and invisible from outside: the pixel is over the canvas, the cast
-// through it meets the wall, and nothing happens.
+// canvas: the pixel is over the canvas, the cast through it meets the wall, and nothing happens. A
+// tap that changed nothing is therefore given one more attempt, and only one — a second silent tap
+// means something other than this.
 //
-// So a tap meant to change the selection is given a second attempt when the first changed nothing,
-// and the report says which it took. Only one: a second silent tap means something other than this.
+// Tapping what is *already* picked out is the opposite case: it is how a selection is let go of, so
+// the tap lands and the answer to it is that there is now no selection. Retrying that would pick the
+// same thing straight back up and leave no trace of what happened in between — and in edit mode what
+// happens in between is that the mode ends, because the mode is the selection. So it is reported
+// rather than undone, and the caller decides what to do about it.
 async function tapToSelect(page, x, y)
 {
-    const before = JSON.stringify(await call(page, "selection"));
-    await tap(page, x, y);
-    await sleep(400);
-
-    if (JSON.stringify(await call(page, "selection")) !== before)
-        return { taps: 1, firstTapSpent: false };
+    const before = await call(page, "selection");
+    const hadSelection = before.object != null || before.voxelQuad != null || before.player != null;
 
     await tap(page, x, y);
     await sleep(400);
-    return { taps: 2, firstTapSpent: true };
+    let after = await call(page, "selection");
+
+    if (JSON.stringify(after) !== JSON.stringify(before))
+    {
+        const nowEmpty = after.object == null && after.voxelQuad == null && after.player == null;
+        return { taps: 1, firstTapSpent: false,
+            outcome: (hadSelection && nowEmpty) ? "deselected" : "selected", selection: after };
+    }
+
+    await tap(page, x, y);
+    await sleep(400);
+    after = await call(page, "selection");
+    const nowEmpty = after.object == null && after.voxelQuad == null && after.player == null;
+    return { taps: 2, firstTapSpent: true,
+        outcome: nowEmpty ? "nothing" : "selected", selection: after };
+}
+
+// ─── The mode a scenario is being carried out in ────────────────────────
+
+async function gameMode(page)
+{
+    return (await call(page, "context")).gameMode;
+}
+
+// Puts the app back into edit mode after something dropped it out.
+//
+// Worth a helper rather than a line in the caller, because edit mode is not a place the app stays
+// put: it is held up by whatever is picked out, and letting that go ends it (see GameModeUtil). A
+// run that tries surfaces one after another lets a selection go every time it taps one it already
+// had, so falling out of the mode is an ordinary event on the way rather than a fault.
+//
+// There are two ways back in and they are not interchangeable. With something already picked out the
+// app offers to open the mode on that, which keeps it; with nothing picked out the mode is entered
+// on the user's own character instead.
+async function ensureEditMode(page, timeout = 10_000)
+{
+    if (await gameMode(page) === "edit")
+        return false;
+
+    const resume = ui.locator(page, "startEditingButton");
+    if (await resume.count() > 0)
+        await resume.click({timeout});
+    else
+    {
+        await ui.locator(page, "editModeButton").click({timeout});
+        await page.locator("#customizePlayerOptions").waitFor({state: "visible", timeout});
+    }
+
+    await sleep(300);
+    if (await gameMode(page) !== "edit")
+        throw new Error("Could not get back into edit mode after the selection was let go of.");
+    return true;
 }
 
 // Dragging across the canvas is how the view is turned, which is the only way to bring something
@@ -328,6 +382,7 @@ async function clickSurface(page, options = {})
     if (options.pick != null)
         candidates = [options.pick(candidates)];
 
+    const startingMode = await gameMode(page);
     const attempts = Math.min(candidates.length, options.maxAttempts ?? 6);
     for (let attempt = 0; attempt < attempts; attempt++)
     {
@@ -338,6 +393,11 @@ async function clickSurface(page, options = {})
 
         if (after.voxelQuad != null && JSON.stringify(after.voxelQuad) !== JSON.stringify(before.voxelQuad))
             return { ...chosen, ...tapped, attempts: attempt + 1 };
+
+        // Tapping the patch already picked out lets it go, and in edit mode the mode goes too. The
+        // next candidate has to be tried from the mode this one started in, not from play mode.
+        if (tapped.outcome === "deselected" && startingMode === "edit")
+            await ensureEditMode(page);
     }
 
     throw new Error(
@@ -355,20 +415,63 @@ async function clickSurface(page, options = {})
 // control. So this asks it, once per candidate, and reports how many patches were offered and
 // refused — which is the difference between "this room has nowhere to put one" and "the tool is
 // broken", the two readings the same symptom otherwise has.
+// Where a room is not offering what is being looked for anywhere in sight, a person does not stand
+// still and squint — he goes and looks somewhere else. These are the moves the search makes between
+// views, in order: widen the view first, since that is free and often enough, then cover ground.
+const DEFAULT_SEARCH_MOVES = [
+    async (page) => { await zoom(page, -400); },
+    async (page) => { await orbit(page, 0, 150); },
+    async (page) => { await walk(page, "KeyW", 1200); },
+    async (page) => { await orbit(page, 700, 0); },
+    async (page) => { await walk(page, "KeyA", 1200); },
+    async (page) => { await orbit(page, 700, -150); },
+    async (page) => { await walk(page, "KeyW", 1600); },
+    async (page) => { await orbit(page, 700, 150); },
+];
+
+// Which of the candidates to actually try, when there are more of them than there are attempts.
+//
+// Taking the nearest few is the obvious choice and the wrong one. What is nearest to a player
+// standing in a room is the floor under him and the low blocks around him, and those are the very
+// surfaces least likely to take anything: a thing hung on a wall needs wall behind it over its whole
+// height. The surfaces that qualify are further off and higher up, and a search that spends every
+// attempt on the closest cluster never reaches one — it reports the room as having nowhere while
+// standing a few paces from somewhere.
+//
+// So the attempts are spread evenly across the whole ordered set instead, near to far.
+function spread(candidates, count)
+{
+    if (candidates.length <= count)
+        return candidates;
+    if (count <= 1)
+        return candidates.slice(0, count);
+
+    const picked = [];
+    for (let i = 0; i < count; i++)
+        picked.push(candidates[Math.round((i * (candidates.length - 1)) / (count - 1))]);
+    return picked;
+}
+
 async function clickSurfaceUntilEnabled(page, elementId, options = {})
 {
     const maxPerView = options.maxAttempts ?? 12;
-    const views = options.views ?? 3;
+    const moves = options.moves ?? DEFAULT_SEARCH_MOVES;
+    const views = options.views ?? Math.min(moves.length + 1, 4);
     const tried = [];
+
+    // The mode the search begins in is the mode it has to stay in: the control being waited on lives
+    // there, and every one of the moves below can end it — walking is a movement key, and tapping a
+    // surface that is already picked out lets the selection the mode stands on go.
+    const startingMode = await gameMode(page);
 
     for (let view = 0; view < views; view++)
     {
-        // Only part of a room is on screen at once, and the part on screen while standing in it is
-        // the part at eye height. Whatever is being placed may only go somewhere else — low on a
-        // wall, high on one — so when a whole view offers nowhere, the view is widened and the
-        // search runs again, which is what a person does rather than concluding there is nowhere.
         if (view > 0)
-            await zoom(page, -400);
+        {
+            await moves[(view - 1) % moves.length](page);
+            if (startingMode === "edit")
+                await ensureEditMode(page);
+        }
 
         const hits = await call(page, "probeGrid", options.grid ?? {cols: 11, rows: 9, margin: 0.06});
         const candidates = hits
@@ -377,13 +480,23 @@ async function clickSurfaceUntilEnabled(page, elementId, options = {})
             .filter(hit => (options.objectType == null ? true : hit.objectType === options.objectType))
             .sort((a, b) => a.distance - b.distance);
 
-        const attempts = Math.min(candidates.length, maxPerView);
-        for (let attempt = 0; attempt < attempts; attempt++)
+        const chosenCandidates = spread(candidates, maxPerView);
+        for (const chosen of chosenCandidates)
         {
-            const chosen = candidates[attempt];
             const before = await call(page, "selection");
-            await tapToSelect(page, chosen.screen.x, chosen.screen.y);
+            const tapped = await tapToSelect(page, chosen.screen.x, chosen.screen.y);
             const after = await call(page, "selection");
+
+            if (tapped.outcome === "deselected")
+            {
+                // The patch under this grid point is the one already picked out, so the tap let it
+                // go — and in edit mode the mode went with it. Nothing was learnt about the patch
+                // that is not already known, but the mode has to be recovered before the next one.
+                tried.push({...chosen, view, outcome: "already picked out"});
+                if (startingMode === "edit")
+                    await ensureEditMode(page);
+                continue;
+            }
 
             if (after.voxelQuad == null ||
                 JSON.stringify(after.voxelQuad) === JSON.stringify(before.voxelQuad))
@@ -395,9 +508,12 @@ async function clickSurfaceUntilEnabled(page, elementId, options = {})
             if ((await ui.locator(page, elementId).count()) === 0)
             {
                 // Absent rather than disabled, which is a different answer: the app is not offering
-                // this action here at all, usually because of who the user is.
+                // this action here at all — because of who the user is, or because the mode the
+                // control belongs to is no longer the mode being stood in.
                 tried.push({...chosen, view, quad: after.voxelQuad,
-                    outcome: `#${elementId} not present`});
+                    mode: await gameMode(page), outcome: `#${elementId} not present`});
+                if (startingMode === "edit")
+                    await ensureEditMode(page);
                 continue;
             }
 
@@ -499,6 +615,7 @@ module.exports = {
     hasBridge, waitForBridge, waitForRoom, call,
     find, findAll, diagnose,
     tap, tapToSelect, orbit, zoom, walk, approach,
+    gameMode, ensureEditMode,
     clickObject, clickSurface, clickSurfaceUntilEnabled, waitForSelection,
     ui, sleep,
 };

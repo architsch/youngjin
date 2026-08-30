@@ -36,7 +36,7 @@
       "type": "clickSurfaceUntilEnabled",
       "elementId": "addDoorButton",
       "objectType": "Voxel",
-      "views": 5,
+      "views": 8,
       "maxAttempts": 20
     },
     {

@@ -151,7 +151,7 @@ Session actions: `start`, `reload`, `waitForRoom`, `skipTutorial`, `dismissPopup
 Data actions: `listRooms`, `searchRooms`, `hubEntries`, `myRoomEntry`.
 World actions: `objects`, `clickObject`, `clickSurface`, `clickSurfaceUntilEnabled`, `orbit`,
 `zoom`, `walk`, `expectSelection`.
-UI actions: `enterEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `fill`,
+UI actions: `enterEditMode`, `ensureEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `fill`,
 `expect`, `say`.
 
 `say` sends a chat message through the HUD's own input and send button, which is the only way to
@@ -195,13 +195,23 @@ the click instead. Two more are worth knowing because they look like faults and 
 - **A surface that is not currently drawn refuses selection**, and the surfaces nearest the camera
   are the likeliest to be culled. Candidates are tried in turn rather than a single point being
   aimed at.
+- **Tapping what is already picked out lets it go**, which is how a selection is dropped. In edit
+  mode the mode goes with it, because the mode *is* the selection — so a run that taps its way
+  across a room falls out of edit mode as a matter of course, and the controls it was driving
+  vanish rather than turning disabled. `ensureEditMode` is the way back in, and the searches below
+  call it for themselves.
 
-`clickSurfaceUntilEnabled` picks out surfaces until the named control is actually offered, widening
-the view between rounds. Most of a room is wall that will not take a door and floor that will not
-take a picture; which patch will is a question only the app can answer, and it answers it by
-enabling the control. When none does, the report says how many patches were selectable, how many
-were offered and refused, and how many did not carry the control at all — the difference between
-"nowhere here" and "the tool is broken".
+`clickSurfaceUntilEnabled` picks out surfaces until the named control is actually offered. Most of a
+room is wall that will not take a door and floor that will not take a picture; which patch will is a
+question only the app can answer, and it answers it by enabling the control. When none does, the
+report says how many patches were selectable, how many were offered and refused, and how many did
+not carry the control at all — the difference between "nowhere here" and "the tool is broken".
+
+Between rounds it widens the view and then covers ground, because standing still and squinting is
+not how a person finds somewhere either. Within a round the attempts are spread across everything in
+sight rather than spent on the nearest few: what is nearest to a player is the floor under him and
+the low blocks around him, and those are the surfaces least likely to take anything, since a thing
+hung on a wall needs wall behind it over its whole height.
 
 `uiClick` and `expectDisabled` read the app's own refusal. HUD controls are `div`s carrying
 `aria-disabled` rather than form elements, so a greyed-out one is clicked quite happily by anything

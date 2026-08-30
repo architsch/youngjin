@@ -35,6 +35,11 @@ entrance — the three metadata keys the spawn logic reads. It walks away from t
 first, deliberately: the wall a player is put down facing does not accept a door, and a plan that
 searched only from there would report a refusal that is correct behaviour.
 
+Finding a wall that does take one is the slow part of that plan, and legitimately so. A door needs
+wall behind it over its whole height, which in a generated hub means the tall boundary walls rather
+than the low block work standing about in the middle — so the search is given several places to
+stand before it is allowed to conclude there is nowhere. Expect it to take a minute or two.
+
 `admin-door-remove` expects the door `admin-door-lifecycle` left behind, so run them in order.
 
 ## The refusal scenarios

@@ -479,6 +479,14 @@ async function runPlan(plan)
                     break;
                 }
 
+                case "ensureEditMode":
+                    // Edit mode is held up by whatever is picked out, so letting that go ends it —
+                    // which a plan does whenever it taps the patch it already had. This is the way
+                    // back in, and it reports whether it was needed.
+                    record.reentered = await Interact.ensureEditMode(page);
+                    record.gameMode = await Interact.gameMode(page);
+                    break;
+
                 case "orbit":
                     await Interact.orbit(page, action.dx || 0, action.dy || 0);
                     break;
