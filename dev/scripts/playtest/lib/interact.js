@@ -274,38 +274,112 @@ function diagnose(report)
 // Brings a target within reach, by turning towards it and then walking at it. Both are ordinary
 // input, so a target that cannot be reached this way is one a player could not reach either — which
 // is a finding rather than a harness problem, and is reported as one.
+// How far to drag to bring something at this many pixels off-centre into the middle of the view.
+//
+// Two things about the conversion are easy to get wrong and neither announces itself, because a
+// steer aimed wrongly still moves the view and the run still ends somewhere plausible. A drag
+// carries what is on screen the *opposite* way, so bringing something on the right back to the
+// middle is a drag to the right, not away from it. And the two are different measures: a drag turns
+// the camera, and how far that carries a thing across the screen depends on the field of view —
+// roughly seven screen pixels to one of drag, so a factor guessed near 1 turns straight past the
+// target and then straight past it again coming back.
+function steerDrag(offsetFromCentre)
+{
+    const drag = offsetFromCentre * 0.13;
+    return Math.max(-200, Math.min(200, drag));
+}
+
+// Two things have to happen and they are not interchangeable: the target has to be found, and then
+// it has to be walked to. They are kept to separate budgets deliberately — sharing one lets a long
+// search leave nothing for the walk, and reports a target the run had in plain sight as unreachable.
 async function approach(page, target, options = {})
 {
-    const maxAttempts = options.maxAttempts ?? 6;
+    // Deliberately narrower than the camera's field of view. A sweep made in steps wider than what
+    // the camera can see passes over things: the target is off the right edge on one step and off
+    // the left edge on the next, having been in plain view for none of them, and the search turns
+    // circles around a target it reports as never findable.
+    const orbitStep = options.orbitStep ?? 100;
+    const sweepLimit = options.sweepLimit ?? 14; // Comfortably more than one revolution at that step.
+    const closeLimit = options.closeLimit ?? 12;
+    const rounds = options.rounds ?? 3;
+
+    // What was tried and what the target looked like at each step. An approach that gives up is one
+    // of the harder failures to read from the outside — the run ends standing somewhere arbitrary,
+    // and the last report says only where the target was by then — so the whole walk is carried out
+    // with the error rather than reconstructed by running it again with logging.
+    const steps = [];
+    const note = (move) => steps.push({
+        move,
+        fov: report.inFieldOfView, los: report.inLineOfSight, range: report.withinSelectRange,
+        over: report.overCanvas, by: report.coveredBy,
+        x: report.screen == null ? null : Math.round(report.screen.x),
+        dist: Number(report.distance.toFixed(1)),
+    });
+
     let report = await find(page, target);
+    note("start");
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++)
+    for (let round = 0; round < rounds; round++)
     {
-        const problem = diagnose(report);
-        if (problem == null) return report;
-
-        if (report.screen == null || !report.inFieldOfView)
+        // Turn until it is in view — blind, and always the same way. It is tempting to read the
+        // bearing off the projected position and aim at it, but a projection only means anything
+        // inside the frustum: for a point outside it the coordinate that comes back is a large
+        // number bearing no usable relation to the angle, and steering by it overshoots into the
+        // blind spot behind, sweeps back round, and overshoots again — forever. A plain sweep has
+        // none of that and is bounded: one revolution in steps this size has to bring the target
+        // through the view.
+        for (let turn = 0; turn < sweepLimit && !report.inFieldOfView; turn++)
         {
-            // Nothing to walk towards until it is in view, so turn first.
-            await orbit(page, options.orbitStep ?? 220, 0);
+            await orbit(page, orbitStep, 0);
+            report = await find(page, target);
+            note(`sweep ${orbitStep}`);
         }
-        else if (!report.withinSelectRange || !report.inLineOfSight)
+        if (!report.inFieldOfView)
+            break; // A whole revolution found nothing, and turning further is the same revolution.
+
+        // Then deal with whatever is still in the way, which is not always distance.
+        for (let step = 0; step < closeLimit; step++)
         {
-            // Steer so the target is ahead, then close the distance. Walking is what changes both
-            // the range and what is standing in the way.
+            const problem = diagnose(report);
+            if (problem == null)
+                return report;
+            if (!report.inFieldOfView)
+                break; // Walked past it or turned off it; the next round finds it again.
+
             const {canvas} = await call(page, "camera");
             const offsetFromCentre = report.screen.x - (canvas.left + canvas.width / 2);
-            if (Math.abs(offsetFromCentre) > canvas.width * 0.15)
-                await orbit(page, -offsetFromCentre * 0.6, 0);
-            await walk(page, "KeyW", options.walkMs ?? 600);
-        }
 
-        report = await find(page, target);
+            if (!report.withinSelectRange || !report.inLineOfSight)
+            {
+                // Too far, or something between. Walking is what changes both, and the steer before
+                // it is what keeps the target ahead while doing so.
+                if (Math.abs(offsetFromCentre) > canvas.width * 0.15)
+                    await orbit(page, steerDrag(offsetFromCentre), 0);
+                await walk(page, "KeyW", options.walkMs ?? 700);
+                report = await find(page, target);
+                note("steer + walk");
+                continue;
+            }
+            else
+            {
+                // Within reach and in plain sight, and still not clickable — so the pixel it
+                // occupies belongs to the HUD. The HUD keeps to the edges of the view, which makes
+                // turning the answer and walking exactly the wrong one: it would carry a target
+                // that is already in reach back out of it.
+                if (Math.abs(offsetFromCentre) < canvas.width * 0.05)
+                    break; // Already central and still covered: turning cannot move what is there.
+                await orbit(page, steerDrag(offsetFromCentre), 0);
+                report = await find(page, target);
+                note("steer off the HUD");
+            }
+        }
     }
 
-    throw new Error(
-        `Could not get within reach of ${JSON.stringify(target)} after ${maxAttempts} attempts — ` +
+    const error = new Error(
+        `Could not get within reach of ${JSON.stringify(target)} after ${rounds} rounds of looking — ` +
         `${diagnose(report)}. A player would be stuck here too.`);
+    error.steps = steps;
+    throw error;
 }
 
 // ─── Clicking things in the world ───────────────────────────────────────

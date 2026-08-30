@@ -154,6 +154,20 @@ async function runPlan(plan)
                     if (record.status === 429) rateLimitHits++;
                     if (action.ref) record.ref = action.ref;
                     if (action.devUser != null) record.devUser = action.devUser;
+
+                    // A visit carrying no session of its own is answered by minting a guest, and
+                    // guest creation is capped per IP and per User-Agent. So a machine that has
+                    // already minted several today is refused the page itself — correct behaviour,
+                    // and worth saying here rather than leaving the run to fail several actions
+                    // later with a missing bridge, which reads like a broken deployment.
+                    if (record.status === 401)
+                    {
+                        throw new Error(
+                            `The server would not start a session (HTTP 401 on the landing page). ` +
+                            `Guest creation is capped per IP and per User-Agent, and this machine ` +
+                            `has spent that budget — give the agent a User-Agent of its own, resume ` +
+                            `a session file, or wait for the cap to lapse.`);
+                    }
                     record.resumedSession = resumedSession;
                     record.env = await page.evaluate(() => window.thingspool_env ?? null).catch(() => null);
                     break;
@@ -169,6 +183,14 @@ async function runPlan(plan)
                         const io = (window).__socket_io_instance;
                         return io ? io.connected === true : false;
                     });
+
+                    // The indicator coming down says the room arrived, not that there is yet
+                    // anything standing in it: the contents spawn after, and the user's own
+                    // character with them. A world action run in that gap aims at a room that is
+                    // still filling, which fails as intermittently as the timing varies. So where
+                    // the bridge is installed, the room's own account of itself is waited for too.
+                    if (await Interact.hasBridge(page))
+                        record.roomReady = await Interact.waitForRoom(page, action.timeout || 45_000);
                     break;
                 }
 
@@ -425,13 +447,24 @@ async function runPlan(plan)
                 case "clickObject":
                 {
                     const target = action.target || {};
-                    const report = await Interact.clickObject(page, target, {
-                        approach: action.approach !== false,
-                    });
-                    record.target = target;
-                    record.objectId = report.objectId;
-                    record.objectType = report.objectType;
-                    record.distance = Number(report.distance.toFixed(2));
+                    record.target = action.target || {};
+                    try
+                    {
+                        const report = await Interact.clickObject(page, target, {
+                            approach: action.approach !== false,
+                        });
+                        record.objectId = report.objectId;
+                        record.objectType = report.objectType;
+                        record.distance = Number(report.distance.toFixed(2));
+                    }
+                    catch (err)
+                    {
+                        // Where the walk went, and what the target looked like at each step. An
+                        // approach that gives up otherwise leaves nothing behind but the position it
+                        // gave up from, which says very little about why.
+                        if (err.steps) record.steps = err.steps;
+                        throw err;
+                    }
                     break;
                 }
 

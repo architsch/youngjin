@@ -51,6 +51,11 @@ world-building rather than room-editing.
 For the check that turns on being *registered* rather than on being an admin, promote to `member`
 rather than `admin` — a guest is refused a layer earlier and proves nothing about it.
 
+Guest creation is capped per IP **and** per User-Agent, so a plan that mints a new one every run
+eventually gets HTTP 401 on the landing page instead of a session. That is the cap working, not a
+broken deployment, and the runner says so. Give the plan a `userAgent` of its own, resume a
+`sessionFile`, or wait for the budget to lapse.
+
 ## Writing a new one
 
 The actions are listed in [docs/testing/playtest/workflow.md](../../../../docs/testing/playtest/workflow.md).
