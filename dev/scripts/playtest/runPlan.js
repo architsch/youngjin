@@ -5,17 +5,19 @@
 // click at a time from a model is slow and expensive, and a fixed script cannot react to what
 // it finds. A round of a dozen actions is the middle ground.
 //
-// What this drives, and what it does not:
+// What this drives:
 //   - It runs a real browser with a real Socket.IO connection, so the server sees a genuine
 //     concurrent player: room load, presence, physics, the socket lifecycle.
 //   - Assertions about *data* (room lists, search, pagination, ownership) go through the
 //     page's own authenticated request context. That is the same session and the same cookies
 //     as the UI, but it does not depend on clicking anything.
 //   - HUD controls that carry a stable element id are driven for real (edit mode, the mode's
-//     way out). Anything reached by aiming at the 3D scene — placing a voxel, dragging an
-//     object, the door that opens the room list — is not, because where it sits on screen
-//     depends on the room that was generated. Screenshots cover whether the client rendered;
-//     the request-context checks cover whether the data behind it is right.
+//     way out, everything a selection raises).
+//   - The 3D scene is driven for real too, through lib/interact.js: the page is asked where
+//     something is and whether a click would reach it, and the click itself is an ordinary
+//     pointer gesture on the canvas. Nothing about that path is simulated — the tap
+//     arbitration, the raycast and the permission check inside the object's own handler all
+//     run — so a world action that fails here is one that would fail for a player.
 //
 // Usage:
 //   node dev/scripts/playtest/runPlan.js <plan.json> [--out <result.json>]
@@ -23,6 +25,7 @@
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("@playwright/test");
+const Interact = require("./lib/interact");
 
 const DEFAULT_BASE_URL = "https://staging.thingspool.net";
 const ARTIFACT_DIR = path.join(__dirname, "../../../temp/playtest/artifacts");
@@ -53,11 +56,24 @@ async function runPlan(plan)
         args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-webgl"],
     });
 
+    // Where this agent's cookies are kept between plans, when the plan asks for that.
+    //
+    // A plan is one browser from launch to close, which is usually right: each run starts from a
+    // clean visitor, the way a new player does. It is wrong for anything that has to happen to an
+    // account *between* two plans — a user promoted in the database, a guest left to age — because
+    // the session that account was reached through dies with the browser, and the next plan comes
+    // back as a stranger. Naming a session file makes the account outlive the plan.
+    const sessionFile = plan.sessionFile
+        ? path.resolve(process.cwd(), plan.sessionFile)
+        : null;
+    const resumedSession = sessionFile != null && fs.existsSync(sessionFile);
+
     // A distinct User-Agent per agent matters beyond realism: guest creation is capped per
     // IP *and* User-Agent together, so agents sharing one string would share one small quota.
     const context = await browser.newContext({
         userAgent: plan.userAgent || `ThingspoolPlaytest-${agentName}/1.0`,
         ignoreHTTPSErrors: true,
+        ...(resumedSession ? { storageState: sessionFile } : {}),
         // There is no GPU here, so WebGL runs on a software rasterizer and the frame rate is
         // decided almost entirely by how many pixels there are to fill. That makes the viewport
         // a lever rather than a detail: a narrow one both stands in for a phone and buys back
@@ -121,12 +137,24 @@ async function runPlan(plan)
                     // guests in a cohort of their own instead of among staging's ordinary
                     // visitors. Attribution is first-touch, so it is only read here, on the visit
                     // that mints the account — a `ref` on any later navigation is ignored.
-                    const query = action.ref ? `?ref=${encodeURIComponent(action.ref)}` : "";
+                    //
+                    // `devUser` picks one of the seeded dev accounts instead, which is how a run
+                    // against a local server becomes somebody other than a guest — an admin, above
+                    // all. The server honours it only in dev mode, so it does nothing against a
+                    // deployment; there, an account is reached by promoting one in the database
+                    // and resuming the session (see stagingAdmin.js's grant-admin).
+                    const params = new URLSearchParams();
+                    if (action.ref) params.set("ref", action.ref);
+                    if (action.devUser != null) params.set("devuser", String(action.devUser));
+                    const query = params.toString() ? `?${params}` : "";
+
                     const response = await page.goto(`${baseURL}/${query}`,
                         { waitUntil: "networkidle", timeout: 60_000 });
                     record.status = response?.status() ?? 0;
                     if (record.status === 429) rateLimitHits++;
                     if (action.ref) record.ref = action.ref;
+                    if (action.devUser != null) record.devUser = action.devUser;
+                    record.resumedSession = resumedSession;
                     record.env = await page.evaluate(() => window.thingspool_env ?? null).catch(() => null);
                     break;
                 }
@@ -232,6 +260,42 @@ async function runPlan(plan)
                     break;
                 }
 
+                case "fill":
+                {
+                    // A text field, addressed by selector because a popup's fields are ordinary
+                    // inputs — the form around them is what carries a name (see Form's `id`).
+                    await Interact.ui.fill(page, action.selector, String(action.text ?? ""));
+                    record.selector = action.selector;
+                    if (action.settleMs) await sleep(action.settleMs);
+                    break;
+                }
+
+                case "uiClick":
+                {
+                    // A HUD control, addressed by its element id and clicked only if the app is
+                    // actually offering it. These controls are divs, so a greyed-out one is clicked
+                    // quite happily by anything reading the DOM alone, and does nothing — which is
+                    // how a refusal comes to be recorded as a success (see Interact.ui.isEnabled).
+                    await Interact.ui.click(page, action.elementId, {
+                        timeout: action.timeout,
+                        settleMs: action.settleMs,
+                    });
+                    record.elementId = action.elementId;
+                    break;
+                }
+
+                case "expectDisabled":
+                {
+                    // The refusal itself is often the thing under test — a tool the app must not
+                    // offer to this user, in this room, on this surface.
+                    await Interact.ui.waitFor(page, action.elementId, {timeout: action.timeout});
+                    record.elementId = action.elementId;
+                    record.enabled = await Interact.ui.isEnabled(page, action.elementId);
+                    if (record.enabled)
+                        throw new Error(`#${action.elementId} is enabled, but was expected to be refused.`);
+                    break;
+                }
+
                 case "say":
                 {
                     // Chat is the one player-to-player action that is reachable without aiming at
@@ -315,6 +379,139 @@ async function runPlan(plan)
                     break;
                 }
 
+                // ── The world ───────────────────────────────────────────
+                //
+                // Everything below aims through the page and acts through the browser (see
+                // lib/interact.js). Each records what it aimed at, so a plan that fails says which
+                // of the silent failures it hit — out of reach, hidden, or over the wrong thing —
+                // rather than only that nothing happened.
+
+                case "whoami":
+                {
+                    // Who the server thinks this session is, and what it is currently allowed to
+                    // do. The user id is what an admin promotion is applied to, so this is also the
+                    // first step of any scenario that needs one.
+                    await Interact.waitForBridge(page, action.timeout || 30_000);
+                    record.context = await Interact.call(page, "context");
+                    break;
+                }
+
+                case "reload":
+                {
+                    // A user's type is read fresh on every identified request and every socket
+                    // handshake, so a promotion made in the database takes effect on the next page
+                    // load and needs nothing restarted.
+                    const response = await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
+                    record.status = response?.status() ?? 0;
+                    if (record.status === 429) rateLimitHits++;
+                    break;
+                }
+
+                case "objects":
+                {
+                    await Interact.waitForRoom(page, action.timeout || 45_000);
+                    const reports = await Interact.call(page, "objects", action.objectType);
+                    record.count = reports.length;
+                    // Trimmed to what a plan is written against: identity, what the object
+                    // carries, and whether it could be clicked from where the player stands.
+                    record.objects = reports.map(o => ({
+                        objectId: o.objectId, objectType: o.objectType, metadata: o.metadata,
+                        distance: Number(o.distance.toFixed(2)),
+                        reachable: o.withinSelectRange && o.inLineOfSight && o.screen != null,
+                    }));
+                    break;
+                }
+
+                case "clickObject":
+                {
+                    const target = action.target || {};
+                    const report = await Interact.clickObject(page, target, {
+                        approach: action.approach !== false,
+                    });
+                    record.target = target;
+                    record.objectId = report.objectId;
+                    record.objectType = report.objectType;
+                    record.distance = Number(report.distance.toFixed(2));
+                    break;
+                }
+
+                case "clickSurface":
+                {
+                    // A patch of the room itself — a wall, a floor, the face of a block — which is
+                    // how anything hung on a surface gets somewhere to hang.
+                    const hit = await Interact.clickSurface(page, {
+                        objectType: action.objectType,
+                        grid: action.grid,
+                    });
+                    record.objectType = hit.objectType;
+                    record.world = hit.world;
+                    record.distance = Number(hit.distance.toFixed(2));
+                    break;
+                }
+
+                case "clickSurfaceUntilEnabled":
+                {
+                    // Most of a room is surface that will not take the thing being placed, and the
+                    // app says which will by enabling the control. So the plan names the control
+                    // rather than a place, and the search is what finds somewhere it applies.
+                    try
+                    {
+                        const found = await Interact.clickSurfaceUntilEnabled(page, action.elementId, {
+                            objectType: action.objectType,
+                            grid: action.grid,
+                            maxAttempts: action.maxAttempts,
+                            views: action.views,
+                        });
+                        record.elementId = action.elementId;
+                        record.attempts = found.attempts;
+                        record.quad = found.quad;
+                        record.world = found.world;
+                    }
+                    catch (err)
+                    {
+                        // How each candidate was refused is the finding here, so it is carried into
+                        // the record rather than left in the message.
+                        if (err.tried) record.tried = err.tried.map(t => ({
+                            quad: t.quad, outcome: t.outcome,
+                        }));
+                        throw err;
+                    }
+                    break;
+                }
+
+                case "orbit":
+                    await Interact.orbit(page, action.dx || 0, action.dy || 0);
+                    break;
+
+                case "zoom":
+                    await Interact.zoom(page, action.deltaY || 0);
+                    break;
+
+                case "walk":
+                    await Interact.walk(page, action.keys || "KeyW", action.ms || 500);
+                    break;
+
+                case "expectSelection":
+                {
+                    // What the app holds selected is the only proof a world click landed, and it is
+                    // what raises the HUD the next action drives.
+                    const want = action.selection || {};
+                    const selection = await Interact.waitForSelection(page, (current) => {
+                        if (want.voxelQuad) return current.voxelQuad != null;
+                        if (want.none) return current.object == null && current.voxelQuad == null;
+                        if (current.object == null) return false;
+                        if (want.objectId && current.object.objectId !== want.objectId) return false;
+                        if (want.objectType && current.object.objectType !== want.objectType) return false;
+                        for (const [key, value] of Object.entries(want.metadata || {}))
+                        {
+                            if ((current.object.metadata || {})[key] !== String(value)) return false;
+                        }
+                        return true;
+                    }, { timeout: action.timeout || 8000 });
+                    record.selection = selection;
+                    break;
+                }
+
                 case "screenshot":
                 {
                     const file = path.join(ARTIFACT_DIR, `${agentName}-${action.name || index}.png`);
@@ -368,6 +565,15 @@ async function runPlan(plan)
         results.push(record);
     }
 
+    // Saved before the context is closed, and saved even when actions failed: a plan that broke
+    // halfway still minted the account the next plan is meant to pick up, and losing the session
+    // would mean starting that scenario over as a different user.
+    if (sessionFile != null)
+    {
+        fs.mkdirSync(path.dirname(sessionFile), { recursive: true });
+        await context.storageState({ path: sessionFile });
+    }
+
     await context.close();
     await browser.close();
 
@@ -375,6 +581,8 @@ async function runPlan(plan)
         agent: agentName,
         baseURL,
         finishedAt: new Date().toISOString(),
+        sessionFile,
+        resumedSession,
         actions: results,
         failedActions: results.filter(r => !r.ok).length,
         rateLimitHits,

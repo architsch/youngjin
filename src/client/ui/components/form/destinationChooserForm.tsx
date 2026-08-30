@@ -96,7 +96,7 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
 
     const items = [...pinned, ...hubRooms.filter(r => r.id !== destinationRoomID)];
 
-    return <Form>
+    return <Form id="doorDestinationForm">
         <List<RoomListEntry>
             items={items}
             getItemKey={(entry) => entry.id}

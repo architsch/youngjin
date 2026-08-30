@@ -5,6 +5,7 @@ import "./system/util/consoleLogCaptureUtil";
 
 import SocketsClient from "./networking/client/socketsClient";
 import App from "./app";
+import AutomationBridgeUtil from "./system/util/automationBridgeUtil";
 import UIManager from "./ui/uiManager";
 import VersionSyncUtil from "./system/util/versionSyncUtil";
 import { ongoingClientProcessExists } from "./system/types/clientProcess";
@@ -15,6 +16,11 @@ import "../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDe
 // Store the client-side env variables that were injected by the server via the game page route.
 const env = (window as any).thingspool_env;
 App.setEnv(env);
+
+// Anything driving this page from outside it — an automated playtest, a scripted screen capture —
+// needs to know where the room put things before it can aim at them. Installed here so it is ready
+// before the first room arrives, and only away from the public site (see AutomationBridgeUtil).
+AutomationBridgeUtil.install(env);
 
 SocketsClient.init(env); // Starting establishing a socket connection.
 UIManager.load(env, App.getUser()); // Initialize the UI system.

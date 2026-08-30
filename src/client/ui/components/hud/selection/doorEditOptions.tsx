@@ -44,7 +44,7 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
             onClose={() => setCustomizing(false)}
         />}
         <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
-            <IconButton icon={<TrashIcon/>} size="md" color="red"
+            <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red"
                 disabled={!canRemoveDoor(props.selection)}
                 onClick={() => openRemoveConfirmPopup(props.selection)}
             />

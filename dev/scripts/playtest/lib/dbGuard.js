@@ -278,7 +278,12 @@ function connectReadOnly(argv)
     };
 }
 
+// The field-level sentinels (deleting a field, incrementing a number). They name no collection and
+// no document, so they carry no namespace to check — they only ever take effect through a reference
+// that came from the guarded facade above and was checked there.
+const FieldValue = admin.firestore.FieldValue;
+
 module.exports = {
-    connect, connectReadOnly, resolveTarget, assertInNamespace,
+    connect, connectReadOnly, resolveTarget, assertInNamespace, FieldValue,
     PROJECT_ID, STORAGE_BUCKET, READABLE_COLLECTIONS,
 };

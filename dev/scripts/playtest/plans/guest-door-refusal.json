@@ -1,0 +1,16 @@
+{
+  "agent": "guest",
+  "actions": [
+    { "type": "start", "ref": "playtest-guest" },
+    { "type": "skipTutorial" },
+    { "type": "dismissPopups" },
+    { "type": "waitForRoom" },
+    { "type": "whoami" },
+    { "type": "enterEditMode" },
+    { "type": "clickSurface", "objectType": "Voxel" },
+    { "type": "expectSelection", "selection": { "voxelQuad": true } },
+    { "type": "expect", "selector": "#addDoorButton", "state": "detached" },
+    { "type": "expect", "selector": "#addCanvasButton", "state": "visible" },
+    { "type": "end" }
+  ]
+}

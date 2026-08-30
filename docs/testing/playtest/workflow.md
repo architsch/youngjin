@@ -57,6 +57,8 @@ node dev/scripts/playtest/stagingAdmin.js inspect
 node dev/scripts/playtest/stagingAdmin.js seed-users      --version 0 --count 3 --run <runID>
 node dev/scripts/playtest/stagingAdmin.js seed-rooms      --version 0 --count 4 --run <runID> [--owner <userID>] [--with-content]
 node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 14 --run <runID> [--with-content] [--persist]
+node dev/scripts/playtest/stagingAdmin.js set-user-type     --user <userID> --type admin|member|guest [--run <runID>]
+node dev/scripts/playtest/stagingAdmin.js restore-user-type --user <userID>
 node dev/scripts/playtest/stagingAdmin.js verify-migration
 node dev/scripts/playtest/stagingAdmin.js verify-funnel     [--run <runID>]
 node dev/scripts/playtest/stagingAdmin.js inspect-content
@@ -93,6 +95,28 @@ cannot own rooms.
 server finds no blob, logs a load failure, and falls back to a hub. That fallback is correct
 behaviour, but it makes the room decorative and puts a recurring error into every later baseline.
 
+### Playing as somebody other than a guest
+
+Staging runs in production mode, so the dev user switch is off and a browser session there can only
+ever become a guest. That puts everything reserved for the other two kinds of user out of reach:
+the doors a Hub is joined to the rest of the world by, which are an admin's, and every check that
+turns on being *registered* rather than on being an admin, which a guest fails a layer earlier and
+so proves nothing about.
+
+`set-user-type` reaches them by the route the product itself uses — nothing in the game ever makes
+an admin, and one is promoted by hand in the database. A run mints an ordinary guest through the
+real page, changes what that guest is, and reloads. The server reads the user's type back out of the
+database on every identified request and at every socket handshake, so the change takes effect on
+the reload with nothing restarted, and no code that ships knows anything about it.
+
+Two guards keep it away from real accounts: it refuses any row carrying an email address, which is
+what a registered person has and a throwaway guest does not, and it stamps the seed marker so
+`cleanup` deletes the promoted account with the rest of the run. `restore-user-type` puts a
+promoted account back without waiting for cleanup.
+
+The session has to survive between the two halves, since the account is changed while no browser is
+open. That is what a plan's `sessionFile` is for — see below.
+
 ### Seeded rooms are generated, not copied
 
 `--with-content` runs `RoomGenerationUtil` — the same generator the server runs when a user
@@ -122,17 +146,68 @@ Runs a real browser with a real socket connection, so the server sees a genuine 
 player. Assertions about data go through the page's own authenticated request context — the
 same session and cookies as the UI, without depending on clicking anything.
 
-Actions: `start`, `waitForRoom`, `skipTutorial`, `gotoRoom`, `listRooms`, `searchRooms`,
-`hubEntries`, `myRoomEntry`, `say`, `screenshot`, `wait`, `end`.
+Session actions: `start`, `reload`, `waitForRoom`, `skipTutorial`, `dismissPopups`, `gotoRoom`,
+`whoami`, `wait`, `screenshot`, `end`.
+Data actions: `listRooms`, `searchRooms`, `hubEntries`, `myRoomEntry`.
+World actions: `objects`, `clickObject`, `clickSurface`, `clickSurfaceUntilEnabled`, `orbit`,
+`zoom`, `walk`, `expectSelection`.
+UI actions: `enterEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `fill`,
+`expect`, `say`.
 
-`say` sends a chat message through the HUD's own input and send button. It is the one
-player-to-player action reachable without aiming at the 3D scene, and therefore the only one a plan
-can drive. It is also the only way to exercise the chat path at all: a message travels as a change
-to the speaker's own player object's metadata, so nothing offline proves a real one leaves the
-browser. An empty message is ignored by the client in a multiplayer room, so the text is required.
+`say` sends a chat message through the HUD's own input and send button, which is the only way to
+exercise the chat path at all: a message travels as a change to the speaker's own player object's
+metadata, so nothing offline proves a real one leaves the browser. An empty message is ignored by
+the client in a multiplayer room, so the text is required.
 
 `start` takes an optional `ref`, which is appended to the address as the query tag the server reads
-to attribute a visitor to a traffic source. See the acquisition-analytics check below.
+to attribute a visitor to a traffic source (see the acquisition-analytics check below), and an
+optional `devUser`, which picks one of the seeded dev accounts. `devUser` is honoured only in dev
+mode, so it is how a *local* run becomes an admin; against a deployment the account is promoted in
+the database instead.
+
+`sessionFile` on the plan keeps the browser's cookies in a file between runs. A plan is otherwise one
+browser from launch to close, which is right for a run that starts as a fresh visitor and wrong for
+anything that has to happen to an account between two plans — a user promoted, a guest left to age —
+because the session dies with the browser and the next plan arrives as a stranger. It is written even
+when actions failed, since a broken plan still minted the account the next one is meant to resume.
+
+### Driving the 3D world
+
+Everything in a room is reached by aiming at it, and where anything lands on screen depends on the
+room that was generated — so a plan cannot carry coordinates. `lib/interact.js` closes that by
+asking the page where things are (`AutomationBridgeUtil`, which only answers questions) and then
+producing an ordinary pointer gesture on the canvas (which only produces input). Neither half can
+shortcut the other, so a click made this way runs the same path a player's does: the tap
+arbitration, the raycast, and the permission check inside the object's own handler.
+
+`clickObject` names its target by identity, by type, or by the metadata it carries —
+`{"objectType": "Door", "metadata": {"Label": "Attic"}}` — and turns and walks towards it until it
+is in reach before clicking. `expectSelection` is what says the click landed, since a selection is
+also what raises the HUD driven next.
+
+Several failures here are silent, and each is reported as itself rather than as a click that did
+nothing: a target out of reach, hidden behind something, or covered by a HUD element that would take
+the click instead. Two more are worth knowing because they look like faults and are not:
+
+- **A control hanging off the current selection spends the first tap on the room**, putting itself
+  away rather than letting the tap through, so that closing it does not also drop the selection. A
+  tap meant to change the selection is therefore given one second attempt.
+- **A surface that is not currently drawn refuses selection**, and the surfaces nearest the camera
+  are the likeliest to be culled. Candidates are tried in turn rather than a single point being
+  aimed at.
+
+`clickSurfaceUntilEnabled` picks out surfaces until the named control is actually offered, widening
+the view between rounds. Most of a room is wall that will not take a door and floor that will not
+take a picture; which patch will is a question only the app can answer, and it answers it by
+enabling the control. When none does, the report says how many patches were selectable, how many
+were offered and refused, and how many did not carry the control at all — the difference between
+"nowhere here" and "the tool is broken".
+
+`uiClick` and `expectDisabled` read the app's own refusal. HUD controls are `div`s carrying
+`aria-disabled` rather than form elements, so a greyed-out one is clicked quite happily by anything
+reading the DOM alone, and does nothing — which is how a refusal comes to be recorded as a success.
+
+Ready-made scenarios live in `dev/scripts/playtest/plans/`.
 
 Two are easy to omit and expensive to omit:
 

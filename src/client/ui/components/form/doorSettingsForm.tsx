@@ -10,7 +10,7 @@ export default function DoorSettingsForm({ isDefaultEntrance, onSetDefaultEntran
 {
     const [checked, setChecked] = useState<boolean>(isDefaultEntrance);
 
-    return <Form>
+    return <Form id="doorSettingsForm">
         <Checkbox
             label="Use this door as a default entrance"
             size="sm"

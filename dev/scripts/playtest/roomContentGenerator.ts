@@ -19,7 +19,7 @@
 // no image map and cannot decide what it is placing.
 import "../../../src/shared/graphics/image/imageMapDependencies";
 
-import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import { RoomType } from "../../../src/shared/room/types/roomType";

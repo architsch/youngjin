@@ -1,0 +1,112 @@
+{
+  "agent": "admin",
+  "sessionFile": "temp/playtest/sessions/admin.json",
+  "actions": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "waitForRoom"
+    },
+    {
+      "type": "dismissPopups"
+    },
+    {
+      "type": "whoami"
+    },
+    {
+      "type": "walk",
+      "keys": "KeyW",
+      "ms": 2500
+    },
+    {
+      "type": "orbit",
+      "dx": 300,
+      "dy": 0
+    },
+    {
+      "type": "walk",
+      "keys": "KeyW",
+      "ms": 2000
+    },
+    {
+      "type": "enterEditMode"
+    },
+    {
+      "type": "clickSurfaceUntilEnabled",
+      "elementId": "addDoorButton",
+      "objectType": "Voxel",
+      "views": 5,
+      "maxAttempts": 20
+    },
+    {
+      "type": "uiClick",
+      "elementId": "addDoorButton",
+      "settleMs": 2500
+    },
+    {
+      "type": "expectSelection",
+      "selection": {
+        "objectType": "Door",
+        "metadata": {
+          "DoorType": "1"
+        }
+      }
+    },
+    {
+      "type": "uiClick",
+      "elementId": "changeDoorLabelButton",
+      "settleMs": 800
+    },
+    {
+      "type": "fill",
+      "selector": "#objectLabelForm input[type=text]",
+      "text": "Attic"
+    },
+    {
+      "type": "dismissPopups"
+    },
+    {
+      "type": "expectSelection",
+      "selection": {
+        "objectType": "Door",
+        "metadata": {
+          "Label": "Attic"
+        }
+      }
+    },
+    {
+      "type": "uiClick",
+      "elementId": "doorSettingsButton",
+      "settleMs": 800
+    },
+    {
+      "type": "click",
+      "selector": "#doorSettingsForm input[type=checkbox]",
+      "settleMs": 800
+    },
+    {
+      "type": "dismissPopups"
+    },
+    {
+      "type": "expectSelection",
+      "selection": {
+        "objectType": "Door",
+        "metadata": {
+          "DoorType": "0"
+        }
+      }
+    },
+    {
+      "type": "objects",
+      "objectType": "Door"
+    },
+    {
+      "type": "screenshot",
+      "name": "door-named"
+    },
+    {
+      "type": "end"
+    }
+  ]
+}

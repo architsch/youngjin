@@ -21,6 +21,8 @@
 //   node dev/scripts/playtest/stagingAdmin.js seed-users --version 0 --count 3
 //   node dev/scripts/playtest/stagingAdmin.js seed-rooms --version 1 --count 2 [--owner <userID>] [--with-content]
 //   node dev/scripts/playtest/stagingAdmin.js seed-population --version 4 --count 25 [--with-content] [--persist]
+//   node dev/scripts/playtest/stagingAdmin.js set-user-type --user <userID> --type admin|member|guest [--run <runID>]
+//   node dev/scripts/playtest/stagingAdmin.js restore-user-type --user <userID>
 //   node dev/scripts/playtest/stagingAdmin.js verify-migration
 //   node dev/scripts/playtest/stagingAdmin.js verify-funnel [--run <runID>]
 //   node dev/scripts/playtest/stagingAdmin.js inspect-content
@@ -335,6 +337,98 @@ async function seedRooms(db, bucket, version, count, runID, ownerUserID, options
 // should have advanced to the current version *in storage*, not merely in the reply the
 // client received. A row still sitting at its seeded version after the server has read it
 // means the write-back silently failed.
+// ─── Who a session is allowed to be ─────────────────────────────────────
+//
+// A browser session on staging can only ever become a guest, because staging runs in production
+// mode and the dev user switch is off. That puts everything reserved for the other two kinds of
+// user out of reach of a playtest: the doors a Hub is joined to the rest of the world by, and the
+// settings of a room nobody owns, which are an admin's; and every check that turns on being
+// registered rather than on being an admin, which needs a member to be told apart from an admin at
+// all — a guest is refused a layer earlier and proves neither.
+//
+// There is no need for a new way in, because the product already has one, and it is exactly this:
+// nothing in the game ever makes an admin, and the one in the local dev seed exists because such an
+// account is promoted by hand in the database. So a run mints an ordinary guest through the real
+// page, changes what that guest is here, and reloads. Every request the server serves afterwards
+// reads the user's type back out of the database — the identification path on every HTTP route, and
+// the handshake on every new socket — so the change takes effect on a reload with nothing restarted
+// and no code that ships knowing anything about it.
+//
+// Two things keep it from reaching anybody real. It refuses an account with an email address, which
+// is what a registered person has and a throwaway guest does not. And it stamps the seed marker, so
+// the existing cleanup deletes the promoted account along with everything else the run created —
+// leaving no standing admin behind on a server that is reachable from the internet.
+
+const PRIOR_USER_TYPE_FIELD = "__playtestPriorUserType";
+const USER_TYPE_BY_NAME = { admin: 0, member: 1, guest: 2 };
+
+async function setUserType(db, userID, typeName, runID)
+{
+    if (!userID)
+        throw new Error("set-user-type needs --user <userID> (the guest minted by the run's own browser).");
+
+    const userType = USER_TYPE_BY_NAME[String(typeName).toLowerCase()];
+    if (userType === undefined)
+        throw new Error(`--type must be one of: ${Object.keys(USER_TYPE_BY_NAME).join(", ")}.`);
+
+    const ref = db.collection(collection("users")).doc(userID);
+    const snap = await ref.get();
+    if (!snap.exists)
+        throw new Error(`No user "${userID}" in ${collection("users")}.`);
+
+    const before = snap.data();
+    if (before.email)
+        throw new Error(
+            `Refusing to change the type of "${userID}" — it carries an email address, so it is a ` +
+            `registered account belonging to a person. Use a guest this run minted instead.`);
+
+    if (before.userType === userType)
+        return { userID, userName: before.userName, userType, unchanged: true };
+
+    await ref.update({
+        userType,
+        // Only the first change records what was there originally, so a run that promotes twice
+        // still restores to the type the account was actually minted with.
+        ...(before[PRIOR_USER_TYPE_FIELD] === undefined
+            ? { [PRIOR_USER_TYPE_FIELD]: before.userType } : {}),
+        [MARKER]: runID,
+    });
+
+    return {
+        userID,
+        userName: before.userName,
+        priorUserType: before[PRIOR_USER_TYPE_FIELD] ?? before.userType,
+        userType,
+        runID,
+        note: "Reload the page for this to take effect (the type is re-read per request and per " +
+            "socket handshake).",
+    };
+}
+
+async function restoreUserType(db, userID)
+{
+    if (!userID)
+        throw new Error("restore-user-type needs --user <userID>.");
+
+    const ref = db.collection(collection("users")).doc(userID);
+    const snap = await ref.get();
+    if (!snap.exists)
+        throw new Error(`No user "${userID}" in ${collection("users")}.`);
+
+    const before = snap.data();
+    if (before[PRIOR_USER_TYPE_FIELD] === undefined)
+        throw new Error(
+            `Refusing to change "${userID}" — it carries no record of a prior type, so it was not ` +
+            `promoted by this tool and its type is not this tool's to restore.`);
+
+    await ref.update({
+        userType: before[PRIOR_USER_TYPE_FIELD],
+        [PRIOR_USER_TYPE_FIELD]: DBGuard.FieldValue.delete(),
+    });
+
+    return { userID, userName: before.userName, userType: before[PRIOR_USER_TYPE_FIELD] };
+}
+
 async function verifyMigration(db)
 {
     const results = {};
@@ -663,6 +757,10 @@ async function main()
                 persist: process.argv.includes("--persist"),
             });
             break;
+        case "set-user-type":
+            output = await setUserType(db, flag("user", ""), flag("type", ""), runID);
+            break;
+        case "restore-user-type":  output = await restoreUserType(db, flag("user", "")); break;
         case "verify-migration":   output = await verifyMigration(db); break;
         case "verify-funnel":      output = await verifyFunnel(db, flag("run", "")); break;
         case "inspect-content":    output = await inspectContent(bucket); break;
@@ -683,9 +781,9 @@ async function main()
             break;
         default:
             console.error(`Unknown command: ${command || "(none)"}\n` +
-                `Commands: inspect | seed-users | seed-rooms | seed-population | verify-migration |\n` +
-                `          verify-funnel | inspect-content | downgrade-content | restore-content |\n` +
-                `          list | cleanup\n` +
+                `Commands: inspect | seed-users | seed-rooms | seed-population | set-user-type |\n` +
+                `          restore-user-type | verify-migration | verify-funnel | inspect-content |\n` +
+                `          downgrade-content | restore-content | list | cleanup\n` +
                 `Targets:  --target staging (default) | --target local`);
             process.exit(2);
     }

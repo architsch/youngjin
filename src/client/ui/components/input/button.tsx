@@ -1,7 +1,9 @@
 export default function Button({name, size = "md", color = "gray", disabled = false, highlight = false, onClick, additionalClassNames = "", id }: Props)
 {
+    // Stated as well as drawn — see iconButton.tsx, which carries the reasoning for both.
     return <div
         id={id}
+        aria-disabled={disabled}
         className={`flex items-center justify-center text-center select-none touch-manipulation ${disabled ? "" : "cursor-pointer"} ${sizeClassNames[size]} ${disabled ? panelClassNames["disabled"] : panelClassNames[color]} ${!disabled && highlight ? highlightClassName : ""} ${additionalClassNames}`}
         onClick={disabled ? undefined : onClick}
     >

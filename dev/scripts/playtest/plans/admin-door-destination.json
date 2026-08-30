@@ -1,0 +1,53 @@
+{
+  "agent": "admin",
+  "sessionFile": "temp/playtest/sessions/admin.json",
+  "actions": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "waitForRoom"
+    },
+    {
+      "type": "dismissPopups"
+    },
+    {
+      "type": "clickObject",
+      "target": {
+        "objectType": "Door",
+        "metadata": {
+          "Label": "Attic"
+        }
+      }
+    },
+    {
+      "type": "expectSelection",
+      "selection": {
+        "objectType": "Door",
+        "metadata": {
+          "Label": "Attic"
+        }
+      }
+    },
+    {
+      "type": "uiClick",
+      "elementId": "changeDoorDestinationButton",
+      "settleMs": 1200
+    },
+    {
+      "type": "expect",
+      "selector": "#doorDestinationForm",
+      "state": "visible"
+    },
+    {
+      "type": "screenshot",
+      "name": "destination-chooser"
+    },
+    {
+      "type": "dismissPopups"
+    },
+    {
+      "type": "end"
+    }
+  ]
+}

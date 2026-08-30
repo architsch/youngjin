@@ -1,0 +1,12 @@
+{
+  "agent": "admin",
+  "sessionFile": "temp/playtest/sessions/admin.json",
+  "actions": [
+    { "type": "start", "ref": "playtest-admin" },
+    { "type": "skipTutorial" },
+    { "type": "dismissPopups" },
+    { "type": "waitForRoom" },
+    { "type": "whoami" },
+    { "type": "end" }
+  ]
+}

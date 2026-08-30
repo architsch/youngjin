@@ -21,7 +21,7 @@ export default function CustomizeObjectLabelForm({ initialText, initialColorInde
     const [text, setText] = useState<string>(initialText);
     const [colorIndex, setColorIndex] = useState<number>(initialColorIndex);
 
-    return <Form>
+    return <Form id="objectLabelForm">
         <FormTextInput
             label="Label Text:"
             size="sm"

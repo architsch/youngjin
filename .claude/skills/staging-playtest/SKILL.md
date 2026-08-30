@@ -32,8 +32,8 @@ sequence yourself. Either way the division of labour is the same:
 
 | Role | Does | Tool |
 |---|---|---|
-| **Admin** | Seeds and cleans DB/storage state; verifies migration and the acquisition funnel landed | `dev/scripts/playtest/stagingAdmin.js` |
-| **Playtester** (1–3) | Drives real browser sessions, checks room list/search/navigation | `dev/scripts/playtest/runPlan.js` |
+| **Admin** | Seeds and cleans DB/storage state; promotes an account where a scenario needs one; verifies migration and the acquisition funnel landed | `dev/scripts/playtest/stagingAdmin.js` |
+| **Playtester** (1–3) | Drives real browser sessions — the world as well as the HUD — and checks room list/search/navigation | `dev/scripts/playtest/runPlan.js` |
 | **Monitor** | Surveys the log backlog, baselines, diffs, watches process metrics | `dev/scripts/playtest/serverMonitor.js` |
 
 All three print JSON on stdout.
@@ -95,6 +95,10 @@ node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 1
 
 # What binary version each room's content blob is actually stored at.
 node dev/scripts/playtest/stagingAdmin.js inspect-content
+
+# An account of a kind a browser session on staging cannot become on its own. The id comes from a
+# plan's `whoami`; the plan must carry a `sessionFile` so the account outlives the browser.
+node dev/scripts/playtest/stagingAdmin.js set-user-type --user <userID> --type admin --run <runID>
 ```
 
 Every command takes `--target staging` (the default) or `--target local`, and prints the target
@@ -213,34 +217,46 @@ Non-obvious things that will otherwise waste a run:
 
 ### What can be driven, and what cannot
 
-HUD controls carry stable element ids, so they are driven for real: `enterEditMode` and
-`exitEditMode` press the mode's own buttons and check the mode arrived with the user's character
-selected under it, which is the whole game-mode crossing — orbit camera, player selection, the
-controls that come with it. `click` and `expect` take a selector straight from the plan, for UI
-this harness does not name; putting the selector in the plan rather than in the harness is
-deliberate, since a plan is written fresh each round and a baked-in selector goes stale silently.
+**The HUD** carries stable element ids and is driven for real. `uiClick` and `expectDisabled` are
+the ones to reach for: these controls are `div`s carrying `aria-disabled` rather than form elements,
+so a greyed-out one is clicked quite happily by anything reading the DOM alone and does nothing —
+which is how a refusal comes to be recorded as a success. `click` and `expect` take a raw selector
+for UI the harness does not name, and belong in the plan rather than baked in here, since a plan is
+written fresh each round and a baked-in selector goes stale silently.
 
-`say` sends a chat message through the HUD's input and send button. It is worth knowing that this
-is the *only* player-to-player action a plan can drive, and the only way to exercise the chat path
-at all — a message travels as a change to the speaker's own player object, so nothing offline proves
-a real one leaves the browser.
+**The 3D scene** is driven too, through `lib/interact.js`. The page is asked where things are and
+whether a click would reach them; the click itself is an ordinary pointer gesture on the canvas. So
+the tap arbitration, the raycast and the permission check inside the object's own handler all run,
+and a world action that fails here is one that would fail for a player. `clickObject` names its
+target by identity, type, or the metadata it carries, and walks to it; `clickSurfaceUntilEnabled`
+picks out surfaces until the app actually offers the control being aimed for; `expectSelection` is
+what proves a click landed. That reaches the room *write* path, which used to be the largest gap.
 
-Anything reached by **aiming at the 3D scene** is not driven: placing or texturing a voxel,
-dragging an object, and going through a door all sit wherever the generated room put them. That
-leaves the room *write* path — an edit dirtying a room until the save loop picks it up — outside
-what a plan can reach, and it is the largest gap. Say so in the report rather than letting a clean
-run imply it was covered. It also means the funnel's `built` milestone cannot be reached by a plan,
-while `chatted` can.
+**Being somebody other than a guest** is reached by promoting an account rather than by playing:
+`stagingAdmin.js set-user-type --type admin|member`, with the plan carrying a `sessionFile` so the
+account survives between the plan that mints it and the plan that uses it. Restore it and clean up
+afterwards. This is what opens the admin door-wiring, and `--type member` is the only way to reach
+a check that turns on being *registered* rather than on being an admin — a guest fails those a layer
+earlier and proves nothing about them.
 
-**`listRooms` and `searchRooms` now exercise the API and nothing else.** A door carries its own
-destination rather than opening a room-list popup, and no player-facing room list survives — the
-only list left in the client is the admin's destination chooser, which picks a door's target. So a
-green `listRooms` proves the endpoint, its pagination and the denormalized owner name, and proves
-nothing about anything a player can reach. `gotoRoom` navigates by URL and is not a stand-in for
-walking through a door either. Two paths therefore have **no staging coverage at all** and belong in
-the report as such: travelling by door, and the admin door-wiring behind it — the latter permanently,
-since managing doors requires an admin in a Hub and a browser session on staging can only ever be a
-guest.
+Ready-made scenarios covering the above live in `dev/scripts/playtest/plans/`, with their running
+order in the README beside them.
+
+Two things still cannot be driven, and belong in the report as such:
+
+- **`listRooms` and `searchRooms` exercise the API and nothing else.** A door carries its own
+  destination rather than opening a room-list popup, and no player-facing room list survives — the
+  only list left is the admin's destination chooser. A green `listRooms` proves the endpoint, its
+  pagination and the denormalized owner name, and nothing a player can reach.
+- **`gotoRoom` navigates by URL**, which is not travelling by door. Going through a door *can* now
+  be driven (`clickObject` on a door, or the admin's `enterDoorButton`), so use that when the
+  journey is what is under test.
+
+Two failures in the world are silent and look like faults when they are not: a control hanging off
+the current selection spends the first tap on the room putting itself away, and a surface that is
+not currently drawn refuses selection. `interact.js` handles both — a second tap, and trying
+candidates in turn — but a report that says "the click did nothing" without saying which of these it
+was has not looked at the error it was given.
 
 ### Reading the client's side of the run
 
