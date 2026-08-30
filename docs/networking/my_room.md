@@ -9,18 +9,18 @@ The DB-internal editor shape (`DBRoomEditor`) carries the user id; the client on
 
 A room may have at most a fixed maximum number of editors — an anti-abuse bound, so an owner cannot inflate database cost by stuffing the list.
 
-## Create / Visit My Room
-1. The user opens the Rooms popup and clicks Visit on the pinned "My Room" entry.
-2. The client checks whether the user already owns a room. If not, it asks the server to create one (with an empty editor list) and associates it with the user; if so, it uses the existing room.
-3. The client requests a room change to move the user into their room.
+## Create My Room
+A member's room is opened for them when they sign up, and there is at most one of them per user — the request is refused for a user who already owns one. A room named as a specific destination is entered outright or refused outright, rather than the user being diverted elsewhere; they stay in the room they were in and are shown why. See [room_population.md](room_population.md#entering-a-specific-room).
 
-Every Visit in the room list names a specific destination, so a room that cannot take another player refuses the request outright rather than diverting the user elsewhere — they stay in the room they were in and are shown why. See [room_population.md](room_population.md#entering-a-specific-room).
+The room list is no longer a way to travel: it is where an admin points a door (see [admin.md](../gameplay/admin.md)), and a player reaches a room by walking through a door that leads to it. It lists hubs and nothing else — a hub is the world's public fabric, whereas a regular room belongs to one person, and wiring a door into one would hand strangers a way in that its owner never agreed to.
 
 ## Copy Room URL
 The client computes the room URL locally and copies it to the clipboard. No server request is made.
 
 ## Change Texture Pack
-A room already comes with a texture pack, drawn when it was generated along with the textures its contents are finished in (see [room_generation.md](../geometry/room_generation.md)). Changing it re-skins those contents: the client sends the new texture pack to the server, which verifies the user owns a room and persists the change.
+A room already comes with a texture pack, drawn when it was generated along with the textures its contents are finished in (see [room_generation.md](../geometry/room_generation.md)). Changing it re-skins those contents: the client sends the new texture pack to the server, which persists the change.
+
+One route serves two callers, since which room is being re-skinned is the only thing that differs between them. Naming no room means "my own", and the requester must own one. Naming a room means an admin re-skinning a hub — a room nobody owns, and so a room the ownership check could never reach.
 
 ## Add Editor
 1. The client sends the target username and the Editor role to the server.

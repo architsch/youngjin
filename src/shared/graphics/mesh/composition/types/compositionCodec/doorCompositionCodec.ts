@@ -22,9 +22,9 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
         parts: InstancedMeshCompositionPart[]): string =>
     {
         const arr: string[] = [];
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.panel)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.label)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.knob)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.panel)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.label)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.knob)));
         return arr.join("");
     },
     decode: (strToDecode: string,
@@ -60,9 +60,9 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
 
 function decodeColor(strToDecode: string, charIndex: number)
 {
-    // base94IndexToRGB clamps the index into the palette, so a hostile or truncated string yields a
-    // real color rather than an undefined one.
-    return ColorUtil.base94IndexToRGB(
+    // paletteIndexToRGB clamps the position into the palette, so a hostile or truncated string
+    // yields a real color rather than an undefined one.
+    return ColorUtil.paletteIndexToRGB("Timber",
         StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charIndex));
 }
 

@@ -14,7 +14,11 @@ export const RoomVolumeConstructorMap: {[roomVolumeShape: string]:
         return new RoomVolume(1, NUM_VOXEL_ROWS - 2, 1, NUM_VOXEL_COLS - 2,
             COLLISION_LAYER_MIN, COLLISION_LAYER_MAX);
     },
-    "MultiplayerEntrance": (): RoomVolume =>
+    // The doorway a multiplayer room used to be entered through. Nothing carves this any more — a
+    // room's way in is a door hung on the boundary wall rather than a hole cut through it — but the
+    // conversions that carry older rooms across still need to name that stretch, to cut it out of a
+    // room that predates the hole and to fill it back in on a room that has one.
+    "InitialMultiplayerEntrance": (): RoomVolume =>
     {
         const row = MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
         const col = MULTI_PLAYER_ENTRANCE_VOXEL_COL;
@@ -31,7 +35,7 @@ export const RoomVolumeConstructorMap: {[roomVolumeShape: string]:
     // framing it (which carries on above the opening), and the floor an arriving player spawns on -
     // while the room above it is ordinary room, somewhere an owner should be as free to build as
     // anywhere else and which nobody can even reach the doorway from.
-    "MultiplayerEntranceZone": (halfWidth: number, halfDepth: number): RoomVolume =>
+    "InitialMultiplayerEntranceZone": (halfWidth: number, halfDepth: number): RoomVolume =>
     {
         const row = MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
         const col = MULTI_PLAYER_ENTRANCE_VOXEL_COL;

@@ -7,12 +7,15 @@ import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumbe
 import AddObjectSignal from "./addObjectSignal";
 import { ObjectMetadata } from "./objectMetadata";
 import ObjectTransform from "./objectTransform";
+import DoorObjectUtil from "../util/doorObjectUtil";
+import { COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL,
+    MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
 
 let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
 let temp_sourceVoxelGridVersion = 0;
 
-const latestVersion = 1;
+const latestVersion = 2;
 
 // The voxel-grid format that first stood a room two storeys tall. A room's objects are written in
 // the same blob as its voxel grid, so a grid older than this is also objects written while the room
@@ -25,11 +28,18 @@ const latestVersion = 1;
 // this format's own.
 const FIRST_TWO_STOREY_VOXEL_GRID_VERSION = 2;
 
+// The voxel-grid format that first filled the entrance doorway back in, which is the same change
+// that made a room's own way in a stored object rather than one every client spawned for itself. A
+// grid older than this belongs to a room whose door was never written down, and that is what dates
+// the objects beside it: a group holding no door is either such a room, or a room whose admin took
+// its door away, and only the grid can tell the two apart.
+const FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION = 3;
+
 // What a group decoded on its own is dated at. Objects arriving without a grid beside them were
 // encoded by a running build rather than read out of storage, so they are current-era by
 // construction and need no rescaling. Named as its own thing rather than importing VoxelGrid's
 // latest version, which would make these two modules import each other.
-const CURRENT_ERA_VOXEL_GRID_VERSION = FIRST_TWO_STOREY_VOXEL_GRID_VERSION;
+const CURRENT_ERA_VOXEL_GRID_VERSION = FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION;
 
 export default class ObjectGroup extends EncodableData
 {
@@ -172,9 +182,10 @@ function decodeBody(bufferState: BufferState): ObjectGroup
 }
 
 const olderVersionDecoders: ((bufferState: BufferState) => EncodableData)[] = [
-    // Version 0 is written byte for byte the way the current version is — the two differ only in
-    // what a position's vertical component is a fraction of — so it is read by the same reader and
-    // corrected afterwards.
+    // Every version so far is written byte for byte the way the current one is — what changed
+    // between them is what the numbers mean, and what the room is expected to hold — so they are all
+    // read by the same reader and corrected afterwards.
+    decodeBody,
     decodeBody,
 ];
 
@@ -198,6 +209,26 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
             const {pos} = object.transform;
             object.transform.pos = {x: pos.x, y: ObjectTransform.rescaleLegacyY(pos.y), z: pos.z};
         }
+        return objectGroup;
+    },
+    (olderVersionData: EncodableData) => { // version 1 -> 2
+        const objectGroup = olderVersionData as ObjectGroup;
+
+        // A room's own way in used to be a door every client spawned for itself and nobody stored,
+        // standing over a hole in the boundary wall. Now it is an ordinary object the room holds,
+        // and a room that never held one has to be given it — otherwise it comes out with a filled
+        // doorway and nothing to open it (the grid beside these objects is filled by the conversion
+        // that dates them; see FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION).
+        //
+        // Rooms written after that change already hold their door, and must be left alone: adding a
+        // second one would put a door over a door in every room in the game, and would put back the
+        // one an admin had deliberately taken down.
+        if (temp_sourceVoxelGridVersion >= FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION)
+            return objectGroup;
+
+        const entranceDoor = DoorObjectUtil.makeEntranceDoor(temp_roomID,
+            MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
+        objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
         return objectGroup;
     },
 ];

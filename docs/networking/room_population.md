@@ -30,13 +30,15 @@ Every route into a multiplayer room converges on the same two stages: `RoomPicke
 
 ![Room Join Flow](figures/room_join_flow.jpg)
 
-The picker is consulted when the user has not named a room themselves — on app start-up, and when single-player mode ends. It prefers an explicit room ID from the URL, then the room from the user's last session, and otherwise falls through to the hub balancer described below. The reserved `hub` keyword in the URL routes straight to that balancer.
+The picker is consulted when the user has not named a room themselves — on app start-up, when single-player mode ends, and when a door that leads nowhere sends the user back out. It prefers an explicit room ID from the URL, then the room from the user's last session, and otherwise falls through to the hub balancer described below. The reserved `hub` keyword in the URL routes straight to that balancer.
+
+Where in the destination room the user lands is a separate question, decided from the doors that room holds — see [room_entrance.md](../geometry/room_entrance.md#player-spawning).
 
 ## Picking a hub
 
 Whenever a user needs *a* hub rather than a specific one, `RoomPickerUtil` chooses it. All hubs are kept resident in memory (see [Hub residency](#hub-residency)), so the choice costs no database query. Hubs that are almost full are excluded outright, and the remaining ones fall into one of three cases.
 
-**Every hub is over-populated.** A brand new hub is opened and the user is sent there. This is also what happens when the server has no hub at all yet.
+**Every hub is over-populated.** A brand new hub is opened and the user is sent there. This is also what happens when the server has no hub at all yet, and it is the same path an admin opening a hub by hand goes down (see [admin.md](../gameplay/admin.md)) — so a hub is preloaded and load-balanced over however it came into being.
 
 ![Over-Populated Hub Logic](figures/over_populated_room_logic.jpg)
 
@@ -54,7 +56,7 @@ Concurrent arrivals that all find every hub over-populated share a single hub cr
 
 A room change carries a flag distinguishing the two kinds of destination a user can end up with:
 
-- **A destination the user picked by name** — a room chosen from the room list, or their own room. If it cannot be entered, the request is simply refused.
+- **A destination the user picked by name** — the room a door leads to, or their own room. If it cannot be entered, the request is simply refused.
 - **A destination the server routed them to** — the room from their last session, a room ID carried in the connection URL, or the reserved hub keyword. If it cannot be entered, the user is re-routed to a hub instead of being left without a room.
 
 "Cannot be entered" covers both a room that is already almost full and a room that no longer loads at all.

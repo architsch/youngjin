@@ -52,15 +52,18 @@ E2E runs handle this themselves — Playwright boots the stack through `dev/scri
 
 ## Dev User Accounts
 
-When `npm run dev` starts, the server automatically seeds 3 **Member** user accounts in the local Firestore emulator. These accounts bypass Google OAuth and let you quickly test member-only features (creating rooms, changing texture packs, registering editors, etc.).
+When `npm run dev` starts, the server automatically seeds 4 user accounts in the local Firestore emulator: three **Member** accounts and one **Admin**. These accounts bypass Google OAuth and let you quickly test member-only features (creating rooms, changing texture packs, registering editors) and admin-only ones (laying and wiring up a hub's doors, opening a new hub, re-skinning one — see [The Admin Privilege](../gameplay/admin.md)).
+
+Nothing in the product ever makes an admin — one is promoted by hand in the database — so this is the only way to reach the admin UI locally.
 
 ### Seeded Accounts
 
-| Index | Username    | Email                 |
-|-------|-------------|-----------------------|
-| 1     | DevMember1  | devmember1@test.com   |
-| 2     | DevMember2  | devmember2@test.com   |
-| 3     | DevMember3  | devmember3@test.com   |
+| Index | Username    | Email                 | Type   |
+|-------|-------------|-----------------------|--------|
+| 1     | DevMember1  | devmember1@test.com   | Member |
+| 2     | DevMember2  | devmember2@test.com   | Member |
+| 3     | DevMember3  | devmember3@test.com   | Member |
+| 4     | DevAdmin    | devadmin@test.com     | Admin  |
 
 ### How to Use
 
@@ -69,6 +72,7 @@ Append `?devuser=N` to the game page URL to log in as a specific dev user:
 - `http://127.0.0.1:3000?devuser=1` — logs in as DevMember1
 - `http://127.0.0.1:3000?devuser=2` — logs in as DevMember2
 - `http://127.0.0.1:3000?devuser=3` — logs in as DevMember3
+- `http://127.0.0.1:3000?devuser=4` — logs in as DevAdmin
 
 This sets a JWT cookie, so subsequent visits to `http://127.0.0.1:3000` (without the query param) will remain logged in as that user. To switch to a different dev user, simply visit with a different `?devuser=N` value.
 

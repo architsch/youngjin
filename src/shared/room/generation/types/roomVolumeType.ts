@@ -14,7 +14,6 @@ export const RoomVolumeTypeEnumMap: Record<string, RoomVolumeType> =
     Area: "Area",           // one of the spaces the room is made of
     Passage: "Passage",     // an opening cut through the wall between two areas
     Stairwell: "Stairwell", // the shaft a flight of steps climbs through
-    Entrance: "Entrance",   // the way into the room, cut through its boundary wall
     Step: "Step",           // one step of a flight, stood back up after the carving
     Reserved: "Reserved",   // a stretch of the room nothing generation places may stand in
 }

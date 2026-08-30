@@ -8,7 +8,10 @@ import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
 // two: the panel is centered across the footprint and flush with its bottom, so the panel's origin
 // sits half the footprint's height below the object's, and the difference between the footprint and
 // the panel is left as clearance at the top.
-const PANEL_ORIGIN_Y = -0.5 * DOOR_FOOTPRINT_HEIGHT;
+// Exported because anything else placed against the door's face has to be measured in the same
+// frame the face itself was authored in — the plate's label text above all, which has to sit on the
+// plate rather than merely near it.
+export const DOOR_PANEL_ORIGIN_Y = -0.5 * DOOR_FOOTPRINT_HEIGHT;
 
 export default class DoorCompositionBuilder extends InstancedMeshCompositionBuilder
 {
@@ -38,7 +41,7 @@ export default class DoorCompositionBuilder extends InstancedMeshCompositionBuil
             dir: BACKWARD_DIR,
             offset: {
                 x: mirrored ? -region.offset.x : region.offset.x,
-                y: PANEL_ORIGIN_Y + region.offset.y,
+                y: DOOR_PANEL_ORIGIN_Y + region.offset.y,
                 // Relief is measured out along the face the door presents to the room, which is the
                 // side of the object the wall is not on.
                 z: region.relief,

@@ -80,7 +80,32 @@ const TextureUtil =
 
         if (unloadTextureAfterDraw && textureURL.length > 0)
             TextureFactory.unload(textureURL);
-    }
+    },
+    // Draws a 2D canvas over the given region of a render target, exactly as it stands.
+    //
+    // Unlike an image, a canvas is drawn by the caller at whatever shape the region is, so there is
+    // no aspect ratio to reconcile and nothing to letterbox — the canvas simply covers the region.
+    // That is also what makes clearing unnecessary: the draw does not blend (see the material
+    // below), so what the canvas holds replaces what was there, alpha and all, and a region that was
+    // showing something else comes out showing only this.
+    drawCanvasOnRenderTarget: (canvas: HTMLCanvasElement, renderTarget: THREE.WebGLRenderTarget,
+        targetU1: number, targetV1: number, targetU2: number, targetV2: number): void =>
+    {
+        const renderer = GraphicsManager.getGameRenderer();
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        material.uniforms.sourceTexture.value = texture;
+        material.uniforms.sourceTexture.value.needsUpdate = true;
+
+        setQuadPositions(-1 + 2 * targetU1, -1 + 2 * targetV1,
+            -1 + 2 * targetU2, -1 + 2 * targetV2);
+        setQuadUVs(0, 0, 1, 1);
+        renderToTarget(renderer, renderTarget, renderTarget.width, renderTarget.height);
+
+        // The pixels are in the render target now; nothing reads this copy of them again.
+        texture.dispose();
+    },
 }
 
 // 1x1 dark gray placeholder texture for when no image is available
@@ -88,7 +113,11 @@ const placeholderData = new Uint8Array([40, 40, 40, 255]);
 const placeholderTexture = new THREE.DataTexture(placeholderData, 1, 1, THREE.RGBAFormat);
 placeholderTexture.needsUpdate = true;
 
+// The source replaces whatever the target region held rather than being blended over it. For an
+// opaque image the two are the same thing; for a canvas carrying transparency they are not, and
+// blending would leave the region holding some mixture of the old contents and the new.
 const material = new THREE.RawShaderMaterial({
+    blending: THREE.NoBlending,
     uniforms: {
         sourceTexture: { value: null },
     },

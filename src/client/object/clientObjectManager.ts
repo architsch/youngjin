@@ -118,10 +118,11 @@ const ClientObjectManager =
             await ClientObjectManager.addObject(gameObject, false, false); // Don't try to add the object to the room data again because it is already part of it.
         }
 
-        // Add special client-side singleton objects.
-        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-            await ClientObjectUtil.spawnMultiplayerEntranceDoor(room);
-        else // If it is a singleplayer room, the client will be responsible for spawning its own player object (In multiplayer mode, the server would've included the player object as part of the room's data before sending it over to the client).
+        // Add special client-side singleton objects. A multiplayer room needs none: its doors arrive
+        // with its object data like anything else in it, and its player objects come from the
+        // server. A singleplayer room's player is the client's own to spawn, since the server keeps
+        // no copy of that room at all.
+        if (room.roomType == RoomTypeEnumMap.SinglePlayer)
             await ClientObjectUtil.spawnSingleModePlayer(room);
     },
     unload: async () =>

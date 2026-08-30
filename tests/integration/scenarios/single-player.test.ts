@@ -68,6 +68,9 @@ import { voxelQuadChangeObservable } from "../../../src/shared/system/sharedObse
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
+import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
@@ -248,6 +251,41 @@ describe("single-player room generation", () => {
         // The two the tutorial addresses by name.
         expect(objectGroup.objectById["npc"]).toBeDefined();
         expect(objectGroup.objectById["door"]).toBeDefined();
+    });
+
+    it("dresses the tutorial's two fixtures itself, the same way every time", () => {
+        // Elsewhere an object nobody has dressed falls back on an appearance derived from where it
+        // stands. The tutorial is the first thing anybody sees of the game, so its two fixtures are
+        // chosen outright instead — and being chosen, they must survive being generated twice.
+        const first = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        const second = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+
+        for (const objectId of ["npc", "door"])
+        {
+            const appearance = first.objectGroup.objectById[objectId]
+                .metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
+            expect(appearance, `the tutorial's ${objectId} was left undressed`).toBeDefined();
+            expect(appearance!.str.length).toBeGreaterThan(0);
+            expect(appearance!.str).toBe(second.objectGroup.objectById[objectId]
+                .metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition]!.str);
+        }
+
+        const door = first.objectGroup.objectById["door"];
+        expect(DoorObjectUtil.getLabel(door)).toBe("Door");
+        expect(DoorObjectUtil.getLabelColorIndex(door)).toBe(
+            DoorObjectUtil.getLabelColorIndex(second.objectGroup.objectById["door"]));
+    });
+
+    it("leaves the tutorial's door leading nowhere, as the room's own way in", () => {
+        // Which is what takes the player out of the tutorial: a default entrance that names no
+        // destination falls back on the server picking the room he should go to next, so clicking
+        // this door is how the tutorial ends (see DoorGameObject).
+        const { objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        const door = objectGroup.objectById["door"];
+
+        expect(DoorObjectUtil.getDoorType(door)).toBe(DoorTypeEnumMap.DefaultEntrance);
+        expect(DoorObjectUtil.getDestinationRoomId(door)).toBe("");
+        expect(DoorObjectUtil.getDestinationDoorLabel(door)).toBe("");
     });
 
     it("builds the tutorial room as a single storey the camera can look down into", () => {

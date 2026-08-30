@@ -10,6 +10,8 @@ Each user is able to customize the visual appearance of his/her own player chara
 
 A user's player customization parameters are encoded as base-94 ASCII characters and saved as an object metadata string (of type `InstancedMeshComposition`) inside the user's `playerMetadata` data field. This lets the customization state persist across different sessions.
 
+A colour is stored as a position in a named palette rather than as a colour, which is what lets a whole character travel in a handful of characters. The player's palette is its own: a character is a tin toy, lithographed in the pure and vivid hues a child's toy is painted in, which are not the colours anything else in the game is finished in (see [door_design.md](door_design.md)). Because a stored position means whatever the palette says it means, a palette's contents and their order are what every character already saved is: entries are appended to one, never rearranged.
+
 The player customization logic is driven by the generic "InstancedMeshComposition" system, which allows each `GameObject` render itself by composing a number of "graphical building blocks" (i.e. instances) from any arbitrary set of instanced meshes (with the help of the `InstancedMeshComposer` component).
 
 ## Design Standards

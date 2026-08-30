@@ -75,7 +75,8 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
             texture = await TextureFactory.loadStaticImageTexture(p.texturePath);
             break;
         case "dynamicEmpty":
-            texture = TextureFactory.loadDynamicEmptyTexture(p.texturePath, p.textureWidth, p.textureHeight);
+            texture = TextureFactory.loadDynamicEmptyTexture(p.texturePath, p.textureWidth,
+                p.textureHeight, p.transparent, p.filterType);
             break;
         default:
             throw new Error(`Unknown texture load type :: "${p.textureLoadType}"`);
@@ -83,7 +84,13 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
 
     const newMaterial = new THREE.MeshPhongMaterial();
     newMaterial.map = texture;
-    newMaterial.transparent = false;
+    // Depth *testing* stays on either way, so a see-through quad is still hidden by whatever stands
+    // in front of it — which is the whole point of writing text into the world rather than over it.
+    // What is turned off is depth writing, since a quad that is mostly nothing would otherwise mask
+    // what is behind it. These quads are small and never overlap one another, so nothing turns on
+    // the order they are drawn in.
+    newMaterial.transparent = p.transparent;
+    newMaterial.depthWrite = !p.transparent;
     if (p.polygonOffsetFactor && p.polygonOffsetUnits)
     {
         newMaterial.polygonOffset = true;
@@ -166,7 +173,6 @@ function createInstancedTinMaterial(p: InstancedTinMaterialParams): THREE.Materi
         shader.vertexShader = `
             varying vec3 vTinSurfacePos;
             varying vec3 vTinLocalPos;
-            varying vec3 vTinPartSize;
         `+ shader.vertexShader;
         shader.vertexShader = shader.vertexShader.replace(
             "#include <begin_vertex>",
@@ -188,30 +194,20 @@ function createInstancedTinMaterial(p: InstancedTinMaterialParams): THREE.Materi
             vTinSurfacePos = position * tinPartScale * 16.0 + tinPartScale * 41.0;
             // Handed to the fragment stage rather than reduced here, because every vertex of a
             // primitive sits on one of its corners — the edge measure below is only meaningful
-            // once it is interpolated across a face. The size goes with it so that measure can be
-            // taken in world units rather than as a fraction of the part.
+            // once it is interpolated across a face.
             vTinLocalPos = position;
-            vTinPartSize = tinPartScale;
             `
         );
 
         shader.fragmentShader = `
             varying vec3 vTinSurfacePos;
             varying vec3 vTinLocalPos;
-            varying vec3 vTinPartSize;
             // The constants below are linear-space equivalents of the sRGB colors they are named
             // after, since the fragment stage works in the renderer's linear working color space.
             const vec3 TIN_RUST_COLOR = vec3(0.147, 0.033, 0.009); // deep orange-brown corrosion
             const vec3 TIN_BARE_COLOR = vec3(0.342, 0.342, 0.319); // unpainted sheet metal
             const vec3 TIN_PATINA_TINT = vec3(0.88, 0.84, 0.72); // the yellowing of aged paint
             const float TIN_MAX_SHEEN = 0.85; // ceiling the specular highlight approaches but never reaches
-            // How far in from an edge the paint has been handled off, in world units. A physical
-            // width rather than a fraction of the part, so that a small piece is not worn to the
-            // same proportion of itself as a large one — the hand that wore it was the same size
-            // either way. Capped against the part's own thickness all the same, since a band wider
-            // than the piece it runs along would leave nothing unworn.
-            const float TIN_WEAR_WIDTH = 0.024;
-            const float TIN_MAX_WEAR_FRACTION = 0.3;
             ${VALUE_NOISE_GLSL}
         `+ shader.fragmentShader;
         shader.fragmentShader = shader.fragmentShader.replace(
@@ -222,17 +218,20 @@ function createInstancedTinMaterial(p: InstancedTinMaterialParams): THREE.Materi
                 diffuseColor.rgb *= vColor; // See createInstancedColorMaterial for why this is needed.
             #endif
 
-            // Every geometry this material is used with spans [-0.5, 0.5] on each axis, so scaling
-            // by the part's size gives the world distance from the fragment to each pair of faces.
-            // The middle of those three only becomes small where two of them are small at once —
-            // that is, along the piece's edges and corners.
-            vec3 tinFaceDist = (0.5 - abs(vTinLocalPos)) * vTinPartSize;
-            float tinFarFace = max(tinFaceDist.x, max(tinFaceDist.y, tinFaceDist.z));
-            float tinNearFace = min(tinFaceDist.x, min(tinFaceDist.y, tinFaceDist.z));
-            float tinWearWidth = min(TIN_WEAR_WIDTH, TIN_MAX_WEAR_FRACTION * 0.5
-                * min(vTinPartSize.x, min(vTinPartSize.y, vTinPartSize.z)));
-            float tinEdge = 1.0 - smoothstep(0.0, tinWearWidth,
-                tinFaceDist.x + tinFaceDist.y + tinFaceDist.z - tinFarFace - tinNearFace);
+            // Every geometry this material is used with spans [-0.5, 0.5] on each axis, so the
+            // middle of the three per-axis distances only approaches the surface where two axes are
+            // extreme at once — that is, along the piece's edges and corners.
+            //
+            // Measured as a fraction of the part rather than in world units. Wear that is a fixed
+            // physical width is the truer account of a hand rubbing a toy, and it is the wrong one
+            // here: the parts are small and vary by an order of magnitude in size, so a fixed band
+            // is a hairline on the large ones and swallows the small ones, and the character stops
+            // reading as one aged object. A proportional band ages every part alike.
+            vec3 tinAxisDist = abs(vTinLocalPos) * 2.0;
+            float tinFarAxis = max(tinAxisDist.x, max(tinAxisDist.y, tinAxisDist.z));
+            float tinNearAxis = min(tinAxisDist.x, min(tinAxisDist.y, tinAxisDist.z));
+            float tinEdge = smoothstep(0.72, 1.0,
+                tinAxisDist.x + tinAxisDist.y + tinAxisDist.z - tinFarAxis - tinNearAxis);
 
             float tinPatch = valueNoiseFbm(vTinSurfacePos);
             float tinGrain = valueNoise(vTinSurfacePos * 5.0);

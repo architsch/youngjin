@@ -1,11 +1,10 @@
 import Room from "../../room/types/room";
-import { COLLISION_LAYER_HEIGHT, MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import PhysicsObject from "./physicsObject";
 import PhysicsVoxel from "./physicsVoxel";
 import { ColliderState } from "./colliderState";
 import { ColliderConfig } from "./colliderConfig";
 import Vec3 from "../../math/types/vec3";
-import { RoomTypeEnumMap } from "../../room/types/roomType";
 
 export default class PhysicsRoom
 {
@@ -19,9 +18,9 @@ export default class PhysicsRoom
         this.room = room;
         this.voxels = room.voxelGrid.voxels.map(voxel => new PhysicsVoxel(voxel));
         this.objectById = {};
+        // The room's boundary is solid all the way round now: a door is a panel hung on that wall
+        // rather than a cover over a hole cut through it, so there is nothing left to plug.
         this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ];
-        if (room.roomType != RoomTypeEnumMap.SinglePlayer) // Invisible entrance-clearance collider is only used in multiplayer rooms (to prevent other players from completely blocking the entrance door).
-            this.globalColliders.push(multiplayerEntrance);
     }
 }
 
@@ -59,22 +58,3 @@ const wall_lowerZ = makeCubeCollider(
 const wall_upperZ = makeCubeCollider(
     NUM_VOXEL_COLS*0.5, MID_ROOM_Y, NUM_VOXEL_ROWS + cubeColliderSizeHalf);
 
-// Only as tall as the doorway it plugs. Standing it through the room's whole height would put an
-// invisible wall across the storey above the entrance, where nobody can block the doorway anyway.
-const multiplayerEntranceHeight = MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS * COLLISION_LAYER_HEIGHT;
-
-const multiplayerEntrance: ColliderState = {
-    hitbox: {
-        center: {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5*multiplayerEntranceHeight,
-            z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW},
-        halfSize: {x: 0.5, y: 0.5*multiplayerEntranceHeight, z: 1},
-    },
-    colliderConfig: {
-            colliderType: "standalone",
-        hitboxSize: {sizeX: 1, sizeY: multiplayerEntranceHeight, sizeZ: 2},
-        applyHardCollisionToOthers: true,
-        outgoingSoftCollisionForceMultiplier: 0,
-        incomingSoftCollisionForceMultiplier: 0,
-        maxClimbableHeight: 0,
-    },
-};

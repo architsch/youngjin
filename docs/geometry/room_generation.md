@@ -6,9 +6,9 @@ Reference: @src/shared/room/generation/util/roomGenerationUtil.ts , @src/shared/
 
 The room generation system lets us build a room's content (i.e. `VoxelGrid` and `ObjectGroup`) without having to edit the individual voxels/objects by hand. Both multiplayer and singleplayer rooms are initially built by this system, via `RoomGenerationUtil`.
 
-A procedurally generated room is a voxel grid and nothing else. Objects are placed only where a room is hand-authored, as a single-player room's fixtures are — see [Furnishing](#furnishing) for why a multiplayer room is left for its own users to fill.
+A procedurally generated room is a voxel grid and one object: the door that is its way in. Everything else is placed only where a room is hand-authored, as a single-player room's fixtures are — see [Furnishing](#furnishing) for why a multiplayer room is otherwise left for its own users to fill.
 
-In case of multiplayer rooms, the system is also responsible for the room's boundary: it leaves the perimeter walls standing and cuts the doorway opening for the room's single entrance through one of them (see [room_entrance.md](room_entrance.md)).
+In case of multiplayer rooms, the system is also responsible for the room's boundary, which it leaves standing the whole way round — the way in is a door hung on that boundary rather than an opening cut through it (see [room_entrance.md](room_entrance.md)).
 
 Generation decides more than a room's contents: it also decides the room-level parameters those contents were picked to suit, and writes them onto the `Room` itself. See [Extending the System](#extending-the-system) for why that responsibility has to keep growing along with the rest of the game.
 
@@ -18,17 +18,17 @@ A room begins as **one solid chunk of matter** filling the grid, and everything 
 
 Two types carry the whole description:
 
-- A `RoomVolume` is a box of the grid: a rectangle of cells over a stretch of the room's height, given as the bounds it runs between. It is the *only* shape the system works in — areas, doorways, stairwells, the storeys themselves and the stretches of a room that have to be kept clear are all one of these. A room is therefore laid out in three dimensions from the start, rather than as a flat plan that something else is left to give a height to.
+- A `RoomVolume` is a box of the grid: a rectangle of cells over a stretch of the room's height, given as the bounds it runs between. It is the *only* shape the system works in — areas, passages, stairwells, the storeys themselves and the stretches of a room that have to be kept clear are all one of these. A room is therefore laid out in three dimensions from the start, rather than as a flat plan that something else is left to give a height to.
 - A `RoomPalette` is the set of textures the surfaces enclosing a volume are finished in: a floor, a ceiling, a wall and one for the block work standing inside it. A volume carries the palette it is to be finished in, so the two travel together.
 
 `RoomVolumeUtil` answers everything ever asked of a volume — whether two of them meet, what they have in common, how to grow one, where a passage between two of them would go — and it is also what applies one to the grid. Carving is the only way a room is ever built, and the consequences are worth stating plainly:
 
 - **Nothing ever builds a wall.** A wall is a place no volume was carved out of — as is a floor slab between two volumes stacked on top of each other, and the ceiling over the topmost one. None of them is described anywhere; every one of them is simply matter that was left alone.
-- **A doorway is a volume.** So is a stairwell, and so is the opening a player arrives through. A passage cut through a wall is not a different kind of thing from the areas it joins, only a smaller one.
+- **A passage is a volume.** So is a stairwell. An opening cut through a wall is not a different kind of thing from the areas it joins, only a smaller one.
 - **The order volumes are carved in does not matter.** Carving takes the blocks out first and finishes the surfaces they left behind afterwards, from what is actually solid once it has done so. A passage cut into an area carved earlier therefore leaves no face standing between them — which matters because a passage is always carved flush against the two areas it joins.
 - **A face is finished by whichever volume looks at it.** A face belongs to whatever encloses a volume rather than to the volume itself, and is drawn only where there is something there to draw it on. So one wall between two differently finished areas carries each one's own texture on the side that faces it, without anything having to arrange that.
 
-`RoomVolumeConstructorMap` is the vocabulary of shapes a room is described in: the storeys, the entrance and the stretch of floor around it, a single block. Naming them in one place is what keeps a room's parts agreeing with each other — the entrance a generator carves and the entrance room editing protects are the same declaration.
+`RoomVolumeConstructorMap` is the vocabulary of shapes a room is described in: the storeys, the stretch of floor around the entrance, a single block. Naming them in one place is what keeps a room's parts agreeing with each other — the stretch a generator keeps clear and the stretch a room's own door stands in are the same declaration.
 
 ### Storeys
 
@@ -103,13 +103,15 @@ Decorative blocks are stood on the floor of the areas the room is made of, in th
 
 Standing a block is the exact counterpart of carving one out, and settles the faces around it the same way, so it is order-independent for the same reason carving is. It has to come after the carving, though: carving can only ever take matter away, and has no way to express something that survives being carved. That is why the steps of a flight are raised rather than described.
 
-**And that is the whole of it — a procedurally generated room is furnished with block work and with nothing else.** A Hub or Regular room is meant to be furnished by the people who use it, so what it owes them is somewhere to build rather than a full house; an object generation had placed would be one somebody has to clear away before he can put his own there. Placing objects procedurally is left to the hand-authored rooms, where a fixture is part of what the room is for.
+**And that is nearly the whole of it — a procedurally generated room is furnished with block work, its own door, and nothing else.** A Hub or Regular room is meant to be furnished by the people who use it, so what it owes them is somewhere to build rather than a full house; an object generation had placed would be one somebody has to clear away before he can put his own there. Placing objects procedurally is otherwise left to the hand-authored rooms, where a fixture is part of what the room is for.
+
+The door is the exception because it is not really furniture. A room with no door is a room nobody can leave, and it is also what an arriving player is put down behind — so it is part of what makes the room a room, and a generator that left it out would produce something nobody could be sent to.
 
 ### The entrance
 
-A room's boundary is matter like any other wall, so the way in is a volume of its own: a cavity for passage, the height of a doorway, cut through that boundary and finished in the palette of the area it opens onto. A multiplayer room that failed to carve it would come out with no way in at all.
+Every multiplayer room is given one door, at a fixed cell on one of its boundary walls. Nothing is cut through that wall: a door is a wall attachment, and an attachment needs the wall behind it — so a cavity there would be the one place in the room the room's own door could not go.
 
-The area behind it is placed rather than drawn, and placed first, so that it is there whatever the rest of the room turns out to be — what an arriving player sees is a room rather than the back of a wall. The stretch of floor it opens onto is never built on, never hung with anything, and never crossed by a flight of steps. That keeps an arriving player from being boxed in whichever way the rest of the room came out, and keeps generated content clear of the cells that room editing protects (see [room_entrance.md](room_entrance.md)).
+The door is placed after the carving, since it hangs on a wall and the walls are not settled until then. The area it opens onto, by contrast, is placed rather than drawn and placed first, so that it is there whatever the rest of the room turns out to be — what an arriving player sees is a room rather than the back of a wall. The stretch of floor in front of the door is never built on, never hung with anything, and never crossed by a flight of steps, so that an arriving player is never boxed in by however the rest of the room came out.
 
 ## Tutorial Room
 
@@ -120,6 +122,8 @@ Every first-time user automatically enters the "tutorial room" in order to parti
 A single-player room is a fixed, hand-authored template rather than a procedural one, so its `SinglePlayerModeConfig` *declares* the parameters it is built with instead of drawing them. It still has to account for every one of them, for the same reason a procedural generator does. Those parameters are also what the mode's scripted steps address the room by, so a step and the room it acts on cannot drift apart.
 
 The tutorial is a run of small rooms the player is walked through in turn, each finished in a palette of its own so that moving from one to the next is visible as such. The stretches of wall between two of them are deliberately left uncarved, and a scripted step opens one up as the tutorial sends the player on — and because each of those walls is named as a volume, a step opening one takes the wall's own height from it rather than being told separately how tall the room is.
+
+The tutorial's two fixtures — the receptionist who greets the player, and the door he leaves by — are also the only objects generation ever *dresses*. Everywhere else an object nobody has finished falls back on an appearance derived from where it stands, which is the same for everyone and the same next session but is nobody's choice: it only has to look like a door, or like a character, since a room's own people will finish it afterwards. Nobody is going to finish these two, and the tutorial is the first thing anyone sees of the game, so what they look like is chosen outright and written onto them as they are placed. The door's name is written on it the same way, and it is left leading nowhere on purpose (see [room_entrance.md](room_entrance.md)).
 
 Every one of those volumes is on the first storey and none on the storey above, which is what makes the tutorial a single-storey room. The tutorial is watched from outside as much as from inside — much of it is played with the camera drawn back and looking down — and what stands over it is simply the matter the room was carved out of, which nothing ever paints. So a camera pulled far enough back looks into the room rather than down onto a lid.
 

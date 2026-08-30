@@ -16,10 +16,11 @@ that are genuinely hard to produce by hand:
   Nothing the app writes is ever outdated, so only direct seeding creates them.
 - **Room content blobs at an older binary version**, which drive the VoxelGrid decoder chain.
   These are found rather than made — see Step 3.
-- A **large population of room owners**, which drives room-list pagination, search and the
-  denormalized owner name. Staging runs in production mode, so the dev OAuth bypass is off and
-  a browser session can only ever become a guest — twenty owners means twenty Google accounts,
-  or one seeding command.
+- A **large population of room owners**, which drives the room-list and search APIs — their
+  pagination and the denormalized owner name. Staging runs in production mode, so the dev OAuth
+  bypass is off and a browser session can only ever become a guest — twenty owners means twenty
+  Google accounts, or one seeding command. (Those two endpoints no longer have any UI in front of
+  them; see Step 4.)
 - **Concurrency** — several real clients in one room at once.
 - **A whole client run, watched** — page errors, failed asset requests and what actually rendered,
   across a room load and a mode change, which a human notices only if they happen to be looking.
@@ -225,11 +226,21 @@ at all — a message travels as a change to the speaker's own player object, so 
 a real one leaves the browser.
 
 Anything reached by **aiming at the 3D scene** is not driven: placing or texturing a voxel,
-dragging an object, and the door that opens the room-list popup all sit wherever the generated
-room put them. That leaves the room *write* path — an edit dirtying a room until the save loop
-picks it up — outside what a plan can reach, and it is the largest gap. Say so in the report
-rather than letting a clean run imply it was covered. It also means the funnel's `built` milestone
-cannot be reached by a plan, while `chatted` can.
+dragging an object, and going through a door all sit wherever the generated room put them. That
+leaves the room *write* path — an edit dirtying a room until the save loop picks it up — outside
+what a plan can reach, and it is the largest gap. Say so in the report rather than letting a clean
+run imply it was covered. It also means the funnel's `built` milestone cannot be reached by a plan,
+while `chatted` can.
+
+**`listRooms` and `searchRooms` now exercise the API and nothing else.** A door carries its own
+destination rather than opening a room-list popup, and no player-facing room list survives — the
+only list left in the client is the admin's destination chooser, which picks a door's target. So a
+green `listRooms` proves the endpoint, its pagination and the denormalized owner name, and proves
+nothing about anything a player can reach. `gotoRoom` navigates by URL and is not a stand-in for
+walking through a door either. Two paths therefore have **no staging coverage at all** and belong in
+the report as such: travelling by door, and the admin door-wiring behind it — the latter permanently,
+since managing doors requires an admin in a Hub and a browser session on staging can only ever be a
+guest.
 
 ### Reading the client's side of the run
 

@@ -36,23 +36,23 @@ Every Hub/Regular room is laid out procedurally from a seed, so its shape is unk
 
 | Test | What it verifies |
 |------|-----------------|
-| leaves every part of the room reachable on foot from the entrance | A flood fill from the entrance reaches every walkable cell — no region is ever sealed off |
-| opens the entrance and keeps the floor in front of it clear | The doorway is carved, and the approach cells that room editing protects are free of generated content |
-| keeps the boundary wall solid apart from the entrance | The perimeter is intact everywhere except the entrance cell |
+| leaves every part of the room reachable on foot from the entrance | A flood fill from where a player arrives reaches every walkable cell — no region is ever sealed off |
+| leaves the wall the door hangs on standing, and the floor in front of it clear | The entrance cell is solid wall, since a door is hung on it, and the approach cells in front of it are free of generated content |
+| keeps the boundary wall solid the whole way round | The perimeter is intact everywhere, the entrance cell included |
 | gives every room an upper storey a player can climb to and walk around on | A walk from the entrance — stepping up at most one layer at a time, and needing headroom to stand — reaches the storey above, and reaches enough of it to be a floor rather than a ledge |
 | builds stairs the physics engine actually carries a player up | The shortest route upstairs is replayed through `PhysicsManager` with a real player collider, gravity and step-up, and his feet end up on the storey floor |
 | climbs to the upper storey by a flight wide enough to walk up | Every tread of a flight along the route upstairs — a run that climbs a layer at a time, more than once over, as opposed to a single step onto a piece of block work — has a second cell beside it at the same height that is equally standable, i.e. the flight is more than one cell across |
 | leaves nothing standing in mid-air | Every block of the room is held up: it rests on the room's floor, on a block below it, or against a block beside it at the same height. Anything left over after that has spread as far as it can — a prop stood on a storey the room was left without, say — is floating |
 | keeps the upper storey inside the room | The boundary wall is solid through the room's full height, so climbing the stairs is not a way out of it |
 | opens some of its rooms through both storeys, and floors over the rest | Across the seeds, some rooms come out with a space open from floor to ceiling — and every room, whichever way it went, still has a reachable upper storey |
-| leaves a multiplayer room empty of objects, for its users to furnish | Generation lays out the voxel grid and nothing else: a generated Hub carries no objects at all |
+| furnishes a multiplayer room with its own way in and nothing else | A generated Hub carries exactly one object: a default-entrance door on the boundary wall at the entrance cell, facing into the room |
 | builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomPaletteMap`, and the pack varies across seeds |
 | decorates a hub, and hands a regular room over plain | A Hub's visible quads carry several different textures; a Regular room's carry exactly one, i.e. each room type is finished with as much as its `RoomPaletteSelectionParams` offers and no more |
 | keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
 | rebuilds the same room from the same seed, and a different one from a different seed | Generation is deterministic per seed (layout and texture pack alike), and seeds do not collapse onto one layout |
 | is what the room generator builds Hub and Regular rooms with | `RoomGenerationUtil.generateRoom` returns a procedurally generated room, texture pack included, for both multiplayer room types |
 
-## Voxel Grid Migration (`voxel-grid-migration.test.ts`) — 57 tests
+## Voxel Grid Migration (`voxel-grid-migration.test.ts`) — 63 tests
 
 A room's contents are stored as an opaque binary blob, so an old room is migrated by the decoder on load rather than by a pass over storage. The fixtures these run against were produced by the previous commit's own encoder, in a git worktree, so what is being read is what the shipped code actually wrote — see the fixtures' README. Run per fixture: the bare shell a multiplayer room used to be, four fully generated rooms, and one with block work of assorted heights. See [voxel_grid.md](../../geometry/voxel_grid.md#stored-format-and-its-versions) for the behavior under test.
 
@@ -69,7 +69,8 @@ A room's contents are stored as an opaque binary blob, so an old room is migrate
 | survives a round trip through the current format unchanged | Re-encoding a migrated room and reading it back gives the same room, so a migrated room does not decay each time it is saved |
 | is carried through every version up to the current one | A version-0 blob runs the whole chain of converters, arriving with both the corner walls version 1 introduced and the storey floor version 2 introduced |
 | holds no quad outside the grid's own range | The migrated room addresses exactly the quads the current grid does |
-| leaves the entrance open | A migrated room is still one a player can get into |
+| seals the doorway, so that the room's door has a wall to hang on | A migrated room's entrance cell is solid, since a wall attachment with nothing behind it is refused |
+| fills the doorway in, and finishes it like the wall it is now part of | The filled cell is solid to the doorway's old height and carries the neighbouring wall's texture on the face that looks into the room |
 
 ## Room Population (`room-population.test.ts`) — 34 tests
 
@@ -145,16 +146,49 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 
 | Test | What it verifies |
 |------|-----------------|
-| two players both spawn at the room entrance | Both players spawn at the entrance cell (`MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5`, `MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5`) |
+| two players both spawn at the room entrance | Both players land where the room's own door puts an arrival, whichever room they came from |
 | player can update own object transform | A move across open floor is accepted near the target |
 | player cannot move another player's object | Authority check: a user cannot move someone else's player |
-| objects are removed when user leaves room | A player object is cleaned up when its user leaves |
+| objects are removed when user leaves room | A player object is cleaned up when its user leaves, while the room's own door stays put |
 | a far position jump is accepted rather than force-resynced | Distance alone never reverts a move; only collision constrains it |
 | ServerUserManager.getPlayerMetadata mirrors live player-object metadata | The metadata snapshot matches the live player object |
 | disconnect-with-save persists lastRoomID and flushes the latest metadata | Disconnect-with-save writes `lastRoomID` and the latest metadata |
 | chat messages are stored in player metadata | A chat message lands in the player object's metadata |
 
-## Voxel Operations (`voxel.test.ts`) — 15 tests
+## Doors and the Admin Privilege (`door.test.ts`) — 14 tests
+
+A door is how one room is joined to another, so laying one is an edit to the shape of the world rather than to a room's contents. See [admin.md](../../gameplay/admin.md) and [room_entrance.md](../../geometry/room_entrance.md) for the behavior under test.
+
+### Who may do what
+
+| Test | What it verifies |
+|------|-----------------|
+| lets an admin hang a door in a hub, and nobody else | An admin may add a door to a Hub; a member and a guest may not |
+| refuses a door in a regular room, even to an admin | A Regular room keeps the one door generation gave it — not even an admin adds another |
+| refuses a door hung under somebody else's name | The anti-spoof check rejects a door whose source user is not the requester |
+| lets only an admin take a hub's door down, move it, or re-wire it | Removal, movement and metadata writes are all accepted for an admin and refused for a member and a guest |
+| refuses a door move that would be resolved against physics | A door is placed rather than pushed, so a transform that is not physics-ignoring is rejected |
+| answers only to the metadata a door has | Label, destination room, destination door label, door type and composition are accepted; an image path and a chat message are not |
+
+### What a door makes of the values it is handed
+
+| Test | What it verifies |
+|------|-----------------|
+| trims a label and cuts it to length, since a label is also a name to be found by | Surrounding whitespace goes, and an over-long label is cut to the maximum |
+| snaps a door type to one the enum actually holds | A valid door type survives; anything else comes out as a custom entrance |
+| reads a door with no metadata as a custom entrance leading nowhere | Every reader has a defined answer for a door that carries nothing |
+
+### Choosing where a player arrives
+
+| Test | What it verifies |
+|------|-----------------|
+| puts him behind the door he was sent to, wherever that door is | A named destination door is found by its label, and the player lands a pace out from its face, facing away from it |
+| falls back on the room's own way in when the named door is not there | A label nothing answers to falls through to a door the room offers as a way in |
+| falls back on any door at all when no door offers itself as the way in | A room whose doors are all custom entrances still receives arrivals |
+| falls back on the middle of the room when it holds no door at all | A room with no doors is still somewhere a player can be put down |
+| prefers a door that offers itself as the way in over one that does not | Repeated draws never land on a custom entrance while a default one exists |
+
+## Voxel Operations (`voxel.test.ts`) — 13 tests
 
 | Test | What it verifies |
 |------|-----------------|
@@ -165,17 +199,15 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | adding a block at multiple collision layers | Blocks at non-contiguous layers (0, 1, 3) |
 | removing a non-existent block is handled gracefully | No crash when removing an absent block |
 | duplicate add to occupied layer is rejected | A second add to an occupied layer is rejected |
-| cannot add a block inside the entrance's no-build zone | Adds in the 3×3 entrance zone are rejected; a cell just outside the zone is allowed |
-| leaves the storey above the entrance free to build on and to take apart | Both entrance zones stop at the storey the doorway opens onto: directly over a cell closed to building, and directly over a jamb closed to removal, the upper storey takes an add and a removal — while the ground storey under each of them is untouched |
-| hangs a wall attachment over the entrance zone, but not inside it | A wall attachment is judged by the stretch of wall it hangs on rather than the whole column behind it: the same picture is refused on the ground floor inside the no-addition zone, accepted directly above it on the storey the zone does not reach, and accepted on both storeys of a column outside the zone |
-| cannot remove the wall blocks framing the entrance | Removing entrance-row jambs is rejected; a far boundary block is removable |
+| refuses to take down a wall a door is hanging on | The wall behind the room's own door stays up, while the same wall a few cells over comes down — nothing protects the entrance by position any more, only the door itself |
+| builds and hangs freely right up to the entrance, which nothing reserves any more | A block goes up directly in front of the door, and a picture goes up on the boundary wall beside it — the old no-build and no-removal zones are gone |
 | a block holding a canvas can only be removed once the canvas goes first | A block with something hanging on it refuses to come down until the attachment has been taken off it |
 
-The invisible collider that plugs the doorway stands only as tall as the doorway itself, now that a room is taller than the storey the entrance opens onto.
+A room's boundary used to have a hole at its entrance, plugged by an invisible collider. Both are gone: the way in is a door hung on the wall, so the wall is simply whole.
 
 | Test | What it verifies |
 |------|-----------------|
-| stops a player walking out on the ground, and lets him past on the storey above | A real player collider walked at the doorway through `PhysicsManager` is held short of it on the ground floor, while the same walk one storey up reaches the boundary wall — so the plug seals the way out without putting an invisible wall across the floor above it |
+| stops a player at the entrance the same way it stops him anywhere else | A real player collider walked at the entrance through `PhysicsManager` is brought up against the wall the door hangs on, on both storeys alike |
 
 A room is encoded into one reusable buffer, and writing past the end of a typed array is silently ignored rather than throwing — so these two cover the room nobody has built yet, which is the most a room can ever cost to write down.
 
@@ -309,19 +341,20 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | a restored composition survives a room switch | A composition restored from stored player metadata follows the player through a room change |
 | the player object is configured with the codec these tests encode against | Guard: the player object's composer config uses the codec type/version the tests encode with |
 
-## Door Mesh Composition (`composition.test.ts`) — 11 tests
+## Door Mesh Composition (`composition.test.ts`) — 12 tests
 
 | Test | What it verifies |
 |------|-----------------|
 | a composition survives an encode/decode round-trip | Encoding a random door and decoding it reproduces the same colors and part count |
 | the same seed always yields the same door | `DoorCompositionCodec.getRandomComposition` is deterministic per seed |
 | decoding is idempotent — re-encoding a decoded door reproduces the string | Decode → re-encode is stable for any seed (property-based) |
-| every authored color scheme survives the palette the codec quantizes to | Each scheme's colors land exactly on palette entries, so a finish is decoded as it was authored |
+| every authored color scheme survives the palette the codec quantizes to | Each scheme's colors land exactly on entries of the timber palette, so a finish is decoded as it was authored |
+| every palette round-trips its own colors, and none outgrows what can name it | Each named palette holds at most 94 colors, and every one of them comes back as the position it was stored at |
 | decoding an arbitrary string never throws and still yields a drawable door | Property-based: any garbage string decodes without throwing into a door with valid moulding inputs on every part |
 | a truncated composition decodes to a drawable door | Every truncation length of a valid string still decodes safely |
 | a door's default appearance depends on where it stands, not on who is looking at it | The fallback composition is seeded from room + object id, so it is stable per room and varies across rooms |
 | a door's default appearance is one of the authored schemes | The fallback never invents a color combination outside the curated set |
-| nobody may re-skin a door | `DoorObjectTypeConfig` refuses composition metadata writes from any user |
+| a door is finished by an admin in a hub, and by nobody else anywhere | `DoorObjectTypeConfig` accepts composition metadata only from an admin, and only in a Hub |
 | the door object is configured with the codec these tests encode against | Guard: the door's composer config uses the codec type/version the tests encode with, and does not collide with the player's |
 | every part of a door is drawn by a mesh the composition itself declares | Every part names a declared mesh, carries moulding inputs, and stands at a non-zero relief with more than one distinct depth |
 
@@ -702,25 +735,26 @@ for how to run it. It skips itself when no emulator is available.
 | Connection | 9 |
 | Room | 9 |
 | Room Generation | 15 |
-| Voxel Grid Migration | 57 |
+| Voxel Grid Migration | 63 |
 | Room Population | 34 |
 | Object | 8 |
-| Voxel | 15 |
+| Voxel | 13 |
 | Voxel Quad Reselection | 32 |
 | Game Mode | 23 |
 | Single-Player | 14 |
 | FTUE | 26 |
 | Player Mesh Composition | 16 |
-| Door Mesh Composition | 11 |
+| Door Mesh Composition | 12 |
+| Doors and the Admin Privilege | 14 |
 | Signals | 6 |
 | Permissions | 5 |
 | Extended Permissions | 16 |
 | State Persistence | 9 |
 | Race Conditions | 26 |
-| Property-Based | 17 |
+| Property-Based | 24 |
 | Room Ownership | 7 |
 | Room API | 12 |
 | Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **456** |
+| **Total** | **483** |

@@ -21,6 +21,9 @@ import {
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+
+const PLAYER_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Player");
 
 describe("room scenarios", () => {
     beforeEach(() => {
@@ -80,8 +83,12 @@ describe("room scenarios", () => {
             rooms: [EMPTY_REGULAR],
             users: usersInRoom(N, "regular"),
             assertions: ({ users, harness }) => {
+                // The room's own door is one of its objects, and belongs to nobody in particular,
+                // so it is the players that are counted here.
                 const roomMem = ServerRoomManager.roomRuntimeMemories["regular"];
-                expect(Object.keys(roomMem.room.objectById)).toHaveLength(N);
+                const playerObjects = Object.values(roomMem.room.objectById)
+                    .filter(obj => obj.objectTypeIndex === PLAYER_OBJECT_TYPE_INDEX);
+                expect(playerObjects).toHaveLength(N);
 
                 for (let i = 0; i < N; i++)
                 {

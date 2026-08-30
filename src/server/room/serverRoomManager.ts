@@ -4,13 +4,13 @@ import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../../shared/room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../../shared/room/types/roomChangeRejectedSignal";
 import { RoomChangeRejectionReason, RoomChangeRejectionReasonEnumMap } from "../../shared/room/types/roomChangeRejectionReason";
-import ObjectTransform from "../../shared/object/types/objectTransform";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import SpawnHotspotUtil from "./util/spawnHotspotUtil";
 import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
@@ -134,8 +134,12 @@ const ServerRoomManager =
         }
         await DBUserUtil.saveMultipleUsersPlayerMetadata(updates);
     },
+    // "destinationDoorLabel" names the door of the destination room the user means to arrive behind,
+    // if he came through a door that pointed at one. Everything else — a room picked from a list, a
+    // room the server routed him to — names none, and lands wherever the room's own way in is.
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
-        savePlayerMetadata: boolean, allowFallback: boolean): Promise<UserRoomChangeResult> =>
+        savePlayerMetadata: boolean, allowFallback: boolean,
+        destinationDoorLabel: string = ""): Promise<UserRoomChangeResult> =>
     {
         const user = socketUserContext.user;
         console.log(`ServerRoomManager.changeUserRoom :: roomID = ${roomID}, userID = ${user.id}`);
@@ -249,10 +253,7 @@ const ServerRoomManager =
         // which is not necessarily the one resolved above (see addUserToRoom).
         socketUserContext.isInSinglePlayerRoom = false;
         const joinedRoomRuntimeMemory = await ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
-            new ObjectTransform(
-                {x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: 0.5 * PLAYER_HEIGHT, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5},
-                {x: 0, y: 0, z: 1}
-            ),
+            SpawnHotspotUtil.pickSpawnTransform(roomRuntimeMemory.room, destinationDoorLabel),
             playerMetadata, userRole
         );
         if (!joinedRoomRuntimeMemory)
@@ -279,7 +280,7 @@ const ServerRoomManager =
         if (!roomID || roomID.length == 0) // If roomID is not specified, pick the best one.
             roomID = await RoomPickerUtil.pickBestRoomID(socketUserContext, "requestFromUser");
         const result = await ServerRoomManager.changeUserRoom(socketUserContext,
-            roomID, true, true, params.allowFallback);
+            roomID, true, true, params.allowFallback, params.destinationDoorLabel);
         ServerRoomManager.notifyRoomChangeRejection(socketUserContext, result);
     },
     // Tells the user that the room change they were waiting for is not going to happen, so

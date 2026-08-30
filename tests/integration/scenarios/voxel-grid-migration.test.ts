@@ -18,6 +18,13 @@
  *   - the ceiling it had becomes a real floor slab at that same height, so the room below it is
  *     left looking exactly as it did;
  *   - the storey the room has gained above that slab arrives empty.
+ *
+ * And from version 2 to version 3 (the doorway being filled in, now that a door is a panel hung on
+ * the wall rather than a cover over a hole cut through it):
+ *   - the entrance cell is solid to the height the doorway stood at, finished like the wall it is
+ *     now part of;
+ *   - nothing else about the room changes at all — which is asserted by taking the doorway back out
+ *     again and finding the room byte for byte as version 2 left it.
  */
 import { describe, it, expect } from "vitest";
 import fs from "fs";
@@ -27,8 +34,13 @@ import BufferState from "../../../src/shared/networking/types/bufferState";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
-    NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
+import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
+import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
+import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
+    MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
+    NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM,
+    NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const FIXTURE_NAMES = ["bare", "procedural_1", "procedural_7", "procedural_12345",
@@ -61,6 +73,31 @@ function loadFixture(name: string): {bytes: Uint8Array, expected: LegacyRoomDesc
 function decode(bytes: Uint8Array): VoxelGrid
 {
     return VoxelGrid.decode(new BufferState(bytes)) as VoxelGrid;
+}
+
+// The migrated room with its doorway opened up again, which is what version 2 left behind.
+//
+// The whole of what version 3 does is fill that one cell, so undoing it is what lets every
+// assertion about what migration preserved go on being made against the fixtures exactly as they
+// were recorded — and makes those assertions stronger rather than weaker, since a fill that
+// disturbed anything beyond the doorway would no longer undo cleanly.
+function decodeWithDoorwayReopened(bytes: Uint8Array): VoxelGrid
+{
+    const grid = decode(bytes);
+    const doorway = RoomVolumeConstructorMap["InitialMultiplayerEntrance"]();
+    for (let layer = doorway.collisionLayerMin; layer <= doorway.collisionLayerMax; ++layer)
+    {
+        const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
+            doorway.rowMin, doorway.colMin, layer);
+        VoxelUpdateUtil.removeVoxelBlock(UserRoleEnumMap.Owner, grid.voxels, first);
+
+        // Taking a block out hides its faces but leaves them painted, so the cell would come back
+        // carrying the finish the fill gave it. A doorway is an unpainted hole — that is what a
+        // version-2 room has there — so the paint goes too.
+        for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+            grid.quadsMem.quads[first + i] = 0;
+    }
+    return grid;
 }
 
 function quadTextureIndex(quad: number): number
@@ -109,15 +146,15 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
         const grid = decode(bytes);
         const out = new BufferState(new Uint8Array(1024 * 1024));
         grid.encode(out);
-        expect(out.view[0]).toBe(2);
+        expect(out.view[0]).toBe(3);
     });
 
     it("keeps every layer the room already had, face for face", () => {
-        expect(hashLegacyLayerQuads(decode(bytes))).toBe(expected.layerQuadsHash);
+        expect(hashLegacyLayerQuads(decodeWithDoorwayReopened(bytes))).toBe(expected.layerQuadsHash);
     });
 
     it("keeps every voxel standing where it stood, and adds the storey floor over it", () => {
-        const grid = decode(bytes);
+        const grid = decodeWithDoorwayReopened(bytes);
         expect(grid.voxels.length).toBe(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
 
         for (let i = 0; i < grid.voxels.length; ++i)
@@ -125,6 +162,31 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
             // The room's old contents, plus a slab at the height its ceiling used to hang at.
             expect(grid.voxels[i].collisionLayerMask).toBe(
                 expected.masks[i] | (1 << LEGACY_NUM_COLLISION_LAYERS));
+        }
+    });
+
+    it("fills the doorway in, and finishes it like the wall it is now part of", () => {
+        const grid = decode(bytes);
+        const doorway = getVoxel(grid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL);
+        const wallBeside = getVoxel(grid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+            MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1);
+
+        for (let layer = COLLISION_LAYER_MIN;
+            layer < COLLISION_LAYER_MIN + MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS; ++layer)
+        {
+            // Solid, so that a door has something to hang on...
+            expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(doorway, layer)).toBe(true);
+
+            // ...and finished like its neighbour, so the filled cell reads as the stretch of wall
+            // it now is rather than as a patch over a hole.
+            const doorwayFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
+                doorway.row, doorway.col, layer);
+            const wallFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
+                wallBeside.row, wallBeside.col, layer);
+            const insideFace = VoxelQueryUtil.getVoxelQuadIndex(
+                doorway.row, doorway.col, "z", "-", layer) - doorwayFirst;
+            expect(quadTextureIndex(grid.quadsMem.quads[doorwayFirst + insideFace]))
+                .toBe(quadTextureIndex(grid.quadsMem.quads[wallFirst + insideFace]));
         }
     });
 
@@ -144,7 +206,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
     });
 
     it("leaves the room's floor exactly as it was", () => {
-        const grid = decode(bytes);
+        const grid = decodeWithDoorwayReopened(bytes);
         for (let i = 0; i < grid.voxels.length; ++i)
         {
             const voxel = grid.voxels[i];
@@ -154,7 +216,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
     });
 
     it("shows the old ceiling from below, as the underside of the new storey floor", () => {
-        const grid = decode(bytes);
+        const grid = decodeWithDoorwayReopened(bytes);
         for (let i = 0; i < grid.voxels.length; ++i)
         {
             const voxel = grid.voxels[i];
@@ -246,11 +308,13 @@ describe("the migrated room as a room", () => {
         expect(grid.quadsMem.quads.length).toBe(NUM_VOXEL_QUADS_PER_ROOM);
     });
 
-    it("leaves the entrance open", () => {
-        // A migrated room a player cannot get into is a room that is gone, so this is checked on
-        // the far side of the migration rather than only where the doorway is first carved.
+    it("seals the doorway, so that the room's door has a wall to hang on", () => {
+        // A migrated room whose doorway was left open is a room whose own door cannot be placed in
+        // it — a door is a wall attachment, and an attachment with no wall behind it is refused
+        // (see WallAttachedObjectUtil). So this is checked on the far side of the migration rather
+        // than only where the fill is written.
         const grid = decode(loadFixture("procedural_1").bytes);
-        const entrance = getVoxel(grid, NUM_VOXEL_ROWS - 1, 16);
-        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(entrance, COLLISION_LAYER_MIN)).toBe(false);
+        const entrance = getVoxel(grid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL);
+        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(entrance, COLLISION_LAYER_MIN)).toBe(true);
     });
 });

@@ -18,7 +18,7 @@ Reference: @src/shared/object/util/objectUpdateUtil.ts , @src/server/object/serv
     - **On failure:** it logs an error. No rollback is sent, since the removal was already applied optimistically.
 
 ## Local-Only Objects
-Some objects exist only on the client and must never enter the synced room state — for example the render objects spawned from the voxel grid and the entrance [Door](../geometry/room_entrance.md#the-door-object). These are spawned during room load (with client-only ids) and torn down without ever being registered in the room's object set or persisted, and without emitting any add/remove signal. They still get a physics body when their type defines a collider, so they can participate in collision while remaining purely client-side and identical across clients.
+Some objects exist only on the client and must never enter the synced room state — the render objects spawned from the voxel grid, for example. These are spawned during room load (with client-only ids) and torn down without ever being registered in the room's object set or persisted, and without emitting any add/remove signal. They still get a physics body when their type defines a collider, so they can participate in collision while remaining purely client-side and identical across clients.
 
 ## Set Object Transform
 

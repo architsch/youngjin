@@ -5,7 +5,6 @@ Reference: @src/shared/physics/physicsManager.ts , @src/shared/physics/util/phys
 ## Global Colliders (Room Boundaries)
 Every `PhysicsRoom` holds a fixed set of `globalColliders` that bounds the playable volume:
 - **Perimeter colliders** — the floor, the ceiling, and the four side walls. Each is a large solid block placed flush just outside one face of the room, so its thickness extends away from the playable volume. They all share one hard-collision configuration (no soft push).
-- **Entrance collider** — an invisible plug over the doorway opening in one of the walls. See [room_entrance.md](room_entrance.md#the-entrance-collider).
 - **Voxel block hitbox** — every solid voxel block contributes its own box collider.
 
 ## Collision Systems
@@ -41,5 +40,5 @@ An object's collider reorients with its facing direction: when the object turns 
 ## Spatial Acceleration
 The physics engine uses the voxel grid as a spatial hash:
 - Queries convert a box's bounds to voxel-grid coordinates, clamped to the valid grid range.
-- The room's `globalColliders` (boundaries + entrance) are always tested; beyond those, only the voxels within the box's footprint are checked, keeping collision cost roughly constant per movement.
+- The room's `globalColliders` (the room's boundaries) are always tested; beyond those, only the voxels within the box's footprint are checked, keeping collision cost roughly constant per movement.
 - Object-to-object queries similarly use range or volume-overlap checks accelerated by the grid.

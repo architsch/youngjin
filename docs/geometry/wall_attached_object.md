@@ -1,11 +1,13 @@
 # Geometry of Wall-Attached Objects
 
-A wall-attached object is a game object mounted on the surface of a voxel wall (e.g. a painting, or a [door](door_design.md)). Its position snaps to a regular sub-cell grid, and its facing direction is always axis-aligned, pointing outward from the wall it is attached to.
+A wall-attached object is a game object mounted on the surface of a voxel wall (e.g. a painting, or a [door](door_design.md)). Nowhere in the room is off limits to one: what settles whether it may go up is the wall behind it and whatever is already hanging there. Its position snaps to a regular sub-cell grid, and its facing direction is always axis-aligned, pointing outward from the wall it is attached to.
 
 An attachment's collider is centred on its position, so one that stands on a floor rather than hanging at eye level has its origin half its own height above that floor. A door is the case that matters.
 
 ## Position & Direction Quantization
-Wall-attached object transforms are quantized before use: positions snap to the nearest sub-cell grid point, facing directions round to the nearest axis-aligned unit vector, and the collider's footprint is sized to whole grid steps. This keeps these objects flush with the wall and aligned with the voxel structure behind them.
+Wall-attached object transforms are quantized before use: positions snap to the grid the wall is built on, facing directions round to the nearest axis-aligned unit vector, and the collider's footprint is sized sideways to whole cells, which is what makes an attachment claim whole columns of wall. This keeps these objects flush with the wall and aligned with the voxel structure behind them.
+
+Vertically it is the object's **bottom edge** that is snapped, not its centre. An object standing an odd number of collision layers tall has its centre half a layer off that grid, so snapping the centre would lift it clear of the floor it stands on and keep it there every time it was moved. An object of even height comes out the same either way.
 
 ## Movement Types
 Wall-attached objects support three movement types:
@@ -59,7 +61,6 @@ A wall-attached object may only be placed where (1) its back is fully supported 
 3. **Iterate across the object's width.** For each cell the object spans:
    - **Back check** — the cell's collision layer mask must fully cover the object's vertical range; otherwise the object would not be supported, and placement is rejected.
    - **Front check** — at least one front cell must *not* fully cover that vertical range, so some of the object is exposed. If every front cell is solid across the range, the object would be invisible inside the wall, and placement is rejected.
-   - **Protected-space check** — the stretch of wall the object would hang on must not reach into somewhere the room keeps clear of new block work, since hanging something there walls the space in exactly as a block would. What is asked about is that stretch alone — the one cell of wall, over the layers the object's own height covers — rather than the whole column of room behind it, so an attachment may go up on an upper storey standing over ground the room protects. See [room_entrance.md](room_entrance.md#editing-constraints-near-the-entrance).
 
 4. **Collision check.** Finally, verify the new position does not overlap any existing wall-attached object.
 
@@ -68,3 +69,5 @@ Implemented in @src/shared/object/util/wallAttachedObjectUtil.ts .
 ## Removing the Wall Behind an Attachment
 
 The support a placement requires can also be taken away afterwards, by removing the voxel block the object hangs on. So a block is asked what it is holding up before it may go: the attachments standing against it count, while ones merely overlapping it from the far side hang on some other block and do not. Removing such a block by itself is refused, since it would leave an attachment with no wall behind it. Removing it together with everything hanging on it is a request of its own — the editing UI warns that the attachments will be destroyed, and on the user's confirmation takes those down first and the block after them.
+
+That way through is only open where every attachment is the user's own to remove. Where one is not — a door, which is an admin's alone — the wall is staying up whatever is agreed to, so the user is told which kind of thing is holding it there rather than being asked to confirm a removal that would then do nothing.

@@ -112,14 +112,12 @@ const DoorCompositionConstants = {
     // Coordinated finishes a door could plausibly have been given. A door's colors are drawn from
     // one of these rather than picked independently, because three unrelated colors on one door do
     // not look like a door that was painted — they look like a fault. The values are snapped to the
-    // shared palette the codec encodes with, so a scheme survives being written out and read back
-    // unchanged; a customization form would still be free to set any color the palette holds.
-    // Every scheme is a finish timber is actually given: stained woods, painted joinery, and the
-    // brass or iron furniture that goes with them. The vivid end of the palette is left out on
-    // purpose — the material tones a color down as it ages it, but nothing turns a pure blue into
-    // something a door was ever painted.
+    // "Timber" palette the codec encodes with, so a scheme survives being written out and read back
+    // unchanged; a customization form is free to set any color that palette holds.
     //
-    // Two constraints beyond that, both of which come from how the door is lit and read:
+    // That palette is already only what timber is finished in, so nothing here has to steer clear of
+    // colors a door was never painted. What is still chosen deliberately, and cannot be, is how the
+    // three colors of one door sit against each other:
     //
     // The **panels stay in the middle of the palette's brightness range**. The material ages a color
     // by warming it and pulling its saturation back, the figure and the carving darken it further,
@@ -128,38 +126,38 @@ const DoorCompositionConstants = {
     // in it, which is a door's whole appearance spent on nothing. The far end is no better — a face
     // at the top of the range washes out and takes the moulding's shading with it.
     //
-    // The **plate stays close in brightness to the panel it sits on**. It only has to carry black
+    // The **plate stays close in brightness to the panel it sits on**. It only has to carry dark
     // lettering, and the smallest step that does is the one to want: a plate that leaps off the door
     // stops being part of it, and reads as a sticker rather than as something screwed to the face.
+    // Measured against what the material makes of a color rather than against the hex written here,
+    // a plate lands between a fifth and two thirds brighter than the door it is screwed to.
+    //
+    // The **knob is metal or bone**, since that is what a knob is made of, and it is the one part of
+    // a door that was never painted to match the rest.
     //
     // The mouldings take no color here at all. Every one of them is worked into the timber it runs
     // around, and is seen by the light falling across its profile rather than by any contrast with
     // the face it is cut out of (see the "InstancedWood" material).
-    // Both constraints are checked against what the *material* makes of a color rather than against
-    // the hex written here, since the ageing warms every color and pulls its saturation back before
-    // any of it is lit. Under that measure a plate lands between a fifth and two thirds brighter
-    // than the door it is screwed to, which is why the mid-toned finishes below share one plate
-    // between them: the palette is coarse, and it holds no nearer step for them to take.
     colorSchemes: [
-        scheme("#ac4e00", "#877666", "#cc903e"), // pine, taupe plate, brass knob
-        scheme("#877666", "#979797", "#cc903e"), // weathered grey
-        scheme("#0a8a49", "#979797", "#dec900"), // painted sage
-        scheme("#516e9b", "#877666", "#c6b492"), // painted slate blue
-        scheme("#d86100", "#979797", "#dec900"), // painted terracotta
-        scheme("#879000", "#979797", "#cc903e"), // painted olive
-        scheme("#009d9f", "#979797", "#c6b492"), // painted teal
-        scheme("#979797", "#c6b492", "#877666"), // painted grey
-        scheme("#cc903e", "#c6b492", "#877666"), // light oak
-        scheme("#96a3f1", "#c6b492", "#cc903e"), // painted periwinkle
-        scheme("#c6b492", "#f5e69f", "#877666"), // painted cream
-        scheme("#86c53a", "#f5e69f", "#877666"), // painted apple green
+        scheme("#b98b56", "#d5cdb6", "#c9a227"), // pine, putty plate, brass knob
+        scheme("#71452b", "#6b6659", "#a98a3f"), // dark walnut
+        scheme("#a87545", "#bdb59d", "#8a7346"), // medium oak
+        scheme("#87816f", "#d5cdb6", "#5c5c5a"), // weathered grey, iron knob
+        scheme("#74856b", "#bdb59d", "#c9a227"), // painted sage
+        scheme("#647684", "#a29b86", "#9a9a97"), // painted slate blue
+        scheme("#5c6f57", "#87816f", "#a98a3f"), // painted deep green
+        scheme("#8a5f56", "#a29b86", "#c9a227"), // painted oxblood
+        scheme("#a89263", "#e6dcc8", "#8a7346"), // painted ochre
+        scheme("#a29b86", "#f0e7d2", "#7a7a78"), // painted putty, ivory plate
+        scheme("#845433", "#87816f", "#ded2b8"), // dark stain, bone knob
+        scheme("#7d8f9c", "#ded2b8", "#5c5c5a"), // painted blue-grey
     ] as DoorCompositionParams["colors"][],
 };
 
 function scheme(panel: string, label: string, knob: string): DoorCompositionParams["colors"]
 {
-    const snap = (hex: string) => ColorUtil.base94IndexToRGB(
-        ColorUtil.rgbToBase94Index(ColorUtil.hexToRGB(hex)));
+    const snap = (hex: string) => ColorUtil.paletteIndexToRGB("Timber", 
+        ColorUtil.rgbToPaletteIndex("Timber", ColorUtil.hexToRGB(hex)));
     return {panel: snap(panel), label: snap(label), knob: snap(knob)};
 }
 

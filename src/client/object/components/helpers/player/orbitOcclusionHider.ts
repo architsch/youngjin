@@ -8,6 +8,7 @@ import HiddenOccluder from "../../../../graphics/types/mesh/hiddenOccluder";
 import OccluderCandidate from "../../../../graphics/types/mesh/occluderCandidate";
 import InstancedMeshComposer from "../../instancedMeshComposer";
 import InstancedMeshGraphics from "../../instancedMeshGraphics";
+import LabelText from "../../labelText";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import Vec3 from "../../../../../shared/math/types/vec3";
 import Geometry3DUtil from "../../../../../shared/math/util/geometry3DUtil";
@@ -332,22 +333,24 @@ export default class OrbitOcclusionHider
     }
 
     // A ray reports the one piece of geometry it struck, but an object need not be one piece: a
-    // composed object draws each of its parts as an instance of its own, and hiding only the part a
-    // sample happened to land on would leave the rest of it standing in front of what the camera is
-    // meant to see. So an object found in the way goes out of sight whole — a door, whose slab,
-    // panels, plate and knob are each an instance of their own, most of all. Objects drawn as a
-    // single piece have nothing further to hide, and say so by carrying no composer.
+    // composed object draws each of its parts as an instance of its own, and its name is an instance
+    // besides — so hiding only the part a sample happened to land on would leave the rest of it
+    // standing in front of what the camera is meant to see, or leave a door's name hanging in the
+    // air where the door was. So an object found in the way goes out of sight whole. Objects drawn
+    // as a single piece have nothing further to hide, and say so by carrying neither of these.
     private hideRemainingPartsOf(gameObject: GameObject): void
     {
-        const composer = gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;
-        if (composer == undefined)
-            return;
-
-        composer.forEachInstance((instancedMeshId: string, instanceId: number) => {
+        const hideInstance = (instancedMeshId: string, instanceId: number) => {
             const mesh = MeshFactory.getMesh(instancedMeshId);
             if (mesh)
                 this.hideOccluder(mesh, instanceId);
-        });
+        };
+
+        const composer = gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;
+        composer?.forEachInstance(hideInstance);
+
+        const labelText = gameObject.components.labelText as LabelText | undefined;
+        labelText?.forEachInstance(hideInstance);
     }
 
     private revealHiddenMeshOccluders(): void

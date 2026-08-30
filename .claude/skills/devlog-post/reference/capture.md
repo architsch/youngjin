@@ -31,9 +31,17 @@ account keeps whatever first-time prompts it has already dismissed, so consecuti
 same game rather than a stranger's first visit. A fresh guest (`devUser: null`) is right only for a
 post about what a new player meets.
 
+**Seat 4 is a seeded admin**, and it is the only way to photograph anything admin-only — laying,
+moving, labelling or re-wiring a hub's doors, opening a new hub, or the hub settings form. Nothing
+in the product ever makes an admin, so a shot script that needs one sets `devUser: 4` and there is
+no other route. A member seat standing in the same hub simply does not have the controls, and the
+run fails looking for a button that was never rendered.
+
 The session starts in a **hub**, where the identity bar reads "Visitor" but everyone may edit all
 the same — hubs are open to anyone standing in them. So a shot of the editing controls needs no
-room of one's own, and no travelling to reach one.
+room of one's own, and no travelling to reach one. **Doors are the exception**: editing a room is
+not enough to manage them, because a door is a join between rooms rather than a piece of a room's
+contents. In a hub they answer to an admin only; in an owned room nobody rearranges them at all.
 
 The tutorial is skipped by default via the browser's tutorial-finished cookie. A post about the
 tutorial itself sets `tutorial: true`.
@@ -43,7 +51,7 @@ tutorial itself sets `tutorial: true`.
 ```js
 module.exports = {
     slug: "orbit-camera",     // names every file: shot("overview") -> orbit-camera-overview.jpg
-    devUser: 1,               // 1-3, or null for a brand-new guest
+    devUser: 1,               // 1-3 members, 4 the admin, or null for a brand-new guest
     startPath: "/",           // or "/<roomID>" to open one room directly
     tutorial: false,          // true only for a post about the tutorial
     // viewport: { width: 1280, height: 800 },
@@ -118,6 +126,14 @@ doorway. Which controls appear depends on what was hit — a wall face offers th
 the texture palette, a picture offers the canvas tools — so a script that assumes one and lands
 on the other will fail looking for a button.
 
+**A door is the one thing a click does not merely select.** To anybody but an admin, clicking a door
+he is standing next to is a journey: the client leaves for the destination room, and the next shot is
+of somewhere else entirely. Only on the admin seat does the click take hold of the door instead — and
+it enters edit mode along with the selection, which is where `changeDoorLabelButton`,
+`changeDoorDestinationButton`, `customizeDoorButton`, `doorSettingsButton` and `enterDoorButton`
+appear. `addDoorButton` sits with the block tools on a selected wall face, admin-only and in a hub
+only.
+
 ### Edit mode is what a shot of the room needs
 
 A click on its own is not an edit any more (see `docs/gameplay/game_mode.md`). In play mode it
@@ -176,12 +192,25 @@ is doing the post's main job.
   their order.
 - Keep 2-4 per post.
 
+**The set has to vary, and that is a separate judgement from whether each frame is good.** A group of
+shots can pass every rule below individually and still fail together, because the reader meets them
+at once: three frames of the same subject, at the same distance, from the same height, differing only
+in which controls happen to be open, read as one picture printed three times. So choose the vantages
+before shooting any of them and make them differ **in kind** — from the storey above over a gallery
+edge; through an opening, so a doorway frames the shot and the room has depth beyond it; close and
+oblique at the subject's own level, where its material reads; from across an open space with the room
+around it. Two kinds is the minimum and three is better; the same walk-up shot at three zoom levels
+is not variety. Lay the finished images side by side and ask whether they look like three views of a
+place or one view taken three times.
+
 ## Composing the frame
 
-A capture that merely contains the feature is not yet a photograph of it. Three faults account for
-almost every bad frame this runner produces, and each has a fix in the camera controls below.
+A capture that merely contains the feature is not yet a photograph of it. Two things decide whether a
+frame works — **where the camera stands**, and **what fills the frame besides the subject** — and
+nearly every bad frame this runner produces fails one of them. Both have their fix in the camera
+controls at the end of this section.
 
-### 1. Fill the frame with the subject
+### 1. Get close, and come at the subject obliquely
 
 **The thing the shot is about should occupy something like a third to a half of the frame's shorter
 side.** A painting that is a postage stamp in the middle of a wall shows a reader nothing, and most
@@ -197,8 +226,6 @@ picture that framing distance is deliberately set so the wall around it stays in
 close end of that range is where a picture-sized subject reads properly; anywhere near the far end
 it is a speck.
 
-### 2. Face the subject from an oblique angle
-
 A camera square onto a wall photographs a flat rectangle: the wall's edges stay parallel, nothing
 recedes, and the room looks like a painted backdrop. **Come round 30-60 degrees off the surface's
 normal, and lift the camera above the subject's own level** (or drop it below). Then the wall runs
@@ -212,7 +239,11 @@ stands there — which, for a subject on the ground floor shot from above, is th
 it. That is the mode working as intended, but it leaves a hole in the frame, so look at the
 resulting image before writing the swing down as the shot's vantage.
 
-### 3. Balance the whole frame, not just the middle
+### 2. Fill the rest of the frame, and make its parts differ in color
+
+The subject is only part of the picture. What decides whether the rest of the frame reads as a place
+is that it holds **several things the eye can tell apart** — and what separates them is color, not
+brightness, because brightness is already being spent by distance and by the camera's own light.
 
 In edit mode the camera looks *straight at* the selection, so the subject sits in the middle of the
 view whatever the script does; where the subject sits is not a choice. **What is choosable is what
@@ -225,12 +256,29 @@ dark unlit void along an edge, and a horizon or a wall edge cutting the frame ex
 are lit by a light that rides with the camera, so anything far from it goes dark — a subject shot
 from close, with its surroundings inside that light, is also the frame that is properly lit.
 
-Two habits do most of the work here. **Frame something near the end of a wall rather than the middle
-of it**, so that coming round off the square-on view opens the room, its doorway and its other
-pictures into the shot instead of yet more of the same wall. And when the stretch of wall the player
-has reached is bare, **hang a picture on it** rather than photographing something across the room:
-the nearest surface gives the largest subject, and hanging one is a feature the post is describing
-anyway.
+**Frame something near the end of a wall rather than the middle of it**, so that coming round off the
+square-on view opens the room, its doorway and its other pictures into the shot instead of yet more
+of the same wall.
+
+**Where the room does not supply the contrast, build it.** Generated rooms are mostly bare, and a bare
+room photographs as a flat expanse of one repeated block whatever the camera does — but dressing the
+stretch of room a shot will use takes a few edit-mode clicks, and it is a feature the post is
+describing anyway. Hang a picture on a bare wall; stand a few decorative blocks near the subject, so
+the frame holds an object at a different depth from the wall behind it; retexture a floor or run a
+band of another material at the subject's own height, so two or three materials meet inside the frame;
+put a second door or another picture further along the wall to carry a corner that would otherwise be
+blank. Choosing a different room instead is the cheaper option when the room is being picked anyway.
+
+Aim for **moderate contrast, well balanced**: three or four elements differing in color and size,
+spread across the frame rather than crowded into its middle. A room dressed until it is busy is as bad
+a photograph as a bare one. The test is whether the eye finds the subject in about a second and still
+has somewhere else to go afterwards.
+
+This is also what makes a shot carry **height**. A frame containing both storeys only *shows* two
+storeys if the eye can separate them, and when the floor below and the floor beyond are the same
+blocks in the same palette, the drop between them flattens into one continuous surface — a photograph
+of a two-storey room that argues against the thing it was taken for. A warm floor below and a cool one
+above, or a patterned storey against a plain one, is what fixes it. Brightness alone will not.
 
 In play mode the camera is first-person, and only half of it is the script's to aim. Turning the
 player swings the view left and right, so where the subject sits **across** the frame is a choice —
@@ -248,28 +296,6 @@ What the game does with the pitch is worth knowing, because it is the only way t
   away over the next few paces. On flat floor that is level; standing at a gallery edge or at the
   top of a flight of stairs it looks down over the drop. So the way to shoot down into a room is to
   walk to somewhere the floor actually falls away.
-
-### 4. Make the two storeys read apart
-
-A frame that contains both storeys only *shows* two storeys if the eye can tell them apart. When the
-floor below and the floor beyond are surfaced in the same blocks, in the same palette, under a light
-that falls off with distance, the drop between them flattens into one continuous surface — and a
-photograph of a two-storey room that reads as flat is a photograph that argues against the very thing
-it was taken for.
-
-So when a shot is meant to carry height, **check that the two levels differ in colour, and not only
-in brightness.** The one that reads best has a distinctly different material on each: a warm floor
-below and a cool one above, a patterned storey against a plain one, a dark ground floor under a pale
-gallery. Depth comes across as a change of colour long before it comes across as a change of shade,
-because shade alone is what distance and the camera's own light are already doing to the frame.
-
-Where a room does not offer that contrast on its own, it is worth making rather than working around:
-retexturing a stretch of one storey's floor takes a few clicks in edit mode, and it is a feature the
-post is describing anyway — the same reasoning as hanging a picture on a bare wall above. Choosing a
-different room is the other option, and the cheaper one when the room is being picked anyway.
-
-This applies to every shot with a floor above or below the camera in it, which for a post about
-vertical space is most of them.
 
 ### The controls, in numbers
 
@@ -290,10 +316,9 @@ that the wheel went the wrong way.
 
 ## While you are iterating
 
-- Keep the half-finished script **outside the repo** — in the scratchpad directory — and point the
-  runner at it there. The dev server watches its own files and restarts on every write under
-  `dev/`, costing a wait each time. Copy it into `dev/scripts/devlog/shots/` once it works, and run
-  it once more from there.
+- Iterate on the script **in place**, in `dev/scripts/devlog/shots/`. The dev server's watcher
+  ignores that directory, so writing to it no longer restarts the server mid-run. Writes elsewhere
+  under `dev/` still do, so keep any throwaway helper out of the watched part of the tree.
 - Rooms are saved, so a run inherits whatever the last one did: a picture hung by an earlier
   attempt is still on the wall, and clicking where a bare wall used to be now selects that picture.
   Write `run()` so it tolerates what it finds rather than assuming a fresh room.

@@ -6,7 +6,6 @@ import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
 import WallAttachedObjectUtil from "../../object/util/wallAttachedObjectUtil";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
-import { RoomVolumeConstructorMap } from "../../room/generation/maps/roomVolumeConstructorMap";
 
 // Every entry point here takes a quadIndex, and a quadIndex arrives from outside: decoded off a
 // voxel edit signal, or computed by a caller from a selection. The arithmetic that turns one back
@@ -56,11 +55,6 @@ const VoxelUpdateUtil =
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
         if (!voxel)
             return false;
-        if (RoomValidationUtil.additionIsBlocked(room,
-            RoomVolumeConstructorMap["SingleBlock"](row, col, collisionLayer)))
-        {
-            return false;
-        }
         if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             return false;
 
@@ -123,11 +117,6 @@ const VoxelUpdateUtil =
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
         if (!voxel)
             return false;
-        if (RoomValidationUtil.removalIsBlocked(room,
-            RoomVolumeConstructorMap["SingleBlock"](row, col, collisionLayer)))
-        {
-            return false;
-        }
         if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             return false;
 

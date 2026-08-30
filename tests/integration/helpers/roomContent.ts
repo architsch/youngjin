@@ -5,10 +5,11 @@
  * creation time — great for the product, useless as a fixture: a scenario that builds and edits
  * blocks at chosen coordinates needs to know what is already there, and needs the same answer on
  * every run. So the fixtures below build the bare shell a multiplayer room used to be (floor,
- * ceiling, boundary wall, entrance) and nothing else, leaving the generator itself to be covered
- * by the tests written for it (see room-generation.test.ts).
+ * ceiling, boundary wall, and the one door every room has) and nothing else, leaving the generator
+ * itself to be covered by the tests written for it (see room-generation.test.ts).
  */
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
 import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
 import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
 import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
@@ -16,7 +17,8 @@ import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGen
 import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
 import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { COLLISION_LAYER_MAX, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL,
+    MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
@@ -44,10 +46,12 @@ export function buildBareMultiplayerRoomContent(room: Room): void
         1, NUM_VOXEL_ROWS - 2, 1, NUM_VOXEL_COLS - 2,
         STOREY_FLOOR_COLLISION_LAYER + 1, COLLISION_LAYER_MAX, PALETTE));
 
-    // The way in, which is a cavity cut through the boundary wall — without it the room has none.
-    const entrance = RoomVolumeConstructorMap["MultiplayerEntrance"]();
-    entrance.palette = PALETTE;
-    RoomVolumeUtil.carveOutVolume(voxels, entrance);
+    // The way in, which is a door hung on the boundary wall — without it the room has none, and
+    // an arriving player has nowhere to be put down (see SpawnHotspotUtil). Nothing is cut through
+    // that wall: a door is a wall attachment, and an attachment needs the wall behind it.
+    const entranceDoor = DoorObjectUtil.makeEntranceDoor(room.id,
+        MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
+    room.objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
 }
 
 /** A fixture room of the given type. Single-player rooms keep their real template. */

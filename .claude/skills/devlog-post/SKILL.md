@@ -167,8 +167,8 @@ The rules that do not bend:
   no images has failed at its main job. They cost nothing against the character budget — the
   counter ignores those lines, because a pasted social post carries the text only and the user
   attaches the JPEGs themselves.
-- **Length.** **Aim for about 600 characters of prose.** The three posts in `source.txt` run roughly
-  620, 550 and 510 characters of body text, and they are the target. 2964 is a hard ceiling
+- **Length.** **Aim for about 600 characters of prose.** The first three posts in `source.txt` run
+  roughly 620, 550 and 510 characters of body text, and they are the target. 2964 is a hard ceiling
   (LinkedIn's 3000-character limit less the 36 the "Play Here" line needs), not a goal — being at a
   fifth of it is the correct outcome, and a post that reaches four figures needs cutting rather
   than congratulating. Never add a sentence because there is budget left. Verify the number, do not

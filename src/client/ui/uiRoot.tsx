@@ -19,7 +19,7 @@ import Popup from "./components/form/popup";
 import PopupState from "./types/popupState";
 import User from "../../shared/user/types/user";
 import AuthPromptForm from "./components/form/authPromptForm";
-import RoomListForm from "./components/form/roomListForm";
+import DestinationChooserForm from "./components/form/destinationChooserForm";
 import ConfigureMyRoomForm from "./components/form/configureMyRoomForm";
 import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
 import CustomizePlayerForm from "./components/form/customizePlayerForm";
@@ -45,6 +45,9 @@ import GameModeUtil from "../system/util/gameModeUtil";
 import FTUEUtil from "./util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
 import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
+import ConfigureHubRoomForm from "./components/form/configureHubRoomForm";
+import CustomizeObjectLabelForm from "./components/form/customizeObjectLabelForm";
+import DoorSettingsForm from "./components/form/doorSettingsForm";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -192,7 +195,8 @@ export default function UIRoot({ env, user }: UIRootProps)
             userRole={userRole}
             onExitApp={exitApp}
         />}
-        <GameModeMenu user={user} currentRoomID={roomID ?? ""}/>
+        <GameModeMenu user={user} currentRoomID={roomID ?? ""}
+            currentRoomType={roomRuntimeMemory?.room.roomType ?? RoomTypeEnumMap.Regular}/>
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         {/* The tools for changing what is selected belong to edit mode alone. In play mode a
             selection is a way of looking at something and reading about it, which is why the
@@ -220,11 +224,33 @@ export default function UIRoot({ env, user }: UIRootProps)
                 case "exitPrompt": return <Popup key={i} title="" showCloseButton={true}>
                     <ExitPromptForm onExit={exitApp}/>
                 </Popup>;
-                case "roomList": return <Popup key={i} title="Rooms" showCloseButton={true}>
-                    <RoomListForm user={user} currentRoomID={roomID ?? ""}/>
+                case "doorDestination": return <Popup key={i} title="Destination" showCloseButton={true}>
+                    <DestinationChooserForm
+                        initialDestinationRoomID={state.params.initialDestinationRoomID}
+                        initialDestinationDoorLabel={state.params.initialDestinationDoorLabel}
+                        onChooseRoom={state.params.onChooseRoom}
+                        onSetDoorLabel={state.params.onSetDoorLabel}
+                    />
+                </Popup>;
+                case "objectLabel": return <Popup key={i} title="Label" showCloseButton={true}>
+                    <CustomizeObjectLabelForm
+                        initialText={state.params.initialText}
+                        initialColorIndex={state.params.initialColorIndex}
+                        onSetText={state.params.onSetText}
+                        onSetColorIndex={state.params.onSetColorIndex}
+                    />
+                </Popup>;
+                case "doorSettings": return <Popup key={i} title="Settings" showCloseButton={true}>
+                    <DoorSettingsForm
+                        isDefaultEntrance={state.params.isDefaultEntrance}
+                        onSetDefaultEntrance={state.params.onSetDefaultEntrance}
+                    />
                 </Popup>;
                 case "configureMyRoom": return <Popup key={i} showCloseButton={true}>
                     <ConfigureMyRoomForm/>
+                </Popup>;
+                case "configureHubRoom": return <Popup key={i} showCloseButton={true}>
+                    <ConfigureHubRoomForm/>
                 </Popup>;
                 case "myRoomWelcome": return <Popup key={i} title="" showCloseButton={true}>
                     <MyRoomWelcomeForm/>

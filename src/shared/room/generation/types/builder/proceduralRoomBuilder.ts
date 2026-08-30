@@ -52,7 +52,6 @@ const HOLLOWED_VOLUME_TYPES = [
     RoomVolumeTypeEnumMap.Area,
     RoomVolumeTypeEnumMap.Passage,
     RoomVolumeTypeEnumMap.Stairwell,
-    RoomVolumeTypeEnumMap.Entrance,
 ];
 const RAISED_VOLUME_TYPES = [
     RoomVolumeTypeEnumMap.Step,

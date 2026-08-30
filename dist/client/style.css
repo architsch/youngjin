@@ -24,6 +24,7 @@
     --color-green-700: oklch(52.7% 0.154 150.069);
     --color-green-800: oklch(44.8% 0.119 151.328);
     --color-green-900: oklch(39.3% 0.095 152.535);
+    --color-emerald-400: oklch(76.5% 0.177 163.223);
     --color-sky-400: oklch(74.6% 0.16 232.661);
     --color-purple-400: oklch(71.4% 0.203 305.504);
     --color-purple-500: oklch(62.7% 0.265 303.9);
@@ -606,6 +607,9 @@
   .shrink-0 {
     flex-shrink: 0;
   }
+  .grow {
+    flex-grow: 1;
+  }
   .border-collapse {
     border-collapse: collapse;
   }
@@ -677,6 +681,9 @@
   .items-end {
     align-items: flex-end;
   }
+  .items-start {
+    align-items: flex-start;
+  }
   .items-stretch {
     align-items: stretch;
   }
@@ -724,11 +731,6 @@
   }
   .justify-self-start {
     justify-self: flex-start;
-  }
-  .truncate {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .overflow-auto {
     overflow: auto;
@@ -882,8 +884,14 @@
       background-color: color-mix(in oklab, var(--color-white) 25%, transparent);
     }
   }
+  .fill-emerald-400 {
+    fill: var(--color-emerald-400);
+  }
   .stroke-amber-400 {
     stroke: var(--color-amber-400);
+  }
+  .stroke-emerald-400 {
+    stroke: var(--color-emerald-400);
   }
   .stroke-sky-400 {
     stroke: var(--color-sky-400);

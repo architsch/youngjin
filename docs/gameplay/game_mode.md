@@ -15,9 +15,11 @@ The mode is held in its own right rather than read back out of the camera, becau
 
 ## Entering and leaving edit mode
 
-There are two ways in, and each opens the mode on something already picked out. The edit-mode button in the top bar opens it on the user's own character: the one thing in the room that is his wherever he is standing, and the one he is most likely to want to change first. The character is therefore the mode's first selection, and the customization form appears with it.
+There are three ways in, and each opens the mode on something already picked out. The edit-mode button in the top bar opens it on the user's own character: the one thing in the room that is his wherever he is standing, and the one he is most likely to want to change first. The character is therefore the mode's first selection, and the customization form appears with it.
 
 The other is offered from the game-mode menu while a play-mode selection is standing, and opens the mode on that selection rather than replacing it: the user has just picked something out and read what there was to read about it, and going on to change that very thing is the next step. Since it opens on what belongs to the room, it is offered only where that selection is the user's to work on — his own character anywhere, a part of the room only where he may edit that room, the same question a click inside the mode is turned away by.
+
+The third is an admin picking a door out, and it asks for nothing at all: the mode opens along with the selection. A door is the one part of a room that nobody clicks in order to read about it — for everyone else a click on a door is a journey, and an admin who only meant to walk through one walks through it. Picking one out is therefore already the beginning of working on it, so the tools come out with it rather than leaving him holding a door and looking for the way to them (see [admin.md](admin.md)).
 
 The way out is the button that says so, the platform's back gesture, or a second click on the very thing being edited. Leaving drops the selection and hands the camera back to the first-person view.
 

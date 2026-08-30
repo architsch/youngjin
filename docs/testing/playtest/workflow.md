@@ -8,7 +8,7 @@ It exists for the states that ordinary play cannot produce. Everything the app w
 at the current schema version, so the row-migration path and its write-back are only ever
 exercised by rows that predate a schema change — and the only way to get one on a real server is
 to write it there directly. The same is true of a room content blob at an older binary version,
-and of a room list with enough owners in it to paginate.
+and of a world with enough member-owned rooms in it to be worth walking.
 
 ## The three tools
 
@@ -85,13 +85,13 @@ boundary is covered offline instead, by `tests/integration/scenarios/voxel-grid-
 against fixtures the old encoder itself produced.
 
 `seed-population` creates a Member account paired with the room it owns. This is the only
-practical way to fill the room list: staging runs in production mode, where the dev OAuth bypass
-is disabled, so a browser session can only ever become a guest, and guests cannot own rooms.
+practical way to get member-owned rooms onto staging at all: staging runs in production mode, where
+the dev OAuth bypass is disabled, so a browser session can only ever become a guest, and guests
+cannot own rooms.
 
-**`--with-content` is usually wanted.** A seeded room with no content blob appears in the room
-list but cannot be entered — the server finds no blob, logs a load failure, and falls back to a
-hub. That fallback is correct behaviour, but it makes the room decorative and puts a recurring
-error into every later baseline.
+**`--with-content` is usually wanted.** A seeded room with no content blob cannot be entered — the
+server finds no blob, logs a load failure, and falls back to a hub. That fallback is correct
+behaviour, but it makes the room decorative and puts a recurring error into every later baseline.
 
 ### Seeded rooms are generated, not copied
 
@@ -188,7 +188,7 @@ the reporting tool uses, so there is one list in the tooling rather than two tha
 
 | Seed | Reusable | Why |
 |---|---|---|
-| `seed-population` at the current version, with `--persist` | Yes | Reading it does not change it, so a stable population keeps pagination deterministic between runs. |
+| `seed-population` at the current version, with `--persist` | Yes | Reading it does not change it, so a stable population stays the same world between runs. |
 | `seed-users` / `seed-rooms` at an outdated version | No | Single-use by nature — the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. |
 | Seeded guests | No | The server's own stale-guest sweep deletes them on its schedule regardless. |
 | `downgrade-content` | No | Allowed only within one decoder's versions. The next room save re-encodes the blob at the current version. Always restore afterwards. |

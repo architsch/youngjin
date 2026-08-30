@@ -12,6 +12,7 @@ import GameObject from "../types/gameObject";
 import Collider from "../components/collider";
 import EasingMotion from "../components/easingMotion";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
+import LabelText from "../components/labelText";
 import OrbitOccluder from "../components/orbitOccluder";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
@@ -43,4 +44,6 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new EasingMotion(parentObject, componentConfig),
     "orbitOccluder": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new OrbitOccluder(parentObject, componentConfig),
+    "labelText": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new LabelText(parentObject, componentConfig),
 }

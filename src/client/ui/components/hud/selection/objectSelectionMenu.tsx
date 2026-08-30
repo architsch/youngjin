@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { objectSelectionObservable } from "../../../../system/clientObservables";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import CanvasEditOptions from "./canvasEditOptions";
+import DoorEditOptions from "./doorEditOptions";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
 import CanvasDesc from "./canvasDesc";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 export default function ObjectSelectionMenu({ inEditMode }: Props)
 {
@@ -29,6 +31,12 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
                 <CanvasEditOptions key={`edit-${objectId}`} selection={state.selection}/>}
             {typeIndex === canvasTypeIndex &&
                 <CanvasDesc key={`desc-${objectId}`} selection={state.selection}/>}
+            {/* Only an admin ever has a door picked out at all, and picking one out opens edit mode
+                with it (see DoorGameObject.onClick) — so there is no play-mode arrangement for a
+                door to be in. Going through the door is offered among the tools instead, since a
+                door an admin is working on is still a door he can walk through. */}
+            {typeIndex === doorTypeIndex && inEditMode &&
+                <DoorEditOptions key={`edit-${objectId}`} selection={state.selection}/>}
         </div>;
     }
     else

@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+import App from "../../app";
 import PlayerCamera from "./helpers/player/playerCamera";
 import PlayerProximityDetectionUpdater from "./helpers/player/playerProximityDetectionUpdater";
 import PlayerPointerInput from "./helpers/player/playerPointerInput";
@@ -12,12 +14,30 @@ import { cameraModeObservable } from "../../system/clientObservables";
 
 const forwardTemp = new THREE.Vector3();
 
+// The walk out of the doorway an arriving player is given: how far it carries him, how fast, and how
+// long it may go on for at the most. The distance is what normally ends it; the time limit is there
+// because a player who arrived facing something solid would otherwise never cover the distance and
+// would be held walking into it forever.
+const ENTERING_STRIDE_LENGTH = 1.5;
+const ENTERING_SPEED = 3;
+const ENTERING_MAX_DURATION = 1.5; // in seconds
+
 export default class PlayerController extends GameObjectComponent
 {
     dx: number = 0;
     dy: number = 0;
 
+    // A player arriving in a multiplayer room spawns behind a door and is walked out from under it,
+    // so that what he sees first is the room rather than the back of a panel, and so that he is
+    // never left standing inside the doorway he came through.
+    //
+    // Where that is, and which way it faces, is whatever the server put him down at — a room may
+    // hold several doors, and he arrives behind whichever one he was routed to (see
+    // SpawnHotspotUtil). A player is drawn facing along his object's -Z, so that is the way out.
     private fullyEntered: boolean = false;
+    private spawnPos: {x: number, z: number} = {x: 0, z: 0};
+    private enteringDir: {x: number, z: number} = {x: 0, z: 0};
+    private enteringTimeLeft: number = 0;
 
     private playerCamera: PlayerCamera = new PlayerCamera();
     private proxUpdater: PlayerProximityDetectionUpdater = new PlayerProximityDetectionUpdater();
@@ -31,7 +51,7 @@ export default class PlayerController extends GameObjectComponent
         if (!this.gameObject.isMine())
             throw new Error("Only the user's own object is allowed to have the PlayerController component.");
 
-        this.fullyEntered = false;
+        this.beginEntering();
 
         this.rigidbody = this.gameObject.components.rigidbody as Rigidbody;
         if (!this.rigidbody)
@@ -40,6 +60,31 @@ export default class PlayerController extends GameObjectComponent
         this.playerCamera.onSpawn(this, this.pointerInput);
         this.pointerInput.onSpawn(this);
         this.keyInput.onSpawn(this);
+    }
+
+    // Records the stride out of the doorway: where it starts and which way it runs. A single-player
+    // room is not entered through a door at all — its player is placed by the mode's own config and
+    // its opening is a scripted step's to direct — so there is nothing there to walk out of.
+    private beginEntering(): void
+    {
+        this.fullyEntered = App.getCurrentRoom()?.roomType == RoomTypeEnumMap.SinglePlayer;
+        if (this.fullyEntered)
+            return;
+
+        this.spawnPos.x = this.gameObject.position.x;
+        this.spawnPos.z = this.gameObject.position.z;
+
+        this.gameObject.obj.getWorldDirection(forwardTemp);
+        forwardTemp.negate(); // The player faces along his object's -Z (see FORWARD_DIR).
+        const length = Math.hypot(forwardTemp.x, forwardTemp.z);
+        if (length <= NEAR_EPSILON)
+        {
+            this.fullyEntered = true; // No direction to walk in, so there is no walk to make.
+            return;
+        }
+        this.enteringDir.x = forwardTemp.x / length;
+        this.enteringDir.z = forwardTemp.z / length;
+        this.enteringTimeLeft = ENTERING_MAX_DURATION;
     }
 
     async onDespawn(): Promise<void>
@@ -62,19 +107,20 @@ export default class PlayerController extends GameObjectComponent
 
         if (!this.fullyEntered)
         {
-            const playerIsInEntrance =
-                this.gameObject.position.x >= MULTI_PLAYER_ENTRANCE_VOXEL_COL &&
-                this.gameObject.position.x <= MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1 &&
-                this.gameObject.position.z >= MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1.5 &&
-                this.gameObject.position.z <= MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 1;
-            if (!playerIsInEntrance)
+            this.enteringTimeLeft -= deltaTime;
+            const travelled = Math.hypot(
+                this.gameObject.position.x - this.spawnPos.x,
+                this.gameObject.position.z - this.spawnPos.z);
+            if (travelled >= ENTERING_STRIDE_LENGTH || this.enteringTimeLeft <= 0)
                 this.fullyEntered = true;
         }
 
         if (!this.fullyEntered)
         {
             const v = this.rigidbody?.getDesiredVelocity()!;
-            this.rigidbody?.setDesiredVelocity(v.x, v.y, Math.min(v.z, -3));
+            this.rigidbody?.setDesiredVelocity(
+                v.x + this.enteringDir.x * ENTERING_SPEED, v.y,
+                v.z + this.enteringDir.z * ENTERING_SPEED);
         }
         else
         {

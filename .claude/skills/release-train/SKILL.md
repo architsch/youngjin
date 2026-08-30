@@ -194,6 +194,12 @@ same fault comes back on the next release, and the user gives the same note agai
    paragraph never restates the opening", not "the user disliked the ending this time". If the note
    really does apply only to this one post, fix the post and say plainly that no rule came out of
    it, rather than inventing a general rule from a single case.
+
+   **Fold it into a principle already on the page; do not append a bullet per note.** The full rule
+   is "How an improvement is written" in
+   [`skill-upkeep/SKILL.md`](../skill-upkeep/SKILL.md) — read it before editing any of these files.
+   This checkpoint is where guidance accretes fastest, because the notes arrive one at a time and
+   appending each is always the smaller edit.
 2. **Delegate phase 2 again** with the same feature named, briefing it on the user's note and on
    what the previous attempt left behind. The rerun **revises in place**: the newest block in
    `public/devlog-<year>/source.txt` is the previous attempt's, and it gets replaced rather than

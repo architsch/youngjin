@@ -73,3 +73,32 @@ Come join ThingsPool. The second floor's open air is inviting you.
 <second-floor-editing>
 
 #ThingsPool #VirtualSpace #OpenWorld #WebGame #SandboxGame #GameDesign #WorldBuilding #FreeToPlay #VoxelEngine #ProceduralGeneration #LevelEditor #GameEngine #DigitalArt #ThreeJS #WebGL #TypeScript
+
+
+
+
+:d:ThingsPool's rooms now open onto one another through doors.
+:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Virtual World, Metaverse, World Building, Room Network, Level Editor, Free to Play, Three.js, WebGL
+:l:2026-08-30
+
+[Dynamic Doors] August 30, 2026
+
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+
+ThingsPool, a 3D virtual universe of rooms, now includes custom doors!
+
+Try entering these new doors, and you will find yourself wandering off into places of pure mystery.
+
+<dynamic-doors-room>
+
+Each door has its own name, and it leads to a unique site of adventure. Try entering them one by one, and you will end up navigating ThingsPool's vast labyrinth of rooms.
+
+<dynamic-doors-placing>
+
+Internally, we now have an admin system which grants the special admin user (i.e. the "Game Master") a right to install these custom doors, connect them to other rooms, and even create brand new rooms!
+
+<dynamic-doors-finish>
+
+So come and enjoy this new, ever-growing world of interconnected doors.
+
+#ThingsPool #Metaverse #Cyberspace #OnlineGame #SocialGame #GameDevelopment #WorldBuilding #BrowserGame #LevelEditor #RealTimeMultiplayer #UIDesign #VoxelEngine #ThreeJS #WebGL #TypeScript

@@ -1,58 +1,92 @@
-# Room Entrance Structure
+# Room Entrances
 
-Reference: @src/shared/room/util/roomValidationUtil.ts , @src/shared/physics/types/physicsRoom.ts , @src/client/object/util/clientObjectUtil.ts
+Reference: @src/shared/object/util/doorObjectUtil.ts , @src/server/room/util/spawnHotspotUtil.ts , @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts
 
 ## Overview
 
-Every room has exactly one **entrance** — a fixed doorway in one of the room's boundary walls, through which every player enters. It is the single gateway for traveling between rooms, and players always spawn here when they enter or switch rooms.
+A room's ways in and out are its **doors**, and nothing else. A door is an ordinary wall-attached
+object (see [wall_attached_object.md](wall_attached_object.md)) hung on the inner face of a wall,
+stored with the room like anything else in it, and travelled through by clicking it. A room may hold
+several, and which rooms a door joins is set by hand rather than derived from anything.
 
-The entrance is anchored to one voxel cell, positioned along the middle of a boundary wall. Three things occupy that cell:
+Nothing is cut through the wall a door hangs on. An attachment needs the wall behind it, so a cavity
+there would be the one place in the room its own door could not go — and a room's boundary is
+therefore solid the whole way round, with the door reading as a door because of what it looks like
+and what it does rather than because there is a hole behind it.
 
-1. A **doorway opening** carved into the boundary wall during room generation, so the wall reads as an open passage (see [room_generation.md](room_generation.md)).
-2. An invisible **entrance collider** that plugs the opening, so players cannot physically walk out of the room through it.
-3. A clickable **Door object** rendered on the inner wall face — the interactive gateway to other rooms.
+Every multiplayer room is generated with exactly one door, at a fixed cell on one boundary wall (see
+[room_generation.md](room_generation.md#the-entrance)). That is the room's own way in and out, and
+for a Regular room it is the only door there will ever be. A Hub's doors are an admin's to add, move,
+name and wire up — see [admin.md](../gameplay/admin.md), which is where the door semantics below come
+from.
 
-Multi-player rooms (Hub/Regular) and single-player rooms each place the entrance at their own fixed cell; for a single-player room the location comes from that mode's configuration (see [single_player_mode.md](../networking/single_player_mode.md)).
+## What a Door Carries
+
+Beyond its appearance ([door_design.md](door_design.md)), a door carries these things as object
+metadata:
+
+- **A label** — the text written on its plate, which is also the name the door is found by. Two doors
+  may share one. What colour it is written in is carried beside it, since which colour reads on a
+  plate depends on what that plate was painted rather than on what the door is called.
+- **A destination room** — where it opens onto. A door that names none is not a way anywhere.
+- **A destination door label** — which door *of that room* the traveller is meant to arrive behind,
+  so that walking through a door in one room puts him behind the door that answers it in the next
+  rather than wherever that room's own way in happens to be.
+- **A door type** — whether the door offers itself as one of the room's ways in, which is what
+  decides where a player who asked for nothing in particular is put down.
 
 ## Player Spawning
 
-Players always spawn just inside the entrance cell. There is no per-user "last position" — every entry and every room switch places the player at the entrance (see [user_state_management.md](../networking/user_state_management.md)).
+There is no per-user "last position": every entry and every room switch places the player behind one
+of the destination room's doors (see [user_state_management.md](../networking/user_state_management.md)).
+Which one is chosen by `SpawnHotspotUtil`, by asking for something more and more general until
+something answers:
 
-## The Entrance Collider
+1. **The door the traveller was sent to**, if the room holds one by that label. Several may, in which
+   case one of them is drawn.
+2. **A door that offers itself as a way in**, otherwise — again drawn, if there are several.
+3. **Any door at all**, if none of them does.
+4. **The middle of the room**, if it holds no door.
 
-Because the doorway opening is a real gap in the boundary wall, a player could otherwise walk straight out of the room into empty space. To prevent that, `PhysicsRoom` seals the opening with an invisible collider. It blocks movement without applying any soft push, so it stops the player just short of the doorway rather than nudging them around. It belongs to the room's set of boundary colliders, alongside the floor, ceiling, and perimeter walls (see [physics.md](physics.md#global-colliders-room-boundaries)). The net effect: the entrance looks like an open doorway but is sealed against walk-through — the only way out is to interact with the Door.
+Each step is there because the one before it can genuinely come up empty: a door may have been
+renamed or taken down since whoever pointed at it did so, and an admin may have marked none of a
+room's doors as a way in.
 
-The plug stands exactly as tall as the doorway it fills, and no taller. A room is taller than the storey the entrance opens onto (see [voxel_grid.md](voxel_grid.md#storeys)), and the boundary above the doorway is ordinary wall — so a plug carried up through the room's whole height would put an invisible obstacle across a floor nobody can reach the doorway from anyway.
+The player is put down a pace out from the chosen door's face, on the floor it stands on, facing away
+from it — and is then walked forward briefly, so that what he sees first is the room rather than the
+back of a panel and so that he never comes to rest inside the doorway he arrived through
+(`PlayerController`).
 
-## The Door Object
+## The Door as an Object
 
-The door is its own GameObject type. It is **client-only and non-persistent**: each client spawns its own Door locally during room load, and it is never written to the database nor sent over the network (see [Local-Only Objects](../networking/object_update.md#local-only-objects)). Players cannot create, delete, move, or re-skin it.
+- **Collider.** A thin pass-through collider — the wall behind it already blocks the player, so the
+  door itself does not need to. Being a wall attachment is what keeps anything else from being hung
+  over it, and what makes a door claim a stretch of wall that nothing else may occupy.
+- **Interaction.** When the player is close enough, is looking its way, stands in front of its face,
+  and can actually see it, the door prompts him to enter. Each condition rules out a position a
+  player genuinely ends up in. *In front of its face* is what a player who has just arrived is not:
+  he stands behind the panel looking out into the room, and prompting him there would flash an
+  invitation to leave over a door he is walking away from. The same condition rules out reaching a
+  door from flat against the wall beside it, where the panel is edge-on. And a door is somewhere a
+  room's users may have built since, so *being in view* has to be asked separately from being looked
+  at. The cheap questions are asked before the costly one, since only the last of them has to search
+  the room.
+- **Clicking it.** For almost everybody a click is a journey: through to the destination room if the
+  door names one, and otherwise a notice that the door is locked — except for a room's own way in,
+  which falls back on taking the user out to a hub rather than shutting him in. That fallback is
+  also how the tutorial ends, its door being a way in that leads nowhere — see
+  [single_player_mode.md](../networking/single_player_mode.md#door-behavior). For an admin a click
+  on a door in a Hub instead takes hold of it and opens edit mode around it, since taking hold of a
+  door is the beginning of working on one; walking through it is then offered among the tools (see
+  [admin.md](../gameplay/admin.md)).
 
-- **Appearance.** A panelled wooden door, assembled at runtime out of flat quads rather than drawn from an image, and mounted on the inner wall face so that it covers the doorway with a margin of wall to either side. Its finish is derived from the room it stands in, so a room's door is recognizably its own and is the same for everyone in it (see [door_design.md](door_design.md)).
-- **Collider.** A thin pass-through collider — the wall and entrance collider behind it already block the player, so the door itself does not need to. It is a wall attachment like a picture is (see [wall_attached_object.md](wall_attached_object.md)), which is what keeps anything else from being hung over it; the blocks it hangs on are inside the no-removal zone below, so it cannot be taken down with the wall.
-- **Interaction.** When the player is close enough, is looking its way, stands in front of its face, and can actually see it, the door prompts them to enter. Each condition rules out a position a player genuinely ends up in. *In front of its face* is what a player who has just arrived is not: he stands *in* the doorway, behind the panel and looking straight through it on his way out into the room, and prompting him there would flash an invitation to leave again over a door he is walking away from. The same condition rules out reaching a door from flat against the wall beside it, where the panel is edge-on and there is nothing of it left to see. And a door is somewhere a room's owner may have built since, so *being in view* has to be asked separately from being looked at — otherwise a door prompts through whatever now stands in front of it. The cheap questions are asked before the costly one, since only the last of them has to search the room. Clicking the door then opens the room-list popup, from which the player picks another room to travel to. (In single-player mode a feature flag can instead send the player straight to a hub — see [single_player_mode.md](../networking/single_player_mode.md#door-behavior).) Clicking out of proximity does nothing.
+## Editing Near a Door
 
-## Editing Constraints Near the Entrance
+There are no reserved cells. The floor in front of a door is somewhere to build like anywhere else,
+and the wall beside one is somewhere to hang a picture like anywhere else. What protects a room's way
+in is the door itself: a wall block cannot be taken down while something hangs on it, and a door is
+not a non-admin's to take down first.
 
-To keep the entrance functional, voxel editing is restricted around it (enforced by `RoomValidationUtil`). Two distinct zones apply:
-
-- A **no-addition zone**, where players cannot place new voxel blocks. This keeps the spawn area and the approach to the doorway from being walled in.
-- A **no-removal zone**, where players cannot remove voxel blocks. This keeps the wall structure framing the doorway intact.
-
-Both are volumes rather than patches of floor, and both stand only as high as the storey the entrance opens onto. Everything they exist to protect — the doorway, the wall framing it, the floor an arriving player spawns on — is on that storey, and the room above it is ordinary room: somewhere an owner should be as free to build as anywhere else, and which nobody can even reach the doorway from. The figures below therefore show each zone's footprint on the ground floor; nothing above that floor is restricted.
-
-### Regular Room (Multiplayer)
-
-![Entrance Constraints of a Multiplayer Room (Regular)](figures/entrance_voxel_constraints_1.jpg)
-
-In a Regular room the protected zones are kept tight: the no-addition zone covers the entrance cell and its immediate neighbors, and the no-removal zone covers just the entrance's own row. Owners and editors are otherwise free to build right up to the edge of the entrance area.
-
-### Hub Room (Multiplayer)
-
-![Entrance Constraints of a Multiplayer Room (Hub)](figures/entrance_voxel_constraints_2.jpg)
-
-A Hub is a shared thoroughfare with heavy foot traffic, so its no-addition zone reaches further into the room than a Regular room's, reserving a larger clear area in front of the entrance so that arriving players are never boxed in. Its no-removal zone is the same as a Regular room's.
-
-### Singleplayer Room
-
-A single-player room has no entrance editing constraints. Editing there is purely local and never persisted, and the room is rebuilt from its template each session, so there is nothing to protect — the player may build freely anywhere. This lets a tutorial teach building without restriction.
+Generation still keeps its own block work off the floor in front of the room's entrance, so that an
+arriving player is never boxed in by a room he has only just walked into — but that is a rule about
+what generation places, not about what anybody may build afterwards.

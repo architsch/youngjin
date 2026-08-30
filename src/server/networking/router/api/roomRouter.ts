@@ -11,6 +11,7 @@ import DBSearchUtil from "../../../db/util/dbSearchUtil";
 import ServerUserManager from "../../../user/serverUserManager";
 import ServerRoomManager from "../../../room/serverRoomManager";
 import OwnedRoomUtil from "../../../room/util/ownedRoomUtil";
+import HubRoomUtil from "../../../room/util/hubRoomUtil";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import DBRoom from "../../../db/types/row/dbRoom";
 import { MAX_ROOM_EDITORS } from "../../../system/serverConstants";
@@ -24,12 +25,41 @@ const ROOM_LIST_PAGE_SIZE = 10;
 // a single search from runaway-scanning the whole collection.
 const ROOM_SEARCH_MAX_SCAN = 500;
 
+// Opens a new room. Which kind is asked for decides who may ask: a Regular room is the one room a
+// member owns, while a Hub is a room of the game's own that the world is built out of — so opening
+// one is world-building rather than a personal act, and belongs to an admin.
 RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
     if (user.userType === UserTypeEnumMap.Guest)
     {
         res.status(403).send("Guest users cannot create rooms.");
+        return;
+    }
+
+    const { roomType } = req.body;
+    if (roomType === RoomTypeEnumMap.Hub)
+    {
+        if (user.userType !== UserTypeEnumMap.Admin)
+        {
+            res.status(403).send("Only an admin can create a hub.");
+            return;
+        }
+        // Made through HubRoomUtil rather than as an owned room: a hub belongs to nobody, is
+        // preloaded into memory for the room picker to balance users across, and does not count
+        // against the one room its creator is allowed to own.
+        const newHubID = await HubRoomUtil.createHub();
+        if (newHubID.length === 0)
+        {
+            res.status(500).send("Failed to create hub.");
+            return;
+        }
+        res.status(200).json({ roomID: newHubID });
+        return;
+    }
+    if (roomType !== undefined && roomType !== RoomTypeEnumMap.Regular)
+    {
+        res.status(400).send("Invalid roomType.");
         return;
     }
 
@@ -56,29 +86,57 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
     res.status(200).json({ roomID: newRoomID });
 });
 
+// Re-skins a room. Which room is decided by who is asking and what they named: naming none means
+// "my own room", which is the ordinary case; naming one is an admin re-skinning a hub, which is a
+// room nobody owns and so a room the ownership check above could never reach.
 RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
-    const dbUser = await DBUserUtil.findUserById(user.id);
-    if (!dbUser)
-    {
-        res.status(404).send("User not found.");
-        return;
-    }
-    if (!dbUser.ownedRoomID || dbUser.ownedRoomID.length === 0)
-    {
-        res.status(403).send("User does not own a room.");
-        return;
-    }
-
-    const { texturePackPath } = req.body;
+    const { texturePackPath, roomID } = req.body;
     if (!texturePackPath || typeof texturePackPath !== "string")
     {
         res.status(400).send("Missing or invalid texturePackPath.");
         return;
     }
 
-    const room = await DBRoomUtil.getRoomContent(dbUser.ownedRoomID);
+    let targetRoomID: string;
+    if (roomID && typeof roomID === "string")
+    {
+        if (user.userType !== UserTypeEnumMap.Admin)
+        {
+            res.status(403).send("Only an admin can re-skin another room.");
+            return;
+        }
+        const dbRoom = await DBRoomUtil.getDBRoom(roomID);
+        if (!dbRoom)
+        {
+            res.status(404).send("Room not found.");
+            return;
+        }
+        if (dbRoom.roomType !== RoomTypeEnumMap.Hub)
+        {
+            res.status(403).send("Only a hub can be re-skinned this way.");
+            return;
+        }
+        targetRoomID = roomID;
+    }
+    else
+    {
+        const dbUser = await DBUserUtil.findUserById(user.id);
+        if (!dbUser)
+        {
+            res.status(404).send("User not found.");
+            return;
+        }
+        if (!dbUser.ownedRoomID || dbUser.ownedRoomID.length === 0)
+        {
+            res.status(403).send("User does not own a room.");
+            return;
+        }
+        targetRoomID = dbUser.ownedRoomID;
+    }
+
+    const room = await DBRoomUtil.getRoomContent(targetRoomID);
     if (!room)
     {
         res.status(404).send("Room not found.");

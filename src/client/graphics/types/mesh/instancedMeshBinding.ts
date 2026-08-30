@@ -418,6 +418,33 @@ export default class InstancedMeshBinding
         return attrib;
     }
 
+    // Draws a 2D canvas over this instance's whole cell of the texture. The counterpart of
+    // drawImageAtIndex for content the caller draws itself rather than fetches — text above all.
+    drawCanvasAtIndex(textureIndex: number, canvas: HTMLCanvasElement)
+    {
+        const cell = this.getTextureCellUVRect(textureIndex);
+        const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
+        const rt = material.map!.renderTarget as THREE.WebGLRenderTarget;
+        TextureUtil.drawCanvasOnRenderTarget(canvas, rt, cell.u1, cell.v1, cell.u2, cell.v2);
+    }
+
+    // Which part of the texture belongs to the given instance. The texture is a grid of cells, one
+    // per instance, and this is the cell's corners in the texture's own coordinates.
+    private getTextureCellUVRect(textureIndex: number): {u1: number, v1: number, u2: number, v2: number}
+    {
+        const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
+        const textureGridCellWidthScale = instancedTexturePackMaterialParams.textureGridCellWidth
+            / instancedTexturePackMaterialParams.textureWidth;
+        const textureGridCellHeightScale = instancedTexturePackMaterialParams.textureGridCellHeight
+            / instancedTexturePackMaterialParams.textureHeight;
+
+        const textureRow = Math.floor(textureIndex * textureGridCellWidthScale);
+        const textureCol = textureIndex % (1 / textureGridCellWidthScale);
+        const u1 = textureGridCellWidthScale * textureCol;
+        const v1 = textureGridCellHeightScale * textureRow;
+        return {u1, v1, u2: u1 + textureGridCellWidthScale, v2: v1 + textureGridCellHeightScale};
+    }
+
     // The optional source UV rect restricts sampling to a sub-region of the source image
     // (e.g. a single cell of an atlas image); by default the full image is drawn.
     async drawImageAtIndex(textureIndex: number, imageURL: string,
@@ -427,21 +454,10 @@ export default class InstancedMeshBinding
         unloadTextureAfterDraw: boolean = true)
     {
         const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
-        const w = instancedTexturePackMaterialParams.textureWidth;
-        const h = instancedTexturePackMaterialParams.textureHeight;
-        const cw = instancedTexturePackMaterialParams.textureGridCellWidth;
-        const ch = instancedTexturePackMaterialParams.textureGridCellHeight;
+        const textureGridCellWidthScale = instancedTexturePackMaterialParams.textureGridCellWidth
+            / instancedTexturePackMaterialParams.textureWidth;
 
-        const textureGridCellWidthScale = cw / w;
-        const textureGridCellHeightScale = ch / h;
-        
-        const textureRow = Math.floor(textureIndex * textureGridCellWidthScale);
-        const textureCol = textureIndex % (1 / textureGridCellWidthScale);
-        const u1 = textureGridCellWidthScale * textureCol;
-        const u2 = u1 + textureGridCellWidthScale;
-        const v1 = textureGridCellHeightScale * textureRow;
-        const v2 = v1 + textureGridCellHeightScale;
-
+        const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex);
         const widthMargin = textureGridCellWidthScale * (1 - widthScale) * 0.5;
         const heightMargin = textureGridCellWidthScale * (1 - heightScale) * 0.5;
 

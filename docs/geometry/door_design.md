@@ -22,9 +22,26 @@ Holding every door to one design is deliberate. A wall may eventually carry seve
 and a row of them has to stay legible as a row of doors — so what varies between them is their
 finish, not their shape.
 
-The **plate** is the one region finished differently from the rest. It is where the destination
-room's name is written, so it is placed where a sign belongs and given a colour that reads as
-something to be looked at without breaking the door's own scheme.
+The **plate** is the one region finished differently from the rest. It is where the door's name is
+written, so it is placed where a sign belongs and given a colour that reads as something to be looked
+at without breaking the door's own scheme.
+
+What is written there is written *into the scene* rather than over it, as a quad standing a hair in
+front of the plate and carrying the lettering as a texture. That is the whole reason it is done that
+way: a caption drawn in the browser's own layer sits on top of everything, so it would announce a
+door through the wall in front of it and could only be hidden or shown whole. A label in the world is
+hidden by exactly as much as stands in front of it. Every label in a room shares one mesh and one
+texture, a cell each, so a room full of them costs a single draw call — the same arrangement a room's
+canvases are drawn through, and the reason a room may hold only so many. The component that does it
+knows nothing about doors: it draws whatever text an object carries onto whatever patch of itself
+that object set aside for one, in whatever colour that object carries for the purpose.
+
+The lettering is a roman serif, which is what has always been cut into a brass plate and painted onto
+a door's glass. Its colour is the one part of a door's appearance kept apart from the three the door
+is finished in, and it has its own palette running the whole spectrum rather than the joinery set:
+what has to be picked is a colour that reads against whatever the plate behind it was painted, and
+that is not a question about joinery. An object nobody has chosen an ink for is lettered in the
+colour its own kind of object declares.
 
 ## Proportions
 
@@ -62,10 +79,15 @@ A door's appearance is three colours — the timber, the plate, and the knob —
 `DoorCompositionCodec` into the object's `InstancedMeshComposition` metadata, exactly as a player's
 appearance is (see [player_customization.md](player_customization.md)). The mouldings take no colour
 of their own: each is worked into the timber it runs around, and is seen by its relief. The encoded
-form is deliberately small and literal, so that letting a user finish his own doors later is a matter
-of opening up a form onto those colours, with nothing to migrate and nothing to interpret. As
-metadata arriving from elsewhere, it is untrusted on the read side: decoding clamps rather than
-trusts, and always yields a drawable door.
+form is deliberately small and literal, which is what makes finishing a door by hand a matter of
+opening a form onto those three colours. As metadata arriving from elsewhere, it is untrusted on the
+read side: decoding clamps rather than trusts, and always yields a drawable door.
+
+A door carries more than its appearance. Apart from the colour of its lettering, the rest of its
+metadata is about what it *is* rather than what it looks like — what is written on it, where it opens
+onto, which door of that room the traveller should arrive behind, and whether it offers itself as one
+of its room's ways in. Those are described in [room_entrance.md](room_entrance.md), since they are
+facts about how rooms are joined rather than about how a door is drawn.
 
 A door that carries no appearance of its own falls back on one derived from **where it stands** —
 the room it is in and its own id — rather than from who is looking at it. A client-spawned object
@@ -73,10 +95,16 @@ carries the viewing user's id, so seeding from that would give every player in a
 door; deriving it from the room instead makes a room's door the same for everyone and the same again
 next session.
 
-The colours are drawn as a coordinated scheme rather than picked independently, because three
-unrelated colours on one door do not look like a door somebody painted — they look like a fault. Two
-constraints shape which schemes exist, and both are measured against what the material makes of a
-colour rather than against the colour as written, since it is aged before anything is lit:
+The colours come from a palette of joinery finishes — bare and stained timber, the paints that were
+mixed to go on timber, and the metal and bone a knob or a plate takes. The player's palette is no use
+here and the door's is no use there: a character is a tin toy lithographed in the colours a child's
+toy is painted in, and almost nothing a door was ever finished in appears among them. So each has a
+palette of its own, and which one a codec speaks is part of that codec's contract.
+
+Within that palette the colours are drawn as a coordinated scheme rather than picked independently,
+because three unrelated colours on one door do not look like a door somebody painted — they look like
+a fault. Two constraints shape which schemes exist, and both are measured against what the material
+makes of a colour rather than against the colour as written, since it is aged before anything is lit:
 
 - **The timber stays in the middle of the brightness range.** A finish that starts dark has nowhere
   to go once the ageing, the figure and the carving have each taken something off it, and arrives as
@@ -130,16 +158,18 @@ Four things make the material work:
   scored around a region however carefully it is shaded; a carving needs room across it for the
   light to travel.
 
-The material also ages the colour it is given, warming it and pulling its saturation back. The
-colours reaching it come from a general-purpose palette and are far more vivid than anything a door
-was ever finished in; left flat and unbroken they read as moulded plastic rather than as timber.
+The material also ages the colour it is given, warming it and pulling its saturation back. That is
+what the palette it draws from is chosen against: a finish that starts dark has nothing left once the
+ageing, the figure and the carving have each taken something off it, and one that starts at the top
+of the range washes out and takes the mouldings' shading with it. Left flat and unbroken, any of them
+would read as moulded plastic rather than as timber.
 
 Nothing about the material is specific to doors, and it is meant to be reached for again by anything
 else built out of moulded rectangular surfaces — furniture, fences, pillars.
 
 ## Related docs
 
-- [Room Entrance Structure](room_entrance.md) — the one door every room has, and what it is for
+- [Room Entrances](room_entrance.md) — what a door carries, and where a traveller through one comes out
 - [Wall-Attached Objects](wall_attached_object.md) — how a door is placed against a wall
 - [Instanced Mesh Composition](../graphics/instanced_mesh_composition.md) — the system a door is assembled through
 - [Player Customization](player_customization.md) — the same metadata mechanism, applied to a character

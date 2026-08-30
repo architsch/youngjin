@@ -5,13 +5,13 @@
  * room's shape unknowable in advance, so what is asserted here is the set of properties every
  * generated room has to have no matter which seed produced it:
  *
- * - the whole room is walkable from the entrance (no region is ever sealed off)
- * - the entrance itself is open, and the floor in front of it is left clear
- * - the boundary wall is intact apart from the entrance
+ * - the whole room is walkable from where a player arrives (no region is ever sealed off)
+ * - the wall the room's door hangs on is left standing, and the floor in front of it left clear
+ * - the boundary wall is intact the whole way round
  * - the upper storey is real, and can be climbed to on foot from the entrance
  * - the stairs up to it are wide enough to walk rather than balance along
  * - nothing it is built out of hangs in mid-air
- * - it is generated empty of objects, for the people who use it to furnish themselves
+ * - it is generated with its own way in and nothing else, for the people who use it to furnish
  * - it is built in one of the texture packs its textures were picked against
  * - it is finished with as much decoration as its room type is offered, and no more
  * - a seed reproduces its room exactly, and different seeds give different rooms
@@ -29,6 +29,8 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
+import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
+import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import {
     COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GRAVITY_SPEED,
     MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
@@ -48,11 +50,19 @@ function isWalkable(voxelGrid: VoxelGrid, row: number, col: number): boolean
     return !!voxel && (voxel.collisionLayerMask & PLAYER_LAYER_MASK) == 0;
 }
 
-/** Every cell reachable on foot from the entrance. */
+const DOOR_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
+
+// Where an arriving player stands. The entrance cell itself is boundary wall — that is what the
+// room's door hangs on — so the room is walked from the cell in front of it, which is the first
+// floor a player ever has under him (see SpawnHotspotUtil).
+const ARRIVAL_ROW = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1;
+const ARRIVAL_COL = MULTI_PLAYER_ENTRANCE_VOXEL_COL;
+
+/** Every cell reachable on foot from where a player arrives. */
 function floodFillFromEntrance(voxelGrid: VoxelGrid): Set<number>
 {
     const reached = new Set<number>();
-    const pending = [MULTI_PLAYER_ENTRANCE_VOXEL_ROW * NUM_VOXEL_COLS + MULTI_PLAYER_ENTRANCE_VOXEL_COL];
+    const pending = [ARRIVAL_ROW * NUM_VOXEL_COLS + ARRIVAL_COL];
     while (pending.length > 0)
     {
         const index = pending.pop()!;
@@ -171,15 +181,15 @@ function getSupportLayerAfterStep(voxelGrid: VoxelGrid, row: number, col: number
  */
 function walkFromEntrance(voxelGrid: VoxelGrid): Map<string, string | undefined>
 {
-    const start = getSupportLayerAfterStep(voxelGrid,
-        MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL, COLLISION_LAYER_MIN - 1);
+    const start = getSupportLayerAfterStep(voxelGrid, ARRIVAL_ROW, ARRIVAL_COL,
+        COLLISION_LAYER_MIN - 1);
     const cameFrom = new Map<string, string | undefined>();
     if (start == undefined)
         return cameFrom;
 
     // Breadth first, so that the route read back out of it is the shortest one there is — which is
     // what keeps the physics-driven walk below down to a manageable number of steps.
-    const startKey = `${MULTI_PLAYER_ENTRANCE_VOXEL_ROW},${MULTI_PLAYER_ENTRANCE_VOXEL_COL},${start}`;
+    const startKey = `${ARRIVAL_ROW},${ARRIVAL_COL},${start}`;
     cameFrom.set(startKey, undefined);
     const pending: string[] = [startKey];
     for (let head = 0; head < pending.length; ++head)
@@ -443,17 +453,17 @@ describe("procedural multiplayer room generation", () => {
         }
     });
 
-    it("opens the entrance and keeps the floor in front of it clear", () => {
+    it("leaves the wall the door hangs on standing, and the floor in front of it clear", () => {
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed);
 
-            // The doorway itself, carved through the boundary wall a player arrives through.
+            // The entrance cell is wall, not a hole: the room's door is hung on it, and a wall
+            // attachment with nothing behind it is refused (see WallAttachedObjectUtil).
             expect(isWalkable(voxelGrid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL),
-                `seed ${seed} :: the entrance is walled up`).toBe(true);
+                `seed ${seed} :: the wall the door hangs on was carved away`).toBe(false);
 
-            // The approach a player walks in along. These are the cells room editing protects
-            // from being built on, so nothing generated may stand in them either.
+            // The approach a player walks in along, which nothing generated may stand in.
             for (let row = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2; row < MULTI_PLAYER_ENTRANCE_VOXEL_ROW; ++row)
             {
                 for (let col = MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1; col <= MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1; ++col)
@@ -464,7 +474,7 @@ describe("procedural multiplayer room generation", () => {
         }
     });
 
-    it("keeps the boundary wall solid apart from the entrance", () => {
+    it("keeps the boundary wall solid the whole way round", () => {
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed);
@@ -473,11 +483,11 @@ describe("procedural multiplayer room generation", () => {
             {
                 for (let col = 0; col < NUM_VOXEL_COLS; ++col)
                 {
+                    // Including the entrance: the way in is a door hung on that wall rather than a
+                    // hole cut through it, so nothing breaks the boundary any more.
                     const onBoundary = row == 0 || col == 0 ||
                         row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
-                    const isEntrance = row == MULTI_PLAYER_ENTRANCE_VOXEL_ROW &&
-                        col == MULTI_PLAYER_ENTRANCE_VOXEL_COL;
-                    if (!onBoundary || isEntrance)
+                    if (!onBoundary)
                         continue;
                     expect(isWalkable(voxelGrid, row, col), `seed ${seed} :: (${row},${col}) is not solid`).toBe(false);
                 }
@@ -607,13 +617,30 @@ describe("procedural multiplayer room generation", () => {
             "no generated room came out with a space open through both storeys").toBeGreaterThan(0);
     });
 
-    it("leaves a multiplayer room empty of objects, for its users to furnish", () => {
-        // Generation lays out the voxel grid and nothing else. A Hub or Regular room is meant to be
-        // furnished by the people who use it, so what it owes them is somewhere to build rather
-        // than a full house — and an object generation placed is one somebody has to clear away
-        // before he can put his own there.
+    it("furnishes a multiplayer room with its own way in and nothing else", () => {
+        // A Hub or Regular room is meant to be furnished by the people who use it, so what it owes
+        // them is somewhere to build rather than a full house — an object generation placed is one
+        // somebody has to clear away before he can put his own there.
+        //
+        // Its door is the one exception, and is not really furniture: a room with no door is a room
+        // nobody can leave, and it is what an arriving player is put down behind besides. It stands
+        // on the boundary wall at the room's entrance cell, facing into the room, and offers itself
+        // as the way in.
         for (const seed of SEEDS)
-            expect(Object.keys(generateFromSeed(seed).objectById).length, `seed ${seed}`).toBe(0);
+        {
+            const objects = Object.values(generateFromSeed(seed).objectById);
+            expect(objects.length, `seed ${seed}`).toBe(1);
+
+            const [door] = objects;
+            expect(door.objectTypeIndex, `seed ${seed}`).toBe(DOOR_OBJECT_TYPE_INDEX);
+            expect(DoorObjectUtil.getDoorType(door), `seed ${seed}`)
+                .toBe(DoorTypeEnumMap.DefaultEntrance);
+            expect(door.transform.pos.x, `seed ${seed}`)
+                .toBeCloseTo(MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, 3);
+            expect(door.transform.pos.z, `seed ${seed}`)
+                .toBeCloseTo(MULTI_PLAYER_ENTRANCE_VOXEL_ROW, 3);
+            expect(door.transform.dir.z, `seed ${seed}`).toBeCloseTo(-1, 3);
+        }
     });
 
     it("builds the room in a texture pack whose palettes it drew from", () => {

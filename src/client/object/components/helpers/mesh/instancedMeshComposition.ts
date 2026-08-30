@@ -8,6 +8,7 @@ import GameObject from "../../../types/gameObject";
 import InstancedMeshCompositionPart from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionCodecMap } from "../../../../../shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
 import StringUtil from "../../../../../shared/math/util/stringUtil";
+import CompositionMetadataUtil from "../../../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import { InstancedMeshCompositionCodecType, InstancedMeshCompositionCodecTypeEnumMap } from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { InstancedMeshCompositionParams } from "../../../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 
@@ -109,7 +110,6 @@ export default class InstancedMeshComposition
     // The prefix consists of two characters, denoting the codec's type and version, respectively.
     private getCodecPrefix(): string
     {
-        return StringUtil.convertRawNumberToVisibleASCII(this.codecType)
-            + StringUtil.convertRawNumberToVisibleASCII(this.codecVersion);
+        return CompositionMetadataUtil.getCodecPrefix(this.codecType, this.codecVersion);
     }
 }

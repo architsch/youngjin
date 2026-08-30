@@ -107,6 +107,14 @@ export default abstract class GameObject
         return this.params.sourceUserID == App.getUser().id;
     }
 
+    // The rectangle a selection outline is drawn around this object, in the object's own local axes.
+    // The object's scale by default, which frames the unit square a picture occupies; an object whose
+    // face claims more of the wall than that says so itself (see DoorGameObject).
+    getSelectionOutlineScale(): THREE.Vector3
+    {
+        return this.obj.scale;
+    }
+
     // Aliases
     get position(): THREE.Vector3 { return this.obj.position; }
     get direction(): THREE.Vector3

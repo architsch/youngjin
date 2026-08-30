@@ -1,5 +1,6 @@
 import { CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
+import { ColorPaletteName } from "../../../../shared/math/maps/colorPaletteMap";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 import useMouseDragScroll from "../../util/mouseDragScroll";
 
@@ -15,8 +16,13 @@ const PALETTE_COLUMNS_ON_VERTICAL_SCREEN = 2;
 // dismisses the palette, rather than as a drag of the screen behind it (in pixels).
 const DISMISS_MOVEMENT_TOLERANCE = 8;
 
-export default function Base94ColorInput({ currValue, setColorIndex }: Props)
+// Which colors are on offer is a question about what is being painted rather than about the control:
+// a character is a tin toy and a door is joinery, and the two are finished in almost nothing in
+// common (see ColorPaletteMap).
+export default function PaletteColorInput({ paletteName, currValue, setColorIndex }: Props)
 {
+    const paletteSize = ColorUtil.getPaletteSize(paletteName);
+
     const [paletteOpen, setPaletteOpen] = useState(false);
     const [paletteStyle, setPaletteStyle] = useState<CSSProperties | undefined>(undefined);
     const [paletteColumns, setPaletteColumns] = useState(PALETTE_COLUMNS_ON_HORIZONTAL_SCREEN);
@@ -114,7 +120,7 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
         return <button
             key={"swatch-" + index}
             className={`w-10 h-10 shrink-0 rounded-md cursor-pointer select-none touch-manipulation border-2 ${(index == currValue) ? "border-white shadow-[inset_0_0_0_2px_#000000]" : "border-gray-600"}`}
-            style={{backgroundColor: ColorUtil.rgbToHex(ColorUtil.base94IndexToRGB(index))}}
+            style={{backgroundColor: ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(paletteName, index))}}
             onClick={() => {
                 setColorIndex(index);
                 setPaletteOpen(false);
@@ -126,7 +132,7 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
         <button
             ref={buttonRef}
             className="w-8 h-6 p-0 shrink-0 rounded-md cursor-pointer select-none touch-manipulation yj-surface-concave"
-            style={{backgroundColor: ColorUtil.rgbToHex(ColorUtil.base94IndexToRGB(currValue))}}
+            style={{backgroundColor: ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(paletteName, currValue))}}
             onClick={() => setPaletteOpen(prev => !prev)}
         />
         {paletteOpen &&
@@ -138,11 +144,11 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
                 <div ref={onPaletteRefChange}
                     className={`absolute p-2 flex flex-col gap-0.5 bg-gray-700 rounded-lg overflow-y-auto pointer-events-auto yj-surface-convex ${(paletteStyle == undefined) ? "invisible" : ""}`}
                     style={paletteStyle}>
-                    {Array.from({length: Math.ceil(ColorUtil.base94PaletteSize / paletteColumns)}, (_, rowIndex) =>
+                    {Array.from({length: Math.ceil(paletteSize / paletteColumns)}, (_, rowIndex) =>
                         <div key={"palette-row-" + rowIndex} className="flex flex-row gap-0.5">
                             {Array.from({length: paletteColumns}, (_, columnIndex) =>
                                 rowIndex * paletteColumns + columnIndex)
-                                .filter(index => index < ColorUtil.base94PaletteSize)
+                                .filter(index => index < paletteSize)
                                 .map(index => renderSwatch(index))}
                         </div>)}
                 </div>
@@ -152,6 +158,7 @@ export default function Base94ColorInput({ currValue, setColorIndex }: Props)
 
 interface Props
 {
-    currValue: number; // Index in the base-94 color palette (see ColorUtil)
+    paletteName: ColorPaletteName; // which set of colors to offer (see ColorPaletteMap)
+    currValue: number; // Position in that palette
     setColorIndex: (index: number) => void;
 }

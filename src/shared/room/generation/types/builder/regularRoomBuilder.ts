@@ -29,6 +29,7 @@ export default class RegularRoomBuilder extends MultiplayerRoomBuilder
             .connectAreas()
             .carveOutRoom()
             .placeProps(PROP_CHANCE_PER_CELL, MAX_PROP_STACK_HEIGHT);
+        this.addEntranceDoor();
         return this;
     }
 }

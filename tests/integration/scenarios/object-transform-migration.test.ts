@@ -193,7 +193,11 @@ describe("object transform ranges and migration", () => {
             [legacyCanvas("a", 1.5), legacyCanvas("b", 2.0), legacyCanvas("c", 1.0)], 0);
 
         const {objectGroup} = decodeRoomBlob(blob);
-        const objects = Object.values(objectGroup.objectById);
+        // A legacy room is also given the entrance door it never stored, since a door used to be
+        // something every client spawned for itself (see ObjectGroup's converters). That is a
+        // different object entirely, so the canvases are what this is about.
+        const objects = Object.values(objectGroup.objectById)
+            .filter(object => object.objectTypeIndex === CANVAS_OBJECT_TYPE_INDEX);
 
         expect(objects).toHaveLength(3);
         expect(objects.map(o => o.objectId).sort()).toEqual(["a", "b", "c"]);

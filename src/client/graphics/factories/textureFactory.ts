@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import TextureFilterType from "../../../shared/graphics/material/types/textureFilterType";
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin("anonymous");
@@ -41,7 +42,16 @@ const TextureFactory =
         return newTexture;
     },
     // An empty texture upon which images can be freely rendered during runtime.
-    loadDynamicEmptyTexture: (textureId: string, width: number, height: number): THREE.Texture =>
+    //
+    // "withAlpha" is for a texture whose drawn-on cells are meant to be partly see-through — text
+    // written straight onto an object, where everything around the lettering has to show what is
+    // behind it. A texture that only ever holds pictures does not need the extra channel.
+    //
+    // "filterType" is a separate question from that one (see TextureFilterType): what a texture
+    // holds decides how it should be sampled, and a see-through texture of pictures would still
+    // want its cells kept crisp.
+    loadDynamicEmptyTexture: (textureId: string, width: number, height: number,
+        withAlpha: boolean = false, filterType: TextureFilterType = "nearest"): THREE.Texture =>
     {
         const loadedTexture = loadedTextures[textureId];
         if (loadedTexture != undefined)
@@ -54,10 +64,11 @@ const TextureFactory =
         if (loadedRenderTargets[textureId] != undefined)
             throw new Error(`RenderTarget with the same textureId already exists (textureId: ${textureId})`);
 
+        const filter = (filterType == "linear") ? THREE.LinearFilter : THREE.NearestFilter;
         const rt = new THREE.WebGLRenderTarget(width, height, {
-            format: THREE.RGBFormat,
-            magFilter: THREE.NearestFilter,
-            minFilter: THREE.NearestFilter,
+            format: withAlpha ? THREE.RGBAFormat : THREE.RGBFormat,
+            magFilter: filter,
+            minFilter: filter,
         });
         loadedRenderTargets[textureId] = rt;
 

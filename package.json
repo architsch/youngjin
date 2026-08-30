@@ -24,7 +24,7 @@
 		"node": ">=24 <25"
 	},
 	"scripts": {
-		"dev": "concurrently -k -n emu,srv -c blue,green \"firebase emulators:start --only firestore,storage\" \"sleep 3 && GCLOUD_PROJECT=thingspool FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 MODE=dev PORT=3000 SIMULATED_LATENCY_MS=200 SIMULATED_DB_LATENCY_MS=200 SIMULATED_LATENCY_JITTER_MS=50 pm2 start ./dev/scripts/devRunner.js --no-daemon --watch --ignore-watch='dist public .git temp docs test-results playwright-report tests node_modules src/shared/graphics/image/maps *.log'\"",
+		"dev": "concurrently -k -n emu,srv -c blue,green \"firebase emulators:start --only firestore,storage\" \"sleep 3 && GCLOUD_PROJECT=thingspool FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 MODE=dev PORT=3000 SIMULATED_LATENCY_MS=200 SIMULATED_DB_LATENCY_MS=200 SIMULATED_LATENCY_JITTER_MS=50 pm2 start ./dev/scripts/devRunner.js --no-daemon --watch --ignore-watch='dist public .git .claude temp docs test-results playwright-report tests node_modules src/shared/graphics/image/maps dev/scripts/devlog dev/scripts/playtest dev/scripts/vps *.log'\"",
 		"devcss": "SKIP_CLIENT_COMPILE=true SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devclient": "SKIP_SERVER_COMPILE=true SKIP_SSG=true npm run dev",
 		"devserver": "SKIP_CSS_COMPILE=true SKIP_CLIENT_COMPILE=true SKIP_SSG=true npm run dev",

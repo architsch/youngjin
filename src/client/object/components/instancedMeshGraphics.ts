@@ -140,4 +140,11 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             widthScale, heightScale, sourceU1, sourceV1, sourceU2, sourceV2,
             unloadTextureAfterDraw);
     }
+
+    // Draws a 2D canvas over the whole of the given cell — content the caller drew itself, rather
+    // than an image fetched from somewhere.
+    drawCanvasAtIndex(instancedMeshId: string, textureIndex: number, canvas: HTMLCanvasElement)
+    {
+        bindingMap[instancedMeshId].drawCanvasAtIndex(textureIndex, canvas);
+    }
 }

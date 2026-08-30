@@ -1,36 +1,79 @@
 import { DoorCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/doorCompositionCodec";
+import DoorCompositionConstants from "../../../graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
+import { DOOR_PANEL_ORIGIN_Y } from "../../../graphics/mesh/composition/types/compositionBuilder/doorCompositionBuilder";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import StringUtil from "../../../math/util/stringUtil";
 import Room from "../../../room/types/room";
+import RoomValidationUtil from "../../../room/util/roomValidationUtil";
 import { DOOR_FOOTPRINT_HEIGHT, DOOR_FOOTPRINT_WIDTH, MAX_DOORS_PER_ROOM, MAX_MESH_INSTANCES_PER_DOOR } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../addObjectSignal";
 import ObjectTypeConfig from "./objectTypeConfig";
+import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
+import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 
-// This object represents the room's entrance door. This is the only gateway through which
-// players (users) can move from room to room.
+// The metadata an admin is allowed to write onto a door. Everything a door is — where it leads, what
+// it is called, whether it offers itself as a room's way in, and what it is finished in — is one of
+// these; anything else arriving under a door's id is refused rather than stored.
+const editableMetadataKeys = [
+    ObjectMetadataKeyEnumMap.InstancedMeshComposition,
+    ObjectMetadataKeyEnumMap.Label,
+    ObjectMetadataKeyEnumMap.LabelColor,
+    ObjectMetadataKeyEnumMap.DestinationRoomId,
+    ObjectMetadataKeyEnumMap.DestinationDoorLabel,
+    ObjectMetadataKeyEnumMap.DoorType,
+];
+
+// A door is a gateway from one room to another, hung on a wall like a picture. Laying one is an edit
+// to the shape of the world rather than to a room's contents, so it is an admin's to make and only
+// in a Hub — see RoomValidationUtil.canUserManageDoors.
 const DoorObjectTypeConfig: ObjectTypeConfig =
 {
     objectType: "Door",
-    persistent: false,
+    persistent: true,
     autoUnload: true,
     canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-        return false;
+        if (!RoomValidationUtil.canUserManageDoors(user, room))
+            return false;
+
+        // Block spoofing attempts
+        if (obj.sourceUserID != user.id)
+            return false;
+
+        // Every door in the room draws its parts from one pool of mesh instances, so the room can
+        // only hold as many as that pool was sized for.
+        const typeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+        const doorCount = Object.values(room.objectById)
+            .filter(obj => obj.objectTypeIndex === typeIndex).length;
+        if (doorCount >= MAX_DOORS_PER_ROOM)
+            return false;
+
+        return true;
     },
     canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-        return false;
+        return RoomValidationUtil.canUserManageDoors(user, room);
     },
     canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        return false;
+        if (!RoomValidationUtil.canUserManageDoors(user, room))
+            return false;
+
+        // A door is slid along the wall by a gizmo, which is a placement rather than a motion.
+        if (!signal.ignorePhysics)
+            return false;
+
+        return true;
     },
     canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        // A door's appearance is decided for it and is not the user's to change. The composition it
-        // is decided as is nonetheless a plain, editable set of colors (see DoorCompositionCodec),
-        // so that letting the user finish his own doors is a matter of opening this up.
-        return false;
+        if (!RoomValidationUtil.canUserManageDoors(user, room))
+            return false;
+
+        // The values themselves are settled by ObjectMetadataEntryMap, which clamps a door type into
+        // the enum and cuts a label to length, so what is left to ask here is only which keys a door
+        // answers to at all.
+        return editableMetadataKeys.includes(signal.metadataKey);
     },
     components: {
         spawnedByAny: {
@@ -77,6 +120,25 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
                     const hashCode = StringUtil.getHashCode(`${obj.roomID}/${obj.objectId}`);
                     return DoorCompositionCodec.getRandomComposition(hashCode);
                 },
+            },
+            // The door's name goes where a sign belongs: on the plate, which is the one region of
+            // its face finished differently for the purpose. The rect comes from the plate's own
+            // declaration rather than being written out again, so the two cannot drift apart, and
+            // it is inset by the moulding running around the plate so the text never rides over the
+            // carving. It stands a little in front of the plate's own relief.
+            labelText: {
+                localOffset: {
+                    x: DoorCompositionConstants.label.offset.x,
+                    y: DOOR_PANEL_ORIGIN_Y + DoorCompositionConstants.label.offset.y,
+                    z: DoorCompositionConstants.label.relief + 0.005,
+                },
+                size: {
+                    x: DoorCompositionConstants.label.size.x
+                        - 2 * DoorCompositionConstants.label.mouldingThickness,
+                    y: DoorCompositionConstants.label.size.y
+                        - 2 * DoorCompositionConstants.label.mouldingThickness,
+                },
+                defaultFontColorHex: "#33302c", // a dark grey that reads as lettering without going to black
             },
             orbitOccluder: {}, // Part of the wall it sits in, as far as the orbit camera is concerned.
         },

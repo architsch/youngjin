@@ -98,6 +98,10 @@ export default function DebugStats({env}: Props)
                         case "show dummy-images": imageListChooserDebugEnabledObservable.set(true); break;
                         case "hide dummy-images": imageListChooserDebugEnabledObservable.set(false); break;
                         case "restart tutorial": void restartTutorial(); break;
+                        // The way to sign in. The room list used to carry a Login button, and is
+                        // now the admin's destination chooser rather than something a player ever
+                        // opens — so until the app grows a proper place for it, this is it.
+                        case "login": PopupUtil.openPopup({popupType: "authPrompt"}); break;
                         case "log": PopupUtil.openPopup({popupType: "consoleLog"}); break;
                         case "lose context": setWebGLContextLost(true); break;
                         case "restore context": setWebGLContextLost(false); break;

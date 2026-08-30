@@ -4,6 +4,7 @@ import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import AddBlockIcon from "../../../svg/icons/addBlockIcon";
 import AddCanvasIcon from "../../../svg/icons/addCanvasIcon";
+import AddDoorIcon from "../../../svg/icons/addDoorIcon";
 import App from "../../../../app";
 import SocketsClient from "../../../../networking/client/socketsClient";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
@@ -24,18 +25,22 @@ import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
-import { clientFeatureFlagsObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, notificationMessageObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import Room from "../../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import FTUEUtil from "../../../util/ftueUtil";
 import PopupUtil from "../../../util/popupUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import NumUtil from "../../../../../shared/math/util/numUtil";
+import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
+import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 let addCanvasButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -64,6 +69,14 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
 
     const canAddCanvas = getPlaceableWallAttachedObjectTransform(
         props.selection, canvasTypeIndex) !== null;
+
+    // Hanging a door is world-building rather than room-editing, so the option is only ever on offer
+    // to an admin — and only in a room whose doors are his to lay (see RoomValidationUtil).
+    const room = App.getCurrentRoom();
+    const canManageDoors = room != undefined &&
+        RoomValidationUtil.canUserManageDoors(App.getUser(), room);
+    const canAddDoor = canManageDoors &&
+        getPlaceableWallAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
 
     useEffect(() => {
         clearFTUETimeouts();
@@ -107,6 +120,17 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.AddCanvas);
             }}
         />
+        {canManageDoors && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
+            disabled={!canAddDoor}
+            onClick={() => {
+                // A door somebody has just hung leads nowhere and is not the room's own way in
+                // until he says so — both of which he says through the door's own options.
+                tryAddObjectFromQuad(props.selection, doorTypeIndex, {
+                    [ObjectMetadataKeyEnumMap.DoorType]:
+                        new EncodableByteString(`${DoorTypeEnumMap.CustomEntrance}`),
+                });
+            }}
+        />}
     </div>;
 }
 
@@ -119,6 +143,12 @@ function clearFTUETimeouts()
     }
 }
 
+// Where an object hung on the clicked wall would go, or null if it cannot go there at all.
+//
+// Everything but the height is the same question whatever is being hung: the cell the quad belongs
+// to fixes the position across the wall, and the quad's own facing fixes which way the object looks.
+// The height is the one thing that varies from one kind of object to the next, so it is asked for
+// separately, and the first of the heights offered that the room will actually take is the answer.
 function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
     objectTypeIndex: number): ObjectTransform | null
 {
@@ -137,29 +167,44 @@ function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
         VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex);
 
     if (dirY != 0)
-        return null;
+        return null; // a floor or a ceiling, which nothing hangs on
 
     const x = voxel.col + 0.5 + offsetX;
-    const yUpper = 0.5 * Math.ceil(2 * offsetY);
-    const yLower = 0.5 * Math.floor(2 * offsetY);
     const z = voxel.row + 0.5 + offsetZ;
-
-    const upperPos: Vec3 = {x, y: yUpper, z};
-    const lowerPos: Vec3 = {x, y: yLower, z};
     const dir: Vec3 = {x: dirX, y: dirY, z: dirZ};
 
-    const upperTr = new ObjectTransform(upperPos, dir);
-    const lowerTr = new ObjectTransform(lowerPos, dir);
-    const upperObj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
-        ObjectIdUtil.generateRandomObjectId(), upperTr);
-    const lowerObj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
-        ObjectIdUtil.generateRandomObjectId(), lowerTr);
-
-    if (ObjectUpdateUtil.canAddObject(user, userRole, room, upperObj))
-        return upperTr;
-    if (ObjectUpdateUtil.canAddObject(user, userRole, room, lowerObj))
-        return lowerTr;
+    for (const y of getCandidateHeights(objectTypeIndex, quadIndex, offsetY))
+    {
+        const tr = new ObjectTransform({x, y, z}, dir);
+        const obj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
+            ObjectIdUtil.generateRandomObjectId(), tr);
+        if (ObjectUpdateUtil.canAddObject(user, userRole, room, obj))
+            return tr;
+    }
     return null;
+}
+
+// How high up the wall the object would sit, in the order the heights are worth trying.
+//
+// A picture goes up at the height it was clicked at, which is rarely one of the steps a wall
+// attachment snaps to — so the steps either side of it are both offered, and whichever the wall will
+// take is where it hangs. A door does not hang at all: it stands on the floor of the storey the
+// clicked quad belongs to, its origin half a footprint above that floor since a wall attachment's
+// collider is centred on its position (see DoorObjectTypeConfig). There is one such height, and no
+// second guess to be made about it.
+function getCandidateHeights(objectTypeIndex: number, quadIndex: number, offsetY: number): number[]
+{
+    if (objectTypeIndex != doorTypeIndex)
+        return [0.5 * Math.ceil(2 * offsetY), 0.5 * Math.floor(2 * offsetY)];
+
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+        return [];
+
+    const storeyFloorLayer = (collisionLayer >= STOREY_FLOOR_COLLISION_LAYER)
+        ? STOREY_FLOOR_COLLISION_LAYER + 1 : COLLISION_LAYER_MIN;
+    const floorY = (storeyFloorLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
+    return [floorY + 0.5 * DOOR_FOOTPRINT_HEIGHT];
 }
 
 async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
@@ -292,6 +337,9 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
 
     const room = App.getCurrentRoom()!;
 
+    if (reportUndetachableAttachment(room, selection.quadIndex))
+        return;
+
     // Taking a wall down destroys whatever is hanging on it, which is more than the button says it
     // does — and unlike the wall, what hangs there was placed and decorated by hand. So that case,
     // and only that case, is put to the user before it is carried out.
@@ -313,6 +361,37 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
     removeVoxelBlockWithItsWallAttachments(selection);
 }
 
+// Whether the block is held up by something the user is not allowed to take down, in which case he
+// is told so and the removal goes no further.
+//
+// A wall can only come down once nothing is left hanging on it, and not everything that hangs on a
+// wall is everybody's to remove — a door is an admin's alone. Without this the user would be asked
+// to confirm the destruction of what is hanging there, and then watch nothing happen: the door would
+// refuse to come down, and the block behind it would refuse to follow.
+function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
+{
+    const user = App.getUser();
+    const userRole = userRoleObservable.peek();
+
+    for (const objectId of WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
+    {
+        const obj = room.objectById[objectId];
+        if (obj == undefined || ObjectUpdateUtil.canRemoveObject(user, userRole, room,
+            new RemoveObjectSignal(room.id, objectId)))
+        {
+            continue;
+        }
+        // Named by what it is, since what the user has to be told is which thing on this wall is
+        // standing in the way rather than that something is.
+        const objectName = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex)
+            .objectType.toLowerCase();
+        notificationMessageObservable.set(
+            `Can't remove a block because a ${objectName} is attached to it.`);
+        return true;
+    }
+    return false;
+}
+
 async function removeVoxelBlockWithItsWallAttachments(selection: VoxelQuadSelection)
 {
     // Re-checked rather than trusted from the caller: a confirmation popup stands between the
@@ -322,6 +401,11 @@ async function removeVoxelBlockWithItsWallAttachments(selection: VoxelQuadSelect
 
     const room = App.getCurrentRoom()!;
     const quadIndex = selection.quadIndex;
+
+    // Asked again for the same reason, and answered the same way: a door may have been hung on this
+    // block while the confirmation was up.
+    if (reportUndetachableAttachment(room, quadIndex))
+        return;
 
     // The attachments go first, since the block is only removable once nothing is left hanging on
     // it. The server reads these signals in the order they were sent, so it sees the same sequence

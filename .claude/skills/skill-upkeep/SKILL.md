@@ -91,12 +91,45 @@ Improvements to resist:
 - Restructuring a skill that works. Section order is not a defect.
 - Adding detail the agent can read from the code anyway. Skills carry judgement and non-obvious
   constraints; source-level facts belong in the source.
-- Growing a skill indefinitely. Length costs attention on every invocation. When a section becomes
-  long and is needed only sometimes, move it to `reference/` and link it — that is exactly what the
-  `devlog-post` skill's `reference/` files are for.
 - Rewriting the description frontmatter without cause. It is what decides whether the skill is found
   at all; change it only when the skill's actual trigger conditions have changed, and keep naming
   the situations a user would describe rather than the mechanism.
+
+### How an improvement is written: consolidate, never accrete
+
+**This governs every edit to a skill, a reference page or a guideline — here, and anywhere else
+feedback gets written down.** It is the rule that keeps all the other rules readable, and the one
+most often broken, because appending is always the easier edit and always looks harmless on its own.
+
+**Fold the note into an existing principle. Do not append a new rule for the case at hand.** When
+feedback arrives — from the user, or from a run that went wrong:
+
+1. **Find the principle it is an instance of.** Nearly every specific correction is a general rule
+   already on the page, failing to bite. "The screenshots all look the same" is not a new rule; it is
+   the composition guidance never saying that a set of images is judged as a set.
+2. **Sharpen that principle until it would have caught this case**, and let the case be its
+   illustration if it needs one. One worked example inside a principle teaches more than three
+   bullets beside it.
+3. **Write a genuinely new rule only when no principle covers it** — and then ask which two existing
+   ones should merge to make room for it.
+
+Symptoms that a page has been accreting, all of which are grounds to consolidate it: a numbered list
+that has outgrown its own introduction ("three faults account for…" above six of them), several
+bullets that are the same advice at different levels of detail, and worked examples outnumbering the
+rules they illustrate.
+
+**State the present only.** No account of what an earlier version said, banned, or got wrong. Git
+keeps that history; in the page it doubles the length and buries the rule that is actually in force.
+
+**Where a question is really about style or taste, point at the examples instead of enumerating
+rules.** No page captures a voice, a visual composition, or a house convention in prose, and each
+attempt adds a rule that only half-applies. Name the principle, then send the reader to the corpus —
+the published dev-log posts, the existing shot scripts, the tests already in the suite — with the
+instruction to read **several and imitate the pattern running through them**, not to copy the most
+recent one.
+
+Length costs attention on every invocation. When a section is long and needed only sometimes, move it
+to `reference/` and link it — that is what the `devlog-post` skill's `reference/` files are for.
 
 ## Step 4 — Check the frontmatter
 

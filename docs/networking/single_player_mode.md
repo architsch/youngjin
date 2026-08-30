@@ -32,7 +32,7 @@ The user's mode flag only *influences where the server routes them*; it is **not
 
 ### The "hub" keyword
 
-The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to load it, `RoomPickerUtil` resolves it to whichever Hub room the incoming user should be load-balanced into (see [room_population.md](room_population.md#picking-a-hub)). The client uses this as the default destination when sending the user out of the tutorial (see [Door behavior](#door-behavior)).
+The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to load it, `RoomPickerUtil` resolves it to whichever Hub room the incoming user should be load-balanced into (see [room_population.md](room_population.md#picking-a-hub)). It is what a URL names when the visitor is to be put somewhere sensible rather than in one room in particular. The way out of the tutorial names no room at all, which the same picker answers the same way (see [Door behavior](#door-behavior)).
 
 ## Server-side contract for single-player rooms
 
@@ -50,7 +50,7 @@ As defense-in-depth, every server signal handler that would mutate room state (o
 
 When the client loads a single-player room it takes a different path than for a multi-player room:
 
-- **Multi-player rooms:** the server sends the full room — voxels and objects, including the player — and the client spawns the entrance door.
+- **Multi-player rooms:** the server sends the full room — voxels and objects, including the player and the room's own door.
 - **Single-player rooms:** the server sends only the room's identity, so the client generates the room's voxels and objects locally from the mode's configuration (the same generation logic the server uses to build multi-player rooms) and spawns its own player at the entrance the configuration defines.
 
 The transform emitter that normally streams player movement to the server disables itself in single-player rooms, and every edit path guards its outgoing signal behind a check for the room type. The result: the player can move and edit freely, but nothing is sent to or persisted by the server.
@@ -87,13 +87,13 @@ A single "clear" action tears the whole layer down, which every step's end actio
 
 ### Feature flags
 
-`FeatureFlag` is a set of global UI/interaction switches (for example, hiding the chat input, disabling manual voxel editing, holding a selection in place, holding the user in the game mode he is in, or changing what the door does). They are tracked in an observable set that notifies listeners as flags are toggled; consumers either query the set on demand or subscribe to changes. These flags let a tutorial step constrain what the user can do at a given moment — and, just as importantly, hand him one thing at a time: the way into edit mode and the way back out of it are each opened only by the step that teaches them, and the labels naming who the user is stay away for the whole tutorial, while the button that leaves the app never does.
+`FeatureFlag` is a set of global UI/interaction switches (for example, hiding the chat input, disabling manual voxel editing, holding a selection in place, or holding the user in the game mode he is in). They are tracked in an observable set that notifies listeners as flags are toggled; consumers either query the set on demand or subscribe to changes. These flags let a tutorial step constrain what the user can do at a given moment — and, just as importantly, hand him one thing at a time: the way into edit mode and the way back out of it are each opened only by the step that teaches them, and the labels naming who the user is stay away for the whole tutorial, while the button that leaves the app never does.
 
 A flag that constrains something the user can do constrains the *doing* of it, not merely the control that offers it. The one holding him in his game mode is the clearest case: it refuses the crossing itself, so the back gesture and a second click on what is being edited are turned away along with the buttons, which are hidden because that same flag says there is nothing for them to do (see [game_mode.md](../gameplay/game_mode.md)).
 
 ### Door behavior
 
-The entrance door checks a feature flag: when set, clicking the door sends the user straight out of the single-player experience — to the room they originally requested via the connection URL, or to a hub by default — instead of opening the normal room-list popup. See [room_entrance.md](../geometry/room_entrance.md#the-door-object).
+Nothing about the tutorial's door is special-cased. It is generated as the room's own way in, leading nowhere — and a door of that kind, asked to open onto a destination it does not have, falls back on taking the user out to wherever the server judges he should go next: the room he originally asked for through the connection URL, or a hub. That is exactly what leaving the tutorial means, so the ordinary behavior of an unwired entrance is the whole of it. See [room_entrance.md](../geometry/room_entrance.md#the-door-as-an-object).
 
 ## Finishing the tutorial
 
@@ -116,4 +116,4 @@ The shared editability check (used by both client and server) grants edit permis
 - [Game Mode](../gameplay/game_mode.md) — the play/edit modes the tutorial walks the user through.
 - [First-Time User Experience](ftue.md) — the guidance that takes over once the tutorial is done.
 - [User State Management Flows](user_state_management.md) — room-join resolution and where user state lives.
-- [Room Entrance](../geometry/room_entrance.md) — entrance geometry for multi-player vs. single-player rooms.
+- [Room Entrances](../geometry/room_entrance.md) — how a room's doors work, and where an arriving player lands.

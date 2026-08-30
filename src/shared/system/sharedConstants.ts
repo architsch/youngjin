@@ -37,6 +37,21 @@ export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 
+// How long the text written on an object may be. It is short because of where it is read: a label
+// is drawn onto a patch of the object itself (see the LabelText component), and a name that fills
+// that patch at a size nobody can make out from across the room is worse than one that was cut.
+export const OBJECT_LABEL_MAX_LENGTH = 24;
+
+// Which set of colors a label's lettering is drawn from (see ColorPaletteMap). Named here rather
+// than written out at each of the three places that need it — what is stored is a position in this
+// exact palette, so a second name for it would be a second meaning for every label already written.
+export const LABEL_COLOR_PALETTE_NAME = "LabelColor";
+
+// The longest a stored document id may be. Firestore's own limit, which is what bounds a door's
+// destination room id: an id is never composed by hand, so this only has to refuse a value that was
+// never an id in the first place.
+export const DOCUMENT_ID_MAX_LENGTH = 1500;
+
 // Physics
 
 export const GRAVITY_SPEED = 3;
@@ -177,6 +192,22 @@ export const DOOR_PANEL_HEIGHT = 3.25;
 export const MAX_DOORS_PER_ROOM = 16;
 export const MAX_MESH_INSTANCES_PER_DOOR = 8;
 
+// Label Text
+
+export const LABEL_GEOMETRY_ID = "Square";
+
+// Every label in a room is drawn from one mesh, and every one of them is written into one cell of
+// one texture — so this is a room-wide budget rather than a per-object one, and the atlas is a grid
+// of exactly this many cells. A cell is wide and short because a label is: what goes on one is a
+// name on a plate, and giving it a square cell would spend most of the pixels above and below the
+// lettering. A quad of a different shape is still drawn correctly (the text is laid out in world
+// units and scaled onto the cell), it just spends its pixels less evenly.
+export const MAX_LABELS_PER_ROOM = 16;
+export const LABEL_ATLAS_WIDTH = 2048; // in pixels
+export const LABEL_ATLAS_HEIGHT = 512; // in pixels
+export const LABEL_ATLAS_CELL_WIDTH = 512; // in pixels
+export const LABEL_ATLAS_CELL_HEIGHT = 128; // in pixels
+
 // Voxel Grid
 
 export const NUM_VOXEL_ROWS = 32;
@@ -248,17 +279,16 @@ export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 // as far as it can see instead (see WorldSpaceSelectionUtil).
 export const MAX_WORLDSPACE_SELECT_DIST = 10;
 
-// Fixed spawn point used whenever a player enters a multiplayer room.
-// (For a singleplayer room, the player's spawn point will be determined by the corresponding
-// SinglePlayerModeConfig's entrance voxel coordinates.)
+// Where a multiplayer room's own door is hung: one fixed cell of one boundary wall, which is also
+// what an arriving player is put down behind unless a door of the room says otherwise (see
+// SpawnHotspotUtil). A singleplayer room names its own entrance cell in its SinglePlayerModeConfig.
 export const MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
 export const MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
 
-// How tall the doorway carved through the boundary wall for that entrance stands, in collision
-// layers: enough for a player to walk through, and no more. What is above it is boundary wall like
-// any other, which matters now that a room stands taller than one storey — the doorway, and the
-// invisible collider that keeps it from being blocked, both belong to the storey it opens onto
-// rather than to the room's whole height.
+// How tall the doorway a multiplayer room used to be entered through stood, in collision layers.
+// Nothing carves one any more — a room's way in is a door hung on the boundary wall — but this is a
+// fact about the format older rooms were written in, and the conversions that carry them across need
+// it to fill that stretch of wall back in.
 export const MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS = 5;
 
 // UI

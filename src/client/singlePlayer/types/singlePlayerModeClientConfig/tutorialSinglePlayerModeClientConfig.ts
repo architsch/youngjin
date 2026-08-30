@@ -64,7 +64,6 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "ui_diagram", diagram: "drag_up", text: () => "Drag to move"},
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: true},
-                    {type: "feature_flag", flag: FeatureFlag.ExitSinglePlayerOnDoorClick, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisablePlayerSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},

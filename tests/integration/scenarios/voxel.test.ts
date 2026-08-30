@@ -8,8 +8,8 @@
  * - Mixed add/remove sequences
  * - Collision layer operations
  * - Room dirty flag
- * - What the entrance keeps clear, for blocks and for wall attachments alike, and the invisible
- *   plug that seals the doorway — all of which now stop at the storey the doorway opens onto
+ * - What now protects a room's way in, which is the door itself rather than any reserved stretch of
+ *   the room around it
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -193,150 +193,60 @@ describe("voxel scenarios", () => {
         });
     });
 
-    it("cannot add a block inside the entrance's no-build zone", async () => {
+    it("refuses to take down a wall a door is hanging on", async () => {
+        // Nothing protects the entrance by position any more: the boundary wall around it is
+        // ordinary wall, and the floor in front of it is ordinary floor. What protects the way in is
+        // the door itself — a block cannot go while something hangs on it, and a door is not a
+        // non-admin's to take down first (see DoorObjectTypeConfig).
         await runScenario({
-            name: "entrance no-add zone",
+            name: "the wall a door hangs on",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             actions: [
-                // One cell in front of the entrance → inside the Hub no-add zone (rejected).
-                // A Hub's no-add zone reaches further into the room than a Regular room's.
-                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
-                // Three cells in front → outside the Hub zone (allowed), as a control
-                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 3, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
+                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
+                // The same wall two cells over, which holds nothing up → editable, as a control.
+                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3, layer: 0 },
             ],
             assertions: () => {
                 const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
-                const blocked = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
-                const allowed = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 3, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(blocked, 0)).toBe(false);
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(allowed, 0)).toBe(true);
-            },
-        });
-    });
-
-    it("protects the wall above the doorway, not just the doorway itself", async () => {
-        // The zones stand as high as the storey the entrance opens onto, rather than only as high
-        // as the doorway. The boundary wall directly over the opening is what frames it, and a
-        // zone that stopped at the doorway's own height would leave that stretch of wall free to
-        // be taken out — leaving a gap in the room's boundary right above the way in.
-        const aboveDoorway = MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS; // the first layer of wall over it
-        expect(aboveDoorway, "the doorway already reaches the top of its storey")
-            .toBeLessThan(NUM_COLLISION_LAYERS_PER_STOREY);
-
-        await runScenario({
-            name: "the wall above the doorway is protected",
-            rooms: [EMPTY_HUB],
-            users: [userAtCenter("hub")],
-            actions: [
-                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: aboveDoorway },
-            ],
-            assertions: () => {
-                const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
-                const overDoorway = VoxelQueryUtil.getVoxel(voxels,
+                const behindDoor = VoxelQueryUtil.getVoxel(voxels,
                     MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(overDoorway, aboveDoorway),
-                    "the wall above the doorway was taken out").toBe(true);
+                const plainWall = VoxelQueryUtil.getVoxel(voxels,
+                    MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(behindDoor, 0),
+                    "the wall the room's door hangs on was taken out").toBe(true);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(plainWall, 0)).toBe(false);
             },
         });
     });
 
-    it("leaves the storey above the entrance free to build on and to take apart", async () => {
-        // The entrance's protected zones exist for the doorway, the wall framing it and the floor a
-        // player spawns on — all of them on the storey the doorway opens onto. The room above that
-        // storey is ordinary room, which nobody can even reach the doorway from, so an owner is as
-        // free to build there as anywhere else.
-        const upperLayer = STOREY_FLOOR_COLLISION_LAYER + 1;
+    it("builds and hangs freely right up to the entrance, which nothing reserves any more", async () => {
+        // The fixed no-build and no-removal zones the entrance used to carry are gone with the hole
+        // they were protecting. The floor in front of a door is somewhere to build like anywhere
+        // else, and the wall beside one is somewhere to hang a picture like anywhere else.
         await runScenario({
-            name: "entrance zones stop at the ground storey",
+            name: "no entrance zones",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             actions: [
-                // Directly over the cell in front of the entrance, which is closed to building on
-                // the ground.
-                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: upperLayer },
-                // Directly over a jamb of the doorway, which is closed to removal on the ground.
-                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1, layer: upperLayer },
+                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
             ],
-            assertions: () => {
-                const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
-                const added = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
-                const removed = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(added, upperLayer)).toBe(true);
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(removed, upperLayer)).toBe(false);
-
-                // ...and the ground storey underneath both of them is untouched by any of that.
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(added, COLLISION_LAYER_MIN)).toBe(false);
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(removed, COLLISION_LAYER_MIN)).toBe(true);
-            },
-        });
-    });
-
-    it("hangs a wall attachment over the entrance zone, but not inside it", async () => {
-        // A wall attachment is asked about the stretch of wall it actually hangs on, rather than
-        // about the whole column of room behind it — so the entrance's no-addition zone refuses it
-        // on the storey the doorway opens onto and lets the identical one go up directly above.
-        const BACK_ROW = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1; // inside the Hub's no-addition footprint
-        const INSIDE_COL = MULTI_PLAYER_ENTRANCE_VOXEL_COL;
-        const OUTSIDE_COL = MULTI_PLAYER_ENTRANCE_VOXEL_COL + 4; // clear of the zone, as a control
-        // A standing player's eyeline on each storey, which is where a picture goes up.
-        const GROUND_Y = 1;
-        const UPPER_Y = GROUND_Y + STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
-
-        await runScenario({
-            name: "wall attachment above the entrance zone",
-            rooms: [EMPTY_HUB],
-            users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const inFrontOfDoor = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
+                    MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(inFrontOfDoor, 0)).toBe(true);
+
+                // A picture on the boundary wall beside the door, which the old no-build zone
+                // reached over. Clear of the door's own footprint, which is the one thing that still
+                // keeps anything off that wall — and keeps it off wherever the door happens to be
+                // rather than at one fixed cell.
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-
-                // Wall for each attachment to hang on, filling both storeys of both columns, so
-                // that the only thing left to tell the four cases apart is the entrance zone.
-                for (const col of [INSIDE_COL, OUTSIDE_COL])
-                {
-                    for (const storeyName of ["FirstStorey", "SecondStorey"])
-                    {
-                        const storey = RoomVolumeConstructorMap[storeyName](
-                            BACK_ROW, BACK_ROW, col, col, undefined);
-                        fillColumn(room.voxelGrid, BACK_ROW, col,
-                            storey.collisionLayerMin, storey.collisionLayerMax);
-                    }
-                }
-
-                const canHang = (col: number, y: number) => WallAttachedObjectUtil.canPlaceObject(
-                    room, "attachment", canvasTypeIndex,
-                    { x: col + 0.5, y, z: BACK_ROW }, { x: 0, y: 0, z: -1 });
-
-                // On the ground storey the zone is what refuses it — the same wall one column over
-                // takes it without complaint.
-                expect(canHang(INSIDE_COL, GROUND_Y)).toBe(false);
-                expect(canHang(OUTSIDE_COL, GROUND_Y)).toBe(true);
-
-                // Directly above, the zone has run out and both columns take it.
-                expect(canHang(INSIDE_COL, UPPER_Y)).toBe(true);
-                expect(canHang(OUTSIDE_COL, UPPER_Y)).toBe(true);
-            },
-        });
-    });
-
-    it("cannot remove the wall blocks framing the entrance", async () => {
-        await runScenario({
-            name: "entrance no-remove row",
-            rooms: [EMPTY_HUB],
-            users: [userAtCenter("hub")],
-            actions: [
-                // A jamb directly beside the doorway → protected (rejected)
-                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1, layer: 0 },
-                // A boundary-wall block far from the entrance → editable now (allowed), as a control
-                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: 10, layer: 0 },
-            ],
-            assertions: () => {
-                const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
-                const jamb = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1)!;
-                const farWall = VoxelQueryUtil.getVoxel(voxels, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, 10)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(jamb, 0)).toBe(true);
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(farWall, 0)).toBe(false);
+                const canHang = WallAttachedObjectUtil.canPlaceObject(room, "attachment",
+                    canvasTypeIndex,
+                    { x: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3 + 0.5, y: 1, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW },
+                    { x: 0, y: 0, z: -1 });
+                expect(canHang).toBe(true);
             },
         });
     });
@@ -383,12 +293,12 @@ describe("voxel scenarios", () => {
 });
 
 /**
- * The invisible collider that plugs the doorway so a player cannot walk out of the room through it.
- * It stands only as tall as the doorway, which matters now that a room is taller than the storey the
- * entrance opens onto: carried up through the room's whole height it would put an invisible wall
- * across the upper storey, over a floor nobody can reach the doorway from in the first place.
+ * The room's boundary, walked into. A room used to have a hole cut through that boundary at its
+ * entrance, plugged by an invisible collider so that a player could not walk out through it. Both
+ * are gone: the way in is a door hung on the wall, so the wall is simply whole, and what stops a
+ * player is the same thing that stops him anywhere else along it.
  */
-describe("the entrance's invisible plug", () => {
+describe("the room's boundary wall", () => {
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -426,24 +336,23 @@ describe("the entrance's invisible plug", () => {
         return pos.z;
     }
 
-    it("stops a player walking out on the ground, and lets him past on the storey above", async () => {
+    it("stops a player at the entrance the same way it stops him anywhere else", async () => {
         await runScenario({
-            name: "entrance plug height",
+            name: "walking into the entrance wall",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const startZ = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2.5;
 
-                // On the ground the plug does its job: he is held short of the doorway cell rather
-                // than walking out of the room through the gap in the boundary wall.
+                // Walking at the entrance cell brings him up against the wall the room's door hangs
+                // on and no further, on either storey. There is no gap in the boundary to be held
+                // short of any more, and nothing invisible doing the holding.
                 const groundZ = walkTowardsEntrance(room, startZ, COLLISION_LAYER_MIN - 1);
-                expect(groundZ).toBeLessThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1);
+                expect(groundZ).toBeLessThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW);
 
-                // On the storey above, the same walk carries him right up to the boundary wall,
-                // which is what stops him there instead — the plug is nowhere near that height.
                 const upperZ = walkTowardsEntrance(room, startZ, STOREY_FLOOR_COLLISION_LAYER);
-                expect(upperZ).toBeGreaterThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1);
+                expect(upperZ).toBeLessThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW);
             },
         });
     });

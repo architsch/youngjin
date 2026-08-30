@@ -42,6 +42,12 @@ change usually lands in one; occasionally it contradicts a sentence in a second 
 the same mechanism in passing, and that second one is the one that gets missed — grep for the
 concept across `/docs` rather than trusting the index alone.
 
+**Rewrite the passage that is now wrong; do not append the new behaviour beside it.** A page that
+grows a paragraph per change becomes a sedimentary record rather than a description of the present,
+which is the failure CLAUDE.md's documentation guidelines are written against. "How an improvement is
+written" in [`skill-upkeep/SKILL.md`](../skill-upkeep/SKILL.md) states the rule in full; it applies to
+every page this skill touches.
+
 Three documents sit outside `/docs` and are checked separately:
 
 - **CLAUDE.md** — its project structure section and its architecture notes. A new top-level
@@ -111,11 +117,17 @@ what keeps these pages from going stale:
 ### One architectural check worth making every time
 
 CLAUDE.md's rule that **room generation defines what a room is** is the invariant most easily broken
-by a change that looks unrelated. If this change introduced a room-level parameter or a new kind of
-placeable content, verify that `RoomGenerationUtil` and `ProceduralRoomGenerationUtil` decide it,
-that every `SinglePlayerModeConfig` declares it, and that any curated data behind it covers every
-option a room can be generated with. A parameter no generator sets is one that every room in the
-game silently holds the default value of.
+by a change that looks unrelated. If this change introduced a room-level parameter, verify that
+`RoomGenerationUtil` and the procedural `RoomBuilder`s decide it, that every `SinglePlayerModeConfig`
+declares it on its `RoomBuilderParams`, and that any curated data behind it covers every option a
+room can be generated with. A parameter no generator sets is one that every room in the game silently
+holds the default value of.
+
+Contents are the narrower half of that rule, and reading it as "generation must place everything" is
+the usual overcorrection. A new kind of *placeable object* owes generation nothing — a room is meant
+to be furnished by the people who use it. A new kind of *voxel* content does, and so does anything
+that has become structurally necessary in the way the room's own door is: a room with no door is a
+room nobody can leave.
 
 This is a *report* if it is unfixable within the scope of a doc/test pass — say plainly that the
 feature is incomplete rather than documenting it as though it works everywhere.

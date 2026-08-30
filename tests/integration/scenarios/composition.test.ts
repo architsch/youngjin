@@ -28,7 +28,11 @@ import { PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/compos
 import { DoorCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/doorCompositionCodec";
 import DoorCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/util/doorObjectUtil";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
+import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
+import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
+import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { InstancedMeshCompositionBuilderMap } from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCompositionBuilderMap";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
@@ -353,14 +357,34 @@ describe("door mesh composition", () => {
     });
 
     it("every authored color scheme survives the palette the codec quantizes to", () => {
-        // A scheme is written as hex and encoded as a palette index, so a color that does not land
-        // on a palette entry would come back as a different one and the finish would not be what was
-        // authored. Asserted here rather than trusted, since the palette is shared and may change.
+        // A scheme is written as hex and encoded as a palette position, so a color that does not
+        // land on a palette entry would come back as a different one and the finish would not be
+        // what was authored. Asserted here rather than trusted, since the palette may change.
         for (const scheme of DoorCompositionConstants.colorSchemes)
         {
             for (const color of Object.values(scheme))
             {
-                expect(ColorUtil.base94IndexToRGB(ColorUtil.rgbToBase94Index(color))).toEqual(color);
+                expect(ColorUtil.paletteIndexToRGB("Timber",
+                    ColorUtil.rgbToPaletteIndex("Timber", color))).toEqual(color);
+            }
+        }
+    });
+
+    it("every palette round-trips its own colors, and none outgrows what can name it", () => {
+        // A palette's positions are what every stored appearance means, and a position is one
+        // visible-ASCII character. Both halves of that are checked here rather than assumed: a
+        // palette that outgrew the encoding would hold colors nothing could write down, and a color
+        // that did not come back as itself would repaint whatever was saved as it.
+        for (const paletteName of Object.keys(ColorPaletteMap))
+        {
+            const paletteSize = ColorUtil.getPaletteSize(paletteName);
+            expect(paletteSize).toBeGreaterThan(0);
+            expect(paletteSize).toBeLessThanOrEqual(94);
+
+            for (let index = 0; index < paletteSize; ++index)
+            {
+                const color = ColorUtil.paletteIndexToRGB(paletteName, index);
+                expect(ColorUtil.rgbToPaletteIndex(paletteName, color)).toBe(index);
             }
         }
     });
@@ -391,15 +415,15 @@ describe("door mesh composition", () => {
         // A client-spawned object carries the viewing user's id, so anything derived from the user
         // would give each player in a room a different door. Two rooms should differ; the same room
         // must not.
-        const a = generateDefaultDoorComposition("room-a", "#entrance_door");
-        const b = generateDefaultDoorComposition("room-a", "#entrance_door");
+        const a = generateDefaultDoorComposition("room-a", ENTRANCE_DOOR_OBJECT_ID);
+        const b = generateDefaultDoorComposition("room-a", ENTRANCE_DOOR_OBJECT_ID);
         expect(b.params.colors).toEqual(a.params.colors);
 
         // Across a spread of rooms, the doors must not all come out the same.
         const finishes = new Set<string>();
         for (let i = 0; i < 40; ++i)
         {
-            const {params, parts} = generateDefaultDoorComposition(`room-${i}`, "#entrance_door");
+            const {params, parts} = generateDefaultDoorComposition(`room-${i}`, ENTRANCE_DOOR_OBJECT_ID);
             finishes.add(DoorCompositionCodec.encode(params, parts));
         }
         expect(finishes.size).toBeGreaterThan(1);
@@ -408,20 +432,26 @@ describe("door mesh composition", () => {
     it("a door's default appearance is one of the authored schemes", () => {
         for (let i = 0; i < 40; ++i)
         {
-            const {params} = generateDefaultDoorComposition(`room-${i}`, "#entrance_door");
+            const {params} = generateDefaultDoorComposition(`room-${i}`, ENTRANCE_DOOR_OBJECT_ID);
             expect(DoorCompositionConstants.colorSchemes).toContainEqual(params.colors);
         }
     });
 
     // ─── Permissions ───────────────────────────────────────────────────
 
-    it("nobody may re-skin a door", () => {
-        // Doors are decided for the room, not chosen. The codec is nonetheless a plain set of
-        // colors, so opening this up later needs no change to the wire format.
-        const user = {id: "u"} as any;
-        expect(DoorObjectTypeConfig.canUserSetObjectMetadata(
-            user, "owner" as any, {} as any, {} as any,
-            {metadataKey: COMPOSITION_KEY, metadataValue: encodeDoorComposition(1)} as any)).toBe(false);
+    it("a door is finished by an admin in a hub, and by nobody else anywhere", () => {
+        // What a door looks like is part of what an admin builds a world out of — one hub's doors
+        // told apart from another's at a glance. It is not a room's users' to change, and not even
+        // an admin's in a Regular room, whose one door is that room's own.
+        const canReskin = (userType: number, roomType: number) =>
+            DoorObjectTypeConfig.canUserSetObjectMetadata(
+                {id: "u", userType} as any, "owner" as any, {roomType} as any, {} as any,
+                {metadataKey: COMPOSITION_KEY, metadataValue: encodeDoorComposition(1)} as any);
+
+        expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Hub)).toBe(true);
+        expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Regular)).toBe(false);
+        expect(canReskin(UserTypeEnumMap.Member, RoomTypeEnumMap.Hub)).toBe(false);
+        expect(canReskin(UserTypeEnumMap.Guest, RoomTypeEnumMap.Hub)).toBe(false);
     });
 
     // ─── Config coherence ──────────────────────────────────────────────

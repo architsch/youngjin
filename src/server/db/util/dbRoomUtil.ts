@@ -155,8 +155,18 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
     // ObjectGroup's converters.
     const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "",
         voxelGrid.sourceFormatVersion) as ObjectGroup;
-    return new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
+    const room = new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
         dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, voxelGrid, objectGroup);
+
+    // A room read from an older format was brought up to date on the way in (see VoxelGrid's and
+    // ObjectGroup's converters), and what came out only exists in memory. Marking it dirty is what
+    // gets that written back, so the conversion is paid for once rather than on every load — and,
+    // more to the point, so that a room whose doorway was just filled and whose door was just
+    // created keeps them.
+    if (voxelGrid.sourceFormatVersion < VoxelGrid.latestFormatVersion)
+        room.dirty = true;
+
+    return room;
 }
 
 function getRoomContentFilePath(roomID?: string): string

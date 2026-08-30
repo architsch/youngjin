@@ -22,12 +22,12 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         arr.push(StringUtil.convertRawNumberToVisibleASCII(params.types.torso));
         arr.push(StringUtil.convertRawNumberToVisibleASCII(params.types.arm));
         arr.push(StringUtil.convertRawNumberToVisibleASCII(params.types.bottom));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.head)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.ear)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.hat)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.torso)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.arm)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToBase94Index(params.colors.bottom)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.head)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.ear)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.hat)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.torso)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.arm)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.bottom)));
         return arr.join("");
     },
     decode: (strToDecode: string,
@@ -42,12 +42,12 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         decodedParams.types.torso = decodePartType("torso", strToDecode, charOffset++);
         decodedParams.types.arm = decodePartType("arm", strToDecode, charOffset++);
         decodedParams.types.bottom = decodePartType("bottom", strToDecode, charOffset++);
-        decodedParams.colors.head = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
-        decodedParams.colors.ear = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
-        decodedParams.colors.hat = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
-        decodedParams.colors.torso = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
-        decodedParams.colors.arm = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
-        decodedParams.colors.bottom = ColorUtil.base94IndexToRGB(StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        decodedParams.colors.head = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        decodedParams.colors.ear = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        decodedParams.colors.hat = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        decodedParams.colors.torso = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        decodedParams.colors.arm = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        decodedParams.colors.bottom = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
         constructParts(decodedParams, decodedParts);
     },
     getRandomComposition: (seed: number):
@@ -62,12 +62,12 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         params.types.torso = rand.randomInt(0, PlayerCompositionConstants.numTypes["torso"]);
         params.types.arm = rand.randomInt(0, PlayerCompositionConstants.numTypes["arm"]);
         params.types.bottom = rand.randomInt(0, PlayerCompositionConstants.numTypes["bottom"]);
-        params.colors.head = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
-        params.colors.ear = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
-        params.colors.hat = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
-        params.colors.torso = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
-        params.colors.arm = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
-        params.colors.bottom = ColorUtil.base94IndexToRGB(rand.randomInt(0, ColorUtil.base94PaletteSize));
+        params.colors.head = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+        params.colors.ear = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+        params.colors.hat = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+        params.colors.torso = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+        params.colors.arm = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+        params.colors.bottom = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
 
         const parts: InstancedMeshCompositionPart[] = [];
         constructParts(params, parts);

@@ -39,6 +39,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
 
 - **Gameplay**
     - [Game Mode](docs/gameplay/game_mode.md)
+    - [The Admin Privilege](docs/gameplay/admin.md)
 
 - **Networking**
     - [Authentication Flows](docs/networking/authentication.md)
@@ -55,7 +56,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
     - [Wall-Attached Object](docs/geometry/wall_attached_object.md)
     - [Voxel Grid Structure](docs/geometry/voxel_grid.md)
     - [Physics System](docs/geometry/physics.md)
-    - [Room Entrance Structure](docs/geometry/room_entrance.md)
+    - [Room Entrances](docs/geometry/room_entrance.md)
     - [Room Generation System](docs/geometry/room_generation.md)
     - [Player Customization System](docs/geometry/player_customization.md)
     - [Door Design](docs/geometry/door_design.md)

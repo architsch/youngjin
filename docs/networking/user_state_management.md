@@ -8,13 +8,13 @@ Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.
 
 - **`DBUser`** — per-user, persistent. Holds the user's last room, their player metadata, their single-player mode (see [single_player_mode.md](single_player_mode.md)), the features they have already been introduced to (see [ftue.md](ftue.md)), account info, and login bookkeeping. Player metadata follows the user across rooms; it is not per-room.
 - **`DBRoom`** — per-room, persistent. Holds the owner, the texture pack, and the editor list (a denormalized list of editor identities, so listing editors in the UI never needs an extra user lookup). The product invariant is that a user's name/email never change after account creation, so the denormalized snapshot does not drift.
-- **State is not bundled into a per-session snapshot.** Players always spawn at the designated entrance position, a user's role is derived from `DBRoom` at join time, and the last room and player metadata are written to `DBUser` directly.
+- **State is not bundled into a per-session snapshot.** Players always spawn behind one of the destination room's doors, a user's role is derived from `DBRoom` at join time, and the last room and player metadata are written to `DBUser` directly.
 
 ## When the user moves from one room to another without reloading the game page
 1. The client sends a room-change request and blocks further requests until the current one completes.
 2. The server loads the target room (from cache or the database) and checks that it can take another player. If it cannot, the user is turned away and stays in their current room (see [room_population.md](room_population.md)).
 3. The server removes the user from the previous room, despawning their player object and, when requested, flushing player metadata to `DBUser`.
-4. The server places the user at the designated [entrance position](../geometry/room_entrance.md) and restores their player metadata (see "Player Metadata Restoration" below).
+4. The server places the user behind one of the room's [doors](../geometry/room_entrance.md#player-spawning) and restores their player metadata (see "Player Metadata Restoration" below).
 5. The server writes the new last room to `DBUser` and notifies the client that the room has changed.
 
 ## When the user opens "/" without a room ID in the URL

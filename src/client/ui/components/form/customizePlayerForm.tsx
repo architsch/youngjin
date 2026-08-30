@@ -7,7 +7,7 @@ import ColorUtil from "../../../../shared/math/util/colorUtil";
 import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
 import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import StepperInput from "../input/stepperInput";
-import Base94ColorInput from "../input/base94ColorInput";
+import PaletteColorInput from "../input/paletteColorInput";
 import PartShapeIcon from "../../svg/icons/partShapeIcon";
 import ClientEventHistoryUtil from "../../../system/util/clientEventHistoryUtil";
 import ClientEvent from "../../../system/types/clientEvent";
@@ -69,10 +69,11 @@ export default function CustomizePlayerForm()
                     <div className="flex flex-col items-center gap-1 shrink-0">
                         <div className="flex flex-row items-center gap-1 shrink-0">
                             <Text content={slot.title} size="sm"/>
-                            <Base94ColorInput
-                                currValue={ColorUtil.rgbToBase94Index(params.colors[slot.key])}
+                            <PaletteColorInput
+                                paletteName="Player"
+                                currValue={ColorUtil.rgbToPaletteIndex("Player", params.colors[slot.key])}
                                 setColorIndex={(index: number) => applyEdit(
-                                    (p) => p.colors[slot.key] = ColorUtil.base94IndexToRGB(index))}
+                                    (p) => p.colors[slot.key] = ColorUtil.paletteIndexToRGB("Player", index))}
                             />
                         </div>
                         <StepperInput

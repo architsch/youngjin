@@ -50,32 +50,6 @@ const ClientObjectUtil =
             await ClientObjectManager.addObject(gameObject, false, false);
         }
     },
-    spawnMultiplayerEntranceDoor: async (room: Room): Promise<GameObject> =>
-    {
-        const gameObject = ObjectFactory.createClientSideObject(
-            room.id,
-            doorTypeIndex,
-            new ObjectTransform(
-                // A door's collider is centered on its position while the door itself stands on the
-                // floor, so its origin sits half a footprint up from the storey the entrance opens
-                // onto (see DoorObjectTypeConfig).
-                {
-                    x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5,
-                    y: 0.5 * DOOR_FOOTPRINT_HEIGHT,
-                    z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-                },
-                {x: 0, y: 0, z: -1}
-            ),
-            {},
-            // Named rather than auto-numbered, so that the appearance derived from its id is the
-            // same door every session rather than one that depends on what spawned before it. The
-            // "#" is what marks an object as client-only and so absent from the room's data, which
-            // the unload path reads the id for.
-            "#entrance_door"
-        );
-        await ClientObjectManager.addObject(gameObject, false, false);
-        return gameObject;
-    },
     spawnSingleModePlayer: async (room: Room): Promise<GameObject> =>
     {
         const pos = ClientObjectUtil.getSingleModePlayerPosition(room);

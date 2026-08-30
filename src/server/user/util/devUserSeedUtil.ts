@@ -1,18 +1,24 @@
 import DBUserUtil from "../../db/util/dbUserUtil";
 import DBSearchUtil from "../../db/util/dbSearchUtil";
-import { UserTypeEnumMap } from "../../../shared/user/types/userType";
+import { UserType, UserTypeEnumMap } from "../../../shared/user/types/userType";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 interface DevUserDef
 {
     userName: string;
     email: string;
+    userType: UserType;
 }
 
+// An admin is among them because an admin is the only user some of the app exists for — the doors a
+// world is built out of, and the settings of a room nobody owns. Nothing in the product ever makes
+// one (an admin is promoted by hand in the database), so without this there is no way to reach any
+// of that locally.
 const DEV_USERS: DevUserDef[] = [
-    { userName: "DevMember1", email: "devmember1@test.com" },
-    { userName: "DevMember2", email: "devmember2@test.com" },
-    { userName: "DevMember3", email: "devmember3@test.com" },
+    { userName: "DevMember1", email: "devmember1@test.com", userType: UserTypeEnumMap.Member },
+    { userName: "DevMember2", email: "devmember2@test.com", userType: UserTypeEnumMap.Member },
+    { userName: "DevMember3", email: "devmember3@test.com", userType: UserTypeEnumMap.Member },
+    { userName: "DevAdmin", email: "devadmin@test.com", userType: UserTypeEnumMap.Admin },
 ];
 
 // Maps dev user index (1-based) to Firestore document ID after seeding
@@ -32,7 +38,7 @@ const DevUserSeedUtil =
                 LogUtil.logRaw(`[DevSeed] Dev user "${def.userName}" already exists (id=${existing.data[0].id})`, "low", "info");
                 continue;
             }
-            const result = await DBUserUtil.createUser(def.userName, UserTypeEnumMap.Member, def.email);
+            const result = await DBUserUtil.createUser(def.userName, def.userType, def.email);
             if (result.success && result.data.length > 0)
             {
                 devUserIds.set(i + 1, result.data[0].id);

@@ -86,7 +86,7 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
         }
 
         const go = selection.gameObject;
-        selectionOutline.setTransformRaw(go.position, go.quaternion, go.obj.scale);
+        selectionOutline.setTransformRaw(go.position, go.quaternion, go.getSelectionOutlineScale());
         selectionOutline.setVisible(true);
 
         // If an object is selected, the player's viewTarget should be that object's position.

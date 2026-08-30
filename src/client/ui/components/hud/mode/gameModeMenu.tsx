@@ -11,6 +11,7 @@ import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
 import User from "../../../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../../../shared/user/types/userType";
+import { RoomType, RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import Button from "../../input/button";
 import CameraZoomSlider from "./cameraZoomSlider";
 import PopupUtil from "../../../util/popupUtil";
@@ -56,7 +57,7 @@ const exitFeatureFlags = [
 // out of the mode at once.
 //------------------------------------------------------------------------
 
-export default function GameModeMenu({ user, currentRoomID }: Props)
+export default function GameModeMenu({ user, currentRoomID, currentRoomType }: Props)
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
 
@@ -105,9 +106,14 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
     // always one that works.
     const canStartEditing = GameModeUtil.canEnterEditModeOnCurrentSelection();
 
-    // A room's own settings are its owner's to change, and only while he is standing in it.
-    const showRoomSettings = inEditMode && user.userType !== UserTypeEnumMap.Guest &&
+    // A room's own settings are its owner's to change, and only while he is standing in it. A hub
+    // has no owner, so its settings are an admin's — the same button, opening onto the handful of
+    // things a room that belongs to nobody can have.
+    const inOwnRoom = user.userType !== UserTypeEnumMap.Guest &&
         user.ownedRoomID.length > 0 && user.ownedRoomID === currentRoomID;
+    const inAdministeredHub = user.userType === UserTypeEnumMap.Admin &&
+        currentRoomType === RoomTypeEnumMap.Hub;
+    const showRoomSettings = inEditMode && (inOwnRoom || inAdministeredHub);
 
     // The mark below keeps to the button it points at: it is scheduled while that button is on
     // offer, and taken back down once it is not. A mark is not taken off the list merely by its
@@ -115,7 +121,7 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
     // moment the button did — skipping the wait that is supposed to earn it — which is why the
     // condition that puts it up is also the one that clears it away.
     useEffect(() => {
-        if (!showRoomSettings || FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings))
+        if (!showRoomSettings || !inOwnRoom || FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings))
             return;
 
         // For any member-type user who has had the button within reach for 2 minutes straight,
@@ -129,7 +135,7 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
             clearTimeout(timeout);
             FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.MyRoomSettings);
         };
-    }, [showRoomSettings]);
+    }, [showRoomSettings, inOwnRoom]);
 
     // Any of the mode's own controls is reason enough for the menu to be up, and each decides for
     // itself whether it has anything to offer: a single-player step that holds the user in his mode,
@@ -162,7 +168,7 @@ export default function GameModeMenu({ user, currentRoomID }: Props)
         </div>
         {showRoomSettings && <div className="flex flex-row justify-end">
             <Button id="configureMyRoomButton" name="Room Settings" size="md" onClick={() => {
-                PopupUtil.openPopup({popupType: "configureMyRoom"});
+                PopupUtil.openPopup({popupType: inOwnRoom ? "configureMyRoom" : "configureHubRoom"});
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings);
             }}/>
         </div>}
@@ -199,4 +205,5 @@ interface Props
 {
     user: User;
     currentRoomID: string;
+    currentRoomType: RoomType;
 }

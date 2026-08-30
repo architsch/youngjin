@@ -10,7 +10,7 @@ import { RoomVolumeConstructorMap } from "../../room/generation/maps/roomVolumeC
 import VoxelUpdateUtil from "../util/voxelUpdateUtil";
 import { UserRoleEnumMap } from "../../user/types/userRole";
 
-const latestVersion = 2;
+const latestVersion = 3;
 
 // How tall a room stood in the format that came before the current one: half its present height,
 // with its ceiling hanging flat over the top of it. Its layers cover the same world heights the
@@ -91,6 +91,7 @@ const olderVersionDecoders: ((bufferState: BufferState) => EncodableData)[] = [
     decoder_1, // version 0 (same binary layout as version 1)
     decoder_1, // version 1
     decoder_2, // version 2
+    decoder_2, // version 3 (same binary layout as version 2)
 ];
 
 const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] = [
@@ -109,7 +110,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
         // Hollow out the entrance cell to the doorway's height, so that an arriving player does not
         // spawn inside the boundary wall. A room being converted is already built, so this takes
         // the blocks back out rather than declaring the space they were never put in.
-        const entrance = RoomVolumeConstructorMap["MultiplayerEntrance"]();
+        const entrance = RoomVolumeConstructorMap["InitialMultiplayerEntrance"]();
         for (let row = entrance.rowMin; row <= entrance.rowMax; ++row)
         {
             for (let col = entrance.colMin; col <= entrance.colMax; ++col)
@@ -160,7 +161,59 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
         }
         return voxelGrid;
     },
+    (olderVersionData: EncodableData) => { // version 2 -> 3
+        // The doorway is filled back in. A door is an ordinary wall attachment now, hung on the
+        // boundary wall like a picture is, and a wall attachment needs the wall behind it — so the
+        // hole the entrance used to be is exactly what a door may no longer be hung over. This is
+        // the counterpart of the v0 -> v1 conversion, which is what cut the hole in the first place.
+        //
+        // The blocks are finished in whatever the wall beside them is finished in, so that the
+        // filled cell reads as the stretch of wall it now is rather than as a patch.
+        const voxelGrid = olderVersionData as VoxelGrid;
+        const entrance = RoomVolumeConstructorMap["InitialMultiplayerEntrance"]();
+
+        for (let row = entrance.rowMin; row <= entrance.rowMax; ++row)
+        {
+            for (let col = entrance.colMin; col <= entrance.colMax; ++col)
+            {
+                for (let collisionLayer = entrance.collisionLayerMin; collisionLayer <= entrance.collisionLayerMax; ++collisionLayer)
+                {
+                    VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxelGrid.voxels,
+                        VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer),
+                        getNeighbouringWallTextureIndices(voxelGrid, row, col, collisionLayer));
+                }
+            }
+        }
+        return voxelGrid;
+    },
 ];
+
+// What the wall next to the given cell is finished in, layer for layer. The entrance is cut through
+// a boundary wall, so the cells to either side of it along that wall are solid and carry the finish
+// the filled cell should take. Falls back to the first texture if neither neighbour is there to ask.
+function getNeighbouringWallTextureIndices(voxelGrid: VoxelGrid, row: number, col: number,
+    collisionLayer: number): number[]
+{
+    const quads = voxelGrid.quadsMem.quads;
+    // Along the boundary wall the entrance is cut through, which is a row when the wall runs east to
+    // west and a column when it runs north to south. The entrance sits on a row of the grid's edge,
+    // so its neighbours along the wall are the cells either side of it in that same row.
+    const neighbours = [{row, col: col - 1}, {row, col: col + 1}];
+    for (const neighbour of neighbours)
+    {
+        const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, neighbour.row, neighbour.col);
+        if (!voxel || !VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+            continue;
+
+        const textureIndices = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
+            neighbour.row, neighbour.col, collisionLayer);
+        for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+            textureIndices[i] = quads[startIndex + i] & 0b01111111;
+        return textureIndices;
+    }
+    return new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(0);
+}
 
 function addLegacyCornerWall(voxels: Voxel[], row: number, col: number,
     quadTextureIndicesWithinLayer: number[]): void

@@ -2,7 +2,7 @@ import { FormEvent, FormEventHandler, useCallback, useEffect, useRef } from "rea
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 
 export default function TextInput({type = "text", size = "md", placeholder = "", currValue,
-    filterTextInput = (str => str), setTextInput }: Props)
+    filterTextInput = (str => str), setTextInput, additionalClassNames = "" }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -27,7 +27,7 @@ export default function TextInput({type = "text", size = "md", placeholder = "",
     return <input
         ref={inputRef}
         type={type}
-        className={`text-left ${textClassNames[size]} yj-panel-white yj-surface-concave`}
+        className={`text-left ${textClassNames[size]} yj-panel-white yj-surface-concave ${additionalClassNames}`}
         placeholder={placeholder}
         value={currValue}
         onInput={onInput}
@@ -61,4 +61,5 @@ interface Props
     currValue: string;
     filterTextInput?: (rawTextInput: string) => string;
     setTextInput: (newTextInput: string) => void;
+    additionalClassNames?: string;
 }

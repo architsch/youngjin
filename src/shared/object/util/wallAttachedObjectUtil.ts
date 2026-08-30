@@ -5,18 +5,17 @@ import { ColliderState } from "../../physics/types/colliderState";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
-import RoomVolume from "../../room/generation/types/roomVolume";
-import RoomValidationUtil from "../../room/util/roomValidationUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import AddObjectSignal from "../types/addObjectSignal";
+import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 
 const WallAttachedObjectUtil =
 {
     canPlaceObject: (room: Room, objectId: string, objectTypeIndex: number,
         pos: Vec3, dir: Vec3): boolean =>
     {
-        const tr = getQuantizedTransform(pos, dir);
+        const tr = getQuantizedTransform(objectTypeIndex, pos, dir);
         pos = tr.pos;
         dir = tr.dir;
 
@@ -42,7 +41,7 @@ const WallAttachedObjectUtil =
             throw new Error(`new ColliderState not found (objectTypeIndex = ${objectTypeIndex})`);
 
         const halfHorizontal = getQuantizedColliderHorizontalHalfSize(newColliderState);
-        const halfVertical = getQuantizedColliderVerticalHalfSize(newColliderState);
+        const halfVertical = getColliderVerticalHalfSize(newColliderState);
 
         // (1) The object's back side must be fully covered (by voxel blocks).
         // (2) The object's front side must be at least partially exposed.
@@ -69,11 +68,6 @@ const WallAttachedObjectUtil =
             const rightCol = Math.floor(pos.x + halfHorizontal - 0.01);
             for (let col = leftCol; col <= rightCol; ++col)
             {
-                if (RoomValidationUtil.additionIsBlocked(room,
-                    getBackingVolume(backRow, col, objBottomY, objTopY)))
-                {
-                    return false;
-                }
                 const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, backRow, col);
                 const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, frontRow, col);
                 if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
@@ -90,11 +84,6 @@ const WallAttachedObjectUtil =
             const rightRow = Math.floor(pos.z + halfHorizontal - 0.01);
             for (let row = leftRow; row <= rightRow; ++row)
             {
-                if (RoomValidationUtil.additionIsBlocked(room,
-                    getBackingVolume(row, backCol, objBottomY, objTopY)))
-                {
-                    return false;
-                }
                 const backVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, backCol);
                 const frontVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, frontCol);
                 if (!backVoxel || !voxelCoversYRange(backVoxel.collisionLayerMask, objBottomY, objTopY))
@@ -160,12 +149,22 @@ const WallAttachedObjectUtil =
     },
 }
 
-function getQuantizedTransform(pos: Vec3, dir: Vec3): {pos: Vec3, dir: Vec3}
+// Snaps a wall attachment onto the grid it hangs on: half a voxel along the wall, and one collision
+// layer up it.
+//
+// The vertical step is measured from the object's bottom edge rather than from its centre. An object
+// standing an odd number of layers tall — a door does — has its centre half a layer off that grid, so
+// snapping the centre would shift it a quarter of a layer off the floor it stands on every time it
+// was nudged, while an object of even height is unaffected either way.
+function getQuantizedTransform(objectTypeIndex: number, pos: Vec3, dir: Vec3): {pos: Vec3, dir: Vec3}
 {
+    const halfVertical = getColliderVerticalHalfSizeByType(objectTypeIndex);
+    const bottomY = COLLISION_LAYER_HEIGHT * Math.round((pos.y - halfVertical) / COLLISION_LAYER_HEIGHT);
+
     return {
         pos: { // wall-attached object's position is always an integer multiple of 0.5.
             x: 0.5*Math.round(2*pos.x),
-            y: 0.5*Math.round(2*pos.y),
+            y: bottomY + halfVertical,
             z: 0.5*Math.round(2*pos.z),
         },
         dir: { // wall-attached object's direction only consists of -1, 0, or 1 coordinate values.
@@ -179,7 +178,7 @@ function getQuantizedTransform(pos: Vec3, dir: Vec3): {pos: Vec3, dir: Vec3}
 function getVerticalMoveResult(room: Room, obj: AddObjectSignal,
     moveUp: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const tr = getQuantizedTransform(obj.transform.pos, obj.transform.dir);
+    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
 
     const newPos = {x: tr.pos.x, y: tr.pos.y + (moveUp ? 0.5 : -0.5), z: tr.pos.z};
     const newDir = tr.dir;
@@ -208,7 +207,7 @@ function getHorizontalMoveResult(room: Room, obj: AddObjectSignal,
 function getStraightHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const tr = getQuantizedTransform(obj.transform.pos, obj.transform.dir);
+    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
 
     const dir4 = DirUtil.vec3ToDir4(tr.dir);
     const dir4CCW = DirUtil.rotateCCW(dir4);
@@ -230,7 +229,7 @@ function getStraightHorizontalMoveResult(room: Room, obj: AddObjectSignal,
 function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean, tryConcaveWrap: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const tr = getQuantizedTransform(obj.transform.pos, obj.transform.dir);
+    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
 
     const dir4 = DirUtil.vec3ToDir4(tr.dir);
     const dir4CCW = DirUtil.rotateCCW(dir4);
@@ -252,17 +251,6 @@ function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     return undefined;
 }
 
-// Checks whether the voxel's occupied collision layers fully cover the given Y range.
-// The stretch of the room one wall attachment hangs on: the cell of wall behind it, over the layers
-// its own height covers. Asking about that rather than about the whole column is what lets an
-// attachment go up on an upper storey over somewhere the room protects on the ground.
-function getBackingVolume(row: number, col: number, bottomY: number,
-    topY: number): RoomVolume
-{
-    const {minLayer, maxLayer} = getCollisionLayerRange(bottomY, topY);
-    return new RoomVolume(row, row, col, col, minLayer, maxLayer);
-}
-
 // The layers a wall attachment of the given height stands among, clamped to the room.
 function getCollisionLayerRange(bottomY: number, topY: number): {minLayer: number, maxLayer: number}
 {
@@ -274,6 +262,7 @@ function getCollisionLayerRange(bottomY: number, topY: number): {minLayer: numbe
     };
 }
 
+// Whether the voxel's occupied collision layers fully cover the given Y range.
 function voxelCoversYRange(collisionLayerMask: number, bottomY: number, topY: number): boolean
 {
     const {minLayer, maxLayer} = getCollisionLayerRange(bottomY, topY);
@@ -295,10 +284,25 @@ function getQuantizedColliderHorizontalHalfSize(colliderState: ColliderState): n
     return 0.5*Math.round(hitboxSize.sizeX);
 }
 
-function getQuantizedColliderVerticalHalfSize(colliderState: ColliderState): number
+// Unlike the horizontal half size above, this one is exact. The horizontal rounding is what makes an
+// attachment claim whole voxel columns of wall; vertically there is nothing to round to, since the
+// collision layers an attachment is checked against are already finer than the object itself, and
+// rounding here would make a door that stands seven layers tall demand eight layers of wall behind
+// it — and, worse, land a quarter of a layer off the floor whenever it was quantized.
+function getColliderVerticalHalfSize(colliderState: ColliderState): number
 {
-    const hitboxSize = colliderState.colliderConfig.hitboxSize;
-    return 0.5*Math.round(hitboxSize.sizeY);
+    return 0.5 * colliderState.colliderConfig.hitboxSize.sizeY;
+}
+
+// The same figure read straight off the object's type, for use before a collider state exists — the
+// height of a hitbox does not depend on which way the object is turned.
+function getColliderVerticalHalfSizeByType(objectTypeIndex: number): number
+{
+    const colliderConfig = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex)
+        .components.spawnedByAny?.collider;
+    if (!colliderConfig)
+        throw new Error(`ColliderConfig not found (objectTypeIndex = ${objectTypeIndex})`);
+    return 0.5 * colliderConfig.hitboxSize.sizeY;
 }
 
 export default WallAttachedObjectUtil;

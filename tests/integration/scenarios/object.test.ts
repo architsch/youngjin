@@ -17,12 +17,29 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
+import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
 
-// Players always spawn at the entrance cell center, regardless of where they were before
-// (see the spawn transform in ServerRoomManager.changeUserRoom).
+// Players always spawn behind one of the room's doors, regardless of where they were before, and a
+// fixture room has exactly one (see roomContent.ts). Asked of the room rather than written out, so
+// that these scenarios stay about who lands where rather than about the arithmetic that decides it —
+// that is SpawnHotspotUtil's own to be tested on.
+function spawnPos(roomID: string): {x: number, z: number}
+{
+    const room = ServerRoomManager.roomRuntimeMemories[roomID].room;
+    const {pos} = SpawnHotspotUtil.pickSpawnTransform(room, "");
+    return {x: pos.x, z: pos.z};
+}
+
+const PLAYER_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Player");
+
 const SPAWN_X = MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5;
-const SPAWN_Z = MULTI_PLAYER_ENTRANCE_VOXEL_ROW + 0.5;
+
+// A point just inside the room from its way in, which the walking scenarios below measure their
+// distances from. It only has to be somewhere a player can stand near the entrance, so it is written
+// out rather than asked for — an action has to be described before the room it runs in exists.
+const SPAWN_Z = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 0.5;
 
 describe("object scenarios", () => {
     beforeEach(() => {
@@ -45,9 +62,9 @@ describe("object scenarios", () => {
                 expect(obj1).toBeDefined();
                 expect(obj2).toBeDefined();
                 expect(obj1!.transform.pos.x).toBeCloseTo(SPAWN_X);
-                expect(obj1!.transform.pos.z).toBeCloseTo(SPAWN_Z);
+                expect(obj1!.transform.pos.z).toBeCloseTo(spawnPos("regular").z);
                 expect(obj2!.transform.pos.x).toBeCloseTo(SPAWN_X);
-                expect(obj2!.transform.pos.z).toBeCloseTo(SPAWN_Z);
+                expect(obj2!.transform.pos.z).toBeCloseTo(spawnPos("regular").z);
             },
         });
     });
@@ -93,7 +110,7 @@ describe("object scenarios", () => {
                 // user2's position should be unchanged (still at the entrance)
                 const obj2 = harness.getPlayerObject(users[1].user.id)!;
                 expect(obj2.transform.pos.x).toBeCloseTo(SPAWN_X);
-                expect(obj2.transform.pos.z).toBeCloseTo(SPAWN_Z);
+                expect(obj2.transform.pos.z).toBeCloseTo(spawnPos("regular").z);
             },
         });
     });
@@ -107,8 +124,12 @@ describe("object scenarios", () => {
                 userAt(20, 20, "regular"),
             ],
             assertions: ({ users, harness }) => {
+                // The room's own door is one of its objects and stays put whoever comes and goes,
+                // so it is the players that are counted here.
                 const roomMem = ServerRoomManager.roomRuntimeMemories["regular"];
-                expect(Object.keys(roomMem.room.objectById)).toHaveLength(2);
+                const playerObjects = Object.values(roomMem.room.objectById)
+                    .filter(obj => obj.objectTypeIndex === PLAYER_OBJECT_TYPE_INDEX);
+                expect(playerObjects).toHaveLength(2);
             },
         });
     });

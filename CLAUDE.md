@@ -61,8 +61,8 @@
 
 ### `/docs` - Documents explaining technical details
 - **`/devOps`** - Local Development, VPS
-- **`/gameplay`** - Game modes (play mode, edit mode)
-- **`/geometry`** - Voxel grid, physics, room generation/entrance, wall-attached objects, textures, player customization
+- **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege
+- **`/geometry`** - Voxel grid, physics, room generation, room entrances and doors, wall-attached objects, textures, player customization
 - **`/graphics`** - Camera control, instanced mesh composition, image map
 - **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode
 - **`/testing`** - E2E and integration test workflows, framework, and scenario coverage
@@ -105,7 +105,9 @@ Every room in the game is born from `RoomGenerationUtil` — multiplayer rooms l
 2. **Room parameters are not independent of each other, or of the room's contents.** A palette's texture indices only mean anything within one specific texture pack; fog has to agree with the skybox; a prop's materials have to come from the room's own pack. Generation is the single place where those agreements are expressed. Adding a parameter anywhere else and leaving generation alone produces rooms whose settings contradict their own contents.
 3. **Generated rooms are what almost everyone sees.** Hubs and newly created rooms are the game's first impression, and most of them are never hand-edited at all. A parameter generation does not decide is one whose effect most players never encounter.
 
-**Contents are a narrower obligation than parameters.** Procedural generation lays out a multiplayer room's voxel grid — its areas, the walls and passages between them, the ways up to the storey above, and the voxel block work standing in them — and deliberately places **no objects at all**. A Hub or Regular room is meant to be furnished by the people who use it, so what generation owes them is somewhere to build rather than a full house. A new kind of placeable object therefore needs nothing from generation; a new kind of *voxel* content does.
+**Contents are a narrower obligation than parameters.** Procedural generation lays out a multiplayer room's voxel grid — its areas, the walls and passages between them, the ways up to the storey above, and the voxel block work standing in them — and places exactly one object: the door that is the room's way in. A Hub or Regular room is otherwise meant to be furnished by the people who use it, so what generation owes them is somewhere to build rather than a full house. A new kind of placeable object therefore needs nothing from generation; a new kind of *voxel* content does.
+
+The door is the exception because it is not furniture: a room with no door is a room nobody can leave, and it is also what an arriving player is put down behind. Anything else that becomes structurally necessary in that sense belongs in generation for the same reason.
 
 Concretely, introducing a room-level parameter means: add it to `Room` (so it is stored and sent to clients), make `RoomGenerationUtil` and the procedural `RoomBuilder`s decide it, declare it on every `SinglePlayerModeConfig` (which carries its parameters as `RoomBuilderParams`), and — where the parameter has curated data behind it, as texture packs have palettes in `RoomPaletteMap` — extend that curation to cover every option a room can be generated with. Conceptual details live in `docs/geometry/room_generation.md`.
 
