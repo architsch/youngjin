@@ -44,6 +44,15 @@ jobs:
     - name: Build
       env:
         EXCLUDE_SHARP: "true"
+        # The VPS has under 1 GB of RAM, so Node sizes its default heap ceiling from
+        # total system memory and lands at ~526 MB. The client bundle (Three.js +
+        # React, minified) has been creeping up and now needs a little under 500 MB of
+        # old space to compile, which no longer fits under that default — the build
+        # died with "Reached heap limit" partway through the client webpack pass.
+        # Raise the ceiling explicitly so it is set by the build's needs rather than by
+        # how much RAM the box happens to have. This is a cap, not a reservation: the
+        # build peaks around 720 MB RSS, which the VPS covers with its swap.
+        NODE_OPTIONS: "--max-old-space-size=1024"
       run: npm run build
 
     - name: Remove sharp before runtime
