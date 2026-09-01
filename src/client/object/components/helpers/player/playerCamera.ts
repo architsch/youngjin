@@ -7,6 +7,7 @@ import FirstPersonCameraPose from "./firstPersonCameraPose";
 import OrbitCameraPose from "./orbitCameraPose";
 import OrbitOcclusionHider from "./orbitOcclusionHider";
 import PlayerPointerInput from "./playerPointerInput";
+import FreeCameraPose from "./freeCameraPose";
 
 //------------------------------------------------------------------------
 // Owns the player's camera: attaches it to the player object and eases it
@@ -25,6 +26,7 @@ export default class PlayerCamera
     private firstPersonPose = new FirstPersonCameraPose();
     private orbitPose = new OrbitCameraPose();
     private occlusionHider = new OrbitOcclusionHider();
+    private freePose = new FreeCameraPose();
 
     // What the orbit is framing right now, or undefined while the orbit mode is not active.
     private orbitTarget: AABB3 | undefined;
@@ -94,7 +96,7 @@ export default class PlayerCamera
                 mode.target, controller.gameObject.obj,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
-        else
+        else if (mode.type == "firstPerson")
         {
             // Whatever the orbit hid to keep its view of the target clear belongs
             // to the room again as soon as the mode is left.
@@ -106,6 +108,15 @@ export default class PlayerCamera
             interpRate = this.firstPersonPose.updatePose(controller, this.camera!,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
+        else if (mode.type == "free")
+        {
+            // Given the player object for the same reason the orbit is: the camera hangs off it, so
+            // a pose aimed in world coordinates has to come down into its frame.
+            interpRate = this.freePose.updatePose(controller.gameObject.obj,
+                this.positionInterpTarget, this.quaternionInterpTarget);
+        }
+        else
+            throw new Error("Unknown camera mode");
 
         // Ease toward the active mode's pose, so switching modes glides rather than snaps.
         const t = Math.min(1, interpRate * deltaTime);
@@ -114,10 +125,11 @@ export default class PlayerCamera
 
         // The camera carries the room's light with it, so how far that light has to reach is a
         // question only the active mode can answer: an orbit may hold the camera much further from
-        // what the user is looking at than his own eye ever does (see GraphicsManager). Eased on
-        // the same terms as the camera itself, so that the light travels with the camera instead of
-        // arriving before it (see pointLightViewDistance).
-        const viewDistance = (mode.type === "orbit") ? this.orbitPose.getOrbitDistance() : 0;
+        // what the user is looking at than his own eye ever does, and a free camera further still
+        // (see GraphicsManager). Eased on the same terms as the camera itself, so that the light
+        // travels with the camera instead of arriving before it (see pointLightViewDistance).
+        const viewDistance = (mode.type === "orbit") ? this.orbitPose.getOrbitDistance()
+            : (mode.type === "free") ? FreeCameraPose.getViewDistance() : 0;
         this.pointLightViewDistance += (viewDistance - this.pointLightViewDistance) * t;
         GraphicsManager.setPointLightReach(this.pointLightViewDistance);
 

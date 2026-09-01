@@ -1,4 +1,5 @@
-import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+import { SANDBOX_SINGLE_PLAYER_MODE, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+import SandboxSinglePlayerModeClientConfig from "../types/singlePlayerModeClientConfig/sandboxSinglePlayerModeClientConfig";
 import SinglePlayerModeClientConfig from "../types/singlePlayerModeClientConfig/singlePlayerModeClientConfig";
 import TutorialSinglePlayerModeClientConfig from "../types/singlePlayerModeClientConfig/tutorialSinglePlayerModeClientConfig";
 
@@ -8,6 +9,7 @@ import TutorialSinglePlayerModeClientConfig from "../types/singlePlayerModeClien
 // the server generates that room too.
 const SinglePlayerModeClientConfigMap: {[singlePlayerMode: string]: SinglePlayerModeClientConfig} = {
     [TUTORIAL_SINGLE_PLAYER_MODE]: TutorialSinglePlayerModeClientConfig,
+    [SANDBOX_SINGLE_PLAYER_MODE]: SandboxSinglePlayerModeClientConfig,
 };
 
 export default SinglePlayerModeClientConfigMap;

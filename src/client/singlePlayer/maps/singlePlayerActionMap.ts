@@ -3,7 +3,7 @@ import App from "../../app";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import ClientObjectManager from "../../object/clientObjectManager";
 import EasingMotion from "../../object/components/easingMotion";
-import { clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SinglePlayerManager from "../singlePlayerManager";
@@ -110,6 +110,10 @@ const SinglePlayerActionMap: {
     "set_variable": (action) => // Works something out and sets it aside under a name, for the steps that follow to build their own parameters from (see SinglePlayerManager).
     {
         SinglePlayerManager.setVariable(action.name, action.computeValue());
+    },
+    "set_camera_mode": (action) =>
+    {
+        cameraModeObservable.set(action.mode);
     },
     "orbit_camera_pose": (action) => // Asks the orbit camera to view its target from a chosen direction and distance, which the camera then glides to as it would to any other view (see orbitCameraViewRequestObservable). Lets a step set up the view it wants the user to begin from.
     {

@@ -4,12 +4,13 @@ import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import UserTokenUtil from "./userTokenUtil";
 import CookieUtil from "../../networking/util/cookieUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
+import DBSearchUtil from "../../db/util/dbSearchUtil";
 import GuestCreationLimitUtil from "./guestCreationLimitUtil";
 import BotDetectionUtil from "../../networking/util/botDetectionUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DevUserSeedUtil from "./devUserSeedUtil";
 import DevRuntimeUtil from "../../system/util/devRuntimeUtil";
-import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+import { SANDBOX_SINGLE_PLAYER_MODE, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import AcquisitionSourceUtil from "../../analytics/util/acquisitionSourceUtil";
 
 let cyclicCounter = 0;
@@ -121,6 +122,48 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
                 }
             }
         }
+    }
+
+    // Dev mode: a seat in the sandbox single-player room, for gameplay experiments and for arranging
+    // a scene to photograph.
+    //
+    // Dev-only, and under a name of this route's own making, for the same reason ?devuser= above is:
+    // whoever gets past here is handed an auth cookie for the id it returns (see
+    // identifyUserFromReq), so a route that named a user of the caller's choosing would mint a valid
+    // session for any account whose id could be guessed. Deriving the account from a sanitised name
+    // under a reserved address is what makes that impossible rather than merely unreachable — no
+    // real account can be reached by any spelling of the query.
+    //
+    // A real stored account rather than one made up on the spot, because the socket authenticates
+    // separately and looks its user up in the database (see SocketsServer): a user that exists only
+    // in the answer to this request gets a page that loads and a game that never connects. It is
+    // found again on the next visit rather than remade, so a name is one seat rather than a row per
+    // run, and its mode is written back each time because finishing the mode clears it.
+    if (process.env.MODE == "dev" && req.query.sandboxuser)
+    {
+        const name = String(req.query.sandboxuser).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "0";
+        const email = `${name}@${SANDBOX_SINGLE_PLAYER_MODE}.invalid`;
+        const userName = `Sandbox-${name}`;
+
+        const existing = await DBSearchUtil.users.withEmail(email);
+        if (existing.success && existing.data.length > 0)
+        {
+            const dbUser = existing.data[0];
+            if (dbUser.singlePlayerMode != SANDBOX_SINGLE_PLAYER_MODE)
+                await DBUserUtil.setSinglePlayerMode(dbUser.id!, SANDBOX_SINGLE_PLAYER_MODE);
+            return new User(dbUser.id, userName, UserTypeEnumMap.Guest, email,
+                SANDBOX_SINGLE_PLAYER_MODE);
+        }
+
+        const created = await DBUserUtil.createUser(userName, UserTypeEnumMap.Guest, email,
+            SANDBOX_SINGLE_PLAYER_MODE);
+        if (!created.success || created.data.length == 0)
+        {
+            LogUtil.logRaw(`Failed to create the sandbox user "${userName}"`, "high", "error");
+            return undefined;
+        }
+        return new User(created.data[0].id, userName, UserTypeEnumMap.Guest, email,
+            SANDBOX_SINGLE_PLAYER_MODE);
     }
 
     const token = req.cookies[CookieUtil.getAuthTokenName()];

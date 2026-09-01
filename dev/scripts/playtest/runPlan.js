@@ -13,11 +13,15 @@
 //     as the UI, but it does not depend on clicking anything.
 //   - HUD controls that carry a stable element id are driven for real (edit mode, the mode's
 //     way out, everything a selection raises).
-//   - The 3D scene is driven for real too, through lib/interact.js: the page is asked where
+//   - The 3D scene is driven for real too, through ../lib/interact.js: the page is asked where
 //     something is and whether a click would reach it, and the click itself is an ordinary
 //     pointer gesture on the canvas. Nothing about that path is simulated — the tap
 //     arbitration, the raycast and the permission check inside the object's own handler all
 //     run — so a world action that fails here is one that would fail for a player.
+//   - Getting to where the acting happens is not itself acting, so it is not driven that way.
+//     ../lib/setup.js stands the player somewhere and points the camera directly ("place",
+//     "vantage", "look"), which is what a plan should open with instead of a blind walk. The
+//     boundary is the design: arranging a scene is set, acting in it is performed.
 //
 // Usage:
 //   node dev/scripts/playtest/runPlan.js <plan.json> [--out <result.json>]
@@ -25,7 +29,8 @@
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("@playwright/test");
-const Interact = require("./lib/interact");
+const Interact = require("../lib/interact");
+const Setup = require("../lib/setup");
 
 const DEFAULT_BASE_URL = "https://staging.thingspool.net";
 const ARTIFACT_DIR = path.join(__dirname, "../../../temp/playtest/artifacts");
@@ -530,6 +535,39 @@ async function runPlan(plan)
 
                 case "walk":
                     await Interact.walk(page, action.keys || "KeyW", action.ms || 500);
+                    break;
+
+                // Priming, not playing. A plan that opens by walking blindly away from the spawn
+                // wall is spending a minute to arrive somewhere it cannot name, and arriving
+                // somewhere slightly different each run; these say where to start instead. What the
+                // plan then tests still happens through real gestures — see dev/scripts/lib/setup.js
+                // for why the line falls there.
+                case "place":
+                    record.pose = await Setup.place(page, action.x, action.z, {
+                        collisionLayer: action.collisionLayer,
+                        faceX: action.faceX, faceZ: action.faceZ,
+                    });
+                    break;
+
+                case "vantage":
+                    record.pose = await Setup.vantage(page, {x: action.x, z: action.z},
+                        { distance: action.distance, collisionLayer: action.collisionLayer });
+                    break;
+
+                case "look":
+                    record.view = await Setup.look(page, {
+                        azimuthDeg: action.azimuthDeg, polarDeg: action.polarDeg, zoom: action.zoom,
+                    });
+                    break;
+
+                case "pose":
+                    record.pose = await Setup.pose(page);
+                    break;
+
+                case "standingSpots":
+                    record.spots = await Setup.standingSpots(page, {
+                        near: action.near, collisionLayer: action.collisionLayer, limit: action.limit,
+                    });
                     break;
 
                 case "expectSelection":

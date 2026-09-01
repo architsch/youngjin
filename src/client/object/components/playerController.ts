@@ -124,10 +124,10 @@ export default class PlayerController extends GameObjectComponent
         }
         else
         {
-            if (cameraModeObservable.peek().type === "orbit")
+            const cameraModeType = cameraModeObservable.peek().type;
+
+            if (cameraModeType === "orbit" || cameraModeType === "free")
             {
-                // In the orbit mode, drag input orbits the camera (see OrbitCameraPose)
-                // instead of steering the player, so the player stands still.
                 this.rigidbody?.setDesiredVelocity(0, 0, 0);
             }
             else // cameraMode === "firstPerson"

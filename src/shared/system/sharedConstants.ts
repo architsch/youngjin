@@ -18,14 +18,14 @@ export const DAY_IN_MS = 24 * HOUR_IN_MS;
 export const ZERO_VEC3: Vec3 = {x: 0, y: 0, z: 0};
 export const UNIT_VEC3: Vec3 = {x: 1, y: 1, z: 1};
 
+// SinglePlayerMode
+
+export const TUTORIAL_SINGLE_PLAYER_MODE = "tutorial";
+export const SANDBOX_SINGLE_PLAYER_MODE = "sandbox";
+
 // Database
 
 export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
-
-// Note: Change this string value when the tutorial's content
-// (e.g. room, steps, etc) gets modified, so that the server will create a
-// brand new room for it and route new guest users to this newly made tutorial room.
-export const TUTORIAL_SINGLE_PLAYER_MODE = "tutorial";
 
 // Networking
 

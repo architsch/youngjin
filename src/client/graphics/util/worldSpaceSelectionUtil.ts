@@ -113,6 +113,12 @@ function syncCameraModeWithSelection(): void
     const framing = getSelectionOrbitFraming();
     const mode = cameraModeObservable.peek();
 
+    // A free camera is not bound to a selection, which is the whole of what makes it free: it is
+    // aimed by whatever set the mode, and a selection landing under it is not a reason to swing it
+    // somewhere else. Only the thing that put the camera in this mode takes it out again.
+    if (mode.type === "free")
+        return;
+
     if (!framing)
     {
         if (mode.type === "orbit")

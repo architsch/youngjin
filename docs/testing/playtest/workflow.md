@@ -149,6 +149,8 @@ same session and cookies as the UI, without depending on clicking anything.
 Session actions: `start`, `reload`, `waitForRoom`, `skipTutorial`, `dismissPopups`, `gotoRoom`,
 `whoami`, `wait`, `screenshot`, `end`.
 Data actions: `listRooms`, `searchRooms`, `hubEntries`, `myRoomEntry`.
+Placement actions (arranging the scene, not acting in it): `place`, `vantage`, `look`, `pose`,
+`standingSpots`.
 World actions: `objects`, `clickObject`, `clickSurface`, `clickSurfaceUntilEnabled`, `orbit`,
 `zoom`, `walk`, `expectSelection`.
 UI actions: `enterEditMode`, `ensureEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `fill`,
@@ -171,14 +173,66 @@ anything that has to happen to an account between two plans — a user promoted,
 because the session dies with the browser and the next plan arrives as a stranger. It is written even
 when actions failed, since a broken plan still minted the account the next one is meant to resume.
 
+### Two bridges: arranging a scene, and acting in it
+
+The page carries two automation surfaces, installed only where the deployment is not the public site,
+and the line between them is the design rather than an accident of how they grew.
+
+`AutomationBridgeUtil` (`window.__thingspool_automation`) **only answers questions**: what the room
+holds, where each thing falls on screen, what a ray through a given pixel meets, what is selected,
+where the camera is. It selects nothing and moves nothing. A caller still has to produce a real
+gesture, which is what makes the click it performs run the same path a player's does — a bridge that
+performed the action instead would prove that the bridge works and nothing else.
+
+`AutomationSetupUtil` (`window.__thingspool_setup`) **only arranges**: it puts the player somewhere,
+turns him, and points the orbit camera. It clicks nothing and edits nothing. It exists because
+standing in a particular spot is a precondition of a test rather than the thing being tested, and
+paying for it in locomotion is expensive and unrepeatable — the walk covers a pace in a few seconds,
+the turn's gain varies more than tenfold between runs, and the result lands somewhere different every
+time.
+
+So: **arrange with one, act with the other.** Collapsing them would mean a passing run no longer
+showed that the game works.
+
+Two consequences a caller has to know:
+
+- The orbit belongs to edit mode, and so do the editing tools. In play mode the camera sits at the
+  player's eye, and a wall face offers only "Start Editing".
+- In a multiplayer room the server keeps its own copy of the player's position and sweeps every
+  reported move through collision from *its* last known point. A placement is exact on the client
+  that made it, and the server's copy stops at the first wall between — so it belongs to composing a
+  view or shortening a journey, never to an assertion about a server-side position.
+
+The setup bridge carries one group that does more than arrange: it builds. Walls and floors, the
+texture pack they are finished in, the pictures and doors hung on them, and a camera bound neither to
+the player nor to a selection. That group works only inside the sandbox single-player room and
+refuses to act anywhere else, which is what keeps the line above intact.
+
+The sandbox is an empty room generated to be a set. It belongs to screenshot capture, and it is where
+the dev-log's photographs are made: a set built to suit the frame, photographed by a camera put where
+the picture wants it, instead of a subject hunted for in a generated room and then shot from wherever
+the search ended. What a photograph is honest about is the thing it is of — a material, a shape, a
+doorway — and that thing is the real one, spawned and drawn and lit as the game does it.
+
+It has no place in a playtest, and the room check is what enforces that. A playtest is asking whether
+the game works, and the sandbox is the one room where the answer could not mean anything: nobody else
+is in it, no gameplay is running, and a wall that stands there because a script asked for one is not
+evidence that walls can be built.
+
 ### Driving the 3D world
 
 Everything in a room is reached by aiming at it, and where anything lands on screen depends on the
-room that was generated — so a plan cannot carry coordinates. `lib/interact.js` closes that by
-asking the page where things are (`AutomationBridgeUtil`, which only answers questions) and then
-producing an ordinary pointer gesture on the canvas (which only produces input). Neither half can
-shortcut the other, so a click made this way runs the same path a player's does: the tap
-arbitration, the raycast, and the permission check inside the object's own handler.
+room that was generated — so a plan cannot carry coordinates. `dev/scripts/lib/interact.js` closes
+that by asking the read-only bridge where things are and then producing an ordinary pointer gesture
+on the canvas. Neither half can shortcut the other, so a click made this way runs the same path a
+player's does: the tap arbitration, the raycast, and the permission check inside the object's own
+handler.
+
+`dev/scripts/lib/setup.js` is the other half, and a plan should open with it rather than with a blind
+`walk`: `place` stands the player at a point, `vantage` a few paces off one facing it, `look` sets the
+orbit's angles and zoom outright, and `standingSpots` reports every place in the room the player
+could stand — read off the grid the room was built from, which is also how the two storeys and the
+staircase treads between them are told apart.
 
 `clickObject` names its target by identity, by type, or by the metadata it carries —
 `{"objectType": "Door", "metadata": {"Label": "Attic"}}` — and turns and walks towards it until it

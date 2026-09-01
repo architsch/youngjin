@@ -15,8 +15,14 @@ import AABB3 from "../../../shared/math/types/aabb3";
 //      minimum distance of its own: framing by size alone answers "how big does this look", which
 //      is the wrong question for something small that is being edited in place, where what
 //      surrounds it matters as much as it does. Left out, the size decides the distance by itself.
+// "free": A special mode in which the camera is completely free to locate itself anywhere and view
+//      anything in any direction. Instant teleporation is fully allowed as well, since the camera in
+//      this mode is neither bound to the player nor a voxel/object selection.
+//      You can use this mode to let the camera follow a cinematic cutscene or set up a unique view
+//      for capturing an in-game screenshot from an unconventional angle.
 type CameraMode =
     | {type: "firstPerson"}
-    | {type: "orbit", target: AABB3, minDistance?: number};
+    | {type: "orbit", target: AABB3, minDistance?: number}
+    | {type: "free"};
 
 export default CameraMode;

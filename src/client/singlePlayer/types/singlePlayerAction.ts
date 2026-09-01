@@ -2,6 +2,7 @@ import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKe
 import Vec3 from "../../../shared/math/types/vec3";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import SinglePlayerParam from "./singlePlayerParam";
+import CameraMode from "../../graphics/types/cameraMode";
 
 // A small tagged command a step carries out on its way in or on its way out (see
 // SinglePlayerActionMap for what each one does).
@@ -31,6 +32,7 @@ type SinglePlayerAction =
         collisionLayer: SinglePlayerParam<number>, facingAxis: "x" | "y" | "z",
         orientation: "-" | "+"}
     | {type: "set_variable", name: string, computeValue: SinglePlayerParam<any>}
+    | {type: "set_camera_mode", mode: CameraMode}
     | {type: "orbit_camera_pose", zoomAmount: SinglePlayerParam<number>,
         azimuthDeg: SinglePlayerParam<number>, polarDeg: SinglePlayerParam<number>}
     | {type: "orbit_camera_target_override", targetX: SinglePlayerParam<number>,

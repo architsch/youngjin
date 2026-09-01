@@ -1,4 +1,5 @@
-import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../system/sharedConstants";
+import { SANDBOX_SINGLE_PLAYER_MODE, TUTORIAL_SINGLE_PLAYER_MODE } from "../../system/sharedConstants";
+import SandboxSinglePlayerModeConfig from "../types/singlePlayerModeConfig/sandboxSinglePlayerModeConfig";
 import SinglePlayerModeConfig from "../types/singlePlayerModeConfig/singlePlayerModeConfig";
 import TutorialSinglePlayerModeConfig from "../types/singlePlayerModeConfig/tutorialSinglePlayerModeConfig";
 
@@ -10,6 +11,7 @@ import TutorialSinglePlayerModeConfig from "../types/singlePlayerModeConfig/tuto
 // moment it is read and does not depend on some entry point having remembered to pull a file in.
 const SinglePlayerModeConfigMap: {[singlePlayerMode: string]: SinglePlayerModeConfig} = {
     [TUTORIAL_SINGLE_PLAYER_MODE]: TutorialSinglePlayerModeConfig,
+    [SANDBOX_SINGLE_PLAYER_MODE]: SandboxSinglePlayerModeConfig,
 };
 
 export default SinglePlayerModeConfigMap;

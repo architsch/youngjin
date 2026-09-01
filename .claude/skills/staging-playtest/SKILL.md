@@ -224,13 +224,30 @@ which is how a refusal comes to be recorded as a success. `click` and `expect` t
 for UI the harness does not name, and belong in the plan rather than baked in here, since a plan is
 written fresh each round and a baked-in selector goes stale silently.
 
-**The 3D scene** is driven too, through `lib/interact.js`. The page is asked where things are and
-whether a click would reach them; the click itself is an ordinary pointer gesture on the canvas. So
-the tap arbitration, the raycast and the permission check inside the object's own handler all run,
-and a world action that fails here is one that would fail for a player. `clickObject` names its
-target by identity, type, or the metadata it carries, and walks to it; `clickSurfaceUntilEnabled`
+**The 3D scene** is driven too, through `dev/scripts/lib/interact.js`. The page is asked where things
+are and whether a click would reach them; the click itself is an ordinary pointer gesture on the
+canvas. So the tap arbitration, the raycast and the permission check inside the object's own handler
+all run, and a world action that fails here is one that would fail for a player. `clickObject` names
+its target by identity, type, or the metadata it carries, and walks to it; `clickSurfaceUntilEnabled`
 picks out surfaces until the app actually offers the control being aimed for; `expectSelection` is
 what proves a click landed. That reaches the room *write* path, which used to be the largest gap.
+
+**Getting to where the acting happens is not itself acting**, and should not be driven that way. A
+plan that opens by walking blindly away from the spawn wall spends a minute arriving somewhere it
+cannot name, and somewhere slightly different each run. `dev/scripts/lib/setup.js` stands the player
+and points the camera directly, through the `place`, `vantage`, `look` and `standingSpots` plan
+actions — exact, immediate, and the same every time. Use them to *reach* the situation; keep every
+click, selection and edit a real gesture, because those are what the playtest is evidence about.
+
+Two limits on `place` worth stating in the plan rather than discovering:
+
+- **The tools live inside edit mode.** In play mode a wall face offers only "Start Editing";
+  `addDoorButton` and the block tools do not exist until the mode does, so `clickSurfaceUntilEnabled`
+  waiting on one from play mode will try every surface and report that no wall would take a door.
+  `ensureEditMode` first.
+- **`place` moves this client exactly; the server keeps its own copy** and sweeps every reported move
+  through collision from *its* last known point. Use it to shorten a journey inside a room, never as
+  the thing an assertion about a server-side position rests on.
 
 **Being somebody other than a guest** is reached by promoting an account rather than by playing:
 `stagingAdmin.js set-user-type --type admin|member`, with the plan carrying a `sessionFile` so the

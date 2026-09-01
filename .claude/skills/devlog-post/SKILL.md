@@ -74,19 +74,63 @@ If **you** started it, stop it once the captures are done (`npm run stop`, then 
 
 ## Step 4 — Capture the screenshots
 
-Full details in [reference/capture.md](reference/capture.md). In short:
+Full details in [reference/capture.md](reference/capture.md). **Build the set; do not go looking for
+one** — and **work each shot out in a live session, writing the script last**, since running a whole
+script from boot to learn what one step did costs a full run per guess.
 
-1. Copy `dev/scripts/devlog/shots/_template.js` to `dev/scripts/devlog/shots/<slug>.js`.
-2. Learn the screen: `node dev/scripts/devlog/captureRunner.js --probe` prints every clickable
-   thing on screen with its position, and writes a probe JPEG under `test-results/devlog-probe/`.
-3. Write `run()` so it walks the game to each moment worth showing, calling `shot("<label>")`.
-   While iterating, add `--out=test-results/devlog-probe` so half-finished shots stay out of
-   `public/`.
-4. **Read every screenshot you take.** They are images; open them with the Read tool and look.
-   Re-shoot anything that shows a loading indicator, a half-arrived room, an open debugger, an
-   empty canvas, or simply not the feature. This is the step that decides whether the post is
-   worth publishing.
-5. Final run without `--out`, writing into `public/devlog-<year>/`.
+**A dev-log screenshot is a photograph, not a recording.** It has never been a claim that the room it
+was taken in arose by itself. What it has to be honest about is the thing it is *of* — a material, a
+shape, a doorway — and that thing is the real one either way, spawned and drawn and lit as the game
+does it. So a capture run opens in the **sandbox**: an empty room whose walls, floors, pictures and
+doors you stand up by asking, and whose camera goes anywhere. Decide the frame, build what belongs in
+it, put the camera where the picture wants it. It is about three times faster than the alternative
+and, far more importantly, the composition becomes a decision rather than a consequence of wherever
+the search for a subject happened to stop.
+
+Two cases still need a generated room, and only these two: the subject **is** a room the generator
+produced (how a hub is laid out, what two storeys look like), or the shot has to **perform a flow**
+(entering edit mode, hanging a picture through the tools). Those set `freshRoom: true` and copy
+`shots/_generated-room-template.js`.
+
+1. **Open a session and leave it in the background:**
+
+   ```bash
+   node dev/scripts/devlog/captureRunner.js --serve &
+
+   # only for the two cases above
+   node dev/scripts/devlog/captureRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4] &
+   ```
+
+2. **Build each shot one step at a time.** Every response carries the resulting pose, view and
+   camera, so the next step follows from what the game actually did:
+
+   ```bash
+   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"hideHUD"}'
+   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"palettes"}'
+   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"stage","args":[{"row":14,"col":14,"rows":9,"cols":11,"layers":8,"wallTextureIndex":45,"floorTextureIndex":14,"open":["-z"]}]}'
+   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"addObject","args":[{"type":"Canvas","row":22,"col":19,"face":"-z","collisionLayer":4,"metadata":{"ImagePath":"1/14"}}]}'
+   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"camera","args":[{"x":14.5,"y":3.4,"z":11.5,"atX":19.5,"atY":1.7,"atZ":19}]}'
+   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"shot","args":["try"]}'
+   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"clearSandbox"}'
+   curl -s http://127.0.0.1:4321/ops     # every op available
+   ```
+
+   **Dress the set out of a palette** (`palettes()` returns the texture-index combinations the game
+   finishes its own rooms in), and **fill the frame** — a set that is a grey box with the subject in
+   it has wasted the whole advantage of building it. See
+   [building the set](reference/capture.md#ctxsetup-in-the-sandbox--building-the-set).
+
+3. **Read every JPEG as you go.** They are images; open them with the Read tool and look. The runner
+   cannot tell a good frame from a bad one, and neither can the pose. Re-shoot anything showing a
+   loading indicator, a half-arrived room, an open debugger, an empty canvas, or simply not the
+   feature. This is the step that decides whether the post is worth publishing.
+
+4. **Transcribe what worked** into `dev/scripts/devlog/shots/<slug>.js` (copy `_template.js`). The
+   ops are the same functions `run(ctx)` calls, under the same names, so this is transcription
+   rather than translation. Then `curl -s -X POST http://127.0.0.1:4321/end`.
+
+5. Run the script end to end with `--out=test-results/devlog-probe`, read the images again, then a
+   final run without `--out`, writing into `public/devlog-<year>/`.
 
 One to four images per post, roughly one per paragraph. The first one in the post becomes its
 share-preview image, so lead with the one that reads best at a glance.
@@ -97,12 +141,14 @@ three faults to shoot against, with the camera numbers that fix them, are in
 [reference/capture.md](reference/capture.md#composing-the-frame):
 
 - **Fill the frame with the subject** — roughly a third to a half of the frame's shorter side. A
-  subject lost in the middle of a wall is the commonest fault, and pulling the camera back to
-  *reach* something and then shooting from there is how it happens.
-- **Come round off the square-on view** — 30-60 degrees off the surface's normal, and above or
-  below its level, so the room recedes instead of standing flat like a backdrop.
-- **Balance the whole frame** — pick the vantage whose surroundings put something in every quarter,
-  rather than one with a blank wall over half of it and a band of empty floor along the bottom.
+  subject lost in the middle of a wall is the commonest fault. In the sandbox that means standing
+  the camera four to eight units off it, and aiming *at* it — the room's only light is the one the
+  camera carries, and it reaches as far as the camera is aimed.
+- **Come round off the square-on view** — off the subject's axis and above or below its level, so
+  the room recedes instead of standing flat like a backdrop.
+- **Balance the whole frame** — three or four things at different depths, differing in colour. In
+  the sandbox everything besides the subject is yours to build, so a frame with a blank wall over
+  half of it and a band of empty floor along the bottom is a set that was not finished.
 
 ## Step 5 — Write the post
 

@@ -41,10 +41,14 @@ export interface GeneratedRoomContent
     objectCount: number;
 }
 
+// `seed` is what makes a generated room reproducible: passing one lays out exactly the same interior
+// every time, so a script written against its coordinates means the same thing on another machine
+// and on the next run. Left out, generation draws a fresh room, which is what seeding a varied
+// population wants.
 export function generateRoomContent(roomName: string, roomType: RoomType,
-    ownerUserID: string, ownerUserName: string): GeneratedRoomContent
+    ownerUserID: string, ownerUserName: string, seed?: number): GeneratedRoomContent
 {
-    const room = RoomGenerationUtil.generateRoom(roomName, roomType, ownerUserID, ownerUserName);
+    const room = RoomGenerationUtil.generateRoom(roomName, roomType, ownerUserID, ownerUserName, seed);
 
     const bufferState = EncodingUtil.startEncoding();
     room.voxelGrid.encode(bufferState);
