@@ -66,6 +66,7 @@
 - **`/graphics`** - Camera control, instanced mesh composition, image map
 - **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode
 - **`/testing`** - E2E and integration test workflows, framework, and scenario coverage
+- **`/plans`** - Dated design/planning notes, filed by year. **Historical records, not descriptions of the present — never edited after the day they were written.** See "Plan Documents Are Historical Records" below.
 
 ### `/tests` - All Tests
 - **`/e2e`** - E2E test fixtures, specs, configs, and helpers (Playwright)
@@ -93,63 +94,24 @@
 - **Observable Pattern**: Used for state management. Each listener can subscribe to an observable and react to its state changes.
 - **Optional Sign-Up**: A new user automatically joins the game as a guest, which is a temporary user profile. In order to save one's progress, the user needs to create his/her own account by selecting one of the given auth providers (such as Google OAuth2). Detailed flows are illustrated in `docs/networking/authentication.md`.
 - **Separation between Static and Dynamic Pages**: Static pages (HTML files in the "public" directory) are being served via GitHub Pages, under the URL: `https://thingspool.net`. Dynamic pages and the server/client apps are being hosted in the VPS, under the URL: `https://app.thingspool.net` (live server) or `https://staging.thingspool.net` (staging server). During local dev test, a local URL (`http://127.0.0.1:3000`) is used to serve both static and dynamic contents.
-- **Room Generation Defines What a Room Is**: See the section below.
+- **Room Generation Defines What a Room Is**: See *Project Rules* below.
 
-## Room Generation Defines What a Room Is
+## Project Rules
 
-Every room in the game is born from `RoomGenerationUtil` — multiplayer rooms laid out procedurally by `HubRoomBuilder` and `RegularRoomBuilder` on top of `ProceduralRoomBuilder`, single-player rooms built from their `SinglePlayerModeConfig` — and nothing else ever produces one. That makes room generation the *definition* of a complete room: not only the voxels and objects inside it, but every room-level parameter those contents were chosen to suit.
+Each rule below is binding as written. The linked page in `.claude/rules/` carries the reasoning, the
+edge cases, and the concrete checklist — read it before acting in that area.
 
-**Whenever a new room-level parameter is introduced, room generation must be extended to choose it as part of the same change.** This is not polish to defer:
+### Room Generation Defines What a Room Is
+Every room is born from `RoomGenerationUtil` and nothing else ever produces one, so generation is the *definition* of a complete room. **Whenever a new room-level parameter is introduced, room generation must be extended to choose it as part of the same change** — `Room`, `RoomGenerationUtil`, the procedural `RoomBuilder`s, every `SinglePlayerModeConfig`, and any curated data behind the parameter. A parameter no generator sets is one that every room silently holds the default value of. Contents are a narrower obligation: a new *placeable object* owes generation nothing, a new kind of *voxel* content does. Full rule: [`.claude/rules/room-generation.md`](.claude/rules/room-generation.md).
 
-1. **A parameter no generator sets does not exist in practice.** Since every room is created by generation, a parameter left out of it is one that every room in the game silently holds the default value of. However complete its editing UI is, the feature ships looking like it was never built — visible only to the few owners who go and change it by hand.
-2. **Room parameters are not independent of each other, or of the room's contents.** A palette's texture indices only mean anything within one specific texture pack; fog has to agree with the skybox; a prop's materials have to come from the room's own pack. Generation is the single place where those agreements are expressed. Adding a parameter anywhere else and leaving generation alone produces rooms whose settings contradict their own contents.
-3. **Generated rooms are what almost everyone sees.** Hubs and newly created rooms are the game's first impression, and most of them are never hand-edited at all. A parameter generation does not decide is one whose effect most players never encounter.
+### The License Files Must Describe What Actually Ships
+The code is Apache-2.0; the writing and artwork under `public/` are all rights reserved; some bundled assets are third-party. That boundary exists only in `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md`, nothing enforces it, and no test fails when it drifts. **Whenever the set of things that ship changes — a dependency, an external asset, a new `public/` directory, a new top-level code directory — the license files change in the same commit.** A copyleft or source-available dependency license is a decision for the user: report it and stop. Never add an asset whose terms are unknown. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Full rule: [`.claude/rules/license-files.md`](.claude/rules/license-files.md).
 
-**Contents are a narrower obligation than parameters.** Procedural generation lays out a multiplayer room's voxel grid — its areas, the walls and passages between them, the ways up to the storey above, and the voxel block work standing in them — and places exactly one object: the door that is the room's way in. A Hub or Regular room is otherwise meant to be furnished by the people who use it, so what generation owes them is somewhere to build rather than a full house. A new kind of placeable object therefore needs nothing from generation; a new kind of *voxel* content does.
+### Plan Documents Are Historical Records
+Files under `/docs/plans` are dated records of what was known, intended and uncertain on the day they were written. **A plan document is never edited after that day** — not to rename a symbol that has since been renamed in `src/`, not to fix a stale path or number, not to correct it, not to append an outcome or a status note, and not to apply the documentation guidelines to it. Plans are also not added to the README index. When a sweeping edit (a rename, a find-and-replace, a docs-sync pass) matches a file under `/docs/plans`, **skip it and leave the file untouched**; inconsistency with today's code is the correct state for a historical record. If a plan is misleading, write a *new* dated plan rather than revising the old one. The only edits that are ever in scope are ones the user asks for: writing a new plan, or editing one on the day it was written. Full rule: [`.claude/rules/plan-documents.md`](.claude/rules/plan-documents.md).
 
-The door is the exception because it is not furniture: a room with no door is a room nobody can leave, and it is also what an arriving player is put down behind. Anything else that becomes structurally necessary in that sense belongs in generation for the same reason.
-
-Concretely, introducing a room-level parameter means: add it to `Room` (so it is stored and sent to clients), make `RoomGenerationUtil` and the procedural `RoomBuilder`s decide it, declare it on every `SinglePlayerModeConfig` (which carries its parameters as `RoomBuilderParams`), and — where the parameter has curated data behind it, as texture packs have palettes in `RoomPaletteMap` — extend that curation to cover every option a room can be generated with. Conceptual details live in `docs/geometry/room_generation.md`.
-
-## The License Files Must Describe What Actually Ships
-
-This repository is **dual-natured on purpose**: the code is open source under Apache-2.0, while the
-written and illustrated works under `public/` are all rights reserved, and some bundled assets belong
-to third parties under their own terms. That boundary exists only in `LICENSE-CONTENT.md` and
-`THIRD-PARTY-NOTICES.md`. Nothing enforces it, no test fails when it drifts, and a reader — or a
-court — has no other place to look.
-
-Drift is therefore not cosmetic. It fails in one of two directions, and both are public:
-
-- **Too wide**, and the repository appears to give away writing and artwork that were never meant to
-  be licensed. A permissive grant, once published, is not reliably retractable.
-- **Too narrow**, and the project claims rights over somebody else's asset, or ships one whose terms
-  it never checked.
-
-**So whenever the set of things that ship changes, the license files change in the same commit.**
-Concretely:
-
-1. **A new dependency** — check its license before adding it. MIT / Apache-2.0 / BSD / ISC are fine.
-   A copyleft or source-available license (GPL, AGPL, LGPL, MPL, SSPL, BUSL, PolyForm, "non-commercial")
-   is a **decision for the user, not a default to accept**: it can force this project's own terms to
-   change. Report it and stop. If the dependency is a substantive one, add it to the table in
-   `THIRD-PARTY-NOTICES.md`.
-2. **A new external asset** — a texture pack, image, model, sound, icon or font arrives with terms
-   attached. Keep the license file it came with beside the asset, and add a row to
-   `THIRD-PARTY-NOTICES.md` naming the author and the license. **Never add an asset whose terms are
-   unknown**; "found on the internet" is not a license.
-3. **A new `public/` directory** — a library section, a dev-log year, an arcade entry — is *content*.
-   It is all rights reserved, and it belongs in the illustrative list in `LICENSE-CONTENT.md`.
-4. **A new top-level code directory** belongs in the "What Apache-2.0 covers" table in
-   `LICENSE-CONTENT.md`, so the open-source half of the boundary stays complete too.
-5. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Scope statements, exclusions and
-   attributions go in the other three files. Editing the license text produces a licence that is no
-   longer Apache-2.0 and that nobody can evaluate.
-6. **Web fonts**: `THIRD-PARTY-NOTICES.md` currently states that none are used. Adding one makes
-   that statement false, and it must be updated.
-
-## Documentation Guidelines (`/docs`)
-Documents in `/docs` are meant to be **conceptual outlines** — the most concise description of how things work *now* — not exhaustive technical dumps. When writing or editing them, follow these rules:
+## Documentation Guidelines (`/docs`, excluding `/docs/plans`)
+Documents in `/docs` are meant to be **conceptual outlines** — the most concise description of how things work *now* — not exhaustive technical dumps. When writing or editing them, follow these rules. (`/docs/plans` is outside all of this: those files describe a past day, not the present, and are never edited — see "Plan Documents Are Historical Records" above.)
 
 1. **Stay conceptual, not exhaustive.** Explain the idea, the purpose, and the flow. Omit nitpicky implementation details that a reader does not need in order to understand the concept, and that would go stale the moment the code is tweaked.
 2. **Describe only the present.** No historical records ("it used to work this way, but now…") and no future plans ("once X is implemented, it will…"). State only how things currently work.

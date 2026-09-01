@@ -17,8 +17,8 @@ import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGen
 import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
 import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
@@ -50,7 +50,7 @@ export function buildBareMultiplayerRoomContent(room: Room): void
     // an arriving player has nowhere to be put down (see SpawnHotspotUtil). Nothing is cut through
     // that wall: a door is a wall attachment, and an attachment needs the wall behind it.
     const entranceDoor = DoorObjectUtil.makeEntranceDoor(room.id,
-        MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
+        INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
     room.objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
 }
 

@@ -7,6 +7,8 @@ import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetad
 import SocketsClient from "../../networking/client/socketsClient";
 import App from "../../app";
 import CameraUtil from "../../graphics/util/cameraUtil";
+import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
+import { cameraModeObservable } from "../../system/clientObservables";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 
 export default class SpeechBubble extends GameObjectComponent
@@ -60,7 +62,7 @@ export default class SpeechBubble extends GameObjectComponent
             // own sits in first-person — above the head — and it lets that one appear again once
             // the camera orbits the body and looks back at it.
             if (dist < 12 && CameraUtil.pointIsInFieldOfView(this.vecTemp1) &&
-                (!this.componentConfig.checkLineOfSight ||
+                (!this.componentConfig.checkLineOfSight || this.orbitCameraIsFramingSpeaker() ||
                 CameraUtil.objectIsInLineOfSight(this.vecTemp1, this.gameObject)))
             {
                 const scaleFactor = Math.max(0.1, 1.5 - 0.12 * dist);
@@ -107,6 +109,25 @@ export default class SpeechBubble extends GameObjectComponent
         if (key !== ObjectMetadataKeyEnumMap.SentMessage)
             return;
         this.displayMessage(value, true);
+    }
+
+    // Whether the orbit camera is currently framing this bubble's own speaker, in which case
+    // whether he can be seen is already somebody else's question and this component must not ask it
+    // a second time.
+    //
+    // The orbit clears the room between itself and the volume it frames, and keeps it clear for as
+    // long as it frames it (see OrbitOcclusionHider). But it answers for a volume, at its own pace,
+    // and leaves alone whatever is barely in the way — where the sight test above asks about a
+    // single point, every frame, and spares nothing. So while the camera turns, the two disagree
+    // for a moment at a time: the room has not yet given way to where the camera has got to, or has
+    // given way as far as the speaker's own outline while the bubble hangs a little above it. Each
+    // such moment is a blink of the bubble, and none of them is a moment the user could not see the
+    // speaker — the orbit's whole promise is that he can.
+    private orbitCameraIsFramingSpeaker(): boolean
+    {
+        const mode = cameraModeObservable.peek();
+        return mode.type === "orbit" &&
+            Geometry3DUtil.pointOverlapsAABB(this.gameObject.position, mode.target);
     }
 
     // "animate" plays a brief bouncy scale to flag that the message just changed. We bounce on

@@ -4,7 +4,7 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import Room from "../../../shared/room/types/room";
 import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
 import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, PLAYER_HEIGHT } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
 import ObjectFactory from "../factories/objectFactory";
 import GameObject from "../types/gameObject";

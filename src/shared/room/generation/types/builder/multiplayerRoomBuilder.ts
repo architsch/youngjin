@@ -1,5 +1,5 @@
 import DoorObjectUtil from "../../../../object/util/doorObjectUtil";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, NUM_VOXEL_ROWS } from "../../../../system/sharedConstants";
+import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, NUM_VOXEL_ROWS } from "../../../../system/sharedConstants";
 import { RoomVolumeConstructorMap } from "../../maps/roomVolumeConstructorMap";
 import { RoomVolumeTypeEnumMap } from "../roomVolumeType";
 import ProceduralRoomBuilder from "./proceduralRoomBuilder";
@@ -36,8 +36,8 @@ export default abstract class MultiplayerRoomBuilder extends ProceduralRoomBuild
         // where the room's own door could not go.
         this.addArea(RoomVolumeConstructorMap["FirstStorey"](
             NUM_VOXEL_ROWS - 1 - ARRIVAL_AREA_DEPTH, NUM_VOXEL_ROWS - 2,
-            MULTI_PLAYER_ENTRANCE_VOXEL_COL - ARRIVAL_AREA_HALF_WIDTH,
-            MULTI_PLAYER_ENTRANCE_VOXEL_COL + ARRIVAL_AREA_HALF_WIDTH,
+            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - ARRIVAL_AREA_HALF_WIDTH,
+            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + ARRIVAL_AREA_HALF_WIDTH,
             arrivalPalette));
 
         this.addVolume(RoomVolumeTypeEnumMap.Reserved,

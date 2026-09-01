@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
 import RoomPalette from "../types/roomPalette";
 import RoomVolume from "../types/roomVolume";
 
@@ -20,12 +20,12 @@ export const RoomVolumeConstructorMap: {[roomVolumeShape: string]:
     // room that predates the hole and to fill it back in on a room that has one.
     "InitialMultiplayerEntrance": (): RoomVolume =>
     {
-        const row = MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
-        const col = MULTI_PLAYER_ENTRANCE_VOXEL_COL;
+        const row = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
+        const col = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
 
         return new RoomVolume(row, row, col, col,
             COLLISION_LAYER_MIN,
-            COLLISION_LAYER_MIN + MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS - 1);
+            COLLISION_LAYER_MIN + INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS - 1);
     },
     // A stretch of the room around the entrance, reaching the given number of cells out to either
     // side of it and the given number in front of and behind it.
@@ -37,8 +37,8 @@ export const RoomVolumeConstructorMap: {[roomVolumeShape: string]:
     // anywhere else and which nobody can even reach the doorway from.
     "InitialMultiplayerEntranceZone": (halfWidth: number, halfDepth: number): RoomVolume =>
     {
-        const row = MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
-        const col = MULTI_PLAYER_ENTRANCE_VOXEL_COL;
+        const row = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
+        const col = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
 
         return new RoomVolume(row - halfDepth, row + halfDepth, col - halfWidth, col + halfWidth,
             COLLISION_LAYER_MIN,

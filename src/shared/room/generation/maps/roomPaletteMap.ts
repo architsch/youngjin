@@ -15,7 +15,7 @@ const palettesByTexturePackPath: {[texturePackPath: string]: RoomPalette[]} = {
     ],
     "country": [
         new RoomPalette(24, 41, 58, 33), // timbered hall
-        new RoomPalette(18, 30, 57, 16), // barn
+        new RoomPalette(18, 30, 0, 16), // barn
         new RoomPalette(52, 47, 50, 25), // stone cottage
         new RoomPalette(26, 39, 56, 8), // farmhouse kitchen
         new RoomPalette(7, 48, 45, 63), // greenhouse
@@ -39,7 +39,7 @@ const palettesByTexturePackPath: {[texturePackPath: string]: RoomPalette[]} = {
     ],
     "aqua": [
         new RoomPalette(24, 39, 16, 2), // pool hall
-        new RoomPalette(8, 61, 34, 26), // bath house
+        new RoomPalette(8, 0, 34, 26), // bath house
         new RoomPalette(29, 21, 18, 43), // grotto
         new RoomPalette(3, 57, 11, 51), // ice cavern
         new RoomPalette(27, 62, 9, 5), // mosaic spa
@@ -51,7 +51,7 @@ const palettesByTexturePackPath: {[texturePackPath: string]: RoomPalette[]} = {
     ],
     "inferno": [
         new RoomPalette(59, 35, 3, 45), // magma vault
-        new RoomPalette(0, 22, 49, 21), // forge
+        new RoomPalette(15, 22, 49, 21), // forge
         new RoomPalette(9, 2, 36, 19), // obsidian hall
         new RoomPalette(23, 8, 17, 7), // tomb
         new RoomPalette(14, 39, 31, 33), // rust works
@@ -62,7 +62,7 @@ const palettesByTexturePackPath: {[texturePackPath: string]: RoomPalette[]} = {
         new RoomPalette(40, 55, 30, 1), // ash lodge
     ],
     "prison": [
-        new RoomPalette(56, 62, 41, 11), // cell block
+        new RoomPalette(0, 62, 41, 11), // cell block
         new RoomPalette(13, 46, 16, 10), // wash room
         new RoomPalette(6, 23, 40, 24), // exercise yard
         new RoomPalette(32, 44, 49, 1), // machine hall

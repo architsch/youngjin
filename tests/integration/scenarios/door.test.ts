@@ -32,8 +32,8 @@ import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
-    LABEL_COLOR_PALETTE_NAME, MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
+    LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
@@ -54,9 +54,9 @@ function makeDoorSignal(room: Room, sourceUser: User, objectId: string = "new-do
     return new AddObjectSignal(room.id, sourceUser.id, sourceUser.userName, doorTypeIndex, objectId,
         new ObjectTransform(
             {
-                x: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 5 + 0.5,
+                x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 5 + 0.5,
                 y: 0.5 * DOOR_FOOTPRINT_HEIGHT,
-                z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+                z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
             },
             {x: 0, y: 0, z: -1}));
 }
@@ -351,7 +351,7 @@ describe("choosing where a player arrives", () => {
 
     function addDoor(room: Room, objectId: string, col: number, label: string, doorType: number)
     {
-        const door = DoorObjectUtil.makeEntranceDoor(room.id, col, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+        const door = DoorObjectUtil.makeEntranceDoor(room.id, col, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
             COLLISION_LAYER_MIN);
         door.objectId = objectId;
         door.metadata[ObjectMetadataKeyEnumMap.Label] = new EncodableByteString(label);

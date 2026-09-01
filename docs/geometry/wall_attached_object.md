@@ -7,6 +7,8 @@ An attachment's collider is centred on its position, so one that stands on a flo
 ## Position & Direction Quantization
 Wall-attached object transforms are quantized before use: positions snap to the grid the wall is built on, facing directions round to the nearest axis-aligned unit vector, and the collider's footprint is sized sideways to whole cells, which is what makes an attachment claim whole columns of wall. This keeps these objects flush with the wall and aligned with the voxel structure behind them.
 
+One consequence is worth naming, because it is a trap. An attachment's position lands exactly on the boundary between the wall it hangs on and the room it faces — and a stored position is not a coordinate but a fraction of a fixed range, which comes back a hair below what was written (see `ObjectTransform`). So an attachment read out of storage is found on one side of that boundary or the other according to nothing but which way it happens to face, while the same attachment moved by hand sits exactly on it. Nothing may therefore read the cell an attachment's origin falls in as the cell it stands in front of, or judge it by whatever fills that cell: which wall it belongs to is a matter of its facing direction.
+
 Vertically it is the object's **bottom edge** that is snapped, not its centre. An object standing an odd number of collision layers tall has its centre half a layer off that grid, so snapping the centre would lift it clear of the floor it stands on and keep it there every time it was moved. An object of even height comes out the same either way.
 
 ## Movement Types

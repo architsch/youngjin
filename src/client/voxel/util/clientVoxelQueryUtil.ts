@@ -93,11 +93,12 @@ const ClientVoxelQueryUtil =
                 : (from.y - collisionLayer * COLLISION_LAYER_HEIGHT)) / absDy)
             : Infinity;
 
+        // The target stands where the viewpoint does, so there is no block in between to speak of.
+        if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
+            return false;
+
         for (let step = 0; step < maxGridWalkSteps; ++step)
         {
-            if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
-                return false; // Arrived at the block the target stands in, having met nothing solid.
-
             // Cross into the next block over whichever boundary the segment reaches first.
             let boundaryCrossed: number;
             if (colBoundary <= rowBoundary && colBoundary <= layerBoundary)
@@ -121,6 +122,15 @@ const ClientVoxelQueryUtil =
 
             if (boundaryCrossed >= 1)
                 return false; // Stepped past the target itself, which the block test above may have missed.
+
+            // Arrived at the block the target stands in, having met nothing solid on the way. Asked
+            // here, before the block is judged, rather than at the top of the next turn: a target
+            // standing *inside* a solid block would otherwise be reported as hidden by the very
+            // block it stands in. That is not a corner case but the ordinary lot of anything hung
+            // on a wall, whose position sits exactly on the boundary between the wall and the room
+            // and lands on whichever side of it the rounding of a stored coordinate happens to fall.
+            if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
+                return false;
 
             if (voxelBlockIsDrawn(voxels, row, col, collisionLayer))
                 return true;

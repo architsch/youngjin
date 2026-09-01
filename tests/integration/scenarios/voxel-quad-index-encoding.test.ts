@@ -32,7 +32,7 @@ import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/remov
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
 import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
-import { COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
 const ROOM_ID = "quad-index-hub";
@@ -57,7 +57,7 @@ function roundTrip<T>(build: (quadIndex: number) => { encode: (b: BufferState) =
 function getInterestingQuadIndices(): number[]
 {
     const entranceFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(
-        MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL);
+        INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
     const lastVoxelFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(
         NUM_VOXEL_ROWS - 1, NUM_VOXEL_COLS - 1);
 

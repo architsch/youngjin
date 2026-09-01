@@ -125,7 +125,7 @@ it, this is one of the two interruptions before the commit gate.
 
 Delegate both at once, with the change set from phase 0 and the report contract in each brief.
 
-- **Phase 1 (`skill-upkeep`) owns** `.claude/skills/` and `.claude/writing-style.md`.
+- **Phase 1 (`skill-upkeep`) owns** `.claude/skills/`, `.claude/writing-style.md` and `.claude/rules/`.
 - **Phase 2 (`devlog-post`) owns** `public/devlog-<year>/` and the screenshots it captures.
 
 Neither may touch `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md`. If either concludes a change

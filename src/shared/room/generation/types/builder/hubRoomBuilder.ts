@@ -1,5 +1,7 @@
 import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../../system/sharedConstants";
 import { RoomVolumeConstructorMap } from "../../maps/roomVolumeConstructorMap";
+import RoomVolumeUtil from "../../util/roomVolumeUtil";
+import RoomPalette from "../roomPalette";
 import MultiplayerRoomBuilder from "./multiplayerRoomBuilder";
 import RoomBuilder from "./roomBuilder";
 
@@ -32,6 +34,17 @@ export default class HubRoomBuilder extends MultiplayerRoomBuilder
     {
         super.run();
 
+        RoomVolumeUtil.carveOutVolume(this.room.voxelGrid.voxels,
+            RoomVolumeConstructorMap["FirstStorey"](
+                1, NUM_VOXEL_ROWS-2, 1, NUM_VOXEL_COLS-2, new RoomPalette(0, 0, 0, 0)));
+
+        RoomVolumeUtil.carveOutVolume(this.room.voxelGrid.voxels,
+            RoomVolumeConstructorMap["SecondStorey"](
+                1, NUM_VOXEL_ROWS-2, 1, NUM_VOXEL_COLS-2, new RoomPalette(0, 0, 0, 0)));
+
+        // NOTE: I temporarily turned off procedural generation for Hub rooms.
+        // For now, every new Hub room will simply be two empty storeys.
+        /*
         // The lounge, standing open from the room's own floor to its own ceiling. It is placed
         // rather than drawn, since it is the thing the rest of the hub is arranged around.
         this.addArea(RoomVolumeConstructorMap["BothStoreys"](
@@ -44,10 +57,11 @@ export default class HubRoomBuilder extends MultiplayerRoomBuilder
         this.allocateStaircaseCapableAreas(NUM_WING_ATTEMPTS, ["FirstStorey"])
             .allocateAreas(NUM_SEED_ATTEMPTS, MIN_SEED_SPAN, MAX_SEED_SPAN, ["FirstStorey"])
             .growAreas(GROWTH_ROUNDS)
-            .raiseSecondStoreys(SECOND_STOREY_CHANCE, true /* a hub is never a single storey */)
+            .raiseSecondStoreys(SECOND_STOREY_CHANCE, true) // a hub is never a single storey
             .connectAreas()
             .carveOutRoom()
             .placeProps(PROP_CHANCE_PER_CELL, MAX_PROP_STACK_HEIGHT);
+        */
         this.addEntranceDoor();
         return this;
     }

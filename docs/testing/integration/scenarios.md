@@ -30,27 +30,59 @@ This document catalogs all integration test scenarios organized by category.
 | room unloads when last user leaves | An empty Regular room is removed from memory |
 | graceful shutdown saves all rooms and user metadata | Shutdown persists and unloads all rooms and users |
 
-## Room Generation (`room-generation.test.ts`) — 15 tests
+## Room Generation (`room-generation.test.ts`) — 17 tests, plus 7 suspended
 
-Every Hub/Regular room is laid out procedurally from a seed, so its shape is unknowable in advance. What is asserted is the set of properties every generated room must have whichever seed produced it. See [room_generation.md](../../geometry/room_generation.md) for the behavior under test.
+Every Hub/Regular room is born from `RoomGenerationUtil`, so what it builds is the definition of a complete room. A Regular room is laid out procedurally from a seed, which makes its shape unknowable in advance — so what is asserted about it is the set of properties it must have whichever seed produced it. See [room_generation.md](../../geometry/room_generation.md) for the behavior under test.
+
+The suspended block at the foot of the file describes a procedurally generated Hub. Procedural generation is switched off for Hubs at present — `HubRoomBuilder` builds two empty storeys and keeps its pipeline commented out beside them — so those tests are skipped, and are to be un-skipped in the same change that restores the pipeline. They are also the only cover for the parts of `ProceduralRoomBuilder` nothing else calls while it is off (staircase-capable areas, second storeys, and the staircase planner behind them).
+
+### Every generated multiplayer room
+
+Asserted over both room types.
 
 | Test | What it verifies |
 |------|-----------------|
 | leaves every part of the room reachable on foot from the entrance | A flood fill from where a player arrives reaches every walkable cell — no region is ever sealed off |
 | leaves the wall the door hangs on standing, and the floor in front of it clear | The entrance cell is solid wall, since a door is hung on it, and the approach cells in front of it are free of generated content |
 | keeps the boundary wall solid the whole way round | The perimeter is intact everywhere, the entrance cell included |
+| leaves nothing standing in mid-air | Every block of the room is held up: it rests on the room's floor, on a block below it, or against a block beside it at the same height. Anything left over after that has spread as far as it can — a prop stood on a storey the room was left without, say — is floating |
+| keeps the upper storey inside the room | The boundary wall is solid through the room's full height, so reaching the storey above is not a way out of it |
+| furnishes a multiplayer room with its own way in and nothing else | A generated room carries exactly one object: a default-entrance door on the boundary wall at the entrance cell, facing into the room |
+| builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomPaletteMap`, and a Hub's pack varies across seeds |
+| keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
+| rebuilds the same room from the same seed | Generation is deterministic per seed, layout and texture pack alike |
+| is what the room generator builds Hub and Regular rooms with | `RoomGenerationUtil.generateRoom` returns a generated, reachable room, texture pack included, for both multiplayer room types |
+
+### A regular room's procedural layout
+
+| Test | What it verifies |
+|------|-----------------|
+| carves rooms out of the solid mass rather than hollowing the whole storey | Some of the storey is walkable and some is not, i.e. the carving ran and left the rest to be mined out |
+| is one storey, with the mass above it left standing | The storey floor and every layer above it are solid across the whole interior |
+| is handed over plain, in one texture throughout | Its visible quads carry exactly one texture, i.e. it is finished with as much as its `RoomPaletteSelectionParams` offers and no more |
+| draws a different room from a different seed | Seeds do not collapse onto one layout |
+
+### A hub room
+
+Its current shape, while procedural generation is switched off for Hubs.
+
+| Test | What it verifies |
+|------|-----------------|
+| stands open through both storeys, from wall to wall | Nothing is left standing inside either storey — no interior walls, no block work, no props |
+| is two storeys of the same height, rather than one tall room | The slab dividing the storeys and the cap over the upper one are both unbroken across the interior, and no cell is open from floor to ceiling |
+| comes out in one texture, whichever pack it drew | Its visible quads carry exactly one texture, since nothing is drawn from its palettes while its rooms are not being laid out |
+
+### Suspended: a procedurally generated hub
+
+| Test | What it verifies |
+|------|-----------------|
 | gives every room an upper storey a player can climb to and walk around on | A walk from the entrance — stepping up at most one layer at a time, and needing headroom to stand — reaches the storey above, and reaches enough of it to be a floor rather than a ledge |
 | builds stairs the physics engine actually carries a player up | The shortest route upstairs is replayed through `PhysicsManager` with a real player collider, gravity and step-up, and his feet end up on the storey floor |
 | climbs to the upper storey by a flight wide enough to walk up | Every tread of a flight along the route upstairs — a run that climbs a layer at a time, more than once over, as opposed to a single step onto a piece of block work — has a second cell beside it at the same height that is equally standable, i.e. the flight is more than one cell across |
-| leaves nothing standing in mid-air | Every block of the room is held up: it rests on the room's floor, on a block below it, or against a block beside it at the same height. Anything left over after that has spread as far as it can — a prop stood on a storey the room was left without, say — is floating |
-| keeps the upper storey inside the room | The boundary wall is solid through the room's full height, so climbing the stairs is not a way out of it |
 | opens some of its rooms through both storeys, and floors over the rest | Across the seeds, some rooms come out with a space open from floor to ceiling — and every room, whichever way it went, still has a reachable upper storey |
-| furnishes a multiplayer room with its own way in and nothing else | A generated Hub carries exactly one object: a default-entrance door on the boundary wall at the entrance cell, facing into the room |
-| builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomPaletteMap`, and the pack varies across seeds |
-| decorates a hub, and hands a regular room over plain | A Hub's visible quads carry several different textures; a Regular room's carry exactly one, i.e. each room type is finished with as much as its `RoomPaletteSelectionParams` offers and no more |
-| keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
-| rebuilds the same room from the same seed, and a different one from a different seed | Generation is deterministic per seed (layout and texture pack alike), and seeds do not collapse onto one layout |
-| is what the room generator builds Hub and Regular rooms with | `RoomGenerationUtil.generateRoom` returns a procedurally generated room, texture pack included, for both multiplayer room types |
+| decorates the room it hands to everybody | A Hub's visible quads carry several different textures, i.e. it is finished with as much as its `RoomPaletteSelectionParams` offers |
+| stands interior walls in the room, rather than hollowing the whole storey | Some of the storey is walkable and some is not |
+| draws a different room from a different seed | Seeds do not collapse onto one layout |
 
 ## Voxel Grid Migration (`voxel-grid-migration.test.ts`) — 63 tests
 
@@ -215,6 +247,23 @@ A room is encoded into one reusable buffer, and writing past the end of a typed 
 |------|-----------------|
 | survives being written and read back when the room is filled solid | A room solid from its floor to its ceiling in every cell encodes within the format's own maximum and decodes back quad for quad |
 | refuses an encoding that overflowed the buffer rather than handing back a short one | An encoding that ran past the buffer throws instead of returning a truncation, and leaves the buffer free for the next one |
+
+## Line of Sight (`line-of-sight.test.ts`) — 8 tests
+
+Whether something in the room can be seen from where the camera stands is answered by walking the voxel grid along the line between the two. A door's "Click to Enter" prompt and a speaker's speech bubble both hang on that answer. See [room_entrance.md](../../geometry/room_entrance.md) and [camera_control.md](../../graphics/camera_control.md) for the behavior under test.
+
+A wall attachment stands exactly on the boundary between the wall and the room, and a stored coordinate comes back a hair below what was written — so which side of that boundary a door is found on is decided by which way it happens to face. These pin down that this cannot decide whether the door is visible.
+
+| Test | What it verifies |
+|------|-----------------|
+| brings a wall attachment back a hair below where it was placed | A door's stored position never exceeds its placed one, and differs from it by less than a thousandth of a block |
+| leaves a door standing in the wall's own cell on half of the room's walls | Two of the four boundary walls hold a door whose stored position falls inside the wall cell itself, and two beside it in the open room |
+| finds every wall's door in sight, whichever way it faces | A door on each of the four boundary walls is in sight from inside the room, both as placed and as stored |
+| finds a door in sight from along the wall it is hung on | The same, approached at an angle so the line crosses the corner of a neighbouring cell of that wall |
+| reports the storey's own floor slab as standing in the way | The slab dividing the two storeys blocks a line drawn between them |
+| reports the boundary wall as standing in the way of what lies beyond it | A point outside the room is not in sight from within it |
+| does not blind a viewpoint pushed into a wall | A camera inside a wall block still sees the room, the block it starts in being no more in the way than the one it ends in |
+| sees straight across an open floor | An unobstructed line the width of the room is not blocked |
 
 ## Game Mode (`game-mode.test.ts`) — 23 tests
 

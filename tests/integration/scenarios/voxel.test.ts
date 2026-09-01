@@ -26,8 +26,8 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FULL_COLLISION_LAYER_MASK, GRAVITY_SPEED,
-    MAX_ENCODED_VOXEL_GRID_BYTES, MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
-    MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+    MAX_ENCODED_VOXEL_GRID_BYTES, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
     STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
@@ -203,16 +203,16 @@ describe("voxel scenarios", () => {
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             actions: [
-                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
+                { type: "removeVoxel", userIndex: 0, row: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
                 // The same wall two cells over, which holds nothing up → editable, as a control.
-                { type: "removeVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3, layer: 0 },
+                { type: "removeVoxel", userIndex: 0, row: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, col: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3, layer: 0 },
             ],
             assertions: () => {
                 const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
                 const behindDoor = VoxelQueryUtil.getVoxel(voxels,
-                    MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
+                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
                 const plainWall = VoxelQueryUtil.getVoxel(voxels,
-                    MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3)!;
+                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(behindDoor, 0),
                     "the wall the room's door hangs on was taken out").toBe(true);
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(plainWall, 0)).toBe(false);
@@ -229,12 +229,12 @@ describe("voxel scenarios", () => {
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             actions: [
-                { type: "addVoxel", userIndex: 0, row: MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
+                { type: "addVoxel", userIndex: 0, row: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, col: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, layer: 0 },
             ],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const inFrontOfDoor = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
-                    MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
+                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(inFrontOfDoor, 0)).toBe(true);
 
                 // A picture on the boundary wall beside the door, which the old no-build zone
@@ -244,7 +244,7 @@ describe("voxel scenarios", () => {
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
                 const canHang = WallAttachedObjectUtil.canPlaceObject(room, "attachment",
                     canvasTypeIndex,
-                    { x: MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3 + 0.5, y: 1, z: MULTI_PLAYER_ENTRANCE_VOXEL_ROW },
+                    { x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3 + 0.5, y: 1, z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW },
                     { x: 0, y: 0, z: -1 });
                 expect(canHang).toBe(true);
             },
@@ -318,7 +318,7 @@ describe("the room's boundary wall", () => {
 
         // Feet on top of whatever layer he stands on, with the whole of him above it.
         const feetY = (standingOnLayer + 1) * COLLISION_LAYER_HEIGHT;
-        let pos: Vec3 = { x: MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: feetY + 0.5 * PLAYER_HEIGHT,
+        let pos: Vec3 = { x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: feetY + 0.5 * PLAYER_HEIGHT,
             z: startZ };
         PhysicsManager.addObject(room.id, objectId, playerTypeIndex,
             PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex, pos, dir)!);
@@ -343,16 +343,16 @@ describe("the room's boundary wall", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                const startZ = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2.5;
+                const startZ = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2.5;
 
                 // Walking at the entrance cell brings him up against the wall the room's door hangs
                 // on and no further, on either storey. There is no gap in the boundary to be held
                 // short of any more, and nothing invisible doing the holding.
                 const groundZ = walkTowardsEntrance(room, startZ, COLLISION_LAYER_MIN - 1);
-                expect(groundZ).toBeLessThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW);
+                expect(groundZ).toBeLessThan(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW);
 
                 const upperZ = walkTowardsEntrance(room, startZ, STOREY_FLOOR_COLLISION_LAYER);
-                expect(upperZ).toBeLessThan(MULTI_PLAYER_ENTRANCE_VOXEL_ROW);
+                expect(upperZ).toBeLessThan(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW);
             },
         });
     });

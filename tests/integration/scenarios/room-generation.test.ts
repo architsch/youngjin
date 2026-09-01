@@ -1,20 +1,23 @@
 /**
- * Scenario tests: procedural multiplayer room generation
+ * Scenario tests: multiplayer room generation
  *
- * Every Hub/Regular room the server creates is laid out procedurally from a seed. That makes the
- * room's shape unknowable in advance, so what is asserted here is the set of properties every
- * generated room has to have no matter which seed produced it:
+ * Every Hub/Regular room the server creates is born from RoomGenerationUtil, so what it builds is
+ * the definition of a complete room. A Regular room is laid out procedurally from a seed, which
+ * makes its shape unknowable in advance — so what is asserted about it is the set of properties it
+ * has to have no matter which seed produced it.
+ *
+ * What every generated multiplayer room owes, whichever kind it is:
  *
  * - the whole room is walkable from where a player arrives (no region is ever sealed off)
  * - the wall the room's door hangs on is left standing, and the floor in front of it left clear
- * - the boundary wall is intact the whole way round
- * - the upper storey is real, and can be climbed to on foot from the entrance
- * - the stairs up to it are wide enough to walk rather than balance along
+ * - the boundary wall is intact the whole way round, and through the room's full height
  * - nothing it is built out of hangs in mid-air
  * - it is generated with its own way in and nothing else, for the people who use it to furnish
  * - it is built in one of the texture packs its textures were picked against
- * - it is finished with as much decoration as its room type is offered, and no more
- * - a seed reproduces its room exactly, and different seeds give different rooms
+ * - a seed reproduces its room exactly
+ *
+ * On top of that: a Regular room is a procedural layout, in one texture, that differs from seed to
+ * seed; and a Hub is currently two empty storeys (see the suspended block at the foot of this file).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
@@ -33,8 +36,9 @@ import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import {
     COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GRAVITY_SPEED,
-    MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+    NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
+    STOREY_FLOOR_COLLISION_LAYER,
 } from "../../../src/shared/system/sharedConstants";
 
 // A handful of unrelated seeds, so that a property asserted below is not one that happens to
@@ -55,8 +59,8 @@ const DOOR_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
 // Where an arriving player stands. The entrance cell itself is boundary wall — that is what the
 // room's door hangs on — so the room is walked from the cell in front of it, which is the first
 // floor a player ever has under him (see SpawnHotspotUtil).
-const ARRIVAL_ROW = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1;
-const ARRIVAL_COL = MULTI_PLAYER_ENTRANCE_VOXEL_COL;
+const ARRIVAL_ROW = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1;
+const ARRIVAL_COL = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
 
 /** Every cell reachable on foot from where a player arrives. */
 function floodFillFromEntrance(voxelGrid: VoxelGrid): Set<number>
@@ -131,10 +135,6 @@ function countWalkableCells(voxelGrid: VoxelGrid): number
 
 // How tall the player stands, in layers, which is how much headroom a place to stand needs.
 const PLAYER_HEIGHT_IN_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
-
-// The lowest layer that is above the storey floor, i.e. the first one a player who has climbed the
-// stairs is standing among.
-const UPPER_STOREY_LAYER_MIN = STOREY_FLOOR_COLLISION_LAYER + 1;
 
 function layerIsSolid(voxelGrid: VoxelGrid, row: number, col: number, layer: number): boolean
 {
@@ -427,72 +427,382 @@ function encodeVoxelGrid(voxelGrid: VoxelGrid): string
     return new Uint8Array(EncodingUtil.endEncoding(bufferState)).join(",");
 }
 
+// The kinds of room RoomGenerationUtil lays out for itself. A single-player room is not one of
+// them: it is built from the SinglePlayerModeConfig it is named after rather than drawn.
+const MULTIPLAYER_ROOM_TYPES = [
+    {name: "hub", roomType: RoomTypeEnumMap.Hub},
+    {name: "regular", roomType: RoomTypeEnumMap.Regular},
+];
+
 /** A room generated from one specific seed, so that a property can be asserted over many of them. */
-function generateFromSeed(seed: number): Room
+function generateFromSeed(seed: number, roomType: number = RoomTypeEnumMap.Hub): Room
 {
-    const room = RoomGenerationUtil.generateRoom("", RoomTypeEnumMap.Hub, "", "", seed);
-    room.id = `generated-${seed}`; // the physics engine keys its worlds by room id
+    const room = RoomGenerationUtil.generateRoom("", roomType, "", "", seed);
+    room.id = `generated-${roomType}-${seed}`; // the physics engine keys its worlds by room id
     return room;
 }
 
-describe("procedural multiplayer room generation", () => {
+/**
+ * How much block work stands inside the boundary wall between the two heights, counting a cell once
+ * for every layer of it that is solid. A stretch that is entirely hollow counts nothing; one that is
+ * solid throughout counts every interior cell at every layer of it.
+ */
+function countInteriorBlocks(voxelGrid: VoxelGrid, layerMin: number, layerMax: number): number
+{
+    let count = 0;
+    for (let row = 1; row < NUM_VOXEL_ROWS - 1; ++row)
+    {
+        for (let col = 1; col < NUM_VOXEL_COLS - 1; ++col)
+        {
+            for (let layer = layerMin; layer <= layerMax; ++layer)
+            {
+                if (layerIsSolid(voxelGrid, row, col, layer))
+                    ++count;
+            }
+        }
+    }
+    return count;
+}
+
+const NUM_INTERIOR_CELLS = (NUM_VOXEL_ROWS - 2) * (NUM_VOXEL_COLS - 2);
+
+describe("every generated multiplayer room", () => {
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
     it("leaves every part of the room reachable on foot from the entrance", () => {
-        for (const seed of SEEDS)
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
-            const {voxelGrid} = generateFromSeed(seed);
-            const reachable = floodFillFromEntrance(voxelGrid);
-            const walkable = countWalkableCells(voxelGrid);
+            for (const seed of SEEDS)
+            {
+                const {voxelGrid} = generateFromSeed(seed, roomType);
+                const reachable = floodFillFromEntrance(voxelGrid);
+                const walkable = countWalkableCells(voxelGrid);
 
-            expect(walkable, `seed ${seed}`).toBeGreaterThan(0);
-            expect(reachable.size, `seed ${seed} :: some of the room is walled off`).toBe(walkable);
+                expect(walkable, `${name} seed ${seed}`).toBeGreaterThan(0);
+                expect(reachable.size,
+                    `${name} seed ${seed} :: some of the room is walled off`).toBe(walkable);
+            }
         }
     });
 
     it("leaves the wall the door hangs on standing, and the floor in front of it clear", () => {
-        for (const seed of SEEDS)
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
-            const {voxelGrid} = generateFromSeed(seed);
-
-            // The entrance cell is wall, not a hole: the room's door is hung on it, and a wall
-            // attachment with nothing behind it is refused (see WallAttachedObjectUtil).
-            expect(isWalkable(voxelGrid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL),
-                `seed ${seed} :: the wall the door hangs on was carved away`).toBe(false);
-
-            // The approach a player walks in along, which nothing generated may stand in.
-            for (let row = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2; row < MULTI_PLAYER_ENTRANCE_VOXEL_ROW; ++row)
+            for (const seed of SEEDS)
             {
-                for (let col = MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1; col <= MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1; ++col)
+                const {voxelGrid} = generateFromSeed(seed, roomType);
+
+                // The entrance cell is wall, not a hole: the room's door is hung on it, and a wall
+                // attachment with nothing behind it is refused (see WallAttachedObjectUtil).
+                expect(isWalkable(voxelGrid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL),
+                    `${name} seed ${seed} :: the wall the door hangs on was carved away`).toBe(false);
+
+                // The approach a player walks in along, which nothing generated may stand in.
+                for (let row = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2; row < INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW; ++row)
                 {
-                    expect(isWalkable(voxelGrid, row, col), `seed ${seed} :: (${row},${col}) is blocked`).toBe(true);
+                    for (let col = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1; col <= INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1; ++col)
+                    {
+                        expect(isWalkable(voxelGrid, row, col),
+                            `${name} seed ${seed} :: (${row},${col}) is blocked`).toBe(true);
+                    }
                 }
             }
         }
     });
 
     it("keeps the boundary wall solid the whole way round", () => {
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            for (const seed of SEEDS)
+            {
+                const {voxelGrid} = generateFromSeed(seed, roomType);
+
+                for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+                {
+                    for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+                    {
+                        // Including the entrance: the way in is a door hung on that wall rather
+                        // than a hole cut through it, so nothing breaks the boundary any more.
+                        const onBoundary = row == 0 || col == 0 ||
+                            row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
+                        if (!onBoundary)
+                            continue;
+                        expect(isWalkable(voxelGrid, row, col),
+                            `${name} seed ${seed} :: (${row},${col}) is not solid`).toBe(false);
+                    }
+                }
+            }
+        }
+    });
+
+    it("leaves nothing standing in mid-air", () => {
+        // Every block a generated room is built out of is held up by something: props stand on the
+        // storey they furnish, and a storey a room was left without is one that nothing may be
+        // stood on at all.
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            for (const seed of SEEDS)
+            {
+                const {voxelGrid} = generateFromSeed(seed, roomType);
+                const floating = findFloatingBlocks(voxelGrid);
+                expect(floating,
+                    `${name} seed ${seed} :: ${floating.length} block(s) hang in mid-air`).toEqual([]);
+            }
+        }
+    });
+
+    it("keeps the upper storey inside the room", () => {
+        // The boundary wall has to stand through the room's whole height, not just the part of it
+        // the ground floor occupies — otherwise reaching the storey above is a way out of the room.
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            for (const seed of SEEDS)
+            {
+                const {voxelGrid} = generateFromSeed(seed, roomType);
+                for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+                {
+                    for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+                    {
+                        const onBoundary = row == 0 || col == 0 ||
+                            row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
+                        if (!onBoundary)
+                            continue;
+                        for (let layer = STOREY_FLOOR_COLLISION_LAYER; layer <= COLLISION_LAYER_MAX; ++layer)
+                        {
+                            expect(layerIsSolid(voxelGrid, row, col, layer),
+                                `${name} seed ${seed} :: the boundary at (${row},${col}) is open at layer ${layer}`)
+                                .toBe(true);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    it("furnishes a multiplayer room with its own way in and nothing else", () => {
+        // A Hub or Regular room is meant to be furnished by the people who use it, so what it owes
+        // them is somewhere to build rather than a full house — an object generation placed is one
+        // somebody has to clear away before he can put his own there.
+        //
+        // Its door is the one exception, and is not really furniture: a room with no door is a room
+        // nobody can leave, and it is what an arriving player is put down behind besides. It stands
+        // on the boundary wall at the room's entrance cell, facing into the room, and offers itself
+        // as the way in.
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            for (const seed of SEEDS)
+            {
+                const objects = Object.values(generateFromSeed(seed, roomType).objectById);
+                expect(objects.length, `${name} seed ${seed}`).toBe(1);
+
+                const [door] = objects;
+                expect(door.objectTypeIndex, `${name} seed ${seed}`).toBe(DOOR_OBJECT_TYPE_INDEX);
+                expect(DoorObjectUtil.getDoorType(door), `${name} seed ${seed}`)
+                    .toBe(DoorTypeEnumMap.DefaultEntrance);
+                expect(door.transform.pos.x, `${name} seed ${seed}`)
+                    .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, 3);
+                expect(door.transform.pos.z, `${name} seed ${seed}`)
+                    .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, 3);
+                expect(door.transform.dir.z, `${name} seed ${seed}`).toBeCloseTo(-1, 3);
+            }
+        }
+    });
+
+    it("builds the room in a texture pack whose palettes it drew from", () => {
+        // A room's textures are cell positions within one specific pack's atlas, so a room that
+        // came out in a pack nothing was picked against would be finished at random.
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            for (const seed of SEEDS)
+            {
+                const room = generateFromSeed(seed, roomType);
+                expect(RoomPaletteMap.getPalettes(room.texturePackPath).length,
+                    `${name} seed ${seed} :: generated in "${room.texturePackPath}", which has no palettes`)
+                    .toBeGreaterThan(0);
+            }
+        }
+
+        // A hub may be finished in any pack the game ships, and the one it wears is genuinely drawn
+        // rather than every hub landing on the same one. (A regular room is deliberately always the
+        // one plain pack — see the regular-room block below.)
+        const packsUsed = new Set(SEEDS.map(seed => generateFromSeed(seed).texturePackPath));
+        expect(packsUsed.size).toBeGreaterThan(1);
+    });
+
+    it("keeps every palette within the reach of a texture pack atlas", () => {
+        // The voxel texture pack atlas is a square grid of cells, and a quad's texture is an index
+        // into it — so a palette naming a cell past the end of the grid renders as nothing.
+        const NUM_TEXTURES_PER_PACK = 64;
+        for (const texturePackPath of RoomPaletteMap.getTexturePackPaths())
+        {
+            const palettes = RoomPaletteMap.getPalettes(texturePackPath);
+            expect(palettes.length, texturePackPath).toBeGreaterThan(0);
+            for (const palette of palettes)
+            {
+                for (const textureIndex of Object.values(palette))
+                {
+                    expect(textureIndex, `${texturePackPath} :: texture ${textureIndex}`)
+                        .toBeGreaterThanOrEqual(0);
+                    expect(textureIndex, `${texturePackPath} :: texture ${textureIndex}`)
+                        .toBeLessThan(NUM_TEXTURES_PER_PACK);
+                }
+            }
+        }
+    });
+
+    it("rebuilds the same room from the same seed", () => {
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            const first = generateFromSeed(SEEDS[0], roomType);
+            const again = generateFromSeed(SEEDS[0], roomType);
+
+            expect(encodeVoxelGrid(again.voxelGrid), name).toBe(encodeVoxelGrid(first.voxelGrid));
+            expect(again.texturePackPath, name).toBe(first.texturePackPath);
+        }
+    });
+
+    it("is what the room generator builds Hub and Regular rooms with", () => {
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            const room = RoomGenerationUtil.generateRoom("", roomType);
+
+            // A room that came out of nothing but the base grid would be solid throughout.
+            expect(countWalkableCells(room.voxelGrid), name).toBeGreaterThan(0);
+            expect(floodFillFromEntrance(room.voxelGrid).size, name)
+                .toBe(countWalkableCells(room.voxelGrid));
+
+            // The room carries the texture pack its contents were picked against, so that the
+            // room it is saved as looks like the room that was generated.
+            expect(RoomPaletteMap.getPalettes(room.texturePackPath).length, name).toBeGreaterThan(0);
+        }
+    });
+});
+
+describe("a regular room's procedural layout", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    it("carves rooms out of the solid mass rather than hollowing the whole storey", () => {
+        // A regular room starts as one solid chunk with a few small areas taken out of it, the rest
+        // being left for its owner to mine out block by block. So a room that came out with its
+        // whole interior open would be one the carving never ran on.
+        for (const seed of SEEDS)
+        {
+            const {voxelGrid} = generateFromSeed(seed, RoomTypeEnumMap.Regular);
+            const walkable = countWalkableCells(voxelGrid);
+            expect(walkable, `seed ${seed}`).toBeGreaterThan(0);
+            expect(walkable, `seed ${seed} :: the whole storey was hollowed out`)
+                .toBeLessThan(NUM_INTERIOR_CELLS);
+        }
+    });
+
+    it("is one storey, with the mass above it left standing", () => {
+        // It is a cosy home rather than a lobby: the storey floor and everything over it stay
+        // solid, which is also what a room mined upwards from starts as.
+        for (const seed of SEEDS)
+        {
+            const {voxelGrid} = generateFromSeed(seed, RoomTypeEnumMap.Regular);
+            const above = countInteriorBlocks(voxelGrid,
+                STOREY_FLOOR_COLLISION_LAYER, COLLISION_LAYER_MAX);
+            const layersAbove = COLLISION_LAYER_MAX - STOREY_FLOOR_COLLISION_LAYER + 1;
+            expect(above, `seed ${seed}`).toBe(NUM_INTERIOR_CELLS * layersAbove);
+        }
+    });
+
+    it("is handed over plain, in one texture throughout", () => {
+        // A regular room belongs to one person, and is a blank room for its owner to decorate
+        // himself. How much decoration it comes out wearing is settled entirely by the texture
+        // packs and palettes its room type is offered — so this is a test that generation reads
+        // those parameters at all, rather than finishing every room alike.
+        for (const seed of SEEDS)
+        {
+            const regular = generateFromSeed(seed, RoomTypeEnumMap.Regular);
+            expect(texturesUsedIn(regular.voxelGrid).size, `seed ${seed}`).toBe(1);
+        }
+    });
+
+    it("draws a different room from a different seed", () => {
+        const first = generateFromSeed(SEEDS[0], RoomTypeEnumMap.Regular);
+        const other = generateFromSeed(SEEDS[1], RoomTypeEnumMap.Regular);
+        expect(encodeVoxelGrid(other.voxelGrid)).not.toBe(encodeVoxelGrid(first.voxelGrid));
+    });
+});
+
+describe("a hub room", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    // Procedural generation is currently switched off for hubs — see the note in HubRoomBuilder —
+    // and a hub is built as two empty storeys instead. These describe that shape, so that the
+    // temporary arrangement is asserted rather than merely not contradicted.
+
+    it("stands open through both storeys, from wall to wall", () => {
+        // Nothing at all is left inside either storey: no interior walls, no block work, no props.
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed);
 
-            for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
-            {
-                for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-                {
-                    // Including the entrance: the way in is a door hung on that wall rather than a
-                    // hole cut through it, so nothing breaks the boundary any more.
-                    const onBoundary = row == 0 || col == 0 ||
-                        row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
-                    if (!onBoundary)
-                        continue;
-                    expect(isWalkable(voxelGrid, row, col), `seed ${seed} :: (${row},${col}) is not solid`).toBe(false);
-                }
-            }
+            expect(countInteriorBlocks(voxelGrid, COLLISION_LAYER_MIN,
+                COLLISION_LAYER_MIN + NUM_COLLISION_LAYERS_PER_STOREY - 1),
+                `seed ${seed} :: something is standing on the ground floor`).toBe(0);
+            expect(countInteriorBlocks(voxelGrid, STOREY_FLOOR_COLLISION_LAYER + 1,
+                STOREY_FLOOR_COLLISION_LAYER + NUM_COLLISION_LAYERS_PER_STOREY),
+                `seed ${seed} :: something is standing on the upper storey`).toBe(0);
         }
+    });
+
+    it("is two storeys of the same height, rather than one tall room", () => {
+        // The slab between them is what makes the upper storey a floor at all, and the cap over the
+        // upper one is what stops it being the taller of the two. Between them they are the only
+        // things left standing inside a hub.
+        for (const seed of SEEDS)
+        {
+            const {voxelGrid} = generateFromSeed(seed);
+
+            expect(countInteriorBlocks(voxelGrid,
+                STOREY_FLOOR_COLLISION_LAYER, STOREY_FLOOR_COLLISION_LAYER),
+                `seed ${seed} :: the storey floor has holes in it`).toBe(NUM_INTERIOR_CELLS);
+            expect(countInteriorBlocks(voxelGrid, COLLISION_LAYER_MAX, COLLISION_LAYER_MAX),
+                `seed ${seed} :: the upper storey is not capped`).toBe(NUM_INTERIOR_CELLS);
+            expect(countCellsOpenThroughBothStoreys(voxelGrid),
+                `seed ${seed} :: a cell is open from the floor to the ceiling`).toBe(0);
+        }
+    });
+
+    it("comes out in one texture, whichever pack it drew", () => {
+        // Nothing is picked from the hub's palettes while its rooms are not being drawn, so what
+        // its faces carry is the one plain texture of whichever pack it landed on.
+        for (const seed of SEEDS)
+        {
+            expect(texturesUsedIn(generateFromSeed(seed).voxelGrid).size, `seed ${seed}`).toBe(1);
+        }
+    });
+});
+
+//----------------------------------------------------------------------------------------------
+// Suspended: what a procedurally generated hub owes
+//
+// A hub used to be the one room type generation gave two storeys, a flight of steps between them,
+// and block work standing about in it. That is switched off for the moment — HubRoomBuilder builds
+// two empty storeys and keeps the procedural pipeline commented out beside them — so none of these
+// properties hold of anything the generator currently produces.
+//
+// They are kept here rather than deleted because the switch is meant to be flipped back, and
+// because they are the only thing asserting the parts of ProceduralRoomBuilder that nothing else
+// calls any more: allocateStaircaseCapableAreas, raiseSecondStoreys, and the staircase planner
+// behind them. Un-skip this block in the same change that restores HubRoomBuilder's pipeline.
+//----------------------------------------------------------------------------------------------
+describe.skip("a procedurally generated hub", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
     it("gives every room an upper storey a player can climb to and walk around on", () => {
@@ -557,44 +867,6 @@ describe("procedural multiplayer room generation", () => {
         }
     });
 
-    it("leaves nothing standing in mid-air", () => {
-        // Every block a generated room is built out of is held up by something: props stand on the
-        // storey they furnish, and a storey a room was left without is one that nothing may be
-        // stood on at all.
-        for (const seed of SEEDS)
-        {
-            const {voxelGrid} = generateFromSeed(seed);
-            const floating = findFloatingBlocks(voxelGrid);
-            expect(floating,
-                `seed ${seed} :: ${floating.length} block(s) hang in mid-air`).toEqual([]);
-        }
-    });
-
-    it("keeps the upper storey inside the room", () => {
-        // The boundary wall has to stand through the room's whole height, not just the part of it
-        // the ground floor occupies — otherwise climbing the stairs is a way out of the room.
-        for (const seed of SEEDS)
-        {
-            const {voxelGrid} = generateFromSeed(seed);
-            for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
-            {
-                for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-                {
-                    const onBoundary = row == 0 || col == 0 ||
-                        row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
-                    if (!onBoundary)
-                        continue;
-                    for (let layer = STOREY_FLOOR_COLLISION_LAYER; layer <= COLLISION_LAYER_MAX; ++layer)
-                    {
-                        expect(layerIsSolid(voxelGrid, row, col, layer),
-                            `seed ${seed} :: the boundary at (${row},${col}) is open at layer ${layer}`)
-                            .toBe(true);
-                    }
-                }
-            }
-        }
-    });
-
     it("opens some of its rooms through both storeys, and floors over the rest", () => {
         // A room that is uniformly two storeys of the same height reads as a filing cabinet. Some
         // of its spaces are deliberately left open from the floor to the ceiling instead — which is
@@ -617,109 +889,28 @@ describe("procedural multiplayer room generation", () => {
             "no generated room came out with a space open through both storeys").toBeGreaterThan(0);
     });
 
-    it("furnishes a multiplayer room with its own way in and nothing else", () => {
-        // A Hub or Regular room is meant to be furnished by the people who use it, so what it owes
-        // them is somewhere to build rather than a full house — an object generation placed is one
-        // somebody has to clear away before he can put his own there.
-        //
-        // Its door is the one exception, and is not really furniture: a room with no door is a room
-        // nobody can leave, and it is what an arriving player is put down behind besides. It stands
-        // on the boundary wall at the room's entrance cell, facing into the room, and offers itself
-        // as the way in.
-        for (const seed of SEEDS)
-        {
-            const objects = Object.values(generateFromSeed(seed).objectById);
-            expect(objects.length, `seed ${seed}`).toBe(1);
-
-            const [door] = objects;
-            expect(door.objectTypeIndex, `seed ${seed}`).toBe(DOOR_OBJECT_TYPE_INDEX);
-            expect(DoorObjectUtil.getDoorType(door), `seed ${seed}`)
-                .toBe(DoorTypeEnumMap.DefaultEntrance);
-            expect(door.transform.pos.x, `seed ${seed}`)
-                .toBeCloseTo(MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, 3);
-            expect(door.transform.pos.z, `seed ${seed}`)
-                .toBeCloseTo(MULTI_PLAYER_ENTRANCE_VOXEL_ROW, 3);
-            expect(door.transform.dir.z, `seed ${seed}`).toBeCloseTo(-1, 3);
-        }
-    });
-
-    it("builds the room in a texture pack whose palettes it drew from", () => {
-        // A room's textures are cell positions within one specific pack's atlas, so a room that
-        // came out in a pack nothing was picked against would be finished at random.
-        const packsUsed = new Set<string>();
-        for (const seed of SEEDS)
-        {
-            const room = generateFromSeed(seed);
-            expect(RoomPaletteMap.getPalettes(room.texturePackPath).length,
-                `seed ${seed} :: generated in "${room.texturePackPath}", which has no palettes`)
-                .toBeGreaterThan(0);
-            packsUsed.add(room.texturePackPath);
-        }
-        // ...and the pack is genuinely drawn, rather than every room landing on the same one.
-        expect(packsUsed.size).toBeGreaterThan(1);
-    });
-
-    it("decorates a hub, and hands a regular room over plain", () => {
-        // How much decoration a room comes out wearing is settled entirely by how many texture
-        // packs and palettes its room type is offered to draw from — so this is a test that
-        // generation reads those parameters at all, rather than finishing every room alike.
-        // A hub is the room the game hands to everybody and is worth decorating; a regular room
-        // belongs to one person, and is a blank room for its owner to decorate himself.
+    it("decorates the room it hands to everybody", () => {
+        // A hub is the room the game hands to everybody and is worth decorating, so its spaces are
+        // finished in the several palettes hand-picked for whichever pack it drew — as much
+        // decoration as its RoomPaletteSelectionParams offers it, and no more.
         for (const seed of SEEDS)
         {
             expect(texturesUsedIn(generateFromSeed(seed).voxelGrid).size,
-                `seed ${seed} :: hub`).toBeGreaterThan(1);
-
-            const regular = RoomGenerationUtil.generateRoom("", RoomTypeEnumMap.Regular, "", "", seed);
-            expect(texturesUsedIn(regular.voxelGrid).size, `seed ${seed} :: regular`).toBe(1);
+                `seed ${seed}`).toBeGreaterThan(1);
         }
     });
 
-    it("keeps every palette within the reach of a texture pack atlas", () => {
-        // The voxel texture pack atlas is a square grid of cells, and a quad's texture is an index
-        // into it — so a palette naming a cell past the end of the grid renders as nothing.
-        const NUM_TEXTURES_PER_PACK = 64;
-        for (const texturePackPath of RoomPaletteMap.getTexturePackPaths())
+    it("stands interior walls in the room, rather than hollowing the whole storey", () => {
+        for (const seed of SEEDS)
         {
-            const palettes = RoomPaletteMap.getPalettes(texturePackPath);
-            expect(palettes.length, texturePackPath).toBeGreaterThan(0);
-            for (const palette of palettes)
-            {
-                for (const textureIndex of Object.values(palette))
-                {
-                    expect(textureIndex, `${texturePackPath} :: texture ${textureIndex}`)
-                        .toBeGreaterThanOrEqual(0);
-                    expect(textureIndex, `${texturePackPath} :: texture ${textureIndex}`)
-                        .toBeLessThan(NUM_TEXTURES_PER_PACK);
-                }
-            }
+            const {voxelGrid} = generateFromSeed(seed);
+            expect(countWalkableCells(voxelGrid), `seed ${seed}`).toBeLessThan(NUM_INTERIOR_CELLS);
         }
     });
 
-    it("rebuilds the same room from the same seed, and a different one from a different seed", () => {
+    it("draws a different room from a different seed", () => {
         const first = generateFromSeed(SEEDS[0]);
-        const again = generateFromSeed(SEEDS[0]);
         const other = generateFromSeed(SEEDS[1]);
-
-        expect(encodeVoxelGrid(again.voxelGrid)).toBe(encodeVoxelGrid(first.voxelGrid));
-        expect(again.texturePackPath).toBe(first.texturePackPath);
         expect(encodeVoxelGrid(other.voxelGrid)).not.toBe(encodeVoxelGrid(first.voxelGrid));
-    });
-
-    it("is what the room generator builds Hub and Regular rooms with", () => {
-        for (const roomType of [RoomTypeEnumMap.Hub, RoomTypeEnumMap.Regular])
-        {
-            const room = RoomGenerationUtil.generateRoom("", roomType);
-
-            // A room that came out of nothing but the base grid would be solid throughout; one
-            // that was merely hollowed out would have no interior walls standing in it at all.
-            expect(countWalkableCells(room.voxelGrid)).toBeGreaterThan(0);
-            expect(countWalkableCells(room.voxelGrid)).toBeLessThan((NUM_VOXEL_ROWS - 2) * (NUM_VOXEL_COLS - 2));
-            expect(floodFillFromEntrance(room.voxelGrid).size).toBe(countWalkableCells(room.voxelGrid));
-
-            // The room carries the texture pack its contents were picked against, so that the
-            // room it is saved as looks like the room that was generated.
-            expect(RoomPaletteMap.getPalettes(room.texturePackPath).length).toBeGreaterThan(0);
-        }
     });
 });

@@ -42,6 +42,14 @@ change usually lands in one; occasionally it contradicts a sentence in a second 
 the same mechanism in passing, and that second one is the one that gets missed — grep for the
 concept across `/docs` rather than trusting the index alone.
 
+**That grep will hit `/docs/plans`, and those hits are not findings.** Plan documents are dated
+historical records of what was known and intended on one day, and they are **never edited after it** —
+not to follow a rename, not to fix a stale path, not to note what was eventually built. A plan that
+disagrees with today's code is doing its job. Skip every match under `/docs/plans`, and do not add
+plans to the README index either. The full rule is
+[`../../rules/plan-documents.md`](../../rules/plan-documents.md); this pass is the one most likely to
+break it, because sweeping `/docs` for stale descriptions is exactly what it does.
+
 **Rewrite the passage that is now wrong; do not append the new behaviour beside it.** A page that
 grows a paragraph per change becomes a sedimentary record rather than a description of the present,
 which is the failure CLAUDE.md's documentation guidelines are written against. "How an improvement is
@@ -54,7 +62,8 @@ Three documents sit outside `/docs` and are checked separately:
   directory, a new subsystem under `/src`, or a new architectural invariant belongs here. Not
   individual features.
 - **README.md** — its documentation index. **A new page under `/docs` that is not linked here does
-  not exist**, so any page you add gets a line in the index in the same change.
+  not exist**, so any page you add gets a line in the index in the same change. `/docs/plans` is the
+  exception: the index lists the pages that describe the present, and plans are not among them.
 - **`.claude/skills/*/SKILL.md`** — out of scope here. The `skill-upkeep` skill owns those.
 
 ### The license files are documentation too
@@ -62,7 +71,8 @@ Three documents sit outside `/docs` and are checked separately:
 `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md` describe *what ships and under whose terms*, and
 they go stale exactly the way a `/docs` page does — except that nothing fails when they do, and the
 consequence is legal rather than confusing. CLAUDE.md's **"The License Files Must Describe What
-Actually Ships"** section is the rule; this is where the pass enforces it.
+Actually Ships"** rule, in full at [`../../rules/license-files.md`](../../rules/license-files.md), is
+the rule; this is where the pass enforces it.
 
 Four questions, answered from the Step 1 change set:
 
@@ -110,14 +120,17 @@ what keeps these pages from going stale:
   source file.
 - **Exception:** `/docs/testing`, `/docs/devOps`, and DB/migration specifics elsewhere may carry
   concrete commands, schema and version steps. Precision genuinely matters there.
+- **`/docs/plans` is governed by none of the above, because it is not describing the present.** These
+  are dated records, edited only on the day they were written. Never rewrite one to match the code.
 - **A small UI feature does not get its own page.** It gets a code comment, and a sentence in an
   existing page if it changes something that page describes. Adding a page per feature is how a
   documentation set becomes unreadable.
 
 ### One architectural check worth making every time
 
-CLAUDE.md's rule that **room generation defines what a room is** is the invariant most easily broken
-by a change that looks unrelated. If this change introduced a room-level parameter, verify that
+CLAUDE.md's rule that **room generation defines what a room is** — in full at
+[`../../rules/room-generation.md`](../../rules/room-generation.md) — is the invariant most easily
+broken by a change that looks unrelated. If this change introduced a room-level parameter, verify that
 `RoomGenerationUtil` and the procedural `RoomBuilder`s decide it, that every `SinglePlayerModeConfig`
 declares it on its `RoomBuilderParams`, and that any curated data behind it covers every option a
 room can be generated with. A parameter no generator sets is one that every room in the game silently

@@ -279,17 +279,19 @@ export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 // as far as it can see instead (see WorldSpaceSelectionUtil).
 export const MAX_WORLDSPACE_SELECT_DIST = 10;
 
-// Where a multiplayer room's own door is hung: one fixed cell of one boundary wall, which is also
-// what an arriving player is put down behind unless a door of the room says otherwise (see
-// SpawnHotspotUtil). A singleplayer room names its own entrance cell in its SinglePlayerModeConfig.
-export const MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
-export const MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
+// Where a multiplayer room's own door is hung when the room is generated: one cell of one boundary
+// wall, which is also what an arriving player is put down behind unless a door of the room says
+// otherwise (see SpawnHotspotUtil). Only the starting point — an admin is free to slide that door
+// along the wall or take it down afterwards, so nothing may read this as where a room's way in
+// stands now. A singleplayer room names its own entrance cell in its SinglePlayerModeConfig.
+export const INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
+export const INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
 
 // How tall the doorway a multiplayer room used to be entered through stood, in collision layers.
 // Nothing carves one any more — a room's way in is a door hung on the boundary wall — but this is a
 // fact about the format older rooms were written in, and the conversions that carry them across need
 // it to fill that stretch of wall back in.
-export const MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS = 5;
+export const INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS = 5;
 
 // UI
 

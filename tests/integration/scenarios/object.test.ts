@@ -19,7 +19,7 @@ import SetObjectTransformSignal from "../../../src/shared/object/types/setObject
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
-import { MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
+import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
 
 // Players always spawn behind one of the room's doors, regardless of where they were before, and a
 // fixture room has exactly one (see roomContent.ts). Asked of the room rather than written out, so
@@ -34,12 +34,12 @@ function spawnPos(roomID: string): {x: number, z: number}
 
 const PLAYER_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Player");
 
-const SPAWN_X = MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5;
+const SPAWN_X = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5;
 
 // A point just inside the room from its way in, which the walking scenarios below measure their
 // distances from. It only has to be somewhere a player can stand near the entrance, so it is written
 // out rather than asked for — an action has to be described before the room it runs in exists.
-const SPAWN_Z = MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 0.5;
+const SPAWN_Z = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 0.5;
 
 describe("object scenarios", () => {
     beforeEach(() => {

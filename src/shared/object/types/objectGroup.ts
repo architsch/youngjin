@@ -8,8 +8,8 @@ import AddObjectSignal from "./addObjectSignal";
 import { ObjectMetadata } from "./objectMetadata";
 import ObjectTransform from "./objectTransform";
 import DoorObjectUtil from "../util/doorObjectUtil";
-import { COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
 
 let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
@@ -227,7 +227,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
             return objectGroup;
 
         const entranceDoor = DoorObjectUtil.makeEntranceDoor(temp_roomID,
-            MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
+            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
         objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
         return objectGroup;
     },

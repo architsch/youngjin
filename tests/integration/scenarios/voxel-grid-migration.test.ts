@@ -37,8 +37,8 @@ import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
-    MULTI_PLAYER_ENTRANCE_VOXEL_COL, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM,
     NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
@@ -167,12 +167,12 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
 
     it("fills the doorway in, and finishes it like the wall it is now part of", () => {
         const grid = decode(bytes);
-        const doorway = getVoxel(grid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL);
-        const wallBeside = getVoxel(grid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-            MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1);
+        const doorway = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
+        const wallBeside = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1);
 
         for (let layer = COLLISION_LAYER_MIN;
-            layer < COLLISION_LAYER_MIN + MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS; ++layer)
+            layer < COLLISION_LAYER_MIN + INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS; ++layer)
         {
             // Solid, so that a door has something to hang on...
             expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(doorway, layer)).toBe(true);
@@ -314,7 +314,7 @@ describe("the migrated room as a room", () => {
         // (see WallAttachedObjectUtil). So this is checked on the far side of the migration rather
         // than only where the fill is written.
         const grid = decode(loadFixture("procedural_1").bytes);
-        const entrance = getVoxel(grid, MULTI_PLAYER_ENTRANCE_VOXEL_ROW, MULTI_PLAYER_ENTRANCE_VOXEL_COL);
+        const entrance = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
         expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(entrance, COLLISION_LAYER_MIN)).toBe(true);
     });
 });

@@ -1,6 +1,6 @@
 ---
 name: skill-upkeep
-description: Audit and repair this project's own Claude skills under .claude/skills — verify every command, path, script flag, selector and factual claim a SKILL.md makes still holds against the current codebase, fix what has drifted, and tighten instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, or as the first phase of the release-train workflow.
+description: Audit and repair this project's own Claude instruction files under .claude — the skills, the shared writing-style page, and the project rules in .claude/rules — verifying every command, path, script flag, selector and factual claim still holds against the current codebase, fixing what has drifted, and tightening instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, or as the first phase of the release-train workflow.
 ---
 
 # Skill Upkeep
@@ -31,7 +31,7 @@ that drives it needs checking against the new behaviour.
 Then enumerate the skills themselves:
 
 ```bash
-ls .claude/skills/*/SKILL.md .claude/skills/*/reference/*.md .claude/writing-style.md
+ls .claude/skills/*/SKILL.md .claude/skills/*/reference/*.md .claude/writing-style.md .claude/rules/*.md
 ```
 
 Every one gets checked, not only the ones the diff touched — drift accumulates from changes made
@@ -42,6 +42,14 @@ and `distribution-push` both write public copy against it. Audit it like any oth
 treat a style rule that has migrated into one of those skills as drift to reverse — rules about
 *how* to write belong in the shared file, rules about what a particular piece must contain belong
 in the skill that owns it.
+
+`.claude/rules/` holds the project invariants that CLAUDE.md states in short and delegates the
+reasoning for — room generation, the license files, plan documents. They are instructions like any
+other file here, and they make the same checkable claims (module and type names, paths, which files
+a rule reaches), so they drift the same way. Two extra checks for these: the summary of each rule
+in CLAUDE.md must still say the same thing as the page it links to — a rule that has been sharpened
+in one place and not the other is worse than one written down once — and every link between
+CLAUDE.md and `.claude/rules/` must resolve in both directions.
 
 ## Step 2 — Verify every checkable claim
 
