@@ -15,14 +15,15 @@ import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEn
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
+import RestrictedZone from "../../../shared/voxel/types/restrictedZone";
 import RoomPaletteMap from "../../../shared/room/generation/maps/roomPaletteMap";
 import WallAttachedObjectUtil from "../../../shared/object/util/wallAttachedObjectUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
-    MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
-    SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+    MAX_RESTRICTED_ZONES, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
+    NUM_VOXEL_ROWS, PLAYER_HEIGHT, SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
@@ -824,6 +825,48 @@ const AutomationSetupUtil =
                     return {objectId};
                 },
 
+                // Lays the stretches of the room that only a superuser may edit over the set, so
+                // that what a zone looks like can be photographed (see
+                // @docs/gameplay/restricted_zone.md). Each one is a rectangle of cells, given in
+                // rows and columns alone because a zone always reaches the whole height of the room.
+                //
+                // The list replaces whatever the room holds rather than adding to it, which is how
+                // the game itself changes them: drawing a zone, moving one, resizing one and taking
+                // one away are all the same request. Called with nothing it only reports, which is
+                // how a script reads back what it laid.
+                //
+                // What is arranged here is the state; the red outlines are the game's own, painted
+                // by the voxel material over every face of every cell a zone stands over. **They
+                // are drawn in edit mode only** — a shot of them stands the zones up and then
+                // enters the mode through the button that does it, the sandbox's free camera being
+                // unmoved by either.
+                //
+                // The game's own rule for who may lay a zone is asked rather than skipped, unlike
+                // everywhere else here: a single-player room's own player is its superuser, so the
+                // check passes on its own terms, and asking it is also what catches a rectangle
+                // that is inside out or off the edge of the grid.
+                restrictedZones: (zones?: {rowMin: number, rowMax: number,
+                    colMin: number, colMax: number}[]) =>
+                {
+                    const room = requireSandboxRoom("Laying restricted zones");
+                    if (zones != undefined)
+                    {
+                        const laid = zones.map(zone => new RestrictedZone(
+                            zone.rowMin, zone.rowMax, zone.colMin, zone.colMax));
+                        if (!ClientVoxelManager.setRestrictedZones(room, laid))
+                        {
+                            throw new Error(`The room will not take those zones. Each one is whole ` +
+                                `cells of the grid — rows 0 to ${NUM_VOXEL_ROWS - 1}, columns 0 to ` +
+                                `${NUM_VOXEL_COLS - 1} — with each minimum no greater than its ` +
+                                `maximum, and a room holds at most ${MAX_RESTRICTED_ZONES} of them.`);
+                        }
+                    }
+                    return room.voxelGrid.restrictedZones.map(zone => ({
+                        rowMin: zone.rowMin, rowMax: zone.rowMax,
+                        colMin: zone.colMin, colMax: zone.colMax,
+                    }));
+                },
+
                 // Empties the set back to the bare floor it was generated as, so one session can
                 // arrange several shots without each inheriting the last one's scenery.
                 //
@@ -842,6 +885,11 @@ const AutomationSetupUtil =
                         if (object.objectTypeIndex != playerTypeIndex)
                             await ClientObjectManager.removeObject(object.objectId, false);
                     }
+
+                    // A zone outlines whatever cells it stands over, so one left behind would paint
+                    // the *next* set red wherever the two happen to overlap — scenery inherited
+                    // from the last shot, which is the whole of what this call is for.
+                    ClientVoxelManager.setRestrictedZones(room, []);
 
                     FreeCameraPose.reset();
                     return AutomationSetupUtil.describeFreeCamera();

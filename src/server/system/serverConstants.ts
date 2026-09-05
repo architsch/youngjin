@@ -33,10 +33,6 @@ export const ACQUISITION_SOURCE_MAX_LENGTH = 32;
 // spanning an unbounded number of documents has to be split into commits of at most this size.
 export const DB_MAX_WRITES_PER_COMMIT = 500;
 
-// Hard cap on the number of editors a room owner can register. Anti-abuse: without
-// a bound, an owner could inflate DB read/write cost by stuffing the editors list.
-export const MAX_ROOM_EDITORS = 32;
-
 // Minimum inactivity gap separating two "distinct logins". Identified requests arriving
 // closer together than this belong to the same visit and must not inflate loginCount
 // (a single visit fires many identified requests: page load, room APIs, etc.).

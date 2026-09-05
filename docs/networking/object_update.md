@@ -17,6 +17,11 @@ Reference: @src/shared/object/util/objectUpdateUtil.ts , @src/server/object/serv
     - **On success:** it relays the `RemoveObjectSignal` to everyone else, who remove and despawn the object.
     - **On failure:** it logs an error. No rollback is sent, since the removal was already applied optimistically.
 
+## Restricted Zones
+Adding, moving, removing and changing the metadata of an object are each refused where the object is one the room keeps and its collider would meet one of the room's restricted zones — unless the user is the one the room answers to (see [restricted_zone.md](../gameplay/restricted_zone.md)). Moving such an object *out* of a zone is refused along with moving one in, since allowing the way out would leave the removal rule undone in two steps instead of one. Metadata is included because what a picture hanging inside a zone shows is as much a part of that stretch of the room as the wall behind it.
+
+Objects the room does not keep are never in question, which is also what keeps this off the path a player's own movement runs down.
+
 ## Local-Only Objects
 Some objects exist only on the client and must never enter the synced room state — the render objects spawned from the voxel grid, for example. These are spawned during room load (with client-only ids) and torn down without ever being registered in the room's object set or persisted, and without emitting any add/remove signal. They still get a physics body when their type defines a collider, so they can participate in collision while remaining purely client-side and identical across clients.
 

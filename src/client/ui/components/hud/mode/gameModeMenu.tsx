@@ -5,7 +5,7 @@ import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelect
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../../../system/util/gameModeUtil";
 import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
-    objectSelectionObservable, playerSelectionObservable, userRoleObservable,
+    objectSelectionObservable, playerSelectionObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
@@ -67,10 +67,6 @@ export default function GameModeMenu({ user, currentRoomID, currentRoomType }: P
         playerSelectionObservable.addListener("ui.gameModeMenu", forceRefresh);
         gameModeObservable.addListener("ui.gameModeMenu", forceRefresh);
         cameraModeObservable.addListener("ui.gameModeMenu", forceRefresh);
-        // What the user may do in this room decides whether the way into edit mode is worth
-        // offering for what he has picked out, and his standing can change under him while he
-        // stands there — an owner may take an editor's rights back.
-        userRoleObservable.addListener("ui.gameModeMenu", forceRefresh);
         for (const flag of exitFeatureFlags)
             clientFeatureFlagsObservable.addElementListener("ui.gameModeMenu", flag, forceRefresh);
         return () => {
@@ -79,7 +75,6 @@ export default function GameModeMenu({ user, currentRoomID, currentRoomType }: P
             playerSelectionObservable.removeListener("ui.gameModeMenu");
             gameModeObservable.removeListener("ui.gameModeMenu");
             cameraModeObservable.removeListener("ui.gameModeMenu");
-            userRoleObservable.removeListener("ui.gameModeMenu");
             for (const flag of exitFeatureFlags)
                 clientFeatureFlagsObservable.removeElementListener("ui.gameModeMenu", flag);
         };

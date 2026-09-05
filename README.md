@@ -40,6 +40,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
 - **Gameplay**
     - [Game Mode](docs/gameplay/game_mode.md)
     - [The Admin Privilege](docs/gameplay/admin.md)
+    - [Restricted Zones](docs/gameplay/restricted_zone.md)
 
 - **Networking**
     - [Authentication Flows](docs/networking/authentication.md)

@@ -73,7 +73,6 @@ function currentRoom(overrides: Partial<DBRoom> = {}): DBRow
         ownerUserID: "",
         ownerUserName: "",
         texturePackPath: "pack",
-        editors: [],
         ...overrides,
     } as DBRow;
 }
@@ -786,7 +785,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
             expect(result.data[0].version).toBe(ROOM_VERSION);
             expect(result.data[0].ownerUserName).toBe("landlord");
-            expect(result.data[0].editors).toEqual([]);
+            expect(result.data[0].editors).toBeUndefined();
             expect(result.data[0].roomName).toBe("");
         });
 

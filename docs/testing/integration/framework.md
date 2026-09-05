@@ -106,8 +106,7 @@ Every atomic operation is an `Action` type:
 | `removeVoxel` | Remove a voxel block |
 | `moveVoxel` | Move a voxel block |
 | `setVoxelTexture` | Set voxel quad texture |
-| `setUserRole` | Change a user's role (Owner/Editor/Visitor) |
-| `setRoomOwner` | Set a user as the owner of a room |
+| `setRoomOwner` | Set a user as the owner of a room (writes both sides of the link, and the stored `DBUser` too, so it survives a reconnect) |
 | `parallel` | Execute action groups concurrently |
 | `gracefulShutdown` | Simulate server shutdown |
 | `setLatency` | Toggle DB latency simulation |
@@ -128,7 +127,7 @@ Structural invariants that must hold after any valid action sequence:
 8. **Player object & metadata presence** - Every in-room user has a player object and a readable `ServerUserManager.getPlayerMetadata` snapshot
 9. **Physics room consistency** - Every occupied room has a loaded physics room
 10. **Physics object consistency** - Every participant's player object exists in the physics system
-11. **User role consistency** - Room owners in the room have the Owner role
+11. **Room ownership consistency** - A room's named owner, while standing in it, names that room as his own
 
 Invariant sets: `"structural"` (checks 1–7), `"full"` (adds 8), `"extended"` (adds 9–11).
 
@@ -145,7 +144,7 @@ Reusable building blocks:
 - **Room presets**: `EMPTY_HUB`, `EMPTY_REGULAR`, `regularRoom(id)`, `hubRoom(id)`, `roomWithWall(id,row,col)`, `multipleRooms(count)`
 - **User presets**: `userAtCenter(roomID)`, `userAt(x,z,roomID)`, `namedUser(id,roomID)`, `usersInRoom(count,roomID)`
 - **Action presets**: `walkAcross()`, `buildColumn()`, `removeColumn()`, `reconnectUser()`, `disconnectWithSave()`, `disconnectWithoutSave()`, `parallel()`, `enableLatency()`, `disableLatency()`
-- **Permission presets**: `setOwner(userIndex,roomID)`, `promoteToEditor(userIndex)`, `demoteToVisitor(userIndex)`
+- **Permission presets**: `setOwner(userIndex,roomID)`
 - **Composite presets**: `addAndTextureVoxel()`, `buildAndMoveBlock()`
 
 ## Property-Based Testing

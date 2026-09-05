@@ -35,10 +35,11 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
+import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+    MAX_ENCODED_VOXEL_GRID_BYTES, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM,
     NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
@@ -89,7 +90,7 @@ function decodeWithDoorwayReopened(bytes: Uint8Array): VoxelGrid
     {
         const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
             doorway.rowMin, doorway.colMin, layer);
-        VoxelUpdateUtil.removeVoxelBlock(UserRoleEnumMap.Owner, grid.voxels, first);
+        VoxelUpdateUtil.removeVoxelBlock(undefined, grid.voxels, first);
 
         // Taking a block out hides its faces but leaves them painted, so the cell would come back
         // carrying the finish the fill gave it. A doorway is an unpainted hole — that is what a
@@ -146,7 +147,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
         const grid = decode(bytes);
         const out = new BufferState(new Uint8Array(1024 * 1024));
         grid.encode(out);
-        expect(out.view[0]).toBe(3);
+        expect(out.view[0]).toBe(VoxelGrid.latestFormatVersion);
     });
 
     it("keeps every layer the room already had, face for face", () => {
@@ -316,5 +317,97 @@ describe("the migrated room as a room", () => {
         const grid = decode(loadFixture("procedural_1").bytes);
         const entrance = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
         expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(entrance, COLLISION_LAYER_MIN)).toBe(true);
+    });
+});
+
+//-----------------------------------------------------------------------------------------------
+// Version 3 -> 4: a room gained its restricted zones.
+//
+// This conversion adds nothing to the room, which is what makes it worth testing rather than what
+// makes it safe to skip. The zones were appended behind the voxels, so nothing in front of them
+// moved and every byte of a version-3 room still has to read back exactly as it did — a reader that
+// had drifted by so much as a byte would still decode, and would only show up as a room that came
+// back subtly different from the one that was written.
+//-----------------------------------------------------------------------------------------------
+
+const V3_FIXTURE_DIR = path.join(__dirname, "../fixtures/voxelGridsV3");
+const V3_FIXTURE_NAMES = ["solid", "hub", "regular", "mixed"];
+
+interface Version3RoomDescription
+{
+    masks: number[];
+    quadsHash: number;
+    numVisibleQuads: number;
+    byteLength: number;
+}
+
+function loadVersion3Fixture(name: string): {bytes: Uint8Array, expected: Version3RoomDescription}
+{
+    return {
+        bytes: new Uint8Array(fs.readFileSync(path.join(V3_FIXTURE_DIR, `${name}.bin`))),
+        expected: JSON.parse(fs.readFileSync(path.join(V3_FIXTURE_DIR, `${name}.json`), "utf8")),
+    };
+}
+
+// The same fold the version-3 fixtures were written with, over the whole of the room's quad memory.
+function hashAllQuads(grid: VoxelGrid): number
+{
+    let hash = 0x811c9dc5; // FNV-1a
+    for (let i = 0; i < grid.quadsMem.quads.length; ++i)
+    {
+        hash ^= grid.quadsMem.quads[i];
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash;
+}
+
+describe.each(V3_FIXTURE_NAMES)("migrating a version-3 room (%s)", (name) => {
+    const {bytes, expected} = loadVersion3Fixture(name);
+
+    it("is recognised as an older version than the one being written now", () => {
+        expect(bytes[0]).toBe(3);
+        expect(bytes.length).toBe(expected.byteLength);
+        expect(decode(bytes).sourceFormatVersion).toBe(3);
+    });
+
+    it("comes back with every voxel exactly as it was written", () => {
+        const grid = decode(bytes);
+        expect(grid.voxels.map(v => v.collisionLayerMask)).toEqual(expected.masks);
+        expect(hashAllQuads(grid)).toBe(expected.quadsHash);
+    });
+
+    it("comes back holding no restricted zones", () => {
+        // A room from before zones existed has not said which part of it its owner meant to keep to
+        // himself, so it stays editable exactly as it was.
+        expect(decode(bytes).restrictedZones).toEqual([]);
+    });
+
+    it("survives a round trip through the current format unchanged", () => {
+        const migrated = decode(bytes);
+        migrated.restrictedZones = [new RestrictedZone(2, 9, 3, 11), new RestrictedZone(20, 20, 0, 31)];
+
+        const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
+        migrated.encode(out);
+        expect(out.view[0]).toBe(VoxelGrid.latestFormatVersion);
+
+        const reloaded = decode(out.view.slice(0, out.byteIndex));
+        expect(Array.from(reloaded.quadsMem.quads)).toEqual(Array.from(migrated.quadsMem.quads));
+        expect(reloaded.voxels.map(v => v.collisionLayerMask))
+            .toEqual(migrated.voxels.map(v => v.collisionLayerMask));
+        expect(reloaded.restrictedZones).toEqual(migrated.restrictedZones);
+    });
+});
+
+describe("the encoded room's size bound", () => {
+    it("holds for the largest room there is, with every zone it may carry", () => {
+        // The buffer a room is encoded into is sized from this bound, so a room that outgrew it
+        // would be writing past the end of that buffer rather than failing here.
+        const grid = VoxelGrid.createBaseGrid(); // solid floor to ceiling: the costliest room to write
+        for (let i = 0; i < MAX_RESTRICTED_ZONES; ++i)
+            grid.restrictedZones.push(new RestrictedZone(i, i, 0, NUM_VOXEL_COLS - 1));
+
+        const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
+        grid.encode(out);
+        expect(out.byteIndex).toBe(MAX_ENCODED_VOXEL_GRID_BYTES);
     });
 });

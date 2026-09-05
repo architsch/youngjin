@@ -16,6 +16,11 @@ export default function VoxelQuadSelectionMenu()
         selection: voxelQuadSelectionObservable.peek(),
     }));
 
+    // What these tools offer is worked out from the room as it stands, so a zone drawn over the
+    // selected face has to reach them — and it does, without a subscription of its own: every change
+    // to the zones announces the selection afresh, exactly as a voxel edit does (see
+    // ClientVoxelManager), because a zone drawn over what the user has picked out is the moment that
+    // selection stops being his to work on.
     useEffect(() => {
         voxelQuadSelectionObservable.addListener("ui.voxelQuadSelection", selection => setState({selection}));
         return () => {

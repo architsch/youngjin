@@ -10,7 +10,7 @@ import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMet
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import ThingsPoolEnv from "../types/thingsPoolEnv";
 import { gameModeObservable, objectSelectionObservable, playerSelectionObservable,
-    userRoleObservable, voxelQuadSelectionObservable } from "../clientObservables";
+    voxelQuadSelectionObservable } from "../clientObservables";
 
 //------------------------------------------------------------------------
 // A read-only window onto what the running client can see, for anything that drives the game from
@@ -204,14 +204,19 @@ const AutomationBridgeUtil =
                         ownerUserID: room.ownerUserID,
                         ownerUserName: room.ownerUserName,
                         texturePackPath: room.texturePackPath,
+                        restrictedZones: room.voxelGrid.restrictedZones.map(zone => ({
+                            rowMin: zone.rowMin, rowMax: zone.rowMax,
+                            colMin: zone.colMin, colMax: zone.colMax,
+                        })),
                     },
-                    role: userRoleObservable.peek(),
                     gameMode: gameModeObservable.peek(),
                     isAdmin: user != undefined && RoomValidationUtil.userIsAdmin(user),
-                    canEditRoom: room != undefined &&
-                        RoomValidationUtil.canUserEditRoom(userRoleObservable.peek(), room),
+                    canEditRoom: user != undefined && room != undefined &&
+                        RoomValidationUtil.canUserEditRoom(user, room),
                     canManageDoors: user != undefined && room != undefined &&
                         RoomValidationUtil.canUserManageDoors(user, room),
+                    isRoomSuperuser: user != undefined && room != undefined &&
+                        RoomValidationUtil.isRoomSuperuser(user, room),
                 };
             },
 

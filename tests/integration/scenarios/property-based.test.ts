@@ -72,7 +72,7 @@ const PROFILES: TestProfile[] = [
     },
     {
         name: "permission-mixed",
-        weights: { connect: 2, disconnect: 1, joinRoom: 3, moveObject: 1, addVoxel: 2, setUserRole: 3 },
+        weights: { connect: 2, disconnect: 1, joinRoom: 3, moveObject: 1, addVoxel: 2 },
         maxUsers: 8, maxActions: 40, numRuns: 20,
     },
 ];

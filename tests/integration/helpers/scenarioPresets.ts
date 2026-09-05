@@ -5,7 +5,6 @@
  * so that individual test files stay concise and declarative.
  */
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { RoomConfig, UserConfig, VoxelPlacement } from "./scenarioRunner";
 import { Action } from "./actions";
 import { MockUserOverrides } from "./mockUser";
@@ -164,18 +163,6 @@ export function disableLatency(): Action
 export function setOwner(userIndex: number, roomID: string): Action
 {
     return { type: "setRoomOwner", userIndex, roomID };
-}
-
-/** Promote a user to editor in their current room. */
-export function promoteToEditor(userIndex: number): Action
-{
-    return { type: "setUserRole", userIndex, role: UserRoleEnumMap.Editor };
-}
-
-/** Demote a user to visitor in their current room. */
-export function demoteToVisitor(userIndex: number): Action
-{
-    return { type: "setUserRole", userIndex, role: UserRoleEnumMap.Visitor };
 }
 
 // ─── Composite Action Sequences ──────────────────────────────────────────

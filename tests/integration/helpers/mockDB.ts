@@ -7,7 +7,6 @@ import { vi } from "vitest";
 import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { createTestRoom } from "./roomContent";
-import DBRoomEditor from "../../../src/server/db/types/row/dbRoomEditor";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 import DBRoomVersionMigration from "../../../src/server/db/types/versionMigration/dbRoomVersionMigration";
 
@@ -20,7 +19,6 @@ interface StoredRoom
     ownerUserID: string;
     ownerUserName: string;
     texturePackPath: string;
-    editors: DBRoomEditor[];
     room: Room; // Full Room object with voxelGrid
 }
 
@@ -86,7 +84,6 @@ export function seedRoom(
         ownerUserID: "",
         ownerUserName: "",
         texturePackPath: room.texturePackPath,
-        editors: [],
         room,
     };
     return room;
@@ -114,7 +111,6 @@ export const mockDBRoomUtil = {
             ownerUserID: stored.ownerUserID,
             ownerUserName: stored.ownerUserName,
             texturePackPath: stored.texturePackPath,
-            editors: stored.editors,
         };
     }),
     saveRoomContent: vi.fn(async (_room: Room): Promise<boolean> =>
@@ -141,13 +137,6 @@ export const mockDBRoomUtil = {
     }),
     changeRoomTexturePackPath: vi.fn(async (_room: Room, _newTexturePackPath: string): Promise<boolean> =>
     {
-        return true;
-    }),
-    setEditors: vi.fn(async (roomID: string, editors: DBRoomEditor[]): Promise<boolean> =>
-    {
-        const stored = roomStore[roomID];
-        if (!stored) return false;
-        stored.editors = editors;
         return true;
     }),
 };

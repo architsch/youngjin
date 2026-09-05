@@ -26,7 +26,7 @@ import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomTy
 // scope variables, so we use vi.hoisted to share state.
 
 const _roomStore = vi.hoisted(() => {
-    const store: { [roomID: string]: { room: any; editors: any[]; ownerUserID: string; ownerUserName: string; roomType: number; texturePackPath: string } } = {};
+    const store: { [roomID: string]: { room: any; ownerUserID: string; ownerUserName: string; roomType: number; texturePackPath: string } } = {};
     return store;
 });
 
@@ -75,7 +75,6 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
                 ownerUserID: entry.ownerUserID,
                 ownerUserName: entry.ownerUserName,
                 texturePackPath: entry.texturePackPath,
-                editors: entry.editors,
             };
         }),
         saveRoomContent: vi.fn(async () => {
@@ -92,19 +91,12 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             const roomID = `room-auto-${++_autoRoomCounter.value}`;
             const room = seedRoomInStore(roomID, roomType);
             room.roomName = roomName;
-            _roomStore[roomID] = { room, editors: [], ownerUserID, ownerUserName, roomType,
+            _roomStore[roomID] = { room, ownerUserID, ownerUserName, roomType,
                 texturePackPath: room.texturePackPath };
             return { success: true, data: [{ id: roomID }] };
         }),
         deleteRoom: vi.fn(async () => true),
         changeRoomTexturePackPath: vi.fn(async () => true),
-        setEditors: vi.fn(async (roomID: string, editors: any[]) => {
-            if (_latencyConfig.enabled) await _randomDelay();
-            const entry = _roomStore[roomID];
-            if (!entry) return false;
-            entry.editors = editors;
-            return true;
-        }),
     },
 }));
 
@@ -265,7 +257,6 @@ function syncRoomStore(): void
     {
         _roomStore[k] = {
             room: v.room,
-            editors: v.editors,
             ownerUserID: v.ownerUserID,
             ownerUserName: v.ownerUserName,
             roomType: v.roomType,
@@ -296,6 +287,9 @@ function reconnectSocket(oldCtx: ConnectedUser): ConnectedUser
         email: oldCtx.user.email,
         singlePlayerMode: storedUser?.singlePlayerMode ?? oldCtx.user.singlePlayerMode,
         lastRoomID: storedUser?.lastRoomID ?? oldCtx.user.lastRoomID,
+        // Which room the user owns comes back with him, since that is what says whether the room he
+        // is being sent back into is his to build in.
+        ownedRoomID: storedUser?.ownedRoomID ?? oldCtx.user.ownedRoomID,
     });
     const socket = new MockSocket(newUser);
     const socketUserContext = new SocketUserContext(socket as any);
@@ -324,8 +318,6 @@ export const harness = {
         }
         for (const uid in ServerRoomManager.currentRoomIDByUserID)
             delete ServerRoomManager.currentRoomIDByUserID[uid];
-        for (const roomID in ServerRoomManager.editorsByRoomID)
-            delete ServerRoomManager.editorsByRoomID[roomID];
         ServerUserManager.clearPlayerObjects();
 
         resetStores();
@@ -355,22 +347,6 @@ export const harness = {
         const room = seedRoom(roomID, roomType);
         syncRoomStore();
         return room;
-    },
-
-    /**
-     * Direct in-memory write into the room's editor list. Lets tests stage an
-     * editor entry without going through the API route. Affects both DB store
-     * and (if loaded) the ServerRoomManager in-memory cache.
-     */
-    addEditor(roomID: string, editor: { userID: string; userName: string; email: string }): void
-    {
-        const stored = roomStore[roomID];
-        if (stored && !stored.editors.some(e => e.userID === editor.userID))
-            stored.editors.push(editor);
-        syncRoomStore();
-        const inMem = ServerRoomManager.editorsByRoomID[roomID];
-        if (inMem && !inMem.some(e => e.userID === editor.userID))
-            inMem.push(editor);
     },
 
     /**
@@ -575,13 +551,6 @@ export const harness = {
         return _userStore[userID]?.playerMetadata;
     },
 
-    /**
-     * Returns the editors list currently stored in the mocked DBRoom for the given room.
-     */
-    getStoredEditors(roomID: string): Array<{userID: string; userName: string; email: string}>
-    {
-        return _roomStore[roomID]?.editors ?? [];
-    },
 
     /**
      * Enables or disables random latency on mocked DB operations.

@@ -107,6 +107,8 @@ Standing a block is the exact counterpart of carving one out, and settles the fa
 
 The door is the exception because it is not really furniture. A room with no door is a room nobody can leave, and it is also what an arriving player is put down behind — so it is part of what makes the room a room, and a generator that left it out would produce something nobody could be sent to.
 
+A room also comes out holding no **restricted zones** (see [restricted_zone.md](../gameplay/restricted_zone.md)). That is a decision rather than an omission, and it is the one room-level parameter generation answers by declining: a zone says which stretch of one particular room the person it belongs to means to keep to himself, and there is nothing generation could draw that would be that judgement.
+
 ### The entrance
 
 Every multiplayer room is given one door, at a fixed cell on one of its boundary walls. Nothing is cut through that wall: a door is a wall attachment, and an attachment needs the wall behind it — so a cavity there would be the one place in the room the room's own door could not go.

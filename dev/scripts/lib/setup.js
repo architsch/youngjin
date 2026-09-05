@@ -282,6 +282,21 @@ const addObject = (page, spec) => callSandbox(page, "addObject", spec);
 /** Takes one down again, by the id `addObject` gave back. */
 const removeObject = (page, objectId) => callSandbox(page, "removeObject", objectId);
 
+/**
+ * The stretches of the room only a superuser may edit, laid over the set:
+ *
+ *   restrictedZones([{rowMin: 14, rowMax: 21, colMin: 15, colMax: 22}])
+ *
+ * Each zone is a rectangle of cells and reaches the whole height of the room, so there is no height
+ * to give. The list replaces whatever the room holds, and what comes back is what it now holds;
+ * called with nothing it only reports.
+ *
+ * **The red outlines are drawn in edit mode only.** Lay the zones, then `ctx.clickId("editModeButton")`
+ * to put them on screen — the sandbox's camera is free of the selection, so the frame the shot was
+ * composed in survives entering the mode.
+ */
+const restrictedZones = (page, zones) => callSandbox(page, "restrictedZones", zones);
+
 /** Empties the set back to bare floor and puts the camera back, between one shot and the next. */
 const clearSandbox = (page) => callSandbox(page, "clear");
 
@@ -371,6 +386,6 @@ module.exports = {
     place, face, faceDeg, vantage,
     look, view, swing, lookAt, clearLookAt,
     sandboxActive, camera, cameraPose, addBlocks, removeBlocks, clearSandbox,
-    texturePack, palettes, pictures, doorStyles, addObject, removeObject, stage,
+    texturePack, palettes, pictures, doorStyles, addObject, removeObject, restrictedZones, stage,
     sleep,
 };

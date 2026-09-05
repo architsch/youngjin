@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
-import { gameModeObservable, objectSelectionObservable, roomChangedObservable, updateObservable, userRoleObservable } from "../../../system/clientObservables";
+import { gameModeObservable, objectSelectionObservable, roomChangedObservable, updateObservable } from "../../../system/clientObservables";
 import GameModeUtil from "../../../system/util/gameModeUtil";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "./generic/worldSpaceArrow";
@@ -110,7 +110,6 @@ function updateGizmos(selection: ObjectSelection)
     }
 
     const user = App.getUser();
-    const userRole = userRoleObservable.peek();
 
     const objectId = go.params.objectId;
     const obj = room.objectById[objectId];
@@ -126,7 +125,7 @@ function updateGizmos(selection: ObjectSelection)
 
         const result = WallAttachedObjectUtil.getMoveResult(room, obj, def.dx, def.dy, def.dz);
         const canMove = result != undefined &&
-            ObjectUpdateUtil.canSetObjectTransform(user, userRole, room,
+            ObjectUpdateUtil.canSetObjectTransform(user, room,
                 new SetObjectTransformSignal(room.id, objectId,
                     new ObjectTransform(result.newPos, result.newDir), true));
 

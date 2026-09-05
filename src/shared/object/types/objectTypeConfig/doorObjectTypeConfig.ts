@@ -7,7 +7,6 @@ import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
 import { DOOR_FOOTPRINT_HEIGHT, DOOR_FOOTPRINT_WIDTH, MAX_DOORS_PER_ROOM, MAX_MESH_INSTANCES_PER_DOOR } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
-import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../addObjectSignal";
 import ObjectTypeConfig from "./objectTypeConfig";
 import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
@@ -35,7 +34,7 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
     objectType: "Door",
     persistent: true,
     autoUnload: true,
-    canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+    canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.canUserManageDoors(user, room))
             return false;
 
@@ -53,10 +52,10 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
 
         return true;
     },
-    canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+    canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return RoomValidationUtil.canUserManageDoors(user, room);
     },
-    canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
+    canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
         if (!RoomValidationUtil.canUserManageDoors(user, room))
             return false;
 
@@ -66,7 +65,7 @@ const DoorObjectTypeConfig: ObjectTypeConfig =
 
         return true;
     },
-    canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
+    canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
         if (!RoomValidationUtil.canUserManageDoors(user, room))
             return false;
 

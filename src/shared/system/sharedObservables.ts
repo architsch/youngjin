@@ -18,16 +18,18 @@ export const logEventObservable = new Observable<LogEvent>();
 // This observable notifies its listeners whenever a room's voxelGrid needs to be modified.
 export const voxelQuadChangeObservable = new Observable<VoxelQuadChange>();
 
+// This observable notifies its listeners, with the ID of the room in question, whenever a room's
+// restricted zones have been replaced — however they arrived, and whether one was drawn, moved,
+// resized or taken away. It carries the room rather than the zones themselves, so that whoever
+// answers to it reads the room's own list rather than a copy of it that may already be behind.
+export const restrictedZonesChangedObservable = new Observable<string>("");
+
 //--------------------------------------------------------------------------------
 // Debug
 //--------------------------------------------------------------------------------
 
 // This observable holds whether collider debug gizmos are enabled.
 export const colliderDebugEnabledObservable = new Observable<boolean>(false);
-
-// If this observable is enabled, ConfigureMyRoomForm's editor list will be filled with
-// a huge number of dummy editor entries (to let the user test the list's scrolling behavior.)
-export const editorListDebugEnabledObservable = new Observable<boolean>(false);
 
 // If this observable is enabled, DestinationChooserForm will be filled with a huge number of
 // dummy room entries (to let the user test the list's scrolling behavior.)

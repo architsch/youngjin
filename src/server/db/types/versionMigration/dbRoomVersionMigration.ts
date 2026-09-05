@@ -40,6 +40,16 @@ const DBRoomVersionMigration: DBVersionMigration = [
     // Removing "id" here instead would strip it from the row on its way to the caller, who needs
     // it.
     async (row: any) => row,
+    // v4 -> v5: drop "editors".
+    //
+    // A room could once appoint people to build in it alongside its owner, which is what this list
+    // held. What a user may do in a room is now settled from who he is and which room it is — he
+    // owns it, or it is a hub, or it is his own single-player room — so there is no roll to keep,
+    // and a list nothing reads is a list that can only mislead the next person to open the document.
+    async (row: any) => {
+        delete row.editors;
+        return row;
+    },
 ];
 
 export default DBRoomVersionMigration;

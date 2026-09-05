@@ -11,12 +11,9 @@ import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
 import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import SpawnHotspotUtil from "./util/spawnHotspotUtil";
-import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
 import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
-import DBRoomEditor from "../db/types/row/dbRoomEditor";
-import { MAX_ROOM_EDITORS } from "../system/serverConstants";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import SinglePlayerModeConfigMap from "../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
 import VoxelGrid from "../../shared/voxel/types/voxelGrid";
@@ -29,17 +26,12 @@ const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
 const currentRoomIDByUserID: {[userID: string]: string} = {};
 const pendingLoads: {[roomID: string]: Promise<RoomRuntimeMemory | null>} = {};
-// Per-room editor table (denormalized {userID, userName, email} entries).
-// Loaded from DBRoom.editors when the room is loaded; mutated in lockstep with
-// DBRoom.editors via setRoomEditor/removeRoomEditor below.
-const editorsByRoomID: {[roomID: string]: DBRoomEditor[]} = {};
 
 const ServerRoomManager =
 {
     roomRuntimeMemories,
     socketRoomContexts,
     currentRoomIDByUserID,
-    editorsByRoomID,
     loadRoom: async (roomID: string): Promise<RoomRuntimeMemory | null> =>
     {
         console.log(`ServerRoomManager.loadRoom :: roomID = ${roomID}`);
@@ -69,7 +61,6 @@ const ServerRoomManager =
             throw new Error(`ServerRoomManager.unloadRoom :: There are still participants in the room (participantUserNameByID = [${JSON.stringify(roomRuntimeMemory.participantUserNameByID)}])`);
         delete ServerRoomManager.roomRuntimeMemories[roomID];
         delete ServerRoomManager.socketRoomContexts[roomID];
-        delete editorsByRoomID[roomID];
 
         PhysicsManager.unload(roomID);
     },
@@ -162,7 +153,7 @@ const ServerRoomManager =
             socketUserContext.isInSinglePlayerRoom = true;
             const mem = buildSinglePlayerRoomRuntimeMemory(roomID);
             socketUserContext.addPendingSignalToUser("roomChangedSignal",
-                new RoomChangedSignal(mem, UserRoleEnumMap.Visitor));
+                new RoomChangedSignal(mem));
             return {type: "success", newRoomID: roomID};
         }
 
@@ -230,15 +221,6 @@ const ServerRoomManager =
                 playerMetadata = dbUser.playerMetadata;
         }
 
-        // userRole is derived from the room's editor list (loaded with the room)
-        // plus the room's ownerUserID. Owner takes precedence.
-        let userRole: UserRole = UserRoleEnumMap.Visitor;
-        const editors = editorsByRoomID[roomID];
-        if (editors && editors.some(e => e.userID === user.id))
-            userRole = UserRoleEnumMap.Editor;
-        if (roomRuntimeMemory.room.ownerUserID === user.id)
-            userRole = UserRoleEnumMap.Owner;
-
         // Theoretically, it is possible for other users to have joined the room
         // during the preceding DBUser lookup process (which is very brief but nevertheless
         // asynchronous), thereby resulting in the room becoming full AFTER it was decided
@@ -254,7 +236,7 @@ const ServerRoomManager =
         socketUserContext.isInSinglePlayerRoom = false;
         const joinedRoomRuntimeMemory = await ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
             SpawnHotspotUtil.pickSpawnTransform(roomRuntimeMemory.room, destinationDoorLabel),
-            playerMetadata, userRole
+            playerMetadata
         );
         if (!joinedRoomRuntimeMemory)
             return {type: "error"};
@@ -265,12 +247,12 @@ const ServerRoomManager =
             console.error(`ServerRoomManager.changeUserRoom :: setLastRoomID failed for userID = ${user.id}: ${err}`)
         );
 
-        // Wrap the room memory and user role in a RoomChangedSignal and send it to the joining user.
+        // Wrap the room memory in a RoomChangedSignal and send it to the joining user.
         // The signal goes straight to the user's own socket context rather than being routed through
         // the room's SocketRoomContext: a single-player user is intentionally never registered in the
         // room context (see above), so an indirect unicast would fail to find them. Since this is a
         // pure unicast to the joining user, the direct path is equivalent for multiplayer rooms too.
-        const roomChangedSignal = new RoomChangedSignal(joinedRoomRuntimeMemory, userRole);
+        const roomChangedSignal = new RoomChangedSignal(joinedRoomRuntimeMemory);
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
         return {type: "success", newRoomID: roomID};
     },
@@ -318,45 +300,6 @@ const ServerRoomManager =
 
         return true;
     },
-    // Adds or refreshes an editor entry on the room. Works whether or not the
-    // room is currently loaded: the DB is the source of truth, and the in-memory
-    // editor list is updated when the room is loaded.
-    // Refreshing an existing editor is always allowed; adding a NEW editor is
-    // rejected with "limit-reached" once the room is at MAX_ROOM_EDITORS.
-    setRoomEditor: async (roomID: string, editor: DBRoomEditor): Promise<"success" | "limit-reached" | "error"> =>
-    {
-        const current = await loadCurrentEditors(roomID);
-        if (!current) return "error";
-        const idx = current.findIndex(e => e.userID === editor.userID);
-        if (idx >= 0)
-            current[idx] = editor;
-        else
-        {
-            if (current.length >= MAX_ROOM_EDITORS)
-                return "limit-reached";
-            current.push(editor);
-        }
-        const success = await DBRoomUtil.setEditors(roomID, current);
-        if (success && editorsByRoomID[roomID])
-            editorsByRoomID[roomID] = current;
-        return success ? "success" : "error";
-    },
-    removeRoomEditor: async (roomID: string, userID: string): Promise<boolean> =>
-    {
-        const current = await loadCurrentEditors(roomID);
-        if (!current) return false;
-        const filtered = current.filter(e => e.userID !== userID);
-        if (filtered.length === current.length)
-            return true; // no-op
-        const success = await DBRoomUtil.setEditors(roomID, filtered);
-        if (success && editorsByRoomID[roomID])
-            editorsByRoomID[roomID] = filtered;
-        return success;
-    },
-    getRoomEditors: async (roomID: string): Promise<DBRoomEditor[]> =>
-    {
-        return (await loadCurrentEditors(roomID)) ?? [];
-    },
 }
 
 // Sends a user whose intended destination turned out to be unusable to a hub that still has
@@ -384,18 +327,6 @@ async function leavePreviousRoom(socketUserContext: SocketUserContext,
     await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
 }
 
-// Returns the room's current editor list, preferring the in-memory copy (loaded
-// rooms) and falling back to a DB read (unloaded rooms). Returns null only when
-// the room doesn't exist in either place.
-async function loadCurrentEditors(roomID: string): Promise<DBRoomEditor[] | null>
-{
-    const cached = editorsByRoomID[roomID];
-    if (cached) return [...cached];
-    const dbRoom = await DBRoomUtil.getDBRoom(roomID);
-    if (!dbRoom) return null;
-    return dbRoom.editors ?? [];
-}
-
 // Builds a transient, content-less RoomRuntimeMemory for a single-player room. It is intentionally
 // NOT stored in roomRuntimeMemories and gets no server-side PhysicsManager world: the client owns
 // and regenerates the room's voxels/objects locally, so the server only needs an identity (the
@@ -414,19 +345,13 @@ function buildSinglePlayerRoomRuntimeMemory(mode: string): RoomRuntimeMemory
 
 async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
 {
-    // Load room content + DB metadata in parallel — they're independent.
-    // Editors live on DBRoom (NOT in the binary content blob), so we need both.
-    const [room, dbRoom] = await Promise.all([
-        DBRoomUtil.getRoomContent(roomID),
-        DBRoomUtil.getDBRoom(roomID),
-    ]);
+    const room = await DBRoomUtil.getRoomContent(roomID);
     if (!room)
         return null;
 
     const roomRuntimeMemory = new RoomRuntimeMemory(room, {});
     ServerRoomManager.roomRuntimeMemories[roomID] = roomRuntimeMemory;
     ServerRoomManager.socketRoomContexts[roomID] = new SocketRoomContext();
-    editorsByRoomID[roomID] = dbRoom?.editors ?? [];
 
     PhysicsManager.load(roomRuntimeMemory);
     return roomRuntimeMemory;

@@ -1,7 +1,6 @@
 import NumUtil from "../../../math/util/numUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../../system/sharedConstants";
-import { UserRoleEnumMap } from "../../../user/types/userRole";
 import Voxel from "../../../voxel/types/voxel";
 import VoxelQuadUpdateUtil from "../../../voxel/util/voxelQuadUpdateUtil";
 import VoxelQueryUtil from "../../../voxel/util/voxelQueryUtil";
@@ -183,7 +182,7 @@ const RoomVolumeUtil =
             {
                 for (let layer = volume.collisionLayerMin; layer <= volume.collisionLayerMax; ++layer)
                 {
-                    VoxelUpdateUtil.removeVoxelBlock(UserRoleEnumMap.Owner, voxels,
+                    VoxelUpdateUtil.removeVoxelBlock(undefined, voxels,
                         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer));
                 }
             }
@@ -255,7 +254,7 @@ const RoomVolumeUtil =
             {
                 for (let layer = volume.collisionLayerMin; layer <= volume.collisionLayerMax; ++layer)
                 {
-                    VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxels,
+                    VoxelUpdateUtil.addVoxelBlock(undefined, voxels,
                         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer), textures);
                 }
             }

@@ -28,7 +28,6 @@ import EncodableByteString from "../../../src/shared/networking/types/encodableB
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
@@ -82,8 +81,7 @@ describe("door permissions", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                const canAdd = (user: User) => ObjectUpdateUtil.canAddObject(user,
-                    UserRoleEnumMap.Visitor, room, makeDoorSignal(room, user));
+                const canAdd = (user: User) => ObjectUpdateUtil.canAddObject(user, room, makeDoorSignal(room, user));
 
                 expect(canAdd(ADMIN)).toBe(true);
                 expect(canAdd(MEMBER)).toBe(false);
@@ -103,7 +101,7 @@ describe("door permissions", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["regular"].room;
                 for (const user of [ADMIN, MEMBER])
                 {
-                    expect(ObjectUpdateUtil.canAddObject(user, UserRoleEnumMap.Owner, room,
+                    expect(ObjectUpdateUtil.canAddObject(user, room,
                         makeDoorSignal(room, user))).toBe(false);
                 }
             },
@@ -118,7 +116,7 @@ describe("door permissions", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const spoofed = makeDoorSignal(room, MEMBER);
-                expect(ObjectUpdateUtil.canAddObject(ADMIN, UserRoleEnumMap.Visitor, room, spoofed))
+                expect(ObjectUpdateUtil.canAddObject(ADMIN, room, spoofed))
                     .toBe(false);
             },
         });
@@ -133,13 +131,10 @@ describe("door permissions", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const door = getEntranceDoor(room);
 
-                const canRemove = (user: User) => ObjectUpdateUtil.canRemoveObject(user,
-                    UserRoleEnumMap.Visitor, room, new RemoveObjectSignal(room.id, door.objectId));
-                const canMove = (user: User) => ObjectUpdateUtil.canSetObjectTransform(user,
-                    UserRoleEnumMap.Visitor, room, new SetObjectTransformSignal(room.id,
+                const canRemove = (user: User) => ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(room.id, door.objectId));
+                const canMove = (user: User) => ObjectUpdateUtil.canSetObjectTransform(user, room, new SetObjectTransformSignal(room.id,
                         door.objectId, door.transform, true));
-                const canRename = (user: User) => ObjectUpdateUtil.canSetObjectMetadata(user,
-                    UserRoleEnumMap.Visitor, room, new SetObjectMetadataSignal(room.id,
+                const canRename = (user: User) => ObjectUpdateUtil.canSetObjectMetadata(user, room, new SetObjectMetadataSignal(room.id,
                         door.objectId, ObjectMetadataKeyEnumMap.Label, "Library"));
 
                 expect(canRemove(ADMIN)).toBe(true);
@@ -166,7 +161,7 @@ describe("door permissions", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const door = getEntranceDoor(room);
-                expect(ObjectUpdateUtil.canSetObjectTransform(ADMIN, UserRoleEnumMap.Visitor, room,
+                expect(ObjectUpdateUtil.canSetObjectTransform(ADMIN, room,
                     new SetObjectTransformSignal(room.id, door.objectId, door.transform, false)))
                     .toBe(false);
             },
@@ -182,7 +177,7 @@ describe("door permissions", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const door = getEntranceDoor(room);
                 const canSet = (key: number, value: string) =>
-                    ObjectUpdateUtil.canSetObjectMetadata(ADMIN, UserRoleEnumMap.Visitor, room,
+                    ObjectUpdateUtil.canSetObjectMetadata(ADMIN, room,
                         new SetObjectMetadataSignal(room.id, door.objectId, key, value));
 
                 expect(canSet(ObjectMetadataKeyEnumMap.Label, "Library")).toBe(true);

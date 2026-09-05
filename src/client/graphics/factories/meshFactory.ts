@@ -3,6 +3,7 @@ import GeometryFactory from "./geometryFactory";
 import MaterialFactory from "./materialFactory";
 import Pool from "../../../shared/system/types/pool";
 import MaterialParams from "../../../shared/graphics/material/types/materialParams";
+import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import GraphicsManager from "../graphicsManager";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
@@ -198,6 +199,20 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
     const uvSampleSizeArray = new Float32Array(maxNumInstances * 2);
     const uvSampleSizeBufferAttrib = new THREE.InstancedBufferAttribute(uvSampleSizeArray, 2);
     geometryClone.setAttribute("uvSampleSize", uvSampleSizeBufferAttrib);
+
+    // A material that paints an outline around its instances reads a per-instance strength to know
+    // which of them wear one (see MaterialConstructorMap's addInstanceOutline). Made here, alongside
+    // the mesh, rather than the first time an instance asks for one: it is what the compiled shader
+    // reads, and a mesh that gained it partway through its life would have been drawn without it up
+    // to that point.
+    const outlineColorHex = (materialParams as InstancedTexturePackMaterialParams).outlineColorHex;
+    if (outlineColorHex)
+    {
+        const outlineStrengthArray = new Float32Array(maxNumInstances);
+        const outlineStrengthBufferAttrib = new THREE.InstancedBufferAttribute(outlineStrengthArray, 1);
+        outlineStrengthBufferAttrib.setUsage(THREE.DynamicDrawUsage);
+        geometryClone.setAttribute("outlineStrength", outlineStrengthBufferAttrib);
+    }
 
     const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
     newMesh.name = meshId;

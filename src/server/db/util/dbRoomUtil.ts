@@ -1,7 +1,6 @@
 import Room from "../../../shared/room/types/room";
 import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
 import DBRoom from "../types/row/dbRoom";
-import DBRoomEditor from "../types/row/dbRoomEditor";
 import { RoomType } from "../../../shared/room/types/roomType";
 import DBQuery from "../types/dbQuery";
 import { DBRow } from "../types/row/dbRow";
@@ -31,8 +30,8 @@ const DBRoomUtil =
         return await getRoomFromDBRoom(result.data[0]);
     },
     // Returns the room's DB row only (no voxel/object content). Use this when you need
-    // fields like roomType / ownerUserName / editors but don't want the cost of
-    // deserializing the binary content blob from cloud storage.
+    // fields like roomType / ownerUserName but don't want the cost of deserializing the
+    // binary content blob from cloud storage.
     getDBRoom: async (roomID: string): Promise<DBRoom | null> =>
     {
         LogUtil.log("DBRoomUtil.getDBRoom", {roomID}, "low", "info");
@@ -87,7 +86,6 @@ const DBRoomUtil =
             ownerUserID: room.ownerUserID,
             ownerUserName: room.ownerUserName,
             texturePackPath: room.texturePackPath,
-            editors: [],
         };
 
         const roomInsertResult = await new DBQuery<{id: string}>()
@@ -127,16 +125,6 @@ const DBRoomUtil =
                 texturePackPath: newTexturePackPath,
             })
             .where("id", "==", room.id)
-            .run();
-        return result.success;
-    },
-    setEditors: async (roomID: string, editors: DBRoomEditor[]): Promise<boolean> =>
-    {
-        LogUtil.log("DBRoomUtil.setEditors", {roomID, count: editors.length}, "low", "info");
-        const result = await new DBQuery<DBRow>()
-            .update(COLLECTION_ROOMS)
-            .set({ editors })
-            .where("id", "==", roomID)
             .run();
         return result.success;
     },

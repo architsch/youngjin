@@ -21,6 +21,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_HUB, userAtCenter } from "../helpers/scenarioPresets";
+import { createEditingUser } from "../helpers/mockUser";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
@@ -31,9 +32,12 @@ import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxel
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
+
+// Who the assertions below act as. They are not about who is asking — the editing utilities want
+// the person as well as the role he holds, so somebody has to be named.
+const actingUser = createEditingUser();
 
 const ROOM_ID = "quad-index-hub";
 const SCRATCH_BUFFER_BYTES = 1024;
@@ -153,7 +157,7 @@ describe("voxel quadIndex encoding and validation", () => {
                 room.dirty = false;
 
                 expect(VoxelUpdateUtil.removeVoxelBlock(
-                    UserRoleEnumMap.Owner, voxels, decoded.quadIndex, room)).toBe(false);
+                    actingUser, voxels, decoded.quadIndex, room)).toBe(false);
 
                 expect(voxels.map(voxel => voxel.collisionLayerMask)).toEqual(masksBefore);
                 expect(room.dirty).toBe(false);
@@ -180,7 +184,6 @@ describe("voxel quadIndex encoding and validation", () => {
             assertions: () => {
                 const { room } = ServerRoomManager.roomRuntimeMemories[ROOM_ID];
                 const { voxels } = room.voxelGrid;
-                const role = UserRoleEnumMap.Owner;
 
                 // A fractional index matters as much as one past the end: it is what an index
                 // arriving from a calculation rather than from this module's own arithmetic looks
@@ -192,15 +195,15 @@ describe("voxel quadIndex encoding and validation", () => {
 
                 for (const quadIndex of outOfRange)
                 {
-                    expect(VoxelUpdateUtil.canAddVoxelBlock(role, room, quadIndex)).toBe(false);
-                    expect(VoxelUpdateUtil.canRemoveVoxelBlock(role, room, quadIndex)).toBe(false);
-                    expect(VoxelUpdateUtil.canSetVoxelQuadTexture(role, room, quadIndex)).toBe(false);
-                    expect(VoxelUpdateUtil.canMoveVoxelBlock(role, room, quadIndex, 0, 0, 1)).toBe(false);
+                    expect(VoxelUpdateUtil.canAddVoxelBlock(actingUser, room, quadIndex)).toBe(false);
+                    expect(VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex)).toBe(false);
+                    expect(VoxelUpdateUtil.canSetVoxelQuadTexture(actingUser, room, quadIndex)).toBe(false);
+                    expect(VoxelUpdateUtil.canMoveVoxelBlock(actingUser, room, quadIndex, 0, 0, 1)).toBe(false);
 
-                    expect(VoxelUpdateUtil.addVoxelBlock(role, voxels, quadIndex, undefined, room)).toBe(false);
-                    expect(VoxelUpdateUtil.removeVoxelBlock(role, voxels, quadIndex, room)).toBe(false);
-                    expect(VoxelUpdateUtil.setVoxelQuadTexture(role, voxels, quadIndex, 3, room)).toBe(false);
-                    expect(VoxelUpdateUtil.moveVoxelBlock(role, voxels, quadIndex, 0, 0, 1, room)).toBe(false);
+                    expect(VoxelUpdateUtil.addVoxelBlock(actingUser, voxels, quadIndex, undefined, room)).toBe(false);
+                    expect(VoxelUpdateUtil.removeVoxelBlock(actingUser, voxels, quadIndex, room)).toBe(false);
+                    expect(VoxelUpdateUtil.setVoxelQuadTexture(actingUser, voxels, quadIndex, 3, room)).toBe(false);
+                    expect(VoxelUpdateUtil.moveVoxelBlock(actingUser, voxels, quadIndex, 0, 0, 1, room)).toBe(false);
                 }
 
                 // Nothing anywhere in the grid moved, and the room was never marked for saving —
@@ -220,7 +223,6 @@ describe("voxel quadIndex encoding and validation", () => {
             assertions: () => {
                 const { room } = ServerRoomManager.roomRuntimeMemories[ROOM_ID];
                 const { voxels } = room.voxelGrid;
-                const role = UserRoleEnumMap.Owner;
 
                 // Called without a room, which skips the can* predicate entirely — the path a room
                 // is generated on, and the one a client applies an already-accepted edit on. Before
@@ -229,10 +231,10 @@ describe("voxel quadIndex encoding and validation", () => {
 
                 for (const quadIndex of [NUM_VOXEL_QUADS_PER_ROOM + 7, -1, 1.5, NaN])
                 {
-                    expect(VoxelUpdateUtil.addVoxelBlock(role, voxels, quadIndex)).toBe(false);
-                    expect(VoxelUpdateUtil.removeVoxelBlock(role, voxels, quadIndex)).toBe(false);
-                    expect(VoxelUpdateUtil.setVoxelQuadTexture(role, voxels, quadIndex, 3)).toBe(false);
-                    expect(VoxelUpdateUtil.moveVoxelBlock(role, voxels, quadIndex, 0, 0, 1)).toBe(false);
+                    expect(VoxelUpdateUtil.addVoxelBlock(undefined, voxels, quadIndex)).toBe(false);
+                    expect(VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, quadIndex)).toBe(false);
+                    expect(VoxelUpdateUtil.setVoxelQuadTexture(undefined, voxels, quadIndex, 3)).toBe(false);
+                    expect(VoxelUpdateUtil.moveVoxelBlock(undefined, voxels, quadIndex, 0, 0, 1)).toBe(false);
                 }
 
                 expect(voxels.map(voxel => voxel.collisionLayerMask)).toEqual(masksBefore);
@@ -249,7 +251,6 @@ describe("voxel quadIndex encoding and validation", () => {
             assertions: () => {
                 const { room } = ServerRoomManager.roomRuntimeMemories[ROOM_ID];
                 const { voxels } = room.voxelGrid;
-                const role = UserRoleEnumMap.Owner;
 
                 // A column offset carrying the block off the near edge of the grid. The destination
                 // is derived from the offsets rather than sent, so it is checked in its own right:
@@ -260,7 +261,7 @@ describe("voxel quadIndex encoding and validation", () => {
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(source, COLLISION_LAYER_MIN)).toBe(true);
 
                 const masksBefore = voxels.map(voxel => voxel.collisionLayerMask);
-                expect(VoxelUpdateUtil.moveVoxelBlock(role, voxels, quadIndex, 0, -6, 0)).toBe(false);
+                expect(VoxelUpdateUtil.moveVoxelBlock(undefined, voxels, quadIndex, 0, -6, 0)).toBe(false);
 
                 // The block stayed where it was rather than being taken down at one end of a move
                 // whose other end went nowhere — and the cell the column would have wrapped onto,

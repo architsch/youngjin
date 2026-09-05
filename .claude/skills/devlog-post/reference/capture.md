@@ -38,6 +38,18 @@ purpose.
 Those set `freshRoom: true` and copy `shots/_generated-room-template.js`. Everything else copies
 `shots/_template.js`, which is the sandbox one.
 
+**"The sandbox cannot reach it yet" is not a third case — it is missing setup surface.** When a newly
+built feature has no op that puts it in frame, add one rather than photographing it in a generated
+room: the shortcut is taken once and then charged on every future post about that feature. What a
+mock owes is the feature's *appearance* — the outlines it draws, the state it leaves standing — and
+not its behaviour, which belongs in the game and its tests. It is honest on the same terms as the
+rest of the sandbox: the thing in frame is spawned, drawn and lit by the game, and only the route to
+it was arranged.
+
+The `perform a flow` row is where that stops. When the picture is of the game *being used* — a hand
+on the tools, a menu open over the thing it edits — the flow **is** the subject, and mocking it would
+be photographing something that never happens. **Mock the state; never mock the act.**
+
 ## Running it
 
 ```bash
@@ -92,9 +104,9 @@ in the product ever makes an admin, so a shot script that needs one sets `devUse
 no other route. A member seat standing in the same hub simply does not have the controls, and the
 run fails looking for a button that was never rendered.
 
-The session starts in a **hub**, where the identity bar reads "Visitor" but everyone may edit all
-the same — hubs are open to anyone standing in them. So a shot of the editing controls needs no
-room of one's own, and no travelling to reach one. **Doors are the exception**: editing a room is
+The session starts in a **hub**, which anybody standing in it may edit, whoever they are. So a shot
+of the editing controls needs no room of one's own, and no travelling to reach one. **Doors are the
+exception**: editing a room is
 not enough to manage them, because a door is a join between rooms rather than a piece of a room's
 contents. In a hub they answer to an admin only; in an owned room nobody rearranges them at all.
 
@@ -181,6 +193,14 @@ Two things to know, because both otherwise cost a run:
 room, with a named error: in a room the game generated, a wall that exists because a script asked for
 one would not be evidence that walls can be built, and a playtest has to keep that line.
 
+**This table is meant to grow.** A newly built feature with nothing here is one that cannot be
+photographed in the sandbox at all, which is what quietly sends every post about it into a generated
+room. Adding an op is small — a case in `dev/scripts/lib/setup.js` and the matching entry on the
+client-side automation bridge behind it (`@src/client/system/util/automationSetupUtil.ts`) — and it
+is done once per feature rather than once per post. Give it the narrowest signature that puts the
+feature's appearance in frame; the game keeps the real path in, and this is only the way to a
+photograph of it.
+
 | | |
 | --- | --- |
 | `stage({row, col, rows?, cols?, layers?, wallTextureIndex?, floorTextureIndex?, open?})` | **Start here.** Four walls around a rectangle of floor, with `open: ["-z"]` leaving the near side out for the camera to look in through. Returns the rectangle, its `centre`, its `floorY` and its `walls` |
@@ -188,13 +208,14 @@ one would not be evidence that walls can be built, and a playtest has to keep th
 | `removeBlocks({row, col, collisionLayer, rows?, cols?, layers?})` | Takes one away again — how a doorway or a window is cut into a wall already standing |
 | `addObject({type, row, col, face?, collisionLayer?, y?, metadata?})` | Hangs a `"Canvas"` or a `"Door"` on a face of a cell. Metadata by the game's own key names — `{ImagePath: "1/14"}`, `{Label: "Library"}`. Returns its `objectId` |
 | `removeObject(objectId)` | Takes one down |
+| `restrictedZones([{rowMin, rowMax, colMin, colMax}, ...])` | The stretches of a room only its superuser may edit. A zone reaches the room's whole height, so rows and columns are the whole of one. The list replaces whatever is standing; called with nothing it reports what the room holds |
 | `texturePack(path?)` | What the whole set is finished in; re-dresses everything already standing. Called with nothing it reports the current pack and the ones on offer |
 | `palettes(path?)` | The `{floor, ceiling, wall, prop}` texture indices the game finishes its **own** rooms in. Dress a set out of one of these |
 | `pictures()` | The paintings a canvas can carry, each with its title and painter |
 | `doorStyles()` | The twelve finishes a door can be given, each ready to spread into `metadata` |
 | `camera({x?, y?, z?, atX?, atY?, atZ?})` | Where the camera stands and what it is aimed at, in **world** coordinates. Either half alone: moving without re-aiming keeps the subject in frame |
 | `cameraPose()` | Where it is now, with the distance and unit direction between the two |
-| `clearSandbox()` | Back to bare floor, everything hung taken down, camera reset — between one shot and the next |
+| `clearSandbox()` | Back to bare floor, everything hung taken down, zones dropped, camera reset — between one shot and the next |
 | `sandboxActive()` | Whether this run is in the sandbox at all |
 
 **Hang things off `stage().walls`, never off a cell you worked out yourself.** Each entry is that
@@ -226,6 +247,13 @@ the game would build; one built from numbers picked by hand looks like a paint c
 **Give the set its own ceiling** (`addBlocks` at `collisionLayer: 15` in the palette's `ceiling`).
 The sandbox room has one, but it is finished in whatever palette the room was generated from, and it
 shows above your walls as a band of an unrelated colour.
+
+**A restricted zone's red outlines belong to edit mode.** The zones stand whether or not anybody is
+in the mode, but the lines the game draws over the cells they cover are shown only inside it — so a
+shot of them lays the zones and then enters the mode with `clickId("editModeButton")`, in either
+order relative to building the set. The sandbox camera is bound to no selection, so entering the mode
+leaves the frame exactly where it was composed; `hideHUD()` afterwards, since the mode brings its own
+controls up.
 
 **Choose the door finishes.** A door given none takes one of the twelve at random, seeded from its
 own id — fine in a room, but over four or five doors the dice regularly hand two or three of them the
@@ -398,6 +426,13 @@ In the sandbox this is cheap and there is no excuse for failing it: `clearSandbo
 different set, or leave the set standing and move the camera somewhere genuinely different. Changing
 the texture pack between two shots of the same set is a legitimate way to make them differ, and it
 costs one call.
+
+**Cheap to vary is not licence to search.** Choose the vantages and the palette up front, shoot them,
+and stop. A run that works through the texture packs to see which comes out best has turned a
+composition decision into a survey: it costs many times the run it replaced and ends with a picture
+no better than the first good one, because there was never a right answer to find. Re-shoot a frame
+for a **fault** — the list above — and never to learn whether some other arrangement might be
+marginally nicer. **The post needs a couple of good-looking images, not the best obtainable ones.**
 
 ## Composing the frame
 

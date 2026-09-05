@@ -1,6 +1,5 @@
 import RemoveObjectSignal from "../../object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../object/types/setObjectMetadataSignal";
-import SetUserRoleSignal from "../../user/types/setUserRoleSignal";
 import RoomTexturePackChangedSignal from "../../room/types/roomTexturePackChangedSignal";
 import AddObjectSignal from "../../object/types/addObjectSignal";
 import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
@@ -12,6 +11,7 @@ import AddVoxelBlockSignal from "../../voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../voxel/types/update/setVoxelQuadTextureSignal";
+import SetRestrictedZonesSignal from "../../voxel/types/update/setRestrictedZonesSignal";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
 
@@ -142,6 +142,18 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => SetVoxelQuadTextureSignal.decode(bufferState),
     }],
+    [14, { // Bidirectional (client <-> server)
+        // (Overall Flow):
+        // A superuser redraws the room's restricted zones and reports the whole list to the server.
+        // The server validates and broadcasts to other clients.
+        signalType: "setRestrictedZonesSignal",
+        // A zone is redrawn by dragging it about, and the drag ends in one message rather than
+        // sending one per frame — so this is rate-limited, unlike the voxel edits beside it, which
+        // are each one deliberate act.
+        minClientToServerSendInterval: 250,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => SetRestrictedZonesSignal.decode(bufferState),
+    }],
 
     //------------------------------------------------------------------------
     // User Signals:
@@ -156,15 +168,10 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
         decode: (bufferState: BufferState) => UserCommandSignal.decode(bufferState),
     }],
-    [11, { // Unidirectional (client <- server)
-        // (Overall Flow):
-        // The server updates a user's role in the current room and announces the update to all clients in the room.
-        // Each client receives the update and applies the new role (e.g. updating UI permissions).
-        signalType: "setUserRoleSignal",
-        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
-        maxClientSideReceptionPeriod: 2000, // this handles the case in which the role update arrives while the room is still loading on the client side, etc.
-        decode: (bufferState: BufferState) => SetUserRoleSignal.decode(bufferState),
-    }],
+    // (Index 11 is retired. It carried a user's standing in the current room, back when a room could
+    // hand one out; what a user may do in a room is now settled from who he is and which room it is,
+    // so there is nothing left to announce. Left unused rather than reassigned, so that a client
+    // running the previous bundle across a deployment cannot read a new signal as the old one.)
     [12, { // Unidirectional (client <- server)
         // (Overall Flow):
         // The server updates the room's texture pack path (via the REST API) and broadcasts the change to all clients in the room.

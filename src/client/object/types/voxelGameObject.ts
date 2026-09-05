@@ -12,10 +12,11 @@ import ClientVoxelQueryUtil from "../../voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../voxel/util/voxelQuadInstanceUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import { gameModeObservable, notificationMessageObservable, texturePackURLObservable, userRoleObservable } from "../../system/clientObservables";
+import { gameModeObservable, notificationMessageObservable, texturePackURLObservable } from "../../system/clientObservables";
 import GraphicsManager from "../../graphics/graphicsManager";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
+import RestrictedZoneOutlineUtil, { RESTRICTED_ZONE_OUTLINE_COLOR } from "../../voxel/util/restrictedZoneOutlineUtil";
 
 let debugEnabled: boolean = false;
 const vector3Temp = new THREE.Vector3();
@@ -39,6 +40,9 @@ export default class VoxelGameObject extends GameObject
         if (VoxelGameObject.materialParams?.texturePath !== currentTexturePackURL)
         {
             VoxelGameObject.materialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
+            // The room's own faces are what a restricted zone is drawn on, so the material every one
+            // of them is drawn with is where the outline comes from (see RestrictedZoneOutlineUtil).
+            VoxelGameObject.materialParams.outlineColorHex = RESTRICTED_ZONE_OUTLINE_COLOR;
             // Pinning the material's id keeps the mesh these quads are drawn from the same one
             // across a change of texture pack, which is what lets the pack be swapped in place
             // rather than rebuilding the room's mesh (see InstancedMeshBinding).
@@ -88,6 +92,10 @@ export default class VoxelGameObject extends GameObject
         if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
             return;
 
+        const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
+        if (quadIndex < 0)
+            return; // The instance has been handed back since the ray was cast, so it draws nothing.
+
         if (gameModeObservable.peek() == "edit")
         {
             const room = App.getCurrentRoom();
@@ -96,16 +104,17 @@ export default class VoxelGameObject extends GameObject
                 console.error("Current room not found.");
                 return;
             }
-            if (!RoomValidationUtil.canUserEditRoom(userRoleObservable.peek(), room))
+            if (!RoomValidationUtil.canUserEditRoom(App.getUser(), room))
             {
                 notificationMessageObservable.set("You don't have permission to edit this room.");
                 return;
             }
+            // A restricted zone is deliberately not asked about here. A zone forbids editing and
+            // nothing else, and picking a face out is not an edit — it is how the user finds out
+            // what the face is. What a zone withholds is answered by the tools the selection opens,
+            // which turn themselves down one by one exactly as they do for anything else that
+            // cannot be afforded (see @docs/gameplay/restricted_zone.md).
         }
-
-        const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
-        if (quadIndex < 0)
-            return; // The instance has been handed back since the ray was cast, so it draws nothing.
 
         VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
     }
@@ -186,6 +195,11 @@ export default class VoxelGameObject extends GameObject
         this.instancedMeshGraphics.updateInstanceTransform(instancedMeshId, instanceId,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex, instanceId, quad, scaleX, scaleY);
+        // Asked here rather than only when the zones change, because an instance is lent to whichever
+        // quad is on show: one that has just been taken out of the pool may last have been drawing a
+        // quad on the other side of the room, and would otherwise keep that quad's outline.
+        InstancedMeshGraphics.setInstanceOutline(instancedMeshId, instanceId,
+            RestrictedZoneOutlineUtil.getOutlineStrength(quadIndex));
     }
 
     private releaseVoxelQuadInstance(quadIndex: number)

@@ -2,19 +2,16 @@ import express from "express";
 import { Request, Response } from "express";
 import User from "../../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../../shared/user/types/userType";
-import { UserRoleEnumMap } from "../../../../shared/user/types/userRole";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
 import DBUserUtil from "../../../db/util/dbUserUtil";
 import DBRoomUtil from "../../../db/util/dbRoomUtil";
 import DBSearchUtil from "../../../db/util/dbSearchUtil";
-import ServerUserManager from "../../../user/serverUserManager";
 import ServerRoomManager from "../../../room/serverRoomManager";
 import OwnedRoomUtil from "../../../room/util/ownedRoomUtil";
 import HubRoomUtil from "../../../room/util/hubRoomUtil";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import DBRoom from "../../../db/types/row/dbRoom";
-import { MAX_ROOM_EDITORS } from "../../../system/serverConstants";
 
 const RoomRouter = express.Router();
 
@@ -151,103 +148,6 @@ RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegistere
     }
 
     res.status(200).send("Room texture updated.");
-});
-
-RoomRouter.post("/set_room_user_role", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
-    const user = User.fromString((req as any).userString);
-
-    const dbUser = await DBUserUtil.findUserById(user.id);
-    if (!dbUser)
-    {
-        res.status(404).send("User not found.");
-        return;
-    }
-    if (!dbUser.ownedRoomID || dbUser.ownedRoomID.length === 0)
-    {
-        res.status(403).send("User does not own a room.");
-        return;
-    }
-
-    const { targetUserName, userRole } = req.body;
-    if (!targetUserName || typeof targetUserName !== "string")
-    {
-        res.status(400).send("Missing or invalid targetUserName.");
-        return;
-    }
-    if (userRole !== UserRoleEnumMap.Editor && userRole !== UserRoleEnumMap.Visitor)
-    {
-        res.status(400).send("userRole must be Editor or Visitor.");
-        return;
-    }
-
-    const searchResult = await DBSearchUtil.users.withUserName(targetUserName);
-    if (!searchResult.success || searchResult.data.length === 0)
-    {
-        res.status(404).send("Target user not found.");
-        return;
-    }
-    const targetUser = searchResult.data[0];
-    if (targetUser.id === user.id)
-    {
-        res.status(400).send("Cannot change your own role.");
-        return;
-    }
-
-    if (userRole === UserRoleEnumMap.Editor)
-    {
-        const result = await ServerRoomManager.setRoomEditor(dbUser.ownedRoomID, {
-            userID: targetUser.id as string,
-            userName: targetUser.userName,
-            email: targetUser.email,
-        });
-        if (result === "limit-reached")
-        {
-            res.status(409).send(`This room already has the maximum of ${MAX_ROOM_EDITORS} editors.`);
-            return;
-        }
-        if (result === "error")
-        {
-            res.status(500).send("Failed to set editor.");
-            return;
-        }
-    }
-    else // Visitor — revoke editor access.
-    {
-        const success = await ServerRoomManager.removeRoomEditor(dbUser.ownedRoomID, targetUser.id as string);
-        if (!success)
-        {
-            res.status(500).send("Failed to remove editor.");
-            return;
-        }
-    }
-
-    // Sync the role change in the server's in-memory state and broadcast to clients.
-    ServerUserManager.syncUserRoleInMemory(targetUser.id as string, dbUser.ownedRoomID, userRole);
-
-    res.status(200).send("User role updated.");
-});
-
-RoomRouter.post("/get_room_editors", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
-    const user = User.fromString((req as any).userString);
-
-    const dbUser = await DBUserUtil.findUserById(user.id);
-    if (!dbUser)
-    {
-        res.status(404).send("User not found.");
-        return;
-    }
-    if (!dbUser.ownedRoomID || dbUser.ownedRoomID.length === 0)
-    {
-        res.status(403).send("User does not own a room.");
-        return;
-    }
-
-    // Editors are stored as denormalized {userID, userName, email} entries on DBRoom,
-    // so listing them is a single fetch — no per-user join required.
-    const roomEditors = await ServerRoomManager.getRoomEditors(dbUser.ownedRoomID);
-    const editors = roomEditors.map(e => ({ userName: e.userName, email: e.email }));
-
-    res.status(200).json({ editors });
 });
 
 // List rooms with offset-based pagination. The client is responsible for hiding

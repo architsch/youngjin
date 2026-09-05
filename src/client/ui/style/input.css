@@ -96,6 +96,31 @@
   }
 }
 
+/* The opposite arrangement, for a panel whose bars are the only sign that there is more of its
+   contents than fits. Left to itself a browser draws overlay bars that fade in once a scroll is
+   already under way, which is no use to somebody who does not yet know there is anywhere to scroll
+   to. Giving the bars a treatment of their own is what takes them out of overlay mode and keeps
+   them drawn, and it is deliberately done through the `::-webkit-scrollbar` pseudo-elements alone:
+   naming `scrollbar-width` or `scrollbar-color` alongside them makes the browser prefer those and
+   ignore all of this, which on a platform whose bars overlay by default leaves them overlaying. */
+@utility yj-visible-scrollbar {
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.30);
+    border-radius: 5px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 5px;
+  }
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
 @layer components {
   .yj-text-xs {
     @apply px-1.5 py-0.5 text-xs

@@ -102,3 +102,27 @@ Internally, we now have an admin system which grants the special admin user (i.e
 So come and enjoy this new, ever-growing world of interconnected doors.
 
 #ThingsPool #Metaverse #Cyberspace #OnlineGame #SocialGame #GameDevelopment #WorldBuilding #BrowserGame #LevelEditor #RealTimeMultiplayer #UIDesign #VoxelEngine #ThreeJS #WebGL #TypeScript
+
+
+
+:d:ThingsPool now lets you keep part of a room to yourself.
+:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, Permissions, Level Editor, World Building, Free to Play, Three.js, WebGL
+:l:2026-09-05
+
+[Restricted Zones] September 5, 2026
+
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+
+ThingsPool, a freely editable virtual world, now supports restricted zones.
+
+A restricted zone is a special part of your room that nobody but you can touch - the walls, the floor, the paintings, and every other treasure you have gathered there.
+
+<restricted-zones-room>
+
+The rest of the room stays open, so you can hand your friends a corner to build in while your own private area stays intact. They can walk right through your zone and admire everything in it, but not a single block of it will move!
+
+<restricted-zones-deco>
+
+So come and claim a corner of ThingsPool for your own.
+
+#ThingsPool #VirtualSpace #Multiplayer #SocialApp #HTML5 #SimulationGame #SandboxGame #GameMechanics #VoxelEngine #LevelEditor #WorldBuilding #UserPermissions #Moderation #ThreeJS #WebGL #TypeScript

@@ -44,11 +44,10 @@ import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import { clientFeatureFlagsObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable }
+import { clientFeatureFlagsObservable, roomChangedObservable, voxelQuadSelectionObservable }
     from "../../../src/client/system/clientObservables";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
@@ -59,10 +58,15 @@ import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/se
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
+import { createEditingUser } from "../helpers/mockUser";
 import {
     buildPillar, ceilingQuadIndexOf, createRoom, currentSelection, floorQuadIndexOf, forceSelect,
     isQuadVisible, quadIndexOf, userAddsBlockAt, userRemovesBlockAt,
 } from "../helpers/selectionHarness";
+
+// Who the assertions below act as. They are not about who is asking — the editing utilities want
+// the person as well as the role he holds, so somebody has to be named.
+const actingUser = createEditingUser();
 
 const ROOM_ID = "reselection-room";
 const WALL_TEXTURES = [1, 1, 1, 1, 1, 1];
@@ -100,7 +104,9 @@ beforeEach(() => {
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableVoxelQuadSelectionChange);
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableAllSelectionChange);
     voxelQuadSelectionObservable.set(null);
-    userRoleObservable.set(UserRoleEnumMap.Owner);
+    // The room these tests use is a hub, which everyone may build in, so who is asking is not what
+    // any of them turns on — but somebody has to be, since every edit is checked against a person.
+    (App.getUser as Mock).mockReturnValue(actingUser);
     useRoom(createRoom(ROOM_ID));
     placeCameraAt(NUM_VOXEL_COLS * 0.5, 2, NUM_VOXEL_ROWS * 0.5);
 });
@@ -283,7 +289,7 @@ describe("reselection after removing any wall block in the room", () => {
                     const quadIndex = quadIndexOf(row, col, axis, orientation, layer);
                     if (!isQuadVisible(room, quadIndex))
                         continue;
-                    if (!VoxelUpdateUtil.canRemoveVoxelBlock(UserRoleEnumMap.Owner, room, quadIndex))
+                    if (!VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex))
                         continue;
 
                     const layerStart = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer);
@@ -301,7 +307,7 @@ describe("reselection after removing any wall block in the room", () => {
                     else if (!after.visible)
                         hidden.push(label);
 
-                    VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, room.voxelGrid.voxels,
+                    VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
                         quadIndexOf(row, col, "y", "+", layer), textures);
                 }
             }

@@ -2,7 +2,6 @@ import ImageMapUtil from "../../../graphics/image/util/imageMapUtil";
 import Room from "../../../room/types/room";
 import { MAX_CANVASES_PER_ROOM } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
-import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../../types/addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../../types/objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
@@ -17,8 +16,8 @@ const CanvasObjectTypeConfig: ObjectTypeConfig =
     objectType: "Canvas",
     persistent: true,
     autoUnload: true,
-    canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
+    canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
+        if (!RoomValidationUtil.canUserEditRoom(user, room))
             return false;
 
         // Block spoofing attempts
@@ -34,14 +33,14 @@ const CanvasObjectTypeConfig: ObjectTypeConfig =
 
         return true;
     },
-    canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
+    canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
+        if (!RoomValidationUtil.canUserEditRoom(user, room))
             return false;
 
         return true;
     },
-    canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
+    canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
+        if (!RoomValidationUtil.canUserEditRoom(user, room))
             return false;
 
         // Canvas movement must ignore physics
@@ -50,8 +49,8 @@ const CanvasObjectTypeConfig: ObjectTypeConfig =
 
         return true;
     },
-    canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(userRole, room))
+    canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
+        if (!RoomValidationUtil.canUserEditRoom(user, room))
             return false;
 
         // User can only set the canvas's image path or picture-frame coords, and nothing else

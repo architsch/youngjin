@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import App from "../../../../app";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
-import { colliderDebugEnabledObservable, editorListDebugEnabledObservable, imageListChooserDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../../shared/system/sharedObservables";
+import { colliderDebugEnabledObservable, imageListChooserDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../../input/button";
 import ThingsPoolEnv from "../../../../system/types/thingsPoolEnv";
@@ -91,8 +91,6 @@ export default function DebugStats({env}: Props)
                     {
                         case "show collider": colliderDebugEnabledObservable.set(true); break;
                         case "hide collider": colliderDebugEnabledObservable.set(false); break;
-                        case "show dummy-editors": editorListDebugEnabledObservable.set(true); break;
-                        case "hide dummy-editors": editorListDebugEnabledObservable.set(false); break;
                         case "show dummy-rooms": roomListDebugEnabledObservable.set(true); break;
                         case "hide dummy-rooms": roomListDebugEnabledObservable.set(false); break;
                         case "show dummy-images": imageListChooserDebugEnabledObservable.set(true); break;

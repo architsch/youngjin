@@ -445,7 +445,7 @@ describe("door mesh composition", () => {
         // an admin's in a Regular room, whose one door is that room's own.
         const canReskin = (userType: number, roomType: number) =>
             DoorObjectTypeConfig.canUserSetObjectMetadata(
-                {id: "u", userType} as any, "owner" as any, {roomType} as any, {} as any,
+                {id: "u", userType} as any, {roomType} as any, {} as any,
                 {metadataKey: COMPOSITION_KEY, metadataValue: encodeDoorComposition(1)} as any);
 
         expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Hub)).toBe(true);

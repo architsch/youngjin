@@ -23,8 +23,7 @@ import DestinationChooserForm from "./components/form/destinationChooserForm";
 import ConfigureMyRoomForm from "./components/form/configureMyRoomForm";
 import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
 import CustomizePlayerForm from "./components/form/customizePlayerForm";
-import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
-import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, objectSelectionObservable, playerSelectionObservable, popupStateObservable, roomChangedObservable, userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, objectSelectionObservable, playerSelectionObservable, popupStateObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ImageListChooserForm from "./components/form/imageListChooserForm";
@@ -53,7 +52,6 @@ export default function UIRoot({ env, user }: UIRootProps)
 {
     const [popupStack, setPopupStack] = useState<PopupState[]>([]);
     const [roomRuntimeMemory, setRoomRuntimeMemory] = useState<RoomRuntimeMemory>();
-    const [userRole, setUserRole] = useState<UserRole>(UserRoleEnumMap.Visitor);
     const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
     const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
     const [playerSelection, setPlayerSelection] = useState<PlayerSelection | null>(null);
@@ -78,9 +76,6 @@ export default function UIRoot({ env, user }: UIRootProps)
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.EnterHub);
             }
         });
-        userRoleObservable.addListener("ui_root", (role: UserRole) => {
-            setUserRole(role);
-        });
         objectSelectionObservable.addListener("ui_root", (selection: ObjectSelection | null) => {
             setObjectSelection(selection);
         });
@@ -102,7 +97,6 @@ export default function UIRoot({ env, user }: UIRootProps)
         return () => {
             clientFeatureFlagsObservable.removeElementListener("ui_root", FeatureFlag.HideChatInput);
             roomChangedObservable.removeListener("ui_root");
-            userRoleObservable.removeListener("ui_root");
             objectSelectionObservable.removeListener("ui_root");
             voxelQuadSelectionObservable.removeListener("ui_root");
             playerSelectionObservable.removeListener("ui_root");
@@ -192,7 +186,6 @@ export default function UIRoot({ env, user }: UIRootProps)
             hence its place after the bar here, which keeps it drawn on top of it. */}
         {isRoomLoaded && !inExclusiveMode && <UserRoomIdentity
             user={user}
-            userRole={userRole}
             onExitApp={exitApp}
         />}
         <GameModeMenu user={user} currentRoomID={roomID ?? ""}

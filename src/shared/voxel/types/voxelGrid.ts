@@ -1,16 +1,16 @@
 import Voxel from "./voxel";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { COLLISION_LAYER_NULL, FULL_COLLISION_LAYER_MASK, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { COLLISION_LAYER_NULL, FULL_COLLISION_LAYER_MASK, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import VoxelQueryUtil from "../util/voxelQueryUtil";
 import VoxelQuadUpdateUtil from "../util/voxelQuadUpdateUtil";
 import { RoomVolumeConstructorMap } from "../../room/generation/maps/roomVolumeConstructorMap";
 import VoxelUpdateUtil from "../util/voxelUpdateUtil";
-import { UserRoleEnumMap } from "../../user/types/userRole";
+import RestrictedZone from "./restrictedZone";
 
-const latestVersion = 3;
+const latestVersion = 4;
 
 // How tall a room stood in the format that came before the current one: half its present height,
 // with its ceiling hanging flat over the top of it. Its layers cover the same world heights the
@@ -24,6 +24,14 @@ export default class VoxelGrid extends EncodableData
     voxels: Voxel[];
     quadsMem: VoxelQuadsRuntimeMemory; // This field is NOT part of the encoded data.
 
+    // The stretches of the room only a superuser may edit (see @docs/gameplay/restricted_zone.md).
+    //
+    // They are kept here, alongside the voxels, because that is what they are about: a zone is a
+    // region of this grid, and the two are read, written and sent as one. A room arriving at a
+    // client therefore arrives with its zones already on it, and nothing has to remember to carry
+    // them separately.
+    restrictedZones: RestrictedZone[];
+
     // Which version of the format this grid was read from, or the current one for a grid that was
     // generated rather than read. Not part of the encoded data — it describes where the grid came
     // from, not what it holds.
@@ -35,12 +43,14 @@ export default class VoxelGrid extends EncodableData
     sourceFormatVersion: number;
 
     constructor(voxels: Voxel[], quadsMem: VoxelQuadsRuntimeMemory,
-        sourceFormatVersion: number = latestVersion)
+        sourceFormatVersion: number = latestVersion,
+        restrictedZones: RestrictedZone[] = [])
     {
         super();
         this.voxels = voxels;
         this.quadsMem = quadsMem;
         this.sourceFormatVersion = sourceFormatVersion;
+        this.restrictedZones = restrictedZones;
     }
 
     // The version a grid encoded right now is written at, which is what an unread grid reports.
@@ -59,6 +69,12 @@ export default class VoxelGrid extends EncodableData
                 voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, FULL_COLLISION_LAYER_MASK);
             }
         }
+        // A room is born with no restricted zones. That is generation's decision rather than an
+        // omission: a zone is a judgement about which stretch of one particular room its owner means
+        // to keep to himself, and there is nothing generation could draw that would be that
+        // judgement. Rooms that should come out already holding one would be told so through
+        // RoomBuilderParams, the way every other room-level parameter is
+        // (see @docs/geometry/room_generation.md).
         return new VoxelGrid(voxels, quadsMem);
     }
 
@@ -68,6 +84,8 @@ export default class VoxelGrid extends EncodableData
 
         for (const voxel of this.voxels)
             voxel.encode(bufferState);
+
+        encodeRestrictedZones(bufferState, this.restrictedZones);
     }
 
     static decode(bufferState: BufferState): EncodableData
@@ -81,7 +99,7 @@ export default class VoxelGrid extends EncodableData
             (data as VoxelGrid).sourceFormatVersion = versionFound;
             return data;
         }
-        const voxelGrid = decoder_2(bufferState) as VoxelGrid;
+        const voxelGrid = decoder_3(bufferState) as VoxelGrid;
         voxelGrid.sourceFormatVersion = versionFound;
         return voxelGrid;
     }
@@ -92,6 +110,7 @@ const olderVersionDecoders: ((bufferState: BufferState) => EncodableData)[] = [
     decoder_1, // version 1
     decoder_2, // version 2
     decoder_2, // version 3 (same binary layout as version 2)
+    decoder_3, // version 4
 ];
 
 const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] = [
@@ -117,7 +136,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
             {
                 for (let collisionLayer = entrance.collisionLayerMin; collisionLayer <= entrance.collisionLayerMax; ++collisionLayer)
                 {
-                    VoxelUpdateUtil.removeVoxelBlock(UserRoleEnumMap.Owner, voxels,
+                    VoxelUpdateUtil.removeVoxelBlock(undefined, voxels,
                         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer));
                 }
             }
@@ -148,7 +167,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
             // happens to put its storey floor. Those two were once the same number, and a migration
             // written against the second would quietly start laying this slab through the top of
             // every legacy room the day that number moved.
-            VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxelGrid.voxels,
+            VoxelUpdateUtil.addVoxelBlock(undefined, voxelGrid.voxels,
                 VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col,
                     LEGACY_NUM_COLLISION_LAYERS),
                 new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(ceilingTextureIndex));
@@ -178,13 +197,20 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
             {
                 for (let collisionLayer = entrance.collisionLayerMin; collisionLayer <= entrance.collisionLayerMax; ++collisionLayer)
                 {
-                    VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxelGrid.voxels,
+                    VoxelUpdateUtil.addVoxelBlock(undefined, voxelGrid.voxels,
                         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer),
                         getNeighbouringWallTextureIndices(voxelGrid, row, col, collisionLayer));
                 }
             }
         }
         return voxelGrid;
+    },
+    (olderVersionData: EncodableData) => { // version 3 -> 4
+        // Rooms gained restricted zones, and a room written before they existed had none. There is
+        // nothing to work out here: a zone says which part of a room its owner meant to keep to
+        // himself, and a room from before the question was asked has not answered it. Leaving the
+        // list empty is that answer, and it leaves every such room editable exactly as it was.
+        return olderVersionData;
     },
 ];
 
@@ -220,17 +246,56 @@ function addLegacyCornerWall(voxels: Voxel[], row: number, col: number,
 {
     for (let collisionLayer = 0; collisionLayer <= LEGACY_COLLISION_LAYER_MAX; ++collisionLayer)
     {
-        VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxels,
+        VoxelUpdateUtil.addVoxelBlock(undefined, voxels,
             VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer),
             quadTextureIndicesWithinLayer);
     }
 }
 
-// The current format: every voxel reads itself off the buffer.
+// The current format: every voxel reads itself off the buffer, and the room's restricted zones
+// follow them.
+function decoder_3(bufferState: BufferState): EncodableData
+{
+    const voxelGrid = decoder_2(bufferState) as VoxelGrid;
+    voxelGrid.restrictedZones = decodeRestrictedZones(bufferState);
+    return voxelGrid;
+}
+
+// The format as it stood before a room carried its restricted zones: every voxel reads itself off
+// the buffer, and there is nothing behind them.
 function decoder_2(bufferState: BufferState): EncodableData
 {
     return decodeVoxels(bufferState,
         (bs, quadsMem, row, col) => Voxel.decodeWithParams(bs, quadsMem, row, col) as Voxel);
+}
+
+function encodeRestrictedZones(bufferState: BufferState, restrictedZones: RestrictedZone[]): void
+{
+    // Capped rather than trusted: the count is written in a single byte, and everything that reaches
+    // here has already been through the validation that enforces the cap, so a list longer than it
+    // means something upstream went wrong and must not be allowed to write a count it cannot read
+    // back.
+    const numZones = Math.min(restrictedZones.length, MAX_RESTRICTED_ZONES);
+    if (restrictedZones.length > MAX_RESTRICTED_ZONES)
+    {
+        console.error(`VoxelGrid :: Too many restricted zones to encode ` +
+            `(${restrictedZones.length}, max ${MAX_RESTRICTED_ZONES})`);
+    }
+    new EncodableRawByteNumber(numZones).encode(bufferState);
+    for (let i = 0; i < numZones; ++i)
+        restrictedZones[i].encode(bufferState);
+}
+
+function decodeRestrictedZones(bufferState: BufferState): RestrictedZone[]
+{
+    const numZones = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+    if (numZones > MAX_RESTRICTED_ZONES)
+        throw new Error(`Decoded restricted zone count is out of range (numZones = ${numZones})`);
+
+    const restrictedZones = new Array<RestrictedZone>(numZones);
+    for (let i = 0; i < numZones; ++i)
+        restrictedZones[i] = RestrictedZone.decode(bufferState) as RestrictedZone;
+    return restrictedZones;
 }
 
 // The format as it stood while a room was half its present height: one byte of collision layer

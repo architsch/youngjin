@@ -4,7 +4,6 @@ import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
-import ServerUserManager from "../user/serverUserManager";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
@@ -19,7 +18,6 @@ const ServerObjectManager =
     onAddObjectSignalReceived: (socketUserContext: SocketUserContext, obj: AddObjectSignal): boolean =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -29,7 +27,7 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
-        if (!ObjectUpdateUtil.addObject(user, userRole, room, obj))
+        if (!ObjectUpdateUtil.addObject(user, room, obj))
         {
             console.error(`onAddObjectSignalReceived :: Failed (objectId=${obj.objectId})`);
             socketUserContext.addPendingSignalToUser("removeObjectSignal",
@@ -44,7 +42,6 @@ const ServerObjectManager =
     onRemoveObjectSignalReceived: (socketUserContext: SocketUserContext, signal: RemoveObjectSignal): boolean =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -54,7 +51,7 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
-        if (!ObjectUpdateUtil.removeObject(user, userRole, room, signal))
+        if (!ObjectUpdateUtil.removeObject(user, room, signal))
         {
             console.error(`onRemoveObjectSignalReceived :: Failed (userID = ${user.id})`);
             return false;
@@ -67,7 +64,6 @@ const ServerObjectManager =
     onSetObjectTransformSignalReceived: (socketUserContext: SocketUserContext, signal: SetObjectTransformSignal) =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -77,7 +73,7 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
-        const result = ObjectUpdateUtil.setObjectTransform(user, userRole, room, signal);
+        const result = ObjectUpdateUtil.setObjectTransform(user, room, signal);
 
         // If desync was detected,
         //      Broadcast to everyone (including the sender).
@@ -97,7 +93,6 @@ const ServerObjectManager =
     onSetObjectMetadataSignalReceived: (socketUserContext: SocketUserContext, signal: SetObjectMetadataSignal) =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -109,7 +104,7 @@ const ServerObjectManager =
 
         const obj = room.objectById[signal.objectId];        
 
-        if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal))
+        if (!ObjectUpdateUtil.setObjectMetadata(user, room, signal))
         {
             console.error(`onSetObjectMetadataSignalReceived :: Failed (objectId = ${signal.objectId})`);
             const originalMetadata = obj.metadata[signal.metadataKey];

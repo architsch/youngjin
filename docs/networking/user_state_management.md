@@ -7,8 +7,8 @@ Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.
 ## Where user state lives
 
 - **`DBUser`** — per-user, persistent. Holds the user's last room, their player metadata, their single-player mode (see [single_player_mode.md](single_player_mode.md)), the features they have already been introduced to (see [ftue.md](ftue.md)), account info, and login bookkeeping. Player metadata follows the user across rooms; it is not per-room.
-- **`DBRoom`** — per-room, persistent. Holds the owner, the texture pack, and the editor list (a denormalized list of editor identities, so listing editors in the UI never needs an extra user lookup). The product invariant is that a user's name/email never change after account creation, so the denormalized snapshot does not drift.
-- **State is not bundled into a per-session snapshot.** Players always spawn behind one of the destination room's doors, a user's role is derived from `DBRoom` at join time, and the last room and player metadata are written to `DBUser` directly.
+- **`DBRoom`** — per-room, persistent. Holds the owner and the texture pack.
+- **State is not bundled into a per-session snapshot.** Players always spawn behind one of the destination room's doors, what a user may do in a room is worked out from who he is and which room it is (see [my_room.md](my_room.md#who-a-room-answers-to)), and the last room and player metadata are written to `DBUser` directly.
 
 ## When the user moves from one room to another without reloading the game page
 1. The client sends a room-change request and blocks further requests until the current one completes.
@@ -51,13 +51,8 @@ Waiting is the delicate part, because the reverse proxy in front of the app stay
 
 The health route reports "not ready" for a process that is on its way out, as well as for one that is not yet listening. Both must count as unavailable: a client that reloaded into the outgoing process would only be disconnected again moments later. Clients keep polling (at a widening interval) for as long as the page is open, so the session recovers whenever the server does return.
 
-## User role resolution
-A user's role within a room is derived (not stored separately) at join time:
-1. **Owner** — if the user owns the room.
-2. **Editor** — if the user appears in the room's editor list (loaded from `DBRoom` and cached in memory while the room is loaded).
-3. **Visitor** — otherwise.
-
-When the owner appoints or revokes an editor, the server updates `DBRoom` (and the in-memory cache) and notifies everyone currently in the room of the role change. If the affected user is offline, the change simply takes effect on their next join, since the role is re-derived from `DBRoom` each time.
+## What a user may do in a room
+Nothing about this is stored per session, per room, or per pair of the two: `RoomValidationUtil` is asked, and it answers from the person and the room alone — he owns this room, or it is a hub, or it is his own single-player room. So there is nothing to establish on the way in, nothing to keep in step while he is there, and nothing to re-establish after a reconnect.
 
 ## Player Metadata Restoration
 When a user joins a room, the server resolves their player metadata by priority:
@@ -67,7 +62,6 @@ When a user joins a room, the server resolves their player metadata by priority:
 
 ## In-Memory Buffers (server-only)
 - **Recent-disconnect metadata buffer** — keyed by user. Populated synchronously at disconnect and consumed on the matching reconnect, then swept after a short time-to-live. It closes the race window where the disconnect's `DBUser` write has not yet landed when the new socket reads `DBUser`.
-- **Editor cache** — keyed by room. Populated from `DBRoom` when a room loads, refreshed when editors change, and dropped when the room unloads.
 
 ## Stale Socket Detection & Cleanup
 A periodic check detects sockets that are no longer connected but whose disconnect handler never fired (e.g. an abrupt browser crash). Such sockets are cleaned up after a short grace period — removing the user from their room and discarding their context. The same loop evicts expired entries from the disconnect-metadata buffer.

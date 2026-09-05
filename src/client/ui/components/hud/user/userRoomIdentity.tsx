@@ -2,7 +2,6 @@ import IconButton from "../../input/iconButton";
 import PaletteIcon from "../../../svg/icons/paletteIcon";
 import PowerIcon from "../../../svg/icons/powerIcon";
 import User from "../../../../../shared/user/types/user";
-import { UserRole, UserRoleEnumMap } from "../../../../../shared/user/types/userRole";
 import { UserTypeEnumMap } from "../../../../../shared/user/types/userType";
 import PopupUtil from "../../../util/popupUtil";
 import { useEffect, useState } from "react";
@@ -13,7 +12,6 @@ import ClientObjectManager from "../../../../object/clientObjectManager";
 
 export default function UserRoomIdentity({
     user,
-    userRole,
     onExitApp,
 }: Props)
 {
@@ -24,13 +22,9 @@ export default function UserRoomIdentity({
 
     const isGuest = user.userType === UserTypeEnumMap.Guest;
 
-    const roleName = userRole === UserRoleEnumMap.Owner ? "Owner"
-        : userRole === UserRoleEnumMap.Editor ? "Editor"
-        : "Visitor";
-
     // Each part of this bar can be taken away on its own, since the scripted single-player steps
-    // hand the user one thing at a time: who he is and what he may do here is noise during a
-    // tutorial, while the button that leaves the app must never be out of reach. The way into edit
+    // hand the user one thing at a time: who he is is noise during a tutorial, while the button
+    // that leaves the app must never be out of reach. The way into edit
     // mode is not taken away on its own terms, though — it stands or falls with whether that mode
     // may be entered at all (see GameModeUtil), so that a button on offer is always one that works.
     useEffect(() => {
@@ -53,7 +47,6 @@ export default function UserRoomIdentity({
     return <div className="flex flex-row absolute right-0 top-(--yj-headline-height,0px) p-2 text-right rounded-bl-lg items-center justify-end gap-2 pointer-events-auto">
         {!hideIdentityLabels && <div className="flex flex-col items-end leading-tight px-1">
             <div className="text-sm yj-text-outline text-amber-300">{user.userName}</div>
-            <div className="text-xs yj-text-outline text-gray-400">({roleName})</div>
         </div>}
         {canChangeGameMode && <IconButton id="editModeButton" icon={<PaletteIcon/>} size="sm" onClick={() => {
             // The mode opens on the user's own character, so there is no mode to open without one.
@@ -88,6 +81,5 @@ export default function UserRoomIdentity({
 interface Props
 {
     user: User;
-    userRole: UserRole;
     onExitApp: () => void;
 }

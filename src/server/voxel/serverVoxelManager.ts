@@ -3,19 +3,19 @@ import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSi
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import SetRestrictedZonesSignal from "../../shared/voxel/types/update/setRestrictedZonesSignal";
 import VoxelUpdateUtil from "../../shared/voxel/util/voxelUpdateUtil";
+import RestrictedZoneUtil from "../../shared/voxel/util/restrictedZoneUtil";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../shared/system/sharedConstants";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
-import ServerUserManager from "../user/serverUserManager";
 
 const ServerVoxelManager =
 {
     onAddVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: AddVoxelBlockSignal) =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -25,7 +25,7 @@ const ServerVoxelManager =
         }
         const room = roomRuntimeMemory.room;
 
-        if (!VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels, signal.quadIndex, signal.quadTextureIndicesWithinLayer, room))
+        if (!VoxelUpdateUtil.addVoxelBlock(user, room.voxelGrid.voxels, signal.quadIndex, signal.quadTextureIndicesWithinLayer, room))
         {
             console.error(`ServerVoxelManager::onAddVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             socketUserContext.addPendingSignalToUser("removeVoxelBlockSignal",
@@ -39,7 +39,6 @@ const ServerVoxelManager =
     onRemoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: RemoveVoxelBlockSignal) =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -55,7 +54,7 @@ const ServerVoxelManager =
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex);
         const textures = captureBlockTextures(room, row, col, collisionLayer);
 
-        if (!VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels, signal.quadIndex, room))
+        if (!VoxelUpdateUtil.removeVoxelBlock(user, room.voxelGrid.voxels, signal.quadIndex, room))
         {
             console.error(`ServerVoxelManager::onRemoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             socketUserContext.addPendingSignalToUser("addVoxelBlockSignal",
@@ -69,7 +68,6 @@ const ServerVoxelManager =
     onMoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: MoveVoxelBlockSignal) =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -86,7 +84,7 @@ const ServerVoxelManager =
         // Capture source block textures before any modification attempt, for potential recovery.
         const sourceTextures = captureBlockTextures(room, row, col, collisionLayer);
 
-        if (!VoxelUpdateUtil.moveVoxelBlock(userRole, room.voxelGrid.voxels, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset, room))
+        if (!VoxelUpdateUtil.moveVoxelBlock(user, room.voxelGrid.voxels, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset, room))
         {
             console.error(`ServerVoxelManager::onMoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             sendMoveReversal(socketUserContext, room, signal, sourceTextures);
@@ -99,7 +97,6 @@ const ServerVoxelManager =
     onSetVoxelQuadTextureSignalReceived: (socketUserContext: SocketUserContext, signal: SetVoxelQuadTextureSignal) =>
     {
         const user = socketUserContext.user;
-        const userRole = ServerUserManager.getUserRole(user.id);
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
@@ -112,7 +109,7 @@ const ServerVoxelManager =
         // Capture old texture for potential recovery.
         const oldTextureIndex = room.voxelGrid.quadsMem.quads[signal.quadIndex] & 0b01111111;
 
-        if (!VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels, signal.quadIndex, signal.textureIndex, room))
+        if (!VoxelUpdateUtil.setVoxelQuadTexture(user, room.voxelGrid.voxels, signal.quadIndex, signal.textureIndex, room))
         {
             console.error(`ServerVoxelManager::onSetVoxelQuadTextureSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             socketUserContext.addPendingSignalToUser("setVoxelQuadTextureSignal",
@@ -122,6 +119,33 @@ const ServerVoxelManager =
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignal("setVoxelQuadTextureSignal", signal, user.id);
+    },
+    onSetRestrictedZonesSignalReceived: (socketUserContext: SocketUserContext, signal: SetRestrictedZonesSignal) =>
+    {
+        const user = socketUserContext.user;
+        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
+        {
+            console.error(`ServerVoxelManager::onSetRestrictedZonesSignalReceived :: No room registered for user (userID = ${user.id})`);
+            return;
+        }
+        const room = roomRuntimeMemory.room;
+
+        if (!RestrictedZoneUtil.setRestrictedZones(user, room, signal.restrictedZones))
+        {
+            console.error(`ServerVoxelManager::onSetRestrictedZonesSignalReceived :: Failed (roomID=${room.id})`);
+
+            // The whole list is what was sent, so the whole list is what puts the sender right
+            // again: there is no partial edit to unpick, only a room whose zones he has drawn
+            // differently from everybody else's.
+            socketUserContext.addPendingSignalToUser("setRestrictedZonesSignal",
+                new SetRestrictedZonesSignal(room.id, room.voxelGrid.restrictedZones));
+            return;
+        }
+
+        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
+        socketRoomContext.multicastSignal("setRestrictedZonesSignal", signal, user.id);
     },
 }
 

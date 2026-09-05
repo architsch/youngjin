@@ -10,6 +10,7 @@ export interface MockUserOverrides {
     email?: string;
     singlePlayerMode?: string;
     lastRoomID?: string;
+    ownedRoomID?: string;
     playerMetadata?: {[key: string]: string};
 }
 
@@ -33,8 +34,19 @@ export function createMockUser(overrides: MockUserOverrides = {}): MockUserResul
         overrides.email ?? `test${i}@test.com`,
         overrides.singlePlayerMode ?? "",
         overrides.lastRoomID ?? "",
+        overrides.ownedRoomID ?? "",
     );
     return { user, playerMetadata: overrides.playerMetadata ?? {} };
+}
+
+/**
+ * A stand-in for whoever is doing the editing, for helpers and assertions that are not about who is
+ * asking. Every room-editing utility is told who is asking (see RoomValidationUtil), so a test
+ * exercising something else still has to name somebody.
+ */
+export function createEditingUser(userType: number = UserTypeEnumMap.Admin): User
+{
+    return createMockUser({userType}).user;
 }
 
 /** Resets the internal counter (call in beforeEach/afterEach). */

@@ -2,8 +2,8 @@
  * Scenario tests: Permission enforcement
  *
  * Covers:
- * - Visitor cannot edit voxels in Regular rooms
- * - Owner/Editor can edit voxels in Regular rooms
+ * - A visitor cannot edit voxels in a Regular room
+ * - Its owner can
  * - All users can edit voxels in Hub rooms
  * - Rollback signals sent to unauthorized users
  */
@@ -12,9 +12,8 @@ import { runScenario } from "../helpers/scenarioRunner";
 import { regularRoom, hubRoom, userAt } from "../helpers/scenarioPresets";
 import { getPendingSignals } from "../helpers/invariants";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
-import ServerUserManager from "../../../src/server/user/serverUserManager";
+import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 
 describe("permission scenarios", () => {
     beforeEach(() => {
@@ -23,15 +22,14 @@ describe("permission scenarios", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("visitor cannot add voxel blocks in a Regular room", async () => {
+    it("a user who owns no room may not edit a Regular room", async () => {
         await runScenario({
             name: "visitor voxel add rejected",
             rooms: [regularRoom("perm-room")],
             users: [userAt(16, 16, "perm-room")],
             assertions: ({ users }) => {
-                // Default role for non-owners in Regular rooms is Visitor
-                const role = ServerUserManager.getUserRole(users[0].user.id);
-                expect(role).toBe(UserRoleEnumMap.Visitor);
+                const room = ServerRoomManager.roomRuntimeMemories["perm-room"].room;
+                expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(false);
             },
         });
     });
@@ -83,35 +81,11 @@ describe("permission scenarios", () => {
                 { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
             ],
             assertions: ({ users }) => {
-                expect(ServerUserManager.getUserRole("the-owner")).toBe(UserRoleEnumMap.Owner);
                 // Owner's voxel add should have succeeded (no rollback)
                 const rollback = getPendingSignals(users[0], "removeVoxelBlockSignal");
                 expect(rollback.length).toBe(0);
                 // Block should be present
                 const roomMem = ServerRoomManager.roomRuntimeMemories["owner-room"];
-                const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
-            },
-        });
-    });
-
-    it("editor role allows voxel editing in Regular room", async () => {
-        await runScenario({
-            name: "editor can edit",
-            rooms: [regularRoom("editor-room")],
-            users: [userAt(16, 16, "editor-room", { id: "the-editor" })],
-            actions: [
-                // Promote to editor, then attempt voxel add
-                { type: "setUserRole", userIndex: 0, role: UserRoleEnumMap.Editor },
-                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
-            ],
-            assertions: ({ users }) => {
-                expect(ServerUserManager.getUserRole("the-editor")).toBe(UserRoleEnumMap.Editor);
-                // Editor's voxel add should have succeeded (no rollback)
-                const rollback = getPendingSignals(users[0], "removeVoxelBlockSignal");
-                expect(rollback.length).toBe(0);
-                // Block should be present
-                const roomMem = ServerRoomManager.roomRuntimeMemories["editor-room"];
                 const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },

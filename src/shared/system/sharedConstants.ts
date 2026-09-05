@@ -225,6 +225,15 @@ export const NUM_VOXEL_QUADS_PER_VOXEL =
 // this range against the width of that field, so a room that outgrows it fails there instead.
 export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 100352
 
+// How many restricted zones one room may hold. A zone is drawn by hand and read at a glance, so the
+// cap is about how many a person can keep track of on the room's plan rather than about what the
+// format could carry (see @docs/gameplay/restricted_zone.md).
+export const MAX_RESTRICTED_ZONES = 8;
+
+// How many bytes one restricted zone is written in: its two row bounds and its two column bounds,
+// a byte each.
+export const ENCODED_RESTRICTED_ZONE_BYTES = 4;
+
 // The largest a room's voxel grid can come out once encoded: every cell writing its floor and
 // ceiling quads, its collision layer mask, and the six faces of every one of its collision layers —
 // which is what a room built solid from its floor to its ceiling amounts to. Only the occupied
@@ -234,7 +243,9 @@ export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_RO
 export const MAX_ENCODED_VOXEL_GRID_BYTES = 1 /* format version */ +
     NUM_VOXEL_ROWS * NUM_VOXEL_COLS *
         (2 /* floor and ceiling quads */ + 2 /* collision layer mask */ +
-            NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS);
+            NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS) +
+    1 /* how many restricted zones follow */ +
+    MAX_RESTRICTED_ZONES * ENCODED_RESTRICTED_ZONE_BYTES;
 
 // How many of a room's quads can be on show at once, which is what the room's instanced mesh is
 // sized for rather than the far larger number of quads the grid addresses (see

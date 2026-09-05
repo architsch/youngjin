@@ -1,7 +1,6 @@
 import Room from "../../../room/types/room";
 import { IS_SERVER, MAX_MESH_INSTANCES_PER_PLAYER, MAX_PLAYERS_PER_ROOM, PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
-import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
@@ -17,13 +16,13 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
     objectType: "Player",
     persistent: false,
     autoUnload: true,
-    canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+    canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return IS_SERVER; // Only the server can add a player character.
     },
-    canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+    canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return IS_SERVER; // Only the server can remove a player character.
     },
-    canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
+    canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
         // User can only move his/her own player character
         if (obj.sourceUserID != user.id)
             return false;
@@ -34,7 +33,7 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
 
         return true;
     },
-    canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
+    canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
         // User can only set the metadata of his/her own player character
         if (obj.sourceUserID != user.id)
             return false;

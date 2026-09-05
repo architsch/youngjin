@@ -8,6 +8,7 @@ export default interface ImageChooserProps
     viewType: "grid" | "list";
     mapName: string;
     initialChoicePath: string; // "" if no initial choice
+    disabled?: boolean; // Turns the opening button down, for a choice that is not this user's to make
     onChoose: (path: string) => void;
     onClick?: () => void;
 }

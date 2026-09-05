@@ -8,7 +8,9 @@ import ClientObjectManager from "../../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
-import { clientFeatureFlagsObservable, objectSelectionObservable, userRoleObservable } from "../../../../system/clientObservables";
+import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
+import RestrictedZoneUtil from "../../../../../shared/voxel/util/restrictedZoneUtil";
+import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import PopupUtil from "../../../util/popupUtil";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
@@ -63,6 +65,12 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
         };
     }, []);
 
+    // Whether this canvas is the user's to change at all, which is what both choosers are turned
+    // down by. Worked out on every render, so a zone drawn over the canvas while it is picked out
+    // reaches them — the selection is announced afresh whenever the room changes under it (see
+    // ClientVoxelManager).
+    const canEdit = canEditCanvas(props.selection);
+
     return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
@@ -75,6 +83,7 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
             viewType="list"
             mapName="CanvasImageMap"
             initialChoicePath={initialImagePath}
+            disabled={!canEdit}
             onChoose={path => {
                 trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
             }}
@@ -89,6 +98,7 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
             viewType="grid"
             mapName="CanvasFrameImageMap"
             initialChoicePath={initialFrameCoords}
+            disabled={!canEdit}
             onChoose={coords => {
                 trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.CanvasFrameCoords, coords);
             }}
@@ -113,6 +123,23 @@ function clearFTUETimeouts()
     }
 }
 
+// Whether this canvas is one the user may change at all: the room has to be his to edit, and the
+// canvas must not be standing in a stretch of it that is somebody else's
+// (see @docs/gameplay/restricted_zone.md). What the choosers offer is a *value*, and it is never the
+// value that is refused here — which is why they are turned down as a whole rather than per choice.
+function canEditCanvas(selection: ObjectSelection): boolean
+{
+    const room = App.getCurrentRoom();
+    if (!room)
+        return false;
+    const user = App.getUser();
+    const params = selection.gameObject.params;
+
+    return RoomValidationUtil.canUserEditRoom(user, room) &&
+        !RestrictedZoneUtil.blocksObjectEdit(user, room, params.objectTypeIndex,
+            params.transform.pos, params.transform.dir);
+}
+
 function canRemoveCanvas(selection: ObjectSelection): boolean
 {
     if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectRemoval))
@@ -122,10 +149,9 @@ function canRemoveCanvas(selection: ObjectSelection): boolean
     if (!room)
         return false;
     const user = App.getUser();
-    const userRole = userRoleObservable.peek();
 
     const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canRemoveObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
+    return ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(room.id, objectId));
 }
 
 function openRemoveConfirmPopup(selection: ObjectSelection)
@@ -168,11 +194,10 @@ function canSetCanvasMetadata(selection: ObjectSelection, metadataKey: ObjectMet
     if (!room)
         return false;
     const user = App.getUser();
-    const userRole = userRoleObservable.peek();
 
     const objectId = selection.gameObject.params.objectId;
     const signal = new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue);
-    return ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal);
+    return ObjectUpdateUtil.canSetObjectMetadata(user, room, signal);
 }
 
 function trySetCanvasMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string)

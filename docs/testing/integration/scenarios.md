@@ -84,9 +84,9 @@ Its current shape, while procedural generation is switched off for Hubs.
 | stands interior walls in the room, rather than hollowing the whole storey | Some of the storey is walkable and some is not |
 | draws a different room from a different seed | Seeds do not collapse onto one layout |
 
-## Voxel Grid Migration (`voxel-grid-migration.test.ts`) — 63 tests
+## Voxel Grid Migration (`voxel-grid-migration.test.ts`) — 80 tests
 
-A room's contents are stored as an opaque binary blob, so an old room is migrated by the decoder on load rather than by a pass over storage. The fixtures these run against were produced by the previous commit's own encoder, in a git worktree, so what is being read is what the shipped code actually wrote — see the fixtures' README. Run per fixture: the bare shell a multiplayer room used to be, four fully generated rooms, and one with block work of assorted heights. See [voxel_grid.md](../../geometry/voxel_grid.md#stored-format-and-its-versions) for the behavior under test.
+A room's contents are stored as an opaque binary blob, so an old room is migrated by the decoder on load rather than by a pass over storage. The fixtures these run against were produced by the previous commit's own encoder, in a git worktree, so what is being read is what the shipped code actually wrote — see the fixtures' README. Run per fixture. The version-1 fixtures are the bare shell a multiplayer room used to be, four fully generated rooms, and one with block work of assorted heights; the version-3 fixtures are the solid mass a room is carved out of, a generated Hub, a generated Regular room, and one with scattered occupancy. See [voxel_grid.md](../../geometry/voxel_grid.md#stored-format-and-its-versions) for the behavior under test.
 
 | Test | What it verifies |
 |------|-----------------|
@@ -103,6 +103,9 @@ A room's contents are stored as an opaque binary blob, so an old room is migrate
 | holds no quad outside the grid's own range | The migrated room addresses exactly the quads the current grid does |
 | seals the doorway, so that the room's door has a wall to hang on | A migrated room's entrance cell is solid, since a wall attachment with nothing behind it is refused |
 | fills the doorway in, and finishes it like the wall it is now part of | The filled cell is solid to the doorway's old height and carries the neighbouring wall's texture on the face that looks into the room |
+| comes back with every voxel exactly as it was written | A version-3 room's collision layer masks and every byte of its quad memory survive the version that appended the restricted zones behind them |
+| comes back holding no restricted zones | A room written before zones existed has not said which part of it its owner meant to keep to himself, so it stays editable exactly as it was |
+| holds for the largest room there is, with every zone it may carry | A room solid from floor to ceiling, carrying the most zones a room may hold, encodes to exactly the size the encoding buffer is sized from |
 
 ## Room Population (`room-population.test.ts`) — 34 tests
 
@@ -265,7 +268,7 @@ A wall attachment stands exactly on the boundary between the wall and the room, 
 | does not blind a viewpoint pushed into a wall | A camera inside a wall block still sees the room, the block it starts in being no more in the way than the one it ends in |
 | sees straight across an open floor | An unobstructed line the width of the room is not blocked |
 
-## Game Mode (`game-mode.test.ts`) — 23 tests
+## Game Mode (`game-mode.test.ts`) — 21 tests
 
 Clicking something in the room means one thing in play mode and another in edit mode. See [game_mode.md](../../gameplay/game_mode.md) for the behavior under test.
 
@@ -276,14 +279,12 @@ Clicking something in the room means one thing in play mode and another in edit 
 | selects the user's own character and orbits it | Entering edit mode picks out the character and frames it by its own size alone (no minimum distance asked for) |
 | opens for a user who may not edit the room, on his own character | A visitor to someone else's room still gets the mode and his own character in it: the character is his wherever he is standing |
 | turns away that user's click on the room itself, and says why | A click on a block in a room he may not edit selects nothing and raises a notification, while leaving him the mode and the character he came into it for |
-| lets an editor's click on the room through | The same click by a user who may edit the room selects the block and raises nothing |
+| lets the room owner's click on it through | The same click by the room's owner selects the block and raises nothing |
 | carries the selection over to a block the user picks next | Picking a block inside the mode drops the character, keeps the mode, and re-frames the camera — this time with a minimum distance, so the block is seen among its surroundings |
 | is left by a second click on the block being edited | Clicking the current selection again lets it go, and the mode goes with it: nothing is selected and the camera is back at the player's eye |
 | is not left by a second click on the user's own character | The character is the exception, since opening the mode goes through the same call: it stays picked out and the mode stands |
 | keeps the orbit through the gap left by a selection being replaced | A selection dropped on the way to another one (what an edit does as it moves the selection onto what it just built) does not read as the mode having ended |
 | drops the selection and hands the camera back | Leaving the mode clears every selection and returns the camera to the first-person view |
-| is left behind when the user's standing in the room is taken away | A role change that revokes editing drops what he had picked out of the room, ends the mode, and returns the camera |
-| is left behind even while a scripted step is holding that selection in place | The step's hold is on the user giving a selection up, not on it being taken from him: the selection goes and the mode with it |
 | takes a selection a scripted step had pinned along with it | A pinned selection is pinned for the sake of what is taught inside the mode, so leaving the mode drops it too rather than being blocked by it |
 | keeps the way out shut | A step holding the user in his mode refuses the crossing itself — what the exit button and the back gesture both come down to — leaving mode, selection, and orbit as they were |
 | keeps the way in shut | The same hold refuses the crossing the other way: edit mode does not open, and nothing is picked out |
@@ -418,32 +419,49 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | chat message multicast reaches room participants | `setObjectMetadataSignal` reaches room participants |
 | desync transform signal reaches ALL participants including sender | A rejected transform broadcasts an authoritative correction to everyone, sender included |
 
-## Permissions (`permissions.test.ts`) — 5 tests
+## Permissions (`permissions.test.ts`) — 4 tests
 
 | Test | What it verifies |
 |------|-----------------|
-| visitor cannot add voxel blocks in a Regular room | Default role in a Regular room is Visitor |
+| a user who owns no room may not edit a Regular room | A Regular room answers to one person, and everybody else is only visiting |
 | visitor voxel add gets rollback signal | An unauthorized add triggers a `removeVoxelBlockSignal` |
 | all users can edit voxels in a Hub room | Any user can edit voxels in Hub rooms |
-| owner can edit voxels in their own Regular room | The room owner has the Owner role and can edit |
-| editor role allows voxel editing in Regular room | A promoted Editor can edit in Regular rooms |
+| owner can edit voxels in their own Regular room | The room's owner builds in it freely |
 
-## Extended Permissions (`permissions-extended.test.ts`) — 16 tests
+## Restricted Zones (`restricted-zones.test.ts`) — 15 tests
 
-### Voxel Operations × Roles Matrix (12 tests)
-Parameterized over 4 voxel operations (addVoxel, removeVoxel, moveVoxel, setVoxelTexture) and 3 roles (Owner, Editor, Visitor):
-- Owner and Editor succeed in Regular rooms
-- Visitor is rejected (gets a rollback) in Regular rooms
+The stretches of a room only a superuser may edit. Asserted as the *server* enforces them, since a client talked into ignoring a zone still has to get past that. See [restricted_zone.md](../../gameplay/restricted_zone.md) for the behavior under test.
+
+| Test | What it verifies |
+|------|-----------------|
+| refuses an ordinary user's block inside a zone, and rolls his own copy back | The block is not placed, the room is not marked for saving, and the sender is sent the removal that undoes his optimistic add |
+| lets the same user build in the same room outside the zone | A zone closes off the stretch it covers and nothing else |
+| lets an admin build inside a hub's zone | A hub's zones do not apply to the person the hub answers to |
+| refuses an ordinary user's removal inside a zone, and puts the block back | A zone drawn over something already standing there does not take it away; it stops anybody else touching it |
+| refuses a repaint inside a zone but leaves the zone's outward faces paintable | The face a zone is seen through from outside it stays the room's to finish, while the one pointing inward does not |
+| counts the owner of a regular room, and the admin of a hub | Who a superuser is comes from a different place in each kind of room, and an admin has no standing in somebody else's room that anybody else lacks |
+| refuses an ordinary user's canvas that would reach into a zone | An object the room keeps is refused where its collider would meet a zone, and the refusal is reached through the same door every other object rule is |
+| refuses taking down, and dragging out of, a canvas standing in a zone | Moving a kept object out of a zone is refused along with moving one in, so the removal rule cannot be undone in two steps |
+| refuses repainting a canvas standing in a zone | What a picture inside a zone shows is as much a part of that stretch of the room as the wall behind it |
+| lets a player walk through a zone | An object the room does not keep is never in question, which is also what keeps this off the path a player's own movement runs down |
+| lets an admin redraw a hub's zones, tells the room, and leaves the room to be saved later | The room takes the new list, is marked for the periodic save rather than written out, and everybody else in the room is told once while the sender is not told twice |
+| refuses an ordinary user's redraw, and hands him the room's own zones back | The whole list is what was sent, so the whole list is what puts a refused sender right again |
+| refuses a list that is too long, out of range, or inside out | The cap, the room's bounds, whole voxels, and min-before-max are all enforced |
+| carries a room's zones through a save and a reload | Zones are stored with the room's voxels and come back off storage unchanged |
+| keeps the question of who is asking out of a single-player room | Nobody else is in it, so there is nobody a zone could be protecting the room from |
+
+## Extended Permissions (`permissions-extended.test.ts`) — 10 tests
+
+### Voxel Operations × Ownership Matrix (8 tests)
+Parameterized over 4 voxel operations (addVoxel, removeVoxel, moveVoxel, setVoxelTexture) and the two answers a Regular room has:
+- Its owner succeeds
+- Anybody else is rejected (gets a rollback)
 
 ### Hub Permissions (1 test)
-- Visitor can perform all voxel operations (add, remove, move, setTexture) in Hub rooms
+- Anybody can perform all voxel operations (add, remove, move, setTexture) in Hub rooms
 
-### Mid-Session Role Changes (2 tests)
-- Promoting a Visitor to Editor enables voxel editing
-- Demoting an Editor to Visitor revokes voxel editing
-
-### Cross-Room Role Behavior (1 test)
-- A user's role resets to Visitor when switching to a different Regular room
+### Cross-Room Behavior (1 test)
+- Owning one Regular room grants nothing in another
 
 ## State Persistence (`state-persistence.test.ts`) — 9 tests
 
@@ -456,7 +474,7 @@ Parameterized over 4 voxel operations (addVoxel, removeVoxel, moveVoxel, setVoxe
 | alternating Case A and B reconnects with observers | Observers stay present during alternating reconnection cycles |
 | voxel blocks persist when all users leave and one rejoins | Blocks are saved when the room empties and seen on rejoin |
 | voxel blocks placed by one user are visible to newly joined user | A new joiner sees blocks placed by others |
-| extended invariants hold after mixed operations | Physics-room, physics-object, and role consistency after mixed ops |
+| extended invariants hold after mixed operations | Physics-room, physics-object, and room-ownership consistency after mixed ops |
 | graceful shutdown preserves user states across multiple rooms | Shutdown preserves all user states across multiple rooms |
 
 ## Race Conditions (`race-conditions.test.ts`) — 26 tests
@@ -504,7 +522,7 @@ Parameterized over 4 voxel operations (addVoxel, removeVoxel, moveVoxel, setVoxe
 
 ### RC12: Metadata-Cache Race (7 tests)
 - Case A under latency: live metadata is captured even if the DB has not yet caught up
-- Case A: a room owner's reconnect re-establishes the Owner role
+- Case A: a room owner's reconnect leaves the room still his
 - Case B: a brand-new chat message at disconnect lands on the next session
 - Disconnect → reconnect across rooms: metadata follows the user
 - `evictExpiredDisconnectMetadata` clears stale entries past the TTL
@@ -524,7 +542,7 @@ Parameterized over 4 voxel operations (addVoxel, removeVoxel, moveVoxel, setVoxe
 | voxel-heavy | connect:2 disconnect:1 join:2 move:1 addVoxel:4 removeVoxel:2 | 8 | 40 | 20 |
 | reconnect-heavy | connect:2 disconnect:1 join:3 move:2 reconnA:2 reconnB:2 | 8 | 30 | 15 |
 | voxel-mixed | connect:2 disconnect:1 join:2 move:1 addVoxel:3 removeVoxel:2 moveVoxel:2 setVoxelTexture:2 | 6 | 40 | 20 |
-| permission-mixed | connect:2 disconnect:1 join:3 move:1 addVoxel:2 setUserRole:3 | 8 | 40 | 20 |
+| permission-mixed | connect:2 disconnect:1 join:3 move:1 addVoxel:2 | 8 | 40 | 20 |
 | Clean state after all disconnect | balanced weights | 10 | 50 | 30 |
 
 ### With-Latency Profiles (7 tests)
@@ -564,25 +582,25 @@ room in the game.
 
 | Test | What it verifies |
 |------|-----------------|
-| owner enters their own room and gets Owner role | Owner gets the Owner role; participant count is correct |
+| owner enters their own room and may edit it | The room is his to build in; participant count is correct |
 | owner exits their own room and room unloads | The room unloads and state is saved with the correct `lastRoomID` |
 
 ### Visitor Enter/Exit
 
 | Test | What it verifies |
 |------|-----------------|
-| visitor enters another user's room and gets Visitor role | Both users present, correct roles (Owner vs Visitor) |
+| visitor enters another user's room and may not edit it | Both users present; the room is its owner's to build in and nobody else's |
 | visitor exits another user's room while owner stays | Room stays loaded; participant count decremented; visitor state saved |
 
 ### Room Switching
 
 | Test | What it verifies |
 |------|-----------------|
-| user moves from default hub to their own regular room | User ends up in their own room with Owner role; the vacated hub stays loaded but empty |
+| user moves from default hub to their own regular room | User ends up in his own room and may build in it; the vacated hub stays loaded but empty |
 | user moves from one regular room to another regular room | Source room unloads; destination has both users |
 | user moves between rooms via URL-style navigation (join by room ID) | Joining by room ID works; the source hub is left empty |
 
-## Room API (`room-api.test.ts`) — 12 tests
+## Room API (`room-api.test.ts`) — 6 tests
 
 ### Create Room (Scenario 1)
 
@@ -591,17 +609,6 @@ room in the game.
 | registered user can create a room | Room created in DB; `ownedRoomID` set on the user |
 | guest user cannot create a room | 403 returned for a guest user type |
 | user who already owns a room cannot create another | 409 returned for a duplicate room |
-
-### Set Room User Role / Appoint Editor (Scenario 4)
-
-| Test | What it verifies |
-|------|-----------------|
-| room owner can appoint another user as editor | DB role set; in-memory role sync called |
-| owner cannot change their own role | 400 returned for a self-role change |
-| user without a room cannot appoint editors | 403 returned |
-| owner can demote an editor back to visitor | Role changed back to Visitor |
-| appointing an editor past the limit is rejected with 409 | Exceeding `MAX_ROOM_EDITORS` returns 409 |
-| /get_room_editors returns denormalized {userName, email} from the room | Editor list is projected from `DBRoom.editors` |
 
 ### Change Room Texture Pack (Scenario 9)
 
@@ -784,7 +791,7 @@ for how to run it. It skips itself when no emulator is available.
 | Connection | 9 |
 | Room | 9 |
 | Room Generation | 15 |
-| Voxel Grid Migration | 63 |
+| Voxel Grid Migration | 80 |
 | Room Population | 34 |
 | Object | 8 |
 | Voxel | 13 |
@@ -797,6 +804,7 @@ for how to run it. It skips itself when no emulator is available.
 | Doors and the Admin Privilege | 14 |
 | Signals | 6 |
 | Permissions | 5 |
+| Restricted Zones | 14 |
 | Extended Permissions | 16 |
 | State Persistence | 9 |
 | Race Conditions | 26 |
@@ -806,4 +814,4 @@ for how to run it. It skips itself when no emulator is available.
 | Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **483** |
+| **Total** | **514** |

@@ -68,20 +68,29 @@ import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpac
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
     notificationMessageObservable, objectSelectionObservable, orbitCameraTargetOverrideObservable,
-    playerSelectionObservable, userRoleObservable,
+    playerSelectionObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
 import Room from "../../../src/shared/room/types/room";
+import User from "../../../src/shared/user/types/user";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { createRoom, floorQuadIndexOf, voxelAt } from "../helpers/selectionHarness";
+import { createMockUser } from "../helpers/mockUser";
 import VoxelQuadInstanceUtil from "../../../src/client/voxel/util/voxelQuadInstanceUtil";
 
 const ROOM_ID = "game-mode-room";
 
 let room: Room;
+
+/** Somebody who owns the named room and nothing else — "" for somebody who owns nothing at all. */
+function userOwning(ownedRoomID: string): User
+{
+    const {user} = createMockUser();
+    user.ownedRoomID = ownedRoomID;
+    return user;
+}
 
 /** A stand-in for the user's own character: only what the framing rules actually read of it. */
 function makeCharacter(): GameObject
@@ -142,7 +151,9 @@ beforeEach(() => {
     orbitCameraTargetOverrideObservable.set(null);
     notificationMessageObservable.set(null);
 
-    userRoleObservable.set(UserRoleEnumMap.Owner);
+    // A hub, which everyone may build in, so the room is not what any of these tests turns on.
+    // The ones that *are* about who may edit make their own room and their own user below.
+    (App.getUser as Mock).mockReturnValue(userOwning(""));
     room = createRoom(ROOM_ID);
     (App.getCurrentRoom as Mock).mockReturnValue(room);
     (App.getVoxelQuads as Mock).mockReturnValue(room.voxelQuads);
@@ -187,7 +198,7 @@ describe("entering edit mode", () => {
         // A hub is everyone's to build in, so this has to be a room with an owner behind it.
         room = createRoom(`${ROOM_ID}-regular`, RoomTypeEnumMap.Regular);
         (App.getCurrentRoom as Mock).mockReturnValue(room);
-        userRoleObservable.set(UserRoleEnumMap.Visitor);
+        (App.getUser as Mock).mockReturnValue(userOwning(""));
 
         GameModeUtil.enterEditMode(makeCharacter());
 
@@ -200,7 +211,7 @@ describe("entering edit mode", () => {
         room = createRoom(`${ROOM_ID}-regular-click`, RoomTypeEnumMap.Regular);
         (App.getCurrentRoom as Mock).mockReturnValue(room);
         (ClientObjectManager.getMyPlayer as Mock).mockReturnValue(makeCharacter());
-        userRoleObservable.set(UserRoleEnumMap.Visitor);
+        (App.getUser as Mock).mockReturnValue(userOwning(""));
         GameModeUtil.enterEditMode(makeCharacter());
         notificationMessageObservable.set(null);
 
@@ -213,11 +224,12 @@ describe("entering edit mode", () => {
         expect(PlayerSelection.isSelected()).toBe(true);
     });
 
-    it("lets an editor's click on the room through", () => {
-        room = createRoom(`${ROOM_ID}-regular-allowed`, RoomTypeEnumMap.Regular);
+    it("lets the room owner's click on it through", () => {
+        const roomID = `${ROOM_ID}-regular-allowed`;
+        room = createRoom(roomID, RoomTypeEnumMap.Regular);
         (App.getCurrentRoom as Mock).mockReturnValue(room);
         (ClientObjectManager.getMyPlayer as Mock).mockReturnValue(makeCharacter());
-        userRoleObservable.set(UserRoleEnumMap.Editor);
+        (App.getUser as Mock).mockReturnValue(userOwning(roomID));
         GameModeUtil.enterEditMode(makeCharacter());
         notificationMessageObservable.set(null);
 
@@ -288,40 +300,6 @@ describe("leaving edit mode", () => {
         expect(WorldSpaceSelectionUtil.isAnythingSelected()).toBe(false);
         expect(GameModeUtil.isInEditMode()).toBe(false);
         expect(cameraModeObservable.peek().type).toBe("firstPerson");
-    });
-
-    it("is left behind when the user's standing in the room is taken away", () => {
-        // A room with an owner behind it, so that the user's role is what decides his editing.
-        room = createRoom(`${ROOM_ID}-revoked`, RoomTypeEnumMap.Regular);
-        (App.getCurrentRoom as Mock).mockReturnValue(room);
-        userRoleObservable.set(UserRoleEnumMap.Editor);
-        GameModeUtil.enterEditMode(makeCharacter());
-        selectQuad(10, 10, floorQuadIndexOf(10, 10));
-
-        // What the server sends down when the owner takes an editor's rights back.
-        userRoleObservable.set(UserRoleEnumMap.Visitor);
-
-        // What he had picked out of the room is no longer his to work on, and the mode goes with it
-        // rather than being left standing empty: it holds the camera in an orbit and the player
-        // still, while the way out of it is only offered alongside a selection.
-        expect(WorldSpaceSelectionUtil.isAnythingSelected()).toBe(false);
-        expect(GameModeUtil.isInEditMode()).toBe(false);
-        expect(cameraModeObservable.peek().type).toBe("firstPerson");
-    });
-
-    it("is left behind even while a scripted step is holding that selection in place", () => {
-        // A step's hold is on the user giving a selection up, not on it being taken from him.
-        room = createRoom(`${ROOM_ID}-revoked-pinned`, RoomTypeEnumMap.Regular);
-        (App.getCurrentRoom as Mock).mockReturnValue(room);
-        userRoleObservable.set(UserRoleEnumMap.Editor);
-        GameModeUtil.enterEditMode(makeCharacter());
-        selectQuad(10, 10, floorQuadIndexOf(10, 10));
-        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableAllSelectionChange);
-
-        userRoleObservable.set(UserRoleEnumMap.Visitor);
-
-        expect(WorldSpaceSelectionUtil.isAnythingSelected()).toBe(false);
-        expect(GameModeUtil.isInEditMode()).toBe(false);
     });
 
     it("takes a selection a scripted step had pinned along with it", () => {

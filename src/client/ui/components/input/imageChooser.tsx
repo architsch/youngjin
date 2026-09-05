@@ -17,6 +17,7 @@ export default function ImageChooser(imageChooserProps: ImageChooserProps)
         id={imageChooserProps.id}
         icon={imageChooserProps.icon ?? <EditIcon/>}
         size="md"
+        disabled={imageChooserProps.disabled}
         onClick={() => {
             if (imageChooserProps.onClick)
                 imageChooserProps.onClick();

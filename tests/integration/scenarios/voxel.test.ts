@@ -23,7 +23,6 @@ import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttached
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FULL_COLLISION_LAYER_MASK, GRAVITY_SPEED,
     MAX_ENCODED_VOXEL_GRID_BYTES, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
@@ -39,6 +38,11 @@ import Vec3 from "../../../src/shared/math/types/vec3";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
+import { createEditingUser } from "../helpers/mockUser";
+
+// Who the assertions below act as. They are not about who is asking — the editing utilities want
+// the person as well as the role he holds, so somebody has to be named.
+const actingUser = createEditingUser();
 
 // Raises a stack of blocks in one cell, which the fixtures below use to stand a wall somewhere the
 // room did not already have one. No room is passed, so nothing is validated: these are fixtures
@@ -48,7 +52,7 @@ function fillColumn(voxelGrid: VoxelGrid, row: number, col: number,
 {
     for (let layer = collisionLayerMin; layer <= collisionLayerMax; ++layer)
     {
-        VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, voxelGrid.voxels,
+        VoxelUpdateUtil.addVoxelBlock(undefined, voxelGrid.voxels,
             VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer), textures);
     }
 }
@@ -268,25 +272,25 @@ describe("voxel scenarios", () => {
                 const canvas = new AddObjectSignal(room.id, user.id, user.userName,
                     ObjectTypeConfigMap.getIndexByType("Canvas"), "canvas-on-wall",
                     new ObjectTransform({ x: WALL_COL + 0.5, y: 0.5, z: WALL_ROW }, { x: 0, y: 0, z: -1 }));
-                expect(ObjectUpdateUtil.addObject(user, UserRoleEnumMap.Owner, room, canvas)).toBe(true);
+                expect(ObjectUpdateUtil.addObject(user, room, canvas)).toBe(true);
 
                 const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(WALL_ROW, WALL_COL, 0);
 
                 // The block is all that keeps the canvas on the wall, so it cannot go by itself...
                 expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
                     .toEqual([canvas.objectId]);
-                expect(VoxelUpdateUtil.canRemoveVoxelBlock(UserRoleEnumMap.Owner, room, quadIndex)).toBe(false);
+                expect(VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex)).toBe(false);
                 // ...but nothing about the block itself stands in the way of taking both down
                 // together, which is what the user is offered.
                 expect(VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(
-                    UserRoleEnumMap.Owner, room, quadIndex)).toBe(true);
+                    actingUser, room, quadIndex)).toBe(true);
 
                 // And with the canvas down first, the block is free to follow — the order the
                 // menu carries the two removals out in.
-                expect(ObjectUpdateUtil.removeObject(user, UserRoleEnumMap.Owner, room,
+                expect(ObjectUpdateUtil.removeObject(user, room,
                     new RemoveObjectSignal(room.id, canvas.objectId))).toBe(true);
                 expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex)).toEqual([]);
-                expect(VoxelUpdateUtil.canRemoveVoxelBlock(UserRoleEnumMap.Owner, room, quadIndex)).toBe(true);
+                expect(VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex)).toBe(true);
             },
         });
     });

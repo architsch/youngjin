@@ -27,6 +27,7 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
 
 describe("race condition scenarios", () => {
     beforeEach(() => {
@@ -704,11 +705,12 @@ describe("race condition scenarios", () => {
             });
         });
 
-        it("Case A: room owner reconnect re-establishes the Owner role", async () => {
-            // Editor/role membership must survive a reconnect, since role is
-            // determined per-room from DBRoom.ownerUserID (and DBRoom.editors).
+        it("Case A: a room owner's reconnect leaves the room still his", async () => {
+            // Being allowed to edit a room must survive a reconnect. It is read from the person and
+            // the room rather than kept as a per-session standing, so nothing has to be
+            // re-established — which is exactly what this asserts.
             await runScenario({
-                name: "case A preserves Owner role",
+                name: "case A preserves ownership",
                 rooms: [regularRoom("rc12-owner")],
                 users: [namedUser("rc12-owner-user", "rc12-owner")],
                 actions: [
@@ -716,9 +718,9 @@ describe("race condition scenarios", () => {
                     { type: "reconnectCaseA", userIndex: 0 },
                 ],
                 skipInvariants: true,
-                assertions: ({ harness }) => {
-                    expect(harness.ServerUserManager.getUserRole("rc12-owner-user"))
-                        .toBe(0); // UserRoleEnumMap.Owner
+                assertions: ({ users }) => {
+                    const room = ServerRoomManager.roomRuntimeMemories["rc12-owner"].room;
+                    expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(true);
                 },
             });
         });

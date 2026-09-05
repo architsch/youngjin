@@ -16,13 +16,17 @@ import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import NumUtil from "../../../src/shared/math/util/numUtil";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import { voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import { createTestRoom } from "./roomContent";
+import { createEditingUser } from "./mockUser";
 
 export type FacingAxis = "x" | "y" | "z";
 export type Orientation = "-" | "+";
+
+// Who these helpers act as. They stand in for a user editing a room by hand, and the editing
+// utilities want the person as well as the role he holds.
+const actingUser = createEditingUser();
 
 /**
  * A freshly built room of the given type, ready to be handed to the App stub. The room is
@@ -111,7 +115,7 @@ export function buildPillar(room: Room, row: number, col: number,
 {
     for (let layer = layerMin; layer <= layerMax; ++layer)
     {
-        VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, room.voxelGrid.voxels,
+        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels,
             quadIndexOf(row, col, "y", "+", layer), [1, 1, 1, 1, 1, 1], room);
     }
 }
@@ -152,7 +156,7 @@ export function userAddsBlockAt(room: Room, selection: VoxelQuadSelection): bool
         textures[i - startIndex] = room.voxelQuads[i] & 0b01111111;
 
     const idealQuadIndex = quadIndexOf(newRow, newCol, axis, orientation, newLayer);
-    if (!VoxelUpdateUtil.addVoxelBlock(UserRoleEnumMap.Owner, room.voxelGrid.voxels,
+    if (!VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels,
         idealQuadIndex, textures, room))
     {
         return false;
@@ -168,7 +172,7 @@ export function userAddsBlockAt(room: Room, selection: VoxelQuadSelection): bool
 export function userRemovesBlockAt(room: Room, selection: VoxelQuadSelection): boolean
 {
     const quadIndex = selection.quadIndex;
-    if (!VoxelUpdateUtil.removeVoxelBlock(UserRoleEnumMap.Owner, room.voxelGrid.voxels,
+    if (!VoxelUpdateUtil.removeVoxelBlock(actingUser, room.voxelGrid.voxels,
         quadIndex, room))
     {
         return false;

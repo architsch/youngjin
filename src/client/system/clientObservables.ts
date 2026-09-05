@@ -9,7 +9,6 @@ import PlayerSelection from "../graphics/types/gizmo/playerSelection";
 import Vec3 from "../../shared/math/types/vec3";
 import ClientProcess from "./types/clientProcess";
 import GameMode from "./types/gameMode";
-import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
 import PopupState from "../ui/types/popupState";
 import CoachMark from "../ui/types/coachMark";
 import CameraMode from "../graphics/types/cameraMode";
@@ -185,13 +184,6 @@ export const chatTextInputObservable = new Observable<string>("");
 //--------------------------------------------------------------------------------
 // User State Observables
 //--------------------------------------------------------------------------------
-
-// This observable notifies its listeners whenever the current user's role
-// in the current room changes (e.g. from Visitor to Editor, or vice versa).
-// This observable gets updated whenever:
-//      (1) Room gets loaded on the client side (i.e. "loadRoom" in app.ts), or
-//      (2) Server signals the client that the user's role in the current room has changed (i.e. "onSetUserRoleSignalReceived" in app.ts)
-export const userRoleObservable = new Observable<UserRole>(UserRoleEnumMap.Visitor);
 
 // This observable tracks the current room's latest texture pack URL.
 // It is updated whenever a room loads or the current room's texture pack changes.

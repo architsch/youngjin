@@ -112,7 +112,6 @@ export async function runScenario(config: ScenarioConfig): Promise<ScenarioConte
             // Instead, we directly modify the room's voxel grid.
             const VoxelUpdateUtil = (await import("../../../src/shared/voxel/util/voxelUpdateUtil")).default;
             const VoxelQueryUtil = (await import("../../../src/shared/voxel/util/voxelQueryUtil")).default;
-            const { UserRoleEnumMap } = await import("../../../src/shared/user/types/userRole");
 
             // Load the room to get access to its memory
             const roomMem = harness.ServerRoomManager.roomRuntimeMemories[roomConfig.id];
@@ -130,7 +129,7 @@ export async function runScenario(config: ScenarioConfig): Promise<ScenarioConte
                     {
                         const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(vp.row, vp.col, vp.layer);
                         VoxelUpdateUtil.addVoxelBlock(
-                            UserRoleEnumMap.Owner, storedRoom.room.voxelGrid.voxels,
+                            undefined, storedRoom.room.voxelGrid.voxels,
                             quadIndex, vp.textures ?? [0, 0, 0, 0, 0, 0]
                         );
                     }
@@ -142,7 +141,7 @@ export async function runScenario(config: ScenarioConfig): Promise<ScenarioConte
                 {
                     const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(vp.row, vp.col, vp.layer);
                     VoxelUpdateUtil.addVoxelBlock(
-                        UserRoleEnumMap.Owner, roomMem.room.voxelGrid.voxels,
+                        undefined, roomMem.room.voxelGrid.voxels,
                         quadIndex, vp.textures ?? [0, 0, 0, 0, 0, 0]
                     );
                 }

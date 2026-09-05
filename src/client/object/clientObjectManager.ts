@@ -12,7 +12,7 @@ import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadata
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/voxelGameObject";
-import { objectSelectionObservable, userRoleObservable } from "../system/clientObservables";
+import { objectSelectionObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
@@ -142,10 +142,9 @@ const ClientObjectManager =
         addToRoomData: boolean = true): Promise<boolean> =>
     {
         const user = App.getUser();
-        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
-        if (!ObjectUpdateUtil.addObject(user, userRole, room, object.params, validate, addToRoomData))
+        if (!ObjectUpdateUtil.addObject(user, room, object.params, validate, addToRoomData))
             return false;
 
         if (gameObjects[object.params.objectId] == undefined)
@@ -181,10 +180,9 @@ const ClientObjectManager =
         removeFromRoomData: boolean = true): Promise<boolean> =>
     {
         const user = App.getUser();
-        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
-        if (!ObjectUpdateUtil.removeObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId), validate, removeFromRoomData))
+        if (!ObjectUpdateUtil.removeObject(user, room, new RemoveObjectSignal(room.id, objectId), validate, removeFromRoomData))
             return false;
 
         if (gameObjects[objectId] != undefined)
@@ -208,11 +206,10 @@ const ClientObjectManager =
         validate: boolean = true): ObjectTransform =>
     {
         const user = App.getUser();
-        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
         const signal = new SetObjectTransformSignal(room.id, objectId, new ObjectTransform(pos, dir), ignorePhysics);
-        const result = ObjectUpdateUtil.setObjectTransform(user, userRole, room, signal, validate);
+        const result = ObjectUpdateUtil.setObjectTransform(user, room, signal, validate);
         const object = ClientObjectManager.getObjectById(objectId);
         if (object)
         {
@@ -229,11 +226,10 @@ const ClientObjectManager =
         validate: boolean = true): boolean =>
     {
         const user = App.getUser();
-        const userRole = userRoleObservable.peek();
         const room = App.getCurrentRoom()!;
 
         const signal = new SetObjectMetadataSignal(room.id, objectId, key, value);
-        if (!ObjectUpdateUtil.setObjectMetadata(user, userRole, room, signal, validate))
+        if (!ObjectUpdateUtil.setObjectMetadata(user, room, signal, validate))
             return false;
 
         const object = ClientObjectManager.getObjectById(objectId);

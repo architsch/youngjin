@@ -41,6 +41,17 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         return bindingMap[instancedMeshId]?.instanceIsHidden(instanceId) === true;
     }
 
+    // Draws (or stops drawing) the outline its material gives an instance — a border painted around
+    // the instance in the material's outline color. Reached by mesh rather than through the
+    // GameObject that owns the instance, because what decides this is a property of the room rather
+    // than of any one object: a room's restricted zones are drawn by sweeping every instance of its
+    // voxel mesh at once (see RestrictedZoneOutlineUtil). A no-op if the binding hasn't been created
+    // yet.
+    static setInstanceOutline(instancedMeshId: string, instanceId: number, strength: number)
+    {
+        bindingMap[instancedMeshId]?.updateInstanceOutline(instanceId, strength);
+    }
+
     async loadInstancedMesh(geometryId: string, materialParams: MaterialParams,
         maxNumInstances: number, createInstanceIdPool: boolean)
     {

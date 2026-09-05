@@ -16,7 +16,7 @@ import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectS
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
 import DoorObjectUtil from "../../../../../shared/object/util/doorObjectUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
-import { clientFeatureFlagsObservable, objectSelectionObservable, userRoleObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import PopupUtil from "../../../util/popupUtil";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
@@ -105,10 +105,9 @@ function canRemoveDoor(selection: ObjectSelection): boolean
     if (!room)
         return false;
     const user = App.getUser();
-    const userRole = userRoleObservable.peek();
 
     const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canRemoveObject(user, userRole, room, new RemoveObjectSignal(room.id, objectId));
+    return ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(room.id, objectId));
 }
 
 function openRemoveConfirmPopup(selection: ObjectSelection)
@@ -152,11 +151,10 @@ function canSetDoorMetadata(selection: ObjectSelection, metadataKey: ObjectMetad
     if (!room)
         return false;
     const user = App.getUser();
-    const userRole = userRoleObservable.peek();
 
     const objectId = selection.gameObject.params.objectId;
     const signal = new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue);
-    return ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal);
+    return ObjectUpdateUtil.canSetObjectMetadata(user, room, signal);
 }
 
 function trySetDoorMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string)

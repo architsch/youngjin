@@ -5,8 +5,7 @@ import PlayerSelection from "../../graphics/types/gizmo/playerSelection";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
-import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable,
-    userRoleObservable } from "../clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable } from "../clientObservables";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 
 //------------------------------------------------------------------------
@@ -127,29 +126,12 @@ const GameModeUtil =
 function canEditCurrentRoom(): boolean
 {
     const room = App.getCurrentRoom();
-    return room != undefined && RoomValidationUtil.canUserEditRoom(userRoleObservable.peek(), room);
+    return room != undefined && RoomValidationUtil.canUserEditRoom(App.getUser(), room);
 }
 
 // A room the user is no longer in is not a room he can be editing, so every arrival starts in play
 // mode. (The selections he made in the room he left are dropped by each kind for itself.)
 roomChangedObservable.addListener("gameMode", (_roomRuntimeMemory: RoomRuntimeMemory) => {
-    gameModeObservable.set("play");
-});
-
-// The user's standing in a room can change under him while he is in it — an owner may take an
-// editor's rights back — and whatever of that room he had picked out is no longer his to work on.
-// It is taken from him rather than given up, which is why the mode is ended here rather than
-// through the way out: a scripted step's hold is on what the user may do, and has no say over what
-// is done to him.
-userRoleObservable.addListener("gameMode", () => {
-    if (!GameModeUtil.isInEditMode() || canEditCurrentRoom())
-        return;
-
-    WorldSpaceSelectionUtil.unselectAll(true);
-    // Nothing is left for the mode to be kept up for, and the mode is not a thing the user can be
-    // left holding: it keeps the camera in an orbit and the player standing still, while the tools
-    // on screen are for changing a selection that is no longer there. So it goes with what it was
-    // arranged around.
     gameModeObservable.set("play");
 });
 

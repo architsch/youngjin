@@ -119,8 +119,8 @@ Four things to get right:
 - **Seeding several stale rooms that share one owner is the interesting case.** Each room's
   v0→v1 migration looks the owner up, so N stale rooms fire N concurrent reads of one user
   document — the contention that a single-document test never reproduces.
-- **A seed below the current version carries a copy of its own key as a field**, because that is
-  what the last migration step on both collections exists to drop. Whether the row came back
+- **A seed below the current version carries a copy of its own key as a field**, because dropping
+  that copy is what one of the migration steps on both collections exists to do. Whether the row came back
   current is only half the assertion; `verify-migration` also reports whether that copy survived
   in storage, which is what a write-back storing the row as the reader had it would leave behind.
 
@@ -150,8 +150,8 @@ fixture that no seeding could produce. So:
 - Once `inspect-content` reports nothing below the current version, this path has no live coverage
   on staging at all. Say so in the report rather than leaving it unmentioned. It is covered offline
   instead, by `tests/integration/scenarios/voxel-grid-migration.test.ts` against the recorded
-  fixtures in `tests/integration/fixtures/legacyVoxelGrids/`, and that suite — not this one — is
-  where a regression in it would surface.
+  fixtures under `tests/integration/fixtures/`, which are filed one directory per format era, and
+  that suite — not this one — is where a regression in it would surface.
 
 ### What persists and what does not
 
@@ -396,6 +396,8 @@ Beyond the target boundary:
   something the reader of a playtest report has to infer. Quote it in the report.
 - **A hub is editable by anybody standing in it**, guests included, so an edit made during a
   playtest is a lasting change to a room every staging visitor arrives in. That is acceptable on
-  staging and nowhere else, and it is a change to report rather than one to make in passing.
+  staging and nowhere else, and it is a change to report rather than one to make in passing — a
+  restricted zone above all, since a zone left behind goes on refusing every later run's edits in
+  that stretch of the room, and refuses them by greying the tools out rather than by erroring.
 - Staging's writes draw on the same Firebase quota as production traffic. Prefer `--persist`
   over reseeding a large population each run.

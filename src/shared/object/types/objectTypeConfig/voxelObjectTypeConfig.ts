@@ -1,6 +1,5 @@
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
-import { UserRole } from "../../../user/types/userRole";
 import AddObjectSignal from "../../types/addObjectSignal";
 import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
@@ -12,16 +11,16 @@ const VoxelObjectTypeConfig: ObjectTypeConfig =
     objectType: "Voxel",
     persistent: false,
     autoUnload: false, // Voxels persist across rooms (shared instanced mesh + texture pack); rebound, not recreated.
-    canUserAddObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+    canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return false;
     },
-    canUserRemoveObject: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal) => {
+    canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return false;
     },
-    canUserSetObjectTransform: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
+    canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
         return false;
     },
-    canUserSetObjectMetadata: (user: User, userRole: UserRole, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
+    canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
         return false;
     },
     components: {

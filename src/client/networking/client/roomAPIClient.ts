@@ -16,14 +16,6 @@ const RoomAPIClient =
     {
         return await RestAPI.post(getURL("change_room_texture"), { data: { texturePackPath, roomID } });
     },
-    setRoomUserRole: async (targetUserName: string, userRole: number): Promise<RestAPIResponse> =>
-    {
-        return await RestAPI.post(getURL("set_room_user_role"), { data: { targetUserName, userRole } });
-    },
-    getRoomEditors: async (): Promise<RestAPIResponse> =>
-    {
-        return await RestAPI.post(getURL("get_room_editors"));
-    },
     getHubRoomListEntries: async (): Promise<RestAPIResponse> =>
     {
         return await RestAPI.post(getURL("get_hub_room_list_entries"));

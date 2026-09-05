@@ -14,7 +14,7 @@ import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
-import { gameModeObservable, graphicsContextRestoredObservable, notificationMessageObservable, userRoleObservable } from "../../system/clientObservables";
+import { gameModeObservable, graphicsContextRestoredObservable, notificationMessageObservable } from "../../system/clientObservables";
 import GraphicsManager from "../../graphics/graphicsManager";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 
@@ -122,11 +122,13 @@ export default class CanvasGameObject extends GameObject
                 console.error("Current room not found.");
                 return;
             }
-            if (!RoomValidationUtil.canUserEditRoom(userRoleObservable.peek(), room))
+            if (!RoomValidationUtil.canUserEditRoom(App.getUser(), room))
             {
                 notificationMessageObservable.set("You don't have permission to edit this room.");
                 return;
             }
+            // A restricted zone is deliberately not asked about here — see VoxelGameObject.onClick
+            // for why picking something out is not one of the things a zone withholds.
         }
 
         ObjectSelection.trySelect(this);

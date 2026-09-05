@@ -10,7 +10,6 @@ import fc from "fast-check";
 import { harness, ConnectedUser } from "./serverHarness";
 import { MockUserOverrides } from "./mockUser";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { UserRole, UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -20,9 +19,9 @@ import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomC
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
-import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
+import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
@@ -61,7 +60,6 @@ export type Action =
     | { type: "setVoxelTexture"; userIndex: number; row: number; col: number;
         layer: number; quadOffset: number; textureIndex: number }
     // Permissions
-    | { type: "setUserRole"; userIndex: number; role: UserRole }
     | { type: "setRoomOwner"; userIndex: number; roomID: string }
     // Concurrency (for race condition testing)
     | { type: "parallel"; groups: Action[][] }
@@ -260,16 +258,6 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(ctx.socketUserContext, signal);
             break;
         }
-        case "setUserRole":
-        {
-            if (connectedUsers.length === 0) return;
-            const idx = action.userIndex % connectedUsers.length;
-            const ctx = connectedUsers[idx];
-            const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
-            if (!roomID) return;
-            ServerUserManager.syncUserRoleInMemory(ctx.user.id, roomID, action.role);
-            break;
-        }
         case "setRoomOwner":
         {
             if (connectedUsers.length === 0) return;
@@ -277,8 +265,13 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             const ctx = connectedUsers[idx];
             const roomMem = ServerRoomManager.roomRuntimeMemories[action.roomID];
             if (!roomMem) return;
+            // Ownership is one fact recorded in two places, and it is the second of the two that
+            // every permission check reads: the room names its owner, and the owner names his room.
+            // Written to the stored user as well as the live one, so that it survives a reconnect
+            // the way it does on the real server, which rebuilds the User from DBUser.
             roomMem.room.ownerUserID = ctx.user.id;
-            ServerUserManager.syncUserRoleInMemory(ctx.user.id, action.roomID, UserRoleEnumMap.Owner);
+            ctx.user.ownedRoomID = action.roomID;
+            await DBUserUtil.setOwnedRoomID(ctx.user.id, action.roomID);
             break;
         }
         case "parallel":
@@ -321,7 +314,6 @@ export interface ActionWeights
     setVoxelTexture?: number;
     reconnectA?: number;
     reconnectB?: number;
-    setUserRole?: number;
 }
 
 export const DEFAULT_MAX_USERS = 10;
@@ -345,7 +337,6 @@ export function buildActionArbitrary(
         setVoxelTexture: weights.setVoxelTexture ?? 0,
         reconnectA: weights.reconnectA ?? 0,
         reconnectB: weights.reconnectB ?? 0,
-        setUserRole: weights.setUserRole ?? 0,
     };
 
     const arbs: {weight: number; arbitrary: fc.Arbitrary<Action>}[] = [];
@@ -439,17 +430,6 @@ export function buildActionArbitrary(
         arbs.push({weight: w.reconnectB, arbitrary: fc.nat({max: maxUsers - 1}).map<Action>(i => ({
             type: "reconnectCaseB", userIndex: i,
         }))});
-
-    if (w.setUserRole > 0)
-        arbs.push({weight: w.setUserRole, arbitrary: fc.record({
-            type: fc.constant("setUserRole" as const),
-            userIndex: fc.nat({max: maxUsers - 1}),
-            role: fc.constantFrom(
-                UserRoleEnumMap.Owner,
-                UserRoleEnumMap.Editor,
-                UserRoleEnumMap.Visitor,
-            ),
-        })});
 
     return fc.oneof(...arbs);
 }

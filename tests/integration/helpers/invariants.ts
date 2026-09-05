@@ -252,17 +252,26 @@ export function checkPhysicsObjectConsistency(): void
     }
 }
 
-/** Invariant 11: User roles are consistent (owner of room has Owner role). */
-export function checkUserRoleConsistency(): void
+/**
+ * Invariant 11: Ownership agrees with itself.
+ *
+ * Ownership is one fact recorded in two places — the room names its owner, and the owner names his
+ * room — and every permission check reads the second of the two. A room whose named owner is
+ * standing in it while denying that he owns it would be a room its owner cannot edit.
+ */
+export function checkRoomOwnershipConsistency(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
         const ownerID = roomMem.room.ownerUserID;
-        if (ownerID && roomMem.participantUserNameByID[ownerID])
-        {
-            const role = ServerUserManager.getUserRole(ownerID);
-            expect(role, `Owner ${ownerID} of room ${roomID} should have Owner role`).toBe(0); // UserRoleEnumMap.Owner
-        }
+        if (!ownerID || !roomMem.participantUserNameByID[ownerID])
+            continue;
+
+        const ownerContext = ServerUserManager.getSocketUserContext(ownerID);
+        if (!ownerContext)
+            continue;
+        expect(ownerContext.user.ownedRoomID,
+            `Owner ${ownerID} of room ${roomID} should name it as his own`).toBe(roomID);
     }
 }
 
@@ -295,7 +304,7 @@ export type InvariantSet = "structural" | "full" | "extended";
  *
  * - "structural": Core data-structure invariants (1–7).
  * - "full": Structural + object transform consistency (8).
- * - "extended": Full + physics & role consistency (9–11).
+ * - "extended": Full + physics & ownership consistency (9–11).
  */
 export function checkInvariants(
     connectedUsers: ConnectedUser[],
@@ -311,6 +320,6 @@ export function checkInvariants(
     {
         checkPhysicsRoomConsistency();
         checkPhysicsObjectConsistency();
-        checkUserRoleConsistency();
+        checkRoomOwnershipConsistency();
     }
 }

@@ -90,7 +90,9 @@ the search for a subject happened to stop.
 Two cases still need a generated room, and only these two: the subject **is** a room the generator
 produced (how a hub is laid out, what two storeys look like), or the shot has to **perform a flow**
 (entering edit mode, hanging a picture through the tools). Those set `freshRoom: true` and copy
-`shots/_generated-room-template.js`.
+`shots/_generated-room-template.js`. A feature the sandbox simply has no op for is **not** a third
+case: add the op — mock the state, never the act — so that this post and every later one about that
+feature stay sandbox runs. See [build the set](reference/capture.md#build-the-set-do-not-go-looking-for-one).
 
 1. **Open a session and leave it in the background:**
 
@@ -123,7 +125,9 @@ produced (how a hub is laid out, what two storeys look like), or the shot has to
 3. **Read every JPEG as you go.** They are images; open them with the Read tool and look. The runner
    cannot tell a good frame from a bad one, and neither can the pose. Re-shoot anything showing a
    loading indicator, a half-arrived room, an open debugger, an empty canvas, or simply not the
-   feature. This is the step that decides whether the post is worth publishing.
+   feature. This is the step that decides whether the post is worth publishing. Re-shoot for a
+   **fault**, never for variety: settle the palette and the vantages up front and stop at a couple of
+   good frames, rather than working through the options to see which wins.
 
 4. **Transcribe what worked** into `dev/scripts/devlog/shots/<slug>.js` (copy `_template.js`). The
    ops are the same functions `run(ctx)` calls, under the same names, so this is transcription
@@ -255,8 +259,9 @@ The rules that do not bend:
 - **Hashtags.** About sixteen on the final line, each a `#` followed by a PascalCase term: six to
   eight broad ones drawn across the bank in [reference/hashtags.md](reference/hashtags.md), and the
   rest naming what this post is about. The broad ones are how someone who has never heard of any of
-  this finds it; the line stops at sixteen because every tag is spent from the budget above, and a
-  longer one reads as spam to the person scrolling past it.
+  this finds it; the line stays short because every tag is spent from the budget above, and a
+  longer one reads as spam to the person scrolling past it. Sixteen is what a post of ordinary
+  length comes to rather than a count to hit — a short post takes fewer.
 - **SEO.** Name the technologies and concepts plainly in the prose — search engines read the
   page, and the `:k:` line is only part of it.
 - **Truth.** **Every item you name is read as shipped; an open tail is read as an invitation.** So

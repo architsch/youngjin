@@ -10,9 +10,9 @@ should lead where, what each way through should be called, and where a traveller
 questions about how the world reads to somebody walking it — so they are made by hand, from inside
 the game, by a user who has been given the **admin** privilege.
 
-An admin is not a role a user holds in one room, the way an owner or an editor is. It is a property
-of the person, granted by hand in the database and by nothing in the product, and it means the same
-thing wherever he stands.
+Being an admin is a property of the person, granted by hand in the database and by nothing in the
+product, and it means the same thing wherever he stands — unlike owning a room, which is a fact about
+one particular room and says nothing anywhere else.
 
 ## What an admin may do
 
@@ -26,6 +26,9 @@ thing wherever he stands.
   somewhere new to lead.
 - **Re-skin a hub.** A hub belongs to nobody, so its texture pack is nobody's to change but an
   admin's.
+- **Draw a hub's restricted zones.** A hub is everybody's to build in, which is exactly why the parts
+  of it that hold the world together — the walls it shares with the rooms it leads to — have to be
+  somebody's to hold shut (see [restricted_zone.md](restricted_zone.md)).
 
 **Doors are a Hub-only tool.** A Regular room belongs to one person, and keeps the one door
 generation gave it — an admin shapes the world out of the rooms the game owns rather than

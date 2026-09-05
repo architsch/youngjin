@@ -11,8 +11,8 @@ import { test, expect } from "@playwright/test";
 test.describe("Error Handling", () => {
     test("API endpoints reject unauthenticated requests", async ({ request }) => {
         // Attempt to access a protected API endpoint without cookies
-        const response = await request.post("/api/room/get_room_editors", {
-            data: {},
+        const response = await request.post("/api/room/change_room_texture", {
+            data: { texturePackPath: "default" },
             headers: { "Cookie": "" },
         });
 

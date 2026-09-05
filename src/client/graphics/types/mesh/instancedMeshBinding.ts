@@ -403,6 +403,25 @@ export default class InstancedMeshBinding
         markInstanceForUpload(eyeRadiiSqrAttrib, instanceId);
     }
 
+    // How strongly this instance wears the outline its material draws around it — 0 for none, 1 for
+    // the full color. Nothing happens on a material that was not given an outline color: the
+    // attribute is simply never read (see MaterialConstructorMap's addInstanceOutline).
+    //
+    // Unchanged values are dropped rather than written, because this is swept over every instance of
+    // a mesh at once — the whole of a room's voxel mesh, most of which is not outlined and stays as
+    // it was. Marking those would turn a sweep that touches a handful of quads into a re-upload of
+    // the entire buffer (see markInstanceForUpload).
+    updateInstanceOutline(instanceId: number, strength: number)
+    {
+        if (!this.instancedMesh)
+            return;
+        const outlineStrengthAttrib = this.getOrCreateInstancedAttribute("outlineStrength", 1);
+        if (outlineStrengthAttrib.getX(instanceId) === strength)
+            return;
+        outlineStrengthAttrib.setX(instanceId, strength);
+        markInstanceForUpload(outlineStrengthAttrib, instanceId);
+    }
+
     // Per-instance attributes consumed by specialized instanced materials (e.g. "InstancedEye")
     // are created lazily, so that instanced meshes which never use them don't pay for the buffers.
     private getOrCreateInstancedAttribute(name: string, itemSize: number): THREE.InstancedBufferAttribute

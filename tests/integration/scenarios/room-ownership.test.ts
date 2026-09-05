@@ -2,8 +2,8 @@
  * Scenario tests: Room ownership and enter/exit flows
  *
  * Covers:
- * - User entering and exiting their own room (owner role assigned)
- * - User entering and exiting another user's room (visitor role assigned)
+ * - User entering and exiting their own room
+ * - User entering and exiting another user's room
  * - User moving from one room to another (room switching)
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -12,8 +12,7 @@ import {
     regularRoom, hubRoom, userAt, namedUser, setOwner,
 } from "../helpers/scenarioPresets";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
-import ServerUserManager from "../../../src/server/user/serverUserManager";
-import { UserRoleEnumMap } from "../../../src/shared/user/types/userRole";
+import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 
 describe("room ownership scenarios", () => {
@@ -25,7 +24,7 @@ describe("room ownership scenarios", () => {
 
     // ─── Scenario 3: User entering/exiting their own room ────────────
 
-    it("owner enters their own room and gets Owner role", async () => {
+    it("owner enters their own room and may edit it", async () => {
         await runScenario({
             name: "owner enters own room",
             rooms: [regularRoom("my-room")],
@@ -37,8 +36,9 @@ describe("room ownership scenarios", () => {
                 // Owner should be in the room
                 expect(ServerRoomManager.currentRoomIDByUserID["owner-1"]).toBe("my-room");
                 expect(harness.getRoomParticipantCount("my-room")).toBe(1);
-                // Owner should have the Owner role
-                expect(ServerUserManager.getUserRole("owner-1")).toBe(UserRoleEnumMap.Owner);
+                // And the room is his to build in
+                const room = ServerRoomManager.roomRuntimeMemories["my-room"].room;
+                expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(true);
             },
         });
     });
@@ -67,7 +67,7 @@ describe("room ownership scenarios", () => {
 
     // ─── Scenario 2: User entering/exiting another user's room ───────
 
-    it("visitor enters another user's room and gets Visitor role", async () => {
+    it("visitor enters another user's room and may not edit it", async () => {
         await runScenario({
             name: "visitor enters another's room",
             rooms: [regularRoom("other-room")],
@@ -78,13 +78,12 @@ describe("room ownership scenarios", () => {
             actions: [
                 setOwner(0, "other-room"),
             ],
-            assertions: ({ harness }) => {
+            assertions: ({ users, harness }) => {
                 // Both users should be in the room
                 expect(harness.getRoomParticipantCount("other-room")).toBe(2);
-                // Owner should have Owner role
-                expect(ServerUserManager.getUserRole("room-owner")).toBe(UserRoleEnumMap.Owner);
-                // Visitor should have Visitor role
-                expect(ServerUserManager.getUserRole("visitor-1")).toBe(UserRoleEnumMap.Visitor);
+                const room = ServerRoomManager.roomRuntimeMemories["other-room"].room;
+                expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(true);
+                expect(RoomValidationUtil.canUserEditRoom(users[1].user, room)).toBe(false);
             },
         });
     });
@@ -102,12 +101,13 @@ describe("room ownership scenarios", () => {
                 { type: "disconnect", userIndex: 1, saveState: true },
             ],
             skipInvariants: true,
-            assertions: ({ harness }) => {
+            assertions: ({ users, harness }) => {
                 // Room should still be loaded (owner is still in it)
                 expect(harness.isRoomLoaded("other-room")).toBe(true);
                 expect(harness.getRoomParticipantCount("other-room")).toBe(1);
-                // Owner should still have Owner role
-                expect(ServerUserManager.getUserRole("room-owner")).toBe(UserRoleEnumMap.Owner);
+                // Owner still owns it
+                const room = ServerRoomManager.roomRuntimeMemories["other-room"].room;
+                expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(true);
                 // Visitor's metadata should have been flushed via savePlayerMetadata.
                 expect(harness.savedPlayerMetadataRecords.some(s => s.userID === "visitor-1")).toBe(true);
             },
@@ -127,10 +127,11 @@ describe("room ownership scenarios", () => {
                 setOwner(0, "my-room"),
             ],
             skipInvariants: true,
-            assertions: ({ harness }) => {
+            assertions: ({ users, harness }) => {
                 // User should now be in their own room
                 expect(ServerRoomManager.currentRoomIDByUserID["switching-user"]).toBe("my-room");
-                expect(ServerUserManager.getUserRole("switching-user")).toBe(UserRoleEnumMap.Owner);
+                const room = ServerRoomManager.roomRuntimeMemories["my-room"].room;
+                expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(true);
                 // The hub stays loaded even though its last user left — hubs are kept resident
                 // so that incoming users can be load-balanced across them without a DB query.
                 expect(harness.isRoomLoaded("hub-default")).toBe(true);

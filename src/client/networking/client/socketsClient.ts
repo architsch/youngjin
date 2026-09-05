@@ -16,11 +16,11 @@ import { connectionStateObservable } from "../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess, ongoingClientProcessExists } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import SetRestrictedZonesSignal from "../../../shared/voxel/types/update/setRestrictedZonesSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
-import SetUserRoleSignal from "../../../shared/user/types/setUserRoleSignal";
 import RoomTexturePackChangedSignal from "../../../shared/room/types/roomTexturePackChangedSignal";
 import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
@@ -53,8 +53,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientVoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
     "setVoxelQuadTextureSignal": (data: EncodableData) =>
         ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
-    "setUserRoleSignal": (data: EncodableData) =>
-        App.onSetUserRoleSignalReceived(data as SetUserRoleSignal),
+    "setRestrictedZonesSignal": (data: EncodableData) =>
+        ClientVoxelManager.onSetRestrictedZonesSignalReceived(data as SetRestrictedZonesSignal),
     "roomTexturePackChangedSignal": (data: EncodableData) =>
         App.onRoomTexturePackChangedSignalReceived(data as RoomTexturePackChangedSignal),
 }
@@ -187,6 +187,10 @@ const SocketsClient =
     emitSetVoxelQuadTextureSignal: (params: SetVoxelQuadTextureSignal) =>
     {
         emitWhenReady("setVoxelQuadTextureSignal", params);
+    },
+    emitSetRestrictedZonesSignal: (params: SetRestrictedZonesSignal) =>
+    {
+        emitWhenReady("setRestrictedZonesSignal", params);
     },
     emitAddObjectSignal: (params: AddObjectSignal) =>
     {

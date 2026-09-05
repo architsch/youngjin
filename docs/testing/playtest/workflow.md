@@ -204,9 +204,10 @@ Two consequences a caller has to know:
   view or shortening a journey, never to an assertion about a server-side position.
 
 The setup bridge carries one group that does more than arrange: it builds. Walls and floors, the
-texture pack they are finished in, the pictures and doors hung on them, and a camera bound neither to
-the player nor to a selection. That group works only inside the sandbox single-player room and
-refuses to act anywhere else, which is what keeps the line above intact.
+texture pack they are finished in, the pictures and doors hung on them, the restricted zones laid
+over parts of the grid, and a camera bound neither to the player nor to a selection. That group works
+only inside the sandbox single-player room and refuses to act anywhere else, which is what keeps the
+line above intact.
 
 The sandbox is an empty room generated to be a set. It belongs to screenshot capture, and it is where
 the dev-log's photographs are made: a set built to suit the frame, photographed by a camera put where

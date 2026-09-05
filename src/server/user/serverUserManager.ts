@@ -7,15 +7,12 @@ import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerObjectManager from "../object/serverObjectManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
-import { UserRole, UserRoleEnumMap } from "../../shared/user/types/userRole";
-import SetUserRoleSignal from "../../shared/user/types/setUserRoleSignal";
 import DBUserUtil from "../db/util/dbUserUtil";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
-const userRoleByUserID: {[userID: string]: UserRole} = {};
 
 // Short-lived per-user buffer of the last known player metadata at disconnect time.
 // When a user reconnects before the disconnect's DBUser write has landed (the race
@@ -50,8 +47,8 @@ const ServerUserManager =
     // Returns the RoomRuntimeMemory the user ended up in, or undefined if the room turned out to
     // be unavailable.
     addUserToRoom: async (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
-        userID: string, playerObjectTransform: ObjectTransform, playerMetadata: {[key: string]: string},
-        userRole: UserRole): Promise<RoomRuntimeMemory | undefined> =>
+        userID: string, playerObjectTransform: ObjectTransform,
+        playerMetadata: {[key: string]: string}): Promise<RoomRuntimeMemory | undefined> =>
     {
         const user = socketUserContext.user;
         const roomID = roomRuntimeMemory.room.id;
@@ -103,7 +100,6 @@ const ServerUserManager =
         );
         if (ServerObjectManager.onAddObjectSignalReceived(socketUserContext, playerAddObjectSignal))
             playerObjectByUserID[userID] = playerAddObjectSignal;
-        userRoleByUserID[userID] = userRole;
         return roomRuntimeMemory;
     },
     removeUserFromRoom: async (socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
@@ -145,7 +141,6 @@ const ServerUserManager =
         delete ServerRoomManager.currentRoomIDByUserID[user.id];
         delete roomRuntimeMemory.participantUserNameByID[user.id];
         delete playerObjectByUserID[user.id];
-        delete userRoleByUserID[user.id];
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (!socketRoomContext)
@@ -211,27 +206,8 @@ const ServerUserManager =
     {
         for (const key in playerObjectByUserID)
             delete playerObjectByUserID[key];
-        for (const key in userRoleByUserID)
-            delete userRoleByUserID[key];
         for (const key in recentDisconnectMetadata)
             delete recentDisconnectMetadata[key];
-    },
-    syncUserRoleInMemory: (userID: string, roomID: string, userRole: UserRole): void =>
-    {
-        // Update the authoritative role map.
-        userRoleByUserID[userID] = userRole;
-
-        // Broadcast the role update to all clients in the room.
-        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        if (!socketRoomContext)
-            return;
-
-        const params = new SetUserRoleSignal(userID, roomID, userRole);
-        socketRoomContext.multicastSignal("setUserRoleSignal", params);
-    },
-    getUserRole: (userID: string): UserRole =>
-    {
-        return userRoleByUserID[userID] ?? UserRoleEnumMap.Visitor;
     },
 }
 

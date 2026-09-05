@@ -42,8 +42,16 @@ house.
 
 ## What introducing a parameter concretely means
 
-- Add it to `Room`, so it is stored and sent to clients.
-- Make `RoomGenerationUtil` and the procedural `RoomBuilder`s decide it.
+- Store it wherever the room is stored, so it reaches clients along with the room: on `Room` for most
+  parameters, or in the room's own content blob where it belongs beside the contents. Which of the
+  two it lives in decides nothing about this rule — a parameter kept with the voxels is a room-level
+  parameter and is reached by every line of this page.
+- Make `RoomGenerationUtil` and the procedural `RoomBuilder`s decide it. **The obligation is to
+  decide, and the decision is sometimes the default.** A parameter that is a judgement about one
+  particular room — which nothing a generator knows could stand in for — is rightly generated empty.
+  What is never allowed is leaving it undecided, and the two are told apart only in writing: say in
+  the parameter's `/docs` page what generated rooms come with and why, so the next reader meets a
+  considered answer rather than an oversight to correct.
 - Declare it on every `SinglePlayerModeConfig`, which carries its parameters as `RoomBuilderParams`.
 - Where the parameter has curated data behind it — as texture packs have palettes in `RoomPaletteMap`
   — extend that curation to cover **every** option a room can be generated with.

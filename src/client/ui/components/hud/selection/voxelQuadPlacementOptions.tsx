@@ -28,7 +28,7 @@ import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/rem
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
-import { clientFeatureFlagsObservable, notificationMessageObservable, userRoleObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import Room from "../../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
@@ -159,7 +159,6 @@ function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
     if (!room)
         return null;
     const user = App.getUser();
-    const userRole = userRoleObservable.peek();
 
     const voxel = selection.voxel;
     const quadIndex = selection.quadIndex;
@@ -178,7 +177,7 @@ function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
         const tr = new ObjectTransform({x, y, z}, dir);
         const obj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
             ObjectIdUtil.generateRandomObjectId(), tr);
-        if (ObjectUpdateUtil.canAddObject(user, userRole, room, obj))
+        if (ObjectUpdateUtil.canAddObject(user, room, obj))
             return tr;
     }
     return null;
@@ -267,7 +266,7 @@ function canAddVoxelBlock(selection: VoxelQuadSelection): boolean
     }
 
     const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    return VoxelUpdateUtil.canAddVoxelBlock(userRoleObservable.peek(), room, targetQuadIndex);
+    return VoxelUpdateUtil.canAddVoxelBlock(App.getUser(), room, targetQuadIndex);
 }
 
 function tryAddVoxelBlock(selection: VoxelQuadSelection)
@@ -327,7 +326,7 @@ function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
     if (!room)
         return false;
     return VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(
-        userRoleObservable.peek(), room, selection.quadIndex);
+        App.getUser(), room, selection.quadIndex);
 }
 
 function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
@@ -371,12 +370,11 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
 function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
 {
     const user = App.getUser();
-    const userRole = userRoleObservable.peek();
 
     for (const objectId of WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
     {
         const obj = room.objectById[objectId];
-        if (obj == undefined || ObjectUpdateUtil.canRemoveObject(user, userRole, room,
+        if (obj == undefined || ObjectUpdateUtil.canRemoveObject(user, room,
             new RemoveObjectSignal(room.id, objectId)))
         {
             continue;

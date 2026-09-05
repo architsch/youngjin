@@ -9,13 +9,13 @@ import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUti
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import RemoveObjectSignal from "../types/removeObjectSignal";
 import User from "../../user/types/user";
-import { UserRole } from "../../user/types/userRole";
 import SetObjectTransformSignal from "../types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../types/setObjectMetadataSignal";
+import RestrictedZoneUtil from "../../voxel/util/restrictedZoneUtil";
 
 const ObjectUpdateUtil =
 {
-    canAddObject(user: User, userRole: UserRole, room: Room, obj: AddObjectSignal): boolean
+    canAddObject(user: User, room: Room, obj: AddObjectSignal): boolean
     {
         // Check if the object's ID is absent.
         if (!obj.objectId || obj.objectId.length == 0)
@@ -31,7 +31,13 @@ const ObjectUpdateUtil =
 
         // Check if the object passes the config's criteria.
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserAddObject(user, userRole, room, obj))
+        if (!config.canUserAddObject(user, room, obj))
+            return false;
+
+        // Check if the object would stand in a stretch of the room that is not this user's to build
+        // in (see @docs/gameplay/restricted_zone.md).
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
+            obj.transform.pos, obj.transform.dir))
             return false;
 
         // Check if the object's collider is placeable.
@@ -41,10 +47,10 @@ const ObjectUpdateUtil =
         else
             return true;
     },
-    addObject(user: User, userRole: UserRole, room: Room, obj: AddObjectSignal,
+    addObject(user: User, room: Room, obj: AddObjectSignal,
         validate: boolean = true, addToRoomData: boolean = true): boolean
     {
-        if (validate && !ObjectUpdateUtil.canAddObject(user, userRole, room, obj))
+        if (validate && !ObjectUpdateUtil.canAddObject(user, room, obj))
         {
             console.error(`ObjectUpdateUtil::addObject :: Failed (x=${obj.transform.pos.x}, y=${obj.transform.pos.y}, z=${obj.transform.pos.z})`);
             return false;
@@ -65,7 +71,7 @@ const ObjectUpdateUtil =
         return true;
     },
 
-    canRemoveObject(user: User, userRole: UserRole, room: Room, signal: RemoveObjectSignal): boolean
+    canRemoveObject(user: User, room: Room, signal: RemoveObjectSignal): boolean
     {
         // Check if the room doesn't match.
         if (signal.roomID != room.id)
@@ -78,15 +84,20 @@ const ObjectUpdateUtil =
         
         // Check if the object passes the config's criteria.
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserRemoveObject(user, userRole, room, obj))
+        if (!config.canUserRemoveObject(user, room, obj))
+            return false;
+
+        // Check if the object stands in a stretch of the room that is not this user's to clear.
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
+            obj.transform.pos, obj.transform.dir))
             return false;
 
         return true;
     },
-    removeObject(user: User, userRole: UserRole, room: Room, signal: RemoveObjectSignal,
+    removeObject(user: User, room: Room, signal: RemoveObjectSignal,
         validate: boolean = true, removeFromRoomData: boolean = true): boolean
     {
-        if (validate && !ObjectUpdateUtil.canRemoveObject(user, userRole, room, signal))
+        if (validate && !ObjectUpdateUtil.canRemoveObject(user, room, signal))
         {
             console.error(`ObjectUpdateUtil::removeObject :: Failed (objectId=${signal.objectId})`);
             return false;
@@ -105,7 +116,7 @@ const ObjectUpdateUtil =
         return true;
     },
 
-    canSetObjectTransform(user: User, userRole: UserRole, room: Room,
+    canSetObjectTransform(user: User, room: Room,
         signal: SetObjectTransformSignal): boolean
     {
         // Check if the object doesn't exist.
@@ -115,7 +126,17 @@ const ObjectUpdateUtil =
 
         // Check if the object passes the config's criteria.
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserSetObjectTransform(user, userRole, room, obj, signal))
+        if (!config.canUserSetObjectTransform(user, room, obj, signal))
+            return false;
+
+        // Check where the object is coming from as well as where it is going. A zone that only
+        // refused what was being carried into it would leave what is already inside one free to be
+        // dragged out and then taken down anywhere, which is the removal rule undone by two steps
+        // instead of one.
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
+                obj.transform.pos, obj.transform.dir) ||
+            RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
+                signal.transform.pos, signal.transform.dir))
             return false;
 
         // Check if the object's collider is placeable.
@@ -125,11 +146,11 @@ const ObjectUpdateUtil =
         else
             return true;
     },
-    setObjectTransform(user: User, userRole: UserRole, room: Room, signal: SetObjectTransformSignal,
+    setObjectTransform(user: User, room: Room, signal: SetObjectTransformSignal,
         validate: boolean = true): ObjectTransformUpdateResult
     {
         const obj = room.objectById[signal.objectId];
-        if (validate && !ObjectUpdateUtil.canSetObjectTransform(user, userRole, room, signal))
+        if (validate && !ObjectUpdateUtil.canSetObjectTransform(user, room, signal))
         {
             console.error(`ObjectUpdateUtil::setObjectTransform :: Failed (x=${signal.transform.pos.x}, y=${signal.transform.pos.y}, z=${signal.transform.pos.z})`);
             return {transform: obj.transform, desyncDetected: true};
@@ -161,7 +182,7 @@ const ObjectUpdateUtil =
         }
     },
 
-    canSetObjectMetadata(user: User, userRole: UserRole, room: Room,
+    canSetObjectMetadata(user: User, room: Room,
         signal: SetObjectMetadataSignal): boolean
     {
         // Check if the room doesn't match.
@@ -175,15 +196,23 @@ const ObjectUpdateUtil =
 
         // Check if the object passes the config's criteria.
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserSetObjectMetadata(user, userRole, room, obj, signal))
+        if (!config.canUserSetObjectMetadata(user, room, obj, signal))
+            return false;
+
+        // Check whether the object stands in a stretch of the room that is not this user's to
+        // change. What a picture hanging inside a zone shows is as much a part of what that stretch
+        // of the room looks like as the wall behind it, so a zone that let it be repainted while
+        // refusing to let it be moved or taken down would be protecting the frame and not the view.
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
+            obj.transform.pos, obj.transform.dir))
             return false;
 
         return true;
     },
-    setObjectMetadata(user: User, userRole: UserRole, room: Room,
+    setObjectMetadata(user: User, room: Room,
         signal: SetObjectMetadataSignal, validate: boolean = true): boolean
     {
-        if (validate && !ObjectUpdateUtil.canSetObjectMetadata(user, userRole, room, signal))
+        if (validate && !ObjectUpdateUtil.canSetObjectMetadata(user, room, signal))
         {
             console.error(`ObjectUpdateUtil::setObjectMetadata :: Failed (objectId=${signal.objectId})`);
             return false;

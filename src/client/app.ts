@@ -12,13 +12,12 @@ import Room from "../shared/room/types/room";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import { endClientProcess, ongoingClientProcessExists } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
-import { UserRole } from "../shared/user/types/userRole";
-import { roomChangedObservable, updateObservable, userRoleObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
+import { roomChangedObservable, updateObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
 import "./graphics/types/gizmo/doorWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for door selection
+import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
-import SetUserRoleSignal from "../shared/user/types/setUserRoleSignal";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
@@ -69,16 +68,6 @@ const App =
     {
         return currentRoom;
     },
-    onSetUserRoleSignalReceived: async (params: SetUserRoleSignal) => {
-        // If this is a UserRole update on the current user's player, update the app-level role.
-        if (params.userID !== App.getUser()?.id)
-            return;
-        const success = await waitUntilSignalProcessingReady("setUserRoleSignal",
-            () => params.roomID === App.getCurrentRoom()?.id);
-        if (!success)
-            return;
-        userRoleObservable.set(params.userRole);
-    },
     onRoomTexturePackChangedSignalReceived: async (params: RoomTexturePackChangedSignal) => {
         const success = await waitUntilSignalProcessingReady("roomTexturePackChangedSignal",
             () => params.roomID === App.getCurrentRoom()?.id);
@@ -101,7 +90,7 @@ const App =
             RoomLoadProgressUtil.enterPhase("unloadingRoom");
             await unloadCurrentRoom();
         }
-        await loadRoom(roomChangedSignal.roomRuntimeMemory, roomChangedSignal.currentUserRole);
+        await loadRoom(roomChangedSignal.roomRuntimeMemory);
 
         // Notify listeners that the room has changed. This disposes the previous room's world-space
         // gizmos and resets their lazy-init state, so the pre-load below re-creates them fresh in
@@ -171,7 +160,7 @@ function getRoomChangeRejectionMessage(reason: RoomChangeRejectionReason): strin
     }
 }
 
-async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: UserRole)
+async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
 {
     currentRoom = roomRuntimeMemory.room;
 
@@ -179,8 +168,6 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory, currentUserRole: U
     // actual voxels/objects locally and injects them before anything reads room.voxelGrid/objectById.
     if (currentRoom.roomType == RoomTypeEnumMap.SinglePlayer)
         ClientObjectUtil.buildSinglePlayerRoomContent(currentRoom);
-
-    userRoleObservable.set(currentUserRole);
 
     RoomLoadProgressUtil.enterPhase("loadingGraphics");
     await GraphicsManager.load(update);

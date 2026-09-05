@@ -1,4 +1,4 @@
-import { texturePackURLObservable, userRoleObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { objectSelectionObservable, texturePackURLObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import Room from "../../shared/room/types/room";
 import ClientObjectManager from "../object/clientObjectManager";
@@ -8,6 +8,9 @@ import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import SetRestrictedZonesSignal from "../../shared/voxel/types/update/setRestrictedZonesSignal";
+import RestrictedZone from "../../shared/voxel/types/restrictedZone";
+import RestrictedZoneUtil from "../../shared/voxel/util/restrictedZoneUtil";
 import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
@@ -60,8 +63,7 @@ const ClientVoxelManager =
     addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer?: number[],
         validate: boolean = true): boolean =>
     {
-        const userRole = userRoleObservable.peek();
-        const success = VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
+        const success = VoxelUpdateUtil.addVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyAddedVoxelBlock));
@@ -71,7 +73,6 @@ const ClientVoxelManager =
         numRows: number, numCols: number, collisionLayerMin: number, collisionLayerMax: number,
         quadTextureIndicesWithinLayer?: number[], validate: boolean = true): boolean =>
     {
-        const userRole = userRoleObservable.peek();
         for (let row = rowStart; row < rowStart + numRows; ++row)
         {
             for (let col = colStart; col < colStart + numCols; ++col)
@@ -79,7 +80,7 @@ const ClientVoxelManager =
                 for (let collisionLayer = collisionLayerMin; collisionLayer <= collisionLayerMax; ++collisionLayer)
                 {
                     const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", collisionLayer);
-                    VoxelUpdateUtil.addVoxelBlock(userRole, room.voxelGrid.voxels,
+                    VoxelUpdateUtil.addVoxelBlock(App.getUser(), room.voxelGrid.voxels,
                         quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
                 }
             }
@@ -89,8 +90,7 @@ const ClientVoxelManager =
     removeVoxelBlock: (room: Room, quadIndex: number,
         validate: boolean = true): boolean =>
     {
-        const userRole = userRoleObservable.peek();
-        const success = VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
+        const success = VoxelUpdateUtil.removeVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, validate ? room : undefined);
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyRemovedVoxelBlock));
@@ -100,7 +100,6 @@ const ClientVoxelManager =
         numRows: number, numCols: number, collisionLayerMin: number, collisionLayerMax: number,
         validate: boolean = true): boolean =>
     {
-        const userRole = userRoleObservable.peek();
         for (let row = rowStart; row < rowStart + numRows; ++row)
         {
             for (let col = colStart; col < colStart + numCols; ++col)
@@ -108,7 +107,7 @@ const ClientVoxelManager =
                 for (let collisionLayer = collisionLayerMin; collisionLayer <= collisionLayerMax; ++collisionLayer)
                 {
                     const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", collisionLayer);
-                    VoxelUpdateUtil.removeVoxelBlock(userRole, room.voxelGrid.voxels,
+                    VoxelUpdateUtil.removeVoxelBlock(App.getUser(), room.voxelGrid.voxels,
                         quadIndex, validate ? room : undefined);
                 }
             }
@@ -119,19 +118,24 @@ const ClientVoxelManager =
         rowOffset: number, colOffset: number, collisionLayerOffset: number,
         validate: boolean = true): boolean =>
     {
-        const userRole = userRoleObservable.peek();
-        return VoxelUpdateUtil.moveVoxelBlock(userRole, room.voxelGrid.voxels,
+        return VoxelUpdateUtil.moveVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, rowOffset, colOffset, collisionLayerOffset, validate ? room : undefined);
     },
     setVoxelQuadTexture: (room: Room, quadIndex: number, textureIndex: number,
         validate: boolean = true): boolean =>
     {
-        const userRole = userRoleObservable.peek();
-        const success = VoxelUpdateUtil.setVoxelQuadTexture(userRole, room.voxelGrid.voxels,
+        const success = VoxelUpdateUtil.setVoxelQuadTexture(App.getUser(), room.voxelGrid.voxels,
             quadIndex, textureIndex, validate ? room : undefined);
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyChangedVoxelQuadTexture));
         return success;
+    },
+    // Redraws the room's restricted zones. Reporting the change to the server is the caller's, as it
+    // is for every other edit here — see voxelQuadTextureOptions for the pattern.
+    setRestrictedZones: (room: Room, restrictedZones: RestrictedZone[],
+        validate: boolean = true): boolean =>
+    {
+        return RestrictedZoneUtil.setRestrictedZones(App.getUser(), room, restrictedZones, validate);
     },
 
     // --- Signal reception handlers (for signals from other clients via server) ---
@@ -143,7 +147,7 @@ const ClientVoxelManager =
             return;
         ClientVoxelManager.addVoxelBlock(App.getCurrentRoom()!, signal.quadIndex,
             signal.quadTextureIndicesWithinLayer, false);
-        refreshSelection();
+        refreshSelections();
     },
     onMoveVoxelBlockSignalReceived: async (signal: MoveVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("moveVoxelBlockSignal",
@@ -152,7 +156,7 @@ const ClientVoxelManager =
             return;
         ClientVoxelManager.moveVoxelBlock(App.getCurrentRoom()!, signal.quadIndex,
             signal.rowOffset, signal.colOffset, signal.collisionLayerOffset, false);
-        refreshSelection();
+        refreshSelections();
     },
     onRemoveVoxelBlockSignalReceived: async (signal: RemoveVoxelBlockSignal) => {
         const success = await waitUntilSignalProcessingReady("removeVoxelBlockSignal",
@@ -161,7 +165,7 @@ const ClientVoxelManager =
             return;
         ClientVoxelManager.removeVoxelBlock(App.getCurrentRoom()!,
             signal.quadIndex, false);
-        refreshSelection();
+        refreshSelections();
     },
     onSetVoxelQuadTextureSignalReceived: async (signal: SetVoxelQuadTextureSignal) => {
         const success = await waitUntilSignalProcessingReady("setVoxelQuadTextureSignal",
@@ -170,11 +174,31 @@ const ClientVoxelManager =
             return;
         ClientVoxelManager.setVoxelQuadTexture(App.getCurrentRoom()!,
             signal.quadIndex, signal.textureIndex, false);
-        refreshSelection();
+        refreshSelections();
+    },
+    onSetRestrictedZonesSignalReceived: async (signal: SetRestrictedZonesSignal) => {
+        const success = await waitUntilSignalProcessingReady("setRestrictedZonesSignal",
+            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
+        if (!success)
+            return;
+        ClientVoxelManager.setRestrictedZones(App.getCurrentRoom()!, signal.restrictedZones, false);
+
+        // The selection is refreshed like any other edit's: a zone drawn over what the user has
+        // picked out is the moment that selection stops being his to work on.
+        refreshSelections();
     },
 }
 
-function refreshSelection()
+// Brings whatever the user has picked out back into line with the room as it now stands. Called
+// after every edit that arrives from elsewhere, because an edit to the room can change what the
+// selected thing is, where it is, or whether it is still the user's to work on at all — and the
+// tools on screen are worked out from all three.
+//
+// Both kinds of selection are seen to, not only the one the edit was made to. Only one of the two is
+// ever up at a time, so the other's announcement reaches nobody; and an edit to the room's fabric
+// can perfectly well be what changes what may be done to a thing standing in it — a restricted zone
+// drawn over the stretch of floor a picture hangs on being the clearest case.
+function refreshSelections()
 {
     const existingSelection = voxelQuadSelectionObservable.peek();
     if (existingSelection != null)
@@ -200,6 +224,9 @@ function refreshSelection()
         // Force-refresh the current selection (in order to update the UI, in case of a minor modification such as a texture change).
         voxelQuadSelectionObservable.notify();
     }
+
+    if (objectSelectionObservable.peek() != null)
+        objectSelectionObservable.notify();
 }
 
 async function onVoxelQuadChange(change: VoxelQuadChange): Promise<void>
