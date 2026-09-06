@@ -34,12 +34,6 @@ export default interface ObjectTypeConfig
                     {params: InstancedMeshCompositionParams,
                         parts: InstancedMeshCompositionPart[]},
             },
-            meshGraphics?: {
-                path: string,
-                geometryId: string,
-                localPosition: {x: number, y: number, z: number},
-                scale: {x: number, y: number, z: number},
-            },
             speechBubble?: {
                 yOffset: number,
                 checkLineOfSight: boolean,
@@ -67,6 +61,10 @@ export default interface ObjectTypeConfig
                 checkLineOfSight: boolean,
             },
             orbitOccluder?: {},
+            // Light the object gives off into the room. What the light is like is the object's own
+            // metadata rather than a setting here, since two lamps of the same kind are lit
+            // differently — see LampObjectUtil.
+            lightSource?: {},
         },
         spawnedByMe?: {
             playerController?: {},

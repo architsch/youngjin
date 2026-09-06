@@ -86,6 +86,7 @@ const DBRoomUtil =
             ownerUserID: room.ownerUserID,
             ownerUserName: room.ownerUserName,
             texturePackPath: room.texturePackPath,
+            prefs: room.prefs,
         };
 
         const roomInsertResult = await new DBQuery<{id: string}>()
@@ -113,6 +114,18 @@ const DBRoomUtil =
             .delete()
             .from(COLLECTION_ROOMS)
             .where("id", "==", roomID)
+            .run();
+        return result.success;
+    },
+    changeRoomPrefs: async (room: Room, newPrefs: string): Promise<boolean> =>
+    {
+        LogUtil.log("DBRoomUtil.changeRoomPrefs", {roomID: room.id, newPrefs}, "low", "info");
+        const result = await new DBQuery<DBRow>()
+            .update(COLLECTION_ROOMS)
+            .set({
+                prefs: newPrefs,
+            })
+            .where("id", "==", room.id)
             .run();
         return result.success;
     },
@@ -144,7 +157,8 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
     const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "",
         voxelGrid.sourceFormatVersion) as ObjectGroup;
     const room = new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
-        dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, voxelGrid, objectGroup);
+        dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, dbRoom.prefs,
+        voxelGrid, objectGroup);
 
     // A room read from an older format was brought up to date on the way in (see VoxelGrid's and
     // ObjectGroup's converters), and what came out only exists in memory. Marking it dirty is what

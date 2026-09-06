@@ -256,6 +256,18 @@ const palettes = (page, texturePackPath) => callSandbox(page, "palettes", textur
 const pictures = (page) => callSandbox(page, "pictures");
 
 /**
+ * The atmosphere the set is seen in — ambient light, the light the player carries, and the fog:
+ *
+ *   roomLighting({headLightPowerStep: 0})            // the room lit only by its own lamps
+ *   roomLighting({fogColorIndex: 6, fogFarStep: 30}) // air the far wall recedes into
+ *
+ * Colors are positions in the game's own light and fog palettes, and everything else is a step in
+ * [0, maxStep]. Called with nothing it reports the room's current lighting alongside both palettes
+ * and that maximum, so a script can read what it is changing.
+ */
+const roomLighting = (page, prefs) => callSandbox(page, "roomLighting", prefs);
+
+/**
  * The twelve finishes a door can be given, each ready to pass straight back as metadata:
  *
  *   const styles = await setup.doorStyles();
@@ -385,7 +397,7 @@ module.exports = {
     pose, standingSpots,
     place, face, faceDeg, vantage,
     look, view, swing, lookAt, clearLookAt,
-    sandboxActive, camera, cameraPose, addBlocks, removeBlocks, clearSandbox,
+    sandboxActive, camera, cameraPose, addBlocks, removeBlocks, clearSandbox, roomLighting,
     texturePack, palettes, pictures, doorStyles, addObject, removeObject, restrictedZones, stage,
     sleep,
 };

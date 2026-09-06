@@ -11,6 +11,7 @@ import RoomBuilderParams from "../types/params/roomBuilderParams";
 import RoomPaletteSelectionParams from "../types/params/roomPaletteSelectionParams";
 import RoomPalette from "../types/roomPalette";
 import RoomPaletteMap from "../maps/roomPaletteMap";
+import RoomPrefsUtil from "../../util/roomPrefsUtil";
 import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../system/sharedConstants";
 
@@ -56,8 +57,14 @@ const RoomGenerationUtil =
     generateRoom: (roomName: string, roomType: RoomType,
         ownerUserID: string = "", ownerUserName: string = "", seed?: number): Room =>
     {
+        // The atmosphere is written out rather than left empty. What a generated room comes with
+        // is the documented default — plain white light and no fog, which is a room seen as it is
+        // rather than a room dressed in somebody's taste — but it is *chosen* here, because a
+        // parameter no generator sets is one no room has ever actually held.
+        // See @docs/graphics/lighting.md .
         const room = new Room(undefined, roomName, roomType, ownerUserID, ownerUserName,
-            "", new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
+            "", RoomPrefsUtil.getDefaultPrefsString(),
+            new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
         RoomGenerationUtil.generateRoomContent(room, seed);
         return room;
     },

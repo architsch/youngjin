@@ -40,6 +40,8 @@ The solution is to make the circle just as large as to let it fully cover the mi
 
 ### Eyes on a Curved Surface
 
+The face — the eyes and the dark patch behind them — is drawn in the same unlit material a lamp's lit panel is (see [lighting.md](../graphics/lighting.md)), rather than in a lit one of its own. It is meant to read as paint on a toy: flat, clean, and the same whichever way the light falls, which is exactly what an unlit material gives. Its colors are therefore what actually reaches the screen rather than a starting point the room's light then works on, so they are kept well down the range — a face at full strength would read as a lamp rather than as paint.
+
 Since the player's eyes are flat patches of color rendered on a flat surface, it can be problematic if we try to render the eyes on the side of a cylinder. Therefore, it is necessary to pad the cylinder's side with a box so as to provide a flat surface for the eyes. The figure top-down view illustrates how this solution is implemented. The circle shape is a cross section of the cylinder (which is the player's head).
 
 ![Player Eyes on a Cylinder](figures/player_customization_3.jpg)

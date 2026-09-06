@@ -22,6 +22,7 @@ import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBloc
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import RoomTexturePackChangedSignal from "../../../shared/room/types/roomTexturePackChangedSignal";
+import RoomPrefsChangedSignal from "../../../shared/room/types/roomPrefsChangedSignal";
 import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
@@ -57,6 +58,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientVoxelManager.onSetRestrictedZonesSignalReceived(data as SetRestrictedZonesSignal),
     "roomTexturePackChangedSignal": (data: EncodableData) =>
         App.onRoomTexturePackChangedSignalReceived(data as RoomTexturePackChangedSignal),
+    "roomPrefsChangedSignal": (data: EncodableData) =>
+        App.onRoomPrefsChangedSignalReceived(data as RoomPrefsChangedSignal),
 }
 
 const lastSignalSentTimes: {[signalType: string]: number} = {};

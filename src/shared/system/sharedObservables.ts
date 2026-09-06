@@ -24,6 +24,12 @@ export const voxelQuadChangeObservable = new Observable<VoxelQuadChange>();
 // answers to it reads the room's own list rather than a copy of it that may already be behind.
 export const restrictedZonesChangedObservable = new Observable<string>("");
 
+// This observable notifies its listeners, with the ID of the room in question, whenever a room's
+// atmosphere has been replaced — its ambient light, the light the player carries, or its fog. Like
+// the one above it carries the room rather than the settings, so that whoever answers to it reads
+// the room's own string rather than a copy that may already be behind.
+export const roomPrefsChangedObservable = new Observable<string>("");
+
 //--------------------------------------------------------------------------------
 // Debug
 //--------------------------------------------------------------------------------

@@ -9,6 +9,7 @@
  * itself to be covered by the tests written for it (see room-generation.test.ts).
  */
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
 import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
 import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
 import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
@@ -59,6 +60,7 @@ export function createTestRoom(roomID: string, roomName: string, roomType: RoomT
     ownerUserID: string = "", ownerUserName: string = "", texturePackPath: string = "default"): Room
 {
     const room = new Room(roomID, roomName, roomType, ownerUserID, ownerUserName, texturePackPath,
+        RoomPrefsUtil.getDefaultPrefsString(),
         new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
 
     if (roomType === RoomTypeEnumMap.SinglePlayer)

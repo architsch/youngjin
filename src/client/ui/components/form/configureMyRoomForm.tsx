@@ -14,7 +14,8 @@ import CopyIcon from "../../svg/icons/copyIcon";
 import TooltipPanel from "../overlay/tooltipPanel";
 import CompactIconButton from "../input/compactIconButton";
 import QuestionMarkIcon from "../../svg/icons/questionMarkIcon";
-import RestrictedZonesSection from "../input/restrictedZonesSection";
+import RestrictedZonesSection from "./section/restrictedZonesSection";
+import LightingSection from "./section/lightingSection";
 
 export default function ConfigureMyRoomForm()
 {
@@ -97,6 +98,11 @@ export default function ConfigureMyRoomForm()
 
         {/* Section 3: Restricted Zones */}
         <RestrictedZonesSection onToggleTooltip={toggleTooltip}/>
+
+        <Spacer size="sm"/>
+
+        {/* Section 4: Lighting */}
+        <LightingSection onToggleTooltip={toggleTooltip}/>
 
         {/* Fixed to the viewport rather than laid out in the form, so it neither takes up a row of
             its own nor gets cut off by the form's scrolling. */}

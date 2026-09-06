@@ -2,13 +2,11 @@ import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import GameObject from "../types/gameObject";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
-import MeshGraphics from "./meshGraphics";
 import CameraUtil from "../../graphics/util/cameraUtil";
 import NumUtil from "../../../shared/math/util/numUtil";
 import { cameraModeObservable } from "../../system/clientObservables";
 
 const vec3Temp = new THREE.Vector3();
-const probePointTemp = new THREE.Vector3();
 
 // The shortest vector still worth taking a direction from. Anything shorter is a direction the
 // scene does not really hold — a player standing on top of the object, or an object with no facing
@@ -40,10 +38,9 @@ export default class PlayerProximityDetector extends GameObjectComponent
 
         if (this.checkLineOfSight)
         {
-            const meshGraphics = this.gameObject.components.meshGraphics as MeshGraphics;
             const instancedMeshGraphics = this.gameObject.components.instancedMeshGraphics as InstancedMeshGraphics;
-            if (!meshGraphics && !instancedMeshGraphics)
-                throw new Error("PlayerProximityDetector with 'checkLineOfSight' requires either MeshGraphics or InstancedMeshGraphics component");
+            if (!instancedMeshGraphics)
+                throw new Error("PlayerProximityDetector with 'checkLineOfSight' requires InstancedMeshGraphics component");
         }
     }
 
@@ -116,22 +113,14 @@ export default class PlayerProximityDetector extends GameObjectComponent
     }
 
     // Whether the object stands where the camera can actually see it, rather than behind whatever
-    // else the room has put in the way.
-    //
-    // What is looked for is a point on the object itself. An object drawn from a mesh hung off its
-    // origin is asked for that mesh's centre, since such an origin need not sit anywhere on the
-    // object — one left down on the floor would give a probe point that grazes the floor from every
-    // angle. Everything else is asked for its own position, which for an object whose collider is
-    // centred on it (a door, say) is already the middle of the thing.
+    // else the room has put in the way. The object is probed at its own position, which for an
+    // object whose collider is centred on it (a door, say) is already the middle of the thing.
     private objectIsInSight(): boolean
     {
         if (!this.checkLineOfSight)
             return true;
 
-        const mesh = (this.gameObject.components.meshGraphics as MeshGraphics)?.mesh;
-        const probePoint = (mesh != undefined)
-            ? mesh.getWorldPosition(probePointTemp) : this.gameObject.position;
-        return CameraUtil.objectIsInLineOfSight(probePoint, this.gameObject);
+        return CameraUtil.objectIsInLineOfSight(this.gameObject.position, this.gameObject);
     }
 
     private turnProximityOn()

@@ -8,6 +8,7 @@ import GameObject from "../../object/types/gameObject";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
+import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
 import ThingsPoolEnv from "../types/thingsPoolEnv";
 import { gameModeObservable, objectSelectionObservable, playerSelectionObservable,
     voxelQuadSelectionObservable } from "../clientObservables";
@@ -204,6 +205,10 @@ const AutomationBridgeUtil =
                         ownerUserID: room.ownerUserID,
                         ownerUserName: room.ownerUserName,
                         texturePackPath: room.texturePackPath,
+                        // Reported decoded rather than as the handful of characters it is stored
+                        // as, for the same reason the restricted zones below are reported as
+                        // rectangles: what a caller is checking is the room, not the wire format.
+                        lighting: RoomPrefsUtil.decode(room.prefs),
                         restrictedZones: room.voxelGrid.restrictedZones.map(zone => ({
                             rowMin: zone.rowMin, rowMax: zone.rowMax,
                             colMin: zone.colMin, colMax: zone.colMax,

@@ -123,21 +123,6 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             this.gameObject, instanceId, r, g, b, thickness, convex);
     }
 
-    updateInstanceEyeColors(instancedMeshId: string, instanceId: number,
-        r_pupil: number, g_pupil: number, b_pupil: number,
-        r_iris: number, g_iris: number, b_iris: number)
-    {
-        bindingMap[instancedMeshId].updateInstanceEyeColors(
-            this.gameObject, instanceId, r_pupil, g_pupil, b_pupil, r_iris, g_iris, b_iris);
-    }
-
-    updateInstanceEyeRadii(instancedMeshId: string, instanceId: number,
-        pupilRadius: number, irisRadius: number)
-    {
-        bindingMap[instancedMeshId].updateInstanceEyeRadii(
-            this.gameObject, instanceId, pupilRadius, irisRadius);
-    }
-
     // The optional source UV rect restricts sampling to a sub-region of the source image
     // (e.g. a single cell of an atlas image); by default the full image is drawn.
     async drawImageAtIndex(instancedMeshId: string,

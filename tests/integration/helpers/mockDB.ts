@@ -19,6 +19,7 @@ interface StoredRoom
     ownerUserID: string;
     ownerUserName: string;
     texturePackPath: string;
+    prefs: string;
     room: Room; // Full Room object with voxelGrid
 }
 
@@ -84,6 +85,7 @@ export function seedRoom(
         ownerUserID: "",
         ownerUserName: "",
         texturePackPath: room.texturePackPath,
+        prefs: room.prefs,
         room,
     };
     return room;
@@ -111,6 +113,7 @@ export const mockDBRoomUtil = {
             ownerUserID: stored.ownerUserID,
             ownerUserName: stored.ownerUserName,
             texturePackPath: stored.texturePackPath,
+            prefs: stored.prefs,
         };
     }),
     saveRoomContent: vi.fn(async (_room: Room): Promise<boolean> =>
@@ -137,6 +140,13 @@ export const mockDBRoomUtil = {
     }),
     changeRoomTexturePackPath: vi.fn(async (_room: Room, _newTexturePackPath: string): Promise<boolean> =>
     {
+        return true;
+    }),
+    changeRoomPrefs: vi.fn(async (room: Room, newPrefs: string): Promise<boolean> =>
+    {
+        const stored = roomStore[room.id];
+        if (stored)
+            stored.prefs = newPrefs;
         return true;
     }),
 };

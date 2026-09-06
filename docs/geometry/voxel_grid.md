@@ -44,6 +44,14 @@ The collision layers partition the room height into equal vertical slices. Each 
 - Efficient vertical collision checks via bitwise operations.
 - Wall-attached object placement validation (checking that the required layers are filled).
 
+## Voxel Blocks
+
+One collision layer of one cell is a **voxel block** — the smallest thing the room can be solid or open at, and the unit the room is actually built out of. A cell is a column of them and the layer mask says which are filled.
+
+The room's blocks have their own flat addressing alongside the quad indices above, which is what anything reasoning about the room *as a volume* rather than as a set of surfaces uses. A quad is a face and belongs to two blocks; a block is a place, and can be asked whether it is solid without reference to which way anything is looking at it. The layer varies fastest along that addressing, so a cell's own column of blocks is contiguous — which suits both of the things that read it, since both sweep the room block by block.
+
+The room's lighting is the main one (see [lighting.md](../graphics/lighting.md)): light is flood-filled from block to block, which is where the occlusion comes from — the fill cannot pass through a solid block, and everything outside the room reads as solid.
+
 ## Quad Positioning
 Wall quads are centered vertically within their layer; floor/ceiling quads sit at the layer's lower or upper boundary depending on which way they face. Wall quads are scaled to one layer's height, while floor/ceiling quads span a full cell.
 

@@ -20,18 +20,25 @@ export default class PlayerCompositionBuilder extends InstancedMeshCompositionBu
     
     protected addEyes(offsetInUnits: Vec3)
     {
+        // The face is drawn unlit (see PlayerCompositionCodec), so these colors are what actually
+        // reaches the screen rather than a starting point the room's light then works on. Both are
+        // held well down the range because of it: an unlit color at full strength reads as a light
+        // rather than as paint, and a character is not meant to have headlamps for eyes. The dark
+        // patch behind them is lifted a little off black for the same reason in reverse — nothing
+        // will ever brighten it now, and at black it reads as a hole cut in the face.
+        //
         // Background for the eyes (0.01 = offset to prevent z-fighting)
         this.addSquare(
             {x: offsetInUnits.x, y: offsetInUnits.y, z: offsetInUnits.z - 0.01},
-            {x: 3, y: 1, z: 1}, {x: 20, y: 20, z: 20});
+            {x: 3, y: 1, z: 1}, {x: 32, y: 32, z: 32});
         // Eye 1 (0.02 = offset to prevent z-fighting)
         this.addSquare(
             {x: offsetInUnits.x + 0.75, y: offsetInUnits.y, z: offsetInUnits.z - 0.02},
-            {x: 0.75, y: 0.6, z: 1}, {x: 20, y: 230, z: 20});
+            {x: 0.75, y: 0.6, z: 1}, {x: 24, y: 150, z: 24});
         // Eye 2 (0.02 = offset to prevent z-fighting)
         this.addSquare(
             {x: offsetInUnits.x - 0.75, y: offsetInUnits.y, z: offsetInUnits.z - 0.02},
-            {x: 0.75, y: 0.6, z: 1}, {x: 20, y: 230, z: 20});
+            {x: 0.75, y: 0.6, z: 1}, {x: 24, y: 150, z: 24});
     }
 
     protected addBox(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)

@@ -1,7 +1,6 @@
 import Rigidbody from "../components/rigidbody";
 import PlayerController from "../components/playerController";
 import GameObjectComponent from "../components/gameObjectComponent";
-import MeshGraphics from "../components/meshGraphics";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import ModelGraphics from "../components/modelGraphics";
 import PeriodicTransformEmitter from "../components/periodicTransformEmitter";
@@ -14,6 +13,7 @@ import EasingMotion from "../components/easingMotion";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
 import LabelText from "../components/labelText";
 import OrbitOccluder from "../components/orbitOccluder";
+import LightSource from "../components/lightSource";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
     (parentObject: GameObject, componentConfig: {[key: string]: any}) => GameObjectComponent} =
@@ -24,8 +24,6 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new Collider(parentObject, componentConfig),
     "playerController": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new PlayerController(parentObject, componentConfig),
-    "meshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new MeshGraphics(parentObject, componentConfig),
     "instancedMeshGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new InstancedMeshGraphics(parentObject, componentConfig),
     "instancedMeshComposer": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
@@ -46,4 +44,6 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new OrbitOccluder(parentObject, componentConfig),
     "labelText": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new LabelText(parentObject, componentConfig),
+    "lightSource": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new LightSource(parentObject, componentConfig),
 }

@@ -1,5 +1,5 @@
 import InstancedColorMaterialParams from "../types/instancedColorMaterialParams";
-import InstancedEyeMaterialParams from "../types/instancedEyeMaterialParams";
+import InstancedEmissiveMaterialParams from "../types/instancedEmissiveMaterialParams";
 import InstancedTinMaterialParams from "../types/instancedTinMaterialParams";
 import InstancedWoodMaterialParams from "../types/instancedWoodMaterialParams";
 import MaterialParams from "../types/materialParams";
@@ -10,14 +10,14 @@ const materialParamsConstructorByType: {[materialType: string]:
     "InstancedColor": (...options: string[]) => {
         return new InstancedColorMaterialParams();
     },
-    "InstancedEye": (...options: string[]) => {
-        return new InstancedEyeMaterialParams();
-    },
     "InstancedTin": (...options: string[]) => {
         return new InstancedTinMaterialParams();
     },
     "InstancedWood": (...options: string[]) => {
         return new InstancedWoodMaterialParams();
+    },
+    "InstancedEmissive": (...options: string[]) => {
+        return new InstancedEmissiveMaterialParams();
     },
 }
 const cachedMaterialParamsById: {[materialId: string]: MaterialParams} = {};

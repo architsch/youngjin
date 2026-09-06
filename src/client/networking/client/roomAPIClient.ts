@@ -16,6 +16,12 @@ const RoomAPIClient =
     {
         return await RestAPI.post(getURL("change_room_texture"), { data: { texturePackPath, roomID } });
     },
+    // Re-lights the room, on the same terms re-skinning one is: naming no room means the user's
+    // own, naming one is an admin re-lighting a hub.
+    changeRoomPrefs: async (prefs: string, roomID?: string): Promise<RestAPIResponse> =>
+    {
+        return await RestAPI.post(getURL("change_room_prefs"), { data: { prefs, roomID } });
+    },
     getHubRoomListEntries: async (): Promise<RestAPIResponse> =>
     {
         return await RestAPI.post(getURL("get_hub_room_list_entries"));

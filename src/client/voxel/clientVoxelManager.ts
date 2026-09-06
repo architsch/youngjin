@@ -21,6 +21,7 @@ import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
 import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
 import ClientEventHistoryUtil from "../system/util/clientEventHistoryUtil";
 import ClientVoxelQueryUtil from "./util/clientVoxelQueryUtil";
+import GraphicsManager from "../graphics/graphicsManager";
 import ClientEvent from "../system/types/clientEvent";
 import { ClientEventType } from "../system/types/clientEventType";
 
@@ -33,6 +34,11 @@ const ClientVoxelManager =
         // different pack swaps its texture in place). Must run before ClientObjectManager.load.
         await ClientVoxelManager.applyVoxelTexturePack(App.getCurrentRoom()!.texturePackPath);
         voxelQuadChangeObservable.addListener("clientVoxelManager", onVoxelQuadChange);
+
+        // Light is propagated through the room's own blocks, so the block map is told which room's
+        // voxels it is now looking at. It outlives every room it is used for (GraphicsManager keeps
+        // it for the app's whole lifetime), so this also drops the previous room's lamps.
+        GraphicsManager.getLightBlockMap().resetForRoom(App.getCurrentRoom()!.voxelGrid.voxels);
     },
     applyVoxelTexturePack: async (texturePackPath: string): Promise<void> =>
     {
@@ -53,6 +59,7 @@ const ClientVoxelManager =
     unload: () =>
     {
         voxelQuadChangeObservable.removeListener("clientVoxelManager");
+        GraphicsManager.getLightBlockMap().resetForRoom(undefined);
     },
     // --- Edits to the current room's voxel grid ---
     //
@@ -65,6 +72,8 @@ const ClientVoxelManager =
     {
         const success = VoxelUpdateUtil.addVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
+        if (success)
+            onRoomShapeChanged();
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyAddedVoxelBlock));
         return success;
@@ -85,6 +94,7 @@ const ClientVoxelManager =
                 }
             }
         }
+        onRoomShapeChanged();
         return true;
     },
     removeVoxelBlock: (room: Room, quadIndex: number,
@@ -92,6 +102,8 @@ const ClientVoxelManager =
     {
         const success = VoxelUpdateUtil.removeVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, validate ? room : undefined);
+        if (success)
+            onRoomShapeChanged();
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyRemovedVoxelBlock));
         return success;
@@ -112,14 +124,18 @@ const ClientVoxelManager =
                 }
             }
         }
+        onRoomShapeChanged();
         return true;
     },
     moveVoxelBlock: (room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number,
         validate: boolean = true): boolean =>
     {
-        return VoxelUpdateUtil.moveVoxelBlock(App.getUser(), room.voxelGrid.voxels,
+        const success = VoxelUpdateUtil.moveVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, rowOffset, colOffset, collisionLayerOffset, validate ? room : undefined);
+        if (success)
+            onRoomShapeChanged();
+        return success;
     },
     setVoxelQuadTexture: (room: Room, quadIndex: number, textureIndex: number,
         validate: boolean = true): boolean =>
@@ -227,6 +243,15 @@ function refreshSelections()
 
     if (objectSelectionObservable.peek() != null)
         objectSelectionObservable.notify();
+}
+
+// What light can and cannot get past is the room's own solid blocks, so any edit that puts one down
+// or takes one away invalidates the light block map. Only asked for here, never done here: the map
+// recomputes once on the next frame, so building a wall block by block costs one recomputation a
+// frame rather than one per block.
+function onRoomShapeChanged()
+{
+    GraphicsManager.getLightBlockMap().requestRecomputation();
 }
 
 async function onVoxelQuadChange(change: VoxelQuadChange): Promise<void>

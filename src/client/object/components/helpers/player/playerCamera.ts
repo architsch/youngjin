@@ -9,6 +9,9 @@ import OrbitOcclusionHider from "./orbitOcclusionHider";
 import PlayerPointerInput from "./playerPointerInput";
 import FreeCameraPose from "./freeCameraPose";
 
+const worldPositionTemp = new THREE.Vector3();
+const roomLightTemp = new THREE.Color();
+
 //------------------------------------------------------------------------
 // Owns the player's camera: attaches it to the player object and eases it
 // toward the pose requested by the active camera mode (cameraModeObservable).
@@ -38,6 +41,12 @@ export default class PlayerCamera
     // the new distance while still standing at the old one — a flare on every notch.
     private pointLightViewDistance: number = 0;
 
+    // How brightly the room's own lamps are lighting wherever the camera is standing, eased for the
+    // same reason and on the same terms: walking under a lamp would otherwise snap the light the
+    // player carries down and back up again, and what he would notice is not the lamp he walked
+    // under but his own torch flickering.
+    private roomLightAtCamera = new THREE.Color(0, 0, 0);
+
     onSpawn(controller: PlayerController, pointerInput: PlayerPointerInput): void
     {
         this.pointerInput = pointerInput;
@@ -52,10 +61,13 @@ export default class PlayerCamera
     {
         this.occlusionHider.revealAll();
 
-        // Nobody is looking through the camera any more, so the light it carries goes back to what
-        // it is tuned for rather than staying stretched over the last orbit's distance.
+        // Nobody is looking through the camera any more, so the light it carries and the air it
+        // looks through go back to what they are tuned for rather than staying stretched over the
+        // last orbit's distance.
         this.pointLightViewDistance = 0;
-        GraphicsManager.setPointLightReach(0);
+        GraphicsManager.setViewDistance(0);
+        this.roomLightAtCamera.setRGB(0, 0, 0);
+        GraphicsManager.setPointLightSurroundings(this.roomLightAtCamera);
     }
 
     update(deltaTime: number, controller: PlayerController): void
@@ -123,15 +135,23 @@ export default class PlayerCamera
         this.camera!.position.lerp(this.positionInterpTarget, t);
         this.camera!.quaternion.slerp(this.quaternionInterpTarget, t);
 
-        // The camera carries the room's light with it, so how far that light has to reach is a
-        // question only the active mode can answer: an orbit may hold the camera much further from
-        // what the user is looking at than his own eye ever does, and a free camera further still
-        // (see GraphicsManager). Eased on the same terms as the camera itself, so that the light
-        // travels with the camera instead of arriving before it (see pointLightViewDistance).
+        // The camera carries the room's light with it and looks through the room's air, so how far
+        // both have to reach is a question only the active mode can answer: an orbit may hold the
+        // camera much further from what the user is looking at than his own eye ever does, and a
+        // free camera further still (see GraphicsManager). Eased on the same terms as the camera
+        // itself, so that they travel with the camera instead of arriving before it (see
+        // pointLightViewDistance).
         const viewDistance = (mode.type === "orbit") ? this.orbitPose.getOrbitDistance()
             : (mode.type === "free") ? FreeCameraPose.getViewDistance() : 0;
         this.pointLightViewDistance += (viewDistance - this.pointLightViewDistance) * t;
-        GraphicsManager.setPointLightReach(this.pointLightViewDistance);
+        GraphicsManager.setViewDistance(this.pointLightViewDistance);
+
+        // And how far it should stand down for the room's own lamps, asked of the eased camera for
+        // the same reason: what matters is where the player is being lit, not where he is headed.
+        GraphicsManager.getLightBlockMap().getLightAt(
+            this.camera!.getWorldPosition(worldPositionTemp), roomLightTemp);
+        this.roomLightAtCamera.lerp(roomLightTemp, t);
+        GraphicsManager.setPointLightSurroundings(this.roomLightAtCamera);
 
         // The camera the sweep must see past is the eased one, so this follows the easing above.
         if (mode.type === "orbit")

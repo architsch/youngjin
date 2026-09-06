@@ -22,8 +22,13 @@ import Vec3 from "../../../shared/math/types/vec3";
 import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
-    MAX_RESTRICTED_ZONES, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
-    NUM_VOXEL_ROWS, PLAYER_HEIGHT, SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+    FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
+    NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
+    SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+import RoomLightingUtil from "./roomLightingUtil";
+import RoomPrefs from "../../../shared/room/types/roomPrefs";
+import RoomPrefsUtil, { MAX_ROOM_PREFS_STEP } from "../../../shared/room/util/roomPrefsUtil";
+import { ColorPaletteMap } from "../../../shared/math/maps/colorPaletteMap";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
@@ -671,6 +676,32 @@ const AutomationSetupUtil =
                     return {
                         texturePackPath: room.texturePackPath,
                         texturePackPaths: RoomPaletteMap.getTexturePackPaths(),
+                    };
+                },
+
+                // The atmosphere the set is seen in: what light fills it, what light the player
+                // carries while standing in it, and what the air between the two is like. Named by
+                // field rather than as the stored string, so a script says what it wants instead of
+                // composing characters.
+                //
+                // Called with nothing it only reports, so a script can read the room's current
+                // lighting and change one thing about it.
+                roomLighting: async (prefs?: Partial<RoomPrefs>) =>
+                {
+                    const room = requireSandboxRoom("Lighting the room");
+                    if (prefs != undefined)
+                    {
+                        // Applied the way a freshly loaded room's lighting is rather than the way
+                        // an edit is: there is no server behind the sandbox to write it to, and
+                        // nothing for it to be racing (see RoomLightingUtil).
+                        RoomLightingUtil.applyRoomLighting(RoomPrefsUtil.encode(
+                            {...RoomPrefsUtil.decode(room.prefs), ...prefs}));
+                    }
+                    return {
+                        ...RoomPrefsUtil.decode(room.prefs),
+                        maxStep: MAX_ROOM_PREFS_STEP,
+                        lightColors: ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME],
+                        fogColors: ColorPaletteMap[FOG_COLOR_PALETTE_NAME],
                     };
                 },
 

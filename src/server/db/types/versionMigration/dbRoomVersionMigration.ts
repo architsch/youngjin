@@ -50,6 +50,18 @@ const DBRoomVersionMigration: DBVersionMigration = [
         delete row.editors;
         return row;
     },
+    // v5 -> v6: introduce "prefs", the room's atmosphere — what light fills it, what light the
+    // player carries while standing in it, and what the air between the two is like.
+    //
+    // The empty string is not a placeholder to be filled in later: it is what a room that has never
+    // been configured stores, and it decodes to the documented defaults, which are exactly how every
+    // room looked before there was anything to configure (see RoomPrefsUtil). So this step is only
+    // here to give existing rows the field at all — a row written from now on carries what
+    // generation chose for it.
+    async (row: any) => {
+        row.prefs = row.prefs ?? "";
+        return row;
+    },
 ];
 
 export default DBRoomVersionMigration;

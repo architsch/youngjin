@@ -12,6 +12,7 @@ import OwnedRoomUtil from "../../../room/util/ownedRoomUtil";
 import HubRoomUtil from "../../../room/util/hubRoomUtil";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import DBRoom from "../../../db/types/row/dbRoom";
+import Room from "../../../../shared/room/types/room";
 
 const RoomRouter = express.Router();
 
@@ -83,9 +84,8 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
     res.status(200).json({ roomID: newRoomID });
 });
 
-// Re-skins a room. Which room is decided by who is asking and what they named: naming none means
-// "my own room", which is the ordinary case; naming one is an admin re-skinning a hub, which is a
-// room nobody owns and so a room the ownership check above could never reach.
+// Re-skins a room. Which room that is, and whether the caller may touch it, is settled by
+// resolveConfigurableRoom below.
 RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
@@ -96,49 +96,9 @@ RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegistere
         return;
     }
 
-    let targetRoomID: string;
-    if (roomID && typeof roomID === "string")
-    {
-        if (user.userType !== UserTypeEnumMap.Admin)
-        {
-            res.status(403).send("Only an admin can re-skin another room.");
-            return;
-        }
-        const dbRoom = await DBRoomUtil.getDBRoom(roomID);
-        if (!dbRoom)
-        {
-            res.status(404).send("Room not found.");
-            return;
-        }
-        if (dbRoom.roomType !== RoomTypeEnumMap.Hub)
-        {
-            res.status(403).send("Only a hub can be re-skinned this way.");
-            return;
-        }
-        targetRoomID = roomID;
-    }
-    else
-    {
-        const dbUser = await DBUserUtil.findUserById(user.id);
-        if (!dbUser)
-        {
-            res.status(404).send("User not found.");
-            return;
-        }
-        if (!dbUser.ownedRoomID || dbUser.ownedRoomID.length === 0)
-        {
-            res.status(403).send("User does not own a room.");
-            return;
-        }
-        targetRoomID = dbUser.ownedRoomID;
-    }
-
-    const room = await DBRoomUtil.getRoomContent(targetRoomID);
+    const room = await resolveConfigurableRoom(user, roomID, res);
     if (!room)
-    {
-        res.status(404).send("Room not found.");
         return;
-    }
 
     const success = await ServerRoomManager.changeRoomTexturePack(room, texturePackPath);
     if (!success)
@@ -148,6 +108,37 @@ RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegistere
     }
 
     res.status(200).send("Room texture updated.");
+});
+
+// Re-lights a room: its ambient light, the light the player carries while standing in it, and its
+// fog. Which room that is, and whether the caller may touch it, is settled the same way re-skinning
+// one is — the two are the same act of decorating a room one owns or a hub one administers.
+//
+// What arrives is not checked here. It is a quantized string with no invalid values in it, only
+// values that decode to something other than what was meant, so ServerRoomManager canonicalizes it
+// instead (see changeRoomPrefs).
+RoomRouter.post("/change_room_prefs", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
+    const user = User.fromString((req as any).userString);
+
+    const { prefs, roomID } = req.body;
+    if (typeof prefs !== "string")
+    {
+        res.status(400).send("Missing or invalid prefs.");
+        return;
+    }
+
+    const room = await resolveConfigurableRoom(user, roomID, res);
+    if (!room)
+        return;
+
+    const success = await ServerRoomManager.changeRoomPrefs(room, prefs);
+    if (!success)
+    {
+        res.status(500).send("Failed to change room lighting.");
+        return;
+    }
+
+    res.status(200).send("Room lighting updated.");
 });
 
 // List rooms with offset-based pagination. The client is responsible for hiding
@@ -260,6 +251,60 @@ RoomRouter.post("/get_my_room_list_entry", UserIdentificationUtil.identifyAnyUse
     }
     res.status(200).json({ room: toRoomListEntry(dbRoom) });
 });
+
+// The room a request to decorate one is about, or null once the reason it is about none has been
+// sent to the caller.
+//
+// Which room is decided by who is asking and what they named: naming none means "my own room",
+// which is the ordinary case; naming one is an admin decorating a hub, which is a room nobody owns
+// and so a room the ownership path could never reach.
+async function resolveConfigurableRoom(user: User, roomID: unknown, res: Response): Promise<Room | null>
+{
+    let targetRoomID: string;
+    if (roomID && typeof roomID === "string")
+    {
+        if (user.userType !== UserTypeEnumMap.Admin)
+        {
+            res.status(403).send("Only an admin can decorate another room.");
+            return null;
+        }
+        const dbRoom = await DBRoomUtil.getDBRoom(roomID);
+        if (!dbRoom)
+        {
+            res.status(404).send("Room not found.");
+            return null;
+        }
+        if (dbRoom.roomType !== RoomTypeEnumMap.Hub)
+        {
+            res.status(403).send("Only a hub can be decorated this way.");
+            return null;
+        }
+        targetRoomID = roomID;
+    }
+    else
+    {
+        const dbUser = await DBUserUtil.findUserById(user.id);
+        if (!dbUser)
+        {
+            res.status(404).send("User not found.");
+            return null;
+        }
+        if (!dbUser.ownedRoomID || dbUser.ownedRoomID.length === 0)
+        {
+            res.status(403).send("User does not own a room.");
+            return null;
+        }
+        targetRoomID = dbUser.ownedRoomID;
+    }
+
+    const room = await DBRoomUtil.getRoomContent(targetRoomID);
+    if (!room)
+    {
+        res.status(404).send("Room not found.");
+        return null;
+    }
+    return room;
+}
 
 function toRoomListEntry(room: DBRoom): RoomListEntry
 {

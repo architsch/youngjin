@@ -22,6 +22,21 @@ const MaterialFactory =
             return loadedMaterial;
 
         const newMaterial = await MaterialConstructorMap[materialParams.type](materialParams);
+
+        // What tells three.js that two of our materials are not interchangeable.
+        //
+        // Three.js caches compiled programs globally, keyed by the material's *parameters* — its
+        // type, its maps, its lights, its flags. Everything our lit materials do to look different
+        // from one another they do in onBeforeCompile, which runs long after that key is worked out
+        // and does not enter it. So the tin, the wood and the flat instanced color are all "a
+        // MeshPhongMaterial with no map" as far as the key is concerned: whichever of them happened
+        // to be drawn first compiled its shader, and the others silently rendered with it — a wooden
+        // door coming out as rusted tin.
+        //
+        // The material id is exactly the right key, being the same thing this factory caches on: one
+        // id, one material, one shader.
+        newMaterial.customProgramCacheKey = () => materialId;
+
         loadedMaterials[materialId] = newMaterial;
         return newMaterial;
     },

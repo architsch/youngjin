@@ -10,7 +10,8 @@ import Form from "./form";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 import Spacer from "../basic/spacer";
 import TooltipPanel from "../overlay/tooltipPanel";
-import RestrictedZonesSection from "../input/restrictedZonesSection";
+import RestrictedZonesSection from "./section/restrictedZonesSection";
+import LightingSection from "./section/lightingSection";
 
 // A hub's settings, which are the game's own rather than any user's — so this is an admin's form,
 // and it holds only what a room that belongs to nobody can have. There is no link to copy (a hub is
@@ -69,6 +70,10 @@ export default function ConfigureHubRoomForm()
         <Spacer size="sm"/>
 
         <RestrictedZonesSection onToggleTooltip={toggleTooltip}/>
+
+        <Spacer size="sm"/>
+
+        <LightingSection onToggleTooltip={toggleTooltip} roomID={roomID}/>
 
         {/* Fixed to the viewport rather than laid out in the form, so it neither takes up a row of
             its own nor gets cut off by the form's scrolling. */}

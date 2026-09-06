@@ -1,6 +1,7 @@
 import RemoveObjectSignal from "../../object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../object/types/setObjectMetadataSignal";
 import RoomTexturePackChangedSignal from "../../room/types/roomTexturePackChangedSignal";
+import RoomPrefsChangedSignal from "../../room/types/roomPrefsChangedSignal";
 import AddObjectSignal from "../../object/types/addObjectSignal";
 import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
 import UserCommandSignal from "../../user/types/userCommandSignal";
@@ -180,6 +181,15 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => RoomTexturePackChangedSignal.decode(bufferState),
+    }],
+    [15, { // Unidirectional (client <- server)
+        // (Overall Flow):
+        // The server updates the room's atmosphere — its ambient light, the light the player carries, and its fog — via the REST API, and broadcasts the change to all clients in the room.
+        // Each client receives the update and applies it to the scene directly; nothing has to be reloaded, since none of it changes what the room is made of.
+        signalType: "roomPrefsChangedSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => RoomPrefsChangedSignal.decode(bufferState),
     }],
 ];
 

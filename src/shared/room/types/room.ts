@@ -19,6 +19,7 @@ export default class Room extends EncodableData
     ownerUserID: string;
     ownerUserName: string;
     texturePackPath: string;
+    prefs: string; // The room's atmosphere, as a handful of characters (see RoomPrefsUtil).
     voxelGrid: VoxelGrid;
     objectGroup: ObjectGroup;
     dirty: boolean;
@@ -27,6 +28,7 @@ export default class Room extends EncodableData
         ownerUserID: string,
         ownerUserName: string,
         texturePackPath: string,
+        prefs: string,
         voxelGrid: VoxelGrid,
         objectGroup: ObjectGroup)
     {
@@ -37,6 +39,7 @@ export default class Room extends EncodableData
         this.ownerUserID = ownerUserID;
         this.ownerUserName = ownerUserName;
         this.texturePackPath = texturePackPath;
+        this.prefs = prefs;
         this.voxelGrid = voxelGrid;
         this.objectGroup = objectGroup;
         this.dirty = false;
@@ -66,6 +69,9 @@ export default class Room extends EncodableData
         new EncodableByteString(this.ownerUserID).encode(bufferState);
         new EncodableByteString(this.ownerUserName).encode(bufferState);
         new EncodableByteString(this.texturePackPath).encode(bufferState);
+        // Ahead of the branch below, because a single-player room has an atmosphere too — it is a
+        // setting the room is seen through rather than part of the content the client regenerates.
+        new EncodableByteString(this.prefs).encode(bufferState);
 
         // Single-player rooms carry no content on the wire: they are a shared template the client
         // regenerates locally from RoomGenerationUtil/SinglePlayerModeConfigMap. Their roomType
@@ -87,6 +93,7 @@ export default class Room extends EncodableData
         const ownerUserID = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const ownerUserName = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        const prefs = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
 
         // Single-player rooms omit their content on the wire (see encode); reconstruct empty
         // placeholders here and let the client generate the real voxels/objects locally.
@@ -107,6 +114,7 @@ export default class Room extends EncodableData
             objectGroup = new ObjectGroup([]);
         }
 
-        return new Room(id, roomName, roomType, ownerUserID, ownerUserName, texturePackPath, voxelGrid, objectGroup);
+        return new Room(id, roomName, roomType, ownerUserID, ownerUserName, texturePackPath, prefs,
+            voxelGrid, objectGroup);
     }
 }

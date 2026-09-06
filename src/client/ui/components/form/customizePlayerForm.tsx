@@ -12,6 +12,7 @@ import PartShapeIcon from "../../svg/icons/partShapeIcon";
 import ClientEventHistoryUtil from "../../../system/util/clientEventHistoryUtil";
 import ClientEvent from "../../../system/types/clientEvent";
 import { ClientEventType } from "../../../system/types/clientEventType";
+import createDeferredSave from "../../util/deferredSave";
 
 //------------------------------------------------------------------------
 // This form edits the player's composition by directly manipulating its
@@ -92,19 +93,9 @@ export default function CustomizePlayerForm()
     </div>;
 }
 
-let saveMyPlayerPartsTimeout: ReturnType<typeof setTimeout> | undefined;
-function trySave()
-{
-    if (!saveMyPlayerPartsTimeout)
-    {
-        // Prevent parameter changes from triggering the save-operation too often.
-        // One save per 2-second interval is enough.
-        saveMyPlayerPartsTimeout = setTimeout(() => {
-            saveMyPlayerParts();
-            saveMyPlayerPartsTimeout = undefined;
-        }, 2000);
-    }
-}
+// Dressing a character is a run of small edits, each of which rewrites the whole composition, so
+// they are written down together rather than one at a time.
+const trySave = createDeferredSave(() => saveMyPlayerParts());
 
 // Reads the user's own player object's composition params (the live object,
 // so that edits can be applied to it directly).

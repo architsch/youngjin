@@ -1,7 +1,7 @@
 import InstancedColorMaterialParams from "../graphics/material/types/instancedColorMaterialParams";
-import InstancedEyeMaterialParams from "../graphics/material/types/instancedEyeMaterialParams";
 import InstancedTinMaterialParams from "../graphics/material/types/instancedTinMaterialParams";
 import InstancedWoodMaterialParams from "../graphics/material/types/instancedWoodMaterialParams";
+import InstancedEmissiveMaterialParams from "../graphics/material/types/instancedEmissiveMaterialParams";
 import Vec3 from "../math/types/vec3";
 
 // Runtime Environment
@@ -46,6 +46,12 @@ export const OBJECT_LABEL_MAX_LENGTH = 24;
 // than written out at each of the three places that need it — what is stored is a position in this
 // exact palette, so a second name for it would be a second meaning for every label already written.
 export const LABEL_COLOR_PALETTE_NAME = "LabelColor";
+
+// Which sets of colors a room's lighting is drawn from (see ColorPaletteMap). Named here for the
+// same reason the one above is: what a room stores is a position in this exact palette, so a second
+// name for it would be a second meaning for every room already lit.
+export const LIGHT_COLOR_PALETTE_NAME = "Light";
+export const FOG_COLOR_PALETTE_NAME = "Fog";
 
 // The longest a stored document id may be. Firestore's own limit, which is what bounds a door's
 // destination room id: an id is never composed by hand, so this only has to refuse a value that was
@@ -133,21 +139,32 @@ export const GEOMETRY_CODE_BY_ID: {[geometryId: string]: number} = {
 };
 
 export const INSTANCED_COLOR_MATERIAL_ID = new InstancedColorMaterialParams().getMaterialId();
-export const INSTANCED_EYE_MATERIAL_ID = new InstancedEyeMaterialParams().getMaterialId();
 export const INSTANCED_TIN_MATERIAL_ID = new InstancedTinMaterialParams().getMaterialId();
 export const INSTANCED_WOOD_MATERIAL_ID = new InstancedWoodMaterialParams().getMaterialId();
+export const INSTANCED_EMISSIVE_MATERIAL_ID = new InstancedEmissiveMaterialParams().getMaterialId();
+
+// A part's material, as one character of a composition string (see DefaultCompositionCodec). These
+// codes are what every composition already saved means, so they are appended and never renumbered —
+// a code that changes meaning repaints every object stored against it.
+//
+// A retired code keeps its place for the same reason. Code 1 was an "InstancedEye" material that
+// drew a player's eye as two concentric circles; eyes are now drawn as plain colored squares like
+// every other part, so nothing composes one any more. Closing the gap would move tin to 1 and wood
+// to 2 and repaint everything.
+const RETIRED_MATERIAL_ID = "";
 
 export const MATERIAL_ID_BY_CODE: string[] = [
     INSTANCED_COLOR_MATERIAL_ID, // 0
-    INSTANCED_EYE_MATERIAL_ID, // 1
+    RETIRED_MATERIAL_ID, // 1 (retired — see above)
     INSTANCED_TIN_MATERIAL_ID, // 2
     INSTANCED_WOOD_MATERIAL_ID, // 3
+    INSTANCED_EMISSIVE_MATERIAL_ID, // 4
 ];
 export const MATERIAL_CODE_BY_ID: {[materialId: string]: number} = {};
 MATERIAL_CODE_BY_ID[INSTANCED_COLOR_MATERIAL_ID] = 0;
-MATERIAL_CODE_BY_ID[INSTANCED_EYE_MATERIAL_ID] = 1;
 MATERIAL_CODE_BY_ID[INSTANCED_TIN_MATERIAL_ID] = 2;
 MATERIAL_CODE_BY_ID[INSTANCED_WOOD_MATERIAL_ID] = 3;
+MATERIAL_CODE_BY_ID[INSTANCED_EMISSIVE_MATERIAL_ID] = 4;
 
 // Materials that tint each instance through the instance color (InstancedMesh.setColorAt), and
 // hence need a composition part's color both encoded and pushed to the GPU. Anything driven by
@@ -158,6 +175,7 @@ export const INSTANCE_COLORED_MATERIAL_IDS: string[] = [
     INSTANCED_COLOR_MATERIAL_ID,
     INSTANCED_TIN_MATERIAL_ID,
     INSTANCED_WOOD_MATERIAL_ID,
+    INSTANCED_EMISSIVE_MATERIAL_ID,
 ];
 
 export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
@@ -192,6 +210,25 @@ export const DOOR_PANEL_HEIGHT = 3.25;
 export const MAX_DOORS_PER_ROOM = 16;
 export const MAX_MESH_INSTANCES_PER_DOOR = 8;
 
+// Lamp
+
+export const LAMP_GEOMETRY_ID = "Square";
+
+// How much wall a lamp lays claim to, and therefore how much of it is drawn: one voxel across and
+// one collision layer tall. A wall attachment claims whole voxel columns of wall horizontally
+// (see WallAttachedObjectUtil), so anything narrower would claim the same stretch while looking
+// like it had been squeezed into a corner of it.
+export const LAMP_FOOTPRINT_WIDTH = 1;
+export const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
+
+// Every lamp in the room draws its parts from one pool of mesh instances, so the room can only hold
+// as many as that pool was sized for. What actually bounds the number is not the drawing — the block
+// map costs the same whether a room holds three lamps or three hundred (see LightBlockMap) — but the
+// propagation each one costs, the clutter of a wall covered in them, and the size of the room's own
+// stored contents.
+export const MAX_LAMPS_PER_ROOM = 24;
+export const MAX_MESH_INSTANCES_PER_LAMP = 4;
+
 // Label Text
 
 export const LABEL_GEOMETRY_ID = "Square";
@@ -212,6 +249,12 @@ export const LABEL_ATLAS_CELL_HEIGHT = 128; // in pixels
 
 export const NUM_VOXEL_ROWS = 32;
 export const NUM_VOXEL_COLS = 32;
+
+// How many voxel blocks a room holds — one collision layer of one voxel each, which is the smallest
+// volume the grid distinguishes (see VoxelQueryUtil's voxel-block section). Every block of the room
+// is addressed at once by anything that reasons about the room as a solid volume rather than about
+// the surfaces drawn on it, so this is the length such a buffer is sized to.
+export const NUM_VOXEL_BLOCKS = NUM_VOXEL_ROWS * NUM_VOXEL_COLS * NUM_COLLISION_LAYERS;
 
 export const NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6; // corresponding to 6 sides of a 3D box: [-y, +y, -x, +x, -z, +z]
 export const NUM_VOXEL_QUADS_PER_VOXEL =

@@ -5,9 +5,11 @@ import CanvasEditOptions from "./canvasEditOptions";
 import DoorEditOptions from "./doorEditOptions";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
 import CanvasDesc from "./canvasDesc";
+import LampEditOptions from "./lampEditOptions";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 
 export default function ObjectSelectionMenu({ inEditMode }: Props)
 {
@@ -37,6 +39,11 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
                 door an admin is working on is still a door he can walk through. */}
             {typeIndex === doorTypeIndex && inEditMode &&
                 <DoorEditOptions key={`edit-${objectId}`} selection={state.selection}/>}
+            {/* As with a door: only an admin ever has a lamp picked out, and picking one out opens
+                edit mode with it (see LampGameObject.onClick), so there is no play-mode arrangement
+                for a lamp to be in. */}
+            {typeIndex === lampTypeIndex && inEditMode &&
+                <LampEditOptions key={`edit-${objectId}`} selection={state.selection}/>}
         </div>;
     }
     else

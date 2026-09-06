@@ -340,28 +340,6 @@ export default class InstancedMeshBinding
         markInstanceForUpload(this.instancedMesh.instanceColor!, instanceId);
     }
 
-    updateInstanceEyeColors(gameObject: GameObject, instanceId: number,
-        r_pupil: number, g_pupil: number, b_pupil: number,
-        r_iris: number, g_iris: number, b_iris: number)
-    {
-        if (!this.instancedMesh)
-        {
-            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
-            return;
-        }
-        // Colors arrive as sRGB values in range [0,255] (see ColorUtil); convert them into the
-        // renderer's working color space, the same treatment three.js gives material colors.
-        const pupilColorAttrib = this.getOrCreateInstancedAttribute("pupilColor", 3);
-        colorTemp.setRGB(r_pupil / 255, g_pupil / 255, b_pupil / 255, THREE.SRGBColorSpace);
-        pupilColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
-        markInstanceForUpload(pupilColorAttrib, instanceId);
-
-        const irisColorAttrib = this.getOrCreateInstancedAttribute("irisColor", 3);
-        colorTemp.setRGB(r_iris / 255, g_iris / 255, b_iris / 255, THREE.SRGBColorSpace);
-        irisColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
-        markInstanceForUpload(irisColorAttrib, instanceId);
-    }
-
     // The moulding running around one "InstancedWood" instance's border: its color, how wide the
     // band is in world units (not in the quad's own coordinates, which is what keeps a moulding the
     // same width whatever it frames), and whether its profile stands proud of the surface or is
@@ -387,22 +365,6 @@ export default class InstancedMeshBinding
         markInstanceForUpload(mouldingParamsAttrib, instanceId);
     }
 
-    // Radii are fractions of the square's side length (0.5 = the circle touches the square's
-    // edges). They are squared here so the "InstancedEye" fragment shader can compare them
-    // directly against the squared UV-space distance from the square's center.
-    updateInstanceEyeRadii(gameObject: GameObject, instanceId: number,
-        pupilRadius: number, irisRadius: number)
-    {
-        if (!this.instancedMesh)
-        {
-            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
-            return;
-        }
-        const eyeRadiiSqrAttrib = this.getOrCreateInstancedAttribute("eyeRadiiSqr", 2);
-        eyeRadiiSqrAttrib.setXY(instanceId, pupilRadius * pupilRadius, irisRadius * irisRadius);
-        markInstanceForUpload(eyeRadiiSqrAttrib, instanceId);
-    }
-
     // How strongly this instance wears the outline its material draws around it — 0 for none, 1 for
     // the full color. Nothing happens on a material that was not given an outline color: the
     // attribute is simply never read (see MaterialConstructorMap's addInstanceOutline).
@@ -422,7 +384,7 @@ export default class InstancedMeshBinding
         markInstanceForUpload(outlineStrengthAttrib, instanceId);
     }
 
-    // Per-instance attributes consumed by specialized instanced materials (e.g. "InstancedEye")
+    // Per-instance attributes consumed by specialized instanced materials (e.g. "InstancedWood")
     // are created lazily, so that instanced meshes which never use them don't pay for the buffers.
     private getOrCreateInstancedAttribute(name: string, itemSize: number): THREE.InstancedBufferAttribute
     {

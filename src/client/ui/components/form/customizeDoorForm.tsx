@@ -11,6 +11,7 @@ import DoorCompositionConstants from "../../../../shared/graphics/mesh/compositi
 import StepperInput from "../input/stepperInput";
 import PaletteColorInput from "../input/paletteColorInput";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
+import createDeferredSave from "../../util/deferredSave";
 
 //------------------------------------------------------------------------
 // This form finishes a door, by editing the three colours its appearance is made of — the timber,
@@ -121,19 +122,10 @@ function sameColor(a: {x: number, y: number, z: number}, b: {x: number, y: numbe
     return a.x === b.x && a.y === b.y && a.z === b.z;
 }
 
-let saveDoorPartsTimeout: ReturnType<typeof setTimeout> | undefined;
-function trySave(selection: ObjectSelection)
-{
-    if (!saveDoorPartsTimeout)
-    {
-        // Prevent parameter changes from triggering the save-operation too often.
-        // One save per 2-second interval is enough.
-        saveDoorPartsTimeout = setTimeout(() => {
-            doForDoor(selection, (c) => c.saveParts());
-            saveDoorPartsTimeout = undefined;
-        }, 2000);
-    }
-}
+// Painting a door is a run of small edits — a scheme, then a colour, then another — and each one
+// rewrites the whole composition, so they are written down together rather than one at a time.
+const trySave = createDeferredSave((selection: ObjectSelection) =>
+    doForDoor(selection, (c) => c.saveParts()));
 
 // Reads the selected door's composition params (the live object, so that edits can be applied to it
 // directly).

@@ -13,6 +13,8 @@ import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import SpawnHotspotUtil from "./util/spawnHotspotUtil";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
+import RoomPrefsChangedSignal from "../../shared/room/types/roomPrefsChangedSignal";
+import RoomPrefsUtil from "../../shared/room/util/roomPrefsUtil";
 import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import SinglePlayerModeConfigMap from "../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
@@ -278,6 +280,31 @@ const ServerRoomManager =
         socketUserContext.addPendingSignalToUser("roomChangeRejectedSignal",
             new RoomChangeRejectedSignal(reason));
     },
+    // Re-lights a room. What arrives is canonicalized before anything is done with it — decoding is
+    // total and encoding clamps, so a round trip through RoomPrefsUtil is both the validation and
+    // the whole of it, and what gets stored and broadcast is a string this version of the game can
+    // read back rather than whatever the client happened to send.
+    changeRoomPrefs: async (room: Room, newPrefs: string): Promise<boolean> =>
+    {
+        const canonicalPrefs = RoomPrefsUtil.encode(RoomPrefsUtil.decode(newPrefs));
+
+        const success = await DBRoomUtil.changeRoomPrefs(room, canonicalPrefs);
+        if (!success)
+            return false;
+
+        const roomRuntimeMemory = roomRuntimeMemories[room.id];
+        if (roomRuntimeMemory)
+            roomRuntimeMemory.room.prefs = canonicalPrefs;
+
+        const socketRoomContext = socketRoomContexts[room.id];
+        if (socketRoomContext)
+        {
+            const signal = new RoomPrefsChangedSignal(room.id, canonicalPrefs);
+            socketRoomContext.multicastSignal("roomPrefsChangedSignal", signal);
+        }
+
+        return true;
+    },
     changeRoomTexturePack: async (room: Room, newTexturePackPath: string): Promise<boolean> =>
     {
         if (!ImageMapUtil.getImageMap("VoxelTexturePackImageMap").hasImagePath(newTexturePackPath))
@@ -337,7 +364,7 @@ function buildSinglePlayerRoomRuntimeMemory(mode: string): RoomRuntimeMemory
     // room is built out of rather than part of its identity, so the client settles it as it builds
     // the room, before anything reads it — a value stamped here would only ever be overwritten.
     const room = new Room(mode /*id*/, mode /*roomName*/, RoomTypeEnumMap.SinglePlayer,
-        "", "", "" /*texturePackPath*/,
+        "", "", "" /*texturePackPath*/, RoomPrefsUtil.getDefaultPrefsString(),
         new VoxelGrid([], new VoxelQuadsRuntimeMemory()),
         new ObjectGroup([]));
     return new RoomRuntimeMemory(room, {});

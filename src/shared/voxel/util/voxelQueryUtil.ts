@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
 import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions";
 
@@ -65,6 +65,54 @@ const VoxelQueryUtil =
                 return layer;
         }
         return COLLISION_LAYER_NULL;
+    },
+
+    //-------------------------------------------------------------------------------------
+    // Voxel blocks
+    //
+    // A "voxel block" is one collision layer of one voxel — the smallest volume the grid
+    // distinguishes, and so the finest thing a caller can ask about a room's shape. The collision
+    // layer varies fastest in the index, then the column, then the row, so that one voxel's own
+    // layers sit next to each other and walking up a column costs one stride.
+    //-------------------------------------------------------------------------------------
+
+    getVoxelBlockIndex(row: number, col: number, collisionLayer: number): number
+    {
+        return (row * NUM_VOXEL_COLS + col) * NUM_COLLISION_LAYERS + collisionLayer;
+    },
+
+    getVoxelBlockRow(voxelBlockIndex: number): number
+    {
+        return (voxelBlockIndex / (NUM_VOXEL_COLS * NUM_COLLISION_LAYERS)) | 0;
+    },
+
+    getVoxelBlockCol(voxelBlockIndex: number): number
+    {
+        return ((voxelBlockIndex / NUM_COLLISION_LAYERS) | 0) % NUM_VOXEL_COLS;
+    },
+
+    getVoxelBlockCollisionLayer(voxelBlockIndex: number): number
+    {
+        return voxelBlockIndex % NUM_COLLISION_LAYERS;
+    },
+
+    isVoxelBlockWithinBound(row: number, col: number, collisionLayer: number): boolean
+    {
+        return row >= 0 && row < NUM_VOXEL_ROWS &&
+            col >= 0 && col < NUM_VOXEL_COLS &&
+            collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX;
+    },
+
+    // Whether something solid stands in the given block. A block outside the grid counts as
+    // occupied, matching isVoxelCollisionLayerOccupied's treatment of a layer outside the room — so
+    // a caller walking the grid is stopped by the floor, the ceiling and the boundary wall without
+    // having to check for them separately.
+    isVoxelBlockOccupied(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
+    {
+        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+        if (voxel == undefined)
+            return true;
+        return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
     },
 
     //-------------------------------------------------------------------------------------

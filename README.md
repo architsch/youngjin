@@ -66,6 +66,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
     - [Camera Control](docs/graphics/camera_control.md)
     - [Instanced Mesh Composition System](docs/graphics/instanced_mesh_composition.md)
     - [Image Map System](docs/graphics/image_map.md)
+    - [Lighting](docs/graphics/lighting.md)
 
 - **Testing**
     - E2E Tests

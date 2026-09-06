@@ -97,6 +97,7 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
         }),
         deleteRoom: vi.fn(async () => true),
         changeRoomTexturePackPath: vi.fn(async () => true),
+        changeRoomPrefs: vi.fn(async () => true),
     },
 }));
 

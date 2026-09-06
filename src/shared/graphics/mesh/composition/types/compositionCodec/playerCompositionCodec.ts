@@ -93,10 +93,16 @@ function getBaseParams(): PlayerCompositionParams
     // The player's solid forms are made of aged, faintly rusted sheet metal ("InstancedTin"), which
     // gives the robot the look of an antique tin toy. The squares are the exception: they only carry
     // the face, whose painted-on look should stay flat and clean.
+    //
+    // Flat and clean is what "InstancedEmissive" *is* — an unlit material draws its color at full
+    // strength whatever is falling on it — so the face takes the same one a lamp's lit panel does
+    // rather than a lit material of its own. That is one fewer material in the scene, and since
+    // every (geometry, material) pair is drawn in its own call, one fewer draw call in any room
+    // holding both a player and a lamp. The colors below are picked for being drawn unlit.
     const ids = {
         instancedMeshId_box: MeshDataUtil.getInstancedMeshId("Box", "InstancedTin"),
         instancedMeshId_cylinder: MeshDataUtil.getInstancedMeshId("Cylinder", "InstancedTin"),
-        instancedMeshId_square: MeshDataUtil.getInstancedMeshId("Square", "InstancedColor"),
+        instancedMeshId_square: MeshDataUtil.getInstancedMeshId("Square", "InstancedEmissive"),
     };
     const types = {head: 0, ear: 0, hat: 0, torso: 0, arm: 0, bottom: 0};
     const colors = {head: ZERO_VEC3, ear: ZERO_VEC3, hat: ZERO_VEC3, torso: ZERO_VEC3, arm: ZERO_VEC3, bottom: ZERO_VEC3};

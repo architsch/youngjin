@@ -6,6 +6,7 @@ import NumUtil from "../../math/util/numUtil";
 import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
+import LampObjectUtil from "../util/lampObjectUtil";
 
 const doorTypeValues = Object.values(DoorTypeEnumMap);
 
@@ -55,6 +56,15 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
             return `${NumUtil.clampInRange(index, 0,
                 ColorUtil.getPaletteSize(LABEL_COLOR_PALETTE_NAME) - 1)}`;
         },
+    },
+    // A lamp's color and strength, as two quantized characters. Round-tripped through the util that
+    // owns their meaning, which clamps both halves into range and supplies a default for either half
+    // that is missing — so what is stored is always a pair a lamp can actually be lit by, whatever
+    // arrived. Without an entry here the raw value would be stored as it came
+    // (see ObjectMetadataEntryMap.preprocess), which for a fixed-width encoding means a lamp could
+    // be handed a string of any length at all.
+    [ObjectMetadataKeyEnumMap.LightProperties]: {
+        preprocessingMethod: (rawValue: string) => LampObjectUtil.canonicalize(rawValue),
     },
 };
 

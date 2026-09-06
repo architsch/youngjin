@@ -13,12 +13,16 @@ import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import { endClientProcess, ongoingClientProcessExists } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { roomChangedObservable, updateObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
+import { roomPrefsChangedObservable } from "../shared/system/sharedObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
 import "./graphics/types/gizmo/doorWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for door selection
+import "./graphics/types/gizmo/lampWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for lamp selection
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
+import RoomPrefsChangedSignal from "../shared/room/types/roomPrefsChangedSignal";
+import RoomLightingUtil from "./system/util/roomLightingUtil";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
@@ -67,6 +71,20 @@ const App =
     getCurrentRoom: (): Room | undefined =>
     {
         return currentRoom;
+    },
+    onRoomPrefsChangedSignalReceived: async (params: RoomPrefsChangedSignal) => {
+        const success = await waitUntilSignalProcessingReady("roomPrefsChangedSignal",
+            () => params.roomID === App.getCurrentRoom()?.id);
+        if (!success)
+            return;
+        // Refused while an edit of this client's own is still on its way to the server, which is
+        // the newer of the two (see RoomLightingUtil). Nothing is announced in that case either:
+        // there is nothing new for the form on screen to show itself.
+        if (!RoomLightingUtil.applyIncoming(params.prefs))
+            return;
+        // The room's own string is what anything on screen reads back, so what is announced is the
+        // room rather than the settings (see the observable's own note).
+        roomPrefsChangedObservable.set(params.roomID);
     },
     onRoomTexturePackChangedSignalReceived: async (params: RoomTexturePackChangedSignal) => {
         const success = await waitUntilSignalProcessingReady("roomTexturePackChangedSignal",
@@ -171,6 +189,9 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
 
     RoomLoadProgressUtil.enterPhase("loadingGraphics");
     await GraphicsManager.load(update);
+    // Before anything is drawn, so that the room's first frame is already lit the way the room is
+    // lit rather than the way the previous one was.
+    RoomLightingUtil.applyRoomLighting(currentRoom.prefs);
     PhysicsManager.load(roomRuntimeMemory);
     RoomLoadProgressUtil.enterPhase("loadingVoxels");
     await ClientVoxelManager.load();

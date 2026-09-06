@@ -4,6 +4,7 @@
  * Tests the HTTP API routes for room management:
  * - Scenario 1:  User creating a room (POST /create_room)
  * - Scenario 9:  User changing room texture pack (POST /change_room_texture)
+ * - Scenario 10: User changing a room's lighting (POST /change_room_prefs)
  *
  * These tests mock the DB layer and call the route handlers directly
  * with mock Express request/response objects.
@@ -20,6 +21,7 @@ const mockSetOwnedRoomID = vi.fn();
 const mockGetRoomContent = vi.fn();
 const mockGetDBRoom = vi.fn();
 const mockChangeRoomTexturePackPath = vi.fn();
+const mockChangeRoomPrefs = vi.fn();
 const mockSearchUsersWithUserName = vi.fn();
 
 vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
@@ -74,6 +76,10 @@ vi.mock("../../../src/server/room/serverRoomManager", () => ({
     default: {
         changeRoomTexturePack: vi.fn(async (_room: any, _path: string) => {
             mockChangeRoomTexturePackPath(_room, _path);
+            return true;
+        }),
+        changeRoomPrefs: vi.fn(async (_room: any, _prefs: string) => {
+            mockChangeRoomPrefs(_room, _prefs);
             return true;
         }),
     },
@@ -307,5 +313,91 @@ describe("room API: change room texture pack (Scenario 9)", () => {
         expect(res.statusCode).toBe(400);
         expect(res.body).toContain("texturePackPath");
         expect(mockChangeRoomTexturePackPath).not.toHaveBeenCalled();
+    });
+});
+
+describe("room API: change room lighting (Scenario 10)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    const ownerRow = {
+        id: "owner-1", userName: "Owner", userType: UserTypeEnumMap.Member,
+        email: "owner@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
+    };
+    const owner = () => new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
+
+    it("room owner can re-light their own room", async () => {
+        mockFindUserById.mockResolvedValue(ownerRow);
+        mockGetRoomContent.mockResolvedValue({ id: "my-room", prefs: "" });
+
+        const res = await callRoute("post", "/change_room_prefs", owner(), { prefs: "!!!!!!" });
+
+        expect(res.statusCode).toBe(200);
+        expect(mockChangeRoomPrefs).toHaveBeenCalledWith(
+            expect.objectContaining({ id: "my-room" }), "!!!!!!");
+    });
+
+    it("passes a nonsense value straight through, for the manager to canonicalize", async () => {
+        // The route deliberately checks only that a string arrived: a quantized value has no
+        // invalid characters, only characters that decode to something other than what was meant,
+        // so what makes it safe is the round trip in ServerRoomManager rather than a check here.
+        mockFindUserById.mockResolvedValue(ownerRow);
+        mockGetRoomContent.mockResolvedValue({ id: "my-room", prefs: "" });
+
+        const res = await callRoute("post", "/change_room_prefs", owner(), { prefs: "nonsense" });
+
+        expect(res.statusCode).toBe(200);
+        expect(mockChangeRoomPrefs).toHaveBeenCalledWith(expect.anything(), "nonsense");
+    });
+
+    it("accepts the empty string, which is what an unconfigured room holds", async () => {
+        mockFindUserById.mockResolvedValue(ownerRow);
+        mockGetRoomContent.mockResolvedValue({ id: "my-room", prefs: "abc" });
+
+        const res = await callRoute("post", "/change_room_prefs", owner(), { prefs: "" });
+
+        expect(res.statusCode).toBe(200);
+        expect(mockChangeRoomPrefs).toHaveBeenCalledWith(expect.anything(), "");
+    });
+
+    it("request with no prefs at all is rejected", async () => {
+        mockFindUserById.mockResolvedValue(ownerRow);
+
+        const res = await callRoute("post", "/change_room_prefs", owner(), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(res.body).toContain("prefs");
+        expect(mockChangeRoomPrefs).not.toHaveBeenCalled();
+    });
+
+    it("user without a room cannot re-light one", async () => {
+        const user = new User("user-1", "NoRoom", UserTypeEnumMap.Member, "noroom@test.com", "", "", "");
+        mockFindUserById.mockResolvedValue({
+            id: "user-1", userName: "NoRoom", userType: UserTypeEnumMap.Member,
+            email: "noroom@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "",
+        });
+
+        const res = await callRoute("post", "/change_room_prefs", user, { prefs: "!!!!!!" });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockChangeRoomPrefs).not.toHaveBeenCalled();
+    });
+
+    it("only an admin can re-light a room he was handed the id of", async () => {
+        const member = new User("member-1", "Member", UserTypeEnumMap.Member, "m@test.com", "", "", "my-room");
+        mockFindUserById.mockResolvedValue({
+            id: "member-1", userName: "Member", userType: UserTypeEnumMap.Member,
+            email: "m@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "my-room",
+        });
+
+        const res = await callRoute("post", "/change_room_prefs", member,
+            { prefs: "!!!!!!", roomID: "some-hub" });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockChangeRoomPrefs).not.toHaveBeenCalled();
     });
 });

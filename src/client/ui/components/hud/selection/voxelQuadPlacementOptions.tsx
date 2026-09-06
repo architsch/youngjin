@@ -5,6 +5,7 @@ import TrashIcon from "../../../svg/icons/trashIcon";
 import AddBlockIcon from "../../../svg/icons/addBlockIcon";
 import AddCanvasIcon from "../../../svg/icons/addCanvasIcon";
 import AddDoorIcon from "../../../svg/icons/addDoorIcon";
+import AddLampIcon from "../../../svg/icons/addLampIcon";
 import App from "../../../../app";
 import SocketsClient from "../../../../networking/client/socketsClient";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
@@ -38,9 +39,11 @@ import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
+import LampObjectUtil from "../../../../../shared/object/util/lampObjectUtil";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 
 let addCanvasButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -77,6 +80,13 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         RoomValidationUtil.canUserManageDoors(App.getUser(), room);
     const canAddDoor = canManageDoors &&
         getPlaceableWallAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
+
+    // Installing a lamp is likewise not an ordinary room edit while the lamp is still a placeholder
+    // — it lights the whole room, and what it looks like is one lit rectangle — so it is an admin's
+    // alone, wherever he is standing.
+    const isAdmin = RoomValidationUtil.userIsAdmin(App.getUser());
+    const canAddLamp = isAdmin &&
+        getPlaceableWallAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
 
     useEffect(() => {
         clearFTUETimeouts();
@@ -128,6 +138,17 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 tryAddObjectFromQuad(props.selection, doorTypeIndex, {
                     [ObjectMetadataKeyEnumMap.DoorType]:
                         new EncodableByteString(`${DoorTypeEnumMap.CustomEntrance}`),
+                });
+            }}
+        />}
+        {isAdmin && <IconButton id="addLampButton" icon={<AddLampIcon/>} size="md"
+            disabled={!canAddLamp}
+            onClick={() => {
+                // A lamp arrives lit the way a lamp with nothing said about it is lit, and is
+                // adjusted from there through its own options (see LampObjectUtil).
+                tryAddObjectFromQuad(props.selection, lampTypeIndex, {
+                    [ObjectMetadataKeyEnumMap.LightProperties]:
+                        new EncodableByteString(LampObjectUtil.getDefaultLightProperties()),
                 });
             }}
         />}
@@ -187,12 +208,27 @@ function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
 //
 // A picture goes up at the height it was clicked at, which is rarely one of the steps a wall
 // attachment snaps to — so the steps either side of it are both offered, and whichever the wall will
-// take is where it hangs. A door does not hang at all: it stands on the floor of the storey the
+// take is where it hangs. A lamp is mounted the same way, being a fitting put wherever it is wanted
+// rather than something that stands on anything; it is only half as tall, so the steps are offered
+// about its own centre. A door does not hang at all: it stands on the floor of the storey the
 // clicked quad belongs to, its origin half a footprint above that floor since a wall attachment's
 // collider is centred on its position (see DoorObjectTypeConfig). There is one such height, and no
 // second guess to be made about it.
 function getCandidateHeights(objectTypeIndex: number, quadIndex: number, offsetY: number): number[]
 {
+    if (objectTypeIndex == lampTypeIndex)
+    {
+        // A lamp stands exactly one collision layer tall, and a wall quad *is* one collision layer —
+        // so the layer clicked is a height a lamp fits, with nothing to round. The layer above is
+        // offered after it for the case where something is already mounted on the one clicked.
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+            return [];
+        return [
+            VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer),
+            VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer + 1),
+        ];
+    }
     if (objectTypeIndex != doorTypeIndex)
         return [0.5 * Math.ceil(2 * offsetY), 0.5 * Math.floor(2 * offsetY)];
 

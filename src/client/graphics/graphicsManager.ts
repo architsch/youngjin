@@ -2,7 +2,12 @@ import * as THREE from "three";
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { graphicsContextRestoredObservable } from "../system/clientObservables";
 import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } from "../system/types/clientProcess";
-import { MINUTE_IN_MS } from "../../shared/system/sharedConstants";
+import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MINUTE_IN_MS } from "../../shared/system/sharedConstants";
+import LightBlockMap from "./light/lightBlockMap";
+import RoomPrefs from "../../shared/room/types/roomPrefs";
+import RoomPrefsUtil, { MAX_FOG_DISTANCE, MAX_ROOM_PREFS_STEP } from "../../shared/room/util/roomPrefsUtil";
+import HeadLightPowerUtil from "../../shared/graphics/light/util/headLightPowerUtil";
+import ColorUtil from "../../shared/math/util/colorUtil";
 
 const minAspectRatio = 0.6;
 const maxAspectRatio = 2;
@@ -49,19 +54,73 @@ let contextLost = false;
 let contextRestoreCheckScheduled = false;
 
 // The point light rides with the camera and is what actually lights the room for the user — the
-// ambient light only keeps the unlit side of things from being black. These are its settings for a
-// view from the player's own eye, where whatever he is looking at is a few paces off.
-const basePointLightIntensity = 4.0;
-const basePointLightDistance = 16;
-const pointLightDecay = 0.5;
+// ambient light only keeps the unlit side of things from being black. How strong it is, how far it
+// carries and how quickly it falls off are one setting rather than three, and the room says which
+// (see HeadLightPowerUtil); these are its settings for a view from the player's own eye, where
+// whatever he is looking at is a few paces off.
+let basePointLightIntensity = HeadLightPowerUtil.getIntensity(MAX_ROOM_PREFS_STEP);
+let basePointLightDistance = HeadLightPowerUtil.getDistance(MAX_ROOM_PREFS_STEP);
+let pointLightDecay = HeadLightPowerUtil.getDecay(MAX_ROOM_PREFS_STEP);
 
 // How far past whatever the camera is looking at the light has to carry. Above 1 so that the target
 // is lit among its surroundings rather than picked out of the dark, and fixed so that the target
 // always sits at the same fraction of the light's range however far back the camera has been taken.
 const pointLightRangePerViewDistance = 2;
 
+// How much light there has to be around the player for the room to get half the say, in the same
+// units the block map accumulates in.
+//
+// The head lamp is only ever the light the room is not providing for itself. Where a room has been
+// lit it goes out and is not missed; where nothing has been put down it is the whole of the light,
+// which is what stops a room nobody has furnished yet being a cave — and is why it cannot simply be
+// deleted: a room comes out of generation with no lamps in it at all, and a player who cannot see
+// cannot place the first one.
+//
+// The handover runs on a curve that saturates rather than on a ramp to some "fully lit" mark,
+// because how much light stands in a place spans a couple of orders of magnitude between standing
+// under a lamp and standing across the room from one. A ramp over that range is not a ramp at all:
+// it is a switch, thrown within a step of every lamp and flat everywhere else, and what the player
+// sees is his own lamp surging back on as he walks away from a light. A saturating curve has no such
+// point to cross.
+const pointLightRoomHalfBrightness = 0.15;
+
+// How far the fog was tuned to close in over, in world units — the reach of a view from the
+// player's own eye. A camera taken further back than this is looking at more room than the fog was
+// written for, so the fog is pushed out in proportion (see refreshFog).
+const referenceFogViewDistance = 8;
+
+// What the settings above are applied to, kept here rather than passed together because they arrive
+// from different places and all decide the same one thing.
+let currViewDistance = 0;
+const currRoomLightAtCamera = new THREE.Color(0, 0, 0);
+
+// The atmosphere the room being stood in asked for. Held rather than applied and forgotten, because
+// the fog has to be worked out again whenever the camera moves back, and what it is worked out from
+// is this (see refreshFog).
+let currRoomPrefs: RoomPrefs = RoomPrefsUtil.decode("");
+
+// The color the lamp is in a room that lights itself none, and scratch for the blend toward the
+// color of a room that does.
+const pointLightBaseColor = new THREE.Color(0xffffff);
+const pointLightColorTemp = new THREE.Color();
+
+// The room's air, created once and never taken away. Toggling scene.fog between an object and null
+// flips a compile-time flag in every material in the scene and recompiles the lot of them mid-frame,
+// so "no fog" is a fog whose distances are past everything the camera draws rather than an absent
+// one — which is exactly what an unconfigured room stores anyway (see RoomPrefsUtil).
+const sceneFog = new THREE.Fog(0x000000, MAX_FOG_DISTANCE, MAX_FOG_DISTANCE * 2);
+
+// Every other light in the room, held as data rather than as THREE.PointLights (see LightBlockMap).
+// Built here, and kept for the app's whole lifetime alongside the scene and the camera, because the
+// textures it owns are read by materials that are themselves never rebuilt between rooms.
+const lightBlockMap = new LightBlockMap();
+
 const GraphicsManager =
 {
+    getLightBlockMap: (): LightBlockMap =>
+    {
+        return lightBlockMap;
+    },
     getGameCanvas: (): HTMLCanvasElement =>
     {
         return gameRenderer.domElement;
@@ -87,28 +146,57 @@ const GraphicsManager =
     {
         return camera;
     },
-    // Sets how far the light the camera carries has to reach, from how far off whatever the camera
-    // is looking at is (zero for a view with nothing in particular in front of it, which leaves the
-    // light as it is tuned for the player's eye).
+    // Sets how far off whatever the camera is looking at is (zero for a view with nothing in
+    // particular in front of it, which leaves everything as it is tuned for the player's own eye).
     //
-    // A light sized for the eye goes out the moment the camera is taken further back than its
-    // range: past that range a point light contributes nothing at all, and the target would be left
-    // to the ambient light alone. Widening the range on its own would only spread the same light
-    // more thinly, since what a point light delivers falls off over distance — so the intensity
-    // follows the range by exactly the falloff the light decays by, which leaves whatever is being
-    // looked at as bright as it was from up close.
-    setPointLightReach: (viewDistance: number) =>
+    // Both the light the camera carries and the air it is looking through are sized from this, and
+    // they are set together rather than by two callers, because they are answering the same
+    // question: a camera pulled back to take in the whole room has to be able to *see* the whole
+    // room. A light sized for the eye goes out past its own range, leaving the target to the
+    // ambient light alone; fog sized for the eye closes over everything beyond a few paces, which
+    // is a room pulled back from and then buried.
+    setViewDistance: (viewDistance: number) =>
     {
-        const range = Math.max(basePointLightDistance, pointLightRangePerViewDistance * viewDistance);
-
-        // Called every frame, and most frames have nothing to say: any view held closer than half
-        // the base range asks for that same base range, which is every first-person frame there is.
-        if (range === pointLight.distance)
+        if (viewDistance === currViewDistance)
             return;
+        currViewDistance = viewDistance;
+        refreshPointLight();
+        refreshFog();
+    },
+    // Sets what light the room's own lamps are already putting on the spot the camera is looking
+    // from, so that the light it carries can stand out of their way (see refreshPointLight).
+    setPointLightSurroundings: (roomLightAtCamera: THREE.Color) =>
+    {
+        if (currRoomLightAtCamera.equals(roomLightAtCamera))
+            return;
+        currRoomLightAtCamera.copy(roomLightAtCamera);
+        refreshPointLight();
+    },
+    // Sets the atmosphere the room is seen in: what light fills it, what light the player carries
+    // while standing in it, and what the air between the two is like. Everything here is the room's
+    // own decision (see RoomPrefsUtil), which is why it arrives in one piece — the settings agree
+    // with each other, and applying half of one room's and half of another's would look like
+    // neither.
+    setRoomLightingPrefs: (prefs: RoomPrefs) =>
+    {
+        currRoomPrefs = prefs;
 
-        pointLight.distance = range;
-        pointLight.intensity = basePointLightIntensity *
-            Math.pow(range / basePointLightDistance, pointLightDecay);
+        ambLight.color.set(getPaletteColor(LIGHT_COLOR_PALETTE_NAME, prefs.ambientColorIndex));
+        ambLight.intensity = RoomPrefsUtil.getAmbientIntensity(prefs);
+
+        pointLightBaseColor.set(getPaletteColor(LIGHT_COLOR_PALETTE_NAME, prefs.headLightColorIndex));
+        basePointLightIntensity = HeadLightPowerUtil.getIntensity(prefs.headLightPowerStep);
+        basePointLightDistance = HeadLightPowerUtil.getDistance(prefs.headLightPowerStep);
+        pointLightDecay = HeadLightPowerUtil.getDecay(prefs.headLightPowerStep);
+        refreshPointLight();
+
+        sceneFog.color.set(getPaletteColor(FOG_COLOR_PALETTE_NAME, prefs.fogColorIndex));
+        // The void beyond the far plane is painted in the fog's own color rather than in black.
+        // They are the same surface as far as the eye is concerned: whatever has faded completely
+        // into the air is standing directly in front of the emptiness past the room, and if the two
+        // disagree the horizon is a visible seam rather than a distance.
+        gameRenderer.setClearColor(sceneFog.color);
+        refreshFog();
     },
     update: (currFPS: number) =>
     {
@@ -128,6 +216,9 @@ const GraphicsManager =
             currPixelRatio = desiredPixelRatio;
             //console.log(desiredPixelRatio);
         }
+        // Consumed once a frame rather than the moment something changes, so that dragging a lamp
+        // across the room costs one propagation per frame rather than one per transform update.
+        lightBlockMap.update();
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);
     },
@@ -148,8 +239,13 @@ const GraphicsManager =
             overlayCanvasRoot = document.getElementById("overlayCanvasRoot") as HTMLElement;
 
             scene = new THREE.Scene();
+            scene.fog = sceneFog;
 
-            ambLight = new THREE.AmbientLight(0xffffff, 0.15);
+            // Both its color and its strength are the room's to choose (see
+            // setRoomLightingPrefs); what it is created with is what a room that has said nothing
+            // asks for, which is what it has always been.
+            ambLight = new THREE.AmbientLight(0xffffff,
+                RoomPrefsUtil.getAmbientIntensity(currRoomPrefs));
             scene.add(ambLight);
 
             camera = new THREE.PerspectiveCamera(60, 1, 0.1, 45); // 45 = roughly the maximum diagonal distance from one corner of the room to the other (Room comprises a 32x32 voxel grid)
@@ -163,6 +259,8 @@ const GraphicsManager =
 
             gameRenderer = new THREE.WebGLRenderer({ antialias: true });
             gameRenderer.shadowMap.enabled = true;
+            // Black only until a room says otherwise: the void past the far plane is painted in
+            // whatever the room's fog is (see setRoomLightingPrefs).
             gameRenderer.setClearColor("#000000");
             gameRenderer.domElement.style.position = "absolute";
             gameRenderer.domElement.style.margin = "auto auto";
@@ -214,6 +312,78 @@ const GraphicsManager =
     },
 }
 
+// Works the head lamp out afresh from everything that has a say in it. Both of its callers set one
+// of those things and leave the other alone, so neither can settle the light on its own.
+//
+// A light sized for the eye goes out the moment the camera is taken further back than its range:
+// past that range a point light contributes nothing at all, and whatever is being looked at would be
+// left to the ambient light alone. Widening the range on its own would only spread the same light
+// more thinly, since what a point light delivers falls off over distance — so the intensity follows
+// the range by exactly the falloff the light decays by, which leaves the target as bright as it was
+// from up close. The room's own lamps then take back as much of what is left as they are lighting
+// the player with already.
+function refreshPointLight()
+{
+    const range = Math.max(basePointLightDistance,
+        pointLightRangePerViewDistance * currViewDistance);
+
+    // How much of what lights the player is the room's own doing, from none of it in the dark to
+    // very nearly all of it under a lamp. Both of the things below follow from this one number.
+    const roomLuminance = 0.2126 * currRoomLightAtCamera.r +
+        0.7152 * currRoomLightAtCamera.g + 0.0722 * currRoomLightAtCamera.b;
+    const roomShare = roomLuminance / (roomLuminance + pointLightRoomHalfBrightness);
+
+    // Whatever share of the lighting the room is not doing itself, and nothing beyond it. There is
+    // no floor held back for the near field: a lamp kept burning under a room that is already lit is
+    // exactly what was washing that room's own colors out, and white light close up drags a
+    // saturated surface toward grey however little of it there is.
+    pointLight.distance = range;
+    pointLight.intensity = basePointLightIntensity *
+        Math.pow(range / basePointLightDistance, pointLightDecay) * (1 - roomShare);
+
+    // And it takes on the color of whatever is already lighting the player, as far as the room is
+    // doing the lighting. Turning it down is not enough on its own: what washes a warm wall out is
+    // not how much the head lamp adds but that what it adds is white, and even a quarter of a white
+    // lamp pulls a saturated color a long way toward grey up close. Light of the room's own color
+    // deepens what is there instead of diluting it, which lets it keep enough strength to still be
+    // the near-field depth cue it exists to be.
+    pointLightColorTemp.copy(pointLightBaseColor);
+    const peak = Math.max(currRoomLightAtCamera.r,
+        Math.max(currRoomLightAtCamera.g, currRoomLightAtCamera.b));
+    if (peak > 0)
+    {
+        // Normalized to its brightest channel, since what is wanted from the room is its color and
+        // not its strength — the strength is already spoken for above.
+        pointLightColorTemp.lerpColors(pointLightBaseColor,
+            colorTemp.setRGB(currRoomLightAtCamera.r / peak, currRoomLightAtCamera.g / peak,
+                currRoomLightAtCamera.b / peak, THREE.LinearSRGBColorSpace),
+            roomShare);
+    }
+    pointLight.color.copy(pointLightColorTemp);
+}
+
+// Works the fog out afresh from what the room asked for and how far back the camera has been taken.
+//
+// The room's two distances are what the air is like seen from where a player stands. A camera taken
+// further back than that is not in a different room, but it is looking across more of one, and fog
+// held at the distances a standing player was given would close over everything between the camera
+// and what it was pulled back to look at. So the whole of it is pushed out in proportion — never
+// pulled in, since a camera closer than the reach the fog was written for is still a player standing
+// in the room and should see it exactly as he does.
+function refreshFog()
+{
+    const scale = Math.max(1, currViewDistance / referenceFogViewDistance);
+    sceneFog.near = RoomPrefsUtil.getFogNearDistance(currRoomPrefs) * scale;
+    sceneFog.far = RoomPrefsUtil.getFogFarDistance(currRoomPrefs) * scale;
+}
+
+function getPaletteColor(paletteName: string, index: number): string
+{
+    return ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(paletteName, index));
+}
+
+const colorTemp = new THREE.Color();
+
 function onResize(ev: UIEvent)
 {
     updateRenderSizes();
@@ -248,6 +418,10 @@ function onContextRestore()
     console.warn("WebGL context restored.");
     if (ongoingClientProcessExists(contextRecoveryProcessName))
         endClientProcess(contextRecoveryProcessName);
+
+    // The block map's textures are backed by buffers held on this side, so they come back by being
+    // written again — which the next propagation does anyway.
+    lightBlockMap.requestRecomputation();
 
     // Geometries, materials and image-backed textures all come back from the copies the scene holds
     // of them. Render targets do not — they only ever existed on the GPU — so whatever was drawn

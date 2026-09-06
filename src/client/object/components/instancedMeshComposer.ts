@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_EYE_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
 import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import GameObject from "../types/gameObject";
@@ -13,7 +13,6 @@ import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 // splitting its instancedMeshId (see MeshDataUtil.getInstancedMeshId for the id's format).
 const INSTANCE_COLORED_SUFFIXES = INSTANCE_COLORED_MATERIAL_IDS.map(
     (materialId) => MeshDataUtil.getInstancedMeshId("", materialId));
-const INSTANCED_EYE_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_EYE_MATERIAL_ID);
 const INSTANCED_WOOD_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_WOOD_MATERIAL_ID);
 
 function usesInstanceColor(instancedMeshId: string): boolean
@@ -81,6 +80,17 @@ export default class InstancedMeshComposer extends GameObjectComponent
     {
         if (key !== ObjectMetadataKeyEnumMap.InstancedMeshComposition)
             return;
+        this.reloadComposition();
+    }
+
+    // Reads the object's composition again and has the instances rebuilt from it.
+    //
+    // Public because a composition is not always stored: an object whose metadata holds none is
+    // composed afresh from generateDefaultParts every time this runs, so an object whose appearance
+    // is *derived* from something else it carries — a lamp's, from the light it gives off — asks for
+    // this when that something else changes (see LampGameObject).
+    reloadComposition(): void
+    {
         this.instancedMeshComposition.loadFromMetadata(this.gameObject);
         this.updateState = "refreshPending";
     }
@@ -260,23 +270,6 @@ export default class InstancedMeshComposer extends GameObjectComponent
                     instancedMeshId, instanceId,
                     part.mouldingColor!.x, part.mouldingColor!.y, part.mouldingColor!.z,
                     part.mouldingThickness!, part.mouldingIsConvex!);
-            }
-            else if (instancedMeshId.endsWith(INSTANCED_EYE_SUFFIX))
-            {
-                this.instancedMeshGraphics.updateInstanceEyeColors(
-                    instancedMeshId, instanceId,
-                    part.pupilColor!.x, part.pupilColor!.y, part.pupilColor!.z,
-                    part.irisColor!.x, part.irisColor!.y, part.irisColor!.z);
-
-                // The eye square is scaled to the larger of the two radii (see PlayerCompositionCodec),
-                // so that circle spans the full square; express both radii as fractions of the
-                // square's side length (0.5 = touches the square's edges).
-                const maxEyeRadius = Math.max(part.pupilRadius!, part.irisRadius!);
-                const radiusToSideFraction = (maxEyeRadius > 0) ? (0.5 / maxEyeRadius) : 0;
-                this.instancedMeshGraphics.updateInstanceEyeRadii(
-                    instancedMeshId, instanceId,
-                    part.pupilRadius! * radiusToSideFraction,
-                    part.irisRadius! * radiusToSideFraction);
             }
         }
 

@@ -3,6 +3,7 @@ import VoxelObjectTypeConfig from "../types/objectTypeConfig/voxelObjectTypeConf
 import PlayerObjectTypeConfig from "../types/objectTypeConfig/playerObjectTypeConfig";
 import CanvasObjectTypeConfig from "../types/objectTypeConfig/canvasObjectTypeConfig";
 import DoorObjectTypeConfig from "../types/objectTypeConfig/doorObjectTypeConfig";
+import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 
 // This map specifies all types of GameObject and their global configs.
 // Each config specifies all types of GameObjectComponents which must be included in the
@@ -12,6 +13,7 @@ const objectTypeConfigPairs: [number, ObjectTypeConfig][] = [
     [1, PlayerObjectTypeConfig],
     [2, CanvasObjectTypeConfig],
     [3, DoorObjectTypeConfig],
+    [4, LampObjectTypeConfig],
 ];
 
 const indexToConfig: {[objectTypeIndex: number]: ObjectTypeConfig} = {};

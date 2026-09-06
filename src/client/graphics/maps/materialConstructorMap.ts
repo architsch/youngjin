@@ -4,40 +4,43 @@ import MaterialParams from "../../../shared/graphics/material/types/materialPara
 import WireframeMaterialParams from "../../../shared/graphics/material/types/wireframeMaterialParams";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import LineBasicMaterialParams from "../../../shared/graphics/material/types/lineBasicMaterialParams";
-import TextureMaterialParams from "../../../shared/graphics/material/types/textureMaterialParams";
 import SpriteMaterialParams from "../../../shared/graphics/material/types/spriteMaterialParams";
 import InstancedColorMaterialParams from "../../../shared/graphics/material/types/instancedColorMaterialParams";
-import InstancedEyeMaterialParams from "../../../shared/graphics/material/types/instancedEyeMaterialParams";
 import InstancedTinMaterialParams from "../../../shared/graphics/material/types/instancedTinMaterialParams";
 import InstancedWoodMaterialParams from "../../../shared/graphics/material/types/instancedWoodMaterialParams";
+import InstancedEmissiveMaterialParams from "../../../shared/graphics/material/types/instancedEmissiveMaterialParams";
 import VALUE_NOISE_GLSL from "../shaders/valueNoiseGLSL";
+import LightBlockMapMaterialUtil from "../light/lightBlockMapMaterialUtil";
 
+// Which materials are lit is decided here and nowhere else: a material wrapped in "addSampling" is
+// one the room's own lamps reach (see LightBlockMap), and one left bare is either unlit by nature —
+// a sprite, a gizmo's wireframe — or a source of light rather than a receiver of it.
 export const MaterialConstructorMap: { [materialType: string]:
     (params: MaterialParams) => Promise<THREE.Material> } =
 {
     "InstancedTexturePack": async (params: MaterialParams) =>
     {
-        return await createInstancedTexturePackMaterial(params as InstancedTexturePackMaterialParams);
+        return LightBlockMapMaterialUtil.addSampling(
+            await createInstancedTexturePackMaterial(params as InstancedTexturePackMaterialParams));
     },
     "InstancedColor": async (params: MaterialParams) =>
     {
-        return createInstancedColorMaterial(params as InstancedColorMaterialParams);
-    },
-    "InstancedEye": async (params: MaterialParams) =>
-    {
-        return createInstancedEyeMaterial(params as InstancedEyeMaterialParams);
+        return LightBlockMapMaterialUtil.addSampling(
+            createInstancedColorMaterial(params as InstancedColorMaterialParams));
     },
     "InstancedTin": async (params: MaterialParams) =>
     {
-        return createInstancedTinMaterial(params as InstancedTinMaterialParams);
+        return LightBlockMapMaterialUtil.addSampling(
+            createInstancedTinMaterial(params as InstancedTinMaterialParams));
     },
     "InstancedWood": async (params: MaterialParams) =>
     {
-        return createInstancedWoodMaterial(params as InstancedWoodMaterialParams);
+        return LightBlockMapMaterialUtil.addSampling(
+            createInstancedWoodMaterial(params as InstancedWoodMaterialParams));
     },
-    "Texture": async (params: MaterialParams) =>
+    "InstancedEmissive": async (params: MaterialParams) =>
     {
-        return await createTextureMaterial(params as TextureMaterialParams);
+        return createInstancedEmissiveMaterial(params as InstancedEmissiveMaterialParams);
     },
     "Sprite": async (params: MaterialParams) =>
     {
@@ -220,6 +223,34 @@ function createInstancedColorMaterial(p: InstancedColorMaterialParams): THREE.Ma
     // defined (i.e. material.vertexColors). Apply the instance color here so it works on this
     // texture-less material without a per-vertex color attribute. The #ifdef makes this a no-op
     // for instanced meshes that never set an instance color.
+    newMaterial.onBeforeCompile = (shader) => {
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <color_fragment>",
+            `
+            #include <color_fragment>
+            #ifdef USE_INSTANCING_COLOR
+                diffuseColor.rgb *= vColor;
+            #endif
+            `
+        );
+    };
+    return newMaterial;
+}
+
+// The finish of something that gives off light rather than receiving it: an unlit material, drawn at
+// the full strength of its own per-instance color whatever is falling on it — which is what a lamp's
+// lit face, a glowing filament or a screen actually looks like.
+//
+// Deliberately not given the block map's sampling (see MaterialConstructorMap's own note): a lamp's
+// emitter is where the room's light comes from, and lighting it by the field it is itself filling
+// would have it brighten in its own glow.
+function createInstancedEmissiveMaterial(p: InstancedEmissiveMaterialParams): THREE.Material
+{
+    const newMaterial = new THREE.MeshBasicMaterial();
+    newMaterial.transparent = false;
+    // The same trick the plain instanced-color material uses, and for the same reason: three.js
+    // folds the per-instance color into vColor but only applies it where USE_COLOR is defined, which
+    // is a per-vertex color attribute this material does not have.
     newMaterial.onBeforeCompile = (shader) => {
         shader.fragmentShader = shader.fragmentShader.replace(
             "#include <color_fragment>",
@@ -769,81 +800,5 @@ function createInstancedWoodMaterial(p: InstancedWoodMaterialParams): THREE.Mate
             `
         );
     };
-    return newMaterial;
-}
-
-function createInstancedEyeMaterial(p: InstancedEyeMaterialParams): THREE.Material
-{
-    // Renders each "Square" instance as an eyeball made of two concentric circles: the pupil
-    // (which takes rendering priority) and the iris (hidden wherever the pupil covers it).
-    // The per-instance colors and squared radii come from instanced buffer attributes written
-    // by InstancedMeshBinding. The squared radii are expressed in the square's UV space, where
-    // the distance from the center to an edge is 0.5. Fragments outside both circles are
-    // discarded, and the surviving fragments write their circle's color into diffuseColor
-    // before the stock lighting chunks run, so lighting still obeys the regular
-    // MeshPhongMaterial rules.
-    const newMaterial = new THREE.MeshPhongMaterial();
-    newMaterial.transparent = false;
-    newMaterial.side = THREE.DoubleSide; // The eye is an infinitely thin quad, so keep it visible from both sides.
-    newMaterial.onBeforeCompile = (shader) => {
-        shader.vertexShader = `
-            attribute vec3 pupilColor;
-            attribute vec3 irisColor;
-            attribute vec2 eyeRadiiSqr;
-            varying vec3 vPupilColor;
-            varying vec3 vIrisColor;
-            varying vec2 vEyeRadiiSqr;
-            varying vec2 vEyeUv;
-            ${shader.vertexShader}
-        `;
-        shader.vertexShader = shader.vertexShader.replace(
-            "#include <begin_vertex>",
-            `
-            #include <begin_vertex>
-            vPupilColor = pupilColor;
-            vIrisColor = irisColor;
-            vEyeRadiiSqr = eyeRadiiSqr;
-            vEyeUv = uv;
-            `
-        );
-        shader.fragmentShader = `
-            varying vec3 vPupilColor;
-            varying vec3 vIrisColor;
-            varying vec2 vEyeRadiiSqr;
-            varying vec2 vEyeUv;
-            ${shader.fragmentShader}
-        `;
-        shader.fragmentShader = shader.fragmentShader.replace(
-            "#include <color_fragment>",
-            `
-            #include <color_fragment>
-            vec2 offsetFromEyeCenter = vEyeUv - vec2(0.5, 0.5);
-            float eyeDistSqr = dot(offsetFromEyeCenter, offsetFromEyeCenter);
-            if (eyeDistSqr < vEyeRadiiSqr[0])
-                diffuseColor.rgb = vPupilColor;
-            else if (eyeDistSqr < vEyeRadiiSqr[1])
-                diffuseColor.rgb = vIrisColor;
-            else
-                discard;
-            `
-        );
-    };
-    return newMaterial;
-}
-
-async function createTextureMaterial(p: TextureMaterialParams): Promise<THREE.Material>
-{
-    const texture: THREE.Texture = await TextureFactory.loadStaticImageTexture(p.texturePath);
-
-    const newMaterial = new THREE.MeshPhongMaterial();
-    newMaterial.map = texture;
-    newMaterial.transparent = true;
-    newMaterial.alphaTest = 0.5;
-    if (p.polygonOffsetFactor && p.polygonOffsetUnits)
-    {
-        newMaterial.polygonOffset = true;
-        newMaterial.polygonOffsetFactor = p.polygonOffsetFactor;
-        newMaterial.polygonOffsetUnits = p.polygonOffsetUnits;
-    }
     return newMaterial;
 }

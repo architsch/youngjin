@@ -10,4 +10,5 @@ export default interface DBRoom extends DBRow
     ownerUserID: string;
     ownerUserName: string;
     texturePackPath: string;
+    prefs: string; // The room's atmosphere, as a handful of characters (see RoomPrefsUtil).
 }

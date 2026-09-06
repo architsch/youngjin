@@ -73,6 +73,7 @@ function currentRoom(overrides: Partial<DBRoom> = {}): DBRow
         ownerUserID: "",
         ownerUserName: "",
         texturePackPath: "pack",
+        prefs: "",
         ...overrides,
     } as DBRow;
 }
@@ -787,6 +788,10 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(result.data[0].ownerUserName).toBe("landlord");
             expect(result.data[0].editors).toBeUndefined();
             expect(result.data[0].roomName).toBe("");
+            // The v5 -> v6 step gives an old room the atmosphere field, and gives it empty — which
+            // is what a room that has never been configured holds, and decodes to exactly how every
+            // room looked before there was anything to configure (see RoomPrefsUtil).
+            expect(result.data[0].prefs).toBe("");
         });
 
         it("drops the id field that rooms written before the rule still carry", async () => {

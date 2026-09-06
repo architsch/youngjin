@@ -46,13 +46,21 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     // the paints that were mixed to go on timber, and the metal and bone tones a knob, a plate or a
     // hinge takes.
     //
-    // Everything here keeps to the middle of the brightness range and well back from full
-    // saturation, which is a requirement of the material it is seen through rather than a matter of
-    // taste: the moulded-timber material ages a color before anything is lit — warming it and
-    // pulling its saturation back — and then the figure and the carving each take more off it
-    // again. A finish that starts dark arrives as a black rectangle with neither grain nor joinery
-    // visible in it, and one that starts at the top of the range washes out and takes the
-    // mouldings' shading with it. See @docs/geometry/door_design.md .
+    // Everything here keeps to the middle of the brightness range, which is a requirement of the
+    // material it is seen through rather than a matter of taste: the moulded-timber material ages a
+    // color before anything is lit — warming it and pulling its saturation back — and then the
+    // figure and the carving each take more off it again. A finish that starts dark arrives as a
+    // black rectangle with neither grain nor joinery visible in it, and one that starts at the top
+    // of the range washes out and takes the mouldings' shading with it.
+    // See @docs/geometry/door_design.md .
+    //
+    // What that requirement does *not* demand is muted color, which is where the first half of this
+    // palette went too far: the material's own aging is what makes a finish look like paint on
+    // timber, so a color chosen already muted arrives twice-muted and the whole set reads as one
+    // brown door in thirty shades. The vibrant bands appended below are the correction. They start
+    // well up the saturation range precisely because they are going to lose some of it on the way
+    // through the material — they are painted joinery rather than bare wood, and a door somebody
+    // painted is allowed to have been painted a color.
     "Timber": [
         // Bare and stained timber, light to dark
         "#e0cbab", "#d8b98b", "#c8a271", "#b98b56", "#a87545",
@@ -66,6 +74,29 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
         // Metal and bone: knobs, plates, escutcheons
         "#c9a227", "#a98a3f", "#8a7346", "#9a9a97", "#7a7a78", "#5c5c5a",
         "#f0e7d2", "#ded2b8",
+        //
+        // Everything below is appended, never rearranged — see this file's opening note.
+        //
+        // Painted joinery in earnest, at three strengths of the same twelve hues. The hues are the
+        // ones something actually gets painted rather than an even wheel: the chartreuse and lime
+        // region is skipped, since nothing is finished in it and offering it would spend three
+        // choices on colors that only ever look like a mistake.
+        //
+        // Bright: a door painted a light, clear color
+        "#de5454", "#de8d54", "#debc54", "#d3de54", "#82de54", "#54de99",
+        "#54ded3", "#54b0de", "#5482de", "#6b54de", "#bc54de", "#de54b0",
+        // Vivid: the same twelve at full strength, which is where most painted joinery sits
+        "#ce1c1c", "#ce661c", "#cea21c", "#c0ce1c", "#58ce1c", "#1cce75",
+        "#1ccec0", "#1c93ce", "#1c58ce", "#3a1cce", "#a21cce", "#ce1c93",
+        // Deep: saturated but dark — kept above the point where the grain stops reading, which is
+        // what the note above is about
+        "#8b1818", "#8b4818", "#8b6e18", "#818b18", "#3f8b18", "#188b52",
+        "#188b81", "#18658b", "#183f8b", "#2c188b", "#6e188b", "#8b1865",
+        // Finishes with names, which fall between the steps of any wheel: the paints and metals a
+        // real piece of joinery is actually specified in.
+        "#c8102e", "#6b2233", "#c05621", "#d4a017", // pillar box, oxblood, burnt orange, mustard
+        "#6b7f2e", "#1f4a2c", "#3f8f7a", "#1f7a7a", // olive, racing green, verdigris, teal
+        "#1b4fa0", "#1c3b57", "#7a3b62", "#4a2545", // cobalt, prussian, plum, aubergine
     ],
     // Lettering: the color the text written on an object is drawn in (see the LabelText component).
     // The whole spectrum, because ink is not a finish — a plate can be painted any color a door is,
@@ -73,4 +104,106 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     // palette rather than a second use of the player's for the same reason the timber set exists:
     // what a set of colors is answerable to is what is painted in it.
     "LabelColor": [...FULL_SPECTRUM_COLORS],
+    // Light: what a lamp, or the light filling a room, is the color of. Not a finish at all — this
+    // is what falls on a finish, which is why it is nothing like the palettes above.
+    //
+    // **Index 0 is plain white, and that is load-bearing**: a room that has never been configured
+    // stores no color at all and is read back at index 0, so white here is what makes an untouched
+    // room look exactly as it did before rooms could be lit (see RoomPrefsUtil).
+    //
+    // This palette is far longer than the ones above, and deliberately holds colors that are hard
+    // to tell apart in a swatch grid. That is the opposite of the rule everywhere else, and the
+    // reason is what is being chosen: a finish is picked by looking at the swatch, so two similar
+    // swatches are one wasted choice — while a light is judged by what a whole room looks like
+    // under it, where the difference between two neighbouring temperatures is the difference
+    // between afternoon and evening. Offering few is what would be wrong here.
+    //
+    // It runs in bands: the identity, grays for a dimmer ambient, temperatures, then the hue wheel
+    // at six strengths. The temperatures are barely tinted, because light of a temperature is not
+    // seen as colored — a room lit warm reads as a warm room rather than an orange one. The hues
+    // are the opposite case: a colored lamp is meant to be seen as colored.
+    //
+    // Twelve hues is what the encoding leaves room for once the grays and temperatures have their
+    // share, since a palette holds at most 94 and every strength costs a full turn of the wheel.
+    // Offering more hues would mean offering fewer strengths, and that is the wrong way round: two
+    // neighbouring hues at the same strength light a room almost identically, while the same hue at
+    // two strengths does not.
+    "Light": [
+        // Plain white — the identity, and the default (see above)
+        "#ffffff",
+        // Grays, for an ambient that is dim rather than tinted
+        "#e0e0e0", "#bdbdbd", "#999999", "#757575", "#525252", "#2e2e2e",
+        // Temperatures, warm to cool: candle, tungsten, halogen, daylight, overcast, blue hour
+        "#ffb46b", "#ffc78f", "#ffd5aa", "#ffe0c0", "#ffe9d3", "#fff2e5",
+        "#fffaf5", "#f7f8ff", "#eaefff", "#dbe5ff", "#c8d8ff", "#b3caff",
+        // Every hue at six evenly spaced strengths. Six rather than the four or five a palette of
+        // finishes would get, and evenly spaced rather than clustered at the ends, because the
+        // middle of the range is where a colored light is actually usable: a pale one barely tints
+        // the room and a fully saturated one floods it, while the steps between are the ones a room
+        // gets lit *by*. Saturation climbs as brightness falls — a light color reads as a tint and
+        // a dark one has to be saturated to read as a color at all — and eases off again at the
+        // bottom, where full saturation only goes muddy.
+        //
+        // Pale
+        "#e7d0d0", "#e7dbd0", "#e7e7d0", "#dbe7d0", "#d0e7d0", "#d0e7db",
+        "#d0e7e7", "#d0dbe7", "#d0d0e7", "#dbd0e7", "#e7d0e7", "#e7d0db",
+        // Soft
+        "#e39696", "#e3bd96", "#e3e396", "#bde396", "#96e396", "#96e3bd",
+        "#96e3e3", "#96bde3", "#9696e3", "#bd96e3", "#e396e3", "#e396bd",
+        // Light
+        "#ec5555", "#eca155", "#ecec55", "#a1ec55", "#55ec55", "#55eca1",
+        "#55ecec", "#55a1ec", "#5555ec", "#a155ec", "#ec55ec", "#ec55a1",
+        // Vivid
+        "#f91010", "#f98510", "#f9f910", "#85f910", "#10f910", "#10f985",
+        "#10f9f9", "#1085f9", "#1010f9", "#8510f9", "#f910f9", "#f91085",
+        // Rich
+        "#c90808", "#c96908", "#c9c908", "#69c908", "#08c908", "#08c969",
+        "#08c9c9", "#0869c9", "#0808c9", "#6908c9", "#c908c9", "#c90869",
+        // Deep
+        "#890b0b", "#894a0b", "#89890b", "#4a890b", "#0b890b", "#0b894a",
+        "#0b8989", "#0b4a89", "#0b0b89", "#4a0b89", "#890b89", "#890b4a",
+    ],
+    // Fog: the color the air in a room is, which is also the color everything in it fades into with
+    // distance and the color of the void past the far wall (see GraphicsManager).
+    //
+    // **Index 0 is black, and that is load-bearing** for the same reason white is above: it is what
+    // an unconfigured room reads back, and black is what the emptiness beyond a room has always
+    // been drawn in. It is long and finely graded for the same reason the light palette is.
+    //
+    // What is offered is dark before it is anything else. Fog is not a color laid over the room —
+    // it is what the room's own colors are replaced by as they recede, so a pale fog is a room that
+    // goes white a few paces off, which is a specific and rarely wanted effect rather than the
+    // ordinary one. The pale bands are kept to the end for when it is wanted.
+    "Fog": [
+        // Black — the identity, and the default (see above)
+        "#000000",
+        // Neutrals, black through to a white-out
+        "#0d0d0d", "#1a1a1a", "#292929", "#3b3b3b", "#4f4f4f", "#666666",
+        "#808080", "#9e9e9e", "#c2c2c2",
+        // Every hue at six strengths, packed toward the dark end rather than spread evenly —
+        // which is where fog is actually set. The steps are close together through the near-blacks
+        // and the low middle because that is the whole usable range for air somebody wants to see
+        // *through*, and one step there changes a room far more than a step among the pale ones
+        // does. Saturation falls as brightness rises, since a dark air needs a strong cast to read
+        // as anything but black, while a pale one is already close to a white-out.
+        //
+        // Near-black: a cast on the dark, which is the ordinary case
+        "#160808", "#160f08", "#161608", "#0f1608", "#081608", "#08160f",
+        "#081616", "#080f16", "#080816", "#0f0816", "#160816", "#16080f",
+        // Dark
+        "#321515", "#322415", "#323215", "#243215", "#153215", "#153224",
+        "#153232", "#152432", "#151532", "#241532", "#321532", "#321524",
+        // Dusk
+        "#502626", "#503b26", "#505026", "#3b5026", "#265026", "#26503b",
+        "#265050", "#263b50", "#262650", "#3b2650", "#502650", "#50263b",
+        // Gloom
+        "#6f3939", "#6f5439", "#6f6f39", "#546f39", "#396f39", "#396f54",
+        "#396f6f", "#39546f", "#39396f", "#54396f", "#6f396f", "#6f3954",
+        // Haze
+        "#925454", "#927354", "#929254", "#739254", "#549254", "#549273",
+        "#549292", "#547392", "#545492", "#735492", "#925492", "#925473",
+        // Mist, for when the room is meant to go pale rather than dark
+        "#b38989", "#b39e89", "#b3b389", "#9eb389", "#89b389", "#89b39e",
+        "#89b3b3", "#899eb3", "#8989b3", "#9e89b3", "#b389b3", "#b3899e",
+    ],
 }

@@ -98,7 +98,7 @@ export default class FreeCameraPose
     // How far off the camera is from what it is aimed at. The room is lit by a light the camera
     // carries, and how far that light has to reach is this distance - so a camera stood well back to
     // take in a whole set would otherwise be lighting the air in front of it and leaving the set
-    // itself in the dark (see GraphicsManager.setPointLightReach).
+    // itself in the dark (see GraphicsManager.setViewDistance).
     static getViewDistance(): number
     {
         return cameraPos.distanceTo(lookTarget);

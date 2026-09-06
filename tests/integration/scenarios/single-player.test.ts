@@ -27,7 +27,14 @@ import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
     const camera = new THREE.PerspectiveCamera();
-    return { default: { getCamera: () => camera, getScene: () => new THREE.Scene() } };
+    // A voxel edit invalidates the room's light map (see LightBlockMap). Nothing here draws
+    // anything, so the map only has to exist and take the message.
+    const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
+        getLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
+    return { default: { getCamera: () => camera, getScene: () => new THREE.Scene(),
+        getLightBlockMap: () => lightBlockMap,
+        setViewDistance: () => {}, setPointLightSurroundings: () => {},
+        setRoomLightingPrefs: () => {} } };
 });
 
 vi.mock("../../../src/client/app", () => ({
@@ -197,7 +204,7 @@ describe("single-player room wire format", () => {
     }
 
     it("omits content for a single-player room and reconstructs it empty", () => {
-        const spRoom = new Room("tutorial", "tutorial", RoomTypeEnumMap.SinglePlayer, "", "", "default",
+        const spRoom = new Room("tutorial", "tutorial", RoomTypeEnumMap.SinglePlayer, "", "", "default", "",
             new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
         const decoded = roundTrip(new RoomRuntimeMemory(spRoom, {})).room;
 
@@ -209,7 +216,7 @@ describe("single-player room wire format", () => {
 
     it("still round-trips full content for a multiplayer room", () => {
         const { voxelGrid, objectGroup } = RoomGenerationUtil.generateRoom("", RoomTypeEnumMap.Hub);
-        const hubRoom = new Room("hub", "", RoomTypeEnumMap.Hub, "", "", "default", voxelGrid, objectGroup);
+        const hubRoom = new Room("hub", "", RoomTypeEnumMap.Hub, "", "", "default", "", voxelGrid, objectGroup);
         const decoded = roundTrip(new RoomRuntimeMemory(hubRoom, {})).room;
 
         expect(decoded.roomType).toBe(RoomTypeEnumMap.Hub);
