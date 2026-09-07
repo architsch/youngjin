@@ -52,6 +52,9 @@ export const LABEL_COLOR_PALETTE_NAME = "LabelColor";
 // name for it would be a second meaning for every room already lit.
 export const LIGHT_COLOR_PALETTE_NAME = "Light";
 export const FOG_COLOR_PALETTE_NAME = "Fog";
+// What the sky past a room is furnished with — its clouds and the land under them. A different set
+// from the air's own, because these are masses seen *against* the air rather than the air itself.
+export const SCENERY_COLOR_PALETTE_NAME = "Scenery";
 
 // The longest a stored document id may be. Firestore's own limit, which is what bounds a door's
 // destination room id: an id is never composed by hand, so this only has to refuse a value that was

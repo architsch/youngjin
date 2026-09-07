@@ -84,8 +84,8 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
     res.status(200).json({ roomID: newRoomID });
 });
 
-// Re-skins a room. Which room that is, and whether the caller may touch it, is settled by
-// resolveConfigurableRoom below.
+// Re-skins the named room. Whether the caller may touch it is settled by resolveConfigurableRoom
+// below.
 RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
@@ -110,9 +110,9 @@ RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegistere
     res.status(200).send("Room texture updated.");
 });
 
-// Re-lights a room: its ambient light, the light the player carries while standing in it, and its
-// fog. Which room that is, and whether the caller may touch it, is settled the same way re-skinning
-// one is — the two are the same act of decorating a room one owns or a hub one administers.
+// Re-lights the named room: its ambient light, the light the player carries while standing in it,
+// and its fog. Whether the caller may touch it is settled the same way re-skinning one is — the two
+// are the same act of decorating a room one owns or a hub one administers.
 //
 // What arrives is not checked here. It is a quantized string with no invalid values in it, only
 // values that decode to something other than what was meant, so ServerRoomManager canonicalizes it
@@ -255,49 +255,46 @@ RoomRouter.post("/get_my_room_list_entry", UserIdentificationUtil.identifyAnyUse
 // The room a request to decorate one is about, or null once the reason it is about none has been
 // sent to the caller.
 //
-// Which room is decided by who is asking and what they named: naming none means "my own room",
-// which is the ordinary case; naming one is an admin decorating a hub, which is a room nobody owns
-// and so a room the ownership path could never reach.
+// **Every such request names the room it means.** Whether the caller may decorate it is then a
+// question about that room, and it has exactly two affirmative answers:
+//
+//   - **A room the caller owns.** Decorating one's own room is the ordinary case.
+//   - **A hub, asked for by an admin.** A hub belongs to nobody, so ownership can never reach one;
+//     dressing the game's own rooms is world-building rather than a personal act.
+//
+// Everything else is refused, which covers a member reaching for a hub, an admin reaching for
+// somebody else's private room, and a guest — who owns nothing — reaching for anything at all.
 async function resolveConfigurableRoom(user: User, roomID: unknown, res: Response): Promise<Room | null>
 {
-    let targetRoomID: string;
-    if (roomID && typeof roomID === "string")
+    if (typeof roomID !== "string" || roomID.length === 0)
     {
-        if (user.userType !== UserTypeEnumMap.Admin)
-        {
-            res.status(403).send("Only an admin can decorate another room.");
-            return null;
-        }
-        const dbRoom = await DBRoomUtil.getDBRoom(roomID);
-        if (!dbRoom)
-        {
-            res.status(404).send("Room not found.");
-            return null;
-        }
-        if (dbRoom.roomType !== RoomTypeEnumMap.Hub)
-        {
-            res.status(403).send("Only a hub can be decorated this way.");
-            return null;
-        }
-        targetRoomID = roomID;
-    }
-    else
-    {
-        const dbUser = await DBUserUtil.findUserById(user.id);
-        if (!dbUser)
-        {
-            res.status(404).send("User not found.");
-            return null;
-        }
-        if (!dbUser.ownedRoomID || dbUser.ownedRoomID.length === 0)
-        {
-            res.status(403).send("User does not own a room.");
-            return null;
-        }
-        targetRoomID = dbUser.ownedRoomID;
+        res.status(400).send("Missing or invalid roomID.");
+        return null;
     }
 
-    const room = await DBRoomUtil.getRoomContent(targetRoomID);
+    const dbRoom = await DBRoomUtil.getDBRoom(roomID);
+    if (!dbRoom)
+    {
+        res.status(404).send("Room not found.");
+        return null;
+    }
+
+    // Read off the room rather than off the caller's own record, so that the permission is settled
+    // by the one thing being decorated. Ownership is checked against a non-empty id on both sides,
+    // since "owned by nobody" and "is nobody" must not come out equal.
+    const ownerUserID = dbRoom.ownerUserID ?? "";
+    const callerOwnsIt = ownerUserID.length > 0 && ownerUserID === user.id;
+    const callerAdministersIt = dbRoom.roomType === RoomTypeEnumMap.Hub
+        && user.userType === UserTypeEnumMap.Admin;
+    if (!callerOwnsIt && !callerAdministersIt)
+    {
+        res.status(403).send("You may only decorate a room you own, or — as an admin — a hub.");
+        return null;
+    }
+
+    // The row above carries the room's identity; this is the room's contents, which is what
+    // decorating one actually rewrites.
+    const room = await DBRoomUtil.getRoomContent(roomID);
     if (!room)
     {
         res.status(404).send("Room not found.");

@@ -44,7 +44,7 @@ export default function ConfigureMyRoomForm()
             return;
         try
         {
-            const response = await RoomAPIClient.changeRoomTexture(path);
+            const response = await RoomAPIClient.changeRoomTexture(path, roomID);
             if (response.status >= 200 && response.status < 300)
             {
                 setTexturePackPath(path);
@@ -57,7 +57,7 @@ export default function ConfigureMyRoomForm()
         {
             endClientProcess("texturePackChange");
         }
-    }, []);
+    }, [roomID]);
 
     return <Form>
         {/* Section 1: Room URL */}
@@ -102,7 +102,7 @@ export default function ConfigureMyRoomForm()
         <Spacer size="sm"/>
 
         {/* Section 4: Lighting */}
-        <LightingSection onToggleTooltip={toggleTooltip}/>
+        <LightingSection onToggleTooltip={toggleTooltip} roomID={roomID}/>
 
         {/* Fixed to the viewport rather than laid out in the form, so it neither takes up a row of
             its own nor gets cut off by the form's scrolling. */}

@@ -206,4 +206,43 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
         "#b38989", "#b39e89", "#b3b389", "#9eb389", "#89b389", "#89b39e",
         "#89b3b3", "#899eb3", "#8989b3", "#9e89b3", "#b389b3", "#b3899e",
     ],
+    // Scenery: the clouds in the sky past a room, and the land below its horizon.
+    //
+    // **A separate palette from the fog's, because it is answerable to something else entirely.**
+    // Fog is what a room's own colors are *replaced by* as they recede, so its set is dark before it
+    // is anything else and gives up saturation as it brightens — a pale, vivid air is a room that
+    // goes to a colored white-out a few paces off. Cloud and land are the opposite case: they are
+    // masses seen *against* that air, at a distance, and what they need in order to read at all is to
+    // differ from it. Drawn from the fog's set they could only ever be a paler or darker version of
+    // the air itself, which is most of the way back to having no clouds and no ground.
+    //
+    // One palette for both, unlike everything else here, because for once the two really are the same
+    // question: a distant mass seen against the air wants the same gamut whether it is vapour or
+    // rock. What each does with it is where they differ — a room picks two entries for its land and
+    // reads the country between them, and one for its weather.
+    //
+    // Saturation peaks in the middle of the brightness range rather than running flat, because that
+    // is where color space has room for it: a near-black and a near-white cannot carry much whatever
+    // they are given, and pretending otherwise only produces two bands nobody can tell apart.
+    "Scenery": [
+        // Neutrals, black through to white in even steps. White is here and is load-bearing — it is
+        // the ordinary color of both a cloud and a snowline, and the fog's set never reaches it.
+        "#000000", "#1a1a1a", "#333333", "#4d4d4d", "#666666", "#808080",
+        "#999999", "#b3b3b3", "#cccccc", "#e6e6e6", "#ffffff",
+        // Deep: night cloud, and the dark of a wooded or a drowned country
+        "#5f1c1c", "#5f3d1c", "#5f5f1c", "#3d5f1c", "#1c5f1c", "#1c5f3d",
+        "#1c5f5f", "#1c3d5f", "#1c1c5f", "#3d1c5f", "#5f1c5f", "#5f1c3d",
+        // Shade
+        "#a52727", "#a56627", "#a5a527", "#66a527", "#27a527", "#27a566",
+        "#27a5a5", "#2766a5", "#2727a5", "#6627a5", "#a527a5", "#a52766",
+        // Mid: where a green country and an open water sit
+        "#d84141", "#d88c41", "#d8d841", "#8cd841", "#41d841", "#41d88c",
+        "#41d8d8", "#418cd8", "#4141d8", "#8c41d8", "#d841d8", "#d8418c",
+        // Light
+        "#e08585", "#e0b285", "#e0e085", "#b3e085", "#85e085", "#85e0b3",
+        "#85e0e0", "#85b2e0", "#8585e0", "#b285e0", "#e085e0", "#e085b3",
+        // Pale: the colors weather takes at either end of a day
+        "#eac3c3", "#ead6c3", "#eaeac3", "#d6eac3", "#c3eac3", "#c3ead6",
+        "#c3eaea", "#c3d6ea", "#c3c3ea", "#d6c3ea", "#eac3ea", "#eac3d6",
+    ],
 }

@@ -600,7 +600,7 @@ room in the game.
 | user moves from one regular room to another regular room | Source room unloads; destination has both users |
 | user moves between rooms via URL-style navigation (join by room ID) | Joining by room ID works; the source hub is left empty |
 
-## Room API (`room-api.test.ts`) — 6 tests
+## Room API (`room-api.test.ts`) — 16 tests
 
 ### Create Room (Scenario 1)
 
@@ -615,8 +615,25 @@ room in the game.
 | Test | What it verifies |
 |------|-----------------|
 | room owner can change the texture pack | DB updated with the new texture pack path |
-| user without a room cannot change textures | 403 returned |
+| a member cannot change another member's room's texture | 403 returned |
 | request without texturePackPath is rejected | 400 returned for the missing field |
+| request that names no room is rejected | 400 returned: a decorating request always names its room |
+
+### Change Room Lighting (Scenario 10)
+
+Both decorating routes settle the same question the same way: a caller may decorate a room they own, or — as an admin — a hub, which belongs to nobody. The permission is read off the room rather than off how it was addressed, so these pin both halves and the cases each half excludes.
+
+| Test | What it verifies |
+|------|-----------------|
+| room owner can re-light their own room | The manager is handed the room and the value |
+| passes a nonsense value straight through, for the manager to canonicalize | The route checks only that a string arrived |
+| accepts the empty string, which is what an unconfigured room holds | An empty value is a legitimate setting, not a missing one |
+| request with no prefs at all is rejected | 400 returned for the missing field |
+| request that names no room is rejected | 400 returned |
+| a member cannot re-light a room he does not own | 403 returned |
+| a member cannot re-light a hub | 403 returned: administering a hub is an admin's |
+| an admin can re-light a hub, which nobody owns | The one room ownership could never reach |
+| an admin still cannot re-light somebody else's private room | 403 returned: being an admin is not being an owner |
 
 ## Authentication Lifecycle (`auth-lifecycle.test.ts`) — 25 tests
 
@@ -810,8 +827,8 @@ for how to run it. It skips itself when no emulator is available.
 | Race Conditions | 26 |
 | Property-Based | 24 |
 | Room Ownership | 7 |
-| Room API | 12 |
+| Room API | 16 |
 | Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **514** |
+| **Total** | **518** |

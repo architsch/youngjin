@@ -25,7 +25,7 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DOOR_
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
     SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
-import RoomLightingUtil from "./roomLightingUtil";
+import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
 import RoomPrefsUtil, { MAX_ROOM_PREFS_STEP } from "../../../shared/room/util/roomPrefsUtil";
 import { ColorPaletteMap } from "../../../shared/math/maps/colorPaletteMap";

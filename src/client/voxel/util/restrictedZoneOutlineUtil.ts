@@ -14,7 +14,7 @@ import { gameModeObservable } from "../../system/clientObservables";
 // rather than as a shape floating in the air near it (see @docs/gameplay/restricted_zone.md).
 //
 // The border is painted by the voxel material, which is told per instance whether to draw one (see
-// MaterialConstructorMap's addInstanceOutline). What this module does is answer that question — for
+// the instance-outline shader). What this module does is answer that question — for
 // one quad as it comes into view, and for the whole room whenever the answer changes for all of it
 // at once.
 export const RESTRICTED_ZONE_OUTLINE_COLOR = "#ff2a1f";

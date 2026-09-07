@@ -1,6 +1,6 @@
 # Lighting
 
-Reference: @src/client/graphics/light/lightBlockMap.ts , @src/client/graphics/light/lightBlockPropagationUtil.ts , @src/client/graphics/light/lightBlockSmoothingUtil.ts , @src/client/graphics/light/lightBlockMapMaterialUtil.ts , @src/client/graphics/shaders/lightBlockMapGLSL.ts , @src/client/object/components/lightSource.ts , @src/shared/room/util/roomPrefsUtil.ts , @src/shared/graphics/light/util/headLightPowerUtil.ts , @src/shared/graphics/light/util/lampLightUtil.ts , @src/client/system/util/roomLightingUtil.ts , @src/client/graphics/graphicsManager.ts
+Reference: @src/client/graphics/light/maps/lightBlockMap.ts , @src/client/graphics/light/util/lightBlockPropagationUtil.ts , @src/client/graphics/light/util/lightBlockSmoothingUtil.ts , @src/client/graphics/light/util/lightBlockMapMaterialUtil.ts , @src/client/graphics/shaders/lightBlockMapGLSL.ts , @src/client/object/components/lightSource.ts , @src/shared/room/util/roomPrefsUtil.ts , @src/shared/graphics/light/util/headLightUtil.ts , @src/shared/graphics/light/util/lampLightUtil.ts , @src/client/graphics/light/util/roomLightingUtil.ts , @src/client/graphics/util/atmosphereMaterialUtil.ts , @src/client/graphics/shaders/atmosphereGLSL.ts , @src/client/graphics/shaders/skyShader.ts , @src/client/graphics/graphicsManager.ts
 
 ## Overview
 
@@ -66,11 +66,14 @@ Everything about how a room is lit that is not a lamp is a room setting, stored 
 
 | Setting | What it does |
 |---|---|
-| Ambient color and strength | What the light that reaches every surface is, and how much of it there is. Two dials rather than one, because they are separate wishes: a room lit warm and a room barely lit at all are not the same request, and a palette entry dark enough to express the second would be too dark to express the first. The bottom of the strength range is nothing at all — a room lit only by what is actually in it. |
+| Ambient color and strength | What the light that reaches every surface is, and how much of it there is. Two dials rather than one, because they are separate wishes: a room lit warm and a room barely lit at all are not the same request, and a palette entry dark enough to express the second would be too dark to express the first. The bottom of the strength range is nothing at all — a room lit only by what is actually in it — and the top is far past lighting a room at all (see [How far the two lights reach](#how-far-the-two-lights-reach)). |
 | Head-lamp color | What the light every visitor carries is. |
-| Head-lamp power | How much of it the room wants at all, from none to the whole of it. |
-| Fog color | What the air is, and with it the emptiness past the room — the two are painted the same, because whatever has faded completely into the air is standing directly in front of that emptiness, and if the two disagree the horizon is a seam rather than a distance. |
-| Fog start and end | Where things begin to fade into the air, and where they have faded into it completely. |
+| Head-lamp power and range | How much of the head lamp the room wants at all — from none, through the ordinary lamp, and well past it — and separately how far it carries and how sharply it fades on the way. Two dials rather than one, for the reason a lamp on the wall has two (see [Two dials, not one or three](#two-dials-not-one-or-three)). |
+| Fog color | What the air is, and with it the emptiness past the room — the two are painted from one description (see [The air, and the sky past it](#the-air-and-the-sky-past-it)). |
+| Fog start and end | Where things begin to fade into the air, and where they have faded into it completely. The start may be nothing at all, and the two are held apart by only as much as it takes to keep the fade defined — so air thick enough to lose the far wall of a room in is a setting, not something the range refuses. |
+| Smoke strength, scale, speed, drift and rise | How unevenly thick the room's own air is (see [The smoke in the room's own air](#the-smoke-in-the-rooms-own-air)). Where the smoke gathers the fog thins and the room shows through, so strength is how far it clears — at nothing the air is an even wash again. Drift and rise are which way it travels, from dry ice pouring across a floor to smoke coming off something. |
+| Cloud color, strength, scale, softness and speed | How the *sky past the room* is broken up: what color the drifting cloud masses are, how far toward it they reach, how fine they are, how sharp their edges run, and how fast they cross the sky. Separate wishes rather than one "weather" setting — a sky of a few great banks and a sky of mottled fleece differ in scale alone, and either can be cut-edged or hazy, faint or full, still or scudding. |
+| Ground color, peak color, opacity, scale and softness | The country the room stands over, seen below the horizon (see [The ground under it](#the-ground-under-it)). Low land takes the first color and high land the second, so how mountainous it reads is how far apart the two were picked, and softness is how sharply they meet. Opacity is how long the land takes to surrender its color to the air; scale is how coarse the country runs. |
 
 **A room that has never been configured is one that has said nothing**, and what it stores is nothing: every setting falls back to a documented default, and the defaults are chosen so that such a room looks exactly as rooms looked before any of this existed — white ambient, the head lamp at the full strength it has always had, and the fog pushed past everything the camera can draw. No room has to be brought up to date for this, and none ever will.
 
@@ -89,6 +92,28 @@ One dial cannot express both. A wash that fills a room softly and a tight pool t
 
 A lamp is furniture rather than a torch, so its bottom step is a small light and not a dark fitting: there is nothing on screen to tell an unconfigured lamp from a broken one.
 
+### Two dials, not one or three
+
+A point light takes brightness, reach and falloff. Both the head lamp and a lamp on the wall are described by **two** settings rather than by one or by three, and both ends of that are deliberate.
+
+**Three would be wrong.** Reach and falloff are one question: a light that reaches the far wall and one that stops dead a pace away differ in both at once, and a lamp given a long reach with a steep falloff is a lamp whose range does nothing. Offered as free dials they mostly describe lamps that do not exist.
+
+**One would be wrong too.** Fused into a single "power", a dim lamp is always a small one and a bright lamp always a far-reaching one — so a soft wash filling a room and a fierce pool a pace across sit at opposite ends of the same dial, and neither of the two crossings between them can be asked for at all. A dim wide lamp and a fierce tight one are both ordinary things to want.
+
+So each light has a **strength** and a **range**, and the range carries reach and falloff together, running them opposite ways.
+
+### How far the two lights reach
+
+Both the ambient and the head lamp run well past what it takes to see by, because being lit is not the only thing a room might want its light for: a room can be *overexposed* deliberately, and that is an effect neither dial could reach while its top was the ordinary room.
+
+Two things follow from opening the top, and both are the reason it did not simply happen by raising a number.
+
+**Each dial is on a cubic rather than a straight ramp.** The range now covers two quite different jobs. The ordinary business of lighting a room happens in the first sliver of it — the difference between a room lit for atmosphere and one lit for reading is a few hundredths — while the top is an overexposure running to a white-out. A straight ramp would spend nine steps in ten on the second and leave the first almost no travel. Cubing gives the ordinary range about half the slider and the effect the other half, and it still reaches nothing at the bottom, which a geometric ramp could not.
+
+**The lamp an unconfigured room gets did not move, but the steps naming it did.** The head lamp's ordinary strength used to sit at the very top of its range, which is the same thing as saying there was nothing above it; both its dials now sit two thirds of the way up. What has to stay fixed is the lamp, not the numbers that name it — so the default steps moved with it and every room that has said nothing is lit exactly as it was.
+
+Pushed to the top, the ambient stops lighting a room and starts erasing it: light arriving from every direction at once flattens the shading that makes shapes readable, and takes each surface to white in turn. That is what the end of the range is for, and a room that wants to be *brighter* rather than blown out should be reaching for its lamps instead.
+
 ### The head lamp stands down for the room
 
 The head lamp is only ever **the light the room is not providing for itself**. Each frame, the field is sampled where the camera is standing, and the lamp gives back as much of its strength as the room is already supplying — and takes on the room's own color as far as it does.
@@ -103,11 +128,105 @@ A save is deliberately delayed a couple of seconds, so that dragging a slider is
 
 The rule that settles it: **while an edit of this client's own is outstanding, lighting arriving from the server is ignored.** The local one is newer and already on its way, so it will win regardless; letting the older one land in the meantime only produces a flicker back to it — and, worse, leaves the form showing one setting while the room is lit in another. Two people editing one room therefore settles as last-writer-wins, which is what the room-configuration form already does with everything else it holds.
 
+### The air, and the sky past it
+
+The air inside a room and the sky past it are **two fields, not one**, and which coordinate each is read on is the whole of the difference between them. The sky's is read on the *direction* a pixel is being looked at. The fog's is read on the *world position* the pixel actually stands at. Everything else about how the two behave follows from that.
+
+The choice is forced, because a direction and a place are what the two things genuinely are:
+
+- **The sky has no positions in it.** It is at infinity, so the only thing that can vary across it is which way the viewer is facing. A field read off a direction is exactly right: the weather stays put overhead as the player walks, and looks the same from a pace outside the wall as from the far end of the world.
+- **The room's air does have positions in it, and the player is standing inside them.** Read off a direction, a thickening of the air would be painted on the inside of a dome — sliding across the walls as the player turns their head, and subtending the same angle whatever it landed on. That reads as weather when it is a mile off and as a stain on the wall when it is two paces away. Read off the world position, a thickening of the air is *somewhere*: the player walks around it, it passes between them and the far wall, and it holds still when they turn.
+
+**What that costs is worth stating.** Whatever has faded completely into the fog is standing directly in front of the sky, so if the two disagree there, the horizon can show as a seam rather than as a distance — and they no longer agree by construction. The two cannot both be had: a fully fogged wall matching a cloudy sky *means* cloud shapes crawling on that wall, which is the thing the volumetric field exists to stop. Where it can be seen at all is a room whose fog closes well inside it, looking out past the room's edge; the two are still painted in the same color, so what differs is the structure and not the hue.
+
+A **skybox** would have been the other way to do the sky, and it is still the wrong one. It is a large image to send over the network for something a room barely looks at, and — being geometry at infinity rather than a property of the air — it could not carry the room's own color at all.
+
+The sky is painted as a quad covering the screen. There is no dome or box to be inside of, nothing to keep centred on the viewer, and no far plane to fall outside of.
+
+It is drawn **last among the opaque surfaces rather than first**, which is the opposite of what a background wants to be and is worth stating. The sky covers the whole screen and is the most expensive thing per pixel in the frame — a fractal field sampled several times over, for the air and again for the land. Drawn first it is shaded in full and then painted over by every wall in the room, which is most of the screen thrown away; drawn last, sitting at the far plane and tested against the depth buffer, it is discarded before its shader runs anywhere a surface already stands. It still writes nothing back to the depth buffer, having nothing to be in front of.
+
+Because the field only *modulates* the room's own fog color, **a room that asked for black air gets a black sky with no clouds in it** — which is what every room that has never been configured asks for. The ground below the horizon is the one part of the sky that is not silent by default, and the section below says why.
+
+#### The smoke in the room's own air
+
+Fog set to one distance is an even wash: every surface the same distance off fades by the same amount, and the air reads as a filter laid over the picture rather than as something the room is full of. The smoke is what breaks that up.
+
+It is a three-dimensional field standing in the room, read at the point each fragment occupies — so a thickening of the air occupies a region rather than a patch of screen. Two surfaces meeting in a corner agree about the air in front of them, because they are asking about the same place.
+
+**What it changes is how much fog there is, not what color it is.** This is the other half of what separates it from the clouds. A cloud is a thing standing in the air and is painted its own color; smoke is the air itself being unevenly thick, and what unevenly thick air does is let more or less of what is behind it through. So the smoke scales back the coverage the distance asked for, and the color mixed toward is the room's own fog color with nothing done to it. Where the smoke lies thickest the room shows through; where it is absent the fog closes as it always did.
+
+It is also deliberately **softer than the clouds are**, and that is an absence rather than a setting. The clouds cut their field at a level to give every mass an edge, because a cloud is only legible as a shape. Air is not a shape — the player is standing inside it — and an edge in it reads as a crease drawn across the room. So there is no cut at all, only a slow lean from thick air to thin.
+
+The room chooses five things about it. **Strength** is how far the air thins where the smoke lies heaviest, and it is the only one that can turn the smoke off — at nothing the air is even again. **Scale** is how fine it runs, from one slow swell filling the room to drifting wisps. **Speed** is how fast it moves through the room, measured in world distance rather than through the field, so that asking for finer smoke does not also appear to speed it up; its bottom is air that hangs still. **Drift** and **Rise** are which way it goes — a bearing and how steeply it climbs or settles, which are two steps because a direction in three dimensions cannot be one, and which are the difference between smoke coming off something and dry ice pouring across a floor.
+
+A field that only travelled would not move so much as scroll: however slowly it was set, nothing about it would be changing, and the eye reads that rigidity at once. So the field doing the shearing travels slower than the smoke it shears, which leaves the two sliding against each other and every mass stretching and folding as it goes — for no extra samples at all.
+
+#### Where the sky's colors come from
+
+The clouds and the land are picked from a palette of their own rather than from the fog's, and the two sets are answerable to different things.
+
+Fog is what a room's own colors are *replaced by* as they recede, so its set is dark before it is anything else and gives up saturation as it brightens — a pale, vivid air is a room that goes to a colored white-out a few paces off. Cloud and land are the opposite case: they are masses seen *against* that air, at a distance, and what they need in order to read at all is to differ from it. Drawn from the fog's set they could only ever be a paler or darker version of the air itself, which is most of the way back to having no clouds and no ground.
+
+So they share one set that runs the full brightness range — white included, since that is the ordinary color of both a cloud and a snowline, and the fog's set never reaches it — with saturation peaking in the middle of that range rather than running flat, because that is where color space has room for it. One set for both, unlike every other palette in the game, because for once the two really are the same question: a distant mass seen against the air wants the same gamut whether it is vapour or rock.
+
+#### What makes a cloud read as a cloud
+
+A fractal field sampled straight gives an even mottle, not weather, and two things turn it into shapes:
+
+- **The coordinate is dragged aside by a sample of the field itself.** This shears every mass along its own gradient, which is what produces the piled edge of a cumulus and the drag and curl of smoke. Without it every mass is the same rounded blob, because nothing has pushed one side of it past the other.
+- **The field is cut at a level.** A cloud is legible because it has an *edge* — a region that is definitely cloud, a region that is definitely not, and a transition between. A fractal field has no edge anywhere; it is haze everywhere, which is why it reads as a wash however strongly it is colored.
+
+How wide that boundary runs is the room's to choose (see below), and the *level* it is centred on is not. The two are not independent: the field is symmetric about its own middle, so moving the level is mostly a way of asking for more or less of the sky covered — a further question, and one nobody has needed yet. The width is held open to at least what the field changes by across one pixel, so an edge finer than the screen can resolve fades instead of crawling; that floor is the shader's, not a setting.
+
+#### What the room chooses about it
+
+**A cloud color, and not a strength alone.** The clouds are painted in their own color and the sky between them in the fog's, so how strongly the weather reads is how far apart the two were picked. A room wanting none turns the strength to nothing, which is where an unconfigured room already has it.
+
+A strength could only ever have been a *degree of the fog's own color*, and a cloud that is a lighter or darker shade of the air it hangs in is barely a cloud. Against the dark air a room lit for atmosphere actually asks for, it is nothing at all however far the dial is pushed. That is felt worst exactly where the sky matters most — the emptiness past the room, where there is no surface to give the eye anything else to read.
+
+**A strength beside it, all the same.** Where the color says *what* the clouds are, this says how far toward it they actually get — which is the difference between weather and a tint, and the way two colors picked far apart are brought back within sight of each other without either being repicked. It is not the old dial returning: that one could only brighten and darken the air itself, where this scales a blend toward a color chosen independently of it.
+
+The rest are each on the curve their own quantity is judged on, rather than on a shared one:
+
+- **Scale** runs geometrically, for the reason a lamp's brightness does — it is judged in ratios, and a linear slider would spend most of its travel between degrees of fleece nobody can tell apart. It never reaches zero and should not: a field of no frequency is a flat sky, which is what picking the cloud color the air already is says, and says better.
+- **Softness** runs geometrically too, and for the same reason: the edge that reads as cut and the edge that reads as merely soft are a couple of hundredths apart, while the difference between wide and wider is barely a difference at all. Its top is wide enough to swallow the field whole, which is the even haze it was before it was cut — not a cloud with a very soft edge but no cloud at all, which is the right far end for the dial to reach.
+- **Speed** runs on neither a linear nor a geometric ramp. It has to reach zero, since still air is a real request and a geometric ramp can never arrive at it; but the interesting half of its range is the slow half, where the difference between imperceptible and gentle lives, and a linear ramp would hand that half a handful of steps. Squaring gives both ends what they need.
+
+Speed is an **angular** rate — how fast the clouds cross the sky — and not a rate through the noise field. That distinction is what makes it and Scale independent: measured through the field, asking for finer clouds would also appear to slow them, since a finer mass subtends a smaller angle while still taking as long to travel its own width. The two dials would then be two ways of asking overlapping questions.
+
+All of them reach the shaders as **uniforms** rather than as constants baked into the source. A constant is part of the shader, so a slider drag would rebuild and recompile every material in the scene on every frame of it — the same trap the fog's own on/off flag sets, and avoided the same way.
+
+### The ground under it
+
+Below the horizon there is land: the country the room stands over, which without it is the same empty air as everything above it.
+
+**Only the sky draws it.** This is the one part of the atmosphere the fog does *not* share, and deliberately — the fog is the air in and around the room, and a far wall fading into a hillside would be wrong. There is still no seam, for the same reason there is none between the fog and the sky, arrived at differently: the land fades into the air with distance, and a ray approaching level meets the land further and further away, so by the time it is level the land is infinitely far off and has become the air exactly. The two sides of the horizon meet in one color without either being told about the other.
+
+**The clouds stop at it.** Cloud belongs over the land, not on it: the clouds are painted on a dome of directions, so below the horizon that dome is beneath the viewer, and cloud drawn there is cloud underneath the ground — which reads as a stain on the landscape rather than as weather above it. It is what a downward ray actually meets, too, since a ray that goes down never climbs to a cloud layer.
+
+They fade out over a band rather than stopping at the line, and the band is the point. In the world the cut is abrupt — that is what a horizon *is* — but the world also has land visible right up to it, where here the land has hazed away to air a little short of it. Stopping the cloud dead would draw a hard line across open air, so instead it fades over roughly the band the land fades in over, and the two cross. This is also the cheaper arrangement: below the horizon the sky was paying for both fields at once, and now it pays for one.
+
+**It is drawn on a plane under the eye, not on the dome the clouds are on.** That is the whole of why it reads as ground. A plane seen from above it runs away from the viewer, so its features stretch and crowd toward the horizon as real land does; anything painted on the dome would keep the same apparent size all the way down and read as a wall.
+
+What gives it the shape of country rather than of hills is a second field laid over the first. A fractal field alone makes rounded swells — which is what erosion is not. Folding the field about its own middle turns the contour halfway up it into a crest, and a contour of a fractal field is a long winding line that branches and rejoins, so what comes out is ridges with valleys running out of them. The same two samples that give the clouds their billow give the land something that reads as carved.
+
+The room chooses **two colors, a coarseness, an opacity and a softness**. Low land takes the first and high land the second, so how far apart they are picked is how mountainous the country reads — a step apart is moorland; a dark green against a pale grey is a snowline. The coarseness is on a geometric curve for the reason the clouds' scale is, and never reaches zero for the same reason: land of no frequency is a flat plain, which is what picking one color for both says and says better.
+
+**Opacity is how long the land takes to surrender its color to the air.** The land hazes into the sky with distance as land does, and left to the haze alone its own color is mostly overwhelmed — a suggestion of a country rather than a country. Raising this divides the rate it is lost at, so the color holds much further out.
+
+What it deliberately cannot do is make the land opaque *at* the horizon, and that limit is the whole reason it divides the rate rather than lifting the land off zero. Land arriving at the horizon still colored would meet the sky in a color the sky is not, and draw the seam this entire arrangement exists to avoid. Dividing the rate leaves it still arriving at nothing exactly there, having simply taken longer to go.
+
+**Softness is how wide the slope between the two colors runs** — a drawn coastline or snowline at one end, two colors that never quite separate at the other. Only the width is the room's: the *level* the land is split at is fixed, for the reason the clouds' cut level is, since moving it is really a way of asking how much of the country is upland rather than how sharply the two meet.
+
+The distance the land stays visible to is **not** a setting. It is fixed by the same constant that decides how far below the horizon the fade runs, so a room asking for coarser country gets bigger hills and nothing else. It also has a second job: land compressed toward the horizon is a field sampled faster than the screen can carry, which crawls and sparkles, and it has faded out before it ever gets that fine.
+
+Unlike the weather, **the land is on by default** — quietly, as two dark neutrals near the bottom of the scenery palette. It is the one setting in this whole section whose default is not "as things were", because its absence is not neutral: a sky with no clouds is a clear sky, but a sky with no ground is a room hanging in a void, which is a stronger statement than any weather and not one an unconfigured room should be making. Dark neutrals are also the one choice that reads correctly against every air a room might pick, since ground darker than the sky above it is what a horizon is. A room that does want the void drops the opacity to nothing.
+
 ### Fog and the camera
 
 Both the head lamp and the fog are sized from **how far off whatever the camera is looking at is**, and they are set together, because they are answering the same question: a camera pulled back to take in the whole room has to be able to see the whole room. A light sized for the eye goes out past its own range, leaving what is being looked at to the ambient light alone; fog sized for the eye closes over everything beyond a few paces, which is a room pulled back from and then buried. The fog is pushed out in proportion and never pulled in, since a camera closer than a standing player's reach is still a player standing in the room.
 
-The fog itself exists from the moment the scene does and is never taken away. Turning it on and off flips the same kind of compile-time flag the light count is, and recompiles every material in the scene; "no fog" is therefore fog whose distances are past everything the camera draws, which is exactly what an unconfigured room asks for anyway.
+The fog itself exists from the moment the scene does and is never taken away. Turning it on and off flips the same kind of compile-time flag the light count is, and recompiles every material in the scene; "no fog" is therefore fog whose distances are past everything the camera draws, which is exactly what an unconfigured room asks for anyway. The sky is likewise always drawn, whatever the fog is doing — it is the emptiness past the room and not a consequence of the haze in front of it.
 
 ## The Lamp
 
@@ -127,6 +246,12 @@ Because the lamp's body will eventually be several pieces rather than one, it is
 ## What a generated room comes with
 
 **Room generation chooses a room's atmosphere explicitly, and what it chooses is the documented default** — plain white light, the head lamp at full, and no fog. It places no lamps.
+
+The cloud settings are the one part of this with no "as it always was" to fall back on, since nothing like them existed before. Their **strength** is written at nothing, which is a sky with no weather in it — so a generated room shows none, and neither does any room that has never been configured. Everything else about them is written at the values the sky was tuned at, and their color at plain white, so that a room which does turn the strength up meets a cloud rather than a stain, and a sky already worth looking at rather than four more sliders to go and find.
+
+The **smoke** is written on rather than off, and it costs nothing to do so: a generated room's fog is pushed past everything the camera draws, so there is no haze for the smoke to be uneven in. What it buys is that the first owner to pull their fog in finds air that already moves, instead of a flat wash and five more sliders to go and find.
+
+The **ground** is the exception, and the only setting generation writes as something visible in the room as generated: two near-blacks, giving every generated room a quiet horizon under its sky. What separates it from the clouds is that its absence is not neutral — no weather is a clear sky, but no ground is a room hanging in a void, and choosing that for a room is as much a decision as choosing land would be. Between the two, land is both the commoner wish and the easier one to undo, and near-black land is the one choice that stays right whatever air the room is later given.
 
 That is a decision rather than an omission, and the reason is worth writing down, since a parameter no generator sets is normally one no room has ever actually held (see [room_generation.md](../geometry/room_generation.md)).
 

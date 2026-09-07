@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { LIGHT_BLOCK_MAP_FRAGMENT_GLSL, LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL,
-    LIGHT_BLOCK_MAP_PARS_GLSL, LIGHT_BLOCK_MAP_VERTEX_GLSL } from "../shaders/lightBlockMapGLSL";
+    LIGHT_BLOCK_MAP_PARS_GLSL, LIGHT_BLOCK_MAP_VERTEX_GLSL } from "../../shaders/lightBlockMapGLSL";
 
 // Wires a lit material up to the room's light block map. Written once and applied to every lit
 // material rather than pasted into each, since what each of them needs is identical: a world position

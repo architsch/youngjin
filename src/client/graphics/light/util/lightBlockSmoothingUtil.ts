@@ -1,7 +1,7 @@
-import Voxel from "../../../shared/voxel/types/voxel";
-import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
+import Voxel from "../../../../shared/voxel/types/voxel";
+import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS }
-    from "../../../shared/system/sharedConstants";
+    from "../../../../shared/system/sharedConstants";
 
 // Softens an accumulated light field across neighbouring blocks.
 //

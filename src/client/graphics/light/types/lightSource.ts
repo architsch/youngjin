@@ -1,4 +1,4 @@
-import Vec3 from "../../../shared/math/types/vec3";
+import Vec3 from "../../../../shared/math/types/vec3";
 
 // One thing in the room that gives off light, reduced to what propagation actually needs. This is
 // not a THREE.PointLight and never becomes one: the scene keeps exactly one real light (the lamp the

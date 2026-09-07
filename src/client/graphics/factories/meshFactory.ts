@@ -201,7 +201,7 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
     geometryClone.setAttribute("uvSampleSize", uvSampleSizeBufferAttrib);
 
     // A material that paints an outline around its instances reads a per-instance strength to know
-    // which of them wear one (see MaterialConstructorMap's addInstanceOutline). Made here, alongside
+    // which of them wear one (see the instance-outline shader). Made here, alongside
     // the mesh, rather than the first time an instance asks for one: it is what the compiled shader
     // reads, and a mesh that gained it partway through its life would have been drawn without it up
     // to that point.

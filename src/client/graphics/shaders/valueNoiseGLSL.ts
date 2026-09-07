@@ -5,7 +5,13 @@
 //
 // The names are prefixed rather than plain, because these functions are concatenated into three.js's
 // own shader source and must not collide with anything the stock chunks declare.
+//
+// Guarded, because more than one of the blocks spliced into a single material can want it — the tin
+// or wood finish of a surface and the air in front of it, say — and a function declared twice is a
+// compile error. Whichever block lands first in the assembled source declares it for the rest.
 const VALUE_NOISE_GLSL = `
+    #ifndef VALUE_NOISE_GLSL_INCLUDED
+    #define VALUE_NOISE_GLSL_INCLUDED
     float valueNoiseHash(vec3 p)
     {
         p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
@@ -31,6 +37,7 @@ const VALUE_NOISE_GLSL = `
         sum += 0.125 * valueNoise(p * 4.01);
         return sum / 0.875;
     }
+    #endif
 `;
 
 export default VALUE_NOISE_GLSL;

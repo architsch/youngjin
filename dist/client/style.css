@@ -970,10 +970,10 @@
       background-color: color-mix(in oklab, var(--color-white) 25%, transparent);
     }
   }
-  .fill-amber-300\/30 {
-    fill: color-mix(in srgb, oklch(87.9% 0.169 91.605) 30%, transparent);
+  .fill-amber-300\/40 {
+    fill: color-mix(in srgb, oklch(87.9% 0.169 91.605) 40%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
-      fill: color-mix(in oklab, var(--color-amber-300) 30%, transparent);
+      fill: color-mix(in oklab, var(--color-amber-300) 40%, transparent);
     }
   }
   .fill-emerald-400 {

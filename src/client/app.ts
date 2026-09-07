@@ -22,7 +22,7 @@ import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outli
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import RoomPrefsChangedSignal from "../shared/room/types/roomPrefsChangedSignal";
-import RoomLightingUtil from "./system/util/roomLightingUtil";
+import RoomLightingUtil from "./graphics/light/util/roomLightingUtil";
 import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 import SinglePlayerManager from "./singlePlayer/singlePlayerManager";

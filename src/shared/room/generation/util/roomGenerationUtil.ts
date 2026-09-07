@@ -60,7 +60,9 @@ const RoomGenerationUtil =
         // The atmosphere is written out rather than left empty. What a generated room comes with
         // is the documented default — plain white light and no fog, which is a room seen as it is
         // rather than a room dressed in somebody's taste — but it is *chosen* here, because a
-        // parameter no generator sets is one no room has ever actually held.
+        // parameter no generator sets is one no room has ever actually held. That covers the cloud
+        // settings too: they are written at the values the sky was tuned at rather than switched
+        // off, and stay invisible until a room asks for air with a color in it.
         // See @docs/graphics/lighting.md .
         const room = new Room(undefined, roomName, roomType, ownerUserID, ownerUserName,
             "", RoomPrefsUtil.getDefaultPrefsString(),

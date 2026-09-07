@@ -1,10 +1,10 @@
-import App from "../../app";
-import GraphicsManager from "../../graphics/graphicsManager";
-import RoomAPIClient from "../../networking/client/roomAPIClient";
-import RoomPrefs from "../../../shared/room/types/roomPrefs";
-import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
-import createDeferredSave from "../../ui/util/deferredSave";
-import { notificationMessageObservable } from "../clientObservables";
+import App from "../../../app";
+import GraphicsManager from "../../graphicsManager";
+import RoomAPIClient from "../../../networking/client/roomAPIClient";
+import RoomPrefs from "../../../../shared/room/types/roomPrefs";
+import RoomPrefsUtil from "../../../../shared/room/util/roomPrefsUtil";
+import createDeferredSave from "../../../ui/util/deferredSave";
+import { notificationMessageObservable } from "../../../system/clientObservables";
 
 // The one place the room's atmosphere is changed, and the one place that decides what wins when two
 // things want to change it at once.
@@ -41,7 +41,7 @@ const RoomLightingUtil =
     // An edit made here: applied to the room as it is made, and written down a couple of seconds
     // later. There is no "apply" step and nothing to undo — what the user is looking at *is* the
     // setting.
-    applyLocalEdit: (prefs: RoomPrefs, roomID?: string) =>
+    applyLocalEdit: (prefs: RoomPrefs, roomID: string) =>
     {
         const encodedPrefs = RoomPrefsUtil.encode(prefs);
         outstandingPrefs = encodedPrefs;
@@ -87,7 +87,7 @@ function applyToScene(prefs: string)
 
 // Handed the setting to write rather than reading it back off the room, so that a room change in
 // the meantime cannot turn a pending save into a write of somebody else's lighting — or of nothing.
-const trySave = createDeferredSave((prefs: string, roomID?: string) => {
+const trySave = createDeferredSave((prefs: string, roomID: string) => {
     RoomAPIClient.changeRoomPrefs(prefs, roomID).then(response => {
         if (response.status >= 200 && response.status < 300)
             return;

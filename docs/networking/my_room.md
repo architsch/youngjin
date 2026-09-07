@@ -16,7 +16,9 @@ The client computes the room URL locally and copies it to the clipboard. No serv
 ## Change Texture Pack
 A room already comes with a texture pack, drawn when it was generated along with the textures its contents are finished in (see [room_generation.md](../geometry/room_generation.md)). Changing it re-skins those contents: the client sends the new texture pack to the server, which persists the change.
 
-One route serves two callers, since which room is being re-skinned is the only thing that differs between them. Naming no room means "my own", and the requester must own one. Naming a room means an admin re-skinning a hub — a room nobody owns, and so a room the ownership check could never reach.
+One route serves two callers, since which room is being re-skinned is the only thing that differs between them — and re-lighting a room (see [lighting.md](../graphics/lighting.md)) is settled the same way, the two being one act of decorating.
+
+**Every such request names the room it means**, and whether the caller may decorate it is then a question about that room rather than about how it was addressed. It has two affirmative answers: a room the caller owns, and a hub asked for by an admin — a room nobody owns, and so one the ownership check could never reach. Everything else is refused, which covers a member reaching for a hub, an admin reaching for somebody else's private room, and a guest, who owns nothing, reaching for anything at all.
 
 ## Restricted Zones
 The room's settings form is also where its owner draws its **restricted zones** — the stretches of the room he keeps to himself, which nobody else may change (see [restricted_zone.md](../gameplay/restricted_zone.md)). Unlike everything above, these do not travel over an HTTP route: they are part of the room's contents rather than of its record, and they are synced the way a voxel edit is (see [voxel_grid_update.md](voxel_grid_update.md)).

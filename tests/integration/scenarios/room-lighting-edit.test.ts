@@ -42,7 +42,7 @@ vi.mock("../../../src/client/system/clientObservables", () => ({
 }));
 
 const { default: RoomLightingUtil } = await import(
-    "../../../src/client/system/util/roomLightingUtil");
+    "../../../src/client/graphics/light/util/roomLightingUtil");
 
 // The setting the user is dragging through, as the room stores it.
 function prefsWithFogColor(fogColorIndex: number)
@@ -73,9 +73,9 @@ describe("editing a room's lighting", () => {
     });
 
     it("writes down the setting the user finished on, not the one that armed the timer", async () => {
-        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3));
+        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         await vi.advanceTimersByTimeAsync(500);
-        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(7));
+        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(7), "room-1");
         await vi.advanceTimersByTimeAsync(5000);
 
         expect(sentPrefs).toEqual([encodedFogColor(7)]);
@@ -86,11 +86,11 @@ describe("editing a room's lighting", () => {
         // arrives. Applying it would light the room in a color the user has already left, and — if
         // the pending save read the room rather than carrying its own setting — write that older
         // color down as the final answer too.
-        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3));
+        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         await vi.advanceTimersByTimeAsync(2500);
         expect(sentPrefs).toEqual([encodedFogColor(3)]);
 
-        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(7));
+        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(7), "room-1");
         const echoTaken = RoomLightingUtil.applyIncoming(
             asServerWouldStore(encodedFogColor(3)));
 
@@ -103,7 +103,7 @@ describe("editing a room's lighting", () => {
     });
 
     it("takes its own setting back once it has come around", async () => {
-        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3));
+        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         await vi.advanceTimersByTimeAsync(2500);
 
         expect(RoomLightingUtil.applyIncoming(asServerWouldStore(encodedFogColor(3)))).toBe(true);
@@ -122,7 +122,7 @@ describe("editing a room's lighting", () => {
         // Otherwise a single failed request would leave this client refusing every change anybody
         // else made, for as long as it stayed in the room.
         saveResponseStatus = 500;
-        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3));
+        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         await vi.advanceTimersByTimeAsync(5000);
 
         expect(RoomLightingUtil.applyIncoming(encodedFogColor(9))).toBe(true);
@@ -130,7 +130,7 @@ describe("editing a room's lighting", () => {
     });
 
     it("drops what it was holding when the user goes to another room", async () => {
-        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3));
+        RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         RoomLightingUtil.applyRoomLighting(encodedFogColor(20));
 
         // The new room's own lighting stands, and the save still goes with the setting it carries

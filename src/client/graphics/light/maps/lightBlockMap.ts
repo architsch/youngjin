@@ -1,15 +1,15 @@
 import * as THREE from "three";
-import Voxel from "../../../shared/voxel/types/voxel";
-import Vec3 from "../../../shared/math/types/vec3";
+import Voxel from "../../../../shared/voxel/types/voxel";
+import Vec3 from "../../../../shared/math/types/vec3";
 import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS } from "../../../shared/system/sharedConstants";
-import NumUtil from "../../../shared/math/util/numUtil";
-import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import { LIGHT_BLOCK_MAP_MAX_BRIGHTNESS } from "../../system/clientConstants";
-import LightBlockPropagationUtil, { LightPropagationScratch } from "./lightBlockPropagationUtil";
-import LightBlockMapMaterialUtil from "./lightBlockMapMaterialUtil";
-import LightBlockSmoothingUtil from "./lightBlockSmoothingUtil";
-import LightSource from "./lightSource";
+    NUM_VOXEL_ROWS } from "../../../../shared/system/sharedConstants";
+import NumUtil from "../../../../shared/math/util/numUtil";
+import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
+import { LIGHT_BLOCK_MAP_MAX_BRIGHTNESS } from "../../../system/clientConstants";
+import LightBlockPropagationUtil, { LightPropagationScratch } from "../util/lightBlockPropagationUtil";
+import LightBlockMapMaterialUtil from "../util/lightBlockMapMaterialUtil";
+import LightBlockSmoothingUtil from "../util/lightBlockSmoothingUtil";
+import LightSource from "../types/lightSource";
 
 // Every light in the room except the one the camera carries, held as data rather than as
 // THREE.PointLight objects and delivered to the shaders as a pair of 3D textures covering the room's

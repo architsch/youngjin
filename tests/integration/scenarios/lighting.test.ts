@@ -18,10 +18,10 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import fc from "fast-check";
 import LightBlockPropagationUtil, { getDistanceAttenuation, LightPropagationScratch }
-    from "../../../src/client/graphics/light/lightBlockPropagationUtil";
-import LightSource from "../../../src/client/graphics/light/lightSource";
-import LightBlockSmoothingUtil from "../../../src/client/graphics/light/lightBlockSmoothingUtil";
-import LightBlockMap from "../../../src/client/graphics/light/lightBlockMap";
+    from "../../../src/client/graphics/light/util/lightBlockPropagationUtil";
+import LightSource from "../../../src/client/graphics/light/types/lightSource";
+import LightBlockSmoothingUtil from "../../../src/client/graphics/light/util/lightBlockSmoothingUtil";
+import LightBlockMap from "../../../src/client/graphics/light/maps/lightBlockMap";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";

@@ -1,8 +1,8 @@
-import Voxel from "../../../shared/voxel/types/voxel";
-import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import { NUM_VOXEL_BLOCKS } from "../../../shared/system/sharedConstants";
-import { LIGHT_SOURCE_MIN_DISTANCE, VOXEL_BLOCK_NEIGHBOR_OFFSETS } from "../../system/clientConstants";
-import LightSource from "./lightSource";
+import Voxel from "../../../../shared/voxel/types/voxel";
+import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
+import { NUM_VOXEL_BLOCKS } from "../../../../shared/system/sharedConstants";
+import { LIGHT_SOURCE_MIN_DISTANCE, VOXEL_BLOCK_NEIGHBOR_OFFSETS } from "../../../system/clientConstants";
+import LightSource from "../types/lightSource";
 
 // Spreads light through a room's open voxel blocks. Deliberately knows nothing about three.js or
 // about textures: what comes out is plain numbers in plain buffers, which is what lets the whole of

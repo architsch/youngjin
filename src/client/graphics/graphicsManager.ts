@@ -2,12 +2,15 @@ import * as THREE from "three";
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { graphicsContextRestoredObservable } from "../system/clientObservables";
 import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } from "../system/types/clientProcess";
-import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MINUTE_IN_MS } from "../../shared/system/sharedConstants";
-import LightBlockMap from "./light/lightBlockMap";
+import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MINUTE_IN_MS,
+    SCENERY_COLOR_PALETTE_NAME } from "../../shared/system/sharedConstants";
+import LightBlockMap from "./light/maps/lightBlockMap";
 import RoomPrefs from "../../shared/room/types/roomPrefs";
 import RoomPrefsUtil, { MAX_FOG_DISTANCE, MAX_ROOM_PREFS_STEP } from "../../shared/room/util/roomPrefsUtil";
-import HeadLightPowerUtil from "../../shared/graphics/light/util/headLightPowerUtil";
+import HeadLightUtil from "../../shared/graphics/light/util/headLightUtil";
 import ColorUtil from "../../shared/math/util/colorUtil";
+import ShaderPrecompileUtil from "./util/shaderPrecompileUtil";
+import AtmosphereMaterialUtil from "./util/atmosphereMaterialUtil";
 
 const minAspectRatio = 0.6;
 const maxAspectRatio = 2;
@@ -55,12 +58,15 @@ let contextRestoreCheckScheduled = false;
 
 // The point light rides with the camera and is what actually lights the room for the user — the
 // ambient light only keeps the unlit side of things from being black. How strong it is, how far it
-// carries and how quickly it falls off are one setting rather than three, and the room says which
-// (see HeadLightPowerUtil); these are its settings for a view from the player's own eye, where
+// carries and how quickly it falls off are two settings rather than one or three, and the room says
+// both (see HeadLightUtil); these are its settings for a view from the player's own eye, where
 // whatever he is looking at is a few paces off.
-let basePointLightIntensity = HeadLightPowerUtil.getIntensity(MAX_ROOM_PREFS_STEP);
-let basePointLightDistance = HeadLightPowerUtil.getDistance(MAX_ROOM_PREFS_STEP);
-let pointLightDecay = HeadLightPowerUtil.getDecay(MAX_ROOM_PREFS_STEP);
+// Started at what a room that has said nothing asks for, which is no longer the top of the range —
+// the top is now an effect well past the ordinary lamp (see HeadLightUtil).
+const unconfiguredPrefs = RoomPrefsUtil.decode("");
+let basePointLightIntensity = HeadLightUtil.getIntensity(unconfiguredPrefs.headLightPowerStep);
+let basePointLightDistance = HeadLightUtil.getDistance(unconfiguredPrefs.headLightRangeStep);
+let pointLightDecay = HeadLightUtil.getDecay(unconfiguredPrefs.headLightRangeStep);
 
 // How far past whatever the camera is looking at the light has to carry. Above 1 so that the target
 // is lit among its surroundings rather than picked out of the dark, and fixed so that the target
@@ -185,16 +191,32 @@ const GraphicsManager =
         ambLight.intensity = RoomPrefsUtil.getAmbientIntensity(prefs);
 
         pointLightBaseColor.set(getPaletteColor(LIGHT_COLOR_PALETTE_NAME, prefs.headLightColorIndex));
-        basePointLightIntensity = HeadLightPowerUtil.getIntensity(prefs.headLightPowerStep);
-        basePointLightDistance = HeadLightPowerUtil.getDistance(prefs.headLightPowerStep);
-        pointLightDecay = HeadLightPowerUtil.getDecay(prefs.headLightPowerStep);
+        basePointLightIntensity = HeadLightUtil.getIntensity(prefs.headLightPowerStep);
+        basePointLightDistance = HeadLightUtil.getDistance(prefs.headLightRangeStep);
+        pointLightDecay = HeadLightUtil.getDecay(prefs.headLightRangeStep);
         refreshPointLight();
 
         sceneFog.color.set(getPaletteColor(FOG_COLOR_PALETTE_NAME, prefs.fogColorIndex));
-        // The void beyond the far plane is painted in the fog's own color rather than in black.
-        // They are the same surface as far as the eye is concerned: whatever has faded completely
-        // into the air is standing directly in front of the emptiness past the room, and if the two
-        // disagree the horizon is a visible seam rather than a distance.
+        // The void beyond the far plane is painted in the same color the room's own air is, so that
+        // the sky and the haze in front of it at least agree about that much — they no longer share a
+        // field, and the atmosphere shader says why. The clear color is set to match as well, though
+        // nothing should ever see it: the sky covers every pixel.
+        AtmosphereMaterialUtil.setColor(sceneFog.color);
+        // How unevenly thick that air is. The room's alone — nothing the sky draws reads any of it.
+        AtmosphereMaterialUtil.setSmoke(RoomPrefsUtil.getFogSmokeAmplitude(prefs),
+            RoomPrefsUtil.getFogSmokeScale(prefs), RoomPrefsUtil.getFogSmokeSpeed(prefs),
+            RoomPrefsUtil.getFogSmokeDrift(prefs));
+        // The clouds and the land come from a palette of their own — they are masses seen against
+        // the air rather than airs, and the fog's set has nothing in it that would read as either.
+        cloudColorTemp.set(getPaletteColor(SCENERY_COLOR_PALETTE_NAME, prefs.cloudColorIndex));
+        AtmosphereMaterialUtil.setClouds(cloudColorTemp,
+            RoomPrefsUtil.getCloudOpacity(prefs), RoomPrefsUtil.getCloudScale(prefs),
+            RoomPrefsUtil.getCloudSoftness(prefs), RoomPrefsUtil.getCloudSpeed(prefs));
+        groundColorTemp.set(getPaletteColor(SCENERY_COLOR_PALETTE_NAME, prefs.groundColorIndex));
+        peakColorTemp.set(getPaletteColor(SCENERY_COLOR_PALETTE_NAME, prefs.groundPeakColorIndex));
+        AtmosphereMaterialUtil.setGround(groundColorTemp, peakColorTemp,
+            RoomPrefsUtil.getGroundScale(prefs), RoomPrefsUtil.getGroundSolidity(prefs),
+            RoomPrefsUtil.getGroundSoftness(prefs));
         gameRenderer.setClearColor(sceneFog.color);
         refreshFog();
     },
@@ -219,16 +241,26 @@ const GraphicsManager =
         // Consumed once a frame rather than the moment something changes, so that dragging a lamp
         // across the room costs one propagation per frame rather than one per transform update.
         lightBlockMap.update();
+        // The sky is drawn from where the camera is looking and what the clock says, so both have to
+        // reach it before the frame does.
+        AtmosphereMaterialUtil.update(camera);
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);
     },
-    // Compiles the shader programs for every material currently in the scene (using the
+    // Compiles the shader programs for every material the room can draw with (using the
     // KHR_parallel_shader_compile extension when available). Called during the room-loading screen
     // so the one-time shader-compilation cost is paid up front, rather than stalling the first
     // frame a given material is drawn (e.g. the first time a world-space gizmo appears).
+    //
+    // Two passes, because they cover different things. The first is everything standing in the room
+    // as loaded. The second is every material that has *not* been needed yet but can be at any
+    // moment — see ShaderPrecompileUtil, which also explains why a shader cannot simply be shipped
+    // compiled. Its stand-in meshes are compiled against the real scene, so they come out as the
+    // same programs the real ones will ask for rather than as near misses.
     precompileSceneShaders: async () =>
     {
         await gameRenderer.compileAsync(scene, camera);
+        await gameRenderer.compileAsync(await ShaderPrecompileUtil.getWarmupScene(), camera, scene);
     },
     load: async (updateCallback: XRFrameRequestCallback | null) =>
     {
@@ -240,6 +272,11 @@ const GraphicsManager =
 
             scene = new THREE.Scene();
             scene.fog = sceneFog;
+
+            // The emptiness past the room, painted rather than cleared to a flat color (see
+            // AtmosphereMaterialUtil). Part of the scene like everything else, and kept for the app's
+            // whole lifetime — it belongs to no particular room, only to whatever air one asks for.
+            scene.add(AtmosphereMaterialUtil.createSkyMesh());
 
             // Both its color and its strength are the room's to choose (see
             // setRoomLightingPrefs); what it is created with is what a room that has said nothing
@@ -383,6 +420,11 @@ function getPaletteColor(paletteName: string, index: number): string
 }
 
 const colorTemp = new THREE.Color();
+// Kept apart from the one above, which the head lamp uses every frame — and from each other, since
+// the atmosphere's colors are handed over together and one holder could not carry all three.
+const cloudColorTemp = new THREE.Color();
+const groundColorTemp = new THREE.Color();
+const peakColorTemp = new THREE.Color();
 
 function onResize(ev: UIEvent)
 {

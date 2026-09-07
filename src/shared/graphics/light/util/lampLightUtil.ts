@@ -3,7 +3,7 @@ import { MAX_ROOM_PREFS_STEP } from "../../../room/util/roomPrefsUtil";
 
 // What a lamp somebody installed gives off, as two settings rather than one or three.
 //
-// Three would be wrong for the reason the head lamp's own note gives (see HeadLightPowerUtil):
+// Three would be wrong for the reason the head lamp's own note gives (see HeadLightUtil):
 // brightness, reach and falloff offered as three free dials mostly describe lamps that do not
 // exist. **One would be wrong too, and that is what is particular here.** A lamp's strength and its
 // spread are genuinely independent wishes: a wash that fills a room softly and a tight pool that

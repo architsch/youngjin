@@ -367,7 +367,7 @@ export default class InstancedMeshBinding
 
     // How strongly this instance wears the outline its material draws around it — 0 for none, 1 for
     // the full color. Nothing happens on a material that was not given an outline color: the
-    // attribute is simply never read (see MaterialConstructorMap's addInstanceOutline).
+    // attribute is simply never read (see the instance-outline shader).
     //
     // Unchanged values are dropped rather than written, because this is swept over every instance of
     // a mesh at once — the whole of a room's voxel mesh, most of which is not outlined and stays as
