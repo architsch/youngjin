@@ -34,8 +34,35 @@
         "    not already answer is worth one prompt.",
         "",
         "The deny additions close the two levers that move production: the Promote to Live and",
-        "Rollback Live workflows. No automated run has any business dispatching those."
+        "Rollback Live workflows. No automated run has any business dispatching those.",
+        "",
+        "The allow list above is a prefix matcher, and that is the limit of it. It cannot see",
+        "into `a && b`, `until curl ...; do ...; done`, `git -C . rev-parse` or",
+        "`kill $(lsof -ti:3000)` — the shapes an in-browser test or a screenshot run actually",
+        "types — so each of those was a prompt however many single commands had been allowed",
+        "individually. The PreToolUse hook below decomposes the command instead: quoting,",
+        "operators, loop keywords, wrapper prefixes, redirections and substitutions, down to the",
+        "simple commands inside, and approves the whole only when every one of them is local and",
+        "reversible. It only ever says \"allow\" — anything it cannot parse or does not recognise",
+        "gets no decision, and these rules apply untouched. Its own hard-block list mirrors the",
+        "deny list above so a hook decision can never route around it, and it withholds",
+        "`maintenance.js --apply` for the same reason this file does. Edit it with the self-test:",
+        "`node .claude/hooks/autoApproveBash.js --self-test`."
     ],
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/autoApproveBash.js\"",
+                        "timeout": 10
+                    }
+                ]
+            }
+        ]
+    },
     "permissions": {
         "allow": [
             "Bash(which *)",

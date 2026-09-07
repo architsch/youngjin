@@ -74,33 +74,27 @@ If **you** started it, stop it once the captures are done (`npm run stop`, then 
 
 ## Step 4 — Capture the screenshots
 
-Full details in [reference/capture.md](reference/capture.md). **Build the set; do not go looking for
-one** — and **work each shot out in a live session, writing the script last**, since running a whole
-script from boot to learn what one step did costs a full run per guess.
+Full details in [reference/capture.md](reference/capture.md). **Work each shot out in a live session,
+writing the script last**, since running a whole script from boot to learn what one step did costs a
+full run per guess.
 
-**A dev-log screenshot is a photograph, not a recording.** It has never been a claim that the room it
-was taken in arose by itself. What it has to be honest about is the thing it is *of* — a material, a
-shape, a doorway — and that thing is the real one either way, spawned and drawn and lit as the game
-does it. So a capture run opens in the **sandbox**: an empty room whose walls, floors, pictures and
-doors you stand up by asking, and whose camera goes anywhere. Decide the frame, build what belongs in
-it, put the camera where the picture wants it. It is about three times faster than the alternative
-and, far more importantly, the composition becomes a decision rather than a consequence of wherever
-the search for a subject happened to stop.
+**Screenshots are for exhibition, not for testing — there is no need to play the game to take one.**
+So every capture run happens in the **sandbox** single-player room: an empty room whose walls,
+floors, blocks, pictures and doors you stand up by asking, and whose camera goes anywhere. Decide the
+frame, build what belongs in it, put the camera where the picture wants it. The picture stays honest
+because the thing it is *of* is spawned, drawn and lit exactly as the game does it; only the room
+around it was arranged.
 
-Two cases still need a generated room, and only these two: the subject **is** a room the generator
-produced (how a hub is laid out, what two storeys look like), or the shot has to **perform a flow**
-(entering edit mode, hanging a picture through the tools). Those set `freshRoom: true` and copy
-`shots/_generated-room-template.js`. A feature the sandbox simply has no op for is **not** a third
-case: add the op — mock the state, never the act — so that this post and every later one about that
-feature stay sandbox runs. See [build the set](reference/capture.md#build-the-set-do-not-go-looking-for-one).
+**When the sandbox has no way to show a feature yet, add one before shooting** — a case in
+`dev/scripts/lib/setup.js` and the matching entry on the client bridge behind it. What the new op
+owes is the feature's *appearance*, a couple of convincing visual artifacts, not its behaviour. It is
+done once per feature rather than once per post. See
+[always shoot in the sandbox](reference/capture.md#1-always-shoot-in-the-sandbox).
 
 1. **Open a session and leave it in the background:**
 
    ```bash
    node dev/scripts/devlog/captureRunner.js --serve &
-
-   # only for the two cases above
-   node dev/scripts/devlog/captureRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4] &
    ```
 
 2. **Build each shot one step at a time.** Every response carries the resulting pose, view and
@@ -120,7 +114,7 @@ feature stay sandbox runs. See [build the set](reference/capture.md#build-the-se
    **Dress the set out of a palette** (`palettes()` returns the texture-index combinations the game
    finishes its own rooms in), and **fill the frame** — a set that is a grey box with the subject in
    it has wasted the whole advantage of building it. See
-   [building the set](reference/capture.md#ctxsetup-in-the-sandbox--building-the-set).
+   [building the set](reference/capture.md#ctxsetup--building-the-set).
 
 3. **Read every JPEG as you go.** They are images; open them with the Read tool and look. The runner
    cannot tell a good frame from a bad one, and neither can the pose. Re-shoot anything showing a
@@ -136,23 +130,30 @@ feature stay sandbox runs. See [build the set](reference/capture.md#build-the-se
 5. Run the script end to end with `--out=test-results/devlog-probe`, read the images again, then a
    final run without `--out`, writing into `public/devlog-<year>/`.
 
-One to four images per post, roughly one per paragraph. The first one in the post becomes its
-share-preview image, so lead with the one that reads best at a glance.
+**Two to four images per post**, roughly one per paragraph. The first one becomes the post's
+share-preview image, so lead with the one that reads best at a glance. They have to look
+**sufficiently different from each other and from the images already in `public/devlog-<year>/`** —
+read the recent ones first. Differ in kind (high over the set; through a doorway with depth beyond
+it; close and oblique at the subject's own level), not merely in distance. That is not licence to
+survey: choose the palette and the vantages up front, shoot them, and stop.
 
 **Compose each frame; do not merely capture it.** Most readers meet the post as a thumbnail on a
-phone, so a frame that technically contains the feature but reads as a grey room has failed. The
-three faults to shoot against, with the camera numbers that fix them, are in
-[reference/capture.md](reference/capture.md#composing-the-frame):
+phone, so a frame that technically contains the feature but reads as a grey room has failed. Full
+detail in [reference/capture.md](reference/capture.md#3-composing-the-frame):
 
-- **Fill the frame with the subject** — roughly a third to a half of the frame's shorter side. A
-  subject lost in the middle of a wall is the commonest fault. In the sandbox that means standing
-  the camera four to eight units off it, and aiming *at* it — the room's only light is the one the
-  camera carries, and it reaches as far as the camera is aimed.
-- **Come round off the square-on view** — off the subject's axis and above or below its level, so
-  the room recedes instead of standing flat like a backdrop.
-- **Balance the whole frame** — three or four things at different depths, differing in colour. In
-  the sandbox everything besides the subject is yours to build, so a frame with a blank wall over
-  half of it and a band of empty floor along the bottom is a set that was not finished.
+- **The rule of thirds.** Aiming *at* the subject centres it; offset the aim point so it falls on a
+  third, without letting it leave the light the camera carries. The subject should still fill a
+  third to a half of the frame's shorter side — four to eight units back from it in the sandbox.
+- **Decent contrast, in colour rather than brightness** — parts the eye can tell apart, all inside
+  one scheme rather than clashing.
+- **No dead margin, and a balanced frame** — a blank wall over half of it, a band of empty floor
+  along the bottom, or an unlit void along an edge is a set that was not finished.
+- **A variety of architectural patterns, blocks and objects** at different depths — a corner and a
+  vanishing point, a picture on a wall, a plinth or a pillar, a doorway cut through to somewhere
+  beyond. Busy is as bad as bare: the eye should find the subject in about a second and still have
+  somewhere else to go.
+- **Come round off the square-on view**, off the subject's axis and above or below its level, so the
+  room recedes instead of standing flat like a backdrop.
 
 ## Step 5 — Write the post
 

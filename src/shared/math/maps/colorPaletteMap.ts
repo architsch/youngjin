@@ -111,6 +111,17 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     // stores no color at all and is read back at index 0, so white here is what makes an untouched
     // room look exactly as it did before rooms could be lit (see RoomPrefsUtil).
     //
+    // **Nothing in it is a dimmed version of anything else.** Every entry sits at the top of the
+    // brightness range — a hue and a strength of tint, never a degree of darkness — because what is
+    // being picked here is what a light *is*, while how much of it there is is a dial standing
+    // beside it in every one of the three places this set is read: a lamp's strength, a room's
+    // ambient strength, and the head lamp's power. A darker entry is that dial spelled a second
+    // time and spelled worse, since it cannot reach nothing the way the dial can, and a fitting
+    // painted dark cannot be told from one somebody turned down. It is also not a thing a room can
+    // honour: light is only ever added to what is already there, so the darkest entry such a set
+    // could hold would still darken nothing (see LightBlockMap) — it would only be a lamp that
+    // fails to light, which is what LampObjectUtil refuses to let one arrive as.
+    //
     // This palette is far longer than the ones above, and deliberately holds colors that are hard
     // to tell apart in a swatch grid. That is the opposite of the rule everywhere else, and the
     // reason is what is being chosen: a finish is picked by looking at the swatch, so two similar
@@ -118,50 +129,53 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     // under it, where the difference between two neighbouring temperatures is the difference
     // between afternoon and evening. Offering few is what would be wrong here.
     //
-    // It runs in bands: the identity, grays for a dimmer ambient, temperatures, then the hue wheel
-    // at six strengths. The temperatures are barely tinted, because light of a temperature is not
-    // seen as colored — a room lit warm reads as a warm room rather than an orange one. The hues
-    // are the opposite case: a colored lamp is meant to be seen as colored.
+    // It runs in bands: the identity, the temperatures warm to cool, then the hue wheel at six
+    // strengths of tint. The temperatures are barely tinted, because light of a temperature is not
+    // seen as colored — a room lit warm reads as a warm room rather than an orange one — and they
+    // are the sliver of the gamut around white that the wheel is far too coarse to resolve. The
+    // hues are the opposite case: a colored lamp is meant to be seen as colored.
     //
-    // Twelve hues is what the encoding leaves room for once the grays and temperatures have their
-    // share, since a palette holds at most 94 and every strength costs a full turn of the wheel.
+    // Twelve hues is what the encoding leaves room for once the temperatures have their share,
+    // since a palette holds at most 94 and every strength of tint costs a full turn of the wheel.
     // Offering more hues would mean offering fewer strengths, and that is the wrong way round: two
     // neighbouring hues at the same strength light a room almost identically, while the same hue at
     // two strengths does not.
     "Light": [
         // Plain white — the identity, and the default (see above)
         "#ffffff",
-        // Grays, for an ambient that is dim rather than tinted
-        "#e0e0e0", "#bdbdbd", "#999999", "#757575", "#525252", "#2e2e2e",
-        // Temperatures, warm to cool: candle, tungsten, halogen, daylight, overcast, blue hour
+        // Temperatures, warm to cool, in one run: candle and firelight, tungsten, halogen,
+        // daylight, overcast, blue hour. Half of the run is warm and only a third of it cool,
+        // because a room lit by lamps is lit warm — the distance between a candle and a tungsten
+        // bulb is a room's whole mood, where the cool end is one effect with a few steps in it.
+        "#ff8220", "#ff8b2d", "#ff943a", "#ff9d46", "#ffa653", "#ffaf60",
         "#ffb46b", "#ffc78f", "#ffd5aa", "#ffe0c0", "#ffe9d3", "#fff2e5",
         "#fffaf5", "#f7f8ff", "#eaefff", "#dbe5ff", "#c8d8ff", "#b3caff",
-        // Every hue at six evenly spaced strengths. Six rather than the four or five a palette of
-        // finishes would get, and evenly spaced rather than clustered at the ends, because the
-        // middle of the range is where a colored light is actually usable: a pale one barely tints
-        // the room and a fully saturated one floods it, while the steps between are the ones a room
-        // gets lit *by*. Saturation climbs as brightness falls — a light color reads as a tint and
-        // a dark one has to be saturated to read as a color at all — and eases off again at the
-        // bottom, where full saturation only goes muddy.
+        // Every hue at six strengths of tint, from a white with a suggestion of color in it to the
+        // hue itself. Six rather than the four or five a palette of finishes would get, because the
+        // middle of this run is where a colored light is actually usable: a faint one barely tints
+        // the room and a pure one floods it, while the steps between are the ones a room gets lit
+        // *by*. The steps widen as they climb, since a difference near white is a difference in
+        // what the whole room looks like, while a difference near the pure hue is barely a
+        // difference at all.
         //
+        // Faint
+        "#ffe6e6", "#fff2e6", "#ffffe6", "#f2ffe6", "#e6ffe6", "#e6fff2",
+        "#e6ffff", "#e6f2ff", "#e6e6ff", "#f2e6ff", "#ffe6ff", "#ffe6f2",
         // Pale
-        "#e7d0d0", "#e7dbd0", "#e7e7d0", "#dbe7d0", "#d0e7d0", "#d0e7db",
-        "#d0e7e7", "#d0dbe7", "#d0d0e7", "#dbd0e7", "#e7d0e7", "#e7d0db",
+        "#ffc2c2", "#ffe0c2", "#ffffc2", "#e0ffc2", "#c2ffc2", "#c2ffe0",
+        "#c2ffff", "#c2e0ff", "#c2c2ff", "#e0c2ff", "#ffc2ff", "#ffc2e0",
         // Soft
-        "#e39696", "#e3bd96", "#e3e396", "#bde396", "#96e396", "#96e3bd",
-        "#96e3e3", "#96bde3", "#9696e3", "#bd96e3", "#e396e3", "#e396bd",
-        // Light
-        "#ec5555", "#eca155", "#ecec55", "#a1ec55", "#55ec55", "#55eca1",
-        "#55ecec", "#55a1ec", "#5555ec", "#a155ec", "#ec55ec", "#ec55a1",
-        // Vivid
-        "#f91010", "#f98510", "#f9f910", "#85f910", "#10f910", "#10f985",
-        "#10f9f9", "#1085f9", "#1010f9", "#8510f9", "#f910f9", "#f91085",
-        // Rich
-        "#c90808", "#c96908", "#c9c908", "#69c908", "#08c908", "#08c969",
-        "#08c9c9", "#0869c9", "#0808c9", "#6908c9", "#c908c9", "#c90869",
-        // Deep
-        "#890b0b", "#894a0b", "#89890b", "#4a890b", "#0b890b", "#0b894a",
-        "#0b8989", "#0b4a89", "#0b0b89", "#4a0b89", "#890b89", "#890b4a",
+        "#ff9999", "#ffcc99", "#ffff99", "#ccff99", "#99ff99", "#99ffcc",
+        "#99ffff", "#99ccff", "#9999ff", "#cc99ff", "#ff99ff", "#ff99cc",
+        // Colored
+        "#ff6b6b", "#ffb56b", "#ffff6b", "#b5ff6b", "#6bff6b", "#6bffb5",
+        "#6bffff", "#6bb5ff", "#6b6bff", "#b56bff", "#ff6bff", "#ff6bb5",
+        // Strong
+        "#ff3838", "#ff9c38", "#ffff38", "#9cff38", "#38ff38", "#38ff9c",
+        "#38ffff", "#389cff", "#3838ff", "#9c38ff", "#ff38ff", "#ff389c",
+        // Pure
+        "#ff0000", "#ff8000", "#ffff00", "#80ff00", "#00ff00", "#00ff80",
+        "#00ffff", "#0080ff", "#0000ff", "#8000ff", "#ff00ff", "#ff0080",
     ],
     // Fog: the color the air in a room is, which is also the color everything in it fades into with
     // distance and the color of the void past the far wall (see GraphicsManager).

@@ -4,6 +4,7 @@ import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import PaletteColorInput from "../../input/paletteColorInput";
 import RangeInput from "../../input/rangeInput";
+import SelectionToolRow from "./selectionToolRow";
 import Text from "../../basic/text";
 import App from "../../../../app";
 import SocketsClient from "../../../../networking/client/socketsClient";
@@ -13,7 +14,8 @@ import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectS
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
 import LampObjectUtil from "../../../../../shared/object/util/lampObjectUtil";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
-import { MAX_ROOM_PREFS_STEP } from "../../../../../shared/room/util/roomPrefsUtil";
+import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
+    MIN_LAMP_RANGE } from "../../../../../shared/graphics/light/util/lampLightUtil";
 import { LIGHT_COLOR_PALETTE_NAME } from "../../../../../shared/system/sharedConstants";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
@@ -21,66 +23,72 @@ import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../.
 import PopupUtil from "../../../util/popupUtil";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 
-const MAX_STEP_ATTRIBUTE = String(MAX_ROOM_PREFS_STEP);
+// An <input> wants its bounds as text, and both of the lamp's dials are chosen from a short run of
+// whole values (see LampLightUtil) — so each of them is also short enough for the slider to mark
+// every value it has.
+const MIN_INTENSITY_ATTRIBUTE = String(MIN_LAMP_INTENSITY);
+const MAX_INTENSITY_ATTRIBUTE = String(MAX_LAMP_INTENSITY);
+const MIN_RANGE_ATTRIBUTE = String(MIN_LAMP_RANGE);
+const MAX_RANGE_ATTRIBUTE = String(MAX_LAMP_RANGE);
 
 // The tools for a lamp somebody has picked out: take it down, or change what it gives off.
 //
 // Everything about the light is one setting stored and written together, because the lit face of
-// the lamp takes its color from the same value the light does — see LampObjectUtil. How strong it
-// is and how far it spreads are separate dials within that, so a dim wash and a tight bright pool
-// are both askable for (see LampLightUtil).
+// the lamp takes its color from the same value the light does — see LampObjectUtil. How much light
+// there is and how far it carries are separate dials within that, so a dim wash and a tight bright
+// pool are both askable for (see LampLightUtil).
 export default function LampEditOptions(props: {selection: ObjectSelection})
 {
     const obj = props.selection.gameObject.params;
     const [light, setLight] = useState(() => ({
         colorIndex: LampObjectUtil.getColorIndex(obj),
-        intensityStep: LampObjectUtil.getIntensityStep(obj),
-        spreadStep: LampObjectUtil.getSpreadStep(obj),
+        intensity: LampObjectUtil.getIntensity(obj),
+        range: LampObjectUtil.getRange(obj),
     }));
 
     // Written straight through rather than deferred, the way a room's own lighting is: a lamp is
-    // adjusted a step at a time from a palette and a slider that is let go of, not dragged against
-    // a live preview, and there are only three values to send.
+    // adjusted a step at a time — a swatch picked, a handle let go of, a number typed — rather than
+    // dragged against a live preview, and there are only three values to send.
     const apply = (edit: (next: typeof light) => void) => {
         const next = {...light};
         edit(next);
         setLight(next);
         trySetLightProperties(props.selection, LampObjectUtil.encodeLightProperties(
-            next.colorIndex, next.intensityStep, next.spreadStep));
+            next.colorIndex, next.intensity, next.range));
     };
 
-    return <div className="flex flex-row items-center gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
+    return <SelectionToolRow>
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveLamp(props.selection)}
             onClick={() => openRemoveConfirmPopup(props.selection)}
         />
-        <div className="flex flex-row items-center gap-1">
-            <Text content="Color" size="sm"/>
+        <div className="flex flex-row items-center gap-1 shrink-0">
+            <Text content="Color" size="sm" additionalClassNames="shrink-0"/>
             <PaletteColorInput
                 paletteName={LIGHT_COLOR_PALETTE_NAME}
                 currValue={light.colorIndex}
                 setColorIndex={(index) => apply(next => next.colorIndex = index)}
             />
         </div>
-        <div className="flex flex-row items-center gap-1">
-            <Text content="Strength" size="sm"/>
+        <div className="flex flex-row items-center gap-1 shrink-0">
+            <Text content="Intensity" size="sm" additionalClassNames="shrink-0"/>
             <RangeInput
-                currValue={String(light.intensityStep)}
-                setValue={(value) => apply(next => next.intensityStep = Number(value))}
-                min="0" max={MAX_STEP_ATTRIBUTE} step="1"
-                additionalClassNames="w-28 shrink-0"
+                currValue={String(light.intensity)}
+                setValue={(value) => apply(next => next.intensity = Number(value))}
+                min={MIN_INTENSITY_ATTRIBUTE} max={MAX_INTENSITY_ATTRIBUTE} step="1"
+                additionalClassNames="w-28"
             />
         </div>
-        <div className="flex flex-row items-center gap-1">
-            <Text content="Spread" size="sm"/>
+        <div className="flex flex-row items-center gap-1 shrink-0">
+            <Text content="Range" size="sm" additionalClassNames="shrink-0"/>
             <RangeInput
-                currValue={String(light.spreadStep)}
-                setValue={(value) => apply(next => next.spreadStep = Number(value))}
-                min="0" max={MAX_STEP_ATTRIBUTE} step="1"
-                additionalClassNames="w-28 shrink-0"
+                currValue={String(light.range)}
+                setValue={(value) => apply(next => next.range = Number(value))}
+                min={MIN_RANGE_ATTRIBUTE} max={MAX_RANGE_ATTRIBUTE} step="1"
+                additionalClassNames="w-28"
             />
         </div>
-    </div>;
+    </SelectionToolRow>;
 }
 
 function canRemoveLamp(selection: ObjectSelection): boolean

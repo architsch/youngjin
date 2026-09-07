@@ -6,7 +6,8 @@ import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOX
 import NumUtil from "../../../../shared/math/util/numUtil";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { LIGHT_BLOCK_MAP_MAX_BRIGHTNESS } from "../../../system/clientConstants";
-import LightBlockPropagationUtil, { LightPropagationScratch } from "../util/lightBlockPropagationUtil";
+import LightBlockPropagationUtil, { getLightLuminance, LightPropagationScratch }
+    from "../util/lightBlockPropagationUtil";
 import LightBlockMapMaterialUtil from "../util/lightBlockMapMaterialUtil";
 import LightBlockSmoothingUtil from "../util/lightBlockSmoothingUtil";
 import LightSource from "../types/lightSource";
@@ -40,10 +41,10 @@ export default class LightBlockMap
     private openBlocks = new Uint8Array(NUM_VOXEL_BLOCKS);
 
     // Four channels rather than three because three.js derives no sized internal format for an RGB
-    // byte 3D texture, so RGB is not a usable combination. The color texture spends the fourth
-    // channel it is therefore obliged to carry on saying whether the block is open room or solid
-    // block, which is what lets a filtered read be renormalized (see uploadTextures); the flux
-    // texture has nothing to put there and leaves it at full.
+    // byte 3D texture, so RGB is not a usable combination. Both textures spend the fourth channel
+    // they are therefore obliged to carry: the color texture on whether the block is open room or
+    // solid block, which is what lets a filtered read be renormalized, and the flux texture on how
+    // much of the light standing in the block has a direction at all (see uploadTextures).
     private colorBuffer = new Uint8Array(NUM_VOXEL_BLOCKS * 4);
     private fluxBuffer = new Uint8Array(NUM_VOXEL_BLOCKS * 4);
     private colorTexture: THREE.Data3DTexture;
@@ -65,9 +66,11 @@ export default class LightBlockMap
     {
         // Nothing has been propagated yet, so the flux buffer starts out saying "no direction"
         // rather than "straight down the negative axes", which is what a buffer of zeroes decodes to.
+        // Its fourth channel is the share of the light that has a direction, and a room with no
+        // light in it has none, so that one really is zero.
         this.fluxBuffer.fill(FLUX_ZERO_BYTE);
         for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
-            this.fluxBuffer[blockIndex * 4 + 3] = 255;
+            this.fluxBuffer[blockIndex * 4 + 3] = 0;
 
         this.colorTexture = createBlockTexture(this.colorBuffer);
         this.fluxTexture = createBlockTexture(this.fluxBuffer);
@@ -268,6 +271,24 @@ export default class LightBlockMap
                 this.fluxBuffer[targetIndex + 1] = FLUX_ZERO_BYTE;
                 this.fluxBuffer[targetIndex + 2] = FLUX_ZERO_BYTE;
             }
+
+            // How much of the light standing here is travelling that way, against how much of it is
+            // simply *here* — the flux is the sum of what every lamp brought, so two lamps facing
+            // each other across a block cancel each other's direction while both of them go on
+            // lighting it. The direction alone cannot tell the two cases apart, and a shader given
+            // only the direction has to treat "coming from every side" as "coming from a side this
+            // surface is turned away from", which is the one way installing a lamp could leave a
+            // room darker than it found it.
+            //
+            // The share is what the length says once the light itself is divided back out, and it
+            // is never more than the whole because the two fields are accumulated in step (see
+            // LightBlockPropagationUtil). Written as zero for a solid block, so that a filtered
+            // read can be renormalized by openness exactly as the color is.
+            const luminance = getLightLuminance(this.blockLightBuffer[sourceIndex],
+                this.blockLightBuffer[sourceIndex + 1], this.blockLightBuffer[sourceIndex + 2]);
+            this.fluxBuffer[targetIndex + 3] = (luminance > 0)
+                ? Math.min(1, fluxLength / luminance) * 255
+                : 0;
         }
         this.colorTexture.needsUpdate = true;
         this.fluxTexture.needsUpdate = true;

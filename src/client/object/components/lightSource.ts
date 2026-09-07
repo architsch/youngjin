@@ -57,16 +57,16 @@ export default class LightSource extends GameObjectComponent
         colorTemp.set(ColorUtil.rgbToHex(
             ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
                 LampObjectUtil.getColorIndex(obj))));
-        const intensity = LampLightUtil.getIntensity(LampObjectUtil.getIntensityStep(obj));
-        const spreadStep = LampObjectUtil.getSpreadStep(obj);
+        const intensity = LampObjectUtil.getIntensity(obj);
+        const range = LampObjectUtil.getRange(obj);
 
         GraphicsManager.getLightBlockMap().addLightSource(obj.objectId, {
             worldPos: getLightWorldPos(obj.transform.pos, obj.transform.dir),
             colorR: colorTemp.r * intensity,
             colorG: colorTemp.g * intensity,
             colorB: colorTemp.b * intensity,
-            range: LampLightUtil.getRange(spreadStep),
-            decay: LampLightUtil.getDecay(spreadStep),
+            range,
+            decay: LampLightUtil.getDecay(range),
         });
     }
 

@@ -5,21 +5,80 @@ import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } f
 import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MINUTE_IN_MS,
     SCENERY_COLOR_PALETTE_NAME } from "../../shared/system/sharedConstants";
 import LightBlockMap from "./light/maps/lightBlockMap";
+import { getLightLuminance } from "./light/util/lightBlockPropagationUtil";
 import RoomPrefs from "../../shared/room/types/roomPrefs";
 import RoomPrefsUtil, { MAX_FOG_DISTANCE, MAX_ROOM_PREFS_STEP } from "../../shared/room/util/roomPrefsUtil";
 import HeadLightUtil from "../../shared/graphics/light/util/headLightUtil";
 import ColorUtil from "../../shared/math/util/colorUtil";
+import NumUtil from "../../shared/math/util/numUtil";
 import ShaderPrecompileUtil from "./util/shaderPrecompileUtil";
 import AtmosphereMaterialUtil from "./util/atmosphereMaterialUtil";
 
 const minAspectRatio = 0.6;
 const maxAspectRatio = 2;
 
+// How much of the device's own pixel grid the room may be drawn at.
+//
+// **The ceiling is deliberately below what the device reports.** A modern phone reports two and a
+// half to three device pixels for every CSS pixel, and on a panel a few hundred CSS pixels wide the
+// ones past the second are not distinguishable at arm's length — while each of them costs a full
+// evaluation of the room's air, its light field and whatever finish the surface has, which is by some
+// margin the most expensive thing this app does. Capping here is up to two thirds fewer fragments for
+// a difference nobody can see, and it applies before the controller below ever runs, so a device that
+// asks for too much never starts out there and has to be walked back down.
 const minPixelRatio = 0.5;
-const maxPixelRatio = window.devicePixelRatio;
-const minPixelRatioTargetFPS = 20;
-const maxPixelRatioTargetFPS = 40;
-let currPixelRatio = window.devicePixelRatio;
+const maxPixelRatio = Math.min(2, window.devicePixelRatio);
+let currPixelRatio = maxPixelRatio;
+
+// The frame times the resolution is steered between.
+//
+// **Steered by time rather than by a frame rate, which is not the same thing.** A rate is a count of
+// frames over a window, so it cannot report anything until the whole window has passed, it reports an
+// average that a stutter disappears into, and it cannot see past the rate the app ticks at. A frame
+// time is available every frame, and the thing actually being protected against — a frame that
+// arrives late enough to be seen — *is* a frame time.
+//
+// **A band rather than a target**, and this is what keeps the controller still. Frame time is not an
+// input the controller merely observes: lowering the resolution shortens the very frames that caused
+// it to be lowered. Steered at a single number, that feedback has nowhere to settle, so the
+// resolution drops, recovers, drops again, and every one of those reversals reallocates the drawing
+// buffer. Between these two it is simply left alone.
+const frameTimeHighWater = 1 / 45;
+const frameTimeLowWater = 1 / 57;
+
+// How quickly the measured frame time forgets what came before it. Long enough that one late frame —
+// a room being edited, a garbage collection, a texture upload — does not move the resolution at all,
+// and short enough that a genuine slide into unplayability is answered inside a second.
+const frameTimeSmoothingHalfLife = 0.25;
+
+// A frame longer than any the resolution could be responsible for. The page having been in the
+// background, a room finishing loading, or a drawing context coming back all produce one, and none of
+// them says anything about how expensive the room is to draw — so they are dropped rather than
+// measured, which is what stops the app arriving in a new room at its lowest resolution because of
+// the frame it arrived on.
+const maxMeasurableFrameTime = 0.5;
+
+// How far the resolution moves each time it moves, and deliberately not by the same amount in both
+// directions. Too high is unplayable and too low is merely soft, so the way down is one large step
+// and the way back up is several small ones — which also keeps the recovery itself from being what
+// pushes the frame back over the line.
+const pixelRatioFallStep = 0.8;
+const pixelRatioRiseStep = 1.06;
+
+// How long must pass between two changes. Changing the resolution reallocates the drawing buffer,
+// which on a mobile driver costs a dropped frame in its own right, so a controller free to adjust
+// every frame would spend more than it saved. Recovery waits far longer than backing off does, for
+// the same reason the steps are uneven: there is no hurry to get back.
+const pixelRatioFallInterval = 0.4;
+const pixelRatioRiseInterval = 2;
+
+// Below this, a change is not worth the reallocation it would cost. It also has to sit under the
+// smallest step either rate above can produce, or the controller would be unable to move at all.
+const pixelRatioMinChange = 0.02;
+
+let smoothedFrameTime = frameTimeLowWater;
+let lastFrameTime = 0;
+let timeSincePixelRatioChange = 0;
 
 let gameCanvasRoot: HTMLElement;
 let overlayCanvasRoot: HTMLElement;
@@ -220,24 +279,9 @@ const GraphicsManager =
         gameRenderer.setClearColor(sceneFog.color);
         refreshFog();
     },
-    update: (currFPS: number) =>
+    update: () =>
     {
-        const performanceScore = Math.max(
-            0,
-            Math.min(
-                1,
-                (currFPS - minPixelRatioTargetFPS) / (maxPixelRatioTargetFPS - minPixelRatioTargetFPS)
-            )
-        ); // 1 = best, 0 = worst
-
-        let desiredPixelRatio = minPixelRatio + (maxPixelRatio - minAspectRatio) * performanceScore;
-        desiredPixelRatio = Math.round(desiredPixelRatio * 10) * 0.1; // round up to 1 decimal digit.
-        if (Math.abs(desiredPixelRatio - currPixelRatio) >= 0.2)
-        {
-            gameRenderer.setPixelRatio(desiredPixelRatio);
-            currPixelRatio = desiredPixelRatio;
-            //console.log(desiredPixelRatio);
-        }
+        updatePixelRatio();
         // Consumed once a frame rather than the moment something changes, so that dragging a lamp
         // across the room costs one propagation per frame rather than one per transform update.
         lightBlockMap.update();
@@ -335,6 +379,15 @@ const GraphicsManager =
         window.addEventListener("resize", onResize);
         updateRenderSizes();
 
+        // The frame a room is entered on carries the whole of the load that was just finished, and
+        // the ones just before it were spent behind a loading screen drawing nothing. Neither says
+        // anything about what this room costs to draw, so the controller starts the room with no
+        // history rather than with that (see updatePixelRatio). The resolution itself is left where
+        // the previous room left it, which is the best guess available for what this device can hold.
+        lastFrameTime = 0;
+        smoothedFrameTime = frameTimeLowWater;
+        timeSincePixelRatioChange = 0;
+
         // Update Loop
 
         gameRenderer.setAnimationLoop(updateCallback);
@@ -347,6 +400,55 @@ const GraphicsManager =
         window.removeEventListener("resize", onResize);
         gameRenderer.setAnimationLoop(null);
     },
+}
+
+// Steers how much of the device's pixel grid the room is drawn at, by how long its frames are
+// actually taking to arrive (see the constants above for the band, the rates and why each is what it
+// is).
+//
+// Timed here rather than handed a figure by the caller, because what has to be measured is the
+// interval between two frames actually reaching the screen. The app's own loop gates its ticks, and
+// on a display running faster than that gate not every pass through it draws anything — so a delta
+// taken there describes how often the loop runs, which on such a device is not how often the room is
+// drawn, and the difference reads as headroom that does not exist.
+//
+// What this cannot do is worth stating plainly: it moves fragments and nothing else. A frame being
+// held up on the CPU — a room-wide light propagation, a large upload, a long garbage collection —
+// gets no shorter for being drawn at half the width, and the controller will walk to its floor
+// looking for a saving that was never there to find. That is the right behaviour to have when it is
+// wrong (a soft image beats an unplayable one), but it means a stutter that survives to the floor is
+// evidence about the CPU rather than about the resolution.
+function updatePixelRatio()
+{
+    const now = performance.now() * 0.001;
+    const frameTime = (lastFrameTime > 0) ? now - lastFrameTime : frameTimeLowWater;
+    lastFrameTime = now;
+
+    if (frameTime > maxMeasurableFrameTime)
+        return;
+
+    // Weighted by how long the frame actually took, so that the smoothing describes a span of time
+    // rather than a number of frames — otherwise the measurement would react more slowly on exactly
+    // the device whose frames are long, which is the one it exists for.
+    smoothedFrameTime += (frameTime - smoothedFrameTime) *
+        (1 - Math.pow(0.5, frameTime / frameTimeSmoothingHalfLife));
+    timeSincePixelRatioChange += frameTime;
+
+    let desiredPixelRatio = currPixelRatio;
+    if (smoothedFrameTime > frameTimeHighWater &&
+        timeSincePixelRatioChange >= pixelRatioFallInterval)
+        desiredPixelRatio = currPixelRatio * pixelRatioFallStep;
+    else if (smoothedFrameTime < frameTimeLowWater &&
+        timeSincePixelRatioChange >= pixelRatioRiseInterval)
+        desiredPixelRatio = currPixelRatio * pixelRatioRiseStep;
+
+    desiredPixelRatio = NumUtil.clampInRange(desiredPixelRatio, minPixelRatio, maxPixelRatio);
+    if (Math.abs(desiredPixelRatio - currPixelRatio) < pixelRatioMinChange)
+        return;
+
+    currPixelRatio = desiredPixelRatio;
+    gameRenderer.setPixelRatio(currPixelRatio);
+    timeSincePixelRatioChange = 0;
 }
 
 // Works the head lamp out afresh from everything that has a say in it. Both of its callers set one
@@ -365,9 +467,11 @@ function refreshPointLight()
         pointLightRangePerViewDistance * currViewDistance);
 
     // How much of what lights the player is the room's own doing, from none of it in the dark to
-    // very nearly all of it under a lamp. Both of the things below follow from this one number.
-    const roomLuminance = 0.2126 * currRoomLightAtCamera.r +
-        0.7152 * currRoomLightAtCamera.g + 0.0722 * currRoomLightAtCamera.b;
+    // very nearly all of it under a lamp. Both of the things below follow from this one number, and
+    // it is measured the same way the block map measures its own light, so that "how much light is
+    // there" means one thing across the two.
+    const roomLuminance = getLightLuminance(currRoomLightAtCamera.r, currRoomLightAtCamera.g,
+        currRoomLightAtCamera.b);
     const roomShare = roomLuminance / (roomLuminance + pointLightRoomHalfBrightness);
 
     // Whatever share of the lighting the room is not doing itself, and nothing beyond it. There is

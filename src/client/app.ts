@@ -226,7 +226,7 @@ function update()
         deltaTimePending -= deltaTime;
 
         ClientObjectManager.update(deltaTime);
-        GraphicsManager.update(App.getFPS());
+        GraphicsManager.update();
         SinglePlayerManager.update(deltaTime);
         updateObservable.set(deltaTime);
 

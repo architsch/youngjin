@@ -28,7 +28,8 @@ import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
-import { MAX_ROOM_PREFS_STEP } from "../../../src/shared/room/util/roomPrefsUtil";
+import LampLightUtil, { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY, MIN_LAMP_RANGE }
+    from "../../../src/shared/graphics/light/util/lampLightUtil";
 import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     LIGHT_COLOR_PALETTE_NAME, MAX_LAMPS_PER_ROOM } from "../../../src/shared/system/sharedConstants";
 
@@ -145,7 +146,7 @@ describe("lamp permissions", () => {
                 const canRelight = (user: User) => ObjectUpdateUtil.canSetObjectMetadata(user, room,
                     new SetObjectMetadataSignal(room.id, lamp.objectId,
                         ObjectMetadataKeyEnumMap.LightProperties,
-                        LampObjectUtil.encodeLightProperties(3, 40, 50)));
+                        LampObjectUtil.encodeLightProperties(3, 8, 9)));
 
                 expect(canRemove(ADMIN)).toBe(true);
                 expect(canMove(ADMIN)).toBe(true);
@@ -207,7 +208,8 @@ describe("lamp permissions", () => {
 });
 
 describe("what a lamp gives off", () => {
-    const steps = fc.integer({min: 0, max: MAX_ROOM_PREFS_STEP});
+    const intensities = fc.integer({min: MIN_LAMP_INTENSITY, max: MAX_LAMP_INTENSITY});
+    const ranges = fc.integer({min: MIN_LAMP_RANGE, max: MAX_LAMP_RANGE});
     const colorIndices = fc.integer({min: 0,
         max: ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME) - 1});
 
@@ -219,30 +221,79 @@ describe("what a lamp gives off", () => {
     }
 
     it("comes back exactly as it was set", () => {
-        fc.assert(fc.property(colorIndices, steps, steps,
-            (colorIndex, intensityStep, spreadStep) => {
+        fc.assert(fc.property(colorIndices, intensities, ranges,
+            (colorIndex, intensity, range) => {
                 const lamp = lampWith(LampObjectUtil.encodeLightProperties(
-                    colorIndex, intensityStep, spreadStep));
+                    colorIndex, intensity, range));
                 expect(LampObjectUtil.getColorIndex(lamp)).toBe(colorIndex);
-                expect(LampObjectUtil.getIntensityStep(lamp)).toBe(intensityStep);
-                expect(LampObjectUtil.getSpreadStep(lamp)).toBe(spreadStep);
+                expect(LampObjectUtil.getIntensity(lamp)).toBe(intensity);
+                expect(LampObjectUtil.getRange(lamp)).toBe(range);
             }));
+    });
+
+    it("offers a dozen whole values on each of its two dials", () => {
+        // Few enough to be marked out on the slider and read off beside it, and each one a quantity
+        // rather than a position on a scale — an intensity of 4 is four times the light of one at 1,
+        // and a range of 9 reaches nine blocks (see LampLightUtil).
+        for (const [min, max] of [[MIN_LAMP_INTENSITY, MAX_LAMP_INTENSITY],
+            [MIN_LAMP_RANGE, MAX_LAMP_RANGE]])
+        {
+            expect(max - min + 1).toBe(12);
+        }
     });
 
     it("is a light whatever the object was handed", () => {
         // Reading has to be total: a lamp carrying anything at all — a value from another version,
         // a value somebody made up — is still a lamp, and nothing downstream carries a check for it.
+        // One stored character addresses far more numbers than either dial has, so what comes back
+        // is held to the dial's own range rather than to the encoding's.
         fc.assert(fc.property(fc.string({maxLength: 20}), (raw) => {
             const lamp = lampWith(raw);
             expect(LampObjectUtil.getColorIndex(lamp)).toBeGreaterThanOrEqual(0);
             expect(LampObjectUtil.getColorIndex(lamp)).toBeLessThan(
                 ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME));
-            for (const step of [LampObjectUtil.getIntensityStep(lamp),
-                LampObjectUtil.getSpreadStep(lamp)])
-            {
-                expect(step).toBeGreaterThanOrEqual(0);
-                expect(step).toBeLessThanOrEqual(MAX_ROOM_PREFS_STEP);
-            }
+            expect(LampObjectUtil.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
+            expect(LampObjectUtil.getIntensity(lamp)).toBeLessThanOrEqual(MAX_LAMP_INTENSITY);
+            expect(LampObjectUtil.getRange(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_RANGE);
+            expect(LampObjectUtil.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
+        }));
+    });
+
+    it("holds a lamp asked for more than a lamp has to what a lamp has", () => {
+        // The bounds are the whole of what the two dials are, so a value from outside them is not a
+        // brighter lamp or a longer-reaching one — it is a lamp that does not exist.
+        const beyond = lampWith(LampObjectUtil.encodeLightProperties(0, 999, 999));
+        expect(LampObjectUtil.getIntensity(beyond)).toBe(MAX_LAMP_INTENSITY);
+        expect(LampObjectUtil.getRange(beyond)).toBe(MAX_LAMP_RANGE);
+
+        const beneath = lampWith(LampObjectUtil.encodeLightProperties(0, 0, 0));
+        expect(LampObjectUtil.getIntensity(beneath)).toBe(MIN_LAMP_INTENSITY);
+        expect(LampObjectUtil.getRange(beneath)).toBe(MIN_LAMP_RANGE);
+    });
+
+    it("leaves a lamp a light even at its lowest, and an effect at its highest", () => {
+        // A lamp is furniture rather than a torch: one turned all the way down is a small light, not
+        // a dark fitting, since there would be nothing on screen to tell that from a broken one. The
+        // top of the range is the opposite end of that — a lamp that blows out the wall it is
+        // mounted on, which takes a strength well past the one that merely lights a room.
+        const unconfigured = lampWith("");
+        expect(MIN_LAMP_INTENSITY).toBeGreaterThan(0);
+        expect(MIN_LAMP_RANGE).toBeGreaterThan(0);
+        expect(MAX_LAMP_INTENSITY)
+            .toBeGreaterThan(3 * LampObjectUtil.getIntensity(unconfigured));
+    });
+
+    it("gives a lamp two dials that do not move together", () => {
+        // The whole point of splitting them: a dim wash and a tight bright pool both have to be
+        // askable for, which they are not while one dial drives strength and reach at once. Reach
+        // and falloff are the one pair that does move together, and opposite ways, so that a wide
+        // lamp is wide rather than merely long-range.
+        expect(MIN_LAMP_INTENSITY).toBeGreaterThan(0);
+        expect(LampLightUtil.getDecay(MIN_LAMP_RANGE))
+            .toBeGreaterThan(LampLightUtil.getDecay(MAX_LAMP_RANGE));
+        fc.assert(fc.property(ranges, ranges, (a, b) => {
+            const [low, high] = a <= b ? [a, b] : [b, a];
+            expect(LampLightUtil.getDecay(high)).toBeLessThanOrEqual(LampLightUtil.getDecay(low));
         }));
     });
 
@@ -264,9 +315,10 @@ describe("what a lamp gives off", () => {
         // no metadata at all has to be a light — and an ordinary one rather than one at the top of
         // a range that exists for dramatic effect.
         const lamp = lampWith("");
-        expect(LampObjectUtil.getIntensityStep(lamp)).toBeGreaterThan(0);
-        expect(LampObjectUtil.getIntensityStep(lamp)).toBeLessThan(MAX_ROOM_PREFS_STEP);
-        expect(LampObjectUtil.getSpreadStep(lamp)).toBeGreaterThan(0);
+        expect(LampObjectUtil.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
+        expect(LampObjectUtil.getIntensity(lamp)).toBeLessThan(MAX_LAMP_INTENSITY);
+        expect(LampObjectUtil.getRange(lamp)).toBeGreaterThan(MIN_LAMP_RANGE);
+        expect(LampObjectUtil.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
         expect(ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
             LampObjectUtil.getColorIndex(lamp)))).toBe("#ffffff");
     });
@@ -276,10 +328,10 @@ describe("what a lamp gives off", () => {
         // read as dark or as reaching nowhere just because its string was short.
         const colorOnly = LampObjectUtil.getDefaultLightProperties().substring(0, 1);
         const lamp = lampWith(colorOnly);
-        expect(LampObjectUtil.getIntensityStep(lamp)).toBe(
-            LampObjectUtil.getIntensityStep(lampWith("")));
-        expect(LampObjectUtil.getSpreadStep(lamp)).toBe(
-            LampObjectUtil.getSpreadStep(lampWith("")));
+        expect(LampObjectUtil.getIntensity(lamp)).toBe(
+            LampObjectUtil.getIntensity(lampWith("")));
+        expect(LampObjectUtil.getRange(lamp)).toBe(
+            LampObjectUtil.getRange(lampWith("")));
     });
 
     it("draws the lamp in the color it lights the room with", () => {
@@ -289,10 +341,10 @@ describe("what a lamp gives off", () => {
         const generateDefaultParts = config.components.spawnedByAny!
             .instancedMeshComposer!.generateDefaultParts;
 
-        fc.assert(fc.property(colorIndices, steps, steps,
-            (colorIndex, intensityStep, spreadStep) => {
+        fc.assert(fc.property(colorIndices, intensities, ranges,
+            (colorIndex, intensity, range) => {
                 const lamp = lampWith(LampObjectUtil.encodeLightProperties(
-                    colorIndex, intensityStep, spreadStep));
+                    colorIndex, intensity, range));
                 const {parts} = generateDefaultParts(lamp);
                 expect(parts.length).toBeGreaterThan(0);
                 expect(parts[0].color).toEqual(

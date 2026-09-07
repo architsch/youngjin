@@ -1,6 +1,16 @@
 import { FormEvent, FormEventHandler, useCallback, useEffect, useRef } from "react";
+import RangeValueInput from "./rangeValueInput";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 
+// A setting chosen by dragging a handle along a track, with the number the handle is standing on
+// written out beside it (see RangeValueInput) — the two are one control and are never given
+// separately, since a slider alone cannot be read off and a field alone cannot be swept through.
+//
+// A slider whose whole range is a handful of values also carries a mark for each of them. Below
+// that count the marks are what say the setting is chosen from a short list rather than swept
+// continuously, and where each of its values lies; above it they would be a texture rather than a
+// scale, and are left off. They are never labelled — the number beside the track is the readout, and
+// a row of little numbers under a slider is unreadable at this size.
 export default function RangeInput({ currValue, setValue, min, max, step, additionalClassNames = "" }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -68,28 +78,73 @@ export default function RangeInput({ currValue, setValue, min, max, step, additi
         };
     }, []);
 
-    // The browser draws the track and the handle itself, and left to its own devices draws them in
-    // its accent color — the one blue thing in an app that has nothing else blue in it. The accent
-    // named here is the app's own, the green its controls already wear.
-    return <input
-        ref={inputRef}
-        type="range"
-        className={`h-8 p-0 rounded-md cursor-pointer accent-green-600 yj-surface-concave ${additionalClassNames}`}
-        value={currValue}
-        min={min}
-        max={max}
-        step={step}
-        onChange={onChange}
-        onFocus={onFocus}
-        onBlur={onBlur}
-    >
-    </input>
+    const minValue = Number(min);
+    const maxValue = Number(max);
+    const stepValue = Number(step);
+
+    // The row never wraps, and what gives way when it runs out of width is the track: the number
+    // beside it is the one part that says nothing at all once it has been squeezed.
+    return <div className="flex flex-row flex-nowrap items-center gap-1 min-w-0">
+        <div className={`relative flex items-center min-w-0 ${additionalClassNames}`}>
+            {/* The browser draws the track and the handle itself, and left to its own devices draws
+                them in its accent color — the one blue thing in an app that has nothing else blue in
+                it. The accent named here is the app's own, the green its controls already wear. */}
+            <input
+                ref={inputRef}
+                type="range"
+                className="w-full h-8 p-0 rounded-md cursor-pointer accent-green-600 yj-surface-concave"
+                value={currValue}
+                min={min}
+                max={max}
+                step={step}
+                onChange={onChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+            >
+            </input>
+            {renderTickMarks(minValue, maxValue, stepValue)}
+        </div>
+        <RangeValueInput
+            currValue={currValue}
+            setValue={setValue}
+            min={minValue}
+            max={maxValue}
+            step={stepValue}
+        />
+    </div>
+}
+
+// The marks under the track, one per value the slider has, laid out across the travel of the handle
+// rather than across the whole element — the handle's own width is the difference, and it is held
+// back at each end so that the first and last marks sit under the handle's two resting places.
+function renderTickMarks(min: number, max: number, step: number)
+{
+    const numValues = getNumValues(min, max, step);
+    if (numValues < 2 || numValues > MAX_TICK_MARKS)
+        return null;
+
+    return <div className="absolute inset-x-0 bottom-0.5 flex flex-row justify-between px-1.75 pointer-events-none">
+        {Array.from({length: numValues}, (_, i) =>
+            <div key={i} className="w-px h-1.5 rounded-full bg-white/40"/>)}
+    </div>
+}
+
+function getNumValues(min: number, max: number, step: number): number
+{
+    if (!Number.isFinite(min) || !Number.isFinite(max) || !(step > 0) || max <= min)
+        return 0;
+    return Math.floor((max - min) / step) + 1;
 }
 
 function stopPropagation(event: Event)
 {
     event.stopPropagation();
 }
+
+// Where a scale stops being a scale. A dozen marks are still countable at a glance and still stand
+// apart on a track a couple of finger-widths wide; more of them read as hatching, and say only that
+// the setting is finely divided — which the absence of marks says just as well.
+const MAX_TICK_MARKS = 12;
 
 interface Props
 {
@@ -99,7 +154,8 @@ interface Props
     max: string;
     step: string;
     // How wide the track is, and whether it may shrink, are the caller's to say: a slider in a form
-    // is given a fixed width and holds it, while one sharing a row with something that must stay
-    // whole gives way to it. Only the height is fixed here, so sliders line up wherever they meet.
+    // is given a width and holds it until the row runs out of room, while one sharing a row with
+    // something that must stay whole gives way to it sooner. Only the height is fixed here, so
+    // sliders line up wherever they meet.
     additionalClassNames?: string;
 }

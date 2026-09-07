@@ -21,6 +21,7 @@ import { useEffect } from "react";
 import FTUEUtil from "../../../util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
+import SelectionToolRow from "./selectionToolRow";
 
 let changeImageButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 let changeFrameButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
@@ -71,7 +72,7 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
     // ClientVoxelManager).
     const canEdit = canEditCanvas(props.selection);
 
-    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
+    return <SelectionToolRow>
         <IconButton icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveCanvas(props.selection)}
             onClick={() => openRemoveConfirmPopup(props.selection)}
@@ -106,7 +107,7 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasFrame);
             }}
         />
-    </div>;
+    </SelectionToolRow>;
 }
 
 function clearFTUETimeouts()

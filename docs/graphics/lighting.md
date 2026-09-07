@@ -38,6 +38,8 @@ The fill answers two questions at once:
 
 Brightness itself is not accumulated along the path. It is worked out at the end from the **straight-line** distance to the lamp, using the same falloff curve a real point light obeys, so a lamp is described in the same units the head lamp is. What the fill contributes is a penalty for the detour: the further the shortest open route runs past the straight line, the more the light is cut. Measuring distance along the fill instead would be measuring it in city blocks, and a lamp lit that way comes out diamond-shaped, with its gradient stepping between a handful of directions.
 
+**Where the fill stops is the same straight line, and not the length of the route travelled.** The two disagree because a route through the grid only ever runs along the axes: it is as long as the sides of the box between its ends rather than as the line across it, so stopping the fill by route length carries a lamp its full reach along each axis and cuts it noticeably short on every diagonal. The falloff has not faded to nothing at that shorter distance, so the light does not fade out there — it stops dead, on an edge shaped exactly like the diamond the paragraph above avoids. Bounding by the straight line instead lets the fill and the falloff give out in the same place, all the way round.
+
 A lamp is also treated as a thing of some size rather than as a point, since a point light's falloff runs to infinity at nothing and the block a lamp stands in *is* at nothing. Without that, one block of the room takes a spike of light no exposure can accommodate, and everything else is left at the bottom of the range.
 
 ### Direction
@@ -45,6 +47,16 @@ A lamp is also treated as a thing of some size rather than as a point, since a p
 Alongside how much light reaches a block, the map stores **which way that light is travelling**. A surface turned toward where the light came from is lit fully; one turned away keeps a share of it regardless of its facing.
 
 That share is held well above zero on purpose. The propagation carries no bounce, so a wall facing away from the room's only lamp would be as black as one in a sealed box — where in a real room it is lit by everything the lamp is shining at.
+
+A block holds one direction however many lamps met in it, so the direction is **weighted by how much light each of them actually brought**: where two lamps meet, the brighter one decides which way the light lies. Weighed by the geometry alone, a lamp carrying almost no light would swing the direction as hard as one blazing beside it, and everything around the two would be shaded as though lit from a side nothing was lighting it from.
+
+### Nothing a light does can leave a room darker
+
+Installing a light can only ever *add* light to a room, and the map is built so that this holds all the way to the screen rather than only in the amount it accumulates.
+
+The amount is monotone for free, since the fill adds. The direction is the part that is not, because there is one of it per block: light arriving from two sides at once cancels while both lamps go on lighting the place, and a direction is all that survives of it. So the map records **how much of a block's light has a direction at all**, alongside the direction itself, and the facing test is charged only to that share. Light whose directions cancelled arrived from everywhere and reaches a surface whichever way it is turned — which is both what really happens and what keeps a second lamp from taking more away through the cosine than it brought in light. A highlight is the one thing that still needs the share in full, since light arriving from every side glints off nothing.
+
+Where one lamp is doing the lighting the share is the whole of it, and this is exactly the shading a single lamp always gave.
 
 ### Smoothing
 
@@ -85,12 +97,22 @@ Brightness, reach and falloff are one description of one light, and picked apart
 
 **A lamp on a wall is given two**, and that is the difference worth stating:
 
-- **Strength** — how much light there is, and nothing about where it goes. Its range runs from a small light up to far more than lighting a room takes, because the top of it exists for effect: a lamp that blows out the wall it is mounted on is a thing somebody will want, and it can only be had if the range reaches past the point where a room is merely lit. Past that point the room's own exposure clips, which is not a limit being exceeded but the effect itself. The steps are geometric rather than even, because brightness is judged in ratios — an even slider spends most of its travel on differences nobody can pick out.
-- **Spread** — how far it carries and how sharply it falls off, which are one question rather than two: a light that reaches the far wall and one that stops a pace away differ in both at once, and a long reach with a steep falloff is a reach that does nothing.
+- **Intensity** — how much light there is, and nothing about where it goes. Its range runs from a small light up to far more than lighting a room takes, because the top of it exists for effect: a lamp that blows out the wall it is mounted on is a thing somebody will want, and it can only be had if the range reaches past the point where a room is merely lit. Past that point the room's own exposure clips, which is not a limit being exceeded but the effect itself.
+- **Range** — how far it carries and how sharply it falls off, which are one question rather than two: a light that reaches the far wall and one that stops a pace away differ in both at once, and a long reach with a steep falloff is a reach that does nothing. So the falloff is not a dial of its own; it is read off the reach, running the other way.
 
 One dial cannot express both. A wash that fills a room softly and a tight pool that picks one thing out of the dark sit at *opposite ends* of a single dial, so a dim spotlight or a broad glow is simply not askable for — which is why the lamp has two and the head lamp has one.
 
+**Both of the lamp's dials are a short run of whole values, and each value is the quantity itself** — a lamp at twice the intensity gives twice the light, and a reach is a number of blocks. That is what lets the number be shown beside the handle and typed back into it, where a position on a scale of a hundred is a number only the code understands; and a run short enough to be marked out on the track puts what a lamp can be into the control itself, rather than leaving it to be discovered by dragging. The room's own settings keep the fine scale they have, since none of them is a quantity a person would name.
+
 A lamp is furniture rather than a torch, so its bottom step is a small light and not a dark fitting: there is nothing on screen to tell an unconfigured lamp from a broken one.
+
+### Where a light's colors come from
+
+The three things this page describes — a lamp, a room's ambient, the light a visitor carries — are all colored from one palette of their own, and **nothing in it is a dimmed version of anything else**. Every entry sits at the top of the brightness range: a hue and a strength of tint, and never a degree of darkness.
+
+That follows from each of them already having a strength beside its color. A darker entry would be that dial spelled a second time and spelled worse — it cannot reach nothing, which the dial can, and a fitting painted dark cannot be told from one somebody turned down. It is also not a thing the room could honour: light is only ever added to what is already there, so the darkest entry such a set could hold would still darken nothing (see [Nothing a light does can leave a room darker](#nothing-a-light-does-can-leave-a-room-darker)). What it would produce is a lamp that fails to light, which reads as broken.
+
+The set is far longer than the palettes things are *painted* from, and it deliberately holds colors that are hard to tell apart as swatches. That is the opposite of the rule elsewhere, and the reason is what is being chosen: a finish is picked by looking at the swatch, so two similar swatches are one wasted choice — while a light is judged by what a whole room looks like under it, where the step between two neighbouring temperatures is the difference between afternoon and evening. It runs as the plain white every unconfigured room is lit by, then the temperatures warm to cool, then the hue wheel at several strengths of tint. Most of the temperatures are warm, because a room lit by lamps is lit warm.
 
 ### Two dials, not one or three
 
@@ -100,7 +122,7 @@ A point light takes brightness, reach and falloff. Both the head lamp and a lamp
 
 **One would be wrong too.** Fused into a single "power", a dim lamp is always a small one and a bright lamp always a far-reaching one — so a soft wash filling a room and a fierce pool a pace across sit at opposite ends of the same dial, and neither of the two crossings between them can be asked for at all. A dim wide lamp and a fierce tight one are both ordinary things to want.
 
-So each light has a **strength** and a **range**, and the range carries reach and falloff together, running them opposite ways.
+So each light has a **strength** and a **range** — the head lamp's *power*, a lamp's *intensity* — and the range carries reach and falloff together, running them opposite ways.
 
 ### How far the two lights reach
 

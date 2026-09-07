@@ -23,6 +23,7 @@ import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import CustomizeDoorForm from "../../form/customizeDoorForm";
+import SelectionToolRow from "./selectionToolRow";
 
 // What an admin can do to the door he has picked out: take it down, name it, point it somewhere,
 // paint it, and say whether it is the room's own way in.
@@ -34,16 +35,16 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
 {
     const [customizing, setCustomizing] = useState<boolean>(false);
 
-    // The column takes the width it is given rather than shrinking to its contents: the appearance
-    // bar scrolls sideways when it holds more than fits, and a column sized to its widest child would
-    // grow to fit it instead and leave it nothing to scroll within. The tool row keeps its own
-    // width — it is a row of buttons, not a panel.
+    // The column takes the width it is given rather than shrinking to its contents: both the
+    // appearance bar and the tool row below it scroll sideways when they hold more than fits, and a
+    // column sized to its widest child would grow to fit it instead and leave them nothing to scroll
+    // within.
     return <div className="flex flex-col gap-1 w-full">
         {customizing && <CustomizeDoorForm
             selection={props.selection}
             onClose={() => setCustomizing(false)}
         />}
-        <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
+        <SelectionToolRow>
             <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red"
                 disabled={!canRemoveDoor(props.selection)}
                 onClick={() => openRemoveConfirmPopup(props.selection)}
@@ -88,11 +89,11 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
             {/* Set apart from the rest, because it is the one button here that does nothing to the
                 door: it uses it. Picking a door out is how an admin comes to be working on it, so
                 this is also the only way left for him to walk through one. */}
-            <div className="w-px self-stretch bg-gray-600"/>
+            <div className="w-px shrink-0 self-stretch bg-gray-600"/>
             <IconButton id="enterDoorButton" icon={<DoorIcon/>} size="md" color="green"
                 onClick={() => (props.selection.gameObject as DoorGameObject).enter()}
             />
-        </div>
+        </SelectionToolRow>
     </div>;
 }
 

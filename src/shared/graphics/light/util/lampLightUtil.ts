@@ -1,5 +1,4 @@
 import NumUtil from "../../../math/util/numUtil";
-import { MAX_ROOM_PREFS_STEP } from "../../../room/util/roomPrefsUtil";
 
 // What a lamp somebody installed gives off, as two settings rather than one or three.
 //
@@ -12,28 +11,27 @@ import { MAX_ROOM_PREFS_STEP } from "../../../room/util/roomPrefsUtil";
 // can express both.
 //
 //   - **Intensity** — how much light there is. Nothing about where it goes.
-//   - **Spread** — how far it carries and how sharply it falls off on the way, which are one
-//     question: a light that reaches the far wall and a light that stops dead a pace away differ in
-//     both at once, and a lamp given a long reach with a steep falloff is a lamp whose range does
-//     nothing.
+//   - **Range** — how far it carries, in blocks, and how sharply it falls off on the way, which are
+//     one question: a light that reaches the far wall and a light that stops dead a pace away differ
+//     in both at once, and a lamp given a long reach with a steep falloff is a lamp whose range does
+//     nothing. So the falloff is not a dial of its own — it is read off the reach, running the other
+//     way.
+//
+// **Both dials are a short count of whole values rather than a fine scale, and each value is the
+// quantity itself** — an intensity of 4 is four times the light of one at 1, and a range of 9 reaches
+// nine blocks. Two things follow from that, and both are the point. A number the user can be shown
+// beside the handle means something to them, where a position on a scale of a hundred is a number
+// only the code understands. And a dozen values is few enough to be marked out on the slider, so
+// what a lamp can be is visible in the control rather than discovered by dragging.
 const LampLightUtil =
 {
-    // Geometric rather than linear, because brightness is judged in ratios: the difference between
-    // a lamp at 1 and one at 2 is the difference the eye also sees between 6 and 12, and a linear
-    // slider spends most of its travel on differences nobody can pick out while cramming every
-    // usable dim setting into its first few steps.
-    getIntensity: (intensityStep: number): number =>
+    // The falloff exponent the reach implies: steep for a lamp that stops a few blocks away, gentle
+    // for one carrying the length of a room. Straight-line between the two, since the reach it is
+    // read off is itself a plain distance.
+    getDecay: (range: number): number =>
     {
-        const t = NumUtil.normalizeInRange(intensityStep, 0, MAX_ROOM_PREFS_STEP);
-        return MIN_INTENSITY * Math.pow(MAX_INTENSITY / MIN_INTENSITY, t);
-    },
-    getRange: (spreadStep: number): number =>
-    {
-        return interpolate(spreadStep, MIN_SPREAD_RANGE, MAX_SPREAD_RANGE);
-    },
-    getDecay: (spreadStep: number): number =>
-    {
-        return interpolate(spreadStep, MIN_SPREAD_DECAY, MAX_SPREAD_DECAY);
+        return NumUtil.convertRange(range, MIN_LAMP_RANGE, MAX_LAMP_RANGE,
+            DECAY_AT_MIN_RANGE, DECAY_AT_MAX_RANGE);
     },
 }
 
@@ -45,22 +43,19 @@ const LampLightUtil =
 // able to blow out the surface it is mounted on and everything near it, which is the whole of a
 // dramatic light. Past a point the room's own exposure clips (see LIGHT_BLOCK_MAP_MAX_BRIGHTNESS)
 // — that is not a limit being exceeded, it is the effect.
-const MIN_INTENSITY = 0.2;
-const MAX_INTENSITY = 12;
+export const MIN_LAMP_INTENSITY = 1;
+export const MAX_LAMP_INTENSITY = 12;
 
-// At the tight end, a pool of light a couple of blocks across that goes to nothing quickly. At the
-// wide end, a wash that carries the length of a room and falls off gently enough to still be
-// putting light on the far wall. The decay runs the other way from the range for the reason in the
-// note above: they are two halves of one description.
-const MIN_SPREAD_RANGE = 4;
-const MAX_SPREAD_RANGE = 30;
-const MIN_SPREAD_DECAY = 1.2;
-const MAX_SPREAD_DECAY = 0.3;
+// At the tight end, a pool of light a few blocks across. At the wide end, a wash that carries the
+// length of an ordinary room and still puts light on the far wall. Measured in blocks, which is the
+// unit the room is built in and therefore the one somebody choosing a reach is actually thinking in.
+export const MIN_LAMP_RANGE = 3;
+export const MAX_LAMP_RANGE = 14;
 
-function interpolate(step: number, atMin: number, atMax: number): number
-{
-    const t = NumUtil.normalizeInRange(step, 0, MAX_ROOM_PREFS_STEP);
-    return atMin + (atMax - atMin) * t;
-}
+// The decay runs the other way from the range for the reason in the note above: they are two halves
+// of one description. Both ends are gentler than the inverse square a real light obeys, because the
+// reach is short enough in blocks that a square law would spend the whole of it within a pace.
+const DECAY_AT_MIN_RANGE = 1.2;
+const DECAY_AT_MAX_RANGE = 0.3;
 
 export default LampLightUtil;

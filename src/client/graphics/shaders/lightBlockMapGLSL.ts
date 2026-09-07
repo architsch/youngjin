@@ -40,7 +40,8 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
     }
 
     // What the room's own lamps are doing at this fragment: how much light stands here, which way it
-    // is coming from, and how squarely the surface meets it.
+    // is coming from, how squarely the surface meets it, and how much of it is coming from that way
+    // at all rather than from every side at once.
     //
     // "viewSpaceNormal" is the fragment's final normal — the one the bump work has already perturbed
     // — which is why the direction light arrives from is brought into view space to meet it rather
@@ -49,10 +50,12 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
     //
     // The direction comes back pointing *toward* the light, which is the convention three.js's own
     // lights use, so it can be handed straight to a BRDF.
-    vec3 readLightBlockMap(vec3 viewSpaceNormal, out vec3 lightDir, out float facing)
+    vec3 readLightBlockMap(vec3 viewSpaceNormal, out vec3 lightDir, out float facing,
+        out float directionalShare)
     {
         lightDir = vec3(0.0);
         facing = 0.0;
+        directionalShare = 0.0;
 
         vec3 samplePos = vLightBlockMapWorldPos +
             vLightBlockMapWorldNormal * ${HALF_BLOCK_GLSL};
@@ -75,7 +78,8 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
         vec3 lit = texel.rgb / texel.a;
         lit = lit * lit * ${LIGHT_BLOCK_MAP_MAX_BRIGHTNESS.toFixed(4)};
 
-        vec3 flux = texture(lightBlockMapFlux, uvw).rgb * 2.0 - 1.0;
+        vec4 fluxTexel = texture(lightBlockMapFlux, uvw);
+        vec3 flux = fluxTexel.rgb * 2.0 - 1.0;
         float fluxLength = length(flux);
         // Light travels *along* the flux direction, so a surface faces the light when its normal
         // opposes it. A block no light reached stores a zero vector, which has no direction to face.
@@ -84,6 +88,11 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
             lightDir = -(mat3(viewMatrix) * (flux / fluxLength));
             facing = max(0.0, dot(viewSpaceNormal, lightDir));
         }
+        // How much of that light is travelling that way rather than standing here from every side
+        // (see LightBlockMap). Renormalized by openness for the same reason the light itself is:
+        // a solid block records no direction, and would otherwise drag every sample near a wall
+        // toward "from everywhere".
+        directionalShare = clamp(fluxTexel.a / texel.a, 0.0, 1.0);
         return lit;
     }
 `;
@@ -128,21 +137,38 @@ export const LIGHT_BLOCK_MAP_VERTEX_GLSL = `
 // for the tin is the compression that keeps a lamp at arm's length from flattening it into a white
 // patch. Everything here is the arithmetic three.js's own RE_Direct_BlinnPhong performs, on a light
 // read out of a texture rather than off a uniform.
+//
+// The facing term is applied only to the share of the light that actually has a direction. Light
+// whose directions cancelled — two lamps meeting, or the block a lamp itself stands in — arrived
+// from every side and reaches the surface whichever way it is turned. Charging it the facing test
+// anyway is what would let installing a lamp make a wall *darker* than the one lamp beside it had
+// left it: the room gains light, the recorded direction swings off the wall's normal, and more is
+// lost to the cosine than was gained. Where one lamp is doing the lighting the share is the whole
+// of it and this is exactly the term it always was.
 export const LIGHT_BLOCK_MAP_FRAGMENT_GLSL = `
     #if defined( RE_IndirectDiffuse )
         vec3 lightBlockMapDir;
         float lightBlockMapFacing;
-        vec3 lightBlockMapLit = readLightBlockMap(normal, lightBlockMapDir, lightBlockMapFacing);
+        float lightBlockMapDirectionalShare;
+        vec3 lightBlockMapLit = readLightBlockMap(normal, lightBlockMapDir, lightBlockMapFacing,
+            lightBlockMapDirectionalShare);
 
         const float lightBlockMapAmbientShare = ${LIGHT_BLOCK_MAP_AMBIENT_SHARE.toFixed(4)};
+        float lightBlockMapReach = 1.0 -
+            lightBlockMapDirectionalShare * (1.0 - lightBlockMapFacing);
         irradiance += lightBlockMapLit *
-            (lightBlockMapAmbientShare + (1.0 - lightBlockMapAmbientShare) * lightBlockMapFacing);
+            (lightBlockMapAmbientShare + (1.0 - lightBlockMapAmbientShare) * lightBlockMapReach);
 
         // Guarded on the material actually being a Blinn-Phong one, since that is what declares the
         // specular terms below. Every lit material in the game is; the guard is here so that the day
         // one of them is not, this fails to compile in nobody's frame rather than in everyone's.
+        //
+        // A highlight is the one thing that genuinely needs the light to be coming from somewhere,
+        // so here the share scales the term rather than sparing it: light arriving from every side
+        // glints off nothing.
         #if defined( PHONG )
-            reflectedLight.directSpecular += lightBlockMapLit * lightBlockMapFacing *
+            reflectedLight.directSpecular += lightBlockMapLit * lightBlockMapDirectionalShare *
+                lightBlockMapFacing *
                 BRDF_BlinnPhong(lightBlockMapDir, geometryViewDir, normal,
                     material.specularColor, material.specularShininess) *
                 material.specularStrength;

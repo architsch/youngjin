@@ -13,11 +13,13 @@
  * - Range: nothing past a light's own range is lit
  * - Directionality: the recorded arrival direction points the way the light actually travelled
  * - Accumulation: lights sum, and the result does not depend on the order they are supplied in
+ * - Monotonicity: installing a light never leaves any surface in the room darker than it found it
  */
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import fc from "fast-check";
-import LightBlockPropagationUtil, { getDistanceAttenuation, LightPropagationScratch }
+import LightBlockPropagationUtil, { getDistanceAttenuation, getLightLuminance,
+    LightPropagationScratch }
     from "../../../src/client/graphics/light/util/lightBlockPropagationUtil";
 import LightSource from "../../../src/client/graphics/light/types/lightSource";
 import LightBlockSmoothingUtil from "../../../src/client/graphics/light/util/lightBlockSmoothingUtil";
@@ -27,7 +29,8 @@ import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsR
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_HEIGHT, FULL_COLLISION_LAYER_MASK, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
-import { LIGHT_SOURCE_MIN_DISTANCE } from "../../../src/client/system/clientConstants";
+import { LIGHT_BLOCK_MAP_AMBIENT_SHARE, LIGHT_SOURCE_MIN_DISTANCE }
+    from "../../../src/client/system/clientConstants";
 
 
 //------------------------------------------------------------------------------
@@ -278,6 +281,43 @@ describe("Light propagation", () =>
             }
         });
 
+        it("reaches a ball rather than a diamond, in an open room", () =>
+        {
+            // Stepping from block to block only ever goes along the axes, so a route through the
+            // grid is as long as the sides of the box between its ends rather than as the line
+            // across it. A fill bounded by the length of that route therefore carries a lamp its
+            // full reach along each axis but gives out a factor of root two short on a flat diagonal
+            // and root three short on a corner one — and it gives out there while the falloff is
+            // still plainly bright, so the light does not fade out, it stops dead on an octahedron.
+            // That edge is what draws a lamp as a diamond. Bounding it by the straight line instead
+            // is what this asserts, from both sides: everything inside the ball is lit and nothing
+            // outside it is.
+            //
+            // Everything inside really is reachable, walls aside: a route that only ever steps
+            // toward its target stays inside the box between the two ends, and so never runs further
+            // from the lamp than the target itself is.
+            const range = 7;
+            const result = propagate(openRoom(), [makeLight({range})]);
+            const lamp = makeLight().worldPos;
+
+            // A hair either side of the boundary is left out rather than asserted, since a block
+            // sitting exactly at the range is decided by the last bit of two different ways of
+            // arriving at the same distance.
+            const boundaryTolerance = 1e-6;
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+            {
+                const center = blockCenter(
+                    VoxelQueryUtil.getVoxelBlockRow(blockIndex),
+                    VoxelQueryUtil.getVoxelBlockCol(blockIndex),
+                    VoxelQueryUtil.getVoxelBlockCollisionLayer(blockIndex));
+                const straightLineDistance = Math.hypot(
+                    center.x - lamp.x, center.y - lamp.y, center.z - lamp.z);
+                if (Math.abs(straightLineDistance - range) <= boundaryTolerance)
+                    continue;
+                expect(result.light[blockIndex * 3] > 0).toBe(straightLineDistance < range);
+            }
+        });
+
         it("a wider range reaches at least as far as a narrower one", () =>
         {
             const near = propagate(openRoom(), [makeLight({range: 6})]);
@@ -516,6 +556,222 @@ describe("Light propagation", () =>
             LightBlockSmoothingUtil.markOpenBlocks(voxels, openBlocks);
             LightBlockSmoothingUtil.smooth(field, smoothingScratch, openBlocks);
             expect(everyEntry(field, value => Math.abs(value - 1) < 1e-5)).toBe(true);
+        });
+    });
+
+    describe("never darkening what it reaches", () =>
+    {
+        // A light can only ever *add* light to a room. The amount is monotone by construction, since
+        // the fill adds; what is not free is the **direction**, which is one vector per block
+        // however many lamps met there. A direction that swung on anything other than the light
+        // behind it is the one way installing a lamp could take shading away from the room it was
+        // put in — and the reason the block map records how much of a block's light has a direction
+        // at all, rather than the direction alone.
+
+        /** How much of a block's light is travelling one way rather than standing in it from every
+         *  side (see LightBlockMap). */
+        function directionalShareAt(result: PropagationResult, blockIndex: number): number
+        {
+            const at = blockIndex * 3;
+            const luminance = getLightLuminance(result.light[at], result.light[at + 1],
+                result.light[at + 2]);
+            if (luminance <= 0)
+                return 0;
+            return Math.min(1, Math.hypot(result.flux[at], result.flux[at + 1],
+                result.flux[at + 2]) / luminance);
+        }
+
+        /** What a surface with the given normal receives from a block: the arithmetic of
+         *  LIGHT_BLOCK_MAP_FRAGMENT_GLSL, which cannot be run here without a GPU. */
+        function shadeAt(result: PropagationResult, blockIndex: number,
+            normal: {x: number, y: number, z: number}): number
+        {
+            const at = blockIndex * 3;
+            const lit = getLightLuminance(result.light[at], result.light[at + 1],
+                result.light[at + 2]);
+            const fluxX = result.flux[at], fluxY = result.flux[at + 1], fluxZ = result.flux[at + 2];
+            const fluxLength = Math.hypot(fluxX, fluxY, fluxZ);
+            // Light travels *along* the flux, so a surface faces it when its normal opposes it.
+            const facing = (fluxLength > 0)
+                ? Math.max(0, -(normal.x * fluxX + normal.y * fluxY + normal.z * fluxZ) / fluxLength)
+                : 0;
+            const reach = 1 - directionalShareAt(result, blockIndex) * (1 - facing);
+            return lit * (LIGHT_BLOCK_MAP_AMBIENT_SHARE +
+                (1 - LIGHT_BLOCK_MAP_AMBIENT_SHARE) * reach);
+        }
+
+        function smoothed(result: PropagationResult): PropagationResult
+        {
+            LightBlockSmoothingUtil.smooth(result.light, smoothingScratch, openBlocks);
+            LightBlockSmoothingUtil.smooth(result.flux, smoothingScratch, openBlocks);
+            return result;
+        }
+
+        // A channel of a light a lamp could actually be: a palette entry brought into linear space
+        // and multiplied by a strength, which is either exactly nothing or a hundredth of something.
+        // Quantized rather than drawn from the whole of the float range on purpose — the two fields
+        // below are compared against each other as a ratio, and a channel down among the denormals
+        // is a number float32 holds to no useful precision at all, so what such a draw measures is
+        // the storage rather than the propagation.
+        const lightChannels = fc.integer({min: 0, max: 400}).map(hundredths => hundredths / 100);
+        const lampSpecs = fc.record({
+            col: fc.integer({min: 1, max: NUM_VOXEL_COLS - 2}),
+            row: fc.integer({min: 1, max: NUM_VOXEL_ROWS - 2}),
+            collisionLayer: fc.integer({min: 0, max: 15}),
+            // Zero included on every channel, so that a light with nothing in it is among the ones
+            // being installed rather than a case of its own.
+            colorR: lightChannels,
+            colorG: lightChannels,
+            colorB: lightChannels,
+            range: fc.float({min: Math.fround(1.5), max: 12, noNaN: true}),
+        });
+        const toLight = (spec: {col: number, row: number, collisionLayer: number, colorR: number,
+            colorG: number, colorB: number, range: number}) => makeLight({
+            worldPos: blockCenter(spec.row, spec.col, spec.collisionLayer),
+            colorR: spec.colorR, colorG: spec.colorG, colorB: spec.colorB,
+            range: spec.range,
+        });
+
+        it("takes nothing at all from the room for a light with no light in it", () =>
+        {
+            // A fitting painted black is the plainest case of the whole section: it lights nothing,
+            // so it must also point nowhere. Weighed by the geometry alone it would swing the
+            // direction as hard as the lamp actually lighting the place, and everything around it
+            // would be shaded as though lit from a side nothing was lighting it from.
+            const lamp = makeLight({worldPos: {x: 12.5, y: 1.75, z: 16.5}, range: 20});
+            const dark = makeLight({worldPos: {x: 20.5, y: 1.75, z: 16.5},
+                colorR: 0, colorG: 0, colorB: 0, range: 20});
+
+            const alone = propagate(openRoom(), [lamp]);
+            const beside = propagate(openRoom(), [lamp, dark]);
+
+            expect(maxAbsoluteDifference(beside.light, alone.light)).toBe(0);
+            expect(maxAbsoluteDifference(beside.flux, alone.flux)).toBe(0);
+        });
+
+        it("hands the direction to the lamp that is doing the lighting", () =>
+        {
+            // Two lamps the same distance from the block between them, one of them all but unlit.
+            // They travel the same way through the grid and are charged the same detour, so a
+            // direction weighed by the route alone would have them cancel each other out almost
+            // exactly — leaving the block lit by the bright one and shaded as though lit by neither.
+            const bright = makeLight({worldPos: {x: 12.5, y: 1.75, z: 16.5}, range: 20});
+            const nearlyDark = makeLight({worldPos: {x: 20.5, y: 1.75, z: 16.5},
+                colorR: 0.01, colorG: 0.01, colorB: 0.01, range: 20});
+
+            const result = propagate(openRoom(), [bright, nearlyDark]);
+            // Light from the bright lamp travels toward increasing x to arrive here.
+            expect(result.fluxAt(16, 16, 3).x).toBeGreaterThan(0);
+            // And nearly all of what stands here is travelling that way: the other lamp is entitled
+            // to take a hundredth of the direction away, not the whole of it.
+            expect(directionalShareAt(result,
+                VoxelQueryUtil.getVoxelBlockIndex(16, 16, 3))).toBeGreaterThan(0.9);
+        });
+
+        it("lights a surface between two facing lamps more than one lamp does, not less", () =>
+        {
+            // The sharpest case of the whole section, and the one a direction on its own cannot
+            // survive: light arrives here from both sides at once and all but cancels, while both
+            // lamps go on lighting the place. Which way the little that is left over points is then
+            // settled by the tenth of a lamp between them — so a surface turned toward the first
+            // lamp goes from being charged for none of the light to being charged for all of it,
+            // and ends up darker under two lamps than it was under one.
+            const towardFirstLamp = {x: -1, y: 0, z: 0};
+            const target = VoxelQueryUtil.getVoxelBlockIndex(16, 16, 3);
+            const first = makeLight({worldPos: {x: 12.5, y: 1.75, z: 16.5}, range: 20});
+            const second = makeLight({worldPos: {x: 20.5, y: 1.75, z: 16.5}, range: 20,
+                colorR: 1.1, colorG: 1.1, colorB: 1.1});
+
+            const alone = propagate(openRoom(), [first]);
+            const facing = propagate(openRoom(), [first, second]);
+
+            // The surface is turned squarely toward the first lamp, so it had everything that lamp
+            // could give it — the whole of what the second one adds is what is at stake.
+            expect(shadeAt(alone, target, towardFirstLamp))
+                .toBeCloseTo(getLightLuminance(alone.light[target * 3], alone.light[target * 3 + 1],
+                    alone.light[target * 3 + 2]), 5);
+            expect(shadeAt(facing, target, towardFirstLamp))
+                .toBeGreaterThan(shadeAt(alone, target, towardFirstLamp));
+        });
+
+        it("never records more direction than there is light to carry it", () =>
+        {
+            // What the shader divides one by the other to get, and what makes that share a share:
+            // the two fields are accumulated in step, and the smoothing sweeps them with the same
+            // weights, so neither pass can put them out of it.
+            fc.assert(fc.property(fc.array(lampSpecs, {minLength: 1, maxLength: 4}), (specs) =>
+            {
+                const voxels = openRoom();
+                LightBlockSmoothingUtil.markOpenBlocks(voxels, openBlocks);
+                const result = propagate(voxels, specs.map(toLight));
+
+                const worstShare = (of: PropagationResult) =>
+                {
+                    let worst = 0;
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                        worst = Math.max(worst, directionalShareAt(of, blockIndex));
+                    return worst;
+                };
+                // Measured before the clamp the share is read through, so that a field genuinely out
+                // of step shows up here rather than being quietly rounded back into range.
+                const unclamped = (of: PropagationResult) =>
+                {
+                    let worst = 0;
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                    {
+                        const at = blockIndex * 3;
+                        const luminance = getLightLuminance(of.light[at], of.light[at + 1],
+                            of.light[at + 2]);
+                        if (luminance <= 0)
+                            continue;
+                        worst = Math.max(worst, Math.hypot(of.flux[at], of.flux[at + 1],
+                            of.flux[at + 2]) / luminance);
+                    }
+                    return worst;
+                };
+
+                expect(unclamped(result)).toBeLessThan(1 + 1e-4);
+                expect(unclamped(smoothed(result))).toBeLessThan(1 + 1e-4);
+                expect(worstShare(result)).toBeLessThanOrEqual(1);
+            }), {numRuns: 15});
+        });
+
+        it("never leaves a surface darker for another lamp having been installed", () =>
+        {
+            // The whole of the section, asserted the way the room actually meets it: every block,
+            // every way a surface in it could be turned, and the field smoothed exactly as it is
+            // before the GPU ever sees it.
+            const normals = [
+                {x: 1, y: 0, z: 0}, {x: -1, y: 0, z: 0},
+                {x: 0, y: 1, z: 0}, {x: 0, y: -1, z: 0},
+                {x: 0, y: 0, z: 1}, {x: 0, y: 0, z: -1},
+            ];
+            fc.assert(fc.property(fc.array(lampSpecs, {minLength: 1, maxLength: 3}), lampSpecs,
+                (installed, added) =>
+                {
+                    const voxels = openRoom();
+                    LightBlockSmoothingUtil.markOpenBlocks(voxels, openBlocks);
+                    const before = smoothed(propagate(voxels, installed.map(toLight)));
+                    const after = smoothed(propagate(voxels,
+                        [...installed, added].map(toLight)));
+
+                    // Scanned into a single worst case and asserted once — a per-block assertion
+                    // over a property test's runs costs minutes. Relative, since what accumulates
+                    // near a lamp is orders of magnitude above what reaches the far wall, and the
+                    // fields are held as floats.
+                    let worstLoss = 0;
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                    {
+                        for (const normal of normals)
+                        {
+                            const wasLit = shadeAt(before, blockIndex, normal);
+                            const nowLit = shadeAt(after, blockIndex, normal);
+                            worstLoss = Math.max(worstLoss,
+                                (wasLit - nowLit) / Math.max(wasLit, 1e-6));
+                        }
+                    }
+                    expect(worstLoss).toBeLessThan(1e-4);
+                }), {numRuns: 30});
         });
     });
 

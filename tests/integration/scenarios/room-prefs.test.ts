@@ -21,7 +21,6 @@ import RoomPrefsUtil, { MAX_AMBIENT_INTENSITY, MAX_CLOUD_SCALE, MAX_CLOUD_SOFTNE
 import RoomPrefs from "../../../src/shared/room/types/roomPrefs";
 import HeadLightUtil, { ORDINARY_POWER_INTENSITY, ORDINARY_RANGE_DECAY, ORDINARY_RANGE_DISTANCE }
     from "../../../src/shared/graphics/light/util/headLightUtil";
-import LampLightUtil from "../../../src/shared/graphics/light/util/lampLightUtil";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME,
@@ -256,22 +255,7 @@ describe("power as one setting", () => {
             .toBeGreaterThan(HeadLightUtil.getIntensity(0));
     });
 
-    it("leaves a lamp a light even at its lowest", () => {
-        // A lamp is furniture rather than a torch: one turned all the way down is a small light,
-        // not a dark fitting, since there would be nothing on screen to tell that from a broken one.
-        expect(LampLightUtil.getIntensity(0)).toBeGreaterThan(0);
-        expect(LampLightUtil.getRange(0)).toBeGreaterThan(0);
-    });
-
-    it("lets a lamp be turned far past what lighting a room takes", () => {
-        // The top of the range exists for effect rather than for visibility: a lamp that blows out
-        // the wall it is mounted on is the thing being asked for, so it has to reach well past the
-        // strength that merely lights a room.
-        expect(LampLightUtil.getIntensity(MAX_ROOM_PREFS_STEP))
-            .toBeGreaterThan(3 * LampLightUtil.getIntensity(DEFAULT_LAMP_STEP));
-    });
-
-    it("never lets either grow dimmer as it is turned up", () => {
+    it("never lets the head lamp grow dimmer as it is turned up", () => {
         fc.assert(fc.property(steps, steps, (a, b) => {
             const [low, high] = a <= b ? [a, b] : [b, a];
             expect(HeadLightUtil.getIntensity(high))
@@ -280,26 +264,6 @@ describe("power as one setting", () => {
                 .toBeGreaterThanOrEqual(HeadLightUtil.getDistance(low));
             expect(HeadLightUtil.getDecay(high))
                 .toBeLessThanOrEqual(HeadLightUtil.getDecay(low));
-            expect(LampLightUtil.getIntensity(high))
-                .toBeGreaterThanOrEqual(LampLightUtil.getIntensity(low));
-        }));
-    });
-
-    it("gives a lamp two dials that do not move together", () => {
-        // The whole point of splitting them: a dim wash and a tight bright pool both have to be
-        // askable for, which they are not while one dial drives strength and reach at once.
-        expect(LampLightUtil.getIntensity(0)).toBe(LampLightUtil.getIntensity(0));
-        expect(LampLightUtil.getRange(0)).toBeLessThan(LampLightUtil.getRange(MAX_ROOM_PREFS_STEP));
-        // Reach and falloff run opposite ways, so a wide lamp is wide rather than merely long-range.
-        expect(LampLightUtil.getDecay(0))
-            .toBeGreaterThan(LampLightUtil.getDecay(MAX_ROOM_PREFS_STEP));
-    });
-
-    it("widens a lamp's reach as its spread is raised", () => {
-        fc.assert(fc.property(steps, steps, (a, b) => {
-            const [low, high] = a <= b ? [a, b] : [b, a];
-            expect(LampLightUtil.getRange(high)).toBeGreaterThanOrEqual(LampLightUtil.getRange(low));
-            expect(LampLightUtil.getDecay(high)).toBeLessThanOrEqual(LampLightUtil.getDecay(low));
         }));
     });
 
@@ -469,8 +433,6 @@ describe("power as one setting", () => {
     });
 });
 
-// What a lamp arrives at when nobody has adjusted it (see LampObjectUtil).
-const DEFAULT_LAMP_STEP = 62;
 const defaultPrefs = RoomPrefsUtil.decode("");
 
 
@@ -480,6 +442,19 @@ describe("the palettes a room's lighting is drawn from", () => {
         // void are what "nobody has said anything" has to mean.
         expect(ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME][0]).toBe("#ffffff");
         expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][0]).toBe("#000000");
+    });
+
+    it("offers no light that is merely a dimmed one", () => {
+        // Every entry sits at the top of the brightness range, so what is picked from this set is a
+        // light's color and never how much of it there is — that is the strength beside it, in all
+        // three of the places the set is read. A darkened entry is that dial spelled a second time,
+        // and it is the one way somebody could install a lamp expecting to light a room and end up
+        // with a fitting that gives nothing back.
+        for (const hex of ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME])
+        {
+            const rgb = ColorUtil.hexToRGB(hex);
+            expect(Math.max(rgb.x, rgb.y, rgb.z)).toBe(255);
+        }
     });
 
     it("keeps both inside what one stored character can address", () => {

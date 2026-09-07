@@ -70,10 +70,14 @@ const LightBlockMapMaterialUtil =
 
 // A single black (or, for the flux texture, directionless) block, standing in until the real block
 // map arrives. Filtering and wrapping do not matter at this size; being a sampler3D does.
+//
+// The fourth channel is zero in both, which is what each of them means by "nothing here": no open
+// room to have light in for the color texture, and none of that light having a direction for the
+// flux one (see LightBlockMap).
 function createPlaceholderTexture(fillValue: number): THREE.Data3DTexture
 {
     const texture = new THREE.Data3DTexture(
-        new Uint8Array([fillValue, fillValue, fillValue, 255]), 1, 1, 1);
+        new Uint8Array([fillValue, fillValue, fillValue, 0]), 1, 1, 1);
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
     texture.needsUpdate = true;

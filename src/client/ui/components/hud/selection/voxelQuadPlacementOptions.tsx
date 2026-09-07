@@ -40,6 +40,7 @@ import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 import LampObjectUtil from "../../../../../shared/object/util/lampObjectUtil";
+import SelectionToolRow from "./selectionToolRow";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
@@ -111,7 +112,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         };
     }, [canAddCanvas]);
 
-    return <div className="flex flex-row gap-4 p-2 w-fit pointer-events-auto overflow-hidden bg-gray-800 rounded-md yj-surface-convex">
+    return <SelectionToolRow>
         <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
             disabled={!canRemoveVoxelBlock(props.selection)}
             onClick={() => tryRemoveVoxelBlock(props.selection)}/>
@@ -152,7 +153,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 });
             }}
         />}
-    </div>;
+    </SelectionToolRow>;
 }
 
 function clearFTUETimeouts()

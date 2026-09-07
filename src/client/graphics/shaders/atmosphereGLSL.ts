@@ -143,27 +143,34 @@ export const ATMOSPHERE_PARS_GLSL = `
         // Full at the horizon and above it, gone a little way below (see the note on the floor).
         float presence = smoothstep(-ATMOSPHERE_CLOUD_FLOOR, 0.0, dir.y);
 
-        // Skipped outright where there is no cloud to find, rather than multiplied out afterwards.
-        // The field is the most expensive thing this shader does, and everything below the band is
-        // the half of the sky that also pays for the land — so this is where the saving is worth
-        // having, and it costs nothing to take: the test is on the fragment's own direction, which
-        // divides the screen along a line, so all but the few shading groups the line crosses take
-        // one side of it together.
+        // How much cloud reaches this fragment's color at all: how far toward the cloud's own color
+        // the weather is allowed to pull the air, and how much of the dome's cloud band stands in
+        // this direction. The two are separate on purpose — one is the strength of the weather and
+        // the other is its shape, and dialing the strength back is how two colors picked far apart
+        // are brought within sight of each other without either being repicked — but *whether there
+        // is anything to draw* is the product of both, which is why they are multiplied before the
+        // field is reached rather than after.
+        //
+        // Skipped outright where that product is nothing, rather than computed and multiplied away.
+        // The field is by far the most expensive thing this shader does, and it is skipped on two
+        // counts:
+        //
+        //   - **A room that has asked for no weather pays nothing at all.** The strength is a
+        //     uniform, and no room has ever set it by default, so for most rooms in the game every
+        //     fragment in the frame takes the same branch and the sky costs a mix of two colors.
+        //   - **Below the cloud band nothing pays either**, which is the half of the sky that also
+        //     pays for the land. That test is on the fragment's own direction, which divides the
+        //     screen along a line, so all but the few shading groups the line crosses still take one
+        //     side of it together.
         //
         // The field reads the slope across a pixel, which is only defined while neighbouring pixels
         // are taking the same branch — so on the line itself it is reading whatever the lanes that
-        // left held. That is harmless here and not by luck: the branch closes exactly where presence
-        // reaches nothing, so anything the field returns along it is multiplied away.
+        // left held. That is harmless here and not by luck: the branch closes exactly where the
+        // strength reaches nothing, so anything the field returns along it is multiplied away.
         vec3 air = airColor;
-        if (presence > 0.0)
-        {
-            // How much cloud stands here, and how far toward its color that much of it reaches. The
-            // two are separate on purpose: one is the shape of the weather and the other is its
-            // strength, and dialing the strength back is how two colors picked far apart are brought
-            // within sight of each other without either being repicked.
-            air = mix(airColor, atmosphereCloudColor,
-                atmosphereCloudAmount(dir) * atmosphereClouds.z * presence);
-        }
+        float cloudStrength = atmosphereClouds.z * presence;
+        if (cloudStrength > 0.0)
+            air = mix(airColor, atmosphereCloudColor, atmosphereCloudAmount(dir) * cloudStrength);
 
         float horizon = smoothstep(-0.25, 0.6, dir.y);
         return air * (1.0 - ATMOSPHERE_HORIZON_DEPTH * (horizon - 0.5));
@@ -224,6 +231,13 @@ const ATMOSPHERE_GROUND_MIN_DIP = 0.002;
 // is drawn on, that decides how much of the field lands inside one pixel.
 const ATMOSPHERE_GROUND_SPREAD = 0.008;
 
+// How much of the land has to survive the haze before it is worth drawing at all. The land is a blend
+// between two colors, so the most it can shift the air by is the distance between them — and below
+// this share of it, that shift is smaller than the step between two neighbouring values of an 8-bit
+// channel. There is nothing to see, and the field that would have been sampled to find it is the most
+// expensive thing the sky does.
+const ATMOSPHERE_GROUND_MIN_PRESENCE = 0.002;
+
 // The land under the sky — everything below the horizon, which without it is the same empty air as
 // everything above it. Only the sky reads this: the fog is the air *in and around the room*, and a
 // floor at the far end of a room fading into a hillside would be wrong.
@@ -245,6 +259,7 @@ export const ATMOSPHERE_GROUND_PARS_GLSL = `
     const float ATMOSPHERE_GROUND_HAZE = ${ATMOSPHERE_GROUND_HAZE.toFixed(4)};
     const float ATMOSPHERE_GROUND_MIN_DIP = ${ATMOSPHERE_GROUND_MIN_DIP.toFixed(4)};
     const float ATMOSPHERE_GROUND_SPREAD = ${ATMOSPHERE_GROUND_SPREAD.toFixed(4)};
+    const float ATMOSPHERE_GROUND_MIN_PRESENCE = ${ATMOSPHERE_GROUND_MIN_PRESENCE.toFixed(4)};
 
     // How high the land stands at a point on it, from the floor of a valley to the top of a ridge.
     //
@@ -288,6 +303,22 @@ export const ATMOSPHERE_GROUND_PARS_GLSL = `
         // sampled, so that asking for coarser country changes how big its hills are and nothing else.
         vec2 groundRay = dir.xz / max(-dir.y, ATMOSPHERE_GROUND_MIN_DIP);
         float groundRange = length(groundRay);
+
+        // How much of the land is still there to be seen at this distance. **Worked out before the
+        // land itself, and the whole reason it is worth working out first**: it falls away
+        // exponentially, so it is nothing at all across the wide band of directions approaching the
+        // horizon — which is the majority of the sky the room ever draws below it, and which would
+        // otherwise pay for a fractal field whose every trace is then multiplied out.
+        //
+        // The room's solidity divides the rate the land is lost at rather than lifting its coverage
+        // off zero. **That distinction is what keeps the horizon a distance.** Land held even
+        // slightly opaque at the horizon would meet the sky in a color the sky is not, and draw the
+        // seam this whole arrangement exists to avoid; dividing the rate leaves it still arriving at
+        // nothing exactly there, having simply taken longer to go.
+        float landPresence = exp(-groundRange * ATMOSPHERE_GROUND_HAZE / atmosphereGroundShape.y);
+        if (landPresence < ATMOSPHERE_GROUND_MIN_PRESENCE)
+            return air;
+
         vec2 groundPoint = groundRay * atmosphereGroundShape.x;
 
         // The room's own slope width, opened further by however much of the field lands inside one
@@ -299,13 +330,7 @@ export const ATMOSPHERE_GROUND_PARS_GLSL = `
         vec3 land = mix(atmosphereGroundColor, atmospherePeakColor,
             smoothstep(ATMOSPHERE_GROUND_LEVEL - slope, ATMOSPHERE_GROUND_LEVEL + slope, height));
 
-        // The room's solidity divides the rate the land is lost at rather than lifting its coverage
-        // off zero. **That distinction is what keeps the horizon a distance.** Land held even
-        // slightly opaque at the horizon would meet the sky in a color the sky is not, and draw the
-        // seam this whole arrangement exists to avoid; dividing the rate leaves it still arriving at
-        // nothing exactly there, having simply taken longer to go.
-        return mix(air, land,
-            exp(-groundRange * ATMOSPHERE_GROUND_HAZE / atmosphereGroundShape.y));
+        return mix(air, land, landPresence);
     }
 `;
 
@@ -427,8 +452,23 @@ export const ATMOSPHERE_FOG_FRAGMENT_PARS_GLSL = `
 // toward is the room's own fog color with nothing done to it. Where the smoke lies thickest the room
 // shows through; where it is absent the fog closes as it always did.
 //
-// The test is on a uniform, so every fragment in the frame takes the same branch and none of them
-// pays for the other. A room that has asked for even air therefore pays nothing at all for this.
+// **The field is only reached where there is fog for it to thin**, which is the one thing that keeps
+// it affordable. This chunk runs on every lit fragment in the room — it is spliced into every material
+// that stands in the air — and the field it can call is several times the cost of everything else
+// those materials do put together. What saves it is that the thinning scales a coverage that is very
+// often already zero: a surface nearer than the room's own fog-near distance is not fogged at all, and
+// no amount of thinning applied to nothing produces anything. In a view from a player's own eye that
+// is most of the screen, since most of what fills it is the wall, floor or object being stood in front
+// of.
+//
+// Two tests, and they fail in different ways on purpose:
+//
+//   - **The strength is a uniform**, so a room that has asked for even air takes the same branch in
+//     every fragment of the frame and pays nothing whatever for this.
+//   - **The coverage is per-fragment**, so it divides the screen by distance rather than arbitrarily.
+//     Fog depth varies smoothly across a surface, so neighbouring fragments overwhelmingly agree, and
+//     only the shading groups straddling the fog-near distance itself pay both ways. The field reads
+//     no derivatives, so unlike the sky's clouds there is nothing for a divergent branch to get wrong.
 export const ATMOSPHERE_FOG_FRAGMENT_GLSL = `
     #ifdef USE_FOG
         #ifdef FOG_EXP2
@@ -436,7 +476,7 @@ export const ATMOSPHERE_FOG_FRAGMENT_GLSL = `
         #else
             float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
         #endif
-        if (atmosphereSmoke.z > 0.0)
+        if (atmosphereSmoke.z > 0.0 && fogFactor > 0.0)
         {
             fogFactor *= 1.0 -
                 atmosphereSmoke.z * atmosphereSmokeThinning(vAtmosphereWorldPos);
