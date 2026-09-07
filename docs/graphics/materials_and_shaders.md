@@ -23,6 +23,14 @@ The splices name three.js's own chunks, so they are written against a specific a
 
 Because this all happens on compilation, three.js's own program cache cannot see any of it: as far as its cache key is concerned the tin, the wood and the flat instanced color are all "a lit material with no texture", and whichever was drawn first would lend its shader to the others. **Every cached material is therefore given a cache key of its own**, which is the same id the material factory caches it under — one id, one material, one shader.
 
+### The noise field the surfaces share
+
+The grain in the timber, the corrosion on the tin, the clouds, the land below the horizon and the unevenness of the room's air are all read from **one value-noise field**. They differ only in what they read it on — a point on a board, a direction on the dome, a place in the room — and in what they do with the answer.
+
+That field is **baked into a 3D texture once at load and read back, rather than worked out in the shader**. Worked out, a single sample is a run of hashing and interpolation, and the places that want it want it several times over: the room's air drags its own coordinate sideways by the field before reading a stack of octaves at the result. That work stands in every material in the room, which on a mid-range phone comes to more per fragment than the lighting and the finishes together. Read from a texture it is one filtered fetch, done by hardware the arithmetic is not competing for.
+
+The texture repeats, and carries several independent fields at once so that the ones read together as a direction cost a single fetch rather than one each. Neither the repetition nor the seam shows: at the coarseness a room asks for by default a whole room is a fraction of one period across, the octaves are read at ratios sharing no common multiple so the sum never lines up with itself, and the field is continuous where it wraps. `ValueNoiseTextureUtil` owns it, and hands it to every shader that reads it as that shader compiles.
+
 ## Compiling early
 
 Turning shader source into something a GPU will run is slow, and it happens the first time a material is drawn — which is to say, in the middle of play: the frame a door is first opened in, the frame another player first walks into the room. So it is done up front instead, behind the room-loading screen, where a pause is a pause in something that is already waiting.

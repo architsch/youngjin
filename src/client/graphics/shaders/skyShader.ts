@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { ATMOSPHERE_GROUND_PARS_GLSL, ATMOSPHERE_PARS_GLSL } from "./atmosphereGLSL";
+import ValueNoiseTextureUtil from "../util/valueNoiseTextureUtil";
 
 // Paints the emptiness past the room — every pixel no surface covers — as the room's own air seen at
 // infinity (see @src/client/graphics/shaders/atmosphereGLSL.ts for what that means and why the fog
@@ -60,6 +61,10 @@ const FRAGMENT_GLSL = `
 
 export default function installSkyShader(shader: THREE.WebGLProgramParametersWithUniforms)
 {
+    // Both the weather and the land are read out of the shared noise field, so the material has to be
+    // handed it (see ValueNoiseTextureUtil).
+    ValueNoiseTextureUtil.bindUniform(shader);
+
     shader.vertexShader = VERTEX_PARS_GLSL + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
         "#include <project_vertex>",

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import VALUE_NOISE_GLSL from "./valueNoiseGLSL";
+import ValueNoiseTextureUtil from "../util/valueNoiseTextureUtil";
 import INSTANCE_COLOR_FRAGMENT_GLSL from "./instanceColorGLSL";
 
 // Renders each instance as a piece of an antique tin toy: the per-instance color is treated as aged
@@ -129,6 +130,10 @@ const LIGHTS_END_GLSL = `
 
 export default function installInstancedTinShader(shader: THREE.WebGLProgramParametersWithUniforms)
 {
+    // The corrosion and the grain are read out of the shared noise field, so the material has to be
+    // handed it (see ValueNoiseTextureUtil).
+    ValueNoiseTextureUtil.bindUniform(shader);
+
     shader.vertexShader = VERTEX_PARS_GLSL + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",

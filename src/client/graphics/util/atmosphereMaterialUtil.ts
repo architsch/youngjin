@@ -2,6 +2,7 @@ import * as THREE from "three";
 import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import installSkyShader from "../shaders/skyShader";
+import ValueNoiseTextureUtil from "./valueNoiseTextureUtil";
 import { ATMOSPHERE_FOG_FRAGMENT_GLSL, ATMOSPHERE_FOG_FRAGMENT_PARS_GLSL,
     ATMOSPHERE_FOG_VERTEX_GLSL, ATMOSPHERE_FOG_VERTEX_PARS_GLSL } from "../shaders/atmosphereGLSL";
 
@@ -114,6 +115,10 @@ const AtmosphereMaterialUtil =
         material.onBeforeCompile = (shader, renderer) =>
         {
             existingOnBeforeCompile.call(material, shader, renderer);
+
+            // The smoke's own field is read out of the shared noise texture, so every material
+            // standing in the room's air has to be handed it (see ValueNoiseTextureUtil).
+            ValueNoiseTextureUtil.bindUniform(shader);
 
             shader.uniforms.atmosphereTime = atmosphereTimeUniform;
             shader.uniforms.atmosphereSmoke = atmosphereSmokeUniform;

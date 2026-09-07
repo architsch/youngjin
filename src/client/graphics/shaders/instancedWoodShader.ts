@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import VALUE_NOISE_GLSL from "./valueNoiseGLSL";
+import ValueNoiseTextureUtil from "../util/valueNoiseTextureUtil";
 import INSTANCE_COLOR_FRAGMENT_GLSL from "./instanceColorGLSL";
 
 // Renders each instance as a piece of moulded joinery: a panel of aged timber with a moulding carved
@@ -360,6 +361,10 @@ const NORMAL_FRAGMENT_GLSL = `
 
 export default function installInstancedWoodShader(shader: THREE.WebGLProgramParametersWithUniforms)
 {
+    // The grain and the knots' own wobble are read out of the shared noise field, so the material has
+    // to be handed it (see ValueNoiseTextureUtil).
+    ValueNoiseTextureUtil.bindUniform(shader);
+
     shader.vertexShader = VERTEX_PARS_GLSL + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",

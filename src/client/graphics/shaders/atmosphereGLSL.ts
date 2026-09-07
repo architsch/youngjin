@@ -107,13 +107,10 @@ export const ATMOSPHERE_PARS_GLSL = `
         float t = atmosphereTime * atmosphereClouds.y;
         vec3 p = (dir + vec3(t, 0.4 * t, -0.7 * t)) * atmosphereClouds.x;
 
-        // Three samples of one field, read as a direction to push the coordinate in. Offset from
-        // each other rather than drawn from separate fields, which costs nothing and decorrelates
-        // them just as well.
-        vec3 warp = vec3(
-            valueNoise(p),
-            valueNoise(p.yzx + 19.7),
-            valueNoise(p.zxy + 43.1)) - 0.5;
+        // Three fields at one point, read as a direction to push the coordinate in. Drawn from
+        // separate fields rather than from one field at three offsets, which decorrelates them just
+        // as well and takes a single fetch to do it (see valueNoiseWarp).
+        vec3 warp = valueNoiseWarp(p);
         float field = valueNoiseFbm(p + warp * ATMOSPHERE_WARP);
 
         // The room's own edge width, held open by however much the field changes across one pixel.
@@ -275,9 +272,7 @@ export const ATMOSPHERE_GROUND_PARS_GLSL = `
     // makes the country read as carved rather than as poured, without becoming the country.
     float atmosphereGroundHeight(vec2 p)
     {
-        vec2 warp = vec2(
-            valueNoise(vec3(p, 0.0)),
-            valueNoise(vec3(p.yx, 11.3))) - 0.5;
+        vec2 warp = valueNoiseWarp(vec3(p, 0.0)).xy;
         float field = valueNoiseFbm(vec3(p + warp * ATMOSPHERE_GROUND_WARP, 0.0));
         float crest = 1.0 - abs(field * 2.0 - 1.0);
         return field + ATMOSPHERE_GROUND_CREST * crest * crest;
@@ -402,10 +397,7 @@ export const ATMOSPHERE_SMOKE_PARS_GLSL = `
         // two sliding against each other. Offset as well, so the two are decorrelated rather than
         // merely out of step.
         vec3 q = (worldPos - travel * (1.0 - ATMOSPHERE_SMOKE_CHURN)) * atmosphereSmoke.x + 13.7;
-        vec3 warp = vec3(
-            valueNoise(q),
-            valueNoise(q.yzx + 31.4),
-            valueNoise(q.zxy + 57.8)) - 0.5;
+        vec3 warp = valueNoiseWarp(q);
 
         float field = valueNoiseFbm(p + warp * ATMOSPHERE_SMOKE_WARP);
         return smoothstep(ATMOSPHERE_SMOKE_LOW, ATMOSPHERE_SMOKE_HIGH, field);
