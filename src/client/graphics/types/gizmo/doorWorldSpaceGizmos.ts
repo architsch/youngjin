@@ -1,6 +1,6 @@
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
-import { DOOR_FOOTPRINT_HEIGHT, DOOR_FOOTPRINT_WIDTH } from "../../../../shared/system/sharedConstants";
+import DoorObjectTypeConfig from "../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import installWallAttachmentMoveGizmos from "./wallAttachmentMoveGizmos";
 
 // Moving a door is world-building rather than room-editing, so the arrows belong to an admin and to
@@ -9,7 +9,7 @@ import installWallAttachmentMoveGizmos from "./wallAttachmentMoveGizmos";
 installWallAttachmentMoveGizmos({
     listenerName: "doorWorldSpaceGizmos",
     objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Door"),
-    footprintWidth: DOOR_FOOTPRINT_WIDTH,
-    footprintHeight: DOOR_FOOTPRINT_HEIGHT,
+    footprintWidth: DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeX,
+    footprintHeight: DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY,
     canUserMove: RoomValidationUtil.canUserManageDoors,
 });

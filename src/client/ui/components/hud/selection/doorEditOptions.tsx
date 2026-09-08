@@ -14,7 +14,7 @@ import ClientObjectManager from "../../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
-import DoorObjectUtil from "../../../../../shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
@@ -51,8 +51,8 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
             />
             <IconButton id="changeDoorLabelButton" icon={<TextCursorIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "objectLabel", params: {
-                    initialText: DoorObjectUtil.getLabel(props.selection.gameObject.params),
-                    initialColorIndex: DoorObjectUtil.getLabelColorIndex(
+                    initialText: DoorObjectTypeConfig.util.getLabel(props.selection.gameObject.params),
+                    initialColorIndex: DoorObjectTypeConfig.util.getLabelColorIndex(
                         props.selection.gameObject.params),
                     onSetText: (text: string) => trySetDoorMetadata(props.selection,
                         ObjectMetadataKeyEnumMap.Label, text),
@@ -63,9 +63,9 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
             <IconButton id="changeDoorDestinationButton" icon={<DestinationIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorDestination", params: {
                     initialDestinationRoomID:
-                        DoorObjectUtil.getDestinationRoomId(props.selection.gameObject.params),
+                        DoorObjectTypeConfig.util.getDestinationRoomId(props.selection.gameObject.params),
                     initialDestinationDoorLabel:
-                        DoorObjectUtil.getDestinationDoorLabel(props.selection.gameObject.params),
+                        DoorObjectTypeConfig.util.getDestinationDoorLabel(props.selection.gameObject.params),
                     onChooseRoom: (roomID: string) => trySetDoorMetadata(props.selection,
                         ObjectMetadataKeyEnumMap.DestinationRoomId, roomID),
                     onSetDoorLabel: (label: string) => trySetDoorMetadata(props.selection,
@@ -79,7 +79,7 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
             <IconButton id="doorSettingsButton" icon={<GearIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorSettings", params: {
                     isDefaultEntrance:
-                        DoorObjectUtil.getDoorType(props.selection.gameObject.params)
+                        DoorObjectTypeConfig.util.getDoorType(props.selection.gameObject.params)
                             == DoorTypeEnumMap.DefaultEntrance,
                     onSetDefaultEntrance: (isDefaultEntrance: boolean) => trySetDoorMetadata(
                         props.selection, ObjectMetadataKeyEnumMap.DoorType,

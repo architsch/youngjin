@@ -6,7 +6,7 @@ import NumUtil from "../../../../../shared/math/util/numUtil";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
-import { PLAYER_HEIGHT } from "../../../../../shared/system/sharedConstants";
+import { PLAYER_HEIGHT } from "../../../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 
 //------------------------------------------------------------------------
 // Computes the camera pose for the "firstPerson" camera mode: the camera

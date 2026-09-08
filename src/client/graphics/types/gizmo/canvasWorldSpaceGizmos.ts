@@ -1,4 +1,5 @@
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
+import CanvasObjectTypeConfig from "../../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import installWallAttachmentMoveGizmos from "./wallAttachmentMoveGizmos";
 
 // A canvas is a 1x1 square of wall, and moving one is an ordinary room edit — anybody who may edit
@@ -6,6 +7,6 @@ import installWallAttachmentMoveGizmos from "./wallAttachmentMoveGizmos";
 installWallAttachmentMoveGizmos({
     listenerName: "canvasWorldSpaceGizmos",
     objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Canvas"),
-    footprintWidth: 1,
-    footprintHeight: 1,
+    footprintWidth: CanvasObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeX,
+    footprintHeight: CanvasObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY,
 });

@@ -1,5 +1,6 @@
 import Vec3 from "../../../../../math/types/vec3";
-import { FORWARD_DIR, UNIT_PLAYER_PART_LENGTH } from "../../../../../system/sharedConstants";
+import { FORWARD_DIR } from "../../../../../system/sharedConstants";
+import { UNIT_PLAYER_PART_LENGTH } from "../compositionConstants/playerCompositionConstants";
 import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
 
 export default class PlayerCompositionBuilder extends InstancedMeshCompositionBuilder

@@ -1,4 +1,4 @@
-import { CANVAS_FRAME_ATLAS_CELL_SIZE } from "../../../shared/system/sharedConstants";
+import { CANVAS_FRAME_ATLAS_CELL_SIZE } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 
 // Side length (in atlas pixels) of the square inner "window" of each picture frame in the
 // canvas_frames atlas, keyed by the frame's "{col},{row}" cell coordinates (see CanvasFrameImageMap).

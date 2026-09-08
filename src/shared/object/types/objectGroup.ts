@@ -7,7 +7,7 @@ import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumbe
 import AddObjectSignal from "./addObjectSignal";
 import { ObjectMetadata } from "./objectMetadata";
 import ObjectTransform from "./objectTransform";
-import DoorObjectUtil from "../util/doorObjectUtil";
+import DoorObjectTypeConfig from "./objectTypeConfig/doorObjectTypeConfig";
 import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
 
@@ -226,7 +226,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
         if (temp_sourceVoxelGridVersion >= FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION)
             return objectGroup;
 
-        const entranceDoor = DoorObjectUtil.makeEntranceDoor(temp_roomID,
+        const entranceDoor = DoorObjectTypeConfig.util.makeEntranceDoor(temp_roomID,
             INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
         objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
         return objectGroup;

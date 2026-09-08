@@ -1,10 +1,10 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
 import ColorUtil from "../../../../../math/util/colorUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
-import { DOOR_GEOMETRY_ID, INSTANCED_WOOD_MATERIAL_ID, ZERO_VEC3 } from "../../../../../system/sharedConstants";
+import { INSTANCED_WOOD_MATERIAL_ID, ZERO_VEC3 } from "../../../../../system/sharedConstants";
 import MeshDataUtil from "../../../util/meshDataUtil";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
-import DoorCompositionConstants from "../compositionConstants/doorCompositionConstants";
+import DoorCompositionConstants, { DOOR_GEOMETRY_ID } from "../compositionConstants/doorCompositionConstants";
 import DoorCompositionParams from "../compositionParams/doorCompositionParams";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";

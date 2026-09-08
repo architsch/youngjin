@@ -19,7 +19,8 @@ import SetObjectTransformSignal from "../../../src/shared/object/types/setObject
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
-import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../src/shared/system/sharedConstants";
 
 // Players always spawn behind one of the room's doors, regardless of where they were before, and a
 // fixture room has exactly one (see roomContent.ts). Asked of the room rather than written out, so

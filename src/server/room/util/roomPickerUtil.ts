@@ -1,6 +1,7 @@
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import { HUB_ROOM_ID_KEYWORD, MAX_PLAYERS_PER_ROOM, ROOM_ALMOST_FULL_MARGIN, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
+import { MAX_PLAYERS_PER_ROOM } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import ServerRoomManager from "../serverRoomManager";
 import HubRoomUtil from "./hubRoomUtil";

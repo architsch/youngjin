@@ -16,7 +16,8 @@ import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import DoorObjectUtil, { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID,
+    SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -30,13 +31,14 @@ import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
     LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH,
-    SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/system/sharedConstants";
+    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+const DOOR_FOOTPRINT_HEIGHT =
+    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
 
 function makeUser(id: string, userType: number): User
 {
@@ -251,12 +253,12 @@ describe("what a door makes of the values it is handed", () => {
                 // actually wearing, so picking that same swatch back changes nothing.
                 const configuredHex = ObjectTypeConfigMap.getConfigByIndex(doorTypeIndex)
                     .components.spawnedByAny!.labelText!.defaultFontColorHex;
-                expect(DoorObjectUtil.getLabelColorIndex(door)).toBe(
+                expect(DoorObjectTypeConfig.util.getLabelColorIndex(door)).toBe(
                     ColorUtil.rgbToPaletteIndex(LABEL_COLOR_PALETTE_NAME,
                         ColorUtil.hexToRGB(configuredHex)));
 
                 door.metadata[ObjectMetadataKeyEnumMap.LabelColor] = new EncodableByteString("7");
-                expect(DoorObjectUtil.getLabelColorIndex(door)).toBe(7);
+                expect(DoorObjectTypeConfig.util.getLabelColorIndex(door)).toBe(7);
             },
         });
     });
@@ -269,10 +271,10 @@ describe("what a door makes of the values it is handed", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const bare = makeDoorSignal(room, ADMIN);
-                expect(DoorObjectUtil.getLabel(bare)).toBe("");
-                expect(DoorObjectUtil.getDestinationRoomId(bare)).toBe("");
-                expect(DoorObjectUtil.getDestinationDoorLabel(bare)).toBe("");
-                expect(DoorObjectUtil.getDoorType(bare)).toBe(DoorTypeEnumMap.CustomEntrance);
+                expect(DoorObjectTypeConfig.util.getLabel(bare)).toBe("");
+                expect(DoorObjectTypeConfig.util.getDestinationRoomId(bare)).toBe("");
+                expect(DoorObjectTypeConfig.util.getDestinationDoorLabel(bare)).toBe("");
+                expect(DoorObjectTypeConfig.util.getDoorType(bare)).toBe(DoorTypeEnumMap.CustomEntrance);
             },
         });
     });
@@ -347,7 +349,7 @@ describe("choosing where a player arrives", () => {
 
     function addDoor(room: Room, objectId: string, col: number, label: string, doorType: number)
     {
-        const door = DoorObjectUtil.makeEntranceDoor(room.id, col, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+        const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id, col, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
             COLLISION_LAYER_MIN);
         door.objectId = objectId;
         door.metadata[ObjectMetadataKeyEnumMap.Label] = new EncodableByteString(label);

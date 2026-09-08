@@ -120,7 +120,7 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     // painted dark cannot be told from one somebody turned down. It is also not a thing a room can
     // honour: light is only ever added to what is already there, so the darkest entry such a set
     // could hold would still darken nothing (see LightBlockMap) — it would only be a lamp that
-    // fails to light, which is what LampObjectUtil refuses to let one arrive as.
+    // fails to light, which is what LampObjectTypeConfig refuses to let one arrive as.
     //
     // This palette is far longer than the ones above, and deliberately holds colors that are hard
     // to tell apart in a swatch grid. That is the opposite of the rule everywhere else, and the

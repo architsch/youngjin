@@ -51,7 +51,7 @@ import ClientVoxelQueryUtil from "../../../src/client/voxel/util/clientVoxelQuer
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Room from "../../../src/shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
@@ -66,7 +66,7 @@ const MIDDLE_ROW = Math.floor(0.5 * NUM_VOXEL_ROWS);
 const MIDDLE_COL = Math.floor(0.5 * NUM_VOXEL_COLS);
 
 // Each boundary wall, named by the way a door hung on it faces into the room, and the cell of that
-// wall the door is hung in (see DoorObjectUtil, which places a door from the cell alone).
+// wall the door is hung in (see DoorObjectTypeConfig, which places a door from the cell alone).
 const WALLS = [
     {facing: "+x", col: 0, row: MIDDLE_ROW},
     {facing: "-x", col: NUM_VOXEL_COLS - 1, row: MIDDLE_ROW},
@@ -83,7 +83,7 @@ let room: Room;
 /** The door itself, as room generation hangs one on the given cell of the boundary wall. */
 function makeDoor(col: number, row: number): AddObjectSignal
 {
-    return DoorObjectUtil.makeEntranceDoor(ROOM_ID, col, row, COLLISION_LAYER_MIN);
+    return DoorObjectTypeConfig.util.makeEntranceDoor(ROOM_ID, col, row, COLLISION_LAYER_MIN);
 }
 
 /**

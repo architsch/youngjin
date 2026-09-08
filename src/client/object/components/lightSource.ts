@@ -2,7 +2,7 @@ import * as THREE from "three";
 import Vec3 from "../../../shared/math/types/vec3";
 import ColorUtil from "../../../shared/math/util/colorUtil";
 import LampLightUtil from "../../../shared/graphics/light/util/lampLightUtil";
-import LampObjectUtil from "../../../shared/object/util/lampObjectUtil";
+import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { LIGHT_COLOR_PALETTE_NAME } from "../../../shared/system/sharedConstants";
 import GraphicsManager from "../../graphics/graphicsManager";
@@ -56,9 +56,9 @@ export default class LightSource extends GameObjectComponent
         // materials give their own colors.
         colorTemp.set(ColorUtil.rgbToHex(
             ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
-                LampObjectUtil.getColorIndex(obj))));
-        const intensity = LampObjectUtil.getIntensity(obj);
-        const range = LampObjectUtil.getRange(obj);
+                LampObjectTypeConfig.util.getColorIndex(obj))));
+        const intensity = LampObjectTypeConfig.util.getIntensity(obj);
+        const range = LampObjectTypeConfig.util.getRange(obj);
 
         GraphicsManager.getLightBlockMap().addLightSource(obj.objectId, {
             worldPos: getLightWorldPos(obj.transform.pos, obj.transform.dir),

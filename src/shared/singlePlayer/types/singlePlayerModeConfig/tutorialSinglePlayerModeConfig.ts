@@ -4,7 +4,12 @@ import RoomBuilderParams from "../../../room/generation/types/params/roomBuilder
 import RoomPalette from "../../../room/generation/types/roomPalette";
 import RoomVolume from "../../../room/generation/types/roomVolume";
 import Room from "../../../room/types/room";
-import { COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, PLAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
+import DoorObjectTypeConfig from "../../../object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_HEIGHT } from "../../../object/types/objectTypeConfig/playerObjectTypeConfig";
+import { COLLISION_LAYER_MIN, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
+
+const DOOR_FOOTPRINT_HEIGHT =
+    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
 import SinglePlayerModeConfig from "./singlePlayerModeConfig";
 
 let cachedParams: RoomBuilderParams | undefined;

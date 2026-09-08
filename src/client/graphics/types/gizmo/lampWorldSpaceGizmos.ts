@@ -1,6 +1,6 @@
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
-import { LAMP_FOOTPRINT_HEIGHT, LAMP_FOOTPRINT_WIDTH } from "../../../../shared/system/sharedConstants";
+import LampObjectTypeConfig from "../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import installWallAttachmentMoveGizmos from "./wallAttachmentMoveGizmos";
 
 // Moving a lamp is an admin's alone while the lamp is a placeholder, on the same terms installing
@@ -8,7 +8,7 @@ import installWallAttachmentMoveGizmos from "./wallAttachmentMoveGizmos";
 installWallAttachmentMoveGizmos({
     listenerName: "lampWorldSpaceGizmos",
     objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Lamp"),
-    footprintWidth: LAMP_FOOTPRINT_WIDTH,
-    footprintHeight: LAMP_FOOTPRINT_HEIGHT,
+    footprintWidth: LampObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeX,
+    footprintHeight: LampObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY,
     canUserMove: (user) => RoomValidationUtil.userIsAdmin(user),
 });

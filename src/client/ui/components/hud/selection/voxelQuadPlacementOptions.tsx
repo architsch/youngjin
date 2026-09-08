@@ -26,7 +26,8 @@ import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../../../shared/system/sharedConstants";
+import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
@@ -39,7 +40,7 @@ import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
-import LampObjectUtil from "../../../../../shared/object/util/lampObjectUtil";
+import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
@@ -146,10 +147,10 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             disabled={!canAddLamp}
             onClick={() => {
                 // A lamp arrives lit the way a lamp with nothing said about it is lit, and is
-                // adjusted from there through its own options (see LampObjectUtil).
+                // adjusted from there through its own options (see the lamp's own util).
                 tryAddObjectFromQuad(props.selection, lampTypeIndex, {
                     [ObjectMetadataKeyEnumMap.LightProperties]:
-                        new EncodableByteString(LampObjectUtil.getDefaultLightProperties()),
+                        new EncodableByteString(LampObjectTypeConfig.util.getDefaultLightProperties()),
                 });
             }}
         />}
@@ -240,7 +241,7 @@ function getCandidateHeights(objectTypeIndex: number, quadIndex: number, offsetY
     const storeyFloorLayer = (collisionLayer >= STOREY_FLOOR_COLLISION_LAYER)
         ? STOREY_FLOOR_COLLISION_LAYER + 1 : COLLISION_LAYER_MIN;
     const floorY = (storeyFloorLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
-    return [floorY + 0.5 * DOOR_FOOTPRINT_HEIGHT];
+    return [floorY + 0.5 * DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY];
 }
 
 async function tryAddObjectFromQuad(selection: VoxelQuadSelection,

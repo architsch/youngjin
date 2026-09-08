@@ -79,7 +79,7 @@ import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
-import { PLAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";

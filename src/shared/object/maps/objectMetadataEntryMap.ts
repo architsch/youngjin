@@ -6,7 +6,7 @@ import NumUtil from "../../math/util/numUtil";
 import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
-import LampObjectUtil from "../util/lampObjectUtil";
+import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 
 const doorTypeValues = Object.values(DoorTypeEnumMap);
 
@@ -64,7 +64,7 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     // (see ObjectMetadataEntryMap.preprocess), which for a fixed-width encoding means a lamp could
     // be handed a string of any length at all.
     [ObjectMetadataKeyEnumMap.LightProperties]: {
-        preprocessingMethod: (rawValue: string) => LampObjectUtil.canonicalize(rawValue),
+        preprocessingMethod: (rawValue: string) => LampObjectTypeConfig.util.canonicalize(rawValue),
     },
 };
 

@@ -7,7 +7,7 @@ import { cameraModeObservable } from "../../system/clientObservables";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
 import SpeechBubble from "../components/speechBubble";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/system/sharedConstants";
+import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 
 const playerHalfHeightWithMargin = 0.5 * PLAYER_HEIGHT + 0.5;
 const playerRadiusWithMargin = PLAYER_RADIUS_XZ + 0.5;

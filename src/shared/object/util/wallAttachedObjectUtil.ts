@@ -136,6 +136,37 @@ const WallAttachedObjectUtil =
         }
         return objectIds;
     },
+    // Where an attachment of the given kind stands when it is hung on the boundary wall of the given
+    // cell. A wall attachment's collider is centred on its position while the object itself stands on
+    // the floor, so its origin sits half a footprint above the storey it is mounted on; across the
+    // wall it is centred on the cell, and along the wall's normal it sits on the face the room looks
+    // at. Which of the four boundary walls the cell belongs to is read off the cell itself.
+    getBoundaryWallAttachmentPos: (objectTypeIndex: number, col: number, row: number,
+        collisionLayer: number): Vec3 =>
+    {
+        const floorY = (collisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
+        const y = floorY + getColliderVerticalHalfSizeByType(objectTypeIndex);
+
+        if (row >= NUM_VOXEL_ROWS - 1)
+            return {x: col + 0.5, y, z: row};
+        if (row <= 0)
+            return {x: col + 0.5, y, z: row + 1};
+        if (col >= NUM_VOXEL_COLS - 1)
+            return {x: col, y, z: row + 0.5};
+        return {x: col + 1, y, z: row + 0.5};
+    },
+    // Which way an attachment hung on the boundary wall of that cell faces: out of the wall it is
+    // hung on, into the room.
+    getBoundaryWallInwardDir: (col: number, row: number): Vec3 =>
+    {
+        if (row >= NUM_VOXEL_ROWS - 1)
+            return {x: 0, y: 0, z: -1};
+        if (row <= 0)
+            return {x: 0, y: 0, z: 1};
+        if (col >= NUM_VOXEL_COLS - 1)
+            return {x: -1, y: 0, z: 0};
+        return {x: 1, y: 0, z: 0};
+    },
     getMoveResult(room: Room, obj: AddObjectSignal,
         dx: number, dy: number, dz: number): {newPos: Vec3, newDir: Vec3} | undefined
     {

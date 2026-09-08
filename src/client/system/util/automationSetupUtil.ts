@@ -21,9 +21,11 @@ import WallAttachedObjectUtil from "../../../shared/object/util/wallAttachedObje
 import Vec3 from "../../../shared/math/types/vec3";
 import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
+import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
-    NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
+    NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
     SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
@@ -90,6 +92,8 @@ import { cameraModeObservable, orbitCameraAnglesObservable, orbitCameraTargetOve
 
 // How many collision layers the player's own height occupies, and so how much clear headroom a cell
 // needs before he can stand in it.
+const DOOR_FOOTPRINT_HEIGHT =
+    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
 const PLAYER_LAYER_COUNT = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
 
 // The most spots one call will report. A room is thousands of cell-and-layer pairs and a caller

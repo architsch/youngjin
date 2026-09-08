@@ -3,7 +3,7 @@ import GameObject from "./gameObject";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { LAMP_FOOTPRINT_HEIGHT, LAMP_FOOTPRINT_WIDTH } from "../../../shared/system/sharedConstants";
+import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import GraphicsManager from "../../graphics/graphicsManager";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
@@ -17,7 +17,8 @@ const vector3Temp = new THREE.Vector3();
 
 // The patch of wall a lamp lays claim to, which is what its selection outline frames and what its
 // move arrows are placed around.
-const selectionOutlineScale = new THREE.Vector3(LAMP_FOOTPRINT_WIDTH, LAMP_FOOTPRINT_HEIGHT, 1);
+const lampHitboxSize = LampObjectTypeConfig.components.spawnedByAny.collider.hitboxSize;
+const selectionOutlineScale = new THREE.Vector3(lampHitboxSize.sizeX, lampHitboxSize.sizeY, 1);
 
 // A light somebody installed on a wall. What is drawn is the composer's business and what is lit is
 // the light source's; what this class does is keep the two pointed at the same place and the same

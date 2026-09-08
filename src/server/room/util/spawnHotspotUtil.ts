@@ -3,12 +3,16 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { DoorTypeEnumMap } from "../../../shared/object/types/doorType";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
-import DoorObjectUtil from "../../../shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig, { SPAWN_DIST_BEHIND_DOOR } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import Room from "../../../shared/room/types/room";
-import { DOOR_FOOTPRINT_HEIGHT, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    PLAYER_HEIGHT, SPAWN_DIST_BEHIND_DOOR } from "../../../shared/system/sharedConstants";
+import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+
+// How much wall a door claims, which is what its origin sits at the middle of.
+const DOOR_FOOTPRINT_HEIGHT =
+    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
 
 // Where a player arriving in a room is put down. The counterpart of RoomPickerUtil: that decides
 // which room a user is headed for, and this decides where in it they land.
@@ -28,13 +32,13 @@ const SpawnHotspotUtil =
 
         if (destinationDoorLabel.length > 0)
         {
-            const named = doors.filter(door => DoorObjectUtil.getLabel(door) === destinationDoorLabel);
+            const named = doors.filter(door => DoorObjectTypeConfig.util.getLabel(door) === destinationDoorLabel);
             if (named.length > 0)
                 return getTransformBehindDoor(pickOne(named));
         }
 
         const defaultEntrances = doors.filter(door =>
-            DoorObjectUtil.getDoorType(door) === DoorTypeEnumMap.DefaultEntrance);
+            DoorObjectTypeConfig.util.getDoorType(door) === DoorTypeEnumMap.DefaultEntrance);
         if (defaultEntrances.length > 0)
             return getTransformBehindDoor(pickOne(defaultEntrances));
 

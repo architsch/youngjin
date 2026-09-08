@@ -6,7 +6,9 @@ import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 
 // This object represents each voxel in the room's voxelGrid. Each voxel consists of blocks, and each block consists of quads (aka "voxelQuads").
-const VoxelObjectTypeConfig: ObjectTypeConfig =
+// No maxCountPerRoom: the voxel grid is one object however large the room is, and nobody may add
+// another (see canUserAddObject below), so there is no collection of them for a room to cap.
+const VoxelObjectTypeConfig =
 {
     objectType: "Voxel",
     persistent: false,
@@ -30,6 +32,6 @@ const VoxelObjectTypeConfig: ObjectTypeConfig =
             orbitOccluder: {}, // The room's own walls, floor, and ceiling are the main thing the orbit camera has to see past.
         },
     },
-}
+} satisfies ObjectTypeConfig;
 
 export default VoxelObjectTypeConfig;

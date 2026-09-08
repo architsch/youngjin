@@ -8,19 +8,19 @@ import { tryStartClientProcess } from "../../system/types/clientProcess";
 import SocketsClient from "../../networking/client/socketsClient";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
-import DoorObjectUtil from "../../../shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../system/util/gameModeUtil";
 import GraphicsManager from "../../graphics/graphicsManager";
 import App from "../../app";
-import { DOOR_FOOTPRINT_HEIGHT, DOOR_FOOTPRINT_WIDTH } from "../../../shared/system/sharedConstants";
 
 const vector3Temp = new THREE.Vector3();
 
 // The stretch of wall a door lays claim to as an attachment, which is what its selection outline
 // frames and what its move arrows are placed around.
-const selectionOutlineScale = new THREE.Vector3(DOOR_FOOTPRINT_WIDTH, DOOR_FOOTPRINT_HEIGHT, 1);
+const doorHitboxSize = DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize;
+const selectionOutlineScale = new THREE.Vector3(doorHitboxSize.sizeX, doorHitboxSize.sizeY, 1);
 
 export default class DoorGameObject extends GameObject
 {
@@ -84,7 +84,7 @@ export default class DoorGameObject extends GameObject
     // answer when it is asked (see RoomPickerUtil).
     enter()
     {
-        const destinationRoomID = DoorObjectUtil.getDestinationRoomId(this.params);
+        const destinationRoomID = DoorObjectTypeConfig.util.getDestinationRoomId(this.params);
         if (destinationRoomID.length == 0 || destinationRoomID == App.getCurrentRoom()?.id)
         {
             notificationMessageObservable.set("This door is locked!");
@@ -97,7 +97,7 @@ export default class DoorGameObject extends GameObject
         if (!tryStartClientProcess("roomChange", 1, 1))
             return;
         SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(destinationRoomID,
-            false, DoorObjectUtil.getDestinationDoorLabel(this.params)));
+            false, DoorObjectTypeConfig.util.getDestinationDoorLabel(this.params)));
     }
 
     getSelectionOutlineScale(): THREE.Vector3

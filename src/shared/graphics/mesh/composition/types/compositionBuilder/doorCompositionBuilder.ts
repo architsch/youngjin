@@ -1,17 +1,7 @@
 import Vec3 from "../../../../../math/types/vec3";
-import { BACKWARD_DIR, DOOR_FOOTPRINT_HEIGHT } from "../../../../../system/sharedConstants";
-import { DoorRegion } from "../compositionConstants/doorCompositionConstants";
+import { BACKWARD_DIR } from "../../../../../system/sharedConstants";
+import { DoorRegion, DOOR_PANEL_ORIGIN_Y } from "../compositionConstants/doorCompositionConstants";
 import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
-
-// A door's parts are authored in panel space — origin at the bottom center of the visible panel —
-// while the object they belong to is centered on its own collider. This is the shift between the
-// two: the panel is centered across the footprint and flush with its bottom, so the panel's origin
-// sits half the footprint's height below the object's, and the difference between the footprint and
-// the panel is left as clearance at the top.
-// Exported because anything else placed against the door's face has to be measured in the same
-// frame the face itself was authored in — the plate's label text above all, which has to sit on the
-// plate rather than merely near it.
-export const DOOR_PANEL_ORIGIN_Y = -0.5 * DOOR_FOOTPRINT_HEIGHT;
 
 export default class DoorCompositionBuilder extends InstancedMeshCompositionBuilder
 {

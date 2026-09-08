@@ -5,7 +5,8 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import ClientObjectManager from "../clientObjectManager";
-import { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH, CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID, MAX_CANVASES_PER_ROOM } from "../../../shared/system/sharedConstants";
+import CanvasObjectTypeConfig, { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH,
+    CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import Vec3 from "../../../shared/math/types/vec3";
@@ -57,7 +58,7 @@ export default class CanvasGameObject extends GameObject
         CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
 
         await this.instancedMeshGraphics.loadInstancedMesh(CANVAS_GEOMETRY_ID,
-            CanvasGameObject.materialParams, MAX_CANVASES_PER_ROOM, true);
+            CanvasGameObject.materialParams, CanvasObjectTypeConfig.maxCountPerRoom, true);
 
         // The room may hold more canvases than the mesh has instances for, in which case this
         // canvas stays unrendered (the same state it is in once despawned) rather than taking the

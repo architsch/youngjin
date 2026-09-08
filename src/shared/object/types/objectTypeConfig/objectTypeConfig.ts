@@ -13,6 +13,11 @@ export default interface ObjectTypeConfig
     objectType: string;
     persistent: boolean;
     autoUnload: boolean; // Whether the client-side object instance (i.e. GameObject) should automatically unload when the room unloads.
+    // How many of this kind of object one room may hold. What it bounds is not only the pool of
+    // mesh instances the type's objects are lent, but the clutter a room can be filled with and the
+    // size of the room's own stored contents — so it is a fact about the kind of object rather than
+    // about the drawing of it. Left unset by a kind of object a room holds no collection of.
+    maxCountPerRoom?: number;
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,
@@ -63,7 +68,7 @@ export default interface ObjectTypeConfig
             orbitOccluder?: {},
             // Light the object gives off into the room. What the light is like is the object's own
             // metadata rather than a setting here, since two lamps of the same kind are lit
-            // differently — see LampObjectUtil.
+            // differently — see the lamp's own util.
             lightSource?: {},
             // A cosmetic bounce is a property of the object itself, not of who is watching it, so
             // it belongs to every copy: the player character its owner sees in third person needs
@@ -80,6 +85,17 @@ export default interface ObjectTypeConfig
             periodicTransformReceiver?: {},
         },
     },
+    // Everything about this kind of object that is a question of what it *means* rather than of how
+    // it is drawn or who may touch it: reading back the metadata it carries, and building one where
+    // the game needs one. It lives here so that a kind of object is described in one place — the
+    // permissions, the components, and the reading of the thing all sit together.
+    //
+    // The methods are the type's own, so they are reached through the type's own config module
+    // (`DoorObjectTypeConfig.util.getLabel(obj)`) rather than through a lookup by type index, which
+    // could only ever hand back a shape common to every type. Each config is declared with
+    // `satisfies ObjectTypeConfig`, which is what keeps those signatures intact through this
+    // deliberately loose declaration.
+    util?: {[methodName: string]: (...args: any[]) => any},
 }
 
 export type SpawnType = "spawnedByMe" | "spawnedByOther" | "spawnedByAny";

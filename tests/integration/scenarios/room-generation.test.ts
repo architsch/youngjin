@@ -32,13 +32,14 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
-import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import {
     COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GRAVITY_SPEED,
     HUB_ROOM_ID_KEYWORD,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
+    NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     STOREY_FLOOR_COLLISION_LAYER,
 } from "../../../src/shared/system/sharedConstants";
 
@@ -607,9 +608,9 @@ describe("every generated multiplayer room", () => {
 
                 const [door] = objects;
                 expect(door.objectTypeIndex, `${name} seed ${seed}`).toBe(DOOR_OBJECT_TYPE_INDEX);
-                expect(DoorObjectUtil.getDoorType(door), `${name} seed ${seed}`)
+                expect(DoorObjectTypeConfig.util.getDoorType(door), `${name} seed ${seed}`)
                     .toBe(DoorTypeEnumMap.DefaultEntrance);
-                expect(DoorObjectUtil.getDestinationRoomId(door), `${name} seed ${seed}`)
+                expect(DoorObjectTypeConfig.util.getDestinationRoomId(door), `${name} seed ${seed}`)
                     .toBe(HUB_ROOM_ID_KEYWORD);
                 expect(door.transform.pos.x, `${name} seed ${seed}`)
                     .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, 3);

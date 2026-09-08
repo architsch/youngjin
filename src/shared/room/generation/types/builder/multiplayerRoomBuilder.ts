@@ -1,4 +1,4 @@
-import DoorObjectUtil from "../../../../object/util/doorObjectUtil";
+import DoorObjectTypeConfig from "../../../../object/types/objectTypeConfig/doorObjectTypeConfig";
 import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, NUM_VOXEL_ROWS } from "../../../../system/sharedConstants";
 import { RoomVolumeConstructorMap } from "../../maps/roomVolumeConstructorMap";
 import { RoomVolumeTypeEnumMap } from "../roomVolumeType";
@@ -55,7 +55,7 @@ export default abstract class MultiplayerRoomBuilder extends ProceduralRoomBuild
     protected addEntranceDoor(): RoomBuilder
     {
         const {params, room} = this;
-        const door = DoorObjectUtil.makeEntranceDoor(room.id, params.entranceVoxelCol,
+        const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id, params.entranceVoxelCol,
             params.entranceVoxelRow, params.entranceVoxelCollisionLayer);
         room.objectGroup.objectById[door.objectId] = door;
         return this;

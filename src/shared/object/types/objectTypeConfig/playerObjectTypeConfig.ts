@@ -1,5 +1,5 @@
 import Room from "../../../room/types/room";
-import { IS_SERVER, MAX_MESH_INSTANCES_PER_PLAYER, MAX_PLAYERS_PER_ROOM, PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../system/sharedConstants";
+import { IS_SERVER } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
@@ -10,12 +10,27 @@ import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh
 import { PlayerCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import StringUtil from "../../../math/util/stringUtil";
 
+// How big a player character stands in the world. The two of them are the player's collider, which
+// is where anything that has to measure against a player's body — where his eyes sit, how far a
+// selection ring floats over his head, which collision layer he is standing on — reads them back
+// from. Exported as well, because a great deal of the game is measured against a player and the
+// expressions doing the measuring stay legible only if the quantity is named.
+export const PLAYER_HEIGHT = 2.5;
+export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
+
+// Every player character in the room draws its parts from one pool of mesh instances, so the room
+// can only hold as many as that pool was sized for. The cap is also what the room balancer fills
+// rooms up to (see RoomPickerUtil).
+export const MAX_PLAYERS_PER_ROOM = 64;
+const MAX_MESH_INSTANCES_PER_PLAYER = 32;
+
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
-const PlayerObjectTypeConfig: ObjectTypeConfig =
+const PlayerObjectTypeConfig =
 {
     objectType: "Player",
     persistent: false,
     autoUnload: true,
+    maxCountPerRoom: MAX_PLAYERS_PER_ROOM,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return IS_SERVER; // Only the server can add a player character.
     },
@@ -88,6 +103,6 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
             periodicTransformReceiver: {},
         },
     },
-}
+} satisfies ObjectTypeConfig;
 
 export default PlayerObjectTypeConfig;

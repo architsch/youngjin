@@ -12,7 +12,7 @@ import ClientObjectManager from "../../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
-import LampObjectUtil from "../../../../../shared/object/util/lampObjectUtil";
+import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../../../shared/graphics/light/util/lampLightUtil";
@@ -34,16 +34,16 @@ const MAX_RANGE_ATTRIBUTE = String(MAX_LAMP_RANGE);
 // The tools for a lamp somebody has picked out: take it down, or change what it gives off.
 //
 // Everything about the light is one setting stored and written together, because the lit face of
-// the lamp takes its color from the same value the light does — see LampObjectUtil. How much light
+// the lamp takes its color from the same value the light does — see the lamp's own util. How much light
 // there is and how far it carries are separate dials within that, so a dim wash and a tight bright
 // pool are both askable for (see LampLightUtil).
 export default function LampEditOptions(props: {selection: ObjectSelection})
 {
     const obj = props.selection.gameObject.params;
     const [light, setLight] = useState(() => ({
-        colorIndex: LampObjectUtil.getColorIndex(obj),
-        intensity: LampObjectUtil.getIntensity(obj),
-        range: LampObjectUtil.getRange(obj),
+        colorIndex: LampObjectTypeConfig.util.getColorIndex(obj),
+        intensity: LampObjectTypeConfig.util.getIntensity(obj),
+        range: LampObjectTypeConfig.util.getRange(obj),
     }));
 
     // Written straight through rather than deferred, the way a room's own lighting is: a lamp is
@@ -53,7 +53,7 @@ export default function LampEditOptions(props: {selection: ObjectSelection})
         const next = {...light};
         edit(next);
         setLight(next);
-        trySetLightProperties(props.selection, LampObjectUtil.encodeLightProperties(
+        trySetLightProperties(props.selection, LampObjectTypeConfig.util.encodeLightProperties(
             next.colorIndex, next.intensity, next.range));
     };
 

@@ -10,7 +10,7 @@
  */
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
-import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
 import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
 import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
@@ -50,7 +50,7 @@ export function buildBareMultiplayerRoomContent(room: Room): void
     // The way in, which is a door hung on the boundary wall — without it the room has none, and
     // an arriving player has nowhere to be put down (see SpawnHotspotUtil). Nothing is cut through
     // that wall: a door is a wall attachment, and an attachment needs the wall behind it.
-    const entranceDoor = DoorObjectUtil.makeEntranceDoor(room.id,
+    const entranceDoor = DoorObjectTypeConfig.util.makeEntranceDoor(room.id,
         INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
     room.objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
 }

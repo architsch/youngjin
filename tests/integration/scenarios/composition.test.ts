@@ -27,8 +27,8 @@ import {
 import { PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import { DoorCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/doorCompositionCodec";
 import DoorCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
-import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";

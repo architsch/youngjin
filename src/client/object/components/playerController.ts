@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
-import { ENTRANCE_DIST_IN_FRONT_OF_DOOR, NEAR_EPSILON,
-    SPAWN_DIST_BEHIND_DOOR } from "../../../shared/system/sharedConstants";
+import { ENTRANCE_DIST_IN_FRONT_OF_DOOR,
+    SPAWN_DIST_BEHIND_DOOR } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import App from "../../app";
 import PlayerCamera from "./helpers/player/playerCamera";

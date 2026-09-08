@@ -1,6 +1,6 @@
 # Room Entrances
 
-Reference: @src/shared/object/util/doorObjectUtil.ts , @src/server/room/util/spawnHotspotUtil.ts , @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts
+Reference: @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/server/room/util/spawnHotspotUtil.ts
 
 ## Overview
 

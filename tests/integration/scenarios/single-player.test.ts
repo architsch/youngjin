@@ -75,7 +75,7 @@ import { voxelQuadChangeObservable } from "../../../src/shared/system/sharedObse
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
-import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
+import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import Room from "../../../src/shared/room/types/room";
@@ -278,9 +278,9 @@ describe("single-player room generation", () => {
         }
 
         const door = first.objectGroup.objectById["door"];
-        expect(DoorObjectUtil.getLabel(door)).toBe("Door");
-        expect(DoorObjectUtil.getLabelColorIndex(door)).toBe(
-            DoorObjectUtil.getLabelColorIndex(second.objectGroup.objectById["door"]));
+        expect(DoorObjectTypeConfig.util.getLabel(door)).toBe("Door");
+        expect(DoorObjectTypeConfig.util.getLabelColorIndex(door)).toBe(
+            DoorObjectTypeConfig.util.getLabelColorIndex(second.objectGroup.objectById["door"]));
     });
 
     it("wires the tutorial's door to the hubs, as the room's own way in", () => {
@@ -292,9 +292,9 @@ describe("single-player room generation", () => {
         const { objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const door = objectGroup.objectById["door"];
 
-        expect(DoorObjectUtil.getDoorType(door)).toBe(DoorTypeEnumMap.DefaultEntrance);
-        expect(DoorObjectUtil.getDestinationRoomId(door)).toBe(HUB_ROOM_ID_KEYWORD);
-        expect(DoorObjectUtil.getDestinationDoorLabel(door)).toBe("");
+        expect(DoorObjectTypeConfig.util.getDoorType(door)).toBe(DoorTypeEnumMap.DefaultEntrance);
+        expect(DoorObjectTypeConfig.util.getDestinationRoomId(door)).toBe(HUB_ROOM_ID_KEYWORD);
+        expect(DoorObjectTypeConfig.util.getDestinationDoorLabel(door)).toBe("");
     });
 
     it("builds the tutorial room as a single storey the camera can look down into", () => {

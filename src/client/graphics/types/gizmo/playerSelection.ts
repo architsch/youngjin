@@ -6,7 +6,7 @@ import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
-import { PLAYER_HEIGHT } from "../../../../shared/system/sharedConstants";
+import { PLAYER_HEIGHT } from "../../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import WorldSpaceOutlineArrow from "./generic/worldSpaceOutlineArrow";
 
 // How high above the character's head the indicator's tip floats, and how large the arrow is drawn.

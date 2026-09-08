@@ -1,4 +1,5 @@
-import { SAFE_PLAYER_PART_CIRCLE_DIAMETER_IN_UNITS, ZERO_VEC3 } from "../../../../../system/sharedConstants";
+import { ZERO_VEC3 } from "../../../../../system/sharedConstants";
+import { SAFE_PLAYER_PART_CIRCLE_DIAMETER_IN_UNITS } from "../compositionConstants/playerCompositionConstants";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
 import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
 import PlayerCompositionBuilder from "./playerCompositionBuilder";

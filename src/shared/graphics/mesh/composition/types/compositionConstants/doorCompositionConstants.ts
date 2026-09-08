@@ -1,5 +1,5 @@
 import ColorUtil from "../../../../../math/util/colorUtil";
-import { DOOR_PANEL_HEIGHT, DOOR_PANEL_WIDTH } from "../../../../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS_PER_STOREY } from "../../../../../system/sharedConstants";
 import DoorCompositionParams from "../compositionParams/doorCompositionParams";
 
 // The design standard every door is built to: a panelled wooden door with mouldings, of the kind
@@ -10,8 +10,39 @@ import DoorCompositionParams from "../compositionParams/doorCompositionParams";
 // panel, x runs across it and y up it, both in world units. That is the frame a joiner would measure
 // a door in, and DoorCompositionBuilder is what shifts it onto the object's own origin.
 
-const W = DOOR_PANEL_WIDTH;
-const H = DOOR_PANEL_HEIGHT;
+// Every part of a door's face is a flat quad laid over the ones beneath it, so there is only ever
+// one geometry involved however elaborate the joinery gets.
+export const DOOR_GEOMETRY_ID = "Square";
+
+// How much wall a door lays claim to, and how much of that claim it actually fills. The footprint is
+// what other wall attachments are kept out of — it is the door's collider, which DoorObjectTypeConfig
+// takes from here, and every consumer outside this file reads it back off that config. The panel is
+// what is drawn, centered across the footprint and flush with its bottom. The difference is
+// deliberate margin: room to stand two doors side by side without their frames touching, and a gap
+// under the ceiling above.
+//
+// Both are kept to whole half-voxels, which is the grid a wall attachment is snapped to, so that a
+// door's stored position stays an exact number rather than one that drifts as it is nudged along
+// the wall. The slack that keeps two neighbouring doors from reading as overlapping is taken off
+// the collision box instead of these (see PhysicsColliderStateUtil).
+//
+// The footprint stands exactly one storey tall, so a door reaches from the floor it is mounted on to
+// just under the slab over it, and the panel keeps a door's real proportions within that.
+export const DOOR_FOOTPRINT_WIDTH = 1.5;
+export const DOOR_FOOTPRINT_HEIGHT = NUM_COLLISION_LAYERS_PER_STOREY * COLLISION_LAYER_HEIGHT; // 3.5
+
+const W = 1.375;
+const H = 3.25;
+
+// The shift from panel space onto the object's own origin, which is centered on the collider: the
+// panel is centered across the footprint and flush with its bottom, so the panel's origin sits half
+// the footprint's height below the object's, and the difference between the footprint and the panel
+// is left as clearance at the top.
+//
+// Exported because anything else placed against the door's face has to be measured in the same frame
+// the face itself was authored in — the plate's label text above all, which has to sit on the plate
+// rather than merely near it.
+export const DOOR_PANEL_ORIGIN_Y = -0.5 * DOOR_FOOTPRINT_HEIGHT;
 
 // The solid timber the panels are let into. A door's proportions live in these four numbers: the
 // uprights down each side, the one between the panels, the rail underfoot, and the rail the knob

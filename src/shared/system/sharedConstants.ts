@@ -73,6 +73,16 @@ export const HUB_ROOM_ID_KEYWORD = "hub";
 export const GRAVITY_SPEED = 3;
 export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
 
+// How much narrower and shorter than its footprint a wall attachment's hitbox is actually built
+// (see PhysicsColliderStateUtil). A footprint is a whole number of half-voxels, so two attachments
+// hung side by side share an edge exactly — and an overlap test on two boxes that share an edge is
+// deciding a tie, which the arithmetic that got them there is not reliable enough to be trusted
+// with. Taking a hair off both sides means neighbours never touch at all, so the question is never
+// close. It is far below anything the eye or the placement grid can resolve, and it is taken off
+// the two axes lying in the wall only: the depth is already a sliver, and shrinking it would lift
+// the attachment off the wall it is supposed to be hanging on.
+export const WALL_ATTACHMENT_HITBOX_INSET = 0.02;
+
 export const NUM_COLLISION_LAYERS = 16; // Total number of collision layers which span the room's Y-axis
 export const COLLISION_LAYER_HEIGHT = 0.5; // How tall one collision layer stands, in world units
 export const MAX_ROOM_Y = NUM_COLLISION_LAYERS * COLLISION_LAYER_HEIGHT; // 8
@@ -190,64 +200,10 @@ export const INSTANCE_COLORED_MATERIAL_IDS: string[] = [
 
 export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
 export const VOXEL_QUAD_GEOMETRY_ID = "Square";
-export const CANVAS_GEOMETRY_ID = "Square";
 
-export const CANVAS_FRAME_ATLAS_PATH = "object_texture_packs/canvas_frames.webp"; // relative to the app's assets_url
-export const CANVAS_FRAME_ATLAS_SIZE = 1024; // in pixels (the atlas is square)
-export const CANVAS_FRAME_ATLAS_CELL_SIZE = 256; // in pixels (each cell is square)
-
-export const MAX_MESH_INSTANCES_PER_PLAYER = 32;
-export const UNIT_PLAYER_PART_LENGTH = 0.125;
-export const SAFE_PLAYER_PART_CIRCLE_DIAMETER_IN_UNITS = 2 * Math.sqrt(5);
-export const SAFE_PLAYER_PART_CIRCLE_STICK_OUT_LENGTH_IN_UNITS = Math.sqrt(5) - 2;
-
-// Door
-
-export const DOOR_GEOMETRY_ID = "Square";
-
-// How much wall a door lays claim to, and how much of that claim it actually fills. The footprint is
-// what other wall attachments are kept out of; the panel is what is drawn, centered across the
-// footprint and flush with its bottom. The difference is deliberate margin: room to stand two doors
-// side by side without their frames touching, and a gap under the ceiling above.
-//
-// The footprint stands exactly one storey tall, so a door reaches from the floor it is mounted on to
-// just under the slab over it, and the panel keeps a door's real proportions within that.
-export const DOOR_FOOTPRINT_WIDTH = 1.5;
-export const DOOR_FOOTPRINT_HEIGHT = NUM_COLLISION_LAYERS_PER_STOREY * COLLISION_LAYER_HEIGHT; // 3.5
-export const DOOR_PANEL_WIDTH = 1.375;
-export const DOOR_PANEL_HEIGHT = 3.25;
-
-export const MAX_DOORS_PER_ROOM = 16;
-export const MAX_MESH_INSTANCES_PER_DOOR = 8;
-
-// The two ends of an arriving player's entrance, measured along the door's own facing direction from
-// the face of the door he came through. A door's position sits on the boundary between the wall it
-// hangs on and the room it faces (see WallAttachedObjectUtil), so half a voxel to either side of it
-// is the middle of a voxel cell: the player is put down in the middle of the wall cell, with the door
-// standing between him and the room, and walks out to the middle of the floor cell in front of it.
-// Placing him behind the door is what makes his arrival a step out of it rather than a step up to it.
-// See SpawnHotspotUtil, which puts him down, and PlayerController, which walks him out.
-export const SPAWN_DIST_BEHIND_DOOR = 0.5;
-export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
-
-// Lamp
-
-export const LAMP_GEOMETRY_ID = "Square";
-
-// How much wall a lamp lays claim to, and therefore how much of it is drawn: one voxel across and
-// one collision layer tall. A wall attachment claims whole voxel columns of wall horizontally
-// (see WallAttachedObjectUtil), so anything narrower would claim the same stretch while looking
-// like it had been squeezed into a corner of it.
-export const LAMP_FOOTPRINT_WIDTH = 1;
-export const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
-
-// Every lamp in the room draws its parts from one pool of mesh instances, so the room can only hold
-// as many as that pool was sized for. What actually bounds the number is not the drawing — the block
-// map costs the same whether a room holds three lamps or three hundred (see LightBlockMap) — but the
-// propagation each one costs, the clutter of a wall covered in them, and the size of the room's own
-// stored contents.
-export const MAX_LAMPS_PER_ROOM = 24;
-export const MAX_MESH_INSTANCES_PER_LAMP = 4;
+// Anything that belongs to one kind of GameObject alone — how much wall a door claims, how many
+// canvases a room holds, how tall a player stands — is declared by that type's own ObjectTypeConfig
+// instead of here, and is reached through it (see ObjectTypeConfigMap).
 
 // Label Text
 
@@ -324,10 +280,7 @@ export const MAX_VISIBLE_VOXEL_QUADS_PER_ROOM =
 
 export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.5 * COLLISION_LAYER_HEIGHT, z: 0.5};
 
-// Object Limits
-
-export const MAX_CANVASES_PER_ROOM = 64; // because the render-target texture, used for rendering canvas images based on mesh instances, is an 8x8 grid
-export const MAX_PLAYERS_PER_ROOM = 64;
+// Room Population
 
 // Population bands used to load-balance the users across the rooms.
 // A room at or above the over-population threshold is considered "over-populated"
@@ -338,15 +291,12 @@ export const MAX_PLAYERS_PER_ROOM = 64;
 export const ROOM_OVER_POPULATION_THRESHOLD = 50;
 export const ROOM_UNDER_POPULATION_THRESHOLD = 20;
 
-// Slots held in reserve below the hard cap. A room is considered "almost full" — and stops
-// admitting anyone new — once its population reaches (MAX_PLAYERS_PER_ROOM - this margin),
-// so that a handful of joins that were already in flight cannot push it past the hard cap.
+// Slots held in reserve below the hard cap, which is the player's own maxCountPerRoom. A room is
+// considered "almost full" — and stops admitting anyone new — once its population reaches that cap
+// less this margin, so that a handful of joins that were already in flight cannot push it past.
 export const ROOM_ALMOST_FULL_MARGIN = 4;
 
 // Gameplay
-
-export const PLAYER_HEIGHT = 2.5;
-export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 
 // How far the user may reach into the room to select something. This is the base reach, which is
 // what a first-person view gets; a camera taken further back than this to orbit a selection reaches
