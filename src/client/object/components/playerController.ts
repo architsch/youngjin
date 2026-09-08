@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
-import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { ENTRANCE_DIST_IN_FRONT_OF_DOOR, NEAR_EPSILON,
+    SPAWN_DIST_BEHIND_DOOR } from "../../../shared/system/sharedConstants";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import App from "../../app";
 import PlayerCamera from "./helpers/player/playerCamera";
@@ -18,7 +19,10 @@ const forwardTemp = new THREE.Vector3();
 // long it may go on for at the most. The distance is what normally ends it; the time limit is there
 // because a player who arrived facing something solid would otherwise never cover the distance and
 // would be held walking into it forever.
-const ENTERING_STRIDE_LENGTH = 1.5;
+//
+// He starts behind the door and the stride is meant to leave him just clear of it, so its length is
+// simply the two distances laid end to end, with the door's own face between them.
+const ENTERING_STRIDE_LENGTH = SPAWN_DIST_BEHIND_DOOR + ENTRANCE_DIST_IN_FRONT_OF_DOOR;
 const ENTERING_SPEED = 3;
 const ENTERING_MAX_DURATION = 1.5; // in seconds
 

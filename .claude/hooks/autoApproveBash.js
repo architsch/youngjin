@@ -218,6 +218,112 @@ function tokenize(input) {
 }
 
 /**
+ * Removes heredoc bodies, keeping the `<<DELIM` redirect itself so the tokenizer still sees
+ * a well-formed command. Without this, `cat > file <<'EOF' ... EOF` hands the tokenizer a
+ * document to parse as shell — which is how every scratchpad file this project writes ended
+ * up at a prompt. A body under an unquoted delimiter is expanded by the shell, so one
+ * carrying a substitution is refused rather than discarded.
+ */
+function stripHeredocs(input) {
+    let src = input;
+    let out = "";
+    let i = 0;
+    let quote = null;
+    const pending = [];
+
+    while (i < src.length) {
+        const ch = src[i];
+
+        if (ch === "\\") {
+            out += src.slice(i, i + 2);
+            i += 2;
+            continue;
+        }
+        if (quote) {
+            out += ch;
+            if (ch === quote) quote = null;
+            i += 1;
+            continue;
+        }
+        if (ch === "'" || ch === '"') {
+            quote = ch;
+            out += ch;
+            i += 1;
+            continue;
+        }
+
+        // A herestring is not a heredoc, and must be consumed whole or its trailing `<<`
+        // reads as one on the next pass.
+        if (ch === "<" && src[i + 1] === "<" && src[i + 2] === "<") {
+            out += "<<<";
+            i += 3;
+            continue;
+        }
+
+        if (ch === "<" && src[i + 1] === "<") {
+            let j = i + 2;
+            let stripTabs = false;
+            if (src[j] === "-") {
+                stripTabs = true;
+                j += 1;
+            }
+            while (src[j] === " " || src[j] === "\t") j += 1;
+
+            let delimiter;
+            let expands = true;
+            if (src[j] === "'" || src[j] === '"') {
+                const q = src[j];
+                const end = src.indexOf(q, j + 1);
+                if (end === -1) return null;
+                delimiter = src.slice(j + 1, end);
+                expands = false;
+                j = end + 1;
+            } else {
+                const match = /^[A-Za-z0-9_.\-]+/.exec(src.slice(j));
+                if (!match) return null;
+                delimiter = match[0];
+                j += delimiter.length;
+            }
+
+            out += "<<" + delimiter;
+            pending.push({ delimiter, stripTabs, expands });
+            i = j;
+            continue;
+        }
+
+        if (ch === "\n" && pending.length > 0) {
+            let rest = src.slice(i + 1);
+            while (pending.length > 0) {
+                const { delimiter, stripTabs, expands } = pending.shift();
+                const lines = rest.split("\n");
+                let end = -1;
+                for (let k = 0; k < lines.length; k += 1) {
+                    const candidate = stripTabs ? lines[k].replace(/^\t+/, "") : lines[k];
+                    if (candidate === delimiter) {
+                        end = k;
+                        break;
+                    }
+                }
+                if (end === -1) return null;
+                const body = lines.slice(0, end).join("\n");
+                if (expands && /\$\(|`/.test(body)) return null;
+                rest = lines.slice(end + 1).join("\n");
+            }
+            out += "\n";
+            src = rest;
+            i = 0;
+            continue;
+        }
+
+        out += ch;
+        i += 1;
+    }
+
+    if (pending.length > 0 || quote) return null;
+    return out;
+}
+
+/**
  * Replaces every `$( ... )` with a placeholder, collecting the inner commands so they can
  * be validated in their own right. Returns null if the substitutions are unbalanced.
  */
@@ -292,8 +398,28 @@ function extractSubstitutions(input) {
 // Path and URL checks
 // ---------------------------------------------------------------------------
 
+/** Stands in for a `$VAR` this command never assigned. Never resolves to a real path. */
+const UNRESOLVED = " unresolved ";
+
+/**
+ * Expands `$NAME` and `${NAME}` from the assignments this same command made, so that the
+ * `SP=/private/tmp/claude-.../scratchpad; rm -f "$SP/x.js"` shape can be checked as the
+ * path it actually is. A variable the command did not assign expands to a marker that no
+ * path check accepts, so it still falls through to a prompt.
+ */
+function expandVars(raw, vars) {
+    if (typeof raw !== "string" || !raw.includes("$")) return raw;
+    return raw.replace(
+        /\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+        (...groups) => {
+            const name = groups[1] || groups[2];
+            return Object.prototype.hasOwnProperty.call(vars, name) ? vars[name] : UNRESOLVED;
+        },
+    );
+}
+
 function isWritablePath(raw) {
-    if (!raw || raw.includes("__SUBST__")) return false;
+    if (!raw || raw.includes("__SUBST__") || raw.includes(UNRESOLVED)) return false;
     if (raw === "/dev/null" || raw === "/dev/stdout" || raw === "/dev/stderr") return true;
     if (raw.startsWith("&")) return true; // 2>&1
     if (raw.startsWith("~")) return false;
@@ -502,7 +628,7 @@ function checkCd(args) {
 // Segment evaluation
 // ---------------------------------------------------------------------------
 
-function segmentAllowed(tokens) {
+function segmentAllowed(tokens, vars) {
     const words = [];
 
     for (let i = 0; i < tokens.length; i += 1) {
@@ -513,11 +639,12 @@ function segmentAllowed(tokens) {
                 i += 1; // reading is unrestricted
                 continue;
             }
-            if (!target || target.type !== "word" || !isWritablePath(target.value)) return false;
+            if (!target || target.type !== "word") return false;
+            if (!isWritablePath(expandVars(target.value, vars))) return false;
             i += 1;
             continue;
         }
-        words.push(token.value);
+        words.push(expandVars(token.value, vars));
     }
 
     if (words.length === 0) return true;
@@ -533,8 +660,13 @@ function segmentAllowed(tokens) {
     while (rest.length && KEYWORDS.has(rest[0])) rest.shift();
     if (rest.length === 0) return true;
 
-    // `FOO=bar cmd ...` and bare assignments.
-    while (rest.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(rest[0])) rest.shift();
+    // `FOO=bar cmd ...` and bare assignments. Recorded so a later `"$FOO/x"` in this same
+    // command can be resolved to the path it will actually be.
+    while (rest.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(rest[0])) {
+        const assignment = rest.shift();
+        const split = assignment.indexOf("=");
+        vars[assignment.slice(0, split)] = assignment.slice(split + 1);
+    }
     if (rest.length === 0) return true;
 
     let head = rest[0];
@@ -607,7 +739,10 @@ function isAllowed(command, depth = 0) {
     if (/<\(|>\(/.test(command)) return false; // process substitution
     if (HARD_BLOCK.some((pattern) => pattern.test(command))) return false;
 
-    const extracted = extractSubstitutions(command);
+    const withoutHeredocs = stripHeredocs(command);
+    if (withoutHeredocs === null) return false;
+
+    const extracted = extractSubstitutions(withoutHeredocs);
     if (!extracted) return false;
     for (const inner of extracted.inner) {
         if (!isAllowed(inner, depth + 1)) return false;
@@ -616,16 +751,18 @@ function isAllowed(command, depth = 0) {
     const tokens = tokenize(extracted.text);
     if (!tokens) return false;
 
+    // Assignments accumulate left to right, the way the shell will make them.
+    const vars = Object.create(null);
     let segment = [];
     for (const token of tokens) {
         if (token.type === "operator") {
-            if (!segmentAllowed(segment)) return false;
+            if (!segmentAllowed(segment, vars)) return false;
             segment = [];
             continue;
         }
         segment.push(token);
     }
-    return segmentAllowed(segment);
+    return segmentAllowed(segment, vars);
 }
 
 // ---------------------------------------------------------------------------
@@ -641,7 +778,39 @@ function decide(command) {
 }
 
 function runSelfTest() {
+    const SCRATCH = "/private/tmp/claude-501/-Volumes-work-youngjin/session/scratchpad";
     const allow = [
+        // Scratchpad work: a path bound to a variable, and files written by heredoc.
+        `SP=${SCRATCH}`,
+        `SP=${SCRATCH} && node "$SP/probe.js"`,
+        `SP=${SCRATCH}; rm -f "$SP/probe.js"`,
+        `SP=${SCRATCH}; mkdir -p "$SP/out"`,
+        `SP=${SCRATCH}; node "$SP/x.js" > "$SP/out.txt"`,
+        `SP=${SCRATCH}; cd "$SP" && ls`,
+        `SP=${SCRATCH}; tee "$SP/out.txt"`,
+        `SP=${SCRATCH}; curl -s -o "$SP/a.json" http://127.0.0.1:3000/x`,
+        `SP=${SCRATCH}; node dev/scripts/devlog/captureRunner.js "$SP/shot.js" --out=test-results/x`,
+        'OUT=test-results/devlog; mkdir -p "$OUT" && node dev/scripts/devlog/captureRunner.js --probe',
+        "CMD=node; $CMD app.js",
+        // `..` is resolved before the check, so this stays inside the scratchpad root.
+        `SP=${SCRATCH}/../sibling; rm -rf "$SP/x"`,
+        `cat > ${SCRATCH}/x.js <<'EOF'\nplain body\nEOF`,
+        "cat > temp/x.txt <<'EOF'\nrm -rf /\nEOF",          // literal data, not a command
+        "cat > temp/x.txt <<EOF\nplain $VAR text\nEOF",
+        "cat <<'EOF' > temp/x.txt\nbody\nEOF",
+        "cat > temp/a.txt <<'A'\none\nA\ncat > temp/b.txt <<'B'\ntwo\nB",
+        'node -e "x" <<< "data"',
+        // Shapes the prefix matcher could not see into.
+        "(cd temp && rm -rf junk)",
+        "npm test & npm run lint",
+        "npx playwright test; echo $?",
+        "node a.js 2>/dev/null",
+        "node a.js 2>&1 | tee temp/log.txt",
+        "find . -name '*.ts' -exec rm {} \\;",
+        "git add -A && git status",
+        "pm2 delete all && pm2 flush",
+        "curl -X DELETE http://127.0.0.1:4321/do",
+        "curl -s 'http://127.0.0.1:3000/a(b)'",
         "npx playwright test tests/e2e",
         "node dev/scripts/devlog/captureRunner.js --probe",
         "node dev/scripts/devlog/captureRunner.js dev/scripts/devlog/shots/nav.js --out=test-results/nav",
@@ -680,6 +849,30 @@ function runSelfTest() {
         "find test-results -name '*.jpg' -exec rm {} +",
     ];
     const deny = [
+        // A variable must not launder a path out of the writable roots.
+        'SP=/etc; rm -rf "$SP/passwd"',
+        `SP=${SCRATCH}; SP=/etc; rm -rf "$SP/x"`,
+        'rm -rf "$HOME/x"',                                  // never assigned here
+        'SP=$(echo /etc); rm -rf "$SP/x"',
+        `SP=${SCRATCH}/../../../../etc; rm -rf "$SP/x"`,   // climbs out of the scratchpad root
+        "CMD=rm; $CMD -rf /",
+        'SP=/etc; tee "$SP/out.txt"',
+        'SP=/etc; curl -s -o "$SP/a.json" http://127.0.0.1:3000/x',
+        // Heredocs: the destination is still checked, and an expanding body is not data.
+        "cat > /etc/motd <<'EOF'\nhi\nEOF",
+        "cat > temp/x.txt <<EOF\n$(rm -rf /)\nEOF",
+        "cat > temp/x.txt <<'EOF'\nno terminator here",
+        "cat > temp/a.txt <<'A'\none\nA\ncat > /etc/b.txt <<'B'\ntwo\nB",
+        // Grouping and indirection are not a way round the list.
+        "(rm -rf /)",
+        "echo a && (git push)",
+        "(cd /etc && rm -rf hosts)",
+        "bash -c 'rm -rf /'",
+        "sh dev/scripts/foo.sh",
+        "./script.sh",
+        "eval 'ls'",
+        "source ~/.zshrc",
+        "curl -X DELETE https://staging.thingspool.net/api/x",
         "git push origin main",
         "git commit -m 'x'",
         "npm publish",

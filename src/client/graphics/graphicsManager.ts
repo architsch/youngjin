@@ -26,8 +26,16 @@ const maxAspectRatio = 2;
 // margin the most expensive thing this app does. Capping here is up to two thirds fewer fragments for
 // a difference nobody can see, and it applies before the controller below ever runs, so a device that
 // asks for too much never starts out there and has to be walked back down.
-const minPixelRatio = 0.5;
 const maxPixelRatio = Math.min(2, window.devicePixelRatio);
+
+// **The floor is a fraction of that ceiling rather than a fixed figure**, because how much density
+// there is to give up is a property of the panel and not a constant. Half the linear resolution is
+// already three quarters of the fragments gone — as much as this lever has ever been worth — and past
+// that the room is plainly soft while the frames it buys are usually not the resolution's to buy at
+// all (see the band below). It is held above an absolute floor as well, so that a panel reporting
+// less than one device pixel per CSS pixel is not left with a floor and a ceiling too close together
+// for the steps below to move between.
+const minPixelRatio = Math.max(0.5, maxPixelRatio * 0.5);
 let currPixelRatio = maxPixelRatio;
 
 // The frame times the resolution is steered between.
@@ -43,8 +51,18 @@ let currPixelRatio = maxPixelRatio;
 // it to be lowered. Steered at a single number, that feedback has nowhere to settle, so the
 // resolution drops, recovers, drops again, and every one of those reversals reallocates the drawing
 // buffer. Between these two it is simply left alone.
-const frameTimeHighWater = 1 / 45;
-const frameTimeLowWater = 1 / 57;
+//
+// **And the band sits low, deliberately.** The resolution is not usually what decides the frame rate.
+// A browser presenting at half the rate of the display it is on presents at that rate whether the
+// room is drawn at full density or at a quarter of it; so does a frame held up on the CPU. A band
+// placed just under a rate that reads as smooth claims every one of those as its own to fix, walks
+// the resolution to its floor looking for a saving that was never there, and leaves the room soft for
+// nothing. Placed here it moves only where the frame rate is bad enough that a soft image is plainly
+// the better of the two — and, which matters more, a device presenting at thirty frames a second
+// falls *under* the low-water mark rather than over the high one, so it climbs back to full density
+// instead of sitting on the floor for the rest of the session.
+const frameTimeHighWater = 1 / 22;
+const frameTimeLowWater = 1 / 27;
 
 // How quickly the measured frame time forgets what came before it. Long enough that one late frame —
 // a room being edited, a garbage collection, a texture upload — does not move the resolution at all,

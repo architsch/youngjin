@@ -2,7 +2,6 @@ import Rigidbody from "../components/rigidbody";
 import PlayerController from "../components/playerController";
 import GameObjectComponent from "../components/gameObjectComponent";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
-import ModelGraphics from "../components/modelGraphics";
 import PeriodicTransformEmitter from "../components/periodicTransformEmitter";
 import PeriodicTransformReceiver from "../components/periodicTransformReceiver";
 import PlayerProximityDetector from "../components/playerProximityDetector";
@@ -28,8 +27,6 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new InstancedMeshGraphics(parentObject, componentConfig),
     "instancedMeshComposer": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new InstancedMeshComposer(parentObject, componentConfig),
-    "modelGraphics": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
-        new ModelGraphics(parentObject, componentConfig),
     "periodicTransformEmitter": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new PeriodicTransformEmitter(parentObject, componentConfig),
     "periodicTransformReceiver": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>

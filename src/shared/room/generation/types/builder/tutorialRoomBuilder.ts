@@ -10,7 +10,7 @@ import DoorCompositionConstants from "../../../../graphics/mesh/composition/type
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { DoorTypeEnumMap } from "../../../../object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../../object/types/objectMetadataKey";
-import { LABEL_COLOR_PALETTE_NAME } from "../../../../system/sharedConstants";
+import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME } from "../../../../system/sharedConstants";
 
 // What the tutorial's two fixtures look like is settled here rather than derived, because the
 // tutorial is the first thing anybody sees of the game and it should be the same first thing every
@@ -71,9 +71,9 @@ export default class TutorialRoomBuilder extends RoomBuilder
                     new EncodableByteString(RECEPTIONIST_APPEARANCE),
             });
 
-        // Add the door. It is the room's own way in, and it is deliberately wired to nowhere: a
-        // default entrance leading nowhere takes whoever walks through it out to wherever the server
-        // judges he should go next, which is exactly what leaving the tutorial means.
+        // Add the door. It is the room's own way in, and it is wired to the hubs rather than to one
+        // hub in particular: whoever walks through it is taken out to whichever hub is worth being
+        // in when he gets there, which is exactly what leaving the tutorial means.
         room.objectGroup.objectById["door"] = new AddObjectSignal("", "", "",
             ObjectTypeConfigMap.getIndexByType("Door"), "door",
             new ObjectTransform(params.hotspots.door, {x: 0, y: 0, z: 1}),
@@ -83,7 +83,8 @@ export default class TutorialRoomBuilder extends RoomBuilder
                 [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Door"),
                 [ObjectMetadataKeyEnumMap.LabelColor]:
                     new EncodableByteString(`${TUTORIAL_DOOR_LABEL_COLOR_INDEX}`),
-                [ObjectMetadataKeyEnumMap.DestinationRoomId]: new EncodableByteString(""),
+                [ObjectMetadataKeyEnumMap.DestinationRoomId]:
+                    new EncodableByteString(HUB_ROOM_ID_KEYWORD),
                 [ObjectMetadataKeyEnumMap.DestinationDoorLabel]: new EncodableByteString(""),
                 [ObjectMetadataKeyEnumMap.DoorType]:
                     new EncodableByteString(`${DoorTypeEnumMap.DefaultEntrance}`),

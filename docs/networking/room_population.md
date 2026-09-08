@@ -30,7 +30,7 @@ Every route into a multiplayer room converges on the same two stages: `RoomPicke
 
 ![Room Join Flow](figures/room_join_flow.jpg)
 
-The picker is consulted when the user has not named a room themselves — on app start-up, when single-player mode ends, and when a door that leads nowhere sends the user back out. It prefers an explicit room ID from the URL, then the room from the user's last session, and otherwise falls through to the hub balancer described below. The reserved `hub` keyword in the URL routes straight to that balancer.
+The picker is consulted when the user has not named a room themselves — on app start-up, and when a single-player experience is skipped. It prefers an explicit room ID from the URL, then the room from the user's last session, and otherwise falls through to the hub balancer described below. The reserved `hub` keyword goes straight to that balancer, whether it is a URL that carries it or a door pointed at the hubs rather than at one of them (see [room_entrance.md](../geometry/room_entrance.md#what-a-door-carries)).
 
 Where in the destination room the user lands is a separate question, decided from the doors that room holds — see [room_entrance.md](../geometry/room_entrance.md#player-spawning).
 

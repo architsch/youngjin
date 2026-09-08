@@ -84,7 +84,7 @@ export default class EasingMotion extends GameObjectComponent
                 1 + (this.scaleMultiplier.z - 1) * weight);
         }
 
-        // Scene-graph meshes (Mesh/Model graphics) follow "node" automatically; baked instanced meshes
+        // Scene-graph meshes follow "node" automatically; baked instanced meshes
         // don't, so let the GameObject re-apply them. No-op for objects without instanced graphics.
         this.gameObject.onVisualTransformChanged();
     }

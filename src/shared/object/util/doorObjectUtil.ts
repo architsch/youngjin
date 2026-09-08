@@ -1,5 +1,5 @@
 import Vec3 from "../../math/types/vec3";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT, HUB_ROOM_ID_KEYWORD,
     LABEL_COLOR_PALETTE_NAME, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import ColorUtil from "../../math/util/colorUtil";
 import EncodableByteString from "../../networking/types/encodableByteString";
@@ -25,6 +25,13 @@ const DoorObjectUtil =
     // The door a multiplayer room is generated with — its way in, standing in the boundary wall at
     // the room's entrance cell and facing into the room.
     //
+    // It is wired to the hubs, and that is not a default standing in for a decision nobody made: a
+    // room's own way in is also its way out, and a door naming nowhere is a locked one, so a room
+    // generated with an unwired entrance would be a room its visitors could not leave. Which hub it
+    // opens onto is deliberately left unsaid — the keyword hands that to the balancer at the moment
+    // somebody walks through, where naming one outright would pin every room in the game to a hub
+    // that may since have filled up or been taken down.
+    //
     // Both room generation and the conversion that carries older rooms across call this, so that a
     // room built today and a room migrated yesterday come out holding the same door.
     makeEntranceDoor: (roomID: string, entranceVoxelCol: number, entranceVoxelRow: number,
@@ -38,6 +45,8 @@ const DoorObjectUtil =
             {
                 [ObjectMetadataKeyEnumMap.DoorType]:
                     new EncodableByteString(`${DoorTypeEnumMap.DefaultEntrance}`),
+                [ObjectMetadataKeyEnumMap.DestinationRoomId]:
+                    new EncodableByteString(HUB_ROOM_ID_KEYWORD),
             });
     },
     getLabel: (obj: AddObjectSignal): string =>

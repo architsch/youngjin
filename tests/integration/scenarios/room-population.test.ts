@@ -20,6 +20,7 @@ import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomC
 import { RoomChangeRejectionReasonEnumMap } from "../../../src/shared/room/types/roomChangeRejectionReason";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import {
+    HUB_ROOM_ID_KEYWORD,
     MAX_PLAYERS_PER_ROOM,
     ROOM_ALMOST_FULL_MARGIN,
     ROOM_OVER_POPULATION_THRESHOLD,
@@ -392,6 +393,42 @@ describe("room population scenarios", () => {
 
         expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBe("hub-a");
         expect(getPendingSignals(ctx, "roomChangeRejectedSignal")).toHaveLength(0);
+    });
+
+    it("routes a door wired to the hub keyword through the hub balancer", async () => {
+        // How the tutorial's door takes the player out: it names the hubs rather than one hub, and
+        // no room answers to that name — so a request carrying it has to reach the balancer instead
+        // of being looked up as a room and failing.
+        await setUpHubs({
+            "hub-a": ROOM_UNDER_POPULATION_THRESHOLD + 1,
+            "hub-b": 0,
+        });
+
+        const ctx = harness.connectUser({singlePlayerMode: "tutorial"});
+        await harness.appStartJoin(ctx);
+
+        await ServerRoomManager.onRequestRoomChangeSignalReceived(ctx.socketUserContext,
+            new RequestRoomChangeSignal(HUB_ROOM_ID_KEYWORD, /*allowFallback*/ false));
+
+        expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBe("hub-b");
+        expect(getPendingSignals(ctx, "roomChangeRejectedSignal")).toHaveLength(0);
+    });
+
+    it("takes a user leaving through the hub keyword to a hub rather than the room in his URL", async () => {
+        // The keyword says which decision is wanted, not merely that one is: a door pointing at the
+        // hubs opens onto a hub even for a user who named a room on the way in. That is what makes
+        // the keyword mean the same thing on a door as it does in a URL.
+        harness.seedRoom("asked-for", RoomTypeEnumMap.Regular);
+        await setUpHubs({"hub-a": 0});
+
+        const ctx = harness.connectUser({singlePlayerMode: "tutorial"});
+        ctx.socket.handshake.auth.targetRoomID = "asked-for";
+        await harness.appStartJoin(ctx);
+
+        await ServerRoomManager.onRequestRoomChangeSignalReceived(ctx.socketUserContext,
+            new RequestRoomChangeSignal(HUB_ROOM_ID_KEYWORD, /*allowFallback*/ false));
+
+        expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBe("hub-a");
     });
 
     it("re-routes a user leaving single-player mode when the room they came for is full", async () => {

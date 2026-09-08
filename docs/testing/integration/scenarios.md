@@ -47,7 +47,7 @@ Asserted over both room types.
 | keeps the boundary wall solid the whole way round | The perimeter is intact everywhere, the entrance cell included |
 | leaves nothing standing in mid-air | Every block of the room is held up: it rests on the room's floor, on a block below it, or against a block beside it at the same height. Anything left over after that has spread as far as it can — a prop stood on a storey the room was left without, say — is floating |
 | keeps the upper storey inside the room | The boundary wall is solid through the room's full height, so reaching the storey above is not a way out of it |
-| furnishes a multiplayer room with its own way in and nothing else | A generated room carries exactly one object: a default-entrance door on the boundary wall at the entrance cell, facing into the room |
+| furnishes a multiplayer room with its own way in and nothing else | A generated room carries exactly one object: a default-entrance door on the boundary wall at the entrance cell, facing into the room — and pointed at the hubs, since a door naming nowhere is a locked one and the room would be one nobody could leave |
 | builds the room in a texture pack whose palettes it drew from | The room's texture pack has palettes curated for it in `RoomPaletteMap`, and a Hub's pack varies across seeds |
 | keeps every palette within the reach of a texture pack atlas | Every curated palette's texture indices exist in the atlas, for every pack |
 | rebuilds the same room from the same seed | Generation is deterministic per seed, layout and texture pack alike |
@@ -107,7 +107,7 @@ A room's contents are stored as an opaque binary blob, so an old room is migrate
 | comes back holding no restricted zones | A room written before zones existed has not said which part of it its owner meant to keep to himself, so it stays editable exactly as it was |
 | holds for the largest room there is, with every zone it may carry | A room solid from floor to ceiling, carrying the most zones a room may hold, encodes to exactly the size the encoding buffer is sized from |
 
-## Room Population (`room-population.test.ts`) — 34 tests
+## Room Population (`room-population.test.ts`) — 36 tests
 
 See [room_population.md](../../networking/room_population.md) for the behavior under test.
 
@@ -163,6 +163,8 @@ Exercised through `harness.appStartJoin()`, which mirrors what `SocketsServer` d
 | Test | What it verifies |
 |------|-----------------|
 | routes a user leaving single-player mode through the picker | An unnamed destination means "you choose", not "refuse" |
+| routes a door wired to the hub keyword through the hub balancer | The keyword a door carries reaches the balancer instead of being looked up as a room and failing |
+| takes a user leaving through the hub keyword to a hub rather than the room in his URL | The keyword says which decision is wanted, so it means the same thing on a door as in a URL |
 | re-routes a user leaving single-player mode when the room they came for is full | The fallback applies on the way out of single-player too |
 
 ### Page refresh and server restart
@@ -217,7 +219,7 @@ A door is how one room is joined to another, so laying one is an edit to the sha
 
 | Test | What it verifies |
 |------|-----------------|
-| puts him behind the door he was sent to, wherever that door is | A named destination door is found by its label, and the player lands a pace out from its face, facing away from it |
+| puts him behind the door he was sent to, wherever that door is | A named destination door is found by its label, and the player lands behind its face, inside the wall it hangs on, facing away from it |
 | falls back on the room's own way in when the named door is not there | A label nothing answers to falls through to a door the room offers as a way in |
 | falls back on any door at all when no door offers itself as the way in | A room whose doors are all custom entrances still receives arrivals |
 | falls back on the middle of the room when it holds no door at all | A room with no doors is still somewhere a player can be put down |
@@ -296,7 +298,7 @@ Clicking something in the room means one thing in play mode and another in edit 
 | replaces the character with a block, and the block with the character again | Only one of the three selections is ever active |
 | replaces the character even while a step holds the character's own selection down | Pinning a selection stops the user from dropping it, not from picking something else instead |
 
-## Single-Player Mode (`single-player.test.ts`) — 14 tests
+## Single-Player Mode (`single-player.test.ts`) — 16 tests
 
 | Test | What it verifies |
 |------|-----------------|
@@ -307,6 +309,8 @@ Clicking something in the room means one thing in play mode and another in edit 
 | omits content for a single-player room and reconstructs it empty | The wire format sends a single-player room as a content-less descriptor: `RoomRuntimeMemory.encode/decode` preserves the room's identity but omits its voxels/objects, reconstructing them empty |
 | still round-trips full content for a multiplayer room | A Hub room's voxel grid and object group survive the encode/decode round-trip intact |
 | generates the tutorial room with the walls its steps take down | `RoomGenerationUtil` (the same shared generator the client uses) builds both walls the tutorial later opens — the one between the user and the receptionist, and the one across the way out — leaves the fallback patch of floor bare, and places the receptionist and the door the steps address by name |
+| dresses the tutorial's two fixtures itself, the same way every time | The receptionist and the door are given their appearance outright rather than one derived from where they stand, so two runs of the generator produce the same first thing anybody sees of the game |
+| wires the tutorial's door to the hubs, as the room's own way in | The way out carries the reserved hub keyword rather than a room or nothing at all — naming a hub outright would pin it to one that may since have gone, and naming nothing would make it a locked door |
 | builds the tutorial room as a single storey the camera can look down into | Every space the tutorial opens is below the slab that caps the room, and no cell of the grid draws an upward face at or above that slab — so a camera drawn back above the room looks into it rather than down onto a lid |
 | emits per-quad change events during generation (why the client listens only after voxels spawn) | Generation fires `voxelQuadChangeObservable` events per quad — guarding the ordering assumption that the client registers its quad-change listener only after the room's voxel objects exist |
 | picks a bare patch of floor between the player and the camera | The patch the tutorial asks the user to select is settled while the step runs: it lies toward the camera, is never the one the user is standing on, and carries no block — so its outline is visible and the block he is asked to build has somewhere to go |

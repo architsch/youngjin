@@ -61,6 +61,13 @@ export const SCENERY_COLOR_PALETTE_NAME = "Scenery";
 // never an id in the first place.
 export const DOCUMENT_ID_MAX_LENGTH = 1500;
 
+// The reserved room id that names a hub without naming which one, leaving that to the balancer
+// (see RoomPickerUtil). A visitor's URL may carry it, and so may a door — which is how a door opens
+// onto the hubs at all, since which hub anybody should be let into is a question about the moment he
+// walks through rather than about the day the door was hung. No real room answers to it: ids are
+// drawn by the database rather than written.
+export const HUB_ROOM_ID_KEYWORD = "hub";
+
 // Physics
 
 export const GRAVITY_SPEED = 3;
@@ -212,6 +219,16 @@ export const DOOR_PANEL_HEIGHT = 3.25;
 
 export const MAX_DOORS_PER_ROOM = 16;
 export const MAX_MESH_INSTANCES_PER_DOOR = 8;
+
+// The two ends of an arriving player's entrance, measured along the door's own facing direction from
+// the face of the door he came through. A door's position sits on the boundary between the wall it
+// hangs on and the room it faces (see WallAttachedObjectUtil), so half a voxel to either side of it
+// is the middle of a voxel cell: the player is put down in the middle of the wall cell, with the door
+// standing between him and the room, and walks out to the middle of the floor cell in front of it.
+// Placing him behind the door is what makes his arrival a step out of it rather than a step up to it.
+// See SpawnHotspotUtil, which puts him down, and PlayerController, which walks him out.
+export const SPAWN_DIST_BEHIND_DOOR = 0.5;
+export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
 
 // Lamp
 

@@ -9,7 +9,7 @@ import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import { ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
+import { HUB_ROOM_ID_KEYWORD, ROOM_AUTO_SAVE_INTERVAL } from "../../shared/system/sharedConstants";
 import SpawnHotspotUtil from "./util/spawnHotspotUtil";
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import RoomTexturePackChangedSignal from "../../shared/room/types/roomTexturePackChangedSignal";
@@ -258,13 +258,28 @@ const ServerRoomManager =
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
         return {type: "success", newRoomID: roomID};
     },
+    // What a request carries is not always a room. Two of the things it can say name a decision
+    // rather than a destination, and both are the picker's to make: nothing at all ("put me
+    // wherever I should be") and the reserved hub keyword ("put me in a hub"). A door carries the
+    // keyword for the same reason a URL does — which hub anybody should be let into depends on how
+    // busy each of them is at the moment he asks, so a door that named one outright would go on
+    // sending people to a hub that has since filled up or been taken down.
+    //
+    // A hub chosen for the user is also a hub he may be moved on from: he named no room, so being
+    // handed a different one beats being turned away should the chosen one fill up in between.
     onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>
     {
         let roomID = params.roomID;
-        if (!roomID || roomID.length == 0) // If roomID is not specified, pick the best one.
+        let allowFallback = params.allowFallback;
+        if (!roomID || roomID.length == 0)
             roomID = await RoomPickerUtil.pickBestRoomID(socketUserContext, "requestFromUser");
+        else if (roomID == HUB_ROOM_ID_KEYWORD)
+        {
+            roomID = await RoomPickerUtil.pickBestHubRoomID();
+            allowFallback = true;
+        }
         const result = await ServerRoomManager.changeUserRoom(socketUserContext,
-            roomID, true, true, params.allowFallback, params.destinationDoorLabel);
+            roomID, true, true, allowFallback, params.destinationDoorLabel);
         ServerRoomManager.notifyRoomChangeRejection(socketUserContext, result);
     },
     // Tells the user that the room change they were waiting for is not going to happen, so

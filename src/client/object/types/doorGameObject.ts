@@ -9,7 +9,6 @@ import SocketsClient from "../../networking/client/socketsClient";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import DoorObjectUtil from "../../../shared/object/util/doorObjectUtil";
-import { DoorTypeEnumMap } from "../../../shared/object/types/doorType";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../system/util/gameModeUtil";
@@ -74,32 +73,31 @@ export default class DoorGameObject extends GameObject
 
     // Walks the user through this door. Also what the admin's own "Enter" button does, since a door
     // he has picked out is still a door he can go through.
+    //
+    // Two destinations are no destination, and both are met with the same locked door: a door that
+    // names no room at all, and one that names the room it is hanging in. The second is worth
+    // ruling out here rather than letting the room change be asked for and granted, since a journey
+    // that ends where it began reads as a broken door — and it is an easy way to wire one up, the
+    // ids a destination is chosen from being long strings nobody reads.
+    //
+    // The reserved hub keyword is neither, and travels: which hub it opens onto is the server's to
+    // answer when it is asked (see RoomPickerUtil).
     enter()
     {
         const destinationRoomID = DoorObjectUtil.getDestinationRoomId(this.params);
-        if (destinationRoomID.length > 0)
+        if (destinationRoomID.length == 0 || destinationRoomID == App.getCurrentRoom()?.id)
         {
-            this.travel(destinationRoomID, false,
-                DoorObjectUtil.getDestinationDoorLabel(this.params));
+            notificationMessageObservable.set("This door is locked!");
             return;
         }
-
-        // A door that leads nowhere yet. Which of the two things that means depends on what the door
-        // is for: a room's own way in is also its way out, so it falls back on taking the user out to
-        // a hub rather than shutting him in — while a door somebody hung and has not yet wired up is
-        // simply not a way anywhere.
-        if (DoorObjectUtil.getDoorType(this.params) == DoorTypeEnumMap.DefaultEntrance)
-            this.travel("", true, "");
-        else
-            notificationMessageObservable.set("This door is locked!");
-    }
-
-    private travel(roomID: string, allowFallback: boolean, destinationDoorLabel: string)
-    {
+        // No fallback is asked for: the door names where it goes, so a destination that cannot take
+        // the user is a refusal he should be told about rather than a reason to put him somewhere
+        // else. The hub keyword is the one destination that is routed on from instead, and it is
+        // the server that makes it so — a hub the user never named is a hub he can be moved on from.
         if (!tryStartClientProcess("roomChange", 1, 1))
             return;
-        SocketsClient.emitRequestRoomChangeSignal(
-            new RequestRoomChangeSignal(roomID, allowFallback, destinationDoorLabel));
+        SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(destinationRoomID,
+            false, DoorObjectUtil.getDestinationDoorLabel(this.params)));
     }
 
     getSelectionOutlineScale(): THREE.Vector3

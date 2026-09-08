@@ -33,7 +33,8 @@ import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttached
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, DOOR_FOOTPRINT_HEIGHT,
     LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
+    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH,
+    SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
@@ -367,9 +368,12 @@ describe("choosing where a player arrives", () => {
 
                 const {pos, dir} = SpawnHotspotUtil.pickSpawnTransform(room, "Side Door");
 
-                // A pace out from that door's face, on the floor it stands on, facing away from it.
+                // Behind that door's face, on the floor it stands on, facing away from it. The door
+                // hangs on the wall at the far end of the room and faces back into it, so behind it
+                // is further out along z than the door itself — which is inside that wall, where he
+                // is meant to be until his entrance stride carries him through the doorway.
                 expect(pos.x).toBeCloseTo(named.transform.pos.x, 3);
-                expect(pos.z).toBeLessThan(named.transform.pos.z);
+                expect(pos.z).toBeCloseTo(named.transform.pos.z + SPAWN_DIST_BEHIND_DOOR, 3);
                 expect(dir.z).toBeCloseTo(1, 3);
             },
         });

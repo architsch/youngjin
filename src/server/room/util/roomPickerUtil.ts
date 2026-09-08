@@ -1,6 +1,6 @@
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import { MAX_PLAYERS_PER_ROOM, ROOM_ALMOST_FULL_MARGIN, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
+import { HUB_ROOM_ID_KEYWORD, MAX_PLAYERS_PER_ROOM, ROOM_ALMOST_FULL_MARGIN, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import ServerRoomManager from "../serverRoomManager";
 import HubRoomUtil from "./hubRoomUtil";
@@ -18,7 +18,7 @@ const RoomPickerUtil =
             roomID = user.singlePlayerMode; // User should join the corresponding single-player room. (If targetRoomID exists, the user should join it AFTER finishing the single-player mode first.)
         else if (targetRoomID && targetRoomID.length > 0) // If roomID was explicitly specified in the URL as a parameter,
         {
-            if (targetRoomID == "hub") // If the specified ID is the reserved "hub" keyword,
+            if (targetRoomID == HUB_ROOM_ID_KEYWORD) // If the specified ID is the reserved "hub" keyword,
                 roomID = await RoomPickerUtil.pickBestHubRoomID(); // User should join any one of the available hubs (Not just a randomly chosen one, but the one that is the most appropriate.)
             else
                 roomID = targetRoomID; // User should join the room with the specified ID.

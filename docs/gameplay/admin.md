@@ -60,10 +60,11 @@ Two of them are worth restating here, because they are what a world is actually 
 - **A label is a name to be found by**, not only text on a plate. Pointing one door at another names
   it, and the destination room is searched for a door by that name when the traveller arrives. Two
   doors may share a name on purpose — several ways into the same place, one of them drawn at random.
-- **A room's own way in is also its way out.** The door generation gives every room is marked as one
-  the room offers arrivals, and it leads nowhere until somebody points it somewhere; rather than
-  shutting a visitor in, it falls back on taking him out to a hub. A door an admin hung and has not
-  yet wired up says it is locked instead, since that is what it is.
+- **A door goes where it says and nowhere else.** One that names no room, or names the room it is
+  hanging in, says it is locked, whoever hung it and whether or not the room offers it to arrivals.
+  What keeps a room's own way in from shutting its visitors in is therefore the destination it is
+  generated with: the reserved id that names the hubs without naming one of them, which is always
+  somewhere to go. A door an admin hung and has not yet wired up is locked, since that is what it is.
 
 ## Reaching the admin UI
 

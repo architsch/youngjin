@@ -6,14 +6,9 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import DoorObjectUtil from "../../../shared/object/util/doorObjectUtil";
 import Room from "../../../shared/room/types/room";
 import { DOOR_FOOTPRINT_HEIGHT, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    PLAYER_HEIGHT } from "../../../shared/system/sharedConstants";
+    PLAYER_HEIGHT, SPAWN_DIST_BEHIND_DOOR } from "../../../shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
-
-// How far out from a door's face the arriving player stands. Far enough that he is not inside the
-// panel, close enough that the room's own door is still behind him — which is what makes his first
-// stride a step into the room rather than a walk up to it (see PlayerController).
-const SPAWN_DISTANCE_FROM_DOOR = 0.6;
 
 // Where a player arriving in a room is put down. The counterpart of RoomPickerUtil: that decides
 // which room a user is headed for, and this decides where in it they land.
@@ -57,21 +52,23 @@ function pickOne(doors: AddObjectSignal[]): AddObjectSignal
     return doors[Math.floor(Math.random() * doors.length)];
 }
 
-// Where a player stands to have just come through the given door: a pace out from its face, on the
-// floor the door stands on, facing away from it into the room.
+// Where a player stands to be about to come through the given door: behind its face, on the floor
+// the door stands on, facing away from it into the room. PlayerController walks him out from there,
+// which is what makes his arrival a step out of the doorway rather than a step up to it.
 //
 // A door's origin sits at the middle of its own height while the door stands on the floor, so the
 // floor is half a footprint below it; the player's own origin is likewise at the middle of his
 // height. The direction is flipped because a player's transform is authored pointing behind him
-// (see PlayerProximityDetector) — so facing away from the door is the door's own facing reversed.
+// (see PlayerProximityDetector) — so facing away from the door is the door's own facing reversed,
+// and standing behind the door is that same facing walked backwards from its face.
 function getTransformBehindDoor(door: AddObjectSignal): ObjectTransform
 {
     const {pos, dir} = door.transform;
     const floorY = pos.y - 0.5 * DOOR_FOOTPRINT_HEIGHT;
     const spawnPos: Vec3 = {
-        x: pos.x + dir.x * SPAWN_DISTANCE_FROM_DOOR,
+        x: pos.x - dir.x * SPAWN_DIST_BEHIND_DOOR,
         y: floorY + 0.5 * PLAYER_HEIGHT,
-        z: pos.z + dir.z * SPAWN_DISTANCE_FROM_DOOR,
+        z: pos.z - dir.z * SPAWN_DIST_BEHIND_DOOR,
     };
     return new ObjectTransform(spawnPos, {x: -dir.x, y: 0, z: -dir.z});
 }

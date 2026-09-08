@@ -65,6 +65,11 @@ export default interface ObjectTypeConfig
             // metadata rather than a setting here, since two lamps of the same kind are lit
             // differently — see LampObjectUtil.
             lightSource?: {},
+            // A cosmetic bounce is a property of the object itself, not of who is watching it, so
+            // it belongs to every copy: the player character its owner sees in third person needs
+            // it as much as everybody else's does, and a thing that is springy is springy no matter
+            // who put it there.
+            easingMotion?: {},
         },
         spawnedByMe?: {
             playerController?: {},
@@ -73,13 +78,6 @@ export default interface ObjectTypeConfig
         },
         spawnedByOther?: {
             periodicTransformReceiver?: {},
-            instancedMeshGraphics?: {},
-            modelGraphics?: {
-                path: string,
-                localPosition: {x: number, y: number, z: number},
-                scale: {x: number, y: number, z: number},
-            },
-            easingMotion?: {},
         },
     },
 }

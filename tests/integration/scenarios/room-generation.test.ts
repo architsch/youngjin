@@ -36,6 +36,7 @@ import DoorObjectUtil from "../../../src/shared/object/util/doorObjectUtil";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import {
     COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GRAVITY_SPEED,
+    HUB_ROOM_ID_KEYWORD,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, PLAYER_HEIGHT,
     STOREY_FLOOR_COLLISION_LAYER,
@@ -56,9 +57,10 @@ function isWalkable(voxelGrid: VoxelGrid, row: number, col: number): boolean
 
 const DOOR_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
 
-// Where an arriving player stands. The entrance cell itself is boundary wall — that is what the
-// room's door hangs on — so the room is walked from the cell in front of it, which is the first
-// floor a player ever has under him (see SpawnHotspotUtil).
+// Where an arriving player ends up. The entrance cell itself is boundary wall — that is what the
+// room's door hangs on, and where a player is put down behind it — so the room is walked from the
+// cell in front of it, which is where his entrance stride sets him down (see SpawnHotspotUtil and
+// PlayerController).
 const ARRIVAL_ROW = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1;
 const ARRIVAL_COL = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
 
@@ -591,6 +593,11 @@ describe("every generated multiplayer room", () => {
         // nobody can leave, and it is what an arriving player is put down behind besides. It stands
         // on the boundary wall at the room's entrance cell, facing into the room, and offers itself
         // as the way in.
+        //
+        // Being a way in is not what makes it a way out, though — where a door goes is written on
+        // the door, and one naming nowhere is a locked one. So it is generated pointed at the hubs,
+        // which is the only destination generation can honestly choose: which hub is worth arriving
+        // in belongs to the moment somebody walks through, not to the day the room was built.
         for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
             for (const seed of SEEDS)
@@ -602,6 +609,8 @@ describe("every generated multiplayer room", () => {
                 expect(door.objectTypeIndex, `${name} seed ${seed}`).toBe(DOOR_OBJECT_TYPE_INDEX);
                 expect(DoorObjectUtil.getDoorType(door), `${name} seed ${seed}`)
                     .toBe(DoorTypeEnumMap.DefaultEntrance);
+                expect(DoorObjectUtil.getDestinationRoomId(door), `${name} seed ${seed}`)
+                    .toBe(HUB_ROOM_ID_KEYWORD);
                 expect(door.transform.pos.x, `${name} seed ${seed}`)
                     .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, 3);
                 expect(door.transform.pos.z, `${name} seed ${seed}`)

@@ -28,7 +28,14 @@ metadata:
 - **A label** — the text written on its plate, which is also the name the door is found by. Two doors
   may share one. What colour it is written in is carried beside it, since which colour reads on a
   plate depends on what that plate was painted rather than on what the door is called.
-- **A destination room** — where it opens onto. A door that names none is not a way anywhere.
+- **A destination room** — where it opens onto. Two answers are no answer, and a door giving either
+  is locked: naming no room at all, and naming the room the door itself hangs in, which would be a
+  journey ending where it began. A door may also name the *hubs* rather than a room, through a
+  reserved id no real room answers to — which is how a way out reaches the world's public rooms
+  without being pinned to one of them, since which hub is worth arriving in is a question about the
+  moment somebody walks through rather than about the day the door was hung (see
+  [room_population.md](../networking/room_population.md#picking-a-hub)). That is what the door every
+  room is generated with carries, so that no room is one its visitors cannot leave.
 - **A destination door label** — which door *of that room* the traveller is meant to arrive behind,
   so that walking through a door in one room puts him behind the door that answers it in the next
   rather than wherever that room's own way in happens to be.
@@ -52,10 +59,12 @@ Each step is there because the one before it can genuinely come up empty: a door
 renamed or taken down since whoever pointed at it did so, and an admin may have marked none of a
 room's doors as a way in.
 
-The player is put down a pace out from the chosen door's face, on the floor it stands on, facing away
-from it — and is then walked forward briefly, so that what he sees first is the room rather than the
-back of a panel and so that he never comes to rest inside the doorway he arrived through
-(`PlayerController`).
+The player is put down *behind* the chosen door — inside the wall it hangs on, on the floor the door
+stands on, facing away from it into the room — and is then walked forward through the doorway until
+he stands just clear of the door. That is what makes an arrival read as a step out of the door rather
+than a walk up to one, and it is also why he never comes to rest in the doorway he arrived through
+(`PlayerController`). The walk is given a time limit as well as a distance, since a player who
+arrived facing something solid would otherwise be held walking into it forever.
 
 ## The Door as an Object
 
@@ -71,10 +80,12 @@ back of a panel and so that he never comes to rest inside the doorway he arrived
   room's users may have built since, so *being in view* has to be asked separately from being looked
   at. The cheap questions are asked before the costly one, since only the last of them has to search
   the room.
-- **Clicking it.** For almost everybody a click is a journey: through to the destination room if the
-  door names one, and otherwise a notice that the door is locked — except for a room's own way in,
-  which falls back on taking the user out to a hub rather than shutting him in. That fallback is
-  also how the tutorial ends, its door being a way in that leads nowhere — see
+- **Clicking it.** For almost everybody a click is a journey to wherever the door says it goes, and
+  a door saying nothing that amounts to somewhere else answers with a notice that it is locked. What
+  a door is for makes no difference to this: a room's own way in and a door somebody hung last week
+  are read the same way, so what keeps a room from shutting its visitors in is the destination its
+  door was given rather than the kind of door it is. A door pointed at the hubs hands the traveller
+  to the balancer; that is also how the tutorial ends, its way out being such a door — see
   [single_player_mode.md](../networking/single_player_mode.md#door-behavior). For an admin a click
   on a door in a Hub instead takes hold of it and opens edit mode around it, since taking hold of a
   door is the beginning of working on one; walking through it is then offered among the tools (see

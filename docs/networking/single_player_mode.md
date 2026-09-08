@@ -32,7 +32,7 @@ The user's mode flag only *influences where the server routes them*; it is **not
 
 ### The "hub" keyword
 
-The hub keyword is a reserved pseudo-room-ID, not a real room. When asked to load it, `RoomPickerUtil` resolves it to whichever Hub room the incoming user should be load-balanced into (see [room_population.md](room_population.md#picking-a-hub)). It is what a URL names when the visitor is to be put somewhere sensible rather than in one room in particular. The way out of the tutorial names no room at all, which the same picker answers the same way (see [Door behavior](#door-behavior)).
+The hub keyword is a reserved pseudo-room-ID, not a real room. Wherever a destination is asked for by name, `RoomPickerUtil` answers it with whichever Hub room the user should be load-balanced into (see [room_population.md](room_population.md#picking-a-hub)). It is what a URL carries when the visitor is to be put somewhere sensible rather than in one room in particular, and equally what a door carries when it opens onto the hubs rather than onto one of them — the way out of the tutorial being such a door (see [Door behavior](#door-behavior)).
 
 ## Server-side contract for single-player rooms
 
@@ -93,13 +93,13 @@ A flag that constrains something the user can do constrains the *doing* of it, n
 
 ### Door behavior
 
-Nothing about the tutorial's door is special-cased. It is generated as the room's own way in, leading nowhere — and a door of that kind, asked to open onto a destination it does not have, falls back on taking the user out to wherever the server judges he should go next: the room he originally asked for through the connection URL, or a hub. That is exactly what leaving the tutorial means, so the ordinary behavior of an unwired entrance is the whole of it. See [room_entrance.md](../geometry/room_entrance.md#the-door-as-an-object).
+Nothing about the tutorial's door is special-cased. It is generated as the room's own way in, wired to the hubs by the reserved keyword — and any door wired that way hands whoever walks through it to the hub balancer. That is exactly what leaving the tutorial means, so the ordinary behavior of a door pointed at the hubs is the whole of it. Pointing it at one hub outright would do instead, right up until that hub filled up or was taken down. See [room_entrance.md](../geometry/room_entrance.md#the-door-as-an-object).
 
 ## Finishing the tutorial
 
 When the tutorial completes, the client signals the server, which verifies the user is actually in the tutorial and then clears their single-player mode flag (in memory and in storage). On the next connect the user is no longer routed to the tutorial room. Guiding the user from there on is the job of the post-tutorial [FTUE system](ftue.md).
 
-Leaving the tutorial is itself a room change: the user is moved into a real (multi-player) room, and it is landing in that non-single-player room that triggers the completion signal. If the user originally arrived via a room-specific URL — the destination that connect-time routing deferred — that is the room they are sent to now, within the same runtime; otherwise they go to a hub. This holds whether the tutorial is finished naturally (through the door) or skipped.
+Leaving the tutorial is itself a room change: the user is moved into a real (multi-player) room, and it is landing in that non-single-player room that triggers the completion signal. Which room depends on how they left. Walking out through the door goes where that door points, which is the hubs. Skipping names no room at all and hands the choice to the picker, which is where a room-specific URL — the destination that connect-time routing deferred — is finally honored, falling through to a hub when there was none.
 
 ## Persistence
 

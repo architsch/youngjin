@@ -91,8 +91,8 @@ import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import Vec3 from "../../../src/shared/math/types/vec3";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER,
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, HUB_ROOM_ID_KEYWORD,
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER,
     TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -283,15 +283,17 @@ describe("single-player room generation", () => {
             DoorObjectUtil.getLabelColorIndex(second.objectGroup.objectById["door"]));
     });
 
-    it("leaves the tutorial's door leading nowhere, as the room's own way in", () => {
-        // Which is what takes the player out of the tutorial: a default entrance that names no
-        // destination falls back on the server picking the room he should go to next, so clicking
-        // this door is how the tutorial ends (see DoorGameObject).
+    it("wires the tutorial's door to the hubs, as the room's own way in", () => {
+        // Which is what takes the player out of the tutorial: the reserved keyword names the hubs
+        // without naming one of them, so clicking this door hands him to the balancer and that is
+        // how the tutorial ends (see DoorGameObject and RoomPickerUtil). Naming a hub outright
+        // would pin the way out to a room that may since have filled up or been taken down, and
+        // naming nothing at all would make the door a locked one.
         const { objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const door = objectGroup.objectById["door"];
 
         expect(DoorObjectUtil.getDoorType(door)).toBe(DoorTypeEnumMap.DefaultEntrance);
-        expect(DoorObjectUtil.getDestinationRoomId(door)).toBe("");
+        expect(DoorObjectUtil.getDestinationRoomId(door)).toBe(HUB_ROOM_ID_KEYWORD);
         expect(DoorObjectUtil.getDestinationDoorLabel(door)).toBe("");
     });
 

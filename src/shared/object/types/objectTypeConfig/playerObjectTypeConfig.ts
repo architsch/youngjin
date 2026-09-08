@@ -77,6 +77,7 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
                 maxFaceAngle: -1,
                 checkLineOfSight: false, // A body this close to the camera is in the way whether it is in view or not.
             },
+            easingMotion: {},
         },
         spawnedByMe: {
             playerController: {},
@@ -85,7 +86,6 @@ const PlayerObjectTypeConfig: ObjectTypeConfig =
         },
         spawnedByOther: {
             periodicTransformReceiver: {},
-            easingMotion: {},
         },
     },
 }

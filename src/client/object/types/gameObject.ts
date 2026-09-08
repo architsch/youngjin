@@ -22,7 +22,7 @@ export default abstract class GameObject
 {
     params: AddObjectSignal; // When a GameObject spawns, use these parameters to initialize it.
     obj: THREE.Object3D = new THREE.Object3D(); // The GameObject's authoritative gameplay transform (position/rotation/scale). Networking (transform emitter/receiver), physics, camera, and proximity logic all read and write this.
-    visualObj: THREE.Object3D = new THREE.Object3D(); // A child of "obj" that carries only the visual representation (meshes/models). Cosmetic effects (e.g. EasingMotion's bounce) animate this node so they never disturb the gameplay transform on "obj". It rests at identity; per-mesh local transforms live on the meshes themselves.
+    visualObj: THREE.Object3D = new THREE.Object3D(); // A child of "obj" that carries only the visual representation (meshes). Cosmetic effects (e.g. EasingMotion's bounce) animate this node so they never disturb the gameplay transform on "obj". It rests at identity; per-mesh local transforms live on the meshes themselves.
     config: ObjectTypeConfig;
     components: {[componentName: string]: GameObjectComponent} = {};
     spawnFinished: boolean = false;
