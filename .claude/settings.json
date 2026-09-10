@@ -33,8 +33,11 @@
         "    root shell on it is an unprompted root shell on production. Anything the audit does",
         "    not already answer is worth one prompt.",
         "",
-        "The deny additions close the two levers that move production: the Promote to Live and",
-        "Rollback Live workflows. No automated run has any business dispatching those.",
+        "The deny additions close the levers that reach production: the Promote to Live and",
+        "Rollback Live workflows, which move it, and Restart Live, which does not change what is",
+        "deployed but does disconnect everyone playing on it. No automated run has any business",
+        "dispatching those. Restart Staging is left out on purpose — staging is the environment",
+        "these workflows exist to be tried on.",
         "",
         "The allow list above is a prefix matcher, and that is the limit of it. It cannot see",
         "into `a && b`, `until curl ...; do ...; done`, `git -C . rev-parse` or",
@@ -143,8 +146,10 @@
 
             "Bash(gh workflow run promote-live.yml:*)",
             "Bash(gh workflow run rollback-live.yml:*)",
+            "Bash(gh workflow run restart-live.yml:*)",
             "Bash(gh workflow run \"Promote to Live\":*)",
-            "Bash(gh workflow run \"Rollback Live\":*)"
+            "Bash(gh workflow run \"Rollback Live\":*)",
+            "Bash(gh workflow run \"Restart Live\":*)"
         ]
     }
 }

@@ -19,19 +19,9 @@ const WallAttachedObjectUtil =
         pos = tr.pos;
         dir = tr.dir;
 
-        // Object's center position must not be out of the room's boundaries.
-
-        if (pos.x < 1 || pos.x > NUM_VOXEL_COLS-1 ||
+        if (pos.x <= 0 || pos.x >= NUM_VOXEL_COLS ||
             pos.y <= 0 || pos.y >= MAX_ROOM_Y ||
-            pos.z < 1 || pos.z > NUM_VOXEL_ROWS-1)
-        {
-            return false;
-        }
-
-        // Object should not be able to penetrate halfway through the room's boundary wall.
-
-        if (((pos.x <= 1 || pos.x >= NUM_VOXEL_COLS-1) && dir.z != 0) ||
-            ((pos.z <= 1 || pos.z >= NUM_VOXEL_ROWS-1) && dir.x != 0))
+            pos.z <= 0 || pos.z >= NUM_VOXEL_ROWS)
         {
             return false;
         }

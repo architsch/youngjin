@@ -92,3 +92,22 @@ Details worth knowing:
 - `.github/workflows/deploy-staging.yml` - Workflow for automatically deploying the app bundles to the VPS whenever "git push" happens.
 - `.github/workflows/promote-live.yml` - Workflow for applying the staging apps to the live apps.
 - `.github/workflows/rollback-live.yml` - Workflow for rolling back the latest live apps to their previous backup copies (in case the latest ones happen to be problematic).
+- `.github/workflows/restart-live.yml` - Workflow for restarting the live app in place, without changing the bundle it is running.
+- `.github/workflows/restart-staging.yml` - The same, for the staging app.
+
+The workflows above share a concurrency group per app, so a deployment, a promotion, a rollback and a
+restart acting on the same one queue behind each other instead of interleaving.
+
+### Restarting without deploying
+
+A server's in-memory state outlives the database it was read from. Rooms are held as
+`RoomRuntimeMemory` once loaded, and hub rooms stay loaded for as long as the process lives, so a
+room edited or removed directly in Firebase goes on being served from the copy the process took
+beforehand. Restarting is what makes the process read the database again.
+
+The restart workflows exist for that, and are deliberately not deployments: they check out nothing
+and build nothing, so the app comes back on exactly the bundle it went down with and only its memory
+starts empty. The process is stopped with a signal it handles rather than dies on — it reports itself
+unavailable on the health route, saves every room with unsaved changes along with each connected
+user's gameplay state, and only then exits — after which the workflow polls the health route until
+the replacement answers, rather than assuming a fixed startup time.

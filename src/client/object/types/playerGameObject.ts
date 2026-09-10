@@ -1,9 +1,7 @@
 import * as THREE from "three";
 import GameObject from "./gameObject";
 import GraphicsManager from "../../graphics/graphicsManager";
-import PlayerSelection from "../../graphics/types/gizmo/playerSelection";
-import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
-import { cameraModeObservable } from "../../system/clientObservables";
+import { cameraModeObservable, objectSelectionObservable } from "../../system/clientObservables";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
 import SpeechBubble from "../components/speechBubble";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
@@ -40,21 +38,6 @@ export default class PlayerGameObject extends GameObject
     {
         if (this.isMine())
             this.refreshOwnVisibility();
-    }
-
-    // The user's own character is a part of the room while he is editing it — one he can pick out
-    // and work on like any other, which is what brings up the form for changing his look. Other
-    // players' characters answer to nobody's click.
-    onClick(_instanceId: number, hitPoint: THREE.Vector3)
-    {
-        if (!this.isMine())
-            return;
-
-        GraphicsManager.getCamera().getWorldPosition(vector3Temp);
-        if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-            return;
-
-        PlayerSelection.trySelect(this);
     }
 
     // If another player gets too close to the user, hide its body so it doesn't clip through the camera.
@@ -101,7 +84,7 @@ export default class PlayerGameObject extends GameObject
 
     private cameraIsInsideOwnBody(): boolean
     {
-        if (PlayerSelection.isSelected())
+        if (objectSelectionObservable.peek()?.gameObject === this)
             return false;
 
         // vector3Temp = Global position of the camera

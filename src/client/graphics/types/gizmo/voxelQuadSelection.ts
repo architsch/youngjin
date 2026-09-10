@@ -1,12 +1,11 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { clientFeatureFlagsObservable, playerViewTargetPosObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
-import GameModeUtil from "../../../system/util/gameModeUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 import VoxelQuadTransformDimensions from "../../../../shared/voxel/types/voxelQuadTransformDimensions";
@@ -148,41 +147,19 @@ export default class VoxelQuadSelection
             return false;
         }
 
+        // Clicking what is already picked out leaves it picked out, as it does for an object (see
+        // ObjectSelection.trySelect). A selection is given up by saying so — the way out of the mode
+        // it stands in, or the back gesture — rather than by a click indistinguishable from the one
+        // that made it.
         const existingSelection = voxelQuadSelectionObservable.peek();
-
-        if (existingSelection == null) // There was no selection before.
+        if (existingSelection != null &&
+            existingSelection.voxel == voxel && existingSelection.quadIndex == quadIndex)
         {
-            voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, quadIndex));
             return true;
         }
-        else
-        {
-            if (existingSelection.voxel == voxel && existingSelection.quadIndex == quadIndex) // Selected the same quad twice.
-            {
-                // Clicking what is already picked out is how the selection is let go of. In edit
-                // mode the mode goes with it: that mode is the selection — the camera orbiting it,
-                // the player standing still for it — so a mode left with nothing under it would be
-                // an arrangement kept up for the sake of something that is no longer there.
-                if (GameModeUtil.isInEditMode())
-                {
-                    // Which makes this click a way out of the mode, and a scripted step holding the
-                    // user in that mode holds it too. The two cannot be told apart here — dropping
-                    // the selection alone would leave the very empty mode described above — so the
-                    // click is turned away whole, leaving the quad picked out as it was.
-                    if (!GameModeUtil.canChangeGameMode())
-                        return true;
-                    GameModeUtil.exitEditMode(); // Which drops this selection along with the mode.
-                    return false;
-                }
-                voxelQuadSelectionObservable.set(null);
-                return false;
-            }
-            else // Selected a different quad while another one was selected.
-            {
-                voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, quadIndex));
-                return true;
-            }
-        }
+
+        voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, quadIndex));
+        return true;
     }
 
     static unselect(force: boolean = false)
@@ -218,25 +195,19 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         selectionOutline.setTransform(tempPos, tempDir, tempScale);
         selectionOutline.setVisible(true);
 
-        // If a voxelQuad is selected, the player's viewTarget should be the selected voxelQuad.
-        playerViewTargetPosObservable.set(new THREE.Vector3(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ));
-
         WorldSpaceSelectionUtil.unselectOthers("voxelQuad");
     }
     else
     {
         selectionOutline?.setVisible(false);
     }
-
-    // Is nothing selected at all? Then just set the viewTarget to NULL.
-    if (!WorldSpaceSelectionUtil.isAnythingSelected())
-        playerViewTargetPosObservable.set(null);
 });
 
-// Whenever the current room changes,
-// the existing selection (if there is one) should be discarded.
+// Whenever the current room changes, the existing selection (if there is one) should be discarded.
+// Forced: a room the user has left is not a room he can be holding anything in, and a scripted step
+// pinning a selection was pinning it in the room that step was played in.
 roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
-    VoxelQuadSelection.unselect();
+    VoxelQuadSelection.unselect(true);
 
     if (selectionOutline)
     {

@@ -22,14 +22,12 @@ import AuthPromptForm from "./components/form/authPromptForm";
 import DestinationChooserForm from "./components/form/destinationChooserForm";
 import ConfigureMyRoomForm from "./components/form/configureMyRoomForm";
 import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
-import CustomizePlayerForm from "./components/form/customizePlayerForm";
-import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, objectSelectionObservable, playerSelectionObservable, popupStateObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, objectSelectionObservable, popupStateObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ImageListChooserForm from "./components/form/imageListChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
-import PlayerSelection from "../graphics/types/gizmo/playerSelection";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "./components/form/confirmForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
@@ -54,7 +52,6 @@ export default function UIRoot({ env, user }: UIRootProps)
     const [roomRuntimeMemory, setRoomRuntimeMemory] = useState<RoomRuntimeMemory>();
     const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
     const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
-    const [playerSelection, setPlayerSelection] = useState<PlayerSelection | null>(null);
     const [inEditMode, setInEditMode] = useState<boolean>(false);
     const [forceHideChat, setForceHideChat] = useState<boolean>(false);
 
@@ -82,9 +79,6 @@ export default function UIRoot({ env, user }: UIRootProps)
         voxelQuadSelectionObservable.addListener("ui_root", (selection: VoxelQuadSelection | null) => {
             setVoxelQuadSelection(selection);
         });
-        playerSelectionObservable.addListener("ui_root", (selection: PlayerSelection | null) => {
-            setPlayerSelection(selection);
-        });
         gameModeObservable.addListener("ui_root", (mode: GameMode) => {
             setInEditMode(mode == "edit");
         });
@@ -99,7 +93,6 @@ export default function UIRoot({ env, user }: UIRootProps)
             roomChangedObservable.removeListener("ui_root");
             objectSelectionObservable.removeListener("ui_root");
             voxelQuadSelectionObservable.removeListener("ui_root");
-            playerSelectionObservable.removeListener("ui_root");
             gameModeObservable.removeListener("ui_root");
             popupStateObservable.removeListener("ui_root");
         };
@@ -170,8 +163,7 @@ export default function UIRoot({ env, user }: UIRootProps)
     const isMultiplayerRoomLoaded = isRoomLoaded &&
         roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
 
-    const anythingSelected = objectSelection != null || voxelQuadSelection != null ||
-        playerSelection != null;
+    const anythingSelected = objectSelection != null || voxelQuadSelection != null;
     // Edit mode, or a selection made outside it, has taken the top bar for its own way out, so the
     // controls that normally live there stand down for as long as it is up. The mode counts in its
     // own right, since it outlasts any one selection made inside it.
@@ -197,7 +189,6 @@ export default function UIRoot({ env, user }: UIRootProps)
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             <ObjectSelectionMenu inEditMode={inEditMode}/>
             {inEditMode && <VoxelQuadSelectionMenu/>}
-            {playerSelection != null && <CustomizePlayerForm/>}
             <Chat hide={chatHidden}/>
             <SkipTutorialButton hide={hideSkipTutorialButton}/>
         </div>

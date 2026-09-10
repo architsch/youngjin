@@ -724,9 +724,6 @@
   .flex-nowrap {
     flex-wrap: nowrap;
   }
-  .flex-wrap {
-    flex-wrap: wrap;
-  }
   .place-content-center-safe {
     place-content: safe center;
   }
@@ -774,9 +771,6 @@
   }
   .gap-x-1 {
     column-gap: calc(var(--spacing) * 1);
-  }
-  .gap-y-0 {
-    row-gap: calc(var(--spacing) * 0);
   }
   .self-center {
     align-self: center;

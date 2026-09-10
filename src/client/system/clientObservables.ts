@@ -5,7 +5,6 @@ import ObservableMap from "../../shared/system/types/observableMap";
 import ObservableSet from "../../shared/system/types/observableSet";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
-import PlayerSelection from "../graphics/types/gizmo/playerSelection";
 import Vec3 from "../../shared/math/types/vec3";
 import ClientProcess from "./types/clientProcess";
 import GameMode from "./types/gameMode";
@@ -60,13 +59,11 @@ export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | 
 // counts how many restorations there have been, which is of no interest beyond telling them apart.
 export const graphicsContextRestoredObservable = new Observable<number>(0);
 
-// This observable notifies its listeners whenever the user selects or unselects an object.
+// This observable notifies its listeners whenever the user selects or unselects an object. Every
+// kind of object is picked out through it, the user's own character included — selecting that is how
+// the user asks to work on his/her own look, which is what puts the player-customization form on
+// screen and takes it away again (see ObjectTypeClientConfig).
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
-
-// This observable notifies its listeners whenever the user selects or unselects his/her own player
-// character. Selecting it is how the user asks to work on his/her own look, so this is also what
-// puts the player-customization form on screen and takes it away again.
-export const playerSelectionObservable = new Observable<PlayerSelection | null>(null);
 
 // Which mode the user is currently playing in (see GameMode). Modes are entered and left
 // deliberately, by GameModeUtil, and everything that differs between them — the camera, the player's
@@ -83,11 +80,6 @@ export const gameModeObservable = new Observable<GameMode>("play");
 // currently not interacting with any input element and thus should be able to interact
 // freely with the game's 3D environment (without interfering with the input's state).
 export const numActiveInputElementsObservable = new Observable<number>(0);
-
-// This observable notifies its listeners whenever the user's player changes its viewTarget.
-// A "viewTarget" is the point in 3D space that is supposed to be the main focus of the
-// player's vision, which means it should be clearly visible to the player's camera all the time.
-export const playerViewTargetPosObservable = new Observable<THREE.Vector3 | null>(null);
 
 // This observable notifies its listeners whenever a brief notification message
 // should be displayed to the user (e.g. error messages, status updates).

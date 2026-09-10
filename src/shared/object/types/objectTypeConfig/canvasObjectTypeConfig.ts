@@ -8,6 +8,7 @@ import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
+import { WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 
 // A canvas is drawn as a single flat quad hanging on the wall.
 export const CANVAS_GEOMETRY_ID = "Square";
@@ -85,7 +86,11 @@ const CanvasObjectTypeConfig =
         spawnedByAny: {
             collider: {
                 colliderType: "wallAttachment",
-                hitboxSize: {sizeX: CANVAS_FOOTPRINT_WIDTH, sizeY: CANVAS_FOOTPRINT_HEIGHT, sizeZ: 0.01},
+                hitboxSize: {
+                    sizeX: CANVAS_FOOTPRINT_WIDTH,
+                    sizeY: CANVAS_FOOTPRINT_HEIGHT,
+                    sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
+                },
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 0,
                 incomingSoftCollisionForceMultiplier: 0,

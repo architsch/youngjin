@@ -15,9 +15,7 @@ import User from "../shared/user/types/user";
 import { roomChangedObservable, updateObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
 import { roomPrefsChangedObservable } from "../shared/system/sharedObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
-import "./graphics/types/gizmo/canvasWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for canvas selection
-import "./graphics/types/gizmo/doorWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for door selection
-import "./graphics/types/gizmo/lampWorldSpaceGizmos"; // Side-effect: registers world-space gizmos for lamp selection
+import "./graphics/types/gizmo/wallAttachmentMoveGizmos"; // Side-effect: registers the arrows that move whichever wall attachment is picked out
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";

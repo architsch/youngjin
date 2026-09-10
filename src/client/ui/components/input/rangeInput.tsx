@@ -3,15 +3,21 @@ import RangeValueInput from "./rangeValueInput";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 
 // A setting chosen by dragging a handle along a track, with the number the handle is standing on
-// written out beside it (see RangeValueInput) — the two are one control and are never given
-// separately, since a slider alone cannot be read off and a field alone cannot be swept through.
+// written out beside it (see RangeValueInput) — the pairing is the default, since a slider alone
+// cannot be read off and a field alone cannot be swept through.
+//
+// The number is dropped only where it would be a readout of nothing: a setting the user judges by
+// what it does rather than by the figure it stands at, and that nobody would ever want to type,
+// note down or tell somebody. There the field costs width and attention and gives back a number
+// that means nothing on its own — see CameraZoomSlider, the one such setting so far.
 //
 // A slider whose whole range is a handful of values also carries a mark for each of them. Below
 // that count the marks are what say the setting is chosen from a short list rather than swept
 // continuously, and where each of its values lies; above it they would be a texture rather than a
-// scale, and are left off. They are never labelled — the number beside the track is the readout, and
-// a row of little numbers under a slider is unreadable at this size.
-export default function RangeInput({ currValue, setValue, min, max, step, additionalClassNames = "" }: Props)
+// scale, and are left off. They are never labelled — the number beside the track is the readout
+// wherever there is one, and a row of little numbers under a slider is unreadable at this size.
+export default function RangeInput({ currValue, setValue, min, max, step, showValueInput = true,
+    additionalClassNames = "" }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -83,7 +89,8 @@ export default function RangeInput({ currValue, setValue, min, max, step, additi
     const stepValue = Number(step);
 
     // The row never wraps, and what gives way when it runs out of width is the track: the number
-    // beside it is the one part that says nothing at all once it has been squeezed.
+    // beside it, where there is one, is the one part that says nothing at all once it has been
+    // squeezed.
     return <div className="flex flex-row flex-nowrap items-center gap-1 min-w-0">
         <div className={`relative flex items-center min-w-0 ${additionalClassNames}`}>
             {/* The browser draws the track and the handle itself, and left to its own devices draws
@@ -104,13 +111,14 @@ export default function RangeInput({ currValue, setValue, min, max, step, additi
             </input>
             {renderTickMarks(minValue, maxValue, stepValue)}
         </div>
-        <RangeValueInput
-            currValue={currValue}
-            setValue={setValue}
-            min={minValue}
-            max={maxValue}
-            step={stepValue}
-        />
+        {showValueInput &&
+            <RangeValueInput
+                currValue={currValue}
+                setValue={setValue}
+                min={minValue}
+                max={maxValue}
+                step={stepValue}
+            />}
     </div>
 }
 
@@ -153,6 +161,9 @@ interface Props
     min: string;
     max: string;
     step: string;
+    // Whether the number the handle is standing on is written out beside the track. Shown unless the
+    // caller says otherwise: dropping the readout is the exception, and one that has to be asked for.
+    showValueInput?: boolean;
     // How wide the track is, and whether it may shrink, are the caller's to say: a slider in a form
     // is given a width and holds it until the row runs out of room, while one sharing a row with
     // something that must stay whole gives way to it sooner. Only the height is fixed here, so

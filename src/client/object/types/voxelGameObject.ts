@@ -17,6 +17,7 @@ import GraphicsManager from "../../graphics/graphicsManager";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import RestrictedZoneOutlineUtil, { RESTRICTED_ZONE_OUTLINE_COLOR } from "../../voxel/util/restrictedZoneOutlineUtil";
+import GameModeUtil from "../../system/util/gameModeUtil";
 
 let debugEnabled: boolean = false;
 const vector3Temp = new THREE.Vector3();
@@ -96,7 +97,7 @@ export default class VoxelGameObject extends GameObject
         if (quadIndex < 0)
             return; // The instance has been handed back since the ray was cast, so it draws nothing.
 
-        if (gameModeObservable.peek() == "edit")
+        if (GameModeUtil.isInEditMode())
         {
             const room = App.getCurrentRoom();
             if (room == undefined)
@@ -105,18 +106,14 @@ export default class VoxelGameObject extends GameObject
                 return;
             }
             if (!RoomValidationUtil.canUserEditRoom(App.getUser(), room))
-            {
-                notificationMessageObservable.set("You don't have permission to edit this room.");
                 return;
-            }
             // A restricted zone is deliberately not asked about here. A zone forbids editing and
             // nothing else, and picking a face out is not an edit — it is how the user finds out
             // what the face is. What a zone withholds is answered by the tools the selection opens,
             // which turn themselves down one by one exactly as they do for anything else that
             // cannot be afforded (see @docs/gameplay/restricted_zone.md).
+            VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
         }
-
-        VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
     }
 
     getVoxel(): Voxel

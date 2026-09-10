@@ -89,7 +89,7 @@ A single "clear" action tears the whole layer down, which every step's end actio
 
 `FeatureFlag` is a set of global UI/interaction switches (for example, hiding the chat input, disabling manual voxel editing, holding a selection in place, or holding the user in the game mode he is in). They are tracked in an observable set that notifies listeners as flags are toggled; consumers either query the set on demand or subscribe to changes. These flags let a tutorial step constrain what the user can do at a given moment — and, just as importantly, hand him one thing at a time: the way into edit mode and the way back out of it are each opened only by the step that teaches them, and the labels naming who the user is stay away for the whole tutorial, while the button that leaves the app never does.
 
-A flag that constrains something the user can do constrains the *doing* of it, not merely the control that offers it. The one holding him in his game mode is the clearest case: it refuses the crossing itself, so the back gesture and a second click on what is being edited are turned away along with the buttons, which are hidden because that same flag says there is nothing for them to do (see [game_mode.md](../gameplay/game_mode.md)).
+A flag that constrains something the user can do constrains the *doing* of it, not merely the control that offers it. The one holding him in his game mode is the clearest case: it refuses the crossing itself, so the back gesture is turned away along with the buttons, which are hidden because that same flag says there is nothing for them to do (see [game_mode.md](../gameplay/game_mode.md)).
 
 ### Door behavior
 

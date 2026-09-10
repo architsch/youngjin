@@ -48,8 +48,12 @@ export default function CameraZoomSlider()
     // its row with and two controls of unequal height read as two unrelated things. It is also the
     // one thing in that row allowed to shrink (min-w-0 lets it fall below the width of what it
     // holds, which flexbox otherwise refuses), and it spends that shrinking on the track alone: the
-    // two magnifiers keep their size, as does the zoom's own readout, so the control says what it is
-    // at every width it reaches.
+    // two magnifiers keep their size, so the control says what it is at every width it reaches.
+    //
+    // The track carries no number beside it. Zoom is the one setting here that is read off the view
+    // rather than off a figure — the user zooms until the room looks right, and a number saying how
+    // far along the travel that landed is not something anyone would type, note down or tell
+    // somebody. The magnifiers at the two ends already say which way is which.
     return <div className="flex flex-row items-center gap-1.5 h-10 min-w-0 px-2 bg-gray-800 rounded-md pointer-events-auto yj-surface-convex">
         <Icon icon={<MagnifierMinusIcon/>} size="sm" additionalClassNames="text-gray-300"/>
         <RangeInput
@@ -58,6 +62,7 @@ export default function CameraZoomSlider()
             min="0"
             max="1"
             step={zoomStep.toString()}
+            showValueInput={false}
             additionalClassNames="w-32"
         />
         <Icon icon={<MagnifierPlusIcon/>} size="sm" additionalClassNames="text-gray-300"/>

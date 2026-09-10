@@ -10,7 +10,7 @@ import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMet
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
 import ThingsPoolEnv from "../types/thingsPoolEnv";
-import { gameModeObservable, objectSelectionObservable, playerSelectionObservable,
+import { gameModeObservable, objectSelectionObservable,
     voxelQuadSelectionObservable } from "../clientObservables";
 
 //------------------------------------------------------------------------
@@ -283,8 +283,10 @@ const AutomationBridgeUtil =
             {
                 const objectSelection = objectSelectionObservable.peek();
                 const quadSelection = voxelQuadSelectionObservable.peek();
-                const playerSelection = playerSelectionObservable.peek();
                 return {
+                    // The user's own character is an object like any other and is reported here like
+                    // any other, under its own object type — so a caller telling "nothing is picked
+                    // out" from "the character is" reads that type.
                     object: objectSelection == null ? null
                         : describeObject(objectSelection.gameObject),
                     voxelQuad: quadSelection == null ? null : {
@@ -292,12 +294,6 @@ const AutomationBridgeUtil =
                         row: quadSelection.voxel.row,
                         quadIndex: quadSelection.quadIndex,
                     },
-                    // The third kind, and the one edit mode opens on from a standing start. Reported
-                    // alongside the other two because only one thing is ever selected, so a caller
-                    // that cannot see this one cannot tell "nothing is picked out" from "the
-                    // character is".
-                    player: playerSelection == null ? null
-                        : describeObject(playerSelection.gameObject),
                 };
             },
 

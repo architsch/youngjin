@@ -1,7 +1,7 @@
 import App from "../../app";
 import GameMode from "../types/gameMode";
 import GameObject from "../../object/types/gameObject";
-import PlayerSelection from "../../graphics/types/gizmo/playerSelection";
+import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
@@ -23,7 +23,8 @@ import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 // enterEditModeOnCurrentSelection). While it lasts, the camera orbits whatever is currently selected,
 // the player stands still, and the tools for changing that selection are on screen; clicking
 // something else moves the whole arrangement onto it, and clicking the very thing already picked out
-// is taken as being done with the mode, which then ends along with the selection.
+// leaves it exactly where it is. The mode is left by saying so — the button that ends it, or the
+// back gesture — and the selection is dropped along with it.
 //
 // The mode is open to everyone, because the user's own character is his to change in any room he can
 // stand in. What the *room* is made of is another matter: a click on a block or a picture is turned
@@ -75,7 +76,7 @@ const GameModeUtil =
         // Nothing to be in the mode for if the character cannot even be picked (a scripted step may
         // be holding every selection down), so the mode is given up again rather than left standing
         // with no selection under it.
-        if (!PlayerSelection.trySelect(myPlayer))
+        if (!ObjectSelection.trySelect(myPlayer))
             gameModeObservable.set("play");
     },
 

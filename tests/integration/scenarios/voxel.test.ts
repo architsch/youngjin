@@ -361,6 +361,46 @@ describe("the room's boundary wall", () => {
             },
         });
     });
+
+    it("takes a wall attachment on the faces inside an opening cut through it", async () => {
+        // An opening cut through the boundary wall has walls of its own — the reveal — and they are
+        // wall like any other: backed by block work on one side and open to the room on the other.
+        // What makes them a case at all is that they stand within the thickness of the boundary
+        // wall rather than in front of it, so an attachment hung on one is the only one in the room
+        // whose position lies inside the boundary ring.
+        const HOLE_ROW = 8;
+        const HOLE_COL = 0;
+        await runScenario({
+            name: "an opening in the boundary wall",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            actions: [
+                { type: "removeVoxel", userIndex: 0, row: HOLE_ROW, col: HOLE_COL, layer: 2 },
+                { type: "removeVoxel", userIndex: 0, row: HOLE_ROW, col: HOLE_COL, layer: 3 },
+            ],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+                const hangs = (pos: Vec3, dir: Vec3) => WallAttachedObjectUtil.canPlaceObject(
+                    room, "attachment", canvasTypeIndex, pos, dir);
+
+                // The cell the opening was cut through is gone from the wall...
+                const holed = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, HOLE_ROW, HOLE_COL)!;
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(holed, 2)).toBe(false);
+
+                // ...and a picture goes up on the reveal to either side of it, facing along the
+                // wall, at the height the opening was cut to.
+                expect(hangs({ x: 0.5, y: 1.5, z: HOLE_ROW }, { x: 0, y: 0, z: 1 })).toBe(true);
+                expect(hangs({ x: 0.5, y: 1.5, z: HOLE_ROW + 1 }, { x: 0, y: 0, z: -1 })).toBe(true);
+
+                // What stays refused is an attachment laid across the wall's inner face, half of it
+                // buried in the boundary wall...
+                expect(hangs({ x: 1, y: 1.5, z: HOLE_ROW }, { x: 0, y: 0, z: 1 })).toBe(false);
+                // ...and one hung on the wall's outward face, looking out of the room at nothing.
+                expect(hangs({ x: 0, y: 1.5, z: 12.5 }, { x: -1, y: 0, z: 0 })).toBe(false);
+            },
+        });
+    });
 });
 
 /**

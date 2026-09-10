@@ -3,7 +3,8 @@ import GameObject from "../types/gameObject";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import App from "../../app";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
-import { ObjectConstructorMap } from "../maps/objectConstructorMap";
+import ObjectTypeClientConfigMap from "../maps/objectTypeClientConfigMap";
+import "../maps/objectTypeClientConfigMapDependencies.ts"; // Side-effect: files every type's client config under its own type name
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 
 let lastObjectIdNumber = 0;
@@ -27,14 +28,14 @@ const ObjectFactory =
             metadata,
         );
         const objectType = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).objectType;
-        return ObjectConstructorMap[objectType](obj);
+        return ObjectTypeClientConfigMap.getConfigByType(objectType).construct(obj);
     },
     // This method is called when the client is instantiating an object
     // whose presence is signaled by the server.
     createServerSideObject: (obj: AddObjectSignal): GameObject =>
     {
         const objectType = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).objectType;
-        return ObjectConstructorMap[objectType](obj);
+        return ObjectTypeClientConfigMap.getConfigByType(objectType).construct(obj);
     },
 }
 

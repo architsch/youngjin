@@ -237,8 +237,8 @@ supposed to stay out of `src/`, a suspicious line count. Generated output (`dist
 the build did not already.
 
 Fixing CI failures is bounded at **two** fix-and-push cycles, and several classes of failure are out
-of scope entirely — the reference file lists which. Never trigger *Promote to Live* or
-*Rollback Live*; production is not part of this workflow at any point.
+of scope entirely — the reference file lists which. Never trigger *Promote to Live*,
+*Rollback Live* or *Restart Live*; production is not part of this workflow at any point.
 
 Do not proceed until *Deploy to Staging* has succeeded and the staging `/health` endpoint reports
 the commit that was just pushed.
@@ -300,8 +300,8 @@ report that will be trusted about the wrong things.
 
 ## Boundaries for the whole run
 
-- **Never push to production.** No `Promote to Live`, no `Rollback Live`, no direct writes to live
-  data, no restarts of the `live` PM2 process.
+- **Never push to production.** No `Promote to Live`, no `Rollback Live`, no `Restart Live`, no
+  direct writes to live data, no restarts of the `live` PM2 process by any other route.
 - **Never reboot or restart services on the VPS** as part of an automated run.
 - **Never commit a dev-log post the user has not approved.** Checkpoint B is a stop, not a notice.
 - **Two fix cycles, then stop.** This applies to CI failures and to anything else that starts

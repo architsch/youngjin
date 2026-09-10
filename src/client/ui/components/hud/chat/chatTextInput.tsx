@@ -46,11 +46,15 @@ export default function ChatTextInput({textInput, setTextInput}
         };
     }, []);
 
+    // min-w-0 overrides the intrinsic minimum width an input carries by default (about twenty
+    // characters), which would otherwise push the Send button onto its own row on a narrow phone.
+    // The field absorbs all of the shrinking for the chat row, down to nothing if it has to — a
+    // clipped placeholder is a better trade than a wrapped row.
     return <input
         id="chatTextInput"
         type="text"
         ref={inputRef}
-        className="flex-4 m-1 px-2 h-10 justify-self-start text-left align-middle rounded-md text-base text-gray-900 bg-gray-200 pointer-events-auto yj-surface-concave"
+        className="flex-4 min-w-0 m-1 px-2 h-10 justify-self-start text-left align-middle rounded-md text-base text-gray-900 bg-gray-200 pointer-events-auto yj-surface-concave"
         onInput={onInput}
         onCompositionEnd={onCompositionEnd}
         onFocus={onFocus}

@@ -65,7 +65,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
-                    {type: "feature_flag", flag: FeatureFlag.DisablePlayerSelectionChange, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
@@ -92,7 +92,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                         arrowSide: "below"},
                     {type: "ui_outline_rect", targetElementId: "editModeButton"},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: false},
-                    {type: "feature_flag", flag: FeatureFlag.DisablePlayerSelectionChange, enable: false},
+                    {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: false},
                 ],
                 transitionRules: [{
                     requirements: [{type: "edit_mode_active", negate: false}],
@@ -106,7 +106,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
                     // The character stays selected from here until the user is asked to pick
                     // something else, so the next few steps have it to talk about.
-                    {type: "feature_flag", flag: FeatureFlag.DisablePlayerSelectionChange, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
                 ],
             },
             "change_camera_angle": {

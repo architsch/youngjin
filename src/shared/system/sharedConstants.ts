@@ -247,7 +247,7 @@ export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_RO
 // How many restricted zones one room may hold. A zone is drawn by hand and read at a glance, so the
 // cap is about how many a person can keep track of on the room's plan rather than about what the
 // format could carry (see @docs/gameplay/restricted_zone.md).
-export const MAX_RESTRICTED_ZONES = 8;
+export const MAX_RESTRICTED_ZONES = 16;
 
 // How many bytes one restricted zone is written in: its two row bounds and its two column bounds,
 // a byte each.

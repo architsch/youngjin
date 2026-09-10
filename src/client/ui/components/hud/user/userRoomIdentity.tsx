@@ -55,7 +55,7 @@ export default function UserRoomIdentity({
                 return;
             GameModeUtil.enterEditMode(myPlayer);
         }}/>}
-        <IconButton icon={<PowerIcon/>} size="sm" onClick={() => {
+        <IconButton id="exitAppButton" icon={<PowerIcon/>} size="sm" onClick={() => {
             // A guest has no account to go anywhere else with, so the only thing worth asking is
             // whether they meant to leave at all. Everyone else is offered the fuller prompt, where
             // leaving is one answer and coming back as somebody else is the other.

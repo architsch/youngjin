@@ -78,8 +78,10 @@ One commit for the whole batch is the norm here. Do not split into several witho
 | **Deploy static content to Pages** | push to `main` | GitHub-hosted |
 | **E2E Tests (Staging)** | completion of *Deploy to Staging*, only when it succeeded | GitHub-hosted |
 
-`Promote to Live` and `Rollback Live` are `workflow_dispatch` only. **Never trigger either.** They
-move production, and they are not part of this workflow at any point.
+`Promote to Live`, `Rollback Live` and `Restart Live` are `workflow_dispatch` only. **Never trigger
+any of them.** The first two move production and the third interrupts it, and none is part of this
+workflow at any point. `Restart Staging` is dispatchable, and restarts the staging app on the bundle
+it already has — it deploys nothing, so it is no substitute for a push.
 
 ## Watching the run
 

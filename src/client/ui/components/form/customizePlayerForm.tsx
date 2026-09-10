@@ -63,7 +63,7 @@ export default function CustomizePlayerForm()
     // This form is what the user's own character being selected looks like, so it neither moves the
     // camera nor carries a close control of its own: the selection frames the character (see
     // WorldSpaceSelectionUtil), and the top bar carries the button that ends edit mode.
-    return <div id="customizePlayerOptions" className="m-2 p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex">
+    return <div id="customizePlayerOptions" className="p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex">
         <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
             {partSlots.map((slot, slotIndex) =>
                 <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">

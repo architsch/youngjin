@@ -3,22 +3,8 @@ import GameObject from "./gameObject";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
-import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
-import GraphicsManager from "../../graphics/graphicsManager";
-import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
-import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
-import GameModeUtil from "../../system/util/gameModeUtil";
-import App from "../../app";
 import LightSource from "../components/lightSource";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
-
-const vector3Temp = new THREE.Vector3();
-
-// The patch of wall a lamp lays claim to, which is what its selection outline frames and what its
-// move arrows are placed around.
-const lampHitboxSize = LampObjectTypeConfig.components.spawnedByAny.collider.hitboxSize;
-const selectionOutlineScale = new THREE.Vector3(lampHitboxSize.sizeX, lampHitboxSize.sizeY, 1);
 
 // A light somebody installed on a wall. What is drawn is the composer's business and what is lit is
 // the light source's; what this class does is keep the two pointed at the same place and the same
@@ -61,27 +47,4 @@ export default class LampGameObject extends GameObject
             this.instancedMeshComposer.reloadComposition();
     }
 
-    getSelectionOutlineScale(): THREE.Vector3
-    {
-        return selectionOutlineScale;
-    }
-
-    // Only an admin can do anything with a lamp, so only an admin can pick one out. For everybody
-    // else it is part of the room's furniture: a click passes through it the way a click on a wall
-    // does.
-    onClick(instanceId: number, hitPoint: THREE.Vector3)
-    {
-        if (!RoomValidationUtil.userIsAdmin(App.getUser()))
-            return;
-
-        GraphicsManager.getCamera().getWorldPosition(vector3Temp);
-        if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-            return;
-
-        // Taking hold of a lamp is the start of working on it, and there is nothing else it is
-        // picked out for — so the mode that work happens in opens along with the selection, exactly
-        // as it does for a door.
-        if (ObjectSelection.trySelect(this))
-            GameModeUtil.enterEditModeOnCurrentSelection();
-    }
 }

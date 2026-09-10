@@ -7,7 +7,7 @@ import StringUtil from "../../../math/util/stringUtil";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
-import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME } from "../../../system/sharedConstants";
+import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME, WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import ObjectTypeConfig from "./objectTypeConfig";
@@ -112,7 +112,11 @@ const DoorObjectTypeConfig =
                 // The footprint is a round number of half-voxels; the box the door is actually
                 // tested against is a hair inside it (see PhysicsColliderStateUtil).
                 colliderType: "wallAttachment",
-                hitboxSize: {sizeX: DOOR_FOOTPRINT_WIDTH, sizeY: DOOR_FOOTPRINT_HEIGHT, sizeZ: 0.01},
+                hitboxSize: {
+                    sizeX: DOOR_FOOTPRINT_WIDTH,
+                    sizeY: DOOR_FOOTPRINT_HEIGHT,
+                    sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
+                },
                 applyHardCollisionToOthers: false, // pass-through: the wall behind already blocks the player
                 outgoingSoftCollisionForceMultiplier: 0,
                 incomingSoftCollisionForceMultiplier: 0,

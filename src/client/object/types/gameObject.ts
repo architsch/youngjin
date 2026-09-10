@@ -8,16 +8,22 @@ import ObjectComponentFactory from "../factories/objectComponentFactory";
 import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/objectTypeConfig/objectTypeConfig";
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
 import Vec3 from "../../../shared/math/types/vec3";
+import ObjectTypeClientConfigMap from "../maps/objectTypeClientConfigMap";
+import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
+import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
+import GameModeUtil from "../../system/util/gameModeUtil";
 
 const vec3Temp = new THREE.Vector3();
+const cameraPosTemp = new THREE.Vector3();
 
 // Whenever you are implementing a new GameObject type, you must:
 //      (1) Create a class for the new type and make sure that it inherits from GameObject.
-//      (2) Add an entry to ObjectConstructorMap.
-//      (3) Add an entry to ObjectTypeConfigMap.
+//      (2) Add an entry to ObjectTypeConfigMap, describing what the new type *is*.
+//      (3) Add an entry to ObjectTypeClientConfigMap, describing how one is built and what picking
+//          one out brings out on screen.
 // Whenever you are modifying an existing GameObject type, you must:
 //      (1) Make appropriate modifications to the existing type's class (i.e. the one which inherits from GameObject).
-//      (2) Make appropriate modifications to the existing type's entry in ObjectTypeConfigMap.
+//      (2) Make appropriate modifications to the existing type's entries in the two maps above.
 export default abstract class GameObject
 {
     params: AddObjectSignal; // When a GameObject spawns, use these parameters to initialize it.
@@ -58,9 +64,72 @@ export default abstract class GameObject
         }
     }
 
+    // Invoked when the object is clicked by the user's pointer input (mouse or touch). "instanceId"
+    // is the ID of the mesh instance that was hit by the user's pointer input (-1 if the mesh is not
+    // instanced).
+    //
+    // A click on an object is how the user takes hold of it, and every kind of object is taken hold
+    // of in exactly the same way — what differs between one kind and the next is only whether *this*
+    // user may take hold of *this* one, which each kind answers for itself (see
+    // ObjectTypeClientConfig). So the taking is done here rather than by each kind in turn.
+    //
+    // Two kinds of object override this. One that is not picked out as an object at all answers the
+    // click its own way (see VoxelGameObject), and one that a click means something else besides
+    // does its own thing alongside the taking (see DoorGameObject).
+    onClick(_instanceId: number, hitPoint: THREE.Vector3)
+    {
+        this.trySelectByClick(hitPoint);
+    }
+
+    // Whether this user may take hold of this object as things currently stand.
+    //
+    // Only one condition is asked of every object there is: the user has to be in **edit mode**,
+    // since taking hold of a thing is the beginning of changing it and changing things is what that
+    // mode is — outside it a click on the room is a click on the room and nothing more. Who may take
+    // hold of what is otherwise the kind of object's own single rule, whole and in one place (see
+    // ObjectTypeClientConfig), which is also where a refusal the user ought to hear about is
+    // explained to him.
+    //
+    // Asked here without making the click, and without the reach a click has to have, because an
+    // object for which a click means something else besides has to know which of its two meanings
+    // applies before it acts on either (see DoorGameObject).
+    canBeSelectedNow(): boolean
+    {
+        const selectionConfig = ObjectTypeClientConfigMap.getConfigByIndex(
+            this.params.objectTypeIndex).selection;
+        if (!selectionConfig) // Not picked out as an object at all (see VoxelGameObject).
+            return false;
+
+        if (!GameModeUtil.isInEditMode())
+            return false;
+
+        const room = App.getCurrentRoom();
+        if (room == undefined)
+            return false;
+
+        return selectionConfig.canBeSelectedByUser(this, App.getUser(), room);
+    }
+
+    // Takes hold of this object on the user's behalf, if the click that landed on it is one that may
+    // take hold of it at all. Reports whether it did.
+    protected trySelectByClick(hitPoint: THREE.Vector3): boolean
+    {
+        // Out of the user's reach, which is read as a click on nothing at all: he cannot take hold
+        // of something across the room that he can barely make out (see WorldSpaceSelectionUtil).
+        // Asked first, so that a click which was never going to land is not answered with an
+        // explanation of why it was refused.
+        GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
+        if (hitPoint.distanceTo(cameraPosTemp) > WorldSpaceSelectionUtil.getMaxSelectDist())
+            return false;
+
+        if (!this.canBeSelectedNow())
+            return false;
+
+        return ObjectSelection.trySelect(this);
+    }
+
     // Callback functions which must be overriden by subclasses
     // if they are meant to be used:
-    onClick(instanceId: number, hitPoint: THREE.Vector3) {} // Invoked when the object is clicked by the user's pointer input (mouse or touch). "instanceId" is the ID of the mesh instance that was hit by the user's pointer input (-1 if the mesh is not instanced).
     onPlayerProximityStart() {} // Invoked when the object gets close to the player.
     onPlayerProximityEnd() {} // Invoked when the object moves away from the player.
     onSetMetadata(key: ObjectMetadataKey, value: string) // Invoked when the object's metadata is set (e.g. one of the entries in object's "metadata" field).
@@ -105,14 +174,6 @@ export default abstract class GameObject
     isMine(): boolean
     {
         return this.params.sourceUserID == App.getUser().id;
-    }
-
-    // The rectangle a selection outline is drawn around this object, in the object's own local axes.
-    // The object's scale by default, which frames the unit square a picture occupies; an object whose
-    // face claims more of the wall than that says so itself (see DoorGameObject).
-    getSelectionOutlineScale(): THREE.Vector3
-    {
-        return this.obj.scale;
     }
 
     // Aliases

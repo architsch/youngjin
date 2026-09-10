@@ -7,20 +7,8 @@ import { notificationMessageObservable } from "../../system/clientObservables";
 import { tryStartClientProcess } from "../../system/types/clientProcess";
 import SocketsClient from "../../networking/client/socketsClient";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
-import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
-import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
-import GameModeUtil from "../../system/util/gameModeUtil";
-import GraphicsManager from "../../graphics/graphicsManager";
 import App from "../../app";
-
-const vector3Temp = new THREE.Vector3();
-
-// The stretch of wall a door lays claim to as an attachment, which is what its selection outline
-// frames and what its move arrows are placed around.
-const doorHitboxSize = DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize;
-const selectionOutlineScale = new THREE.Vector3(doorHitboxSize.sizeX, doorHitboxSize.sizeY, 1);
 
 export default class DoorGameObject extends GameObject
 {
@@ -40,30 +28,22 @@ export default class DoorGameObject extends GameObject
             throw new Error("DoorGameObject requires PlayerProximityDetector component");
     }
 
-    // A door means two different things to two kinds of user. To almost everybody it is the way out
-    // of the room, and a click on it is a journey. To an admin it is also a piece of the world he is
-    // building, and a click is how he takes hold of it — which is why he is not made to walk up to a
-    // door to select one, the way he is not made to walk up to a picture to move it.
+    // A door means two different things to two kinds of user. To somebody laying out the world it is
+    // a piece of that world, and a click is how he takes hold of it — the ordinary business of
+    // picking an object out, on the terms every object is picked out by, which is why he is not made
+    // to walk up to a door to select one any more than he is made to walk up to a picture to move
+    // one. To everybody else it is the way out of the room, and a click on it is a journey.
+    //
+    // Which of the two a click is has to be settled before it is made, rather than read off what
+    // came of it: a door the user may work on but did not manage to pick out this time is still not
+    // a door he means to be walked through. What settles it is the same question the taking itself
+    // would ask, asked here in advance — so who may work on a door, and when, is said once, in the
+    // door's client config and the conditions every object shares (see GameObject).
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        const room = App.getCurrentRoom();
-        if (room == undefined)
+        if (this.canBeSelectedNow())
         {
-            console.error("Current room not found in DoorGameObject's onClick.");
-            return;
-        }
-
-        if (RoomValidationUtil.canUserManageDoors(App.getUser(), room))
-        {
-            GraphicsManager.getCamera().getWorldPosition(vector3Temp);
-            if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-                return;
-            // Taking hold of a door is the start of working on it, and there is nothing else an
-            // admin picks one out for: a door he only meant to walk through he walks through. So the
-            // mode that work happens in opens along with the selection, rather than leaving him
-            // holding a door with no tools out and a mode button to find.
-            if (ObjectSelection.trySelect(this))
-                GameModeUtil.enterEditModeOnCurrentSelection();
+            super.onClick(instanceId, hitPoint);
             return;
         }
 
@@ -98,11 +78,6 @@ export default class DoorGameObject extends GameObject
             return;
         SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(destinationRoomID,
             false, DoorObjectTypeConfig.util.getDestinationDoorLabel(this.params)));
-    }
-
-    getSelectionOutlineScale(): THREE.Vector3
-    {
-        return selectionOutlineScale;
     }
 
     onPlayerProximityStart(): void

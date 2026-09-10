@@ -42,8 +42,12 @@ const OWN_DOMAINS = ["thingspool.net"];
 
 /**
  * Never auto-approved, whatever else the command says. This mirrors settings.json `deny`
- * (production data and the two workflows that move live) and adds the machine-level and
+ * (production data and the workflows that reach live) and adds the machine-level and
  * outward-facing verbs that a decomposer should never be trusted to reason about.
+ *
+ * Workflow dispatch is blocked wholesale rather than by name: `gh workflow run` is rare
+ * enough that one prompt costs nothing, and a list of names would have to be revisited
+ * every time a workflow is added.
  */
 const HARD_BLOCK = [
     /\bgcloud\s+(alpha\s+|beta\s+)?firestore\b/,
@@ -877,6 +881,7 @@ function runSelfTest() {
         "git commit -m 'x'",
         "npm publish",
         "gh workflow run promote-live.yml",
+        "gh workflow run restart-live.yml",
         "firebase firestore:delete --all-collections",
         "gcloud storage rm gs://bucket/x",
         "gsutil cp a gs://b",

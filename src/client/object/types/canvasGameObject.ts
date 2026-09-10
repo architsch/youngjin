@@ -4,22 +4,15 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/obj
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
-import ClientObjectManager from "../clientObjectManager";
 import CanvasObjectTypeConfig, { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH,
     CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
-import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
-import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
-import { gameModeObservable, graphicsContextRestoredObservable, notificationMessageObservable } from "../../system/clientObservables";
-import GraphicsManager from "../../graphics/graphicsManager";
-import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
-
-const vector3Temp = new THREE.Vector3();
+import { graphicsContextRestoredObservable } from "../../system/clientObservables";
 
 export default class CanvasGameObject extends GameObject
 {
@@ -100,39 +93,6 @@ export default class CanvasGameObject extends GameObject
         // Both the picture frame and the image live in the same render-target cell,
         // so any metadata change simply re-draws the whole cell.
         this.loadImage();
-    }
-
-    onClick(instanceId: number, hitPoint: THREE.Vector3)
-    {
-        const player = ClientObjectManager.getMyPlayer();
-        if (player == undefined)
-        {
-            console.error("My player not found in CanvasGameObject's onClick.");
-            return;
-        }
-
-        GraphicsManager.getCamera().getWorldPosition(vector3Temp);
-        if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-            return;
-
-        if (gameModeObservable.peek() == "edit")
-        {
-            const room = App.getCurrentRoom();
-            if (room == undefined)
-            {
-                console.error("Current room not found.");
-                return;
-            }
-            if (!RoomValidationUtil.canUserEditRoom(App.getUser(), room))
-            {
-                notificationMessageObservable.set("You don't have permission to edit this room.");
-                return;
-            }
-            // A restricted zone is deliberately not asked about here — see VoxelGameObject.onClick
-            // for why picking something out is not one of the things a zone withholds.
-        }
-
-        ObjectSelection.trySelect(this);
     }
 
     loadImage(): Promise<void>

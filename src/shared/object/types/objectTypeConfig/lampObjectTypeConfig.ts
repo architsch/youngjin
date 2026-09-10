@@ -8,7 +8,8 @@ import MeshDataUtil from "../../../graphics/mesh/util/meshDataUtil";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
 import { BACKWARD_DIR, COLLISION_LAYER_HEIGHT, INSTANCED_EMISSIVE_MATERIAL_ID,
-    LIGHT_COLOR_PALETTE_NAME } from "../../../system/sharedConstants";
+    LIGHT_COLOR_PALETTE_NAME, 
+    WALL_ATTACHMENT_HITBOX_INSET} from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import ObjectTypeConfig from "./objectTypeConfig";
@@ -121,7 +122,11 @@ const LampObjectTypeConfig =
                 // A lamp lays claim to the patch of wall it is mounted on, so nothing else can be
                 // hung over it — and so that taking the wall away takes the lamp with it.
                 colliderType: "wallAttachment",
-                hitboxSize: {sizeX: LAMP_FOOTPRINT_WIDTH, sizeY: LAMP_FOOTPRINT_HEIGHT, sizeZ: 0.01},
+                hitboxSize: {
+                    sizeX: LAMP_FOOTPRINT_WIDTH,
+                    sizeY: LAMP_FOOTPRINT_HEIGHT,
+                    sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
+                },
                 applyHardCollisionToOthers: false, // pass-through: the wall behind already blocks the player
                 outgoingSoftCollisionForceMultiplier: 0,
                 incomingSoftCollisionForceMultiplier: 0,

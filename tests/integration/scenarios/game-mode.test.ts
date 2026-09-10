@@ -69,13 +69,11 @@ import ClientObjectManager from "../../../src/client/object/clientObjectManager"
 import GameObject from "../../../src/client/object/types/gameObject";
 import VoxelGameObject from "../../../src/client/object/types/voxelGameObject";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
-import PlayerSelection from "../../../src/client/graphics/types/gizmo/playerSelection";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
     notificationMessageObservable, objectSelectionObservable, orbitCameraTargetOverrideObservable,
-    playerSelectionObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
@@ -145,14 +143,12 @@ beforeEach(() => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
     for (const flag of [FeatureFlag.DisableAllSelectionChange, FeatureFlag.DisableVoxelQuadSelectionChange,
-        FeatureFlag.DisableObjectSelectionChange, FeatureFlag.DisablePlayerSelectionChange,
-        FeatureFlag.DisableGameModeTransition])
+        FeatureFlag.DisableObjectSelectionChange, FeatureFlag.DisableGameModeTransition])
     {
         clientFeatureFlagsObservable.tryRemove(flag);
     }
     voxelQuadSelectionObservable.set(null);
     objectSelectionObservable.set(null);
-    playerSelectionObservable.set(null);
     gameModeObservable.set("play");
     cameraModeObservable.set({type: "firstPerson"});
     orbitCameraTargetOverrideObservable.set(null);
@@ -175,12 +171,14 @@ describe("play mode", () => {
         expect(cameraModeObservable.peek().type).toBe("firstPerson");
     });
 
-    it("drops the selection when the user clicks the same block again", () => {
+    it("keeps the selection when the user clicks the same block again", () => {
+        // A selection is given up by saying so, not by a click indistinguishable from the one that
+        // made it: the user reaching past a block and catching it again still has it picked out.
         const quadIndex = floorQuadIndexOf(10, 10);
         selectQuad(10, 10, quadIndex);
         selectQuad(10, 10, quadIndex);
 
-        expect(VoxelQuadSelection.isSelected()).toBe(false);
+        expect(VoxelQuadSelection.isSelected()).toBe(true);
     });
 });
 
@@ -189,12 +187,12 @@ describe("entering edit mode", () => {
         GameModeUtil.enterEditMode(makeCharacter());
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
-        expect(PlayerSelection.isSelected()).toBe(true);
+        expect(ObjectSelection.isSelected()).toBe(true);
 
         const mode = cameraModeObservable.peek();
         expect(mode.type).toBe("orbit");
         // Framed on the character itself, so its own size decides how far back the camera sits.
-        expect(mode.type == "orbit" && mode.minDistance).toBeUndefined();
+        expect(mode.type == "orbit" && mode.minDistance).toBe(0);
         expect(mode.type == "orbit" && mode.target.center.y).toBe(0.5 * PLAYER_HEIGHT);
     });
 
@@ -210,7 +208,7 @@ describe("entering edit mode", () => {
         GameModeUtil.enterEditMode(makeCharacter());
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
-        expect(PlayerSelection.isSelected()).toBe(true);
+        expect(ObjectSelection.isSelected()).toBe(true);
         expect(cameraModeObservable.peek().type).toBe("orbit");
     });
 
@@ -228,7 +226,7 @@ describe("entering edit mode", () => {
         expect(notificationMessageObservable.peek()).toContain("permission");
         // Turned away, not thrown out: what he came into the mode for is still his.
         expect(GameModeUtil.isInEditMode()).toBe(true);
-        expect(PlayerSelection.isSelected()).toBe(true);
+        expect(ObjectSelection.isSelected()).toBe(true);
     });
 
     it("lets the room owner's click on it through", () => {
@@ -250,7 +248,7 @@ describe("entering edit mode", () => {
         GameModeUtil.enterEditMode(makeCharacter());
         expect(selectQuad(10, 10, floorQuadIndexOf(10, 10))).toBe(true);
 
-        expect(PlayerSelection.isSelected()).toBe(false);
+        expect(ObjectSelection.isSelected()).toBe(false);
         expect(VoxelQuadSelection.isSelected()).toBe(true);
         expect(GameModeUtil.isInEditMode()).toBe(true);
 
@@ -260,18 +258,17 @@ describe("entering edit mode", () => {
         expect(mode.type == "orbit" && mode.minDistance).toBeGreaterThan(0);
     });
 
-    it("is left by a second click on the block being edited", () => {
-        // Clicking what is already picked out is how it is let go of, and inside edit mode the mode
-        // goes with it: the mode is that selection — the camera orbiting it, the player standing
-        // still for it — so there is nothing for it to be kept up for once the selection is gone.
+    it("is not left by a second click on the block being edited", () => {
+        // The mode is left by saying so — the button that ends it, or the back gesture — and not by
+        // a click on the very thing being edited, which leaves that thing exactly where it is.
         GameModeUtil.enterEditMode(makeCharacter());
         const quadIndex = floorQuadIndexOf(10, 10);
         selectQuad(10, 10, quadIndex);
         selectQuad(10, 10, quadIndex);
 
-        expect(VoxelQuadSelection.isSelected()).toBe(false);
-        expect(GameModeUtil.isInEditMode()).toBe(false);
-        expect(cameraModeObservable.peek().type).toBe("firstPerson");
+        expect(VoxelQuadSelection.isSelected()).toBe(true);
+        expect(GameModeUtil.isInEditMode()).toBe(true);
+        expect(cameraModeObservable.peek().type).toBe("orbit");
     });
 
     it("is not left by a second click on the user's own character", () => {
@@ -279,9 +276,9 @@ describe("entering edit mode", () => {
         // which has to report the character picked out whether or not it already was.
         const character = makeCharacter();
         GameModeUtil.enterEditMode(character);
-        PlayerSelection.trySelect(character);
+        ObjectSelection.trySelect(character);
 
-        expect(PlayerSelection.isSelected()).toBe(true);
+        expect(ObjectSelection.isSelected()).toBe(true);
         expect(GameModeUtil.isInEditMode()).toBe(true);
     });
 
@@ -329,7 +326,7 @@ describe("leaving edit mode", () => {
 describe("a scripted step holding the user in his mode", () => {
     // What a tutorial step does while it teaches what is inside a mode. The hold is on the crossing
     // itself rather than on the button that offers it, so every way across has to answer to it —
-    // the back gesture and a second click on what is being edited go through no button at all.
+    // the back gesture goes through no button at all.
     it("keeps the way out shut", () => {
         GameModeUtil.enterEditMode(makeCharacter());
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
@@ -348,23 +345,8 @@ describe("a scripted step holding the user in his mode", () => {
         GameModeUtil.enterEditMode(makeCharacter());
 
         expect(GameModeUtil.isInEditMode()).toBe(false);
-        expect(PlayerSelection.isSelected()).toBe(false);
+        expect(ObjectSelection.isSelected()).toBe(false);
         expect(cameraModeObservable.peek().type).toBe("firstPerson");
-    });
-
-    it("turns away a second click on the block being edited, selection and all", () => {
-        // The click is a way out of the mode, and the two cannot be told apart: dropping the
-        // selection alone would leave the user in a mode with nothing under it. So the whole gesture
-        // is refused and the block stays picked out.
-        GameModeUtil.enterEditMode(makeCharacter());
-        const quadIndex = floorQuadIndexOf(10, 10);
-        selectQuad(10, 10, quadIndex);
-        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableGameModeTransition);
-
-        selectQuad(10, 10, quadIndex);
-
-        expect(GameModeUtil.isInEditMode()).toBe(true);
-        expect(VoxelQuadSelection.isSelected()).toBe(true);
     });
 
     it("lets the way out through again once it lets go", () => {
@@ -398,7 +380,7 @@ describe("a scripted step pointing the camera", () => {
         expect(mode.type == "orbit" && mode.target.center.x).toBe(stepsChosenPlace.x);
         expect(mode.type == "orbit" && mode.target.center.z).toBe(stepsChosenPlace.z);
         // The step is showing the user somewhere, not picking anything out for him.
-        expect(PlayerSelection.isSelected()).toBe(true);
+        expect(ObjectSelection.isSelected()).toBe(true);
     });
 
     it("outranks what the user selects meanwhile, and gives the camera back when it ends", () => {
@@ -430,23 +412,22 @@ describe("only one thing at a time is selected", () => {
         GameModeUtil.enterEditMode(character);
 
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
-        expect(PlayerSelection.isSelected()).toBe(false);
-
-        PlayerSelection.trySelect(character);
-        expect(VoxelQuadSelection.isSelected()).toBe(false);
         expect(ObjectSelection.isSelected()).toBe(false);
-        expect(PlayerSelection.isSelected()).toBe(true);
+
+        ObjectSelection.trySelect(character);
+        expect(VoxelQuadSelection.isSelected()).toBe(false);
+        expect(ObjectSelection.isSelected()).toBe(true);
     });
 
     it("replaces the character even while a step holds the character's own selection down", () => {
         GameModeUtil.enterEditMode(makeCharacter());
-        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisablePlayerSelectionChange);
+        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableObjectSelectionChange);
 
         // The flag stops the user from *dropping* the character, not from picking something else:
         // what replaces a selection is not the user giving that selection up.
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
 
-        expect(PlayerSelection.isSelected()).toBe(false);
+        expect(ObjectSelection.isSelected()).toBe(false);
         expect(VoxelQuadSelection.isSelected()).toBe(true);
     });
 });

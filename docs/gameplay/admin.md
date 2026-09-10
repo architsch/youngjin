@@ -72,10 +72,10 @@ There is no admin mode to enter. What an admin has is a few more things on scree
 belong: an extra option when a wall is selected, a door that can be picked out rather than only
 walked through, and a room-settings button in a room nobody owns.
 
-Picking a door out puts him in edit mode along with it. There is nothing else he would pick one out
-for — a door he only meant to go through he goes through — so the tools come out with the door
-rather than leaving him holding one and looking for the way to the tools. Going through the door is
-then one of those tools, since a door being worked on is still a door.
+A door is picked out the way anything else is, from inside edit mode: outside it a door is the way
+out of the room to an admin as much as to anybody else, and a click on it is a journey. Going through
+the door is also among the tools a picked-out door offers, since a door being worked on is still a
+door.
 
 Locally, the development server seeds an admin among its dev users, reachable through the
 `?devuser=` query parameter (see [local_dev.md](../devOps/local_dev.md)).

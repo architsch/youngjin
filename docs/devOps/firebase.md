@@ -71,7 +71,7 @@ Index definitions live in `firestore.indexes.json` and are deployed **manually**
 
 ## What the workflows deploy
 
-**No workflow deploys anything to Firebase.** `deploy-staging.yml`, `promote-live.yml`, and `rollback-live.yml` build bundles and restart PM2 processes; none of them invokes `firebase-tools`.
+**No workflow deploys anything to Firebase.** The deployment workflows build bundles and restart PM2 processes, and the restart workflows only restart them; none of them invokes `firebase-tools`. They are listed in [Deployment → Workflows](vps/deployment.md#workflows).
 
 | Firebase asset | Kept in sync by |
 |----------------|-----------------|

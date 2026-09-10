@@ -277,20 +277,19 @@ Clicking something in the room means one thing in play mode and another in edit 
 | Test | What it verifies |
 |------|-----------------|
 | leaves the camera alone when the user selects a block | A selection made in play mode neither starts edit mode nor takes the camera out of the first-person view |
-| drops the selection when the user clicks the same block again | In play mode, clicking the current selection again is still how it is let go of |
-| selects the user's own character and orbits it | Entering edit mode picks out the character and frames it by its own size alone (no minimum distance asked for) |
+| keeps the selection when the user clicks the same block again | Clicking the current selection again never drops it, in either mode |
+| selects the user's own character and orbits it | Entering edit mode picks out the character and frames it by its own size alone, with no minimum distance under it |
 | opens for a user who may not edit the room, on his own character | A visitor to someone else's room still gets the mode and his own character in it: the character is his wherever he is standing |
 | turns away that user's click on the room itself, and says why | A click on a block in a room he may not edit selects nothing and raises a notification, while leaving him the mode and the character he came into it for |
 | lets the room owner's click on it through | The same click by the room's owner selects the block and raises nothing |
 | carries the selection over to a block the user picks next | Picking a block inside the mode drops the character, keeps the mode, and re-frames the camera — this time with a minimum distance, so the block is seen among its surroundings |
-| is left by a second click on the block being edited | Clicking the current selection again lets it go, and the mode goes with it: nothing is selected and the camera is back at the player's eye |
-| is not left by a second click on the user's own character | The character is the exception, since opening the mode goes through the same call: it stays picked out and the mode stands |
+| is not left by a second click on the block being edited | Clicking the current selection again leaves it exactly where it is: the block stays picked out, the mode stands, and the camera keeps its orbit |
+| is not left by a second click on the user's own character | The same holds for the character, which is what the mode opens on and which opening it goes through the same call to pick out |
 | keeps the orbit through the gap left by a selection being replaced | A selection dropped on the way to another one (what an edit does as it moves the selection onto what it just built) does not read as the mode having ended |
 | drops the selection and hands the camera back | Leaving the mode clears every selection and returns the camera to the first-person view |
 | takes a selection a scripted step had pinned along with it | A pinned selection is pinned for the sake of what is taught inside the mode, so leaving the mode drops it too rather than being blocked by it |
 | keeps the way out shut | A step holding the user in his mode refuses the crossing itself — what the exit button and the back gesture both come down to — leaving mode, selection, and orbit as they were |
 | keeps the way in shut | The same hold refuses the crossing the other way: edit mode does not open, and nothing is picked out |
-| turns away a second click on the block being edited, selection and all | The third way out is refused whole, since dropping the selection alone would leave the user in a mode with nothing under it |
 | lets the way out through again once it lets go | The step that teaches the way out opens it for itself, and the selection it had pinned meanwhile is no obstacle |
 | holds the camera on its own place while the user's selection stands | A step that points the camera somewhere frames that place, and picks nothing out for the user — his own selection is untouched |
 | outranks what the user selects meanwhile, and gives the camera back when it ends | The step's place wins over a selection made under it, and clearing the override re-frames the camera onto that selection |

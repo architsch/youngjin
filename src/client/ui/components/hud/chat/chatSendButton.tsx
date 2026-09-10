@@ -27,7 +27,9 @@ export default function ChatSendButton({textInput, sendMessage}
 
     // Wears the app's standard button look rather than one of its own, so that the one control the
     // user reaches for most often is not the odd one out. It only takes the share of the chat row
-    // the text field beside it leaves over.
+    // the text field beside it leaves over, but never less than its own label needs — the field
+    // keeps its intrinsic minimum waived (see chatTextInput.tsx) so it, not the button, is what
+    // gives way on a narrow phone.
     return <Button
         id="chatSendButton"
         name="Send"

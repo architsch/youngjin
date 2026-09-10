@@ -96,7 +96,10 @@ export default function Chat({hide}: Props)
     else
     {
         return <>
-            <div className="flex flex-row flex-wrap gap-x-1 gap-y-0 p-2 w-full">
+            {/* Never wraps: the text field and the Send button stay on one row at every width.
+                The field is the one that gives way (see chatTextInput.tsx), so on a narrow phone
+                the button keeps its full "Send" label and the field shrinks past its placeholder. */}
+            <div className="flex flex-row flex-nowrap gap-x-1 p-2 w-full">
                 <ChatTextInput textInput={state.textInput} setTextInput={setTextInput}/>
                 <ChatSendButton textInput={state.textInput} sendMessage={sendMessage}/>
             </div>

@@ -1,12 +1,10 @@
 import { useEffect, useReducer } from "react";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
-import PlayerSelection from "../../../../graphics/types/gizmo/playerSelection";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import WorldSpaceSelectionUtil from "../../../../graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../../../system/util/gameModeUtil";
 import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
-    objectSelectionObservable, playerSelectionObservable,
-    voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+    objectSelectionObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
 import User from "../../../../../shared/user/types/user";
@@ -23,7 +21,6 @@ const exitFeatureFlags = [
     FeatureFlag.DisableAllSelectionChange,
     FeatureFlag.DisableVoxelQuadSelectionChange,
     FeatureFlag.DisableObjectSelectionChange,
-    FeatureFlag.DisablePlayerSelectionChange,
     FeatureFlag.DisableGameModeTransition,
 ];
 
@@ -64,7 +61,6 @@ export default function GameModeMenu({ user, currentRoomID, currentRoomType }: P
     useEffect(() => {
         voxelQuadSelectionObservable.addListener("ui.gameModeMenu", forceRefresh);
         objectSelectionObservable.addListener("ui.gameModeMenu", forceRefresh);
-        playerSelectionObservable.addListener("ui.gameModeMenu", forceRefresh);
         gameModeObservable.addListener("ui.gameModeMenu", forceRefresh);
         cameraModeObservable.addListener("ui.gameModeMenu", forceRefresh);
         for (const flag of exitFeatureFlags)
@@ -72,7 +68,6 @@ export default function GameModeMenu({ user, currentRoomID, currentRoomType }: P
         return () => {
             voxelQuadSelectionObservable.removeListener("ui.gameModeMenu");
             objectSelectionObservable.removeListener("ui.gameModeMenu");
-            playerSelectionObservable.removeListener("ui.gameModeMenu");
             gameModeObservable.removeListener("ui.gameModeMenu");
             cameraModeObservable.removeListener("ui.gameModeMenu");
             for (const flag of exitFeatureFlags)
@@ -185,11 +180,6 @@ function selectionCanBeGivenUp(): boolean
     }
     if (ObjectSelection.isSelected() &&
         !clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange))
-    {
-        return true;
-    }
-    if (PlayerSelection.isSelected() &&
-        !clientFeatureFlagsObservable.has(FeatureFlag.DisablePlayerSelectionChange))
     {
         return true;
     }
