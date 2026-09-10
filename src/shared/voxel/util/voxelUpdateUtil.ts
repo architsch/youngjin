@@ -55,8 +55,6 @@ const VoxelUpdateUtil =
     {
         if (!quadIndexIsInRange("canAddVoxelBlock", quadIndex))
             return false;
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
-            return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
@@ -122,8 +120,6 @@ const VoxelUpdateUtil =
     {
         if (!quadIndexIsInRange("canRemoveVoxelBlockWithItsWallAttachments", quadIndex))
             return false;
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
-            return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
@@ -180,8 +176,6 @@ const VoxelUpdateUtil =
         rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
     {
         if (!quadIndexIsInRange("canMoveVoxelBlock", quadIndex))
-            return false;
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
             return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -273,8 +267,6 @@ const VoxelUpdateUtil =
     canSetVoxelQuadTexture(user: User, room: Room, quadIndex: number): boolean
     {
         if (!quadIndexIsInRange("canSetVoxelQuadTexture", quadIndex))
-            return false;
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
             return false;
 
         // Asked of the face rather than of the voxel it belongs to, so that the surface a zone is

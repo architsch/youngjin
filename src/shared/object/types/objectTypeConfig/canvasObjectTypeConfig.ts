@@ -38,9 +38,6 @@ const CanvasObjectTypeConfig =
     autoUnload: true,
     maxCountPerRoom: MAX_CANVASES_PER_ROOM,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
-            return false;
-
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
             return false;
@@ -55,15 +52,9 @@ const CanvasObjectTypeConfig =
         return true;
     },
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
-            return false;
-
         return true;
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
-            return false;
-
         // Canvas movement must ignore physics
         if (!signal.ignorePhysics)
             return false;
@@ -71,9 +62,6 @@ const CanvasObjectTypeConfig =
         return true;
     },
     canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        if (!RoomValidationUtil.canUserEditRoom(user, room))
-            return false;
-
         // User can only set the canvas's image path or picture-frame coords, and nothing else
         if (signal.metadataKey == ObjectMetadataKeyEnumMap.ImagePath)
             return ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(signal.metadataValue);

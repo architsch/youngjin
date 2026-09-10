@@ -19,17 +19,6 @@ const RoomValidationUtil =
     {
         return user.ownedRoomID.length > 0 && user.ownedRoomID == room.id;
     },
-    // Whether the user may change what this room is made of.
-    //
-    // A Hub is the game's own thoroughfare and is open to everyone to build in; a single-player room
-    // has nobody in it but the player; and a Regular room is its owner's. What is *inside* a room he
-    // may build in can still be closed to him — see RestrictedZoneUtil.
-    canUserEditRoom: (user: User, room: Room): boolean =>
-    {
-        return room.roomType == RoomTypeEnumMap.Hub ||
-            room.roomType == RoomTypeEnumMap.SinglePlayer ||
-            RoomValidationUtil.userOwnsRoom(user, room);
-    },
     // Whether the user is one of the few who shape the world itself rather than a room within it.
     // This is a property of the person, not of where he is standing, which is what makes it a
     // different question from every other permission here — those are all about one particular room.

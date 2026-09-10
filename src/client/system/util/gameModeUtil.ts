@@ -91,7 +91,7 @@ const GameModeUtil =
     canEnterEditModeOnCurrentSelection: (): boolean =>
     {
         return !GameModeUtil.isInEditMode() && GameModeUtil.canChangeGameMode() &&
-            WorldSpaceSelectionUtil.isAnythingSelected() && canEditCurrentRoom();
+            WorldSpaceSelectionUtil.isAnythingSelected();
     },
 
     // Enters edit mode on what the user already has picked out — the other way in, offered while a
@@ -119,15 +119,6 @@ const GameModeUtil =
         WorldSpaceSelectionUtil.unselectAll(true);
         gameModeObservable.set("play");
     },
-}
-
-// Whether the room the user is currently in is one he may edit. This governs what the room is made
-// of, not whether the mode may be entered: the character the mode opens on is the user's own
-// wherever he is standing.
-function canEditCurrentRoom(): boolean
-{
-    const room = App.getCurrentRoom();
-    return room != undefined && RoomValidationUtil.canUserEditRoom(App.getUser(), room);
 }
 
 // A room the user is no longer in is not a room he can be editing, so every arrival starts in play
