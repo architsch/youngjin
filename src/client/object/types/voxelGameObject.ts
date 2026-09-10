@@ -82,36 +82,11 @@ export default class VoxelGameObject extends GameObject
     // (see VoxelQuadInstanceUtil).
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        const player = ClientObjectManager.getMyPlayer();
-        if (player == undefined)
+        if (this.canBeSelected(hitPoint))
         {
-            console.error("My player not found in VoxelGameObject's onClick.");
-            return;
-        }
-
-        GraphicsManager.getCamera().getWorldPosition(vector3Temp);
-        if (hitPoint.distanceTo(vector3Temp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-            return;
-
-        const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
-        if (quadIndex < 0)
-            return; // The instance has been handed back since the ray was cast, so it draws nothing.
-
-        if (GameModeUtil.isInEditMode())
-        {
-            const room = App.getCurrentRoom();
-            if (room == undefined)
-            {
-                console.error("Current room not found.");
-                return;
-            }
-            if (!RoomValidationUtil.canUserEditRoom(App.getUser(), room))
-                return;
-            // A restricted zone is deliberately not asked about here. A zone forbids editing and
-            // nothing else, and picking a face out is not an edit — it is how the user finds out
-            // what the face is. What a zone withholds is answered by the tools the selection opens,
-            // which turn themselves down one by one exactly as they do for anything else that
-            // cannot be afforded (see @docs/gameplay/restricted_zone.md).
+            const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
+            if (quadIndex < 0)
+                return; // The instance has been handed back since the ray was cast, so it draws nothing.
             VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
         }
     }

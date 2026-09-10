@@ -17,7 +17,7 @@ export default interface ObjectTypeClientConfig
     construct: (params: AddObjectSignal) => GameObject;
 
     selection?: { // If this field is present, the object must be selectable (as long as the necessary conditions are met).
-        canBeSelectedByUser: (gameObject: GameObject, user: User, room: Room) => boolean;
+        canBeSelectedByUserInEditMode: (gameObject: GameObject, user: User, room: Room) => boolean;
         editOptions?: ComponentType<{selection: ObjectSelection}>;
         showMoveGizmos?: boolean;
     };

@@ -41,7 +41,7 @@ export default class DoorGameObject extends GameObject
     // door's client config and the conditions every object shares (see GameObject).
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        if (this.canBeSelectedNow())
+        if (this.canBeSelected(hitPoint))
         {
             super.onClick(instanceId, hitPoint);
             return;

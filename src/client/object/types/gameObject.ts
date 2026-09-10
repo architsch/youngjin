@@ -64,68 +64,34 @@ export default abstract class GameObject
         }
     }
 
-    // Invoked when the object is clicked by the user's pointer input (mouse or touch). "instanceId"
-    // is the ID of the mesh instance that was hit by the user's pointer input (-1 if the mesh is not
-    // instanced).
-    //
-    // A click on an object is how the user takes hold of it, and every kind of object is taken hold
-    // of in exactly the same way — what differs between one kind and the next is only whether *this*
-    // user may take hold of *this* one, which each kind answers for itself (see
-    // ObjectTypeClientConfig). So the taking is done here rather than by each kind in turn.
-    //
-    // Two kinds of object override this. One that is not picked out as an object at all answers the
-    // click its own way (see VoxelGameObject), and one that a click means something else besides
-    // does its own thing alongside the taking (see DoorGameObject).
     onClick(_instanceId: number, hitPoint: THREE.Vector3)
     {
-        this.trySelectByClick(hitPoint);
+        if (this.canBeSelected(hitPoint))
+            ObjectSelection.trySelect(this);
     }
 
-    // Whether this user may take hold of this object as things currently stand.
-    //
-    // Only one condition is asked of every object there is: the user has to be in **edit mode**,
-    // since taking hold of a thing is the beginning of changing it and changing things is what that
-    // mode is — outside it a click on the room is a click on the room and nothing more. Who may take
-    // hold of what is otherwise the kind of object's own single rule, whole and in one place (see
-    // ObjectTypeClientConfig), which is also where a refusal the user ought to hear about is
-    // explained to him.
-    //
-    // Asked here without making the click, and without the reach a click has to have, because an
-    // object for which a click means something else besides has to know which of its two meanings
-    // applies before it acts on either (see DoorGameObject).
-    canBeSelectedNow(): boolean
+    canBeSelected(selectionPoint: THREE.Vector3): boolean
     {
+        if (!GameModeUtil.isInEditMode())
+            return false;
+
+        if (selectionPoint)
+        {
+            GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
+            if (selectionPoint.distanceTo(cameraPosTemp) > WorldSpaceSelectionUtil.getMaxSelectDist())
+                return false;
+        }
+
         const selectionConfig = ObjectTypeClientConfigMap.getConfigByIndex(
             this.params.objectTypeIndex).selection;
         if (!selectionConfig) // Not picked out as an object at all (see VoxelGameObject).
-            return false;
-
-        if (!GameModeUtil.isInEditMode())
             return false;
 
         const room = App.getCurrentRoom();
         if (room == undefined)
             return false;
 
-        return selectionConfig.canBeSelectedByUser(this, App.getUser(), room);
-    }
-
-    // Takes hold of this object on the user's behalf, if the click that landed on it is one that may
-    // take hold of it at all. Reports whether it did.
-    protected trySelectByClick(hitPoint: THREE.Vector3): boolean
-    {
-        // Out of the user's reach, which is read as a click on nothing at all: he cannot take hold
-        // of something across the room that he can barely make out (see WorldSpaceSelectionUtil).
-        // Asked first, so that a click which was never going to land is not answered with an
-        // explanation of why it was refused.
-        GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
-        if (hitPoint.distanceTo(cameraPosTemp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-            return false;
-
-        if (!this.canBeSelectedNow())
-            return false;
-
-        return ObjectSelection.trySelect(this);
+        return selectionConfig.canBeSelectedByUserInEditMode(this, App.getUser(), room);
     }
 
     // Callback functions which must be overriden by subclasses

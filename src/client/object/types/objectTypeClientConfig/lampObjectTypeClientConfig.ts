@@ -9,7 +9,7 @@ const LampObjectTypeClientConfig: ObjectTypeClientConfig =
 {
     construct: (params: AddObjectSignal) => new LampGameObject(params),
     selection: {
-        canBeSelectedByUser: (_gameObject, user) =>
+        canBeSelectedByUserInEditMode: (_gameObject, user) =>
             RoomValidationUtil.userIsAdmin(user),
         editOptions: LampEditOptions,
         showMoveGizmos: true,

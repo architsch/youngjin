@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import GameObject from "./gameObject";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import Vec3 from "../../../shared/math/types/vec3";

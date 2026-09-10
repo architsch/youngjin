@@ -8,7 +8,7 @@ const CanvasObjectTypeClientConfig: ObjectTypeClientConfig =
 {
     construct: (params: AddObjectSignal) => new CanvasGameObject(params),
     selection: {
-        canBeSelectedByUser: (_gameObject, _user, _room) => true,
+        canBeSelectedByUserInEditMode: (_gameObject, _user, _room) => true,
         editOptions: CanvasEditOptions,
         showMoveGizmos: true,
     },

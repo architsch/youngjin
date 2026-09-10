@@ -8,7 +8,7 @@ const PlayerObjectTypeClientConfig: ObjectTypeClientConfig =
 {
     construct: (params: AddObjectSignal) => new PlayerGameObject(params),
     selection: {
-        canBeSelectedByUser: (gameObject) => gameObject.isMine(),
+        canBeSelectedByUserInEditMode: (gameObject) => gameObject.isMine(),
         editOptions: CustomizePlayerForm,
     },
 };
