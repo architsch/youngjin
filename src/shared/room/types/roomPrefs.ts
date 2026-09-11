@@ -31,9 +31,11 @@ export default interface RoomPrefs
     headLightPowerStep: number;
     headLightRangeStep: number;
 
-    // The air. Its color is a position in the "Fog" palette, and is also what the void past the
-    // room is painted in. The two distances are where things begin to fade into it and where they
-    // have faded into it completely.
+    // The air in the room. Its color is a position in the "Fog" palette, and the two distances are
+    // where things begin to fade into it and where they have faded into it completely. It is laid
+    // over the sky past the room as well, by as much of the room's air as stands in front of it —
+    // which is what lets the sky be a color of its own without the two meeting at a seam (see the
+    // sky shader).
     fogColorIndex: number;
     fogNearStep: number;
     fogFarStep: number;
@@ -62,16 +64,28 @@ export default interface RoomPrefs
     fogSmokeDriftStep: number;
     fogSmokeRiseStep: number;
 
+    // The sky past the room — every part of the view no surface covers, between the clouds and above
+    // the land. A position in the "Fog" palette, the set of airs, because that is what it is: the air
+    // at infinity, rather than a mass seen against it as the clouds and the land are.
+    //
+    // Its own color rather than the fog's, so that a room can have a pale sky past a dark haze or a
+    // black void past a lit mist. The two still meet without a seam, because the fog is laid over the
+    // sky by as much of the room's air as stands in front of it (see the sky shader): a window seen
+    // from across a fogged room shows fog, and one seen from a pace away shows the sky.
+    //
+    // A room that does not carry one takes its air's own color (see RoomPrefsUtil).
+    skyColorIndex: number;
+
     // The drifting cloud masses of the sky past the room (a field of its own, read on the direction
     // the sky is looked at rather than on any place in the room; see the atmosphere shader).
     //
     //   - **Color**, a position in the "Scenery" palette — a set of masses seen against the air,
-    //     rather than the set of airs the fog's color comes from. The clouds are that color and the
-    //     sky between them is the fog's, so how strongly they read is how far apart the two were
-    //     picked.
+    //     rather than the set of airs the fog's and the sky's colors come from. The clouds are that
+    //     color and the sky between them is the sky's own, so how strongly they read is how far apart
+    //     the two were picked.
     //
     //     A color rather than a strength alone, because a strength could only ever have been a
-    //     *degree of* the fog's own color, and a cloud that is a darker or lighter shade of the air
+    //     *degree of* the sky's own color, and a cloud that is a darker or lighter shade of the air
     //     it hangs in is barely a cloud. Against a dark sky it is invisible however far the dial is
     //     pushed, which is exactly the range a room lit for atmosphere lives in.
     //   - **Opacity**, how far toward that color a cloud actually gets. Where the color says *what*

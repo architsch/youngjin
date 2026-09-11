@@ -77,6 +77,12 @@ export default function UIRoot({ env, user }: UIRootProps)
         });
         gameModeObservable.addListener("ui_root", (mode: GameMode) => {
             setInEditMode(mode == "edit");
+            // Edit mode opens on the user's own character, and the panel that selection brings out
+            // lives along the same bottom edge the room's settings hold while they are open. So
+            // entering the mode puts the settings away, rather than leaving the character's panel
+            // standing down behind them with nothing on screen to say why.
+            if (mode == "edit")
+                setRoomSettingsOpen(false);
         });
         popupStateObservable.addListener("ui_root", (state: PopupState) => {
             if (state.popupType != "none")
@@ -155,7 +161,8 @@ export default function UIRoot({ env, user }: UIRootProps)
 
     // The room's settings take the bottom edge while they are open, so what normally lives there —
     // the chat, and the tools for whatever is selected — stands down meanwhile rather than being
-    // drawn over.
+    // drawn over, and comes back once they are put away: the tools onto whatever is selected by
+    // then (see ObjectSelectionMenu and VoxelQuadSelectionMenu, which each read it on the way in).
     const chatHidden = forceHideChat || !isRoomLoaded || inEditMode || roomSettingsOpen;
     const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || inEditMode;
 

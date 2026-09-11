@@ -12,11 +12,15 @@
  * - Seamlessness: the field is continuous across the wrap, so tiling it shows no crease
  * - Decorrelation: the channels read together as a warp vector do not agree with each other
  * - Determinism: the same field every time, so a room looks the same on every load and to everyone
+ * - Periodicity: the stacked octaves come back onto themselves all at once, at the distance the
+ *   drifting clouds and smoke are wrapped at
  */
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import ValueNoiseTextureUtil, { VALUE_NOISE_PERIOD }
     from "../../../src/client/graphics/util/valueNoiseTextureUtil";
+import { VALUE_NOISE_FBM_PERIOD, VALUE_NOISE_SECOND_OCTAVE, VALUE_NOISE_THIRD_OCTAVE }
+    from "../../../src/client/graphics/shaders/valueNoiseGLSL";
 
 // The util hands the texture over by binding it onto a material being compiled, which is the only
 // thing it is ever asked to do — so the tests ask for it the same way rather than through a door
@@ -56,6 +60,18 @@ describe("baked value-noise field", () =>
         // Read between texels rather than nearest, or the field arrives as visible cubes.
         expect(texture.minFilter).toBe(THREE.LinearFilter);
         expect(texture.magFilter).toBe(THREE.LinearFilter);
+    });
+
+    it("comes back onto itself, every octave at once, where drifting air is wrapped", () =>
+    {
+        // The clouds and the smoke keep how far they have drifted modulo this, so every octave of
+        // the stacked field has to come round there exactly: one that did not would jump each time
+        // the drift wrapped, which on a sky reads as a flicker with no cause anybody could find. The
+        // base period and each finer octave must all fit a whole number of times.
+        const basePeriods = VALUE_NOISE_FBM_PERIOD / VALUE_NOISE_PERIOD;
+        expect(Number.isInteger(basePeriods)).toBe(true);
+        for (const octave of [VALUE_NOISE_SECOND_OCTAVE, VALUE_NOISE_THIRD_OCTAVE])
+            expect(basePeriods * octave).toBeCloseTo(Math.round(basePeriods * octave), 9);
     });
 
     it("gives every channel a field rather than a constant", () =>

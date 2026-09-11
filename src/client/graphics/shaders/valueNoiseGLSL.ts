@@ -17,6 +17,24 @@ import { VALUE_NOISE_PERIOD } from "../util/valueNoiseTextureUtil";
 // or wood finish of a surface and the air in front of it, say — and a function declared twice is a
 // compile error. Whichever block lands first in the assembled source declares it for the rest, which
 // is also why the sampler is declared in here rather than beside any one of them.
+
+// How much finer the second and third octaves of the stacked field are than the first (see
+// valueNoiseFbm). Deliberately not whole numbers — but whole hundredths, which is what lets the sum
+// come round again at all (see VALUE_NOISE_FBM_PERIOD).
+export const VALUE_NOISE_SECOND_OCTAVE = 2.03;
+export const VALUE_NOISE_THIRD_OCTAVE = 4.01;
+
+// How far the stacked field has to be moved before every octave in it lands back on itself at once,
+// in noise units: a whole number of the base period and a whole number of each octave's own, which a
+// hundred base periods always is while the octaves stay in whole hundredths.
+//
+// Anything carried through the field without end keeps how far it has gone modulo this (see
+// AtmosphereMaterialUtil). The clouds and the smoke drift for as long as a page is open, and a
+// coordinate left to grow soon becomes one a float cannot place finely — the field it lands on bands,
+// and then blocks. Wrapped here it never grows past this, and the wrap cannot be seen, since the field
+// on the far side of it is exactly the field that was left.
+export const VALUE_NOISE_FBM_PERIOD = VALUE_NOISE_PERIOD * 100;
+
 const VALUE_NOISE_GLSL = `
     #ifndef VALUE_NOISE_GLSL_INCLUDED
     #define VALUE_NOISE_GLSL_INCLUDED
@@ -51,13 +69,16 @@ const VALUE_NOISE_GLSL = `
 
     // A few octaves stacked, which is what gives a patch an irregular outline rather than a uniform
     // blob. The ratios between them are deliberately not whole numbers: each octave comes round again
-    // at its own period, and periods that share no common multiple mean the sum never repeats itself
-    // even though every part of it does.
+    // at its own period, and periods this far from sharing a multiple mean the sum never visibly
+    // repeats itself even though every part of it does — the whole of it comes round only a hundred
+    // base periods on (see VALUE_NOISE_FBM_PERIOD).
     float valueNoiseFbm(vec3 p)
     {
         float sum = 0.5 * texture(valueNoiseTexture, p * VALUE_NOISE_INV_PERIOD).a;
-        sum += 0.25 * texture(valueNoiseTexture, p * (2.03 * VALUE_NOISE_INV_PERIOD)).a;
-        sum += 0.125 * texture(valueNoiseTexture, p * (4.01 * VALUE_NOISE_INV_PERIOD)).a;
+        sum += 0.25 * texture(valueNoiseTexture,
+            p * (${VALUE_NOISE_SECOND_OCTAVE.toFixed(2)} * VALUE_NOISE_INV_PERIOD)).a;
+        sum += 0.125 * texture(valueNoiseTexture,
+            p * (${VALUE_NOISE_THIRD_OCTAVE.toFixed(2)} * VALUE_NOISE_INV_PERIOD)).a;
         return sum / 0.875;
     }
     #endif

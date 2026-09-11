@@ -274,12 +274,13 @@ const GraphicsManager =
         refreshPointLight();
 
         sceneFog.color.set(getPaletteColor(FOG_COLOR_PALETTE_NAME, prefs.fogColorIndex));
-        // The void beyond the far plane is painted in the same color the room's own air is, so that
-        // the sky and the haze in front of it at least agree about that much — they no longer share a
-        // field, and the atmosphere shader says why. The clear color is set to match as well, though
-        // nothing should ever see it: the sky covers every pixel.
-        AtmosphereMaterialUtil.setColor(sceneFog.color);
-        // How unevenly thick that air is. The room's alone — nothing the sky draws reads any of it.
+        // The sky past the room is a color of its own, drawn from the same set of airs the fog is.
+        // The fog is laid over it rather than standing in for it — by as much of the room's air as
+        // lies between the camera and the room's edge, so the two still meet without a seam (see the
+        // sky shader).
+        skyColorTemp.set(getPaletteColor(FOG_COLOR_PALETTE_NAME, prefs.skyColorIndex));
+        AtmosphereMaterialUtil.setSkyColor(skyColorTemp);
+        // How unevenly thick that air is — in the room, and in the fog laid over the sky past it.
         AtmosphereMaterialUtil.setSmoke(RoomPrefsUtil.getFogSmokeAmplitude(prefs),
             RoomPrefsUtil.getFogSmokeScale(prefs), RoomPrefsUtil.getFogSmokeSpeed(prefs),
             RoomPrefsUtil.getFogSmokeDrift(prefs));
@@ -294,7 +295,8 @@ const GraphicsManager =
         AtmosphereMaterialUtil.setGround(groundColorTemp, peakColorTemp,
             RoomPrefsUtil.getGroundScale(prefs), RoomPrefsUtil.getGroundSolidity(prefs),
             RoomPrefsUtil.getGroundSoftness(prefs));
-        gameRenderer.setClearColor(sceneFog.color);
+        // Painted to match the sky, though nothing should ever see it: the sky covers every pixel.
+        gameRenderer.setClearColor(skyColorTemp);
         refreshFog();
     },
     update: () =>
@@ -359,7 +361,7 @@ const GraphicsManager =
             gameRenderer = new THREE.WebGLRenderer({ antialias: true });
             gameRenderer.shadowMap.enabled = true;
             // Black only until a room says otherwise: the void past the far plane is painted in
-            // whatever the room's fog is (see setRoomLightingPrefs).
+            // whatever the room's sky is (see setRoomLightingPrefs).
             gameRenderer.setClearColor("#000000");
             gameRenderer.domElement.style.position = "absolute";
             gameRenderer.domElement.style.margin = "auto auto";
@@ -543,7 +545,8 @@ function getPaletteColor(paletteName: string, index: number): string
 
 const colorTemp = new THREE.Color();
 // Kept apart from the one above, which the head lamp uses every frame — and from each other, since
-// the atmosphere's colors are handed over together and one holder could not carry all three.
+// the atmosphere's colors are handed over together and one holder could not carry them all.
+const skyColorTemp = new THREE.Color();
 const cloudColorTemp = new THREE.Color();
 const groundColorTemp = new THREE.Color();
 const peakColorTemp = new THREE.Color();

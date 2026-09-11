@@ -56,6 +56,8 @@ function arbitraryPrefs(): fc.Arbitrary<RoomPrefs>
             max: ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME) - 1}),
         fogNearStep: steps,
         fogFarStep: steps,
+        skyColorIndex: fc.integer({min: 0,
+            max: ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME) - 1}),
         cloudColorIndex: fc.integer({min: 0,
             max: ColorUtil.getPaletteSize(SCENERY_COLOR_PALETTE_NAME) - 1}),
         cloudOpacityStep: steps,
@@ -106,6 +108,8 @@ describe("room prefs encoding", () => {
             expect(prefs.headLightColorIndex).toBeLessThan(
                 ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME));
             expect(prefs.fogColorIndex).toBeLessThan(
+                ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME));
+            expect(prefs.skyColorIndex).toBeLessThan(
                 ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME));
         }));
     });
@@ -176,6 +180,14 @@ describe("a room that has said nothing", () => {
         expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][defaults.fogColorIndex]).toBe("#000000");
     });
 
+    it("paints its sky in its own air's color", () => {
+        // The sky has no default of its own: a room that does not carry one is given its air's
+        // color, which for a room that has said nothing at all is the black void past the room it
+        // has always had.
+        expect(defaults.skyColorIndex).toBe(defaults.fogColorIndex);
+        expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][defaults.skyColorIndex]).toBe("#000000");
+    });
+
     it("shows no clouds, because there is no weather at all", () => {
         // Said with the strength rather than with the color, which is what the move to a palette of
         // the clouds' own forced and what a person reading the sliders would expect anyway. The color
@@ -230,6 +242,19 @@ describe("a room that has said nothing", () => {
         expect(RoomPrefsUtil.getCloudScale(defaults)).toBeCloseTo(5.3, 1);
         expect(RoomPrefsUtil.getCloudSpeed(defaults)).toBeCloseTo(0.008, 3);
         expect(RoomPrefsUtil.getCloudSoftness(defaults)).toBeCloseTo(0.1, 2);
+    });
+
+    it("moves its clouds and its smoke at the speeds they were tuned at, however far the top reaches", () => {
+        // Generation writes every setting out in full, so every generated room holds these two
+        // steps explicitly — which makes the speed each one names the one point on its curve that
+        // can never move. Pinned far more tightly than the rest for that reason: the top of both
+        // ranges reaches a long way past them, and a curve reshaped carelessly around the default
+        // would quietly re-weather every room ever generated.
+        expect(RoomPrefsUtil.getCloudSpeed(defaults)).toBeCloseTo(0.00801942421, 10);
+        expect(RoomPrefsUtil.getFogSmokeSpeed(defaults)).toBeCloseTo(0.11723898717, 10);
+        // ...and the tops are storms rather than drifts.
+        expect(MAX_CLOUD_SPEED).toBeGreaterThan(100 * RoomPrefsUtil.getCloudSpeed(defaults));
+        expect(MAX_FOG_SMOKE_SPEED).toBeGreaterThan(100 * RoomPrefsUtil.getFogSmokeSpeed(defaults));
     });
 
     it("is what a shorter string from some other version decodes to as well", () => {
@@ -467,5 +492,33 @@ describe("the palettes a room's lighting is drawn from", () => {
     it("holds the fog inside the range its steps address", () => {
         const furthest = RoomPrefsUtil.decode("");
         expect(RoomPrefsUtil.getFogNearDistance(furthest)).toBe(MAX_FOG_DISTANCE);
+    });
+});
+
+// How many characters a room's string ran to before its sky had a color of its own — everything up
+// to and including the head lamp's range.
+const PRE_SKY_PREFS_LENGTH = 23;
+
+describe("a sky with a color of its own", () => {
+    it("gives a room stored before it could choose a sky the sky it already had", () => {
+        // Such a room's string stops short of the sky's character, and its sky was painted in its
+        // air's color. Reading it back any other way would repaint the sky of every room that ever
+        // chose a fog.
+        const fogColors = fc.integer({min: 0,
+            max: ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME) - 1});
+        fc.assert(fc.property(fogColors, (fogColorIndex) => {
+            const stored = RoomPrefsUtil.encode({...defaultPrefs, fogColorIndex, skyColorIndex: 0})
+                .substring(0, PRE_SKY_PREFS_LENGTH);
+            expect(RoomPrefsUtil.decode(stored).skyColorIndex).toBe(fogColorIndex);
+        }));
+    });
+
+    it("keeps the sky it was given once it carries one, whatever the air is", () => {
+        // Only a room that has never said follows its air; one that has chosen a sky keeps it
+        // however its fog is changed afterwards.
+        const decoded = RoomPrefsUtil.decode(
+            RoomPrefsUtil.encode({...defaultPrefs, fogColorIndex: 12, skyColorIndex: 60}));
+        expect(decoded.skyColorIndex).toBe(60);
+        expect(decoded.fogColorIndex).toBe(12);
     });
 });

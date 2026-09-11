@@ -13,9 +13,22 @@ export default function FogPanel({ anchorElementId, onClose }: Props)
 {
     const [prefs, apply] = useEditableRoomPrefs();
 
+    // Where the fog starts can never be further off than where it ends: a fade that begins after it
+    // has finished is not a fade. So dragging either slider past the other carries the other along
+    // with it, rather than refusing the drag or leaving the pair crossed — the one edit writes both,
+    // and both handles are seen to move.
+    const setNearStep = (value: string) => apply(next => {
+        next.fogNearStep = Number(value);
+        next.fogFarStep = Math.max(next.fogFarStep, next.fogNearStep);
+    });
+    const setFarStep = (value: string) => apply(next => {
+        next.fogFarStep = Number(value);
+        next.fogNearStep = Math.min(next.fogNearStep, next.fogFarStep);
+    });
+
     return <ScrollPanel id="fogOptions" anchorElementId={anchorElementId} onClose={onClose} size="lg">
         {/*<TooltipButton id="fogTooltipButton" additionalClassNames="self-center"
-            text="The air in the room. Things fade into it between where it starts and where it ends — and beyond the room, it is all there is."/>
+            text="The air in the room. Things fade into it between where it starts and where it ends — and so does the sky beyond the room, as far as the room stands in front of it."/>
         */}
         <div className={COLUMN_CLASS_NAMES}>
             <FormPaletteColorInput
@@ -27,13 +40,13 @@ export default function FogPanel({ anchorElementId, onClose }: Props)
             <FormRangeInput
                 label="Near"
                 currValue={String(prefs.fogNearStep)}
-                setValue={(value) => apply(next => next.fogNearStep = Number(value))}
+                setValue={setNearStep}
                 min="0" max={MAX_STEP_ATTRIBUTE} step="1"
             />
             <FormRangeInput
                 label="Far"
                 currValue={String(prefs.fogFarStep)}
-                setValue={(value) => apply(next => next.fogFarStep = Number(value))}
+                setValue={setFarStep}
                 min="0" max={MAX_STEP_ATTRIBUTE} step="1"
             />
         </div>

@@ -43,10 +43,11 @@ const MIN_FOG_SPAN = 0.25;
 export const MIN_CLOUD_SCALE = 0.6;
 export const MAX_CLOUD_SCALE = 24;
 
-// How fast the clouds may cross the sky, as an angular rate — the fraction of a right angle they
-// travel per second. The top is a visibly scudding sky, which is far past anything restful and is
-// there for the rooms that want weather rather than atmosphere.
-export const MAX_CLOUD_SPEED = 0.06;
+// How the clouds' and the smoke's speeds are spread along their steps (see stepToSpeedFraction): the
+// larger this is, the more of each dial is given to its slow end and the further past it the top
+// reaches. Both tops are derived from it rather than chosen, which is why they stand further down,
+// after the defaults they are derived from (see MAX_CLOUD_SPEED).
+const SPEED_CURVATURE = 8;
 
 // How wide the boundary between cloud and clear air may be made, as a distance either side of the
 // point the field is cut at. The bottom is a cut edge — the field crosses it within a pixel, and only
@@ -72,10 +73,6 @@ export const MAX_GROUND_SCALE = 8;
 // and a room is a known size.
 export const MIN_FOG_SMOKE_SCALE = 0.015;
 export const MAX_FOG_SMOKE_SCALE = 0.6;
-
-// How fast the smoke may travel through the room, in world units a second. The top is a visible
-// current — smoke pouring through a doorway rather than hanging in it.
-export const MAX_FOG_SMOKE_SPEED = 1.5;
 
 // How far the land holds its own color against the air in front of it, as a multiple of the reach
 // the haze would otherwise allow. At the bottom the country is a suggestion behind the air; at the
@@ -117,6 +114,10 @@ const DEFAULT_HEAD_LIGHT_RANGE_STEP = 62;
 const DEFAULT_FOG_COLOR_INDEX = 0; // black, the first entry in the "Fog" palette
 const DEFAULT_FOG_NEAR_STEP = MAX_ROOM_PREFS_STEP;
 const DEFAULT_FOG_FAR_STEP = MAX_ROOM_PREFS_STEP;
+
+// (The sky has no default of its own: a room that does not carry one takes its air's color — see
+// decode — which for a room that has said nothing is the same black.)
+
 // No weather, said with the strength rather than with the color.
 //
 // It used to be said by picking the air's own palette entry twice, which stopped being expressible
@@ -167,6 +168,29 @@ const DEFAULT_FOG_SMOKE_SPEED_STEP = 26;
 const DEFAULT_FOG_SMOKE_DRIFT_STEP = 12;
 const DEFAULT_FOG_SMOKE_RISE_STEP = 58;
 
+// How fast the clouds and the smoke move at the steps a room is generated with.
+//
+// **These are the one point on either speed's curve that may never move.** Generation writes a
+// room's settings out in full (see getDefaultPrefsString), so every room generated so far holds these
+// steps explicitly, and whatever speed they name is the speed all of those rooms move at. They are
+// the speeds the sky and the smoke were tuned at: each default step squared, over the ranges the two
+// speeds ran across before their tops were opened up.
+const TUNED_CLOUD_SPEED = 0.06 * Math.pow(DEFAULT_CLOUD_SPEED_STEP / MAX_ROOM_PREFS_STEP, 2);
+const TUNED_FOG_SMOKE_SPEED = 1.5 * Math.pow(DEFAULT_FOG_SMOKE_SPEED_STEP / MAX_ROOM_PREFS_STEP, 2);
+
+// How fast the clouds may cross the sky, as an angular rate, and how fast the smoke may travel
+// through the room, in world units a second. Both tops are far past anything restful — a sky racing
+// overhead, and smoke tearing through the room faster than the eye can follow any one wisp of it —
+// which is what a room asking for a storm rather than an atmosphere reaches for.
+//
+// **Neither number is chosen; both are derived**, as the ambient's ceiling is: each is what its curve
+// has to reach at the top of the range for the default step to keep landing on the tuned speed above.
+// How far above the tuned speeds that puts them is decided by the curve's shape (see
+// SPEED_CURVATURE).
+export const MAX_CLOUD_SPEED = TUNED_CLOUD_SPEED / stepToSpeedFraction(DEFAULT_CLOUD_SPEED_STEP);
+export const MAX_FOG_SMOKE_SPEED =
+    TUNED_FOG_SMOKE_SPEED / stepToSpeedFraction(DEFAULT_FOG_SMOKE_SPEED_STEP);
+
 // Where each field sits in the stored string. Positions are fixed and are never reordered: a
 // character's position is its entire meaning, so moving one re-lights every room already stored.
 // A field appended after these keeps the same guarantee, since anything past the end of a shorter
@@ -194,6 +218,7 @@ const FOG_SMOKE_RISE_CHAR_INDEX = 19;
 const GROUND_SOLIDITY_CHAR_INDEX = 20;
 const GROUND_SOFTNESS_CHAR_INDEX = 21;
 const HEAD_LIGHT_RANGE_CHAR_INDEX = 22;
+const SKY_COLOR_CHAR_INDEX = 23;
 
 // The room's atmosphere, to and from the handful of characters the room is stored with.
 //
@@ -207,8 +232,10 @@ const RoomPrefsUtil =
 {
     decode: (prefs: string): RoomPrefs =>
     {
-        // Read first, because it is what the clouds fall back to when the room has not said — a room
-        // that never chose weather wants none of it, whatever air it did choose.
+        // Read first, because it is what the sky falls back to when the room has not said. A room
+        // stored before its sky could be chosen had that sky painted in its own air, so reading it
+        // back that way is what leaves it looking exactly as it was stored — and it is the plainest
+        // answer for a room that has said nothing at all, whose air and sky are then one black void.
         const fogColorIndex = readPaletteIndex(prefs, FOG_COLOR_CHAR_INDEX,
             FOG_COLOR_PALETTE_NAME, DEFAULT_FOG_COLOR_INDEX);
         return {
@@ -225,6 +252,8 @@ const RoomPrefsUtil =
             fogColorIndex,
             fogNearStep: readStep(prefs, FOG_NEAR_CHAR_INDEX, DEFAULT_FOG_NEAR_STEP),
             fogFarStep: readStep(prefs, FOG_FAR_CHAR_INDEX, DEFAULT_FOG_FAR_STEP),
+            skyColorIndex: readPaletteIndex(prefs, SKY_COLOR_CHAR_INDEX, FOG_COLOR_PALETTE_NAME,
+                fogColorIndex),
             cloudColorIndex: readPaletteIndex(prefs, CLOUD_COLOR_CHAR_INDEX,
                 SCENERY_COLOR_PALETTE_NAME, DEFAULT_CLOUD_COLOR_INDEX),
             cloudOpacityStep: readStep(prefs, CLOUD_OPACITY_CHAR_INDEX,
@@ -266,6 +295,7 @@ const RoomPrefsUtil =
         chars[FOG_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.fogColorIndex, FOG_COLOR_PALETTE_NAME);
         chars[FOG_NEAR_CHAR_INDEX] = writeStep(prefs.fogNearStep);
         chars[FOG_FAR_CHAR_INDEX] = writeStep(prefs.fogFarStep);
+        chars[SKY_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.skyColorIndex, FOG_COLOR_PALETTE_NAME);
         chars[AMBIENT_INTENSITY_CHAR_INDEX] = writeStep(prefs.ambientIntensityStep);
         chars[CLOUD_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.cloudColorIndex,
             SCENERY_COLOR_PALETTE_NAME);
@@ -361,15 +391,12 @@ const RoomPrefsUtil =
     // the whole of what makes this dial and the one above independent rather than two ways of asking
     // the same question.
     //
-    // The curve above does not suit it. It has to reach zero, since still air is a real request and a
-    // geometric ramp can never arrive at it; but the interesting half of the range is the slow half,
-    // where the difference between imperceptible and gentle lives, and a linear ramp would hand that
-    // half four or five steps. Squaring gives both — nothing at the bottom, and fine control where
-    // the judgement actually is.
+    // The curve above does not suit it, and neither would a plain square: the range runs from still
+    // air to a racing sky, and a curve over that has to arrive at nothing at one end while being
+    // judged in ratios at the other (see stepToSpeedFraction).
     getCloudSpeed: (prefs: RoomPrefs): number =>
     {
-        const t = NumUtil.normalizeInRange(prefs.cloudSpeedStep, 0, MAX_ROOM_PREFS_STEP);
-        return MAX_CLOUD_SPEED * t * t;
+        return MAX_CLOUD_SPEED * stepToSpeedFraction(prefs.cloudSpeedStep);
     },
     // How coarse the land below the horizon is. Geometric, for the reason the clouds' scale is, and
     // it never reaches zero for that reason too: land of no frequency at all is a flat plain, which
@@ -415,12 +442,11 @@ const RoomPrefsUtil =
     },
     // How fast the smoke travels through the room, in world units a second — a rate through the room
     // rather than through the field, so that setting the smoke finer does not also appear to speed it
-    // up. Squared, for the reason the clouds' speed is: it has to reach zero, since air that hangs
-    // still is a real request, but the judgement lives in the slow half of the range.
+    // up. On the clouds' curve, for the reason theirs is on it: it has to reach zero, since air that
+    // hangs still is a real request, and above that it runs to a gale (see stepToSpeedFraction).
     getFogSmokeSpeed: (prefs: RoomPrefs): number =>
     {
-        const t = NumUtil.normalizeInRange(prefs.fogSmokeSpeedStep, 0, MAX_ROOM_PREFS_STEP);
-        return MAX_FOG_SMOKE_SPEED * t * t;
+        return MAX_FOG_SMOKE_SPEED * stepToSpeedFraction(prefs.fogSmokeSpeedStep);
     },
     // Which way the smoke travels, as a unit vector in the world's own axes.
     //
@@ -449,6 +475,19 @@ const RoomPrefsUtil =
 function stepToFogDistance(step: number): number
 {
     return NumUtil.convertRange(step, 0, MAX_ROOM_PREFS_STEP, 0, MAX_FOG_DISTANCE, true);
+}
+
+// Where a speed step falls between still air and the top of its range, as a fraction of the way.
+//
+// Geometric over most of its travel, because once a range runs from a drift nobody can see to a gale,
+// fast and faster are told apart by ratio, just as a scale is. But pulled down by its own starting
+// value so that it arrives at nothing at the bottom, which a geometric ramp alone never can — and
+// still air is a real request. That leaves the curve running almost straight near the bottom, which
+// keeps the slow end — where the difference between imperceptible and gentle lives — finely divided.
+function stepToSpeedFraction(step: number): number
+{
+    const t = NumUtil.normalizeInRange(step, 0, MAX_ROOM_PREFS_STEP);
+    return Math.expm1(SPEED_CURVATURE * t) / Math.expm1(SPEED_CURVATURE);
 }
 
 // A palette position is clamped to the palette it is a position in, rather than to the encoding's

@@ -1,7 +1,8 @@
 import VALUE_NOISE_GLSL from "./valueNoiseGLSL";
+import Vec3 from "../../../shared/math/types/vec3";
 
-// The room's air, in the two places it is seen: as the emptiness past the room (the sky), and as the
-// haze things fade into on their way to it (the fog).
+// The room's atmosphere, in the two places it is seen: the haze things fade into on their way out of
+// sight (the fog), and the emptiness past the room that haze stands in front of (the sky).
 //
 // **They are two fields, not one, and which coordinate each is read on is the whole of the
 // difference.** The sky's is read on the *direction* the fragment is being looked at; the fog's on
@@ -20,12 +21,16 @@ import VALUE_NOISE_GLSL from "./valueNoiseGLSL";
 //     position, it is somewhere: the player walks around it, it passes between them and the far wall,
 //     and it holds still when they turn.
 //
-// **What that costs is worth stating, because it was once the reason these were one field.** Whatever
-// has faded completely into the fog is standing directly in front of the sky, so if the two do not
-// agree there, the horizon can show as a seam rather than as a distance. They no longer agree by
-// construction. The two cannot both be had: a fully fogged wall matching a cloudy sky *means* cloud
-// shapes on that wall, which is the thing the volumetric field exists to stop. Where it can be seen
-// at all is a room whose fog closes well inside it — see @docs/graphics/lighting.md .
+// **They meet without a seam all the same, because the fog is laid over the sky too.** Whatever has
+// faded completely into the fog is standing directly in front of the sky, so if the two disagreed
+// there, the room's edge would show as a seam rather than as a distance. They cannot agree by being
+// one field: a fully fogged wall matching a cloudy sky *means* cloud shapes on that wall, which is
+// the thing the volumetric field exists to stop. Nor do they agree by being one color, since the sky
+// has a color of its own. They agree because the sky is fogged just as a surface on the room's edge
+// would be — by the room's own air, over the stretch of it between the camera and where the line of
+// sight leaves the room, thinned by whatever smoke stands at that point (see the sky shader). So a
+// window in a boundary wall shows the same fog in its aperture as on the wall around it, however far
+// off it is and whatever the sky beyond it is painted — see @docs/graphics/lighting.md .
 //
 // A skybox would have been the other way to do the sky, and it is still the wrong one. It is a large
 // image to send over the network for something the room barely looks at, and — being geometry at
@@ -72,16 +77,23 @@ const ATMOSPHERE_HORIZON_DEPTH = 0.16;
 // over, so the two cross and the horizon stays a distance rather than an edge.
 const ATMOSPHERE_CLOUD_FLOOR = 0.18;
 
-// The three the room *does* choose — what color the clouds are, how fine, and how fast — arrive as
-// uniforms rather than as baked constants, because they are dragged on sliders. A constant is part of
-// the shader's source, so turning one into a value would mean rebuilding and recompiling every
-// material in the scene on every frame of the drag (which is the same trap the fog's own on/off flag
-// sets; see GraphicsManager). A uniform costs a single upload and no compilation at all.
+// Which way the clouds are carried across the dome of directions, per unit of their speed (see
+// AtmosphereMaterialUtil, which does the carrying). Not a unit vector, and it need not be: its length
+// is simply part of what one unit of the clouds' speed means.
+export const ATMOSPHERE_CLOUD_DRIFT: Vec3 = { x: 1, y: 0.4, z: -0.7 };
+
+// What the room *does* choose — what color the clouds are, how fine, how strong, how soft, and how
+// far they have drifted — arrives as uniforms rather than as baked constants, because it is dragged on
+// sliders. A constant is part of the shader's source, so turning one into a value would mean
+// rebuilding and recompiling every material in the scene on every frame of the drag (which is the
+// same trap the fog's own on/off flag sets; see GraphicsManager). A uniform costs a single upload and
+// no compilation at all.
 export const ATMOSPHERE_PARS_GLSL = `
-    uniform float atmosphereTime;
-    // (how fine the clouds are, how fast they cross the sky, how far toward their own color they
-    // reach, how wide their edge runs)
-    uniform vec4 atmosphereClouds;
+    // (how fine the clouds are, how far toward their own color they reach, how wide their edge runs)
+    uniform vec3 atmosphereClouds;
+    // How far the clouds have drifted, in noise units: a running total kept and wrapped on the CPU
+    // rather than worked out here from a clock (see AtmosphereMaterialUtil).
+    uniform vec3 atmosphereCloudDrift;
     uniform vec3 atmosphereCloudColor;
     ${VALUE_NOISE_GLSL}
 
@@ -99,13 +111,13 @@ export const ATMOSPHERE_PARS_GLSL = `
     // from the far end of the world.
     float atmosphereCloudAmount(vec3 dir)
     {
-        // The drift is added to the *direction*, before the scale is applied, so that it is an
-        // angular rate: the clouds cross the sky at the same apparent speed however fine they have
-        // been set. Added to the sampling point instead, the two dials would fight — asking for
-        // finer clouds would also appear to slow them, since a finer feature subtends a smaller
-        // angle while still taking as long to travel its own width.
-        float t = atmosphereTime * atmosphereClouds.y;
-        vec3 p = (dir + vec3(t, 0.4 * t, -0.7 * t)) * atmosphereClouds.x;
+        // The drift accrues at the clouds' speed *times their scale*, which comes to the same as
+        // moving the direction before the scale is applied: an angular rate, so that the clouds cross
+        // the sky at the same apparent speed however fine they have been set. Accrued at the speed
+        // alone, the two dials would fight — asking for finer clouds would also appear to slow them,
+        // since a finer feature subtends a smaller angle while still taking as long to travel its own
+        // width.
+        vec3 p = dir * atmosphereClouds.x + atmosphereCloudDrift;
 
         // Three fields at one point, read as a direction to push the coordinate in. Drawn from
         // separate fields rather than from one field at three offsets, which decorrelates them just
@@ -118,22 +130,22 @@ export const ATMOSPHERE_PARS_GLSL = `
         // resolve crawls and sparkles as it crosses pixel centres, so the tightest edge a room can
         // ask for is the tightest one that can be drawn without shimmering — the same reason the
         // instance outline fades over a pixel rather than switching at a threshold.
-        float edge = max(atmosphereClouds.w, fwidth(field));
+        float edge = max(atmosphereClouds.z, fwidth(field));
         return smoothstep(ATMOSPHERE_COVERAGE_LEVEL - edge, ATMOSPHERE_COVERAGE_LEVEL + edge, field);
     }
 
-    // What the air looks like in a given direction: the room's own two colors, the fog's where the
-    // sky is clear and the cloud's where it is not.
+    // What the sky looks like in a given direction: the room's own two colors, the sky's where it is
+    // clear and the cloud's where it is not.
     //
     // A *blend between two chosen colors* rather than a brightening and darkening of one. The
-    // difference is the whole point: a cloud drawn as a shade of the air it hangs in is barely a
-    // cloud, and against the dark air a room lit for atmosphere actually asks for, it is nothing at
+    // difference is the whole point: a cloud drawn as a shade of the sky it hangs in is barely a
+    // cloud, and against the dark sky a room lit for atmosphere actually asks for, it is nothing at
     // all however hard it is pushed. Given its own color it stands out on any sky, including the
     // emptiness past the room where there is no surface to give the eye anything else to read.
     //
-    // A room wanting no weather picks the same palette entry twice, which is what every room that has
-    // never been configured already holds — so none of them shows so much as a change of shade.
-    vec3 atmosphereColor(vec3 airColor, vec3 viewDir)
+    // A room wanting no weather turns the clouds' strength to nothing, which is where every room that
+    // has never been configured already has it — so none of them shows so much as a change of shade.
+    vec3 atmosphereColor(vec3 clearColor, vec3 viewDir)
     {
         vec3 dir = normalize(viewDir);
 
@@ -164,13 +176,13 @@ export const ATMOSPHERE_PARS_GLSL = `
         // are taking the same branch — so on the line itself it is reading whatever the lanes that
         // left held. That is harmless here and not by luck: the branch closes exactly where the
         // strength reaches nothing, so anything the field returns along it is multiplied away.
-        vec3 air = airColor;
-        float cloudStrength = atmosphereClouds.z * presence;
+        vec3 sky = clearColor;
+        float cloudStrength = atmosphereClouds.y * presence;
         if (cloudStrength > 0.0)
-            air = mix(airColor, atmosphereCloudColor, atmosphereCloudAmount(dir) * cloudStrength);
+            sky = mix(clearColor, atmosphereCloudColor, atmosphereCloudAmount(dir) * cloudStrength);
 
         float horizon = smoothstep(-0.25, 0.6, dir.y);
-        return air * (1.0 - ATMOSPHERE_HORIZON_DEPTH * (horizon - 0.5));
+        return sky * (1.0 - ATMOSPHERE_HORIZON_DEPTH * (horizon - 0.5));
     }
 `;
 
@@ -341,7 +353,10 @@ const ATMOSPHERE_SMOKE_WARP = 0.6;
 // and the eye reads the rigidity immediately. Letting the warp lag behind gives the two a relative
 // motion, so every mass stretches and folds as it goes — which is the difference between air moving
 // and a texture sliding, for no extra samples at all.
-const ATMOSPHERE_SMOKE_CHURN = 0.35;
+//
+// Exported because the lag is applied where the two are carried along, on the CPU (see
+// AtmosphereMaterialUtil), rather than in the shader.
+export const ATMOSPHERE_SMOKE_CHURN = 0.35;
 
 // Between which two levels of the field the air actually thins.
 //
@@ -359,19 +374,21 @@ const ATMOSPHERE_SMOKE_LOW = 0.30;
 const ATMOSPHERE_SMOKE_HIGH = 0.72;
 
 // The fog's own field: the room's air being unevenly thick, which is what smoke and dry ice actually
-// are. Nothing here is shared with the sky (see this module's note) — not the coordinate it is read
-// on, not the shaping, and not what it does with the answer.
+// are. Nothing here is shared with the sky's clouds (see this module's note) — not the coordinate it
+// is read on, not the shaping, and not what it does with the answer. The sky does read it, but only
+// for the fog laid over it, and at a place in the room as any surface would (see the sky shader).
 export const ATMOSPHERE_SMOKE_PARS_GLSL = `
-    uniform float atmosphereTime;
-    // (how fine the smoke is, how fast it travels in world units a second, how far it thins the air
-    // where it lies thickest)
-    uniform vec3 atmosphereSmoke;
-    // Which way it travels, as a unit vector in the world's own axes.
-    uniform vec3 atmosphereSmokeDrift;
+    // (how fine the smoke is, how far it thins the air where it lies thickest)
+    uniform vec2 atmosphereSmoke;
+    // How far the smoke has travelled, and how far the field shearing it has — in noise units, as
+    // running totals kept and wrapped on the CPU rather than worked out here from a clock (see
+    // AtmosphereMaterialUtil). Two, because the second lags the first, and a lag worked out here from
+    // the first would jump every time that one wrapped.
+    uniform vec3 atmosphereSmokeTravel;
+    uniform vec3 atmosphereSmokeChurn;
     ${VALUE_NOISE_GLSL}
 
     const float ATMOSPHERE_SMOKE_WARP = ${ATMOSPHERE_SMOKE_WARP.toFixed(4)};
-    const float ATMOSPHERE_SMOKE_CHURN = ${ATMOSPHERE_SMOKE_CHURN.toFixed(4)};
     const float ATMOSPHERE_SMOKE_LOW = ${ATMOSPHERE_SMOKE_LOW.toFixed(4)};
     const float ATMOSPHERE_SMOKE_HIGH = ${ATMOSPHERE_SMOKE_HIGH.toFixed(4)};
 
@@ -383,20 +400,19 @@ export const ATMOSPHERE_SMOKE_PARS_GLSL = `
     // of the screen. Two surfaces meeting in a corner agree about the air in front of them because
     // they are asking about the same place, and a wall passing behind a thin patch shows through it.
     //
-    // The drift is subtracted from the world position before the scale is applied, so it is a rate
-    // through the room in world units rather than through the field — asking for finer smoke does not
-    // also appear to speed it up. That is the same separation the clouds keep between their scale and
-    // their speed, arrived at from the other side, since theirs is an angular rate and this is a
-    // linear one.
+    // The travel accrues at the smoke's speed *times its scale*, which comes to the same as moving
+    // the world position before the scale is applied: a rate through the room in world units rather
+    // than through the field, so asking for finer smoke does not also appear to speed it up. That is
+    // the same separation the clouds keep between their scale and their speed, arrived at from the
+    // other side, since theirs is an angular rate and this is a linear one.
     float atmosphereSmokeThinning(vec3 worldPos)
     {
-        vec3 travel = atmosphereSmokeDrift * (atmosphereTime * atmosphereSmoke.y);
-        vec3 p = (worldPos - travel) * atmosphereSmoke.x;
+        vec3 p = worldPos * atmosphereSmoke.x - atmosphereSmokeTravel;
 
         // The shearing field travels at a fraction of the smoke's own speed, which is what leaves the
-        // two sliding against each other. Offset as well, so the two are decorrelated rather than
-        // merely out of step.
-        vec3 q = (worldPos - travel * (1.0 - ATMOSPHERE_SMOKE_CHURN)) * atmosphereSmoke.x + 13.7;
+        // two sliding against each other (see ATMOSPHERE_SMOKE_CHURN). Offset as well, so the two are
+        // decorrelated rather than merely out of step.
+        vec3 q = worldPos * atmosphereSmoke.x - atmosphereSmokeChurn + 13.7;
         vec3 warp = valueNoiseWarp(q);
 
         float field = valueNoiseFbm(p + warp * ATMOSPHERE_SMOKE_WARP);
@@ -468,10 +484,10 @@ export const ATMOSPHERE_FOG_FRAGMENT_GLSL = `
         #else
             float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
         #endif
-        if (atmosphereSmoke.z > 0.0 && fogFactor > 0.0)
+        if (atmosphereSmoke.y > 0.0 && fogFactor > 0.0)
         {
             fogFactor *= 1.0 -
-                atmosphereSmoke.z * atmosphereSmokeThinning(vAtmosphereWorldPos);
+                atmosphereSmoke.y * atmosphereSmokeThinning(vAtmosphereWorldPos);
         }
         gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fogFactor);
     #endif

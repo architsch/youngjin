@@ -20,10 +20,11 @@ import * as THREE from "three";
 // **Why it may be tiled without showing.** The texture repeats, and what would give that away is the
 // field's own broad shape coming round again within sight. It does not: at the fineness a room asks
 // for by default, a whole room is a fraction of one period across (see VALUE_NOISE_PERIOD). The finer
-// octaves repeat sooner, but they are read at ratios that share no common multiple with the period, so
-// the sum of the three never lines up with itself at all — while each octave stays continuous across
-// the seam, which is what actually matters. There is no seam to find, only a pattern that eventually
-// rhymes.
+// octaves repeat sooner, but they are read at ratios that come round with the period only a hundred
+// periods on, so the sum of the three lines up with itself nowhere anyone could compare — while each
+// octave stays continuous across the seam, which is what actually matters. There is no seam to find,
+// only a pattern that eventually rhymes; and where it rhymes exactly is what lets the drifting air be
+// wrapped without a jump (see VALUE_NOISE_FBM_PERIOD).
 
 // How many noise units the baked field covers before it comes round again.
 //

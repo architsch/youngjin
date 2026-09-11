@@ -33,6 +33,8 @@ The top edge of the screen holds what is about the session rather than about any
 
 The room's settings — what the room *is*, as against what is in it: its texture pack, its restricted zones, its lighting — open as a panel along the bottom of the screen rather than as a popup, so the room stays in view while they are adjusted. They are offered in either mode to the room's superuser (a Regular room's owner, or an admin in a hub), but not in a single-player room, which is generated afresh each time and has nowhere for its settings to be kept. Laid out whole, the settings would stand as a wall of controls over the very room they adjust, so that panel only names them, in a single low row; each setting's controls come up in a panel of their own, one at a time, hung from the toggle beside its name (see [Panels](#panels)).
 
+While the room's settings are open they hold the bottom edge, so the tools for whatever is selected stand down meanwhile, and come back — onto whatever is selected by then — once the settings are put away. Entering edit mode puts them away itself: the mode opens on the user's own character, and the panel that selection brings out needs that same edge.
+
 The camera's zoom slider stands apart from the bar, upright against the right-hand edge of the screen, and only while the camera orbits (see [camera_control.md](../graphics/camera_control.md)).
 
 ## Panels

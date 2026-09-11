@@ -1,25 +1,33 @@
 import { MAX_ROOM_PREFS_STEP } from "../../../../shared/room/util/roomPrefsUtil";
-import { SCENERY_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
+import { FOG_COLOR_PALETTE_NAME, SCENERY_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
 import useEditableRoomPrefs from "../../util/editableRoomPrefs";
 import TooltipButton from "../input/tooltipButton";
 import FormPaletteColorInput from "../input/formPaletteColorInput";
 import FormRangeInput from "../input/formRangeInput";
 import ScrollPanel from "./scrollPanel";
 
-// The clouds in the sky past a room — the weather outside it — raised from the room's settings (see
-// CustomizeRoomPanel). What each setting means is in @docs/graphics/lighting.md, and how an edit
-// reaches the room is in useEditableRoomPrefs.
-export default function CloudsPanel({ anchorElementId, onClose }: Props)
+// The sky past a room — its own color, and the weather drifting across it — raised from the room's
+// settings (see CustomizeRoomPanel). What each setting means is in @docs/graphics/lighting.md, and
+// how an edit reaches the room is in useEditableRoomPrefs.
+export default function SkyPanel({ anchorElementId, onClose }: Props)
 {
     const [prefs, apply] = useEditableRoomPrefs();
 
-    return <ScrollPanel id="cloudsOptions" anchorElementId={anchorElementId} onClose={onClose} size="lg">
-        {/*<TooltipButton id="cloudsTooltipButton" additionalClassNames="self-center"
-            text="Drifting cloud in the sky past your room — the air outside it, where Smoke is the air inside. Strength is how much weather there is at all, and starts at none. The clouds are painted in their own color and the sky between them in the fog's, so the further apart you pick the two the stronger they read. Softness is how sharp the edge of a cloud is, from cut to no edge at all."/>
+    return <ScrollPanel id="skyOptions" anchorElementId={anchorElementId} onClose={onClose} size="lg">
+        {/*<TooltipButton id="skyTooltipButton" additionalClassNames="self-center"
+            text="The sky past your room, and the cloud drifting across it — the air outside it, where Smoke is the air inside. The sky and the clouds each have a color of their own, so the further apart you pick the two the stronger the clouds read. Strength is how much weather there is at all, and starts at none. Softness is how sharp the edge of a cloud is, from cut to no edge at all. Your room's fog is laid over the sky as well, as far as the room stands in front of it."/>
         */}
         <div className={COLUMN_CLASS_NAMES}>
+            {/* The sky is air rather than a mass seen against it, so it is picked from the set of airs
+                the fog is, while the clouds have a palette of their own (see RoomPrefs). */}
             <FormPaletteColorInput
-                label="Color"
+                label="Sky Color"
+                paletteName={FOG_COLOR_PALETTE_NAME}
+                currValue={prefs.skyColorIndex}
+                setColorIndex={(index) => apply(next => next.skyColorIndex = index)}
+            />
+            <FormPaletteColorInput
+                label="Cloud Color"
                 paletteName={SCENERY_COLOR_PALETTE_NAME}
                 currValue={prefs.cloudColorIndex}
                 setColorIndex={(index) => apply(next => next.cloudColorIndex = index)}

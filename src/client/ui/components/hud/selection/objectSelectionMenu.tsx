@@ -9,7 +9,14 @@ import ObjectTypeClientConfigMap from "../../../../object/maps/objectTypeClientC
 // what is left here is the raising of it.
 export default function ObjectSelectionMenu({ inEditMode }: Props)
 {
-    const [selection, setSelection] = useState<ObjectSelection | null>(null);
+    // This menu stands down while the room's settings hold the foot of the screen (see UIRoot), and
+    // comes back when they are put away — onto whatever is picked out by then, which may well have
+    // been picked out while there was no menu here to hear it: entering edit mode with the settings
+    // open puts them away and picks out the user's own character in the same moment. So what is
+    // selected is read on the way in rather than waited for, and read in the first render rather
+    // than in an effect after it, so the menu arrives with its tools instead of a frame late.
+    const [selection, setSelection] = useState<ObjectSelection | null>(
+        () => objectSelectionObservable.peek());
 
     useEffect(() => {
         objectSelectionObservable.addListener("ui.objectSelection", setSelection);

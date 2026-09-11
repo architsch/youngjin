@@ -11,13 +11,13 @@ They are kept apart from the materials that wear them. **One module per surface*
 Two properties of a material are decided in the map and nowhere else, because they are decisions about the material rather than about how it is drawn:
 
 - **Whether the room's own lamps reach it** (see [lighting.md](lighting.md)). A lamp's own lit face does not: a light lit by the field it is filling would brighten in its own glow.
-- **Whether it stands in the room's air.** Everything that is part of the room fades into the same drifting haze the sky is painted with; the gizmos do not, being drawn over the world rather than in it.
+- **Whether it stands in the room's air.** Everything that is part of the room fades into the same drifting haze, which is laid over the sky past the room too; the gizmos do not, being drawn over the world rather than in it.
 
 Both are applied by wrapping, so a material gains them without knowing about them, and a reader can see at a glance which materials have which.
 
 ### Grafting onto three.js rather than replacing it
 
-Every one of these surfaces is a stock three.js material with code spliced into it at named points, rather than a shader written from scratch. That is what keeps them lit by the same lights, fogged by the same fog, tone-mapped and color-converted by the same code as everything else in the scene — which matters most for the things that have to *match*, like the fog and the sky it fades into.
+Every one of these surfaces is a stock three.js material with code spliced into it at named points, rather than a shader written from scratch. That is what keeps them lit by the same lights, fogged by the same fog, tone-mapped and color-converted by the same code as everything else in the scene — which matters most for the things that have to *match*, like the fog on a wall at the room's edge and the fog laid over the sky beside it.
 
 The splices name three.js's own chunks, so they are written against a specific arrangement of its shader source and are commented with why each point was chosen. The one thing to know when moving one is that every stock chunk is inlined into a single `main()`, so anything declared by an earlier splice is still in scope for a later one.
 

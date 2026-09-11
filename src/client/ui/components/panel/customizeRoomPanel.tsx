@@ -6,7 +6,7 @@ import AmbientLightPanel from "./ambientLightPanel";
 import HeadLightPanel from "./headLightPanel";
 import FogPanel from "./fogPanel";
 import SmokePanel from "./smokePanel";
-import CloudsPanel from "./cloudsPanel";
+import SkyPanel from "./skyPanel";
 import GroundPanel from "./groundPanel";
 import TexturePackSection, { TEXTURE_PACK_BUTTON_ID } from "./section/texturePackSection";
 import RestrictedZonesSection, { RESTRICTED_ZONES_BUTTON_ID } from "./section/restrictedZonesSection";
@@ -14,7 +14,7 @@ import AmbientLightSection, { AMBIENT_LIGHT_BUTTON_ID } from "./section/ambientL
 import HeadLightSection, { HEAD_LIGHT_BUTTON_ID } from "./section/headLightSection";
 import FogSection, { FOG_BUTTON_ID } from "./section/fogSection";
 import SmokeSection, { SMOKE_BUTTON_ID } from "./section/smokeSection";
-import CloudsSection, { CLOUDS_BUTTON_ID } from "./section/cloudsSection";
+import SkySection, { SKY_BUTTON_ID } from "./section/skySection";
 import GroundSection, { GROUND_BUTTON_ID } from "./section/groundSection";
 
 //------------------------------------------------------------------------
@@ -68,8 +68,8 @@ export default function CustomizeRoomPanel({ onClose }: Props)
             <SmokeSection open={openButtonId == SMOKE_BUTTON_ID}
                 onToggle={() => toggleSubPanel(SMOKE_BUTTON_ID)}/>
             <div className={DIVIDER_CLASS_NAMES}/>
-            <CloudsSection open={openButtonId == CLOUDS_BUTTON_ID}
-                onToggle={() => toggleSubPanel(CLOUDS_BUTTON_ID)}/>
+            <SkySection open={openButtonId == SKY_BUTTON_ID}
+                onToggle={() => toggleSubPanel(SKY_BUTTON_ID)}/>
             <div className={DIVIDER_CLASS_NAMES}/>
             <GroundSection open={openButtonId == GROUND_BUTTON_ID}
                 onToggle={() => toggleSubPanel(GROUND_BUTTON_ID)}/>
@@ -89,8 +89,8 @@ export default function CustomizeRoomPanel({ onClose }: Props)
             <FogPanel anchorElementId={FOG_BUTTON_ID} onClose={closeSubPanel}/>}
         {openButtonId == SMOKE_BUTTON_ID &&
             <SmokePanel anchorElementId={SMOKE_BUTTON_ID} onClose={closeSubPanel}/>}
-        {openButtonId == CLOUDS_BUTTON_ID &&
-            <CloudsPanel anchorElementId={CLOUDS_BUTTON_ID} onClose={closeSubPanel}/>}
+        {openButtonId == SKY_BUTTON_ID &&
+            <SkyPanel anchorElementId={SKY_BUTTON_ID} onClose={closeSubPanel}/>}
         {openButtonId == GROUND_BUTTON_ID &&
             <GroundPanel anchorElementId={GROUND_BUTTON_ID} onClose={closeSubPanel}/>}
     </div>;
