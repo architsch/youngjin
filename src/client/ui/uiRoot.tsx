@@ -4,8 +4,8 @@ import Chat from "./components/hud/chat/chat";
 import DebugStats from "./components/hud/debug/debugStats";
 import VoxelQuadSelectionMenu from "./components/hud/selection/voxelQuadSelectionMenu";
 import ObjectSelectionMenu from "./components/hud/selection/objectSelectionMenu";
-import GameModeMenu from "./components/hud/mode/gameModeMenu";
-import UserRoomIdentity from "./components/hud/user/userRoomIdentity";
+import TopBarMenu from "./components/hud/topBar/topBarMenu";
+import CameraZoomSlider from "./components/hud/mode/cameraZoomSlider";
 import Loading from "./components/overlay/loading";
 import Notification from "./components/overlay/notification";
 import Reconnecting from "./components/overlay/reconnecting";
@@ -13,6 +13,7 @@ import Headline from "./components/overlay/headline";
 import SkipTutorialButton from "./components/hud/singlePlayer/skipTutorialButton";
 import ScreenArrow from "./components/overlay/screenArrow";
 import ScreenOutlineRect from "./components/overlay/screenOutlineRect";
+import ScreenOutlineCapsule from "./components/overlay/screenOutlineCapsule";
 import ScreenCoachMarks from "./components/overlay/screenCoachMarks";
 import ScreenDiagram from "./components/overlay/screenDiagram";
 import Popup from "./components/form/popup";
@@ -20,40 +21,39 @@ import PopupState from "./types/popupState";
 import User from "../../shared/user/types/user";
 import AuthPromptForm from "./components/form/authPromptForm";
 import DestinationChooserForm from "./components/form/destinationChooserForm";
-import ConfigureMyRoomForm from "./components/form/configureMyRoomForm";
 import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
-import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, objectSelectionObservable, popupStateObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, popupStateObservable, roomChangedObservable } from "../system/clientObservables";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ImageListChooserForm from "./components/form/imageListChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
-import ObjectSelection from "../graphics/types/gizmo/objectSelection";
-import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import ConfirmForm from "./components/form/confirmForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import useCloseGesture from "./util/closeGesture";
 import PopupUtil from "./util/popupUtil";
+import ClosablePanelUtil from "./util/closablePanelUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
-import WorldSpaceSelectionUtil from "../graphics/util/worldSpaceSelectionUtil";
 import GameMode from "../system/types/gameMode";
 import GameModeUtil from "../system/util/gameModeUtil";
 import FTUEUtil from "./util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
 import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
-import ConfigureHubRoomForm from "./components/form/configureHubRoomForm";
 import CustomizeObjectLabelForm from "./components/form/customizeObjectLabelForm";
 import DoorSettingsForm from "./components/form/doorSettingsForm";
+import CustomizeRoomPanel from "./components/panel/customizeRoomPanel";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
     const [popupStack, setPopupStack] = useState<PopupState[]>([]);
     const [roomRuntimeMemory, setRoomRuntimeMemory] = useState<RoomRuntimeMemory>();
-    const [objectSelection, setObjectSelection] = useState<ObjectSelection | null>(null);
-    const [voxelQuadSelection, setVoxelQuadSelection] = useState<VoxelQuadSelection | null>(null);
     const [inEditMode, setInEditMode] = useState<boolean>(false);
     const [forceHideChat, setForceHideChat] = useState<boolean>(false);
+    // Whether the room's own settings are open (see CustomizeRoomPanel). Held here rather than by
+    // the panel or the button that opens it, because both of those need it: the button in the top
+    // bar is lit while the panel is up, and the panel takes the bottom edge from what else lives there.
+    const [roomSettingsOpen, setRoomSettingsOpen] = useState<boolean>(false);
 
     useEffect(() => {
         clientFeatureFlagsObservable.addElementListener("ui_root", FeatureFlag.HideChatInput, (action: "add" | "remove") => {
@@ -61,6 +61,8 @@ export default function UIRoot({ env, user }: UIRootProps)
         });
         roomChangedObservable.addListener("ui_root", (roomRuntimeMemory: RoomRuntimeMemory) => {
             setRoomRuntimeMemory(roomRuntimeMemory);
+            // The settings on screen were the settings of the room the user has just left.
+            setRoomSettingsOpen(false);
 
             if (roomRuntimeMemory.room.ownerUserID == user.id && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.EnterMyRoom))
             {
@@ -72,12 +74,6 @@ export default function UIRoot({ env, user }: UIRootProps)
                 PopupUtil.openPopup({popupType: "hubRoomWelcome"});
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.EnterHub);
             }
-        });
-        objectSelectionObservable.addListener("ui_root", (selection: ObjectSelection | null) => {
-            setObjectSelection(selection);
-        });
-        voxelQuadSelectionObservable.addListener("ui_root", (selection: VoxelQuadSelection | null) => {
-            setVoxelQuadSelection(selection);
         });
         gameModeObservable.addListener("ui_root", (mode: GameMode) => {
             setInEditMode(mode == "edit");
@@ -91,8 +87,6 @@ export default function UIRoot({ env, user }: UIRootProps)
         return () => {
             clientFeatureFlagsObservable.removeElementListener("ui_root", FeatureFlag.HideChatInput);
             roomChangedObservable.removeListener("ui_root");
-            objectSelectionObservable.removeListener("ui_root");
-            voxelQuadSelectionObservable.removeListener("ui_root");
             gameModeObservable.removeListener("ui_root");
             popupStateObservable.removeListener("ui_root");
         };
@@ -120,8 +114,8 @@ export default function UIRoot({ env, user }: UIRootProps)
     };
 
     // Going back, in whatever way the user's device offers, closes the topmost thing that is open —
-    // a popup first, then edit mode or whatever is selected — instead of leaving the page. With
-    // nothing left to close, only a second back gesture gives the page up.
+    // a popup first, then a panel (see ClosablePanelUtil), then edit mode itself — instead of leaving
+    // the page. With nothing left to close, only a second back gesture gives the page up.
     useCloseGesture((kind) => {
         // The Escape key is already answered by whichever input element currently holds the user's
         // attention: a focused text field gives up focus, an open color palette dismisses itself.
@@ -130,7 +124,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         if (kind == "escape" && numActiveInputElementsObservable.peek() > 0)
             return;
 
-        if (popupStack.length == 0 && !inEditMode && !WorldSpaceSelectionUtil.isAnythingSelected())
+        if (popupStack.length == 0 && !ClosablePanelUtil.hasOpenPanel() && !inEditMode)
         {
             // Nothing on screen to close, so the gesture keeps the meaning it came with — except
             // that a back gesture only gives the page up once the user has asked for it twice.
@@ -145,53 +139,47 @@ export default function UIRoot({ env, user }: UIRootProps)
 
         if (popupStack.length > 0)
             PopupUtil.closePopup();
-        else if (inEditMode) // Going back out of edit mode leaves the mode itself, not merely the
-                             // selection standing in it, which would leave the user in a mode with
-                             // nothing selected and no sign of how he got there. Nothing comes of
-                             // it while a single-player step is holding the user in that mode, and
-                             // the gesture is spent on it all the same rather than reaching the
-                             // page underneath: the mode is still what is on screen.
+        else if (ClosablePanelUtil.hasOpenPanel())
+            ClosablePanelUtil.closeTopmost();
+        else // Going back out of edit mode leaves the mode itself, not merely the selection standing
+             // in it, which would leave the user in a mode with nothing selected and no sign of how
+             // he got there. Nothing comes of it while a single-player step is holding the user in
+             // that mode, and the gesture is spent on it all the same rather than reaching the page
+             // underneath: the mode is still what is on screen.
             GameModeUtil.exitEditMode();
-        else // Nothing comes of this while a single-player step is holding the selection in place,
-             // and that is the point: the gesture is spent on the selection either way, and never
-             // reaches the page underneath.
-            WorldSpaceSelectionUtil.unselectAll();
     });
 
-    const roomID = roomRuntimeMemory?.room.id;
     const isRoomLoaded = roomRuntimeMemory != undefined;
     const isMultiplayerRoomLoaded = isRoomLoaded &&
         roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
 
-    const anythingSelected = objectSelection != null || voxelQuadSelection != null;
-    // Edit mode, or a selection made outside it, has taken the top bar for its own way out, so the
-    // controls that normally live there stand down for as long as it is up. The mode counts in its
-    // own right, since it outlasts any one selection made inside it.
-    const inExclusiveMode = inEditMode || anythingSelected;
-    const chatHidden = forceHideChat || !isRoomLoaded || inEditMode;
+    // The room's settings take the bottom edge while they are open, so what normally lives there —
+    // the chat, and the tools for whatever is selected — stands down meanwhile rather than being
+    // drawn over.
+    const chatHidden = forceHideChat || !isRoomLoaded || inEditMode || roomSettingsOpen;
     const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || inEditMode;
 
     return <>
-        {/* A selection takes the top bar for itself, so the identity and room controls that
-            normally hold it step aside for as long as one is up. The debugger is the exception: it
-            is a development tool, and it is wanted most in the states that hide everything else —
-            hence its place after the bar here, which keeps it drawn on top of it. */}
-        {isRoomLoaded && !inExclusiveMode && <UserRoomIdentity
+        {/* The debugger is drawn after the top bar, which keeps it on top of it: it is a
+            development tool, and it is wanted most in the states that cover everything else. */}
+        {isRoomLoaded && <TopBarMenu
             user={user}
+            room={roomRuntimeMemory.room}
+            roomSettingsOpen={roomSettingsOpen}
+            onToggleRoomSettings={() => setRoomSettingsOpen(prev => !prev)}
             onExitApp={exitApp}
         />}
-        <GameModeMenu user={user} currentRoomID={roomID ?? ""}
-            currentRoomType={roomRuntimeMemory?.room.roomType ?? RoomTypeEnumMap.Regular}/>
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
-        {/* The tools for changing what is selected belong to edit mode alone. In play mode a
-            selection is a way of looking at something and reading about it, which is why the
-            canvas's description below stands outside that condition. */}
+        <CameraZoomSlider/>
+        {/* The tools for changing what is selected belong to edit mode alone, as the selection
+            itself does. */}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
-            <ObjectSelectionMenu inEditMode={inEditMode}/>
-            {inEditMode && <VoxelQuadSelectionMenu/>}
+            {!roomSettingsOpen && <ObjectSelectionMenu inEditMode={inEditMode}/>}
+            {inEditMode && !roomSettingsOpen && <VoxelQuadSelectionMenu/>}
             <Chat hide={chatHidden}/>
             <SkipTutorialButton hide={hideSkipTutorialButton}/>
         </div>
+        {roomSettingsOpen && <CustomizeRoomPanel onClose={() => setRoomSettingsOpen(false)}/>}
         {popupStack.map((state, i) => {
             switch (state.popupType)
             {
@@ -230,12 +218,6 @@ export default function UIRoot({ env, user }: UIRootProps)
                         onSetDefaultEntrance={state.params.onSetDefaultEntrance}
                     />
                 </Popup>;
-                case "configureMyRoom": return <Popup key={i} showCloseButton={true}>
-                    <ConfigureMyRoomForm/>
-                </Popup>;
-                case "configureHubRoom": return <Popup key={i} showCloseButton={true}>
-                    <ConfigureHubRoomForm/>
-                </Popup>;
                 case "myRoomWelcome": return <Popup key={i} title="" showCloseButton={true}>
                     <MyRoomWelcomeForm/>
                 </Popup>;
@@ -264,6 +246,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         <Headline/>
         <ScreenArrow/>
         <ScreenOutlineRect/>
+        <ScreenOutlineCapsule/>
         <ScreenCoachMarks/>
         {popupStack.length === 0 && <ScreenDiagram/>}
         <Loading/>

@@ -706,9 +706,9 @@ describe("race condition scenarios", () => {
         });
 
         it("Case A: a room owner's reconnect leaves the room still his", async () => {
-            // Being allowed to edit a room must survive a reconnect. It is read from the person and
-            // the room rather than kept as a per-session standing, so nothing has to be
-            // re-established — which is exactly what this asserts.
+            // Owning a room must survive a reconnect. It is read from the person and the room rather
+            // than kept as a per-session standing, so nothing has to be re-established — which is
+            // exactly what this asserts.
             await runScenario({
                 name: "case A preserves ownership",
                 rooms: [regularRoom("rc12-owner")],
@@ -720,7 +720,7 @@ describe("race condition scenarios", () => {
                 skipInvariants: true,
                 assertions: ({ users }) => {
                     const room = ServerRoomManager.roomRuntimeMemories["rc12-owner"].room;
-                    expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(true);
+                    expect(RoomValidationUtil.userOwnsRoom(users[0].user, room)).toBe(true);
                 },
             });
         });

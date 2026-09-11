@@ -17,7 +17,7 @@ import { numActiveInputElementsObservable } from "../../../system/clientObservab
 // scale, and are left off. They are never labelled — the number beside the track is the readout
 // wherever there is one, and a row of little numbers under a slider is unreadable at this size.
 export default function RangeInput({ currValue, setValue, min, max, step, showValueInput = true,
-    additionalClassNames = "" }: Props)
+    orientation = "horizontal", additionalClassNames = "" }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -91,7 +91,12 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
     // The row never wraps, and what gives way when it runs out of width is the track: the number
     // beside it, where there is one, is the one part that says nothing at all once it has been
     // squeezed.
-    return <div className="flex flex-row flex-nowrap items-center gap-1 min-w-0">
+    //
+    // Stood upright, the track runs from its least value at the foot to its greatest at the head —
+    // the way anything measured upward reads — which a track turned by the vertical writing mode only
+    // does when it is also told to run right-to-left.
+    const vertical = orientation == "vertical";
+    return <div className={`flex ${vertical ? "flex-col" : "flex-row"} flex-nowrap items-center gap-1 min-w-0`}>
         <div className={`relative flex items-center min-w-0 ${additionalClassNames}`}>
             {/* The browser draws the track and the handle itself, and left to its own devices draws
                 them in its accent color — the one blue thing in an app that has nothing else blue in
@@ -99,7 +104,7 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
             <input
                 ref={inputRef}
                 type="range"
-                className="w-full h-8 p-0 rounded-md cursor-pointer accent-green-600 yj-surface-concave"
+                className={`${vertical ? "w-8 h-full [writing-mode:vertical-lr] [direction:rtl]" : "w-full h-8"} p-0 rounded-md cursor-pointer accent-green-600 yj-surface-concave`}
                 value={currValue}
                 min={min}
                 max={max}
@@ -109,7 +114,7 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
                 onBlur={onBlur}
             >
             </input>
-            {renderTickMarks(minValue, maxValue, stepValue)}
+            {!vertical && renderTickMarks(minValue, maxValue, stepValue)}
         </div>
         {showValueInput &&
             <RangeValueInput
@@ -164,6 +169,10 @@ interface Props
     // Whether the number the handle is standing on is written out beside the track. Shown unless the
     // caller says otherwise: dropping the readout is the exception, and one that has to be asked for.
     showValueInput?: boolean;
+    // Which way the track runs. Level unless the caller says otherwise: a slider standing upright is
+    // one kept to a narrow strip at the edge of the screen (see CameraZoomSlider), and carries no
+    // tick marks, which are laid out along a level track only.
+    orientation?: "horizontal" | "vertical";
     // How wide the track is, and whether it may shrink, are the caller's to say: a slider in a form
     // is given a width and holds it until the row runs out of room, while one sharing a row with
     // something that must stay whole gives way to it sooner. Only the height is fixed here, so

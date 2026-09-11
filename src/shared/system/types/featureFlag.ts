@@ -16,5 +16,4 @@ export enum FeatureFlag
     // play and edit mode are refused, and the controls that offer them are taken off screen with
     // them (see GameModeUtil).
     DisableGameModeTransition,
-    HideUserIdentityLabels,
 }

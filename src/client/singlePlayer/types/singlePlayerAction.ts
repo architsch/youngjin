@@ -20,6 +20,7 @@ type SinglePlayerAction =
     | {type: "ui_arrow", targetElementId: string, arrowBias: "center" | "left" | "right",
         arrowSide?: "above" | "below"}
     | {type: "ui_outline_rect", targetElementId: string}
+    | {type: "ui_outline_capsule", targetElementId: string, thicknessPx: SinglePlayerParam<number>}
     | {type: "gizmo_navigation_arrow", targetX: SinglePlayerParam<number>,
         targetZ: SinglePlayerParam<number>}
     | {type: "gizmo_downward_arrow", targetX: SinglePlayerParam<number>,

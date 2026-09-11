@@ -9,8 +9,6 @@ type PopupState =
     | { popupType: "authPrompt" }
     | { popupType: "confirm", params: ConfirmProps }
     | { popupType: "exitPrompt" }
-    | { popupType: "configureMyRoom" }
-    | { popupType: "configureHubRoom" }
     | { popupType: "myRoomWelcome" }
     | { popupType: "hubRoomWelcome" }
     | { popupType: "imageChooser"; params: ImageChooserProps }

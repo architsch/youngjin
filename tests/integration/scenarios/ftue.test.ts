@@ -349,16 +349,16 @@ describe("FTUE coach marks (client)", () => {
         // UI that scheduled it has to take it down explicitly once the control is beyond use.
         // Otherwise the mark would come straight back with the control, skipping the wait that
         // earned it the first time.
-        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings, "configureMyRoomButton", "Your room.");
+        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings, "roomSettingsButton", "Your room.");
         FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.MyRoomSettings);
 
         expect(screenCoachMarksObservable.peek()).toEqual([]);
 
         // Still unexperienced, so the guidance is not lost — it is offered afresh next time.
         expect(FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings)).toBe(false);
-        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings, "configureMyRoomButton", "Your room.");
+        FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings, "roomSettingsButton", "Your room.");
         expect(screenCoachMarksObservable.peek().map(mark => mark.targetElementId))
-            .toEqual(["configureMyRoomButton"]);
+            .toEqual(["roomSettingsButton"]);
     });
 
     it("shows a mark without recording anything, so the control still has to be used", () => {

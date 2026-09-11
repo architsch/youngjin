@@ -174,33 +174,24 @@ async function gameMode(page)
     return (await call(page, "context")).gameMode;
 }
 
-// Puts the app back into edit mode after something dropped it out.
+// Puts the app into edit mode, unless it is there already.
 //
-// Worth a helper rather than a line in the caller, because edit mode is not a place the app stays
-// put: it is held up by whatever is picked out, and letting that go ends it (see GameModeUtil). A
-// run that tries surfaces one after another lets a selection go every time it taps one it already
-// had, so falling out of the mode is an ordinary event on the way rather than a fault.
-//
-// There are two ways back in and they are not interchangeable. With something already picked out the
-// app offers to open the mode on that, which keeps it; with nothing picked out the mode is entered
-// on the user's own character instead.
+// Worth a helper rather than a line in the caller, because a run moving from one scenario to the
+// next does not always know which mode the last one left it in, and nothing can be picked out until
+// it is in this one (see GameModeUtil). There is one way in — the game-mode switch in the top bar —
+// and the mode opens on the user's own character, whose panel coming up is the sign that the mode
+// arrived with a selection under it.
 async function ensureEditMode(page, timeout = 10_000)
 {
     if (await gameMode(page) === "edit")
         return false;
 
-    const resume = ui.locator(page, "startEditingButton");
-    if (await resume.count() > 0)
-        await resume.click({timeout});
-    else
-    {
-        await ui.locator(page, "editModeButton").click({timeout});
-        await page.locator("#customizePlayerOptions").waitFor({state: "visible", timeout});
-    }
+    await ui.locator(page, "gameModeToggleSwitch").click({timeout});
+    await page.locator("#customizePlayerOptions").waitFor({state: "visible", timeout});
 
     await sleep(300);
     if (await gameMode(page) !== "edit")
-        throw new Error("Could not get back into edit mode after the selection was let go of.");
+        throw new Error("Could not get into edit mode.");
     return true;
 }
 

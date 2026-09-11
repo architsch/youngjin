@@ -1,8 +1,5 @@
 import { useMemo, useState } from "react";
 import Text from "../basic/text";
-import IconButton from "../input/iconButton";
-import CloseIcon from "../../svg/icons/closeIcon";
-import useMouseDragScroll from "../../util/mouseDragScroll";
 import useWorldTapDismiss from "../../util/worldTapDismiss";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
@@ -12,10 +9,11 @@ import StepperInput from "../input/stepperInput";
 import PaletteColorInput from "../input/paletteColorInput";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import createDeferredSave from "../../util/deferredSave";
+import ScrollPanel from "./scrollPanel";
 
 //------------------------------------------------------------------------
-// This form finishes a door, by editing the three colours its appearance is made of — the timber,
-// the plate its name is written on, and the knob. It works the way the player-customization form
+// This panel finishes a door, by editing the three colours its appearance is made of — the timber,
+// the plate its name is written on, and the knob. It works the way the player-customization panel
 // does: the params the door is composed of are edited in place and the door rebuilt from them, so
 // what the user sees is the door itself changing rather than a preview of it.
 //
@@ -31,14 +29,13 @@ const colorSlots: {title: string, key: keyof DoorCompositionParams["colors"]}[] 
     {title: "Knob", key: "knob"},
 ];
 
-export default function CustomizeDoorForm({ selection, onClose }: Props)
+export default function CustomizeDoorPanel({ selection, onClose }: Props)
 {
-    const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const [editCount, setEditCount] = useState(0);
 
-    // A tap on the room puts this bar away and goes no further. Left to reach the room, that tap
-    // would drop the very door being painted — taking the bar with it, since the bar belongs to the
-    // selection — so putting the bar down would quietly cost the user his place as well.
+    // A tap on the room puts this panel away and goes no further. Left to reach the room, that tap
+    // would drop the very door being painted — taking the panel with it, since the panel belongs to
+    // the selection — so putting the panel down would quietly cost the user his place as well.
     useWorldTapDismiss(onClose);
 
     // Re-read 'params' whenever 'editCount' changes.
@@ -69,40 +66,32 @@ export default function CustomizeDoorForm({ selection, onClose }: Props)
         p.colors.knob = {...scheme.knob};
     });
 
-    // The close button stands above the panel rather than inside it, so the panel is exactly as tall
-    // as the controls it holds — a slab of background reaching up past them to enclose a button reads
-    // as a panel with a gap in it.
-    return <div className="m-2 flex flex-col gap-1 items-start">
-        <IconButton icon={<CloseIcon/>} size="sm" onClick={onClose}/>
-        <div id="customizeDoorOptions" className="p-2 flex flex-col gap-1 max-h-[30vh] w-full bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex">
-            <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
-                <div className="flex flex-col items-center gap-1 shrink-0">
-                    <Text content="Presets" size="sm"/>
-                    <StepperInput
-                        currValue={findMatchingScheme(params)}
-                        numValues={DoorCompositionConstants.colorSchemes.length}
-                        setValue={applyScheme}
+    return <ScrollPanel id="customizeDoorOptions" onClose={onClose} additionalClassNames="m-2">
+        <div className="flex flex-col items-center gap-1 shrink-0">
+            <Text content="Presets" size="sm"/>
+            <StepperInput
+                currValue={findMatchingScheme(params)}
+                numValues={DoorCompositionConstants.colorSchemes.length}
+                setValue={applyScheme}
+            />
+        </div>
+        <div className="w-px self-stretch shrink-0 bg-gray-500"/>
+        {colorSlots.map((slot, slotIndex) =>
+            <div key={"color-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
+                <div className="flex flex-row items-center gap-1 shrink-0">
+                    <Text content={slot.title} size="sm"/>
+                    <PaletteColorInput
+                        paletteName={COLOR_PALETTE_NAME}
+                        currValue={ColorUtil.rgbToPaletteIndex(COLOR_PALETTE_NAME, params.colors[slot.key])}
+                        setColorIndex={(index: number) => applyEdit(
+                            (p) => p.colors[slot.key] = ColorUtil.paletteIndexToRGB(COLOR_PALETTE_NAME, index))}
                     />
                 </div>
-                <div className="w-px self-stretch bg-gray-500"/>
-                {colorSlots.map((slot, slotIndex) =>
-                    <div key={"color-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
-                        <div className="flex flex-row items-center gap-1 shrink-0">
-                            <Text content={slot.title} size="sm"/>
-                            <PaletteColorInput
-                                paletteName={COLOR_PALETTE_NAME}
-                                currValue={ColorUtil.rgbToPaletteIndex(COLOR_PALETTE_NAME, params.colors[slot.key])}
-                                setColorIndex={(index: number) => applyEdit(
-                                    (p) => p.colors[slot.key] = ColorUtil.paletteIndexToRGB(COLOR_PALETTE_NAME, index))}
-                            />
-                        </div>
-                        {slotIndex < colorSlots.length - 1 &&
-                            <div className="w-px self-stretch bg-gray-500"/>}
-                    </div>
-                )}
+                {slotIndex < colorSlots.length - 1 &&
+                    <div className="w-px self-stretch bg-gray-500"/>}
             </div>
-        </div>
-    </div>;
+        )}
+    </ScrollPanel>;
 }
 
 // Which of the authored schemes the door is currently wearing, or the first one if it is wearing a
@@ -145,7 +134,7 @@ function doForDoor(selection: ObjectSelection, action: (composer: InstancedMeshC
     const composer = selection.gameObject.components.instancedMeshComposer as InstancedMeshComposer;
     if (!composer)
     {
-        console.error(`CustomizeDoorForm :: The selected door has no composer`);
+        console.error(`CustomizeDoorPanel :: The selected door has no composer`);
         return undefined;
     }
     return action(composer);

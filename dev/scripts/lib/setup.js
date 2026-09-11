@@ -303,7 +303,7 @@ const removeObject = (page, objectId) => callSandbox(page, "removeObject", objec
  * to give. The list replaces whatever the room holds, and what comes back is what it now holds;
  * called with nothing it only reports.
  *
- * **The red outlines are drawn in edit mode only.** Lay the zones, then `ctx.clickId("editModeButton")`
+ * **The red outlines are drawn in edit mode only.** Lay the zones, then `ctx.clickId("gameModeToggleSwitch")`
  * to put them on screen — the sandbox's camera is free of the selection, so the frame the shot was
  * composed in survives entering the mode.
  */

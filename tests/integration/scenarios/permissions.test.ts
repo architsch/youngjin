@@ -2,17 +2,18 @@
  * Scenario tests: Permission enforcement
  *
  * Covers:
- * - A visitor cannot edit voxels in a Regular room
- * - Its owner can
+ * - A visitor may edit voxels in somebody else's Regular room
+ * - Its owner can too
  * - All users can edit voxels in Hub rooms
- * - Rollback signals sent to unauthorized users
+ *
+ * Owning a room is not what lets anybody build in it. What a room's owner keeps to himself is drawn
+ * as restricted zones instead, which have scenarios of their own (restricted-zones.test.ts).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
-import { regularRoom, hubRoom, userAt } from "../helpers/scenarioPresets";
+import { regularRoom, hubRoom, userAt, setOwner } from "../helpers/scenarioPresets";
 import { getPendingSignals } from "../helpers/invariants";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
-import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 
 describe("permission scenarios", () => {
@@ -22,34 +23,26 @@ describe("permission scenarios", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("a user who owns no room may not edit a Regular room", async () => {
+    it("a visitor may build in somebody else's Regular room", async () => {
         await runScenario({
-            name: "visitor voxel add rejected",
-            rooms: [regularRoom("perm-room")],
-            users: [userAt(16, 16, "perm-room")],
-            assertions: ({ users }) => {
-                const room = ServerRoomManager.roomRuntimeMemories["perm-room"].room;
-                expect(RoomValidationUtil.canUserEditRoom(users[0].user, room)).toBe(false);
-            },
-        });
-    });
-
-    it("visitor voxel add gets rollback signal", async () => {
-        await runScenario({
-            name: "visitor voxel rollback",
-            rooms: [regularRoom("vis-rollback")],
-            users: [userAt(16, 16, "vis-rollback")],
+            name: "visitor voxel add accepted",
+            rooms: [regularRoom("vis-room")],
+            users: [
+                userAt(16, 16, "vis-room", { id: "the-owner" }),
+                userAt(20, 20, "vis-room", { id: "the-visitor" }),
+            ],
             actions: [
-                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+                setOwner(0, "vis-room"),
+                { type: "addVoxel", userIndex: 1, row: 10, col: 10, layer: 0 },
             ],
             assertions: ({ users }) => {
-                // Visitor's add should have been rejected with a rollback
-                const rollback = getPendingSignals(users[0], "removeVoxelBlockSignal");
-                expect(rollback.length).toBeGreaterThanOrEqual(1);
-                // Block should NOT be present
-                const roomMem = ServerRoomManager.roomRuntimeMemories["vis-rollback"];
+                // Taken rather than rolled back...
+                const rollback = getPendingSignals(users[1], "removeVoxelBlockSignal");
+                expect(rollback.length).toBe(0);
+                // ...and standing in the room.
+                const roomMem = ServerRoomManager.roomRuntimeMemories["vis-room"];
                 const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(false);
+                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
             },
         });
     });

@@ -6,7 +6,7 @@ export default function FormRangeInput({ label, currValue, setValue, min, max, s
     // The label keeps its width and the track gives way, so that a row too wide for the form is
     // narrowed rather than broken across two lines (see RangeInput).
     return <div className="flex flex-row items-center gap-1 min-w-0">
-        <Text content={label} additionalClassNames="shrink-0"/>
+        <Text content={label} size="sm" additionalClassNames="shrink-0"/>
         <RangeInput
             currValue={currValue}
             setValue={setValue}

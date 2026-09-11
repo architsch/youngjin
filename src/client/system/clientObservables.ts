@@ -99,6 +99,12 @@ export const screenArrowTargetObservable = new Observable<{targetElementId: stri
 // The DOM element id that the 2D on-screen rectangular outline should surround, or null to hide it.
 export const screenOutlineRectTargetObservable = new Observable<string | null>(null);
 
+// The DOM element id that the 2D on-screen capsule-shaped outline should surround, or null to hide
+// it. "thicknessPx" is how heavy a line it is drawn with: a control shaped like a capsule tends to be
+// a small one, which the rectangular outline's heavy line would swamp.
+export const screenOutlineCapsuleTargetObservable = new Observable<{targetElementId: string,
+    thicknessPx: number} | null>(null);
+
 // Every coach mark (a short message pointing at a UI element, identified by its DOM element id)
 // that is currently on screen. Several may be up at once, so a mark appearing joins this list
 // instead of replacing it — a mark cut short by a newer one would be guidance the user never got

@@ -256,22 +256,24 @@ async function runPlan(plan)
                 {
                     // Edit mode opens on the user's own character, so the character's own controls
                     // coming up is the client-visible proof that the mode arrived with a selection
-                    // under it — a mode standing over nothing would still show its own way out.
-                    await page.locator("#editModeButton").click({ timeout: action.timeout || 15_000 });
+                    // under it — the switch alone would read "Edit" over a mode standing on nothing.
+                    await page.locator("#gameModeToggleSwitch").click({ timeout: action.timeout || 15_000 });
                     await page.locator("#customizePlayerOptions")
                         .waitFor({ state: "visible", timeout: 15_000 });
-                    record.exitButtonShown = await page.locator("#modeExitButton").isVisible();
+                    record.switchShowsEdit =
+                        await page.locator("#gameModeToggleSwitch").getAttribute("aria-checked") === "true";
                     break;
                 }
 
                 case "exitEditMode":
                 {
-                    await page.locator("#modeExitButton").click({ timeout: action.timeout || 15_000 });
+                    await page.locator("#gameModeToggleSwitch").click({ timeout: action.timeout || 15_000 });
                     await page.locator("#customizePlayerOptions")
                         .waitFor({ state: "hidden", timeout: 15_000 });
-                    // The mode gives the top bar back to the identity controls on its way out, so
-                    // the way back in returning is what says the mode really ended.
-                    record.editModeButtonShown = await page.locator("#editModeButton").isVisible();
+                    // The switch standing on "Play" again is what says the mode really ended, rather
+                    // than the character's panel merely having gone.
+                    record.switchShowsEdit =
+                        await page.locator("#gameModeToggleSwitch").getAttribute("aria-checked") === "true";
                     break;
                 }
 

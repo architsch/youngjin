@@ -72,15 +72,8 @@ export default abstract class GameObject
 
     canBeSelected(selectionPoint: THREE.Vector3): boolean
     {
-        if (!GameModeUtil.isInEditMode())
+        if (!this.isSelectableClick(selectionPoint))
             return false;
-
-        if (selectionPoint)
-        {
-            GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
-            if (selectionPoint.distanceTo(cameraPosTemp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-                return false;
-        }
 
         const selectionConfig = ObjectTypeClientConfigMap.getConfigByIndex(
             this.params.objectTypeIndex).selection;
@@ -92,6 +85,23 @@ export default abstract class GameObject
             return false;
 
         return selectionConfig.canBeSelectedByUserInEditMode(this, App.getUser(), room);
+    }
+
+    // What every click that picks anything out has to be, whatever it lands on — an object, or the
+    // face of a voxel (see VoxelGameObject): made in edit mode, since nothing is picked out in play
+    // mode (see GameModeUtil), and within the user's reach (see WorldSpaceSelectionUtil).
+    protected isSelectableClick(selectionPoint: THREE.Vector3): boolean
+    {
+        if (!GameModeUtil.isInEditMode())
+            return false;
+
+        if (selectionPoint)
+        {
+            GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
+            if (selectionPoint.distanceTo(cameraPosTemp) > WorldSpaceSelectionUtil.getMaxSelectDist())
+                return false;
+        }
+        return true;
     }
 
     // Callback functions which must be overriden by subclasses

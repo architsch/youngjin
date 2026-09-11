@@ -51,8 +51,8 @@ import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import { clientFeatureFlagsObservable, roomChangedObservable, voxelQuadSelectionObservable }
-    from "../../../src/client/system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable,
+    voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
@@ -110,6 +110,9 @@ beforeEach(() => {
 
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableVoxelQuadSelectionChange);
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableAllSelectionChange);
+    // Every interruption walked here happens to a selection, and selections are made in edit mode
+    // alone (see GameModeUtil).
+    gameModeObservable.set("edit");
     voxelQuadSelectionObservable.set(null);
     // The room these tests use is a hub, which everyone may build in, so who is asking is not what
     // any of them turns on — but somebody has to be, since every edit is checked against a person.

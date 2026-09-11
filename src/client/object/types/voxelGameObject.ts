@@ -80,15 +80,19 @@ export default class VoxelGameObject extends GameObject
     // hit by the user's pointer input. Which quad that instance is drawing has to be looked up,
     // since an instance is lent to whichever quad is on show rather than belonging to one
     // (see VoxelQuadInstanceUtil).
+    //
+    // A voxel is never picked out as an object (see VoxelObjectTypeClientConfig): what a click on one
+    // picks out is the face it landed on. So only what every click has to be is asked here, and not
+    // whether this kind of object lets the user take hold of one — which has no answer for a voxel.
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        if (this.canBeSelected(hitPoint))
-        {
-            const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
-            if (quadIndex < 0)
-                return; // The instance has been handed back since the ray was cast, so it draws nothing.
-            VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
-        }
+        if (!this.isSelectableClick(hitPoint))
+            return;
+
+        const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
+        if (quadIndex < 0)
+            return; // The instance has been handed back since the ray was cast, so it draws nothing.
+        VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
     }
 
     getVoxel(): Voxel

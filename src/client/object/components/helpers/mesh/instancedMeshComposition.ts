@@ -50,10 +50,10 @@ export default class InstancedMeshComposition
     }
 
     // Both the params and the parts are emptied and refilled in place rather than replaced, so that
-    // whoever is already holding on to either of them goes on holding the live composition. A form
-    // editing the params directly (see CustomizePlayerForm) is what this is for: a composition is
+    // whoever is already holding on to either of them goes on holding the live composition. A panel
+    // editing the params directly (see CustomizePlayerPanel) is what this is for: a composition is
     // reloaded here whenever it is saved, since the save writes it to the object's metadata and
-    // comes straight back as a metadata change, and swapping the object out from under such a form
+    // comes straight back as a metadata change, and swapping the object out from under such a panel
     // would leave its next edit written to a copy nothing reads any more.
     loadFromMetadata(gameObject: GameObject)
     {

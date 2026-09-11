@@ -197,7 +197,8 @@ showed that the game works.
 Two consequences a caller has to know:
 
 - The orbit belongs to edit mode, and so do the editing tools. In play mode the camera sits at the
-  player's eye, and a wall face offers only "Start Editing".
+  player's eye and nothing can be picked out at all; the game-mode switch in the top bar is the only
+  way into the mode.
 - In a multiplayer room the server keeps its own copy of the player's position and sweeps every
   reported move through collision from *its* last known point. A placement is exact on the client
   that made it, and the server's copy stops at the first wall between — so it belongs to composing a

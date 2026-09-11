@@ -1,10 +1,10 @@
 # Player Customization System
 
-Reference: @src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec.ts , @src/shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams.ts , @src/shared/graphics/mesh/composition/types/compositionBuilder/playerCompositionBuilder.ts , @src/client/object/types/playerGameObject.ts , @src/client/object/components/instancedMeshComposer.ts , @src/client/ui/components/form/customizePlayerForm.tsx
+Reference: @src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec.ts , @src/shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams.ts , @src/shared/graphics/mesh/composition/types/compositionBuilder/playerCompositionBuilder.ts , @src/client/object/types/playerGameObject.ts , @src/client/object/components/instancedMeshComposer.ts , @src/client/ui/components/panel/customizePlayerPanel.tsx
 
 ## Overview
 
-Each user is able to customize the visual appearance of his/her own player character, by adjusting a list of parameters in the in-game UI (see `customizePlayerForm.tsx`). That form is what the character being *selected* looks like: it is on screen for exactly as long as the user has his own character picked out, which is where edit mode begins (see [game_mode.md](../gameplay/game_mode.md)) and what the user returns to by clicking his own body. The camera orbits the character throughout, so the user can watch from any side what he is changing.
+Each user is able to customize the visual appearance of his/her own player character, by adjusting a list of parameters in the in-game UI (see `customizePlayerPanel.tsx`). That panel is what the character being *selected* looks like: it is on screen for exactly as long as the user has his own character picked out, which is where edit mode begins (see [game_mode.md](../gameplay/game_mode.md)) and what the user returns to by clicking his own body. The camera orbits the character throughout, so the user can watch from any side what he is changing.
 
 ## Underlying Logic
 

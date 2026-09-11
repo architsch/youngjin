@@ -241,7 +241,7 @@ click, selection and edit a real gesture, because those are what the playtest is
 
 Two limits on `place` worth stating in the plan rather than discovering:
 
-- **The tools live inside edit mode.** In play mode a wall face offers only "Start Editing";
+- **The tools live inside edit mode.** In play mode nothing can be picked out at all, and
   `addDoorButton` and the block tools do not exist until the mode does, so `clickSurfaceUntilEnabled`
   waiting on one from play mode will try every surface and report that no wall would take a door.
   `ensureEditMode` first.

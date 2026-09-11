@@ -1,11 +1,10 @@
 /**
  * Scenario tests: play mode vs. edit mode
  *
- * Clicking something in the room means two different things depending on which of the two modes the
- * user is in. In play mode it is a way of looking at what was clicked and nothing more: the camera
+ * Nothing in the room is picked out in play mode: a click on it is a click on the room, and the camera
  * stays at the player's eye. Edit mode is entered deliberately, begins on the user's own character,
- * and is the only mode in which a selection takes the camera into an orbit around it. These tests
- * walk the ways into and out of that mode, and the rules that only hold inside it.
+ * and is where things are picked out — and where a selection takes the camera into an orbit around
+ * it. These tests walk the ways into and out of that mode, and the rules that hold inside it.
  *
  * The logic under test is client-side, so the client modules that need a browser are stubbed out
  * and everything else — room generation, the selection modules, the framing rules — runs for real.
@@ -58,14 +57,14 @@ vi.mock("../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineArrow
     },
 }));
 
-// Only what a click on a block asks of it, on its way to the permission check under test.
+// Imported by the modules under test, none of which asks anything of it here that needs a game
+// running behind it.
 vi.mock("../../../src/client/object/clientObjectManager", () => ({
     default: { getMyPlayer: vi.fn(), getObjectById: vi.fn() },
 }));
 
 import * as THREE from "three";
 import App from "../../../src/client/app";
-import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import GameObject from "../../../src/client/object/types/gameObject";
 import VoxelGameObject from "../../../src/client/object/types/voxelGameObject";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
@@ -78,10 +77,11 @@ import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { COLLISION_LAYER_MIN } from "../../../src/shared/system/sharedConstants";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { createRoom, floorQuadIndexOf, voxelAt } from "../helpers/selectionHarness";
+import { createRoom, floorQuadIndexOf, isQuadVisible, quadIndexOf, voxelAt } from "../helpers/selectionHarness";
 import { createMockUser } from "../helpers/mockUser";
 import VoxelQuadInstanceUtil from "../../../src/client/voxel/util/voxelQuadInstanceUtil";
 
@@ -115,8 +115,8 @@ function selectQuad(row: number, col: number, quadIndex: number): boolean
 
 /**
  * A click that actually lands on the block in the room, rather than the selection it ordinarily
- * leads to. Whether the user may edit this room at all is asked here, at the point of contact, so
- * these are the only tests that have to go the whole way round.
+ * leads to. Everything a click has to be before it picks anything out is asked on the way, which is
+ * what the tests of play mode, and of whose room it is, turn on.
  */
 function clickVoxel(row: number, col: number, quadIndex: number): void
 {
@@ -128,9 +128,11 @@ function clickVoxel(row: number, col: number, quadIndex: number): void
     VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
     try
     {
-        VoxelGameObject.prototype.onClick.call(
-            { getVoxel: () => voxel } as unknown as VoxelGameObject,
-            instanceId, new THREE.Vector3(col + 0.5, 0, row + 0.5));
+        // The voxel's own class, standing on the voxel under test rather than on a spawned object,
+        // so that the click is asked exactly what a real one is.
+        const clicked = Object.assign(Object.create(VoxelGameObject.prototype),
+            { getVoxel: () => voxel }) as VoxelGameObject;
+        clicked.onClick(instanceId, new THREE.Vector3(col + 0.5, 0, row + 0.5));
     }
     finally
     {
@@ -154,8 +156,7 @@ beforeEach(() => {
     orbitCameraTargetOverrideObservable.set(null);
     notificationMessageObservable.set(null);
 
-    // A hub, which everyone may build in, so the room is not what any of these tests turns on.
-    // The ones that *are* about who may edit make their own room and their own user below.
+    // A hub, which belongs to nobody. The test about somebody else's room makes one of its own below.
     (App.getUser as Mock).mockReturnValue(userOwning(""));
     room = createRoom(ROOM_ID);
     (App.getCurrentRoom as Mock).mockReturnValue(room);
@@ -163,22 +164,21 @@ beforeEach(() => {
 });
 
 describe("play mode", () => {
-    it("leaves the camera alone when the user selects a block", () => {
-        expect(selectQuad(10, 10, floorQuadIndexOf(10, 10))).toBe(true);
+    it("picks nothing out when the user clicks a block", () => {
+        clickVoxel(10, 10, floorQuadIndexOf(10, 10));
 
-        expect(VoxelQuadSelection.isSelected()).toBe(true);
+        expect(WorldSpaceSelectionUtil.isAnythingSelected()).toBe(false);
         expect(GameModeUtil.isInEditMode()).toBe(false);
         expect(cameraModeObservable.peek().type).toBe("firstPerson");
     });
 
-    it("keeps the selection when the user clicks the same block again", () => {
-        // A selection is given up by saying so, not by a click indistinguishable from the one that
-        // made it: the user reaching past a block and catching it again still has it picked out.
-        const quadIndex = floorQuadIndexOf(10, 10);
-        selectQuad(10, 10, quadIndex);
-        selectQuad(10, 10, quadIndex);
+    it("refuses a selection asked for by code", () => {
+        // What an edit re-picks once its answer has arrived, which can be after the mode was left.
+        // The click is turned away before it gets this far; this is the rest of the line.
+        expect(selectQuad(10, 10, floorQuadIndexOf(10, 10))).toBe(false);
+        expect(ObjectSelection.trySelect(makeCharacter())).toBe(false);
 
-        expect(VoxelQuadSelection.isSelected()).toBe(true);
+        expect(WorldSpaceSelectionUtil.isAnythingSelected()).toBe(false);
     });
 });
 
@@ -196,11 +196,10 @@ describe("entering edit mode", () => {
         expect(mode.type == "orbit" && mode.target.center.y).toBe(0.5 * PLAYER_HEIGHT);
     });
 
-    it("opens for a user who may not edit the room, on his own character", () => {
+    it("opens in somebody else's room too, on the user's own character", () => {
         // The character is the user's own wherever he is standing, so the mode he changes it in is
-        // open to him in a room that is not his. (What that room is *made* of is another matter:
-        // the click that would pick a block out of it is what gets turned away — see below.)
-        // A hub is everyone's to build in, so this has to be a room with an owner behind it.
+        // open to him in a room that is not his. A hub is nobody's, so this has to be a room with an
+        // owner behind it.
         room = createRoom(`${ROOM_ID}-regular`, RoomTypeEnumMap.Regular);
         (App.getCurrentRoom as Mock).mockReturnValue(room);
         (App.getUser as Mock).mockReturnValue(userOwning(""));
@@ -212,29 +211,14 @@ describe("entering edit mode", () => {
         expect(cameraModeObservable.peek().type).toBe("orbit");
     });
 
-    it("turns away that user's click on the room itself, and says why", () => {
+    it("lets his click on a block in somebody else's room through", () => {
+        // Owning a room is no condition for picking out its blocks. What its owner keeps to himself
+        // is drawn as restricted zones, and a zone turns down the tools a selection opens rather
+        // than the click that made it.
         room = createRoom(`${ROOM_ID}-regular-click`, RoomTypeEnumMap.Regular);
         (App.getCurrentRoom as Mock).mockReturnValue(room);
-        (ClientObjectManager.getMyPlayer as Mock).mockReturnValue(makeCharacter());
+        (App.getVoxelQuads as Mock).mockReturnValue(room.voxelQuads);
         (App.getUser as Mock).mockReturnValue(userOwning(""));
-        GameModeUtil.enterEditMode(makeCharacter());
-        notificationMessageObservable.set(null);
-
-        clickVoxel(10, 10, floorQuadIndexOf(10, 10));
-
-        expect(VoxelQuadSelection.isSelected()).toBe(false);
-        expect(notificationMessageObservable.peek()).toContain("permission");
-        // Turned away, not thrown out: what he came into the mode for is still his.
-        expect(GameModeUtil.isInEditMode()).toBe(true);
-        expect(ObjectSelection.isSelected()).toBe(true);
-    });
-
-    it("lets the room owner's click on it through", () => {
-        const roomID = `${ROOM_ID}-regular-allowed`;
-        room = createRoom(roomID, RoomTypeEnumMap.Regular);
-        (App.getCurrentRoom as Mock).mockReturnValue(room);
-        (ClientObjectManager.getMyPlayer as Mock).mockReturnValue(makeCharacter());
-        (App.getUser as Mock).mockReturnValue(userOwning(roomID));
         GameModeUtil.enterEditMode(makeCharacter());
         notificationMessageObservable.set(null);
 
@@ -259,8 +243,8 @@ describe("entering edit mode", () => {
     });
 
     it("is not left by a second click on the block being edited", () => {
-        // The mode is left by saying so — the button that ends it, or the back gesture — and not by
-        // a click on the very thing being edited, which leaves that thing exactly where it is.
+        // The mode is left by saying so — the switch, or the back gesture — and not by a click on
+        // the very thing being edited, which leaves that thing exactly where it is.
         GameModeUtil.enterEditMode(makeCharacter());
         const quadIndex = floorQuadIndexOf(10, 10);
         selectQuad(10, 10, quadIndex);
@@ -280,6 +264,22 @@ describe("entering edit mode", () => {
 
         expect(ObjectSelection.isSelected()).toBe(true);
         expect(GameModeUtil.isInEditMode()).toBe(true);
+    });
+
+    it("leaves the current selection standing when asked for a quad nobody can see", () => {
+        // A request that finds nothing there to pick out is not the user giving up what he has.
+        GameModeUtil.enterEditMode(makeCharacter());
+        const floorQuadIndex = floorQuadIndexOf(10, 10);
+        selectQuad(10, 10, floorQuadIndex);
+
+        // The side of a block that is not there.
+        const hiddenQuadIndex = quadIndexOf(10, 10, "x", "+", COLLISION_LAYER_MIN);
+        expect(isQuadVisible(room, hiddenQuadIndex)).toBe(false);
+
+        expect(selectQuad(10, 10, hiddenQuadIndex)).toBe(false);
+        expect(selectQuad(10, 10, -1)).toBe(false);
+
+        expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(floorQuadIndex);
     });
 
     it("keeps the orbit through the gap left by a selection being replaced", () => {
@@ -325,14 +325,14 @@ describe("leaving edit mode", () => {
 
 describe("a scripted step holding the user in his mode", () => {
     // What a tutorial step does while it teaches what is inside a mode. The hold is on the crossing
-    // itself rather than on the button that offers it, so every way across has to answer to it —
-    // the back gesture goes through no button at all.
+    // itself rather than on the switch that offers it, so every way across has to answer to it —
+    // the back gesture goes through no control at all.
     it("keeps the way out shut", () => {
         GameModeUtil.enterEditMode(makeCharacter());
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
         clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableGameModeTransition);
 
-        GameModeUtil.exitEditMode(); // What the exit button and the back gesture both come down to.
+        GameModeUtil.exitEditMode(); // What the switch and the back gesture both come down to.
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
         expect(VoxelQuadSelection.isSelected()).toBe(true);

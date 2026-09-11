@@ -39,8 +39,4 @@ The room's restricted zones travel on this same path, but as the whole list rath
 The zones are stored with the room's voxels rather than beside them, so a client joining a room receives them as part of the room and only this incremental change travels on its own. A zone edit marks the room to be saved by the ordinary periodic save rather than writing it out immediately.
 
 ## Permission Enforcement
-Every voxel operation is checked against who is asking and which room it is:
-- **Hub rooms:** any user may edit voxels, since a hub is the game's own thoroughfare.
-- **Regular rooms:** only the room's owner may edit; anybody else's attempts are rejected and rolled back.
-
-On top of that, an edit landing inside one of the room's restricted zones is refused unless the user is the one the room answers to. Both questions are about the person rather than about a standing handed out inside the room, which is why every entry point here is told who is asking.
+Every voxel operation is checked against who is asking and where the edit lands. Any user may edit the voxels of a Hub and of a Regular room alike — owning a room is not what lets somebody build in it — except inside one of the room's restricted zones, where an edit is refused and rolled back unless the user is the one the room answers to. That question is about the person rather than about a standing handed out inside the room, which is why every entry point here is told who is asking.

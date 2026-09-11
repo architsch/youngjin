@@ -1,6 +1,6 @@
 # Restricted Zones
 
-Reference: @src/shared/voxel/types/restrictedZone.ts , @src/shared/voxel/util/restrictedZoneUtil.ts , @src/shared/room/util/roomValidationUtil.ts , @src/client/ui/components/input/restrictedZonesSection.tsx , @src/client/voxel/util/restrictedZoneOutlineUtil.ts
+Reference: @src/shared/voxel/types/restrictedZone.ts , @src/shared/voxel/util/restrictedZoneUtil.ts , @src/shared/room/util/roomValidationUtil.ts , @src/client/ui/components/panel/restrictedZonesPanel.tsx , @src/client/voxel/util/restrictedZoneOutlineUtil.ts
 
 ## Why they exist
 
@@ -67,7 +67,7 @@ same grounds.
 
 **Picking something out.** A zone forbids editing and nothing else, and selecting a face or an object
 is not an edit — it is how the user finds out what the thing is. Edit mode itself is likewise open to
-anybody who may edit the room at all, whatever the selection happens to be standing in.
+anybody, whatever the selection happens to be standing in.
 
 What a zone withholds is answered by the tools a selection opens, each of which turns itself down on
 its own: the buttons that would change the block work grey out, and so do the strip of textures that
@@ -91,7 +91,7 @@ to draw one, rather than by a second thing laid over the room. Everybody in edit
 not only the superuser whose zones they are — the person a zone applies to is precisely the one who
 needs to see where it is.
 
-**On the room's plan**, in the room's settings form, where the superuser draws them: a grid of the
+**On the room's plan**, raised from the room's settings, where the superuser draws them: a grid of the
 room seen from above, with each zone as a rectangle that is dragged about by its middle and resized by
 handles on its edges, the way a selection is dragged around an image editor. Every edge snaps to a
 voxel, and the room is told only once the user lets go.

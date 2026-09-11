@@ -270,25 +270,25 @@ A wall attachment stands exactly on the boundary between the wall and the room, 
 | does not blind a viewpoint pushed into a wall | A camera inside a wall block still sees the room, the block it starts in being no more in the way than the one it ends in |
 | sees straight across an open floor | An unobstructed line the width of the room is not blocked |
 
-## Game Mode (`game-mode.test.ts`) — 21 tests
+## Game Mode (`game-mode.test.ts`) — 20 tests
 
-Clicking something in the room means one thing in play mode and another in edit mode. See [game_mode.md](../../gameplay/game_mode.md) for the behavior under test.
+Nothing is picked out in play mode; edit mode is entered deliberately, and is where things are picked out and changed. See [game_mode.md](../../gameplay/game_mode.md) for the behavior under test.
 
 | Test | What it verifies |
 |------|-----------------|
-| leaves the camera alone when the user selects a block | A selection made in play mode neither starts edit mode nor takes the camera out of the first-person view |
-| keeps the selection when the user clicks the same block again | Clicking the current selection again never drops it, in either mode |
+| picks nothing out when the user clicks a block | A click in play mode selects nothing, and the camera stays at the player's eye |
+| refuses a selection asked for by code | Outside edit mode even a selection the game asks for by itself is refused, for a block and for an object alike |
 | selects the user's own character and orbits it | Entering edit mode picks out the character and frames it by its own size alone, with no minimum distance under it |
-| opens for a user who may not edit the room, on his own character | A visitor to someone else's room still gets the mode and his own character in it: the character is his wherever he is standing |
-| turns away that user's click on the room itself, and says why | A click on a block in a room he may not edit selects nothing and raises a notification, while leaving him the mode and the character he came into it for |
-| lets the room owner's click on it through | The same click by the room's owner selects the block and raises nothing |
+| opens in somebody else's room too, on the user's own character | A visitor to someone else's room gets the mode and his own character in it: the character is his wherever he is standing |
+| lets his click on a block in somebody else's room through | Owning a room is no condition for picking out its blocks: the visitor's click selects the block and raises nothing |
 | carries the selection over to a block the user picks next | Picking a block inside the mode drops the character, keeps the mode, and re-frames the camera — this time with a minimum distance, so the block is seen among its surroundings |
 | is not left by a second click on the block being edited | Clicking the current selection again leaves it exactly where it is: the block stays picked out, the mode stands, and the camera keeps its orbit |
 | is not left by a second click on the user's own character | The same holds for the character, which is what the mode opens on and which opening it goes through the same call to pick out |
+| leaves the current selection standing when asked for a quad nobody can see | A request for a hidden or nonexistent face selects nothing and drops nothing |
 | keeps the orbit through the gap left by a selection being replaced | A selection dropped on the way to another one (what an edit does as it moves the selection onto what it just built) does not read as the mode having ended |
 | drops the selection and hands the camera back | Leaving the mode clears every selection and returns the camera to the first-person view |
 | takes a selection a scripted step had pinned along with it | A pinned selection is pinned for the sake of what is taught inside the mode, so leaving the mode drops it too rather than being blocked by it |
-| keeps the way out shut | A step holding the user in his mode refuses the crossing itself — what the exit button and the back gesture both come down to — leaving mode, selection, and orbit as they were |
+| keeps the way out shut | A step holding the user in his mode refuses the crossing itself — what the switch and the back gesture both come down to — leaving mode, selection, and orbit as they were |
 | keeps the way in shut | The same hold refuses the crossing the other way: edit mode does not open, and nothing is picked out |
 | lets the way out through again once it lets go | The step that teaches the way out opens it for itself, and the selection it had pinned meanwhile is no obstacle |
 | holds the camera on its own place while the user's selection stands | A step that points the camera somewhere frames that place, and picks nothing out for the user — his own selection is untouched |
@@ -422,12 +422,11 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | chat message multicast reaches room participants | `setObjectMetadataSignal` reaches room participants |
 | desync transform signal reaches ALL participants including sender | A rejected transform broadcasts an authoritative correction to everyone, sender included |
 
-## Permissions (`permissions.test.ts`) — 4 tests
+## Permissions (`permissions.test.ts`) — 3 tests
 
 | Test | What it verifies |
 |------|-----------------|
-| a user who owns no room may not edit a Regular room | A Regular room answers to one person, and everybody else is only visiting |
-| visitor voxel add gets rollback signal | An unauthorized add triggers a `removeVoxelBlockSignal` |
+| a visitor may build in somebody else's Regular room | Owning a Regular room is no condition for building in it: a visitor's add is taken rather than rolled back |
 | all users can edit voxels in a Hub room | Any user can edit voxels in Hub rooms |
 | owner can edit voxels in their own Regular room | The room's owner builds in it freely |
 
@@ -453,18 +452,18 @@ The stretches of a room only a superuser may edit. Asserted as the *server* enfo
 | carries a room's zones through a save and a reload | Zones are stored with the room's voxels and come back off storage unchanged |
 | keeps the question of who is asking out of a single-player room | Nobody else is in it, so there is nobody a zone could be protecting the room from |
 
-## Extended Permissions (`permissions-extended.test.ts`) — 10 tests
+## Extended Permissions (`permissions-extended.test.ts`) — 3 tests
 
-### Voxel Operations × Ownership Matrix (8 tests)
-Parameterized over 4 voxel operations (addVoxel, removeVoxel, moveVoxel, setVoxelTexture) and the two answers a Regular room has:
-- Its owner succeeds
-- Anybody else is rejected (gets a rollback)
+What these guard against is ownership creeping back in as a condition on any one voxel operation: what a room's owner keeps to himself is drawn as restricted zones instead.
+
+### Regular Room Permissions (1 test)
+- A visitor can perform all voxel operations (add, remove, move, setTexture) in somebody else's Regular room, with no rollback of any of them
 
 ### Hub Permissions (1 test)
-- Anybody can perform all voxel operations (add, remove, move, setTexture) in Hub rooms
+- Anybody can perform all voxel operations (add, remove, move, setTexture) in Hub rooms, with no rollback of any of them
 
 ### Cross-Room Behavior (1 test)
-- Owning one Regular room grants nothing in another
+- Owning one Regular room is no condition for editing another
 
 ## State Persistence (`state-persistence.test.ts`) — 9 tests
 
@@ -585,14 +584,14 @@ room in the game.
 
 | Test | What it verifies |
 |------|-----------------|
-| owner enters their own room and may edit it | The room is his to build in; participant count is correct |
+| owner enters their own room and owns it | The room answers to him; participant count is correct |
 | owner exits their own room and room unloads | The room unloads and state is saved with the correct `lastRoomID` |
 
 ### Visitor Enter/Exit
 
 | Test | What it verifies |
 |------|-----------------|
-| visitor enters another user's room and may not edit it | Both users present; the room is its owner's to build in and nobody else's |
+| visitor enters another user's room, which stays its owner's | Both users present; the room answers to its owner and not to the visitor |
 | visitor exits another user's room while owner stays | Room stays loaded; participant count decremented; visitor state saved |
 
 ### Room Switching

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { clientFeatureFlagsObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -132,20 +132,17 @@ export default class VoxelQuadSelection
             return false;
         }
 
-        // If the quadIndex doesn't even make sense, just unselect.
-        if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
-        {
-            voxelQuadSelectionObservable.set(null);
+        // Nothing is picked out outside edit mode, as for an object (see ObjectSelection.trySelect).
+        if (gameModeObservable.peek() != "edit")
             return false;
-        }
 
-        // If the quad is hidden, just unselect.
-        const quad = voxel.quadsMem.quads[quadIndex];
-        if ((quad & 0b10000000) == 0)
-        {
-            voxelQuadSelectionObservable.set(null);
+        // A quad that does not exist, or that nobody can see, is nothing to pick out — and asking for
+        // one is no reason to drop what the user already has: a selection is given up by saying so,
+        // never by a request that found nothing there.
+        if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
             return false;
-        }
+        if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
+            return false;
 
         // Clicking what is already picked out leaves it picked out, as it does for an object (see
         // ObjectSelection.trySelect). A selection is given up by saying so — the way out of the mode

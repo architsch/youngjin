@@ -6,7 +6,7 @@ import MagnifierPlusIcon from "../../../svg/icons/magnifierPlusIcon";
 import { cameraModeObservable, orbitCameraZoomObservable } from "../../../../system/clientObservables";
 
 // Fine enough that the view answers the handle continuously rather than in visible jumps, and
-// coarse enough that a step of it is still a step: the track is a couple of finger-widths wide.
+// coarse enough that a step of it is still a step: the track is a couple of finger-widths long.
 const zoomStep = 0.01;
 
 //------------------------------------------------------------------------
@@ -21,9 +21,18 @@ const zoomStep = 0.01;
 // keeps the two in step: a pinch or a wheel notch moves the handle exactly as if the user had
 // dragged it there, and dragging it does exactly what a gesture would have done.
 //
-// It appears only while the camera is actually orbiting. Selecting something puts a user who may
-// edit the room into an orbit around it, but leaves everyone else in the first-person view, where
-// there is no zoom to speak of and a control offering one would be a lie.
+// It appears only while the camera is actually orbiting, which is to say in edit mode: the
+// first-person view of play mode has no zoom to speak of, and a control offering one would be a lie.
+//
+// It stands upright against the right-hand edge of the screen, with nothing behind it. Edit mode is
+// spent looking at the room, and this is on screen for the whole of it, so it keeps to the narrowest
+// strip it can — no wider than its handle, at the edge where it takes the least of a portrait phone's
+// view. With no tray to stand out against, the magnifiers carry a dark outline of their own to stay
+// legible over whatever the room behind them is.
+//
+// The track carries no number beside it. Zoom is the one setting here that is read off the view
+// rather than off a figure — the user zooms until the room looks right, and a number saying how far
+// along the travel that landed is not something anyone would type, note down or tell somebody.
 //------------------------------------------------------------------------
 
 export default function CameraZoomSlider()
@@ -44,18 +53,9 @@ export default function CameraZoomSlider()
     if (!isOrbiting)
         return null;
 
-    // The tray stands as tall as a medium button, since the button ending the mode is what it shares
-    // its row with and two controls of unequal height read as two unrelated things. It is also the
-    // one thing in that row allowed to shrink (min-w-0 lets it fall below the width of what it
-    // holds, which flexbox otherwise refuses), and it spends that shrinking on the track alone: the
-    // two magnifiers keep their size, so the control says what it is at every width it reaches.
-    //
-    // The track carries no number beside it. Zoom is the one setting here that is read off the view
-    // rather than off a figure — the user zooms until the room looks right, and a number saying how
-    // far along the travel that landed is not something anyone would type, note down or tell
-    // somebody. The magnifiers at the two ends already say which way is which.
-    return <div className="flex flex-row items-center gap-1.5 h-10 min-w-0 px-2 bg-gray-800 rounded-md pointer-events-auto yj-surface-convex">
-        <Icon icon={<MagnifierMinusIcon/>} size="sm" additionalClassNames="text-gray-300"/>
+    // Zooming in is at the top, since a track standing upright reads as "more" the higher it goes.
+    return <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 pointer-events-auto">
+        <Icon icon={<MagnifierPlusIcon/>} size="sm" additionalClassNames={ICON_CLASS_NAMES}/>
         <RangeInput
             currValue={zoomAmount.toString()}
             setValue={(value: string) => orbitCameraZoomObservable.set(Number(value))}
@@ -63,8 +63,12 @@ export default function CameraZoomSlider()
             max="1"
             step={zoomStep.toString()}
             showValueInput={false}
-            additionalClassNames="w-32"
+            orientation="vertical"
+            additionalClassNames="h-[min(40vh,12rem)]"
         />
-        <Icon icon={<MagnifierPlusIcon/>} size="sm" additionalClassNames="text-gray-300"/>
+        <Icon icon={<MagnifierMinusIcon/>} size="sm" additionalClassNames={ICON_CLASS_NAMES}/>
     </div>;
 }
+
+// Light, with a dark outline drawn all the way round it, the way the lettering over the scene is.
+const ICON_CLASS_NAMES = "text-gray-100 [filter:drop-shadow(0_0_1px_black)_drop-shadow(0_0_1px_black)]";

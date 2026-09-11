@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import Text from "../basic/text";
 import ClientObjectManager from "../../../object/clientObjectManager";
-import useMouseDragScroll from "../../util/mouseDragScroll";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
 import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
@@ -13,9 +12,10 @@ import ClientEventHistoryUtil from "../../../system/util/clientEventHistoryUtil"
 import ClientEvent from "../../../system/types/clientEvent";
 import { ClientEventType } from "../../../system/types/clientEventType";
 import createDeferredSave from "../../util/deferredSave";
+import ScrollPanel from "./scrollPanel";
 
 //------------------------------------------------------------------------
-// This form edits the player's composition by directly manipulating its
+// This panel edits the player's composition by directly manipulating its
 // PlayerCompositionParams object: each body part has a type (which selects
 // the part's shape variant) and a color. After every edit, the player's
 // parts are rebuilt from the params, which keeps every derived placement
@@ -34,9 +34,8 @@ const partSlots: {title: string, key: keyof PlayerCompositionParams["types"], bu
     {title: "Bottom", key: "bottom", builderName: "PlayerBottom"},
 ];
 
-export default function CustomizePlayerForm()
+export default function CustomizePlayerPanel()
 {
-    const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const [editCount, setEditCount] = useState(0);
 
     // Re-read 'params' whenever 'editCount' changes.
@@ -45,7 +44,7 @@ export default function CustomizePlayerForm()
         return null;
 
     // The edit is written to the params the player is composed of at this moment, rather than to
-    // the ones this render read. Nothing re-renders this form when the composition is reloaded from
+    // the ones this render read. Nothing re-renders this panel when the composition is reloaded from
     // the object's metadata, so the two are only the same object for as long as nobody has swapped
     // it (see InstancedMeshComposition), and an edit written to a params object the player is no
     // longer composed of is an edit the user never made.
@@ -60,37 +59,36 @@ export default function CustomizePlayerForm()
         setEditCount(prev => prev + 1);
     };
 
-    // This form is what the user's own character being selected looks like, so it neither moves the
-    // camera nor carries a close control of its own: the selection frames the character (see
-    // WorldSpaceSelectionUtil), and the top bar carries the button that ends edit mode.
-    return <div id="customizePlayerOptions" className="p-2 flex flex-col gap-2 max-h-[30vh] bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex">
-        <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full overflow-x-auto no-scrollbar">
-            {partSlots.map((slot, slotIndex) =>
-                <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
-                    <div className="flex flex-col items-center gap-1 shrink-0">
-                        <div className="flex flex-row items-center gap-1 shrink-0">
-                            <Text content={slot.title} size="sm"/>
-                            <PaletteColorInput
-                                paletteName="Player"
-                                currValue={ColorUtil.rgbToPaletteIndex("Player", params.colors[slot.key])}
-                                setColorIndex={(index: number) => applyEdit(
-                                    (p) => p.colors[slot.key] = ColorUtil.paletteIndexToRGB("Player", index))}
-                            />
-                        </div>
-                        <StepperInput
-                            currValue={params.types[slot.key]}
-                            numValues={PlayerCompositionConstants.numTypes[slot.key]}
-                            setValue={(value: number) => applyEdit((p) => p.types[slot.key] = value)}
-                            preview={<PartShapeIcon params={params}
-                                builderType={`${slot.builderName}_${params.types[slot.key]}`}/>}
+    // This panel is what the user's own character being selected looks like, so it neither moves the
+    // camera nor can be put away on its own: the selection frames the character (see
+    // WorldSpaceSelectionUtil), and what takes the panel away is the selection moving on — or edit
+    // mode itself ending, by the game-mode switch or the back gesture.
+    return <ScrollPanel id="customizePlayerOptions">
+        {partSlots.map((slot, slotIndex) =>
+            <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
+                <div className="flex flex-col items-center gap-1 shrink-0">
+                    <div className="flex flex-row items-center gap-1 shrink-0">
+                        <Text content={slot.title} size="sm"/>
+                        <PaletteColorInput
+                            paletteName="Player"
+                            currValue={ColorUtil.rgbToPaletteIndex("Player", params.colors[slot.key])}
+                            setColorIndex={(index: number) => applyEdit(
+                                (p) => p.colors[slot.key] = ColorUtil.paletteIndexToRGB("Player", index))}
                         />
                     </div>
-                    {slotIndex < partSlots.length - 1 &&
-                        <div className="w-px self-stretch bg-gray-500"/>}
+                    <StepperInput
+                        currValue={params.types[slot.key]}
+                        numValues={PlayerCompositionConstants.numTypes[slot.key]}
+                        setValue={(value: number) => applyEdit((p) => p.types[slot.key] = value)}
+                        preview={<PartShapeIcon params={params}
+                            builderType={`${slot.builderName}_${params.types[slot.key]}`}/>}
+                    />
                 </div>
-            )}
-        </div>
-    </div>;
+                {slotIndex < partSlots.length - 1 &&
+                    <div className="w-px self-stretch bg-gray-500"/>}
+            </div>
+        )}
+    </ScrollPanel>;
 }
 
 // Dressing a character is a run of small edits, each of which rewrites the whole composition, so
@@ -120,7 +118,7 @@ function doForMyPlayer(action: (composer: InstancedMeshComposer) => any)
     const myPlayer = ClientObjectManager.getMyPlayer();
     if (!myPlayer)
     {
-        console.error(`CustomizePlayerForm :: My player not found`);
+        console.error(`CustomizePlayerPanel :: My player not found`);
         return;
     }
     const instancedMeshComposer = myPlayer.components.instancedMeshComposer as InstancedMeshComposer;

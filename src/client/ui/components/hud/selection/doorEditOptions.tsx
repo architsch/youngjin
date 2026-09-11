@@ -22,7 +22,7 @@ import PopupUtil from "../../../util/popupUtil";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
-import CustomizeDoorForm from "../../form/customizeDoorForm";
+import CustomizeDoorPanel from "../../panel/customizeDoorPanel";
 import SelectionToolRow from "./selectionToolRow";
 
 // What an admin can do to the door he has picked out: take it down, name it, point it somewhere,
@@ -40,7 +40,7 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
     // column sized to its widest child would grow to fit it instead and leave them nothing to scroll
     // within.
     return <div className="flex flex-col gap-1 w-full">
-        {customizing && <CustomizeDoorForm
+        {customizing && <CustomizeDoorPanel
             selection={props.selection}
             onClose={() => setCustomizing(false)}
         />}

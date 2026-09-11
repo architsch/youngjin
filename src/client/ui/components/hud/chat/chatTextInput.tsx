@@ -59,7 +59,7 @@ export default function ChatTextInput({textInput, setTextInput}
         onCompositionEnd={onCompositionEnd}
         onFocus={onFocus}
         onBlur={onBlur}
-        placeholder="Your Message Here"
+        placeholder="Your Message"
         defaultValue={textInput}>
     </input>;
 }

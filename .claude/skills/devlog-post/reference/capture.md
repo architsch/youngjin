@@ -69,7 +69,7 @@ sandbox is generated empty each time — so `run()` can assume it starts from no
 | `shot(label, opts?)` | Settles the frame, then writes `<slug>-<label>.jpg`. `opts.selector` shoots one element; `opts.settleMs` waits longer first |
 | `setup.*` | **Builds the set and aims the camera.** The main working surface — see below |
 | `hideHUD()` / `showHUD()` | Takes the whole interface out of shot and gives it back. Called in almost every shot |
-| `clickId(id)` / `clickText(text)` | For the few visuals that only appear inside edit mode — `clickId("editModeButton")` enters it. The UI's controls are styled `div`s, not `<button>`s, so role-based locators find nothing |
+| `clickId(id)` / `clickText(text)` | For the few visuals that only appear inside edit mode — `clickId("gameModeToggleSwitch")` enters it. The UI's controls are styled `div`s, not `<button>`s, so role-based locators find nothing |
 | `describeUI()` | Everything currently visible that can be clicked or read, with its position |
 | `dismissPopups()` / `hideDebugUI()` | Both already done before `run()` starts; call again after something reopens one |
 | `sleep(ms)`, `page`, `log()` | The raw Playwright `Page` is there for anything the helpers do not cover |
@@ -129,7 +129,7 @@ anything with a block standing in front of it, naming the cells at fault.
 
 **A restricted zone's red outlines belong to edit mode.** The zones stand either way, but the lines
 over them are drawn only inside the mode — so that shot lays the zones and then calls
-`clickId("editModeButton")`. The sandbox camera is bound to no selection, so the frame stays exactly
+`clickId("gameModeToggleSwitch")`. The sandbox camera is bound to no selection, so the frame stays exactly
 where it was composed; `hideHUD()` afterwards, since the mode brings its own controls up.
 
 ## 2. A few shots, made to look different

@@ -69,8 +69,8 @@ module.exports = {
         // Everything that the post is actually about goes through a real gesture, aimed from what
         // the page reports rather than from a coordinate written down on a previous run.
 
-        // The editing tools exist only inside edit mode; in play mode a wall face offers only
-        // "Start Editing".
+        // The editing tools exist only inside edit mode; in play mode nothing can be picked out at
+        // all.
         await interact.ensureEditMode();
 
         // A face of wall that will actually take a picture, found by casting through the view.

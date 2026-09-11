@@ -216,8 +216,6 @@ const AutomationBridgeUtil =
                     },
                     gameMode: gameModeObservable.peek(),
                     isAdmin: user != undefined && RoomValidationUtil.userIsAdmin(user),
-                    canEditRoom: user != undefined && room != undefined &&
-                        RoomValidationUtil.canUserEditRoom(user, room),
                     canManageDoors: user != undefined && room != undefined &&
                         RoomValidationUtil.canUserManageDoors(user, room),
                     isRoomSuperuser: user != undefined && room != undefined &&

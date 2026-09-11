@@ -1,28 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
-import App from "../../../../app";
-import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
-import SocketsClient from "../../../../networking/client/socketsClient";
-import RestrictedZone from "../../../../../shared/voxel/types/restrictedZone";
-import SetRestrictedZonesSignal from "../../../../../shared/voxel/types/update/setRestrictedZonesSignal";
-import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
-import { MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../../../shared/system/sharedConstants";
-import { restrictedZonesChangedObservable } from "../../../../../shared/system/sharedObservables";
-import { notificationMessageObservable } from "../../../../system/clientObservables";
-import Text from "../../basic/text";
-import CompactIconButton from "../../input/compactIconButton";
-import IconButton from "../../input/iconButton";
-import QuestionMarkIcon from "../../../svg/icons/questionMarkIcon";
-import PlusIcon from "../../../svg/icons/plusIcon";
-import TrashIcon from "../../../svg/icons/trashIcon";
-import RestrictedZoneGrid from "../../input/restrictedZoneGrid";
+import App from "../../../app";
+import ClientVoxelManager from "../../../voxel/clientVoxelManager";
+import SocketsClient from "../../../networking/client/socketsClient";
+import RestrictedZone from "../../../../shared/voxel/types/restrictedZone";
+import SetRestrictedZonesSignal from "../../../../shared/voxel/types/update/setRestrictedZonesSignal";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
+import { MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../../shared/system/sharedConstants";
+import { restrictedZonesChangedObservable } from "../../../../shared/system/sharedObservables";
+import { notificationMessageObservable } from "../../../system/clientObservables";
+import IconButton from "../input/iconButton";
+import TooltipButton from "../input/tooltipButton";
+import PlusIcon from "../../svg/icons/plusIcon";
+import TrashIcon from "../../svg/icons/trashIcon";
+import RestrictedZoneGrid from "../input/restrictedZoneGrid";
+import ScrollPanel from "./scrollPanel";
 
-export const RESTRICTED_ZONES_TOOLTIP_BUTTON_ID = "restrictedZonesTooltipButton";
-export const RESTRICTED_ZONES_TOOLTIP_TEXT = "Only you can edit things that are in the Restricted Zones.";
-
-// The "Restricted Zones" section of a room's settings, shared by the two forms that offer it — a
-// hub's, which an admin opens, and a room owner's own. What a zone is for is in
+// The plan of the room its restricted zones are drawn on, raised from the room's settings (see
+// CustomizeRoomPanel) into a panel of its own above them: the plan has to be seen whole to be worked
+// with, which an entry in the row of settings could never give it. What a zone is for is in
 // @docs/gameplay/restricted_zone.md.
-export default function RestrictedZonesSection({onToggleTooltip}: Props)
+export default function RestrictedZonesPanel({ anchorElementId, onClose }: Props)
 {
     const room = App.getCurrentRoom();
 
@@ -33,9 +30,9 @@ export default function RestrictedZonesSection({onToggleTooltip}: Props)
     // than state of this component, so React has to be told when it has been replaced.
     const [editCount, setEditCount] = useState(0);
     useEffect(() => {
-        restrictedZonesChangedObservable.addListener("restrictedZonesSection",
+        restrictedZonesChangedObservable.addListener("restrictedZonesPanel",
             () => setEditCount(n => n + 1));
-        return () => restrictedZonesChangedObservable.removeListener("restrictedZonesSection");
+        return () => restrictedZonesChangedObservable.removeListener("restrictedZonesPanel");
     }, []);
 
     const zones = room?.voxelGrid.restrictedZones ?? [];
@@ -74,13 +71,10 @@ export default function RestrictedZonesSection({onToggleTooltip}: Props)
             setSelectedIndex(null);
     }, [zones, selectedIndex, apply]);
 
-    return <>
-        <div className="flex flex-row items-center">
-            <CompactIconButton id={RESTRICTED_ZONES_TOOLTIP_BUTTON_ID} icon={<QuestionMarkIcon/>} size="md"
-                onClick={() => onToggleTooltip(RESTRICTED_ZONES_TOOLTIP_BUTTON_ID, RESTRICTED_ZONES_TOOLTIP_TEXT)}/>
-            <Text content="Restricted Zones:" size="sm"/>
-        </div>
-        <div className="flex flex-row items-center gap-1">
+    return <ScrollPanel id="restrictedZonesOptions" anchorElementId={anchorElementId} onClose={onClose} size="lg">
+        <div className="flex flex-col items-center gap-1 shrink-0">
+            <TooltipButton id="restrictedZonesTooltipButton"
+                text="Only you can edit things that are in the Restricted Zones."/>
             <IconButton id="addRestrictedZoneButton" icon={<PlusIcon/>} size="sm" color="green"
                 disabled={zones.length >= MAX_RESTRICTED_ZONES} onClick={addZone}/>
             <IconButton id="removeRestrictedZoneButton" icon={<TrashIcon/>} size="sm" color="red"
@@ -92,7 +86,7 @@ export default function RestrictedZonesSection({onToggleTooltip}: Props)
             onSelect={setSelectedIndex}
             onCommit={apply}
         />
-    </>
+    </ScrollPanel>;
 }
 
 // How big a zone starts out, in voxels. Big enough to be taken hold of straight away on a phone,
@@ -112,6 +106,6 @@ function makeNewZone(): RestrictedZone
 
 interface Props
 {
-    // Raising this section's explanation, which the form owns so that only one is ever up at a time.
-    onToggleTooltip: (targetElementId: string, text: string) => void;
+    anchorElementId: string; // DOM element id of the toggle the panel hangs from (see ScrollPanel)
+    onClose: () => void;
 }

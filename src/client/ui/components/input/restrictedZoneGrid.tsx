@@ -37,12 +37,12 @@ export default function RestrictedZoneGrid({zones, selectedIndex, onSelect, onCo
         onPanelRefChange(node);
     }, [onPanelRefChange]);
 
-    // Keep the press from reaching the form's own drag-to-scroll (see useMouseDragScroll), which
-    // would otherwise read a drag across the plan as a scroll of the form. This panel scrolls
-    // instead, and a press meant for one of the two cannot be meant for the other.
+    // Keep the press from reaching the drag-to-scroll of the panel the plan is shown in (see
+    // ScrollPanel), which would otherwise read a drag across the plan as a scroll of that panel. The
+    // plan scrolls instead, and a press meant for one of the two cannot be meant for the other.
     //
     // These must be native listeners: React delegates its own events at the root container, above
-    // the form, so a React-level stopPropagation would run too late. They are on mousedown and
+    // that panel, so a React-level stopPropagation would run too late. They are on mousedown and
     // touchstart rather than pointerdown, which is the event this component's own handlers are built
     // on and which fires first — so stopping these leaves those untouched. Stopping an event does
     // not stop the other listeners on the same element, so the panel's own scrolling is untouched

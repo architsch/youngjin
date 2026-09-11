@@ -17,6 +17,10 @@ import SinglePlayerModeClientConfig from "./singlePlayerModeClientConfig";
 
 let cachedSteps: {[stepName: string]: SinglePlayerStep} | undefined;
 
+// How heavy a line the game-mode switch's track is outlined with. The track is a small capsule,
+// which the heavy line framing the tutorial's buttons would swallow.
+const MODE_SWITCH_OUTLINE_THICKNESS_PX = 2;
+
 // How far the user has to swing the camera around before he is taken to have discovered that he can.
 const TUTORIAL_CAMERA_TURN_DEG = 20;
 
@@ -70,7 +74,6 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
-                    {type: "feature_flag", flag: FeatureFlag.HideUserIdentityLabels, enable: true},
                 ],
                 transitionRules: [{
                     requirements: [{type: "player_is_nearby", negate: true,
@@ -86,11 +89,14 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
             "start_edit": {
                 startDelay: 0,
                 actionsOnStart: [
-                    {type: "ui_headline", text: () => "Start the edit mode."},
-                    // The button sits in the top-right corner, with no room above it for an arrow.
-                    {type: "ui_arrow", targetElementId: "editModeButton", arrowBias: "center",
+                    {type: "ui_headline", text: () => "Switch to Edit mode."},
+                    // The switch sits in the top-right corner, with no room above it for an arrow.
+                    {type: "ui_arrow", targetElementId: "gameModeToggleSwitch", arrowBias: "center",
                         arrowSide: "below"},
-                    {type: "ui_outline_rect", targetElementId: "editModeButton"},
+                    // Outlined around the track alone, which is what reads as the switch; the labels
+                    // on either side of it only name its two settings.
+                    {type: "ui_outline_capsule", targetElementId: "gameModeToggleSwitchTrack",
+                        thicknessPx: () => MODE_SWITCH_OUTLINE_THICKNESS_PX},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: false},
                     {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: false},
                 ],
@@ -297,11 +303,12 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
             "exit_edit_mode": {
                 startDelay: 500,
                 actionsOnStart: [
-                    {type: "ui_headline", text: () => "Exit the edit mode."},
-                    // The button shares the top edge with the headline, so it is pointed at from
-                    // below, like the one that opened the mode.
-                    {type: "ui_arrow", targetElementId: "modeExitButton", arrowBias: "center",
+                    {type: "ui_headline", text: () => "Switch back to Play mode."},
+                    // The same switch that opened the mode, pointed at from below for the same reason.
+                    {type: "ui_arrow", targetElementId: "gameModeToggleSwitch", arrowBias: "center",
                         arrowSide: "below"},
+                    {type: "ui_outline_capsule", targetElementId: "gameModeToggleSwitchTrack",
+                        thicknessPx: () => MODE_SWITCH_OUTLINE_THICKNESS_PX},
                     // The way out is opened for this step alone. The selection standing in the mode
                     // stays pinned throughout: leaving the mode drops it along with the mode, so
                     // there is no need to hand the room back to the user's clicks to let him go.

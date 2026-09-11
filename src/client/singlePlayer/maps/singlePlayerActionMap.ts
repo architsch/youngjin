@@ -3,7 +3,7 @@ import App from "../../app";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import ClientObjectManager from "../../object/clientObjectManager";
 import EasingMotion from "../../object/components/easingMotion";
-import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineCapsuleTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SinglePlayerManager from "../singlePlayerManager";
@@ -21,6 +21,7 @@ const SinglePlayerActionMap: {
         headlineMessageObservable.set(null);
         screenArrowTargetObservable.set(null);
         screenOutlineRectTargetObservable.set(null);
+        screenOutlineCapsuleTargetObservable.set(null);
         screenDiagramObservable.set(null);
         navigationArrowTargetObservable.set(null);
         downwardArrowTargetObservable.set(null);
@@ -43,6 +44,11 @@ const SinglePlayerActionMap: {
     "ui_outline_rect": (action) => // A React-based 2D rectangular outline which surrounds the target UI element for the purpose of highlighting.
     {
         screenOutlineRectTargetObservable.set(action.targetElementId);
+    },
+    "ui_outline_capsule": (action) => // A React-based 2D capsule-shaped outline which surrounds a pill-shaped target UI element (such as a switch's track) for the purpose of highlighting. Its line is as thick as the step asks for, since a control of that shape tends to be too small for the rectangular outline's heavy line.
+    {
+        screenOutlineCapsuleTargetObservable.set({targetElementId: action.targetElementId,
+            thicknessPx: action.thicknessPx()});
     },
     "gizmo_navigation_arrow": (action) => // A 3D world-space arrow which helps the user navigate to the target location. This arrow is always positioned right in front of the player (about 3 units away in the XZ plane), at the height of 1 (i.e. y = 1), and it always keeps pointing at the target.
     {

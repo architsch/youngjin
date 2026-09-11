@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import GameObject from "../../../object/types/gameObject";
-import { clientFeatureFlagsObservable, objectSelectionObservable, roomChangedObservable,
-    updateObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable,
+    roomChangedObservable, updateObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
@@ -44,6 +44,12 @@ export default class ObjectSelection
         {
             return false;
         }
+
+        // Nothing is picked out outside edit mode (see GameModeUtil). A click is turned away before it
+        // gets this far (see GameObject), so what this holds the line against is a selection asked
+        // for by code instead — one re-picked by an edit whose answer arrives after the mode was left.
+        if (gameModeObservable.peek() != "edit")
+            return false;
 
         // Clicking what is already picked out leaves it picked out. A selection is given up by
         // saying so — the way out of the mode it stands in, or the back gesture — rather than by a
