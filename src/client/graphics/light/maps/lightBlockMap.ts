@@ -10,6 +10,7 @@ import LightBlockPropagationUtil, { getLightLuminance, LightPropagationScratch }
     from "../util/lightBlockPropagationUtil";
 import LightBlockMapMaterialUtil from "../util/lightBlockMapMaterialUtil";
 import LightBlockSmoothingUtil from "../util/lightBlockSmoothingUtil";
+import LightBlockDilationUtil from "../util/lightBlockDilationUtil";
 import LightSource from "../types/lightSource";
 
 // Every light in the room except the one the camera carries, held as data rather than as
@@ -39,6 +40,10 @@ export default class LightBlockMap
     // What the smoothing pass sweeps through, and which blocks it is allowed to sweep across.
     private smoothingScratch = new Float32Array(NUM_VOXEL_BLOCKS * 3);
     private openBlocks = new Uint8Array(NUM_VOXEL_BLOCKS);
+
+    // The brightest light standing near each block rather than in it, three entries per block (see
+    // LightBlockDilationUtil). Nothing is drawn from it: it is what getNearbyLightAt answers from.
+    private nearbyLightBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
 
     // Four channels rather than three because three.js derives no sized internal format for an RGB
     // byte 3D texture, so RGB is not a usable combination. Both textures spend the fourth channel
@@ -119,16 +124,19 @@ export default class LightBlockMap
         this.needsRecomputation = true;
     }
 
-    // What light the room's own lamps put on a given point, in the linear space they accumulate in.
-    // Read once a frame by whatever needs to know how well lit the player already is — the lamp the
-    // camera carries stands down where the room lights itself, and takes on its color, so that a
-    // room somebody has lit is seen by its own light rather than washed flat by a white one held an
-    // arm's length away (see GraphicsManager).
+    // What light the room's own lamps have put near a given point — the brightest light standing
+    // within a few paces of it, discounted by how far off it is (see LightBlockDilationUtil) — in
+    // the linear space they accumulate in. Read once a frame by whatever needs to know how well lit
+    // the player's surroundings already are — the lamp the camera carries stands down where the
+    // room lights itself, and takes on its color, so that a room somebody has lit is seen by its
+    // own light rather than washed flat by a white one held an arm's length away (see
+    // GraphicsManager).
     //
-    // Sampled the way the shader samples it, smoothly between block centres rather than block by
-    // block. A value that stepped as the player crossed from one block to the next would be a step
-    // in how bright his own lamp is, which is a far more noticeable thing than the step itself.
-    getLightAt(worldPos: Vec3, outLight: THREE.Color): THREE.Color
+    // Sampled the way the shader samples the light itself, smoothly between block centres rather
+    // than block by block. A value that stepped as the player crossed from one block to the next
+    // would be a step in how bright his own lamp is, which is a far more noticeable thing than the
+    // step itself.
+    getNearbyLightAt(worldPos: Vec3, outLight: THREE.Color): THREE.Color
     {
         // Block centres sit at half-integers, so a position drops half a block to land on the
         // lattice the interpolation runs over.
@@ -161,9 +169,9 @@ export default class LightBlockMap
 
                     const weight = rowWeight * colWeight * layerWeight;
                     const at = blockIndex * 3;
-                    sumR += this.blockLightBuffer[at] * weight;
-                    sumG += this.blockLightBuffer[at + 1] * weight;
-                    sumB += this.blockLightBuffer[at + 2] * weight;
+                    sumR += this.nearbyLightBuffer[at] * weight;
+                    sumG += this.nearbyLightBuffer[at + 1] * weight;
+                    sumB += this.nearbyLightBuffer[at + 2] * weight;
                     sumWeight += weight;
                 }
             }
@@ -195,8 +203,8 @@ export default class LightBlockMap
         this.blockLightBuffer.fill(0);
         this.blockFluxBuffer.fill(0);
 
-        // Marked whether or not there is anything to propagate, because getLightAt reads it too and
-        // must never be answering from the shape of a room that has since been left.
+        // Marked whether or not there is anything to propagate, because getNearbyLightAt reads it
+        // too and must never be answering from the shape of a room that has since been left.
         LightBlockSmoothingUtil.markOpenBlocks(this.voxels, this.openBlocks);
 
         if (this.voxels != undefined)
@@ -213,6 +221,11 @@ export default class LightBlockMap
             LightBlockSmoothingUtil.smooth(this.blockFluxBuffer, this.smoothingScratch,
                 this.openBlocks);
         }
+
+        // Worked out from the light as smoothed, which is the light the room is actually seen in —
+        // and whether or not there was anything to propagate, for the same reason as the openness.
+        LightBlockDilationUtil.dilate(this.blockLightBuffer, this.nearbyLightBuffer,
+            this.openBlocks);
 
         this.uploadTextures();
     }

@@ -225,6 +225,38 @@ A door is how one room is joined to another, so laying one is an edit to the sha
 | falls back on the middle of the room when it holds no door at all | A room with no doors is still somewhere a player can be put down |
 | prefers a door that offers itself as the way in over one that does not | Repeated draws never land on a custom entrance while a default one exists |
 
+## Lamps (`lamp.test.ts`) — 18 tests
+
+A lamp is furniture that lights the room, installed and edited on the same terms as a picture. See [lighting.md](../../graphics/lighting.md#the-lamp) for the behavior under test.
+
+### Who may do what
+
+| Test | What it verifies |
+|------|-----------------|
+| lets anybody install a lamp in a hub | An admin, a member and a guest may all add a lamp |
+| lets a visitor install a lamp in a regular room he does not own | A member and a guest may add a lamp to somebody else's Regular room |
+| refuses a lamp installed under somebody else's name | The anti-spoof check rejects a lamp whose source user is not the requester |
+| refuses a lamp once the room holds as many as its mesh was sized for | The per-room cap refuses the next lamp, for a member and an admin alike |
+| lets anybody take down, move, or re-light a lamp somebody else installed | Removal, movement and a light-properties write are accepted for an admin, a member and a guest |
+| keeps an ordinary user's lamp out of a restricted zone, and his hands off one inside it | A member's lamp is refused inside a hub's zone while the admin's is not, and a member may neither remove nor re-light a lamp standing in one |
+| refuses a lamp moved the way something with physics moves | A lamp is placed rather than pushed, so a transform that is not physics-ignoring is rejected |
+| refuses every metadata key but the light a lamp gives off | Light properties are accepted; composition, label, image path and destination room are not |
+
+### What a lamp gives off
+
+| Test | What it verifies |
+|------|-----------------|
+| comes back exactly as it was set | Property-based: any in-range color, intensity and range survive an encode/decode round trip |
+| offers a dozen whole values on each of its two dials | Intensity and range each span twelve whole values |
+| is a light whatever the object was handed | Property-based: any string decodes to a color, intensity and range within their ranges |
+| holds a lamp asked for more than a lamp has to what a lamp has | Out-of-range intensity and range are clamped to the dial's bounds |
+| leaves a lamp a light even at its lowest, and an effect at its highest | The lowest step is still a light, and the top of the intensity range sits well above the default |
+| gives a lamp two dials that do not move together | Falloff runs opposite to range, monotonically, independent of intensity |
+| is stored as something a lamp can be lit by, whatever arrived | Property-based: preprocessing yields a fixed-length value and is a fixed point |
+| arrives lit rather than dark when nothing has been said about it | A lamp with no metadata is an ordinary white light |
+| reads a lamp stored by a version that knew fewer settings | A short string falls back on the default for each missing setting |
+| draws the lamp in the color it lights the room with | Property-based: the generated composition's lit part takes the light's palette color |
+
 ## Voxel Operations (`voxel.test.ts`) — 13 tests
 
 | Test | What it verifies |
@@ -835,6 +867,7 @@ for how to run it. It skips itself when no emulator is available.
 | Door Mesh Composition | 12 |
 | Indexed Mesh Composition | 6 |
 | Doors and the Admin Privilege | 14 |
+| Lamps | 18 |
 | Signals | 6 |
 | Permissions | 5 |
 | Restricted Zones | 14 |
@@ -847,4 +880,4 @@ for how to run it. It skips itself when no emulator is available.
 | Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **524** |
+| **Total** | **542** |

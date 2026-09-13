@@ -9,8 +9,8 @@ export const FTUEElementCodeEnumMap: Record<string, number> =
     _NOT_USED_: 1,
     EnterMyRoom: 2,
     MyRoomSettings: 3,
-    AddCanvas: 4,
-    ChangeCanvasImage: 5,
-    ChangeCanvasFrame: 6,
+    AddCanvas: 4, // retired: Showing a coach mark for this feels annoying
+    ChangeCanvasImage: 5, // retired: Showing a coach mark for this feels annoying
+    ChangeCanvasFrame: 6, // retired: Showing a coach mark for this feels annoying
     EnterHub: 7,
 }

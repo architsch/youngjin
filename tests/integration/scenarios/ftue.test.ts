@@ -242,9 +242,9 @@ describe("FTUE element records (client)", () => {
             _NOT_USED_: "B", // retired element: the slot stays reserved, never reused
             EnterMyRoom: "C",
             MyRoomSettings: "D",
-            AddCanvas: "E",
-            ChangeCanvasImage: "F",
-            ChangeCanvasFrame: "G",
+            AddCanvas: "E", // retired element: the slot stays reserved, never reused
+            ChangeCanvasImage: "F", // retired element: the slot stays reserved, never reused
+            ChangeCanvasFrame: "G", // retired element: the slot stays reserved, never reused
             EnterHub: "H",
         });
     });

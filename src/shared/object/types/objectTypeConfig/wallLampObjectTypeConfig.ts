@@ -9,7 +9,6 @@ import NumUtil from "../../../math/util/numUtil";
 import StringUtil from "../../../math/util/stringUtil";
 import MeshDataUtil from "../../../graphics/mesh/util/meshDataUtil";
 import Room from "../../../room/types/room";
-import RoomValidationUtil from "../../../room/util/roomValidationUtil";
 import { COLLISION_LAYER_HEIGHT, INSTANCED_EMISSIVE_MATERIAL_ID,
     LIGHT_COLOR_PALETTE_NAME,
     WALL_ATTACHMENT_HITBOX_INSET} from "../../../system/sharedConstants";
@@ -47,7 +46,7 @@ const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
 // map costs the same whether a room holds three lamps or three hundred (see LightBlockMap) — but the
 // propagation each one costs, the clutter of a wall covered in them, and the size of the room's own
 // stored contents.
-const MAX_LAMPS_PER_ROOM = 24;
+const MAX_LAMPS_PER_ROOM = 64;
 const MAX_MESH_INSTANCES_PER_LAMP = 4;
 
 // Where each of the lamp's settings sits in its stored string. Fixed positions, never reordered: a
@@ -63,7 +62,7 @@ const RANGE_CHAR_INDEX = 2;
 // that exists for dramatic effect (see LampLightUtil).
 const DEFAULT_COLOR_INDEX = 0;
 const DEFAULT_INTENSITY = 3;
-const DEFAULT_RANGE = 10;
+const DEFAULT_RANGE = 6;
 
 // The metadata a lamp answers to, which is only the light it gives off. Notably *not* its
 // composition: what a lamp looks like is derived from its light rather than authored beside it (see
@@ -74,9 +73,9 @@ const editableMetadataKeys = [
 ];
 
 // A lamp is a light somebody installed on a wall — the only thing in the game that lights a room
-// other than the light every visitor carries (see @docs/graphics/lighting.md). It is admin-only for
-// now, being a placeholder: what it looks like is a single lit rectangle, and what a room is
-// actually furnished with should be a fitting with a body.
+// other than the light every visitor carries (see @docs/graphics/lighting.md). It is anybody's to
+// install, move, re-light and take down, on the same terms as a canvas: the room's restricted zones
+// are what keep one out of a stretch that is not the user's (see ObjectUpdateUtil).
 const WallLampObjectTypeConfig =
 {
     objectType: "WallLamp",
@@ -84,9 +83,6 @@ const WallLampObjectTypeConfig =
     autoUnload: true,
     maxCountPerRoom: MAX_LAMPS_PER_ROOM,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        if (!RoomValidationUtil.userIsAdmin(user))
-            return false;
-
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
             return false;
@@ -103,12 +99,9 @@ const WallLampObjectTypeConfig =
         return true;
     },
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        return RoomValidationUtil.userIsAdmin(user);
+        return true;
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        if (!RoomValidationUtil.userIsAdmin(user))
-            return false;
-
         // A lamp is slid along the wall by a gizmo, which is a placement rather than a motion.
         if (!signal.ignorePhysics)
             return false;
@@ -116,9 +109,6 @@ const WallLampObjectTypeConfig =
         return true;
     },
     canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        if (!RoomValidationUtil.userIsAdmin(user))
-            return false;
-
         // The values themselves are settled by ObjectMetadataEntryMap, which clamps a lamp's color
         // and strength into range, so what is left to ask here is only which keys a lamp answers to.
         return editableMetadataKeys.includes(signal.metadataKey);

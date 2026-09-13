@@ -1,6 +1,6 @@
 # Lighting
 
-Reference: @src/client/graphics/light/maps/lightBlockMap.ts , @src/client/graphics/light/util/lightBlockPropagationUtil.ts , @src/client/graphics/light/util/lightBlockSmoothingUtil.ts , @src/client/graphics/light/util/lightBlockMapMaterialUtil.ts , @src/client/graphics/shaders/lightBlockMapGLSL.ts , @src/client/object/components/lightSource.ts , @src/shared/room/util/roomPrefsUtil.ts , @src/shared/graphics/light/util/headLightUtil.ts , @src/shared/graphics/light/util/lampLightUtil.ts , @src/client/graphics/light/util/roomLightingUtil.ts , @src/client/graphics/util/atmosphereMaterialUtil.ts , @src/client/graphics/shaders/atmosphereGLSL.ts , @src/client/graphics/shaders/skyShader.ts , @src/client/graphics/graphicsManager.ts
+Reference: @src/client/graphics/light/maps/lightBlockMap.ts , @src/client/graphics/light/util/lightBlockPropagationUtil.ts , @src/client/graphics/light/util/lightBlockSmoothingUtil.ts , @src/client/graphics/light/util/lightBlockDilationUtil.ts , @src/client/graphics/light/util/lightBlockMapMaterialUtil.ts , @src/client/graphics/shaders/lightBlockMapGLSL.ts , @src/client/object/components/lightSource.ts , @src/shared/room/util/roomPrefsUtil.ts , @src/shared/graphics/light/util/headLightUtil.ts , @src/shared/graphics/light/util/lampLightUtil.ts , @src/client/graphics/light/util/roomLightingUtil.ts , @src/client/graphics/util/atmosphereMaterialUtil.ts , @src/client/graphics/shaders/atmosphereGLSL.ts , @src/client/graphics/shaders/skyShader.ts , @src/client/graphics/graphicsManager.ts
 
 ## Overview
 
@@ -139,9 +139,13 @@ Pushed to the top, the ambient stops lighting a room and starts erasing it: ligh
 
 ### The head lamp stands down for the room
 
-The head lamp is only ever **the light the room is not providing for itself**. Each frame, the field is sampled where the camera is standing, and the lamp gives back as much of its strength as the room is already supplying — and takes on the room's own color as far as it does.
+The head lamp is only ever **the light the room is not providing for itself**. Each frame, the field is read around where the camera is standing, and the lamp gives back as much of its strength as the room is already supplying there — and takes on the room's own color as far as it does.
 
 Both halves matter. Turning it down is not enough on its own: what washes a warm wall out is not how much the head lamp adds but that what it adds is white, and even a little white light drags a saturated surface toward grey up close. Light of the room's own color deepens what is there instead of diluting it.
+
+**What is read is the light near the camera, not only the light at it.** A lamp's light gives out within its own reach, but the pool it leaves on a wall is looked at from well outside that reach — and a head lamp that came back the moment the player stepped out of the lamp's light would flatten the pool under white light from exactly the distance it is best seen from. So the reading is the brightest light standing anywhere nearby, discounted by how far off it is: a lamp goes on holding the head lamp down some way past its own light, lets it back gradually as the player walks away, and is noticed from further off the brighter it is.
+
+The discount falls away smoothly with straight-line distance, so what a lamp holds down is a ball around it rather than a diamond. It is carried through the room only by way of open blocks, never through a solid one: a lamp on the far side of a wall, or on the storey above, is not near anyone on this side of it, and a player walled in beside a lit room keeps the head lamp they see by. Where the only way from a lamp to a place winds through the room, the reading errs toward handing the head lamp back rather than taking it away.
 
 The handover runs on a curve that saturates rather than a ramp to some "fully lit" mark, because how much light stands in a place spans orders of magnitude between standing under a lamp and standing across the room from one. A ramp over that range is not a ramp at all — it is a switch, thrown within a step of every lamp — and what the player sees is his own lamp surging back on as he walks away from a light.
 
@@ -261,7 +265,7 @@ The fog itself exists from the moment the scene does and is never taken away. Tu
 
 A lamp is a light somebody installed on a wall — the only thing besides the head lamp and the ambient that lights a room. It hangs like a picture does (see [wall_attached_object.md](../geometry/wall_attached_object.md)): it claims the patch of wall it is mounted on, nothing else can be hung over it, and taking that wall down takes the lamp with it.
 
-It is currently **a placeholder, and an admin's alone**. What it looks like is a single lit rectangle, drawn in an unlit material so it shows at the full strength of its own color whatever is falling on it — which is what a source of light rather than a receiver of one looks like. It is not lit by the field, since a lamp lit by the light it is itself producing would brighten in its own glow.
+It is **furniture like any other**: anybody in edit mode may install one, move it, re-light it or take it down, on the same terms as a picture — the room's restricted zones are what keep one out of a stretch that is not the user's (see [restricted_zone.md](../gameplay/restricted_zone.md)), and a room holds only so many. It is currently **a placeholder** in looks: a single lit rectangle, drawn in an unlit material so it shows at the full strength of its own color whatever is falling on it — which is what a source of light rather than a receiver of one looks like. It is not lit by the field, since a lamp lit by the light it is itself producing would brighten in its own glow.
 
 That same unlit material is what the player's face is painted with (see [player_customization.md](../geometry/player_customization.md)): a face is a flat patch of color that is meant to stay flat and clean, which is the same thing an emitter is. Sharing it costs nothing and saves a draw call, since a mesh is drawn once per geometry-and-material pair.
 

@@ -8,7 +8,6 @@ import ClientObjectManager from "../../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
-import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import RestrictedZoneUtil from "../../../../../shared/voxel/util/restrictedZoneUtil";
 import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
@@ -17,14 +16,8 @@ import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import PictureIcon from "../../../svg/icons/pictureIcon";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
-import { useEffect } from "react";
-import FTUEUtil from "../../../util/ftueUtil";
-import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import SelectionToolRow from "./selectionToolRow";
-
-let changeImageButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
-let changeFrameButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 
 export default function CanvasEditOptions(props: {selection: ObjectSelection})
 {
@@ -33,38 +26,6 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
     const initialImagePath = imagePathMetadata ? imagePathMetadata.str : "";
     const frameCoordsMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
     const initialFrameCoords = frameCoordsMetadata ? frameCoordsMetadata.str : "";
-
-    useEffect(() => {
-        clearFTUETimeouts();
-        if (!FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasImage))
-        {
-            // If the user hasn't change a canvas's image yet,
-            // we will show a coach mark which tells he user to try changing it.
-            changeImageButtonFTUETimeout = setTimeout(() => {
-                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.ChangeCanvasImage,
-                    "changeCanvasImageButton", "Choose your own picture.");
-            }, 750);
-        }
-        if (FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasImage) &&
-            !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasFrame))
-        {
-            // If the user hasn't change a canvas's frame yet (but already has changed a canvas's image),
-            // we will show a coach mark which tells he user to try changing it.
-            changeFrameButtonFTUETimeout = setTimeout(() => {
-                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.ChangeCanvasFrame,
-                    "changeCanvasFrameButton", "Try a different frame.");
-            }, 750);
-        }
-        return () => {
-            clearFTUETimeouts();
-            // Both marks belong to this menu, which is only on screen while a canvas is selected.
-            // A mark is not taken off the list by going out of view with its target, so one left
-            // behind here would come back the moment any canvas was selected again — instantly,
-            // without the beat that is meant to let the menu settle first.
-            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.ChangeCanvasImage);
-            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.ChangeCanvasFrame);
-        };
-    }, []);
 
     // Whether this canvas is the user's to change at all, which is what both choosers are turned
     // down by. Worked out on every render, so a zone drawn over the canvas while it is picked out
@@ -88,9 +49,6 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
             onChoose={path => {
                 trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
             }}
-            onClick={() => {
-                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasImage);
-            }}
         />
         <ImageChooser
             title="Change Frame"
@@ -103,25 +61,8 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
             onChoose={coords => {
                 trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.CanvasFrameCoords, coords);
             }}
-            onClick={() => {
-                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.ChangeCanvasFrame);
-            }}
         />
     </SelectionToolRow>;
-}
-
-function clearFTUETimeouts()
-{
-    if (changeImageButtonFTUETimeout)
-    {
-        clearTimeout(changeImageButtonFTUETimeout);
-        changeImageButtonFTUETimeout = undefined;
-    }
-    if (changeFrameButtonFTUETimeout)
-    {
-        clearTimeout(changeFrameButtonFTUETimeout);
-        changeFrameButtonFTUETimeout = undefined;
-    }
 }
 
 // Whether this canvas is one the user may change at all: the room has to be his to edit, and the

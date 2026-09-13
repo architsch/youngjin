@@ -14,6 +14,8 @@
  * - Directionality: the recorded arrival direction points the way the light actually travelled
  * - Accumulation: lights sum, and the result does not depend on the order they are supplied in
  * - Monotonicity: installing a light never leaves any surface in the room darker than it found it
+ * - Nearness: the light near a point, which the head lamp stands down for, reaches past a lamp's
+ *   own light but never through a wall
  */
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
@@ -23,6 +25,8 @@ import LightBlockPropagationUtil, { getDistanceAttenuation, getLightLuminance,
     from "../../../src/client/graphics/light/util/lightBlockPropagationUtil";
 import LightSource from "../../../src/client/graphics/light/types/lightSource";
 import LightBlockSmoothingUtil from "../../../src/client/graphics/light/util/lightBlockSmoothingUtil";
+import LightBlockDilationUtil, { NEARBY_LIGHT_SPREAD }
+    from "../../../src/client/graphics/light/util/lightBlockDilationUtil";
 import LightBlockMap from "../../../src/client/graphics/light/maps/lightBlockMap";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
@@ -559,6 +563,163 @@ describe("Light propagation", () =>
         });
     });
 
+    describe("nearness", () =>
+    {
+        // What the lamp the camera carries stands down for is not the light standing where the
+        // player is but the brightest light near there, discounted by how far off it is (see
+        // LightBlockDilationUtil) — since a lamp's pool is looked at from well outside the light it
+        // casts, and a head lamp back at full strength there washes the pool out.
+
+        const nearbyLight = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+
+        /** The room's light as the map holds it: propagated, then smoothed. */
+        function smoothedLight(voxels: Voxel[], lights: LightSource[]): PropagationResult
+        {
+            LightBlockSmoothingUtil.markOpenBlocks(voxels, openBlocks);
+            const result = propagate(voxels, lights);
+            LightBlockSmoothingUtil.smooth(result.light, smoothingScratch, openBlocks);
+            return result;
+        }
+
+        it("agrees with a search of the whole room, in an open room", () =>
+        {
+            // The pass sweeps one axis at a time, which is the same thing as asking every lit block
+            // in the room only because its discount is a bell curve over straight-line distance.
+            // Asserted against that search itself, which rules out both a sweep that loses light on
+            // the way and a pass that reaches a diamond rather than a ball.
+            const isOpen = new Uint8Array(NUM_VOXEL_BLOCKS).fill(1);
+            const centers = Array.from({length: NUM_VOXEL_BLOCKS}, (_, blockIndex) => blockCenter(
+                VoxelQueryUtil.getVoxelBlockRow(blockIndex),
+                VoxelQueryUtil.getVoxelBlockCol(blockIndex),
+                VoxelQueryUtil.getVoxelBlockCollisionLayer(blockIndex)));
+            const discountPerSquaredDistance = 1 / (2 * NEARBY_LIGHT_SPREAD * NEARBY_LIGHT_SPREAD);
+            const channel = fc.integer({min: 0, max: 400}).map(hundredths => hundredths / 100);
+
+            fc.assert(fc.property(fc.array(fc.record({
+                blockIndex: fc.integer({min: 0, max: NUM_VOXEL_BLOCKS - 1}),
+                colorR: channel, colorG: channel, colorB: channel,
+            }), {minLength: 1, maxLength: 6}), (litBlocks) =>
+            {
+                const field = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+                for (const lit of litBlocks)
+                {
+                    field[lit.blockIndex * 3] = lit.colorR;
+                    field[lit.blockIndex * 3 + 1] = lit.colorG;
+                    field[lit.blockIndex * 3 + 2] = lit.colorB;
+                }
+                LightBlockDilationUtil.dilate(field, nearbyLight, isOpen);
+
+                const sources = [...new Set(litBlocks.map(lit => lit.blockIndex))];
+                const luminanceOf = (buffer: Float32Array, blockIndex: number) => getLightLuminance(
+                    buffer[blockIndex * 3], buffer[blockIndex * 3 + 1], buffer[blockIndex * 3 + 2]);
+
+                // Scanned into single worst cases and asserted once, as elsewhere in this file.
+                let worstError = 0;
+                for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                {
+                    let best = -1, bestLight = 0, runnerUpLight = 0;
+                    for (const source of sources)
+                    {
+                        const dx = centers[blockIndex].x - centers[source].x;
+                        const dy = centers[blockIndex].y - centers[source].y;
+                        const dz = centers[blockIndex].z - centers[source].z;
+                        const arrived = luminanceOf(field, source) *
+                            Math.exp(-discountPerSquaredDistance * (dx*dx + dy*dy + dz*dz));
+                        if (arrived > bestLight)
+                        {
+                            runnerUpLight = bestLight;
+                            bestLight = arrived;
+                            best = source;
+                        }
+                        else
+                            runnerUpLight = Math.max(runnerUpLight, arrived);
+                    }
+
+                    // Relative to what should have arrived — except down among what a float holds
+                    // to no useful precision, where only the difference itself is worth asking
+                    // about.
+                    worstError = Math.max(worstError,
+                        Math.abs(luminanceOf(nearbyLight, blockIndex) - bestLight) /
+                        Math.max(bestLight, 1e-12));
+
+                    // The color is the winning block's own, which is only a question with one
+                    // answer where two blocks do not arrive with the same amount of light.
+                    if (bestLight < 1e-12 || bestLight - runnerUpLight < bestLight * 1e-6)
+                        continue;
+                    const discount = bestLight / luminanceOf(field, best);
+                    for (let offset = 0; offset < 3; ++offset)
+                    {
+                        const expected = field[best * 3 + offset] * discount;
+                        worstError = Math.max(worstError,
+                            Math.abs(nearbyLight[blockIndex * 3 + offset] - expected) /
+                            Math.max(expected, 1e-6));
+                    }
+                }
+                expect(worstError).toBeLessThan(1e-4);
+            }), {numRuns: 10});
+        });
+
+        it("never reports less light near a point than stands at it", () =>
+        {
+            // Nearness only ever adds reach: under a lamp, the head lamp stands down at least as
+            // far as it would for the light standing there alone.
+            fc.assert(fc.property(fc.array(fc.record({
+                col: fc.integer({min: 1, max: NUM_VOXEL_COLS - 2}),
+                row: fc.integer({min: 1, max: NUM_VOXEL_ROWS - 2}),
+                collisionLayer: fc.integer({min: 0, max: 15}),
+                colorR: fc.float({min: Math.fround(0.1), max: 4, noNaN: true}),
+                range: fc.float({min: Math.fround(1.5), max: 12, noNaN: true}),
+            }), {minLength: 1, maxLength: 3}), (specs) =>
+            {
+                const result = smoothedLight(openRoom(), specs.map(spec => makeLight({
+                    worldPos: blockCenter(spec.row, spec.col, spec.collisionLayer),
+                    colorR: spec.colorR,
+                    range: spec.range,
+                })));
+                LightBlockDilationUtil.dilate(result.light, nearbyLight, openBlocks);
+
+                let worstShortfall = 0;
+                for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                {
+                    const at = blockIndex * 3;
+                    const standing = getLightLuminance(result.light[at], result.light[at + 1],
+                        result.light[at + 2]);
+                    const near = getLightLuminance(nearbyLight[at], nearbyLight[at + 1],
+                        nearbyLight[at + 2]);
+                    worstShortfall = Math.max(worstShortfall,
+                        (standing - near) / Math.max(standing, 1e-6));
+                }
+                expect(worstShortfall).toBeLessThan(1e-5);
+            }), {numRuns: 15});
+        });
+
+        it("never carries light through a solid block", () =>
+        {
+            // A lamp on the far side of a wall is not near anybody on this side of it, however few
+            // paces off it stands — which is what keeps a player walled in beside a lit room from
+            // losing the lamp they see by.
+            const wallRow = 20;
+            const voxels = makeVoxels((row) => row === wallRow ? FULL_COLLISION_LAYER_MASK : 0);
+            const result = smoothedLight(voxels, [makeLight({range: 30})]);
+            LightBlockDilationUtil.dilate(result.light, nearbyLight, openBlocks);
+
+            expect(nearbyLight[VoxelQueryUtil.getVoxelBlockIndex(wallRow - 1, 16, 3) * 3])
+                .toBeGreaterThan(0);
+            let brightestPastTheWall = 0;
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+            {
+                if (VoxelQueryUtil.getVoxelBlockRow(blockIndex) < wallRow)
+                    continue;
+                for (let offset = 0; offset < 3; ++offset)
+                {
+                    brightestPastTheWall = Math.max(brightestPastTheWall,
+                        nearbyLight[blockIndex * 3 + offset]);
+                }
+            }
+            expect(brightestPastTheWall).toBe(0);
+        });
+    });
+
     describe("never darkening what it reaches", () =>
     {
         // A light can only ever *add* light to a room. The amount is monotone by construction, since
@@ -777,9 +938,9 @@ describe("Light propagation", () =>
 
     describe("reading the map back", () =>
     {
-        // What the lamp the camera carries stands down for: it asks the map how well lit the player
-        // already is, and a room somebody has lit is then seen by its own light rather than washed
-        // flat by a white one held at arm's length (see GraphicsManager).
+        // What the lamp the camera carries stands down for: it asks the map how well lit the
+        // player's surroundings already are, and a room somebody has lit is then seen by its own
+        // light rather than washed flat by a white one held at arm's length (see GraphicsManager).
         function mapWithLampAt(worldPos: {x: number, y: number, z: number}): LightBlockMap
         {
             const map = new LightBlockMap();
@@ -792,7 +953,7 @@ describe("Light propagation", () =>
         const probe = new THREE.Color();
         const luminanceAt = (map: LightBlockMap, worldPos: {x: number, y: number, z: number}) =>
         {
-            map.getLightAt(worldPos, probe);
+            map.getNearbyLightAt(worldPos, probe);
             return 0.2126 * probe.r + 0.7152 * probe.g + 0.0722 * probe.b;
         };
 
@@ -803,6 +964,43 @@ describe("Light propagation", () =>
             const far = luminanceAt(map, {x: 16.5, y: 1.75, z: 28.5});
             expect(near).toBeGreaterThan(far);
             expect(far).toBeGreaterThanOrEqual(0);
+        });
+
+        it("goes on reporting a lamp past its own light, and lets go of it gradually", () =>
+        {
+            // A lamp's pool is looked at from well outside the light it casts, so the head lamp has
+            // to go on standing down there. And it has to come back as the player walks away
+            // rather than all at once at the edge of the lamp's light, which would read as the
+            // player's own lamp surging back on.
+            const range = 6;
+            const lamp = makeLight({range, colorR: 3, colorG: 3, colorB: 3});
+            const map = new LightBlockMap();
+            map.resetForRoom(openRoom());
+            map.addLightSource("lamp", lamp);
+            map.update();
+
+            // Past everything the lamp's own light reaches, smoothing included.
+            const pastItsLight = {row: 16 + range + 2, col: 16, collisionLayer: 3};
+            LightBlockSmoothingUtil.markOpenBlocks(openRoom(), openBlocks);
+            const standing = propagate(openRoom(), [lamp]);
+            LightBlockSmoothingUtil.smooth(standing.light, smoothingScratch, openBlocks);
+            expect(standing.at(pastItsLight.row, pastItsLight.col, pastItsLight.collisionLayer))
+                .toBe(0);
+            const pastItsLightNearby = luminanceAt(map,
+                blockCenter(pastItsLight.row, pastItsLight.col, pastItsLight.collisionLayer));
+            expect(pastItsLightNearby).toBeGreaterThan(0);
+
+            // Walking away from the lamp, it only ever fades.
+            let previous = luminanceAt(map, {x: 16.5, y: 1.75, z: 17.5});
+            for (let z = 17.5; z <= 30.5; z += 0.25)
+            {
+                const here = luminanceAt(map, {x: 16.5, y: 1.75, z});
+                expect(here).toBeLessThanOrEqual(previous + 1e-6);
+                previous = here;
+            }
+            // And by the far side of the room it has let go of the lamp all but entirely.
+            expect(luminanceAt(map, {x: 16.5, y: 1.75, z: 30.5}))
+                .toBeLessThan(pastItsLightNearby * 0.05);
         });
 
         it("reports nothing at all in a room with no lamps in it", () =>
@@ -821,7 +1019,7 @@ describe("Light propagation", () =>
             map.resetForRoom(openRoom());
             map.addLightSource("red", makeLight({colorR: 3, colorG: 0, colorB: 0, range: 20}));
             map.update();
-            map.getLightAt({x: 16.5, y: 1.75, z: 18.5}, probe);
+            map.getNearbyLightAt({x: 16.5, y: 1.75, z: 18.5}, probe);
             expect(probe.r).toBeGreaterThan(0);
             expect(probe.g).toBe(0);
             expect(probe.b).toBe(0);

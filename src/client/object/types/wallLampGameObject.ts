@@ -45,5 +45,4 @@ export default class WallLampGameObject extends GameObject
         if (key === ObjectMetadataKeyEnumMap.LightProperties)
             this.instancedMeshComposer.reloadComposition();
     }
-
 }

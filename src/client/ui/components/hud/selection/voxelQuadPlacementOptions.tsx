@@ -34,9 +34,7 @@ import { clientFeatureFlagsObservable, notificationMessageObservable, voxelQuadS
 import Room from "../../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
-import FTUEUtil from "../../../util/ftueUtil";
 import PopupUtil from "../../../util/popupUtil";
-import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
@@ -46,8 +44,6 @@ import SelectionToolRow from "./selectionToolRow";
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
-
-let addCanvasButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -83,35 +79,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const canAddDoor = canManageDoors &&
         getPlaceableWallAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
 
-    // Installing a lamp is likewise not an ordinary room edit while the lamp is still a placeholder
-    // — it lights the whole room, and what it looks like is one lit rectangle — so it is an admin's
-    // alone, wherever he is standing.
-    const isAdmin = RoomValidationUtil.userIsAdmin(App.getUser());
-    const canAddLamp = isAdmin &&
-        getPlaceableWallAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
-
-    useEffect(() => {
-        clearFTUETimeouts();
-        if (canAddCanvas && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.AddCanvas))
-        {
-            // If the user hasn't added any canvas yet,
-            // we will show a coach mark which tells he user to try adding one.
-            addCanvasButtonFTUETimeout = setTimeout(() => {
-                FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.AddCanvas,
-                    "addCanvasButton", "Hang a picture on this wall.");
-            }, 750);
-        }
-        return () => {
-            clearFTUETimeouts();
-            // Cancelling the pending mark is not enough on its own: one that is already up stays up
-            // until it is taken down, and the button it points at outlives the quad it was shown
-            // for — it merely turns disabled when the selection moves to a quad that takes no
-            // canvas, and it returns with the next selection after the menu closes. So the mark is
-            // taken down along with the invitation that raised it, rather than being left to urge
-            // the user towards a button that would do nothing.
-            FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.AddCanvas);
-        };
-    }, [canAddCanvas]);
+    const canAddLamp = getPlaceableWallAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
 
     return <SelectionToolRow>
         <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
@@ -129,7 +97,6 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                     [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath),
                     [ObjectMetadataKeyEnumMap.CanvasFrameCoords]: new EncodableByteString(randomFrameCoords),
                 });
-                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.AddCanvas);
             }}
         />
         {canManageDoors && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
@@ -143,7 +110,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 });
             }}
         />}
-        {isAdmin && <IconButton id="addLampButton" icon={<AddLampIcon/>} size="md"
+        <IconButton id="addLampButton" icon={<AddLampIcon/>} size="md"
             disabled={!canAddLamp}
             onClick={() => {
                 // A lamp arrives lit the way a lamp with nothing said about it is lit, and is
@@ -153,17 +120,8 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                         new EncodableByteString(WallLampObjectTypeConfig.util.getDefaultLightProperties()),
                 });
             }}
-        />}
+        />
     </SelectionToolRow>;
-}
-
-function clearFTUETimeouts()
-{
-    if (addCanvasButtonFTUETimeout)
-    {
-        clearTimeout(addCanvasButtonFTUETimeout);
-        addCanvasButtonFTUETimeout = undefined;
-    }
 }
 
 // Where an object hung on the clicked wall would go, or null if it cannot go there at all.

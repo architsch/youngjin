@@ -4,9 +4,9 @@ Reference: @src/client/ui/util/ftueUtil.ts , @src/client/ui/types/ftueElementCod
 
 ## What it is
 
-The tutorial teaches the basics in a room of its own (see [single_player_mode.md](single_player_mode.md)). The FTUE system picks up where it leaves off: once the user is in a real room, it points out the features they have not tried yet — setting up their own room, hanging a picture on a wall and dressing it up.
+The tutorial teaches the basics in a room of its own (see [single_player_mode.md](single_player_mode.md)). The FTUE system picks up where it leaves off: once the user is in a real room, it points out what nothing else on screen would tell them — that one room is theirs to build in, that the hubs are shared with everybody, and where their own room's settings are kept.
 
-Features the tutorial itself teaches are deliberately not among them: a user who has just been walked through one needs no coach mark for it afterwards.
+Features the tutorial itself teaches are deliberately not among them: a user who has just been walked through one needs no coach mark for it afterwards. Nor are the tools a selection brings out, such as hanging a picture and dressing it up: those are already in front of the user the moment the menu holding them opens, and a bubble arriving with that menu every time reads as nagging rather than as guidance.
 
 Each such feature is an **FTUE element**. An element is *experienced* once the user has been through it, and guidance for an experienced element never appears again. That record is persisted, so it also holds across sessions.
 
@@ -26,26 +26,23 @@ Several marks may be on screen at once. Because each is triggered by whatever UI
 
 ## When a coach mark appears
 
-Guidance is scheduled by the UI that owns the control, and the triggers come in two shapes:
-
-- **Dwell** — the control has been within reach, unused, for a stretch of uninterrupted time. This is how the room-settings button is advertised, which is on offer to a user standing in his own room (see [game_mode.md](../gameplay/game_mode.md)).
-- **Context** — the user has just selected something and the menu for it has opened. The mark follows a short beat later, so it does not race the menu's own appearance. This is how adding a picture to a wall, and then changing that picture's image and frame, are advertised.
+Guidance is scheduled by the UI that owns the control, and only once that control has been within reach, unused, for a stretch of uninterrupted time. This is how the room-settings button is advertised, which is on offer to a user standing in his own room (see [game_mode.md](../gameplay/game_mode.md)). A user who has had a control in front of him for that long and not touched it has plausibly not noticed it, which is the one situation a mark is for.
 
 Because guidance is scheduled ahead of time, the user may well discover the feature on their own before the mark is due — so `FTUEUtil` re-checks at that moment and stays quiet if there is nothing left to say.
 
-Entering one's own room for the first time is handled by the same record but not by a coach mark: it is worth a full welcome popup, since nothing else on screen tells the user that this is the one room they are free to build in.
+Entering one's own room, or a hub, for the first time is handled by the same record but not by a coach mark: each is worth a full welcome popup, since nothing else on screen tells the user that the one is the room they are free to build in and the other a place shared with everybody.
 
 ## When a coach mark goes away
 
 A mark that is up stays up until something takes it down, and losing sight of its target is not enough on its own: a mark whose control has left the screen is simply not drawn, and would come back with the control — instantly, without the wait that earned it the first time — if nothing else had ended it in the meantime.
 
-So the same condition that schedules a mark also ends it: the UI that owns the control cancels the guidance still pending *and* takes down the mark already up as soon as that control stops being on offer — the selection moving to something the feature cannot be applied to, the menu or the button leaving the screen, the user leaving the room the guidance belonged to. A control that is still on screen but disabled counts as gone this way, since a mark urging the user towards a button that does nothing is worse than no mark at all. Whichever of these ends it, the guidance is not lost: the element is still unexperienced, so the mark is scheduled afresh — wait and all — the next time its control is genuinely on offer.
+So the same condition that schedules a mark also ends it: the UI that owns the control cancels the guidance still pending *and* takes down the mark already up as soon as that control stops being on offer — the button leaving the screen, the user leaving the room the guidance belonged to. A control that is still on screen but disabled counts as gone this way, since a mark urging the user towards a button that does nothing is worse than no mark at all. Whichever of these ends it, the guidance is not lost: the element is still unexperienced, so the mark is scheduled afresh — wait and all — the next time its control is genuinely on offer.
 
 ## What counts as being experienced
 
 It is always the user's own use of the control, never the guidance being shown: clicking the control records the element, and recording it is also what takes its coach mark down. Showing a mark records nothing on its own — it is an offer, and an offer the user ignores leaves them no more experienced than before.
 
-Reaching the control is the whole of it. Where the control opens a chooser, the element is recorded on opening it rather than on settling for something inside: a user who opened the chooser and backed out has already found the feature, and pointing them at it again would be telling them something they know.
+Reaching the control is the whole of it. Where the control opens something, the element is recorded on opening it rather than on doing anything inside: a user who opened it and backed out has already found the feature, and pointing them at it again would be telling them something they know.
 
 ## Where the record lives
 

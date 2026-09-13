@@ -7,7 +7,6 @@ import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
-import RoomValidationUtil from "../../../room/util/roomValidationUtil";
 import { WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 
 // A canvas is drawn as a single flat quad hanging on the wall.

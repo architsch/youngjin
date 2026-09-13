@@ -175,7 +175,7 @@ const referenceFogViewDistance = 8;
 // What the settings above are applied to, kept here rather than passed together because they arrive
 // from different places and all decide the same one thing.
 let currViewDistance = 0;
-const currRoomLightAtCamera = new THREE.Color(0, 0, 0);
+const currRoomLightNearCamera = new THREE.Color(0, 0, 0);
 
 // The atmosphere the room being stood in asked for. Held rather than applied and forgotten, because
 // the fog has to be worked out again whenever the camera moves back, and what it is worked out from
@@ -246,13 +246,14 @@ const GraphicsManager =
         refreshPointLight();
         refreshFog();
     },
-    // Sets what light the room's own lamps are already putting on the spot the camera is looking
-    // from, so that the light it carries can stand out of their way (see refreshPointLight).
-    setPointLightSurroundings: (roomLightAtCamera: THREE.Color) =>
+    // Sets what light the room's own lamps are already putting around the spot the camera is
+    // looking from, so that the light it carries can stand out of their way (see
+    // refreshPointLight).
+    setPointLightSurroundings: (roomLightNearCamera: THREE.Color) =>
     {
-        if (currRoomLightAtCamera.equals(roomLightAtCamera))
+        if (currRoomLightNearCamera.equals(roomLightNearCamera))
             return;
-        currRoomLightAtCamera.copy(roomLightAtCamera);
+        currRoomLightNearCamera.copy(roomLightNearCamera);
         refreshPointLight();
     },
     // Sets the atmosphere the room is seen in: what light fills it, what light the player carries
@@ -479,19 +480,25 @@ function updatePixelRatio()
 // left to the ambient light alone. Widening the range on its own would only spread the same light
 // more thinly, since what a point light delivers falls off over distance — so the intensity follows
 // the range by exactly the falloff the light decays by, which leaves the target as bright as it was
-// from up close. The room's own lamps then take back as much of what is left as they are lighting
-// the player with already.
+// from up close. The room's own lamps then take back as much of what is left as they are already
+// lighting the player's surroundings with.
 function refreshPointLight()
 {
     const range = Math.max(basePointLightDistance,
         pointLightRangePerViewDistance * currViewDistance);
 
-    // How much of what lights the player is the room's own doing, from none of it in the dark to
-    // very nearly all of it under a lamp. Both of the things below follow from this one number, and
-    // it is measured the same way the block map measures its own light, so that "how much light is
-    // there" means one thing across the two.
-    const roomLuminance = getLightLuminance(currRoomLightAtCamera.r, currRoomLightAtCamera.g,
-        currRoomLightAtCamera.b);
+    // How much of the light around the player is the room's own doing, from none of it in the dark
+    // to very nearly all of it under a lamp. Both of the things below follow from this one number,
+    // and it is measured the same way the block map measures its own light, so that "how much light
+    // is there" means one thing across the two.
+    //
+    // It is the light near the player and not only the light where the player stands (see
+    // LightBlockDilationUtil), because what the head lamp washes out is whatever is being looked
+    // at. A lamp's pool is looked at from well outside the light it casts, and a head lamp that
+    // came back the moment the player stepped out of that light would flatten the pool from exactly
+    // where it is seen best.
+    const roomLuminance = getLightLuminance(currRoomLightNearCamera.r, currRoomLightNearCamera.g,
+        currRoomLightNearCamera.b);
     const roomShare = roomLuminance / (roomLuminance + pointLightRoomHalfBrightness);
 
     // Whatever share of the lighting the room is not doing itself, and nothing beyond it. There is
@@ -502,22 +509,22 @@ function refreshPointLight()
     pointLight.intensity = basePointLightIntensity *
         Math.pow(range / basePointLightDistance, pointLightDecay) * (1 - roomShare);
 
-    // And it takes on the color of whatever is already lighting the player, as far as the room is
-    // doing the lighting. Turning it down is not enough on its own: what washes a warm wall out is
-    // not how much the head lamp adds but that what it adds is white, and even a quarter of a white
-    // lamp pulls a saturated color a long way toward grey up close. Light of the room's own color
-    // deepens what is there instead of diluting it, which lets it keep enough strength to still be
-    // the near-field depth cue it exists to be.
+    // And it takes on the color of whatever is already lighting the player's surroundings, as far
+    // as the room is doing the lighting. Turning it down is not enough on its own: what washes a
+    // warm wall out is not how much the head lamp adds but that what it adds is white, and even a
+    // quarter of a white lamp pulls a saturated color a long way toward grey up close. Light of the
+    // room's own color deepens what is there instead of diluting it, which lets it keep enough
+    // strength to still be the near-field depth cue it exists to be.
     pointLightColorTemp.copy(pointLightBaseColor);
-    const peak = Math.max(currRoomLightAtCamera.r,
-        Math.max(currRoomLightAtCamera.g, currRoomLightAtCamera.b));
+    const peak = Math.max(currRoomLightNearCamera.r,
+        Math.max(currRoomLightNearCamera.g, currRoomLightNearCamera.b));
     if (peak > 0)
     {
         // Normalized to its brightest channel, since what is wanted from the room is its color and
         // not its strength — the strength is already spoken for above.
         pointLightColorTemp.lerpColors(pointLightBaseColor,
-            colorTemp.setRGB(currRoomLightAtCamera.r / peak, currRoomLightAtCamera.g / peak,
-                currRoomLightAtCamera.b / peak, THREE.LinearSRGBColorSpace),
+            colorTemp.setRGB(currRoomLightNearCamera.r / peak, currRoomLightNearCamera.g / peak,
+                currRoomLightNearCamera.b / peak, THREE.LinearSRGBColorSpace),
             roomShare);
     }
     pointLight.color.copy(pointLightColorTemp);

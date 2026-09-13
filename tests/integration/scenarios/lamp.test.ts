@@ -1,8 +1,9 @@
 /**
  * Scenario tests: lamps, and the light they put into a room
  *
- * A lamp is the only thing besides the head lamp and the ambient that lights a room, and while it
- * is still a placeholder it is an admin's alone. That is the whole of what these cover:
+ * A lamp is the only thing besides the head lamp and the ambient that lights a room, and it is
+ * furniture that anybody may install — held back only by what holds back a picture. That is the
+ * whole of what these cover:
  *
  * - who may install a lamp, take one down, move one, and change what it gives off
  * - which metadata a lamp answers to at all, and what it makes of a value it is handed
@@ -25,6 +26,7 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import Room from "../../../src/shared/room/types/room";
+import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
@@ -67,7 +69,7 @@ describe("lamp permissions", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("lets an admin install a lamp, and nobody else", async () => {
+    it("lets anybody install a lamp in a hub", async () => {
         await runScenario({
             name: "installing a lamp in a hub",
             rooms: [EMPTY_HUB],
@@ -78,25 +80,25 @@ describe("lamp permissions", () => {
                     ObjectUpdateUtil.canAddObject(user, room, makeLampSignal(room, user));
 
                 expect(canAdd(ADMIN)).toBe(true);
-                expect(canAdd(MEMBER)).toBe(false);
-                expect(canAdd(GUEST)).toBe(false);
+                expect(canAdd(MEMBER)).toBe(true);
+                expect(canAdd(GUEST)).toBe(true);
             },
         });
     });
 
-    it("lets an admin install a lamp in a room he does not own", async () => {
-        // Unlike a door, which is world-building and belongs to hubs alone, a lamp is a light — and
-        // an admin is the only one who can install one anywhere while it is still a placeholder.
+    it("lets a visitor install a lamp in a regular room he does not own", async () => {
+        // Unlike a door, which is world-building and belongs to hubs alone, a lamp is furniture — so
+        // it is anybody's to install wherever a picture would be.
         await runScenario({
             name: "installing a lamp in a regular room",
             rooms: [EMPTY_REGULAR],
             users: [userAtCenter("regular")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["regular"].room;
-                expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
-                    makeLampSignal(room, ADMIN))).toBe(true);
                 expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
-                    makeLampSignal(room, MEMBER))).toBe(false);
+                    makeLampSignal(room, MEMBER))).toBe(true);
+                expect(ObjectUpdateUtil.canAddObject(GUEST, room,
+                    makeLampSignal(room, GUEST))).toBe(true);
             },
         });
     });
@@ -108,8 +110,8 @@ describe("lamp permissions", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
-                    makeLampSignal(room, MEMBER))).toBe(false);
+                expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
+                    makeLampSignal(room, GUEST))).toBe(false);
             },
         });
     });
@@ -124,13 +126,17 @@ describe("lamp permissions", () => {
                 for (let i = 0; i < MAX_LAMPS_PER_ROOM; ++i)
                     room.objectById[`lamp-${i}`] = makeLampSignal(room, ADMIN, `lamp-${i}`, -5 - i);
 
-                expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
-                    makeLampSignal(room, ADMIN, "one-too-many", -40))).toBe(false);
+                // The cap is not a privilege: an admin runs into it as surely as anybody else.
+                for (const user of [MEMBER, ADMIN])
+                {
+                    expect(ObjectUpdateUtil.canAddObject(user, room,
+                        makeLampSignal(room, user, "one-too-many", -40))).toBe(false);
+                }
             },
         });
     });
 
-    it("lets only an admin take a lamp down, move it, or re-light it", async () => {
+    it("lets anybody take down, move, or re-light a lamp somebody else installed", async () => {
         await runScenario({
             name: "editing a lamp",
             rooms: [EMPTY_HUB],
@@ -140,25 +146,49 @@ describe("lamp permissions", () => {
                 const lamp = makeLampSignal(room, ADMIN);
                 room.objectById[lamp.objectId] = lamp;
 
-                const canRemove = (user: User) => ObjectUpdateUtil.canRemoveObject(user, room,
-                    new RemoveObjectSignal(room.id, lamp.objectId));
-                const canMove = (user: User) => ObjectUpdateUtil.canSetObjectTransform(user, room,
-                    new SetObjectTransformSignal(room.id, lamp.objectId, lamp.transform, true));
-                const canRelight = (user: User) => ObjectUpdateUtil.canSetObjectMetadata(user, room,
+                for (const user of [ADMIN, MEMBER, GUEST])
+                {
+                    expect(ObjectUpdateUtil.canRemoveObject(user, room,
+                        new RemoveObjectSignal(room.id, lamp.objectId))).toBe(true);
+                    expect(ObjectUpdateUtil.canSetObjectTransform(user, room,
+                        new SetObjectTransformSignal(room.id, lamp.objectId, lamp.transform, true))).toBe(true);
+                    expect(ObjectUpdateUtil.canSetObjectMetadata(user, room,
+                        new SetObjectMetadataSignal(room.id, lamp.objectId,
+                            ObjectMetadataKeyEnumMap.LightProperties,
+                            WallLampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)))).toBe(true);
+                }
+            },
+        });
+    });
+
+    it("keeps an ordinary user's lamp out of a restricted zone, and his hands off one inside it", async () => {
+        // With no privilege of its own left to ask about, a restricted zone is what stops a lamp
+        // being installed, taken down or re-lit in a stretch of the room that is not the user's —
+        // and the hub's superuser is still above it (see @docs/gameplay/restricted_zone.md).
+        await runScenario({
+            name: "a lamp inside a restricted zone",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const lampCol = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 5;
+                room.voxelGrid.restrictedZones = [new RestrictedZone(
+                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 3, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+                    lampCol - 2, lampCol + 2)];
+
+                expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
+                    makeLampSignal(room, MEMBER))).toBe(false);
+                expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
+                    makeLampSignal(room, ADMIN))).toBe(true);
+
+                const lamp = makeLampSignal(room, ADMIN, "zoned-lamp");
+                room.objectById[lamp.objectId] = lamp;
+                expect(ObjectUpdateUtil.canRemoveObject(MEMBER, room,
+                    new RemoveObjectSignal(room.id, lamp.objectId))).toBe(false);
+                expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room,
                     new SetObjectMetadataSignal(room.id, lamp.objectId,
                         ObjectMetadataKeyEnumMap.LightProperties,
-                        WallLampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)));
-
-                expect(canRemove(ADMIN)).toBe(true);
-                expect(canMove(ADMIN)).toBe(true);
-                expect(canRelight(ADMIN)).toBe(true);
-
-                for (const user of [MEMBER, GUEST])
-                {
-                    expect(canRemove(user)).toBe(false);
-                    expect(canMove(user)).toBe(false);
-                    expect(canRelight(user)).toBe(false);
-                }
+                        WallLampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)))).toBe(false);
             },
         });
     });

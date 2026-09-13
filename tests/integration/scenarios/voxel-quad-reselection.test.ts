@@ -19,7 +19,7 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     // A voxel edit invalidates the room's light map (see LightBlockMap). Nothing here draws
     // anything, so the map only has to exist and take the message.
     const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
-        getLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
+        getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
     return { default: { getCamera: () => camera, getScene: () => scene,
         getLightBlockMap: () => lightBlockMap,
         setViewDistance: () => {}, setPointLightSurroundings: () => {},

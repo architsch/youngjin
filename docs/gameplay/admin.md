@@ -35,7 +35,7 @@ generation gave it — an admin shapes the world out of the rooms the game owns 
 rearranging the way into somebody's own room.
 
 Everything else an admin does, he does as any user would. A Hub is already editable by anyone, so an
-admin builds and hangs pictures in one on the same terms as everybody else.
+admin builds, hangs pictures and installs lamps in one on the same terms as everybody else.
 
 ## Where the privilege is checked
 
