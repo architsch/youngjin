@@ -141,6 +141,8 @@ So come and claim a corner of ThingsPool for your own.
 
 [Lights, Sky, and Fog!] September 13, 2026
 
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+
 ThingsPool now has lights!
 
 <lights-8>
